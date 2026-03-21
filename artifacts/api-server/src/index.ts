@@ -41,6 +41,18 @@ app.listen(port, (err) => {
 
   logger.info({ port }, "Server listening");
 
+  // Warn if WhatsApp env vars are absent in production (messages stored but not sent to patients)
+  if (isProd && (!process.env["WHATSAPP_TOKEN"] || !process.env["WHATSAPP_PHONE_ID"])) {
+    logger.warn(
+      "WHATSAPP_TOKEN or WHATSAPP_PHONE_ID not set in production — outbound WhatsApp messages will be stored but NOT delivered to patients",
+    );
+  }
+  if (isProd && !process.env["WHATSAPP_APP_SECRET"]) {
+    logger.warn(
+      "WHATSAPP_APP_SECRET not set in production — inbound webhook POST requests will be rejected (fail-closed). Set this secret to enable inbound WhatsApp.",
+    );
+  }
+
   // Start BullMQ worker only if Redis is configured
   if (process.env["REDIS_URL"]) {
     try {
