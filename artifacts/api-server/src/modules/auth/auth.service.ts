@@ -10,7 +10,14 @@ import {
 } from "../../shared/errors";
 import type { UserRole, User, Clinic } from "@workspace/db";
 
-const JWT_SECRET = process.env["JWT_SECRET"] || "dental-crm-secret-change-in-production";
+function getJwtSecret(): string {
+  const secret = process.env["JWT_SECRET"];
+  if (!secret) {
+    throw new Error("JWT_SECRET environment variable is required.");
+  }
+  return secret;
+}
+
 const SALT_ROUNDS = 10;
 
 export interface AuthResult {
@@ -151,7 +158,7 @@ export class AuthService {
         role: user.role,
         email: user.email,
       },
-      JWT_SECRET,
+      getJwtSecret(),
       { expiresIn: "7d" },
     );
   }

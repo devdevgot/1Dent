@@ -7,6 +7,7 @@ import { useAuthStore } from "@/hooks/use-auth";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Building2, User, Mail, Lock, ArrowRight } from "lucide-react";
+import { getRoleDashboardPath } from "@/lib/role-redirect";
 
 export default function Register() {
   const [, setLocation] = useLocation();
@@ -26,7 +27,7 @@ export default function Register() {
             title: "Clinic registered successfully!",
             description: `Welcome to Dental CRM, ${response.data.user.name}.`,
           });
-          setLocation("/dashboard");
+          setLocation(getRoleDashboardPath(response.data.user.role));
         }
       },
       onError: (error) => {

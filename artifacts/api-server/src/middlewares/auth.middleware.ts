@@ -3,7 +3,13 @@ import jwt from "jsonwebtoken";
 import { UnauthorizedError, ForbiddenError } from "../shared/errors";
 import type { UserRole } from "@workspace/db";
 
-const JWT_SECRET = process.env["JWT_SECRET"] || "dental-crm-secret-change-in-production";
+function getJwtSecret(): string {
+  const secret = process.env["JWT_SECRET"];
+  if (!secret) {
+    throw new Error("JWT_SECRET environment variable is required. Set it before starting the server.");
+  }
+  return secret;
+}
 
 export interface JwtPayload {
   userId: string;
@@ -28,7 +34,7 @@ export function authMiddleware(req: Request, _res: Response, next: NextFunction)
       throw new UnauthorizedError("Authentication required");
     }
 
-    const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    const payload = jwt.verify(token, getJwtSecret()) as JwtPayload;
     req.user = payload;
     next();
   } catch {

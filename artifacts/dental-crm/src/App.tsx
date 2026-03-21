@@ -78,10 +78,19 @@ function Router() {
       
       {/* Protected Routes */}
       <Route path="/dashboard">
-        <ProtectedRoute component={Dashboard} />
+        <ProtectedRoute component={Dashboard} allowedRoles={['owner', 'admin']} />
+      </Route>
+      <Route path="/dashboard/doctor">
+        <ProtectedRoute component={Dashboard} allowedRoles={['doctor']} />
+      </Route>
+      <Route path="/dashboard/accountant">
+        <ProtectedRoute component={Dashboard} allowedRoles={['accountant']} />
+      </Route>
+      <Route path="/dashboard/warehouse">
+        <ProtectedRoute component={Dashboard} allowedRoles={['warehouse']} />
       </Route>
 
-      {/* Fallback for development showing how routing works */}
+      {/* Feature Routes (WIP placeholders until Tasks #2-#8 complete) */}
       <Route path="/kanban">
         <ProtectedRoute component={() => <div className="p-4 bg-white rounded-xl shadow-sm border h-full">Kanban (WIP)</div>} allowedRoles={['owner', 'admin']} />
       </Route>

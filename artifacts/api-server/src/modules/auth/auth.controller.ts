@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { z } from "zod";
 import { AuthService } from "./auth.service";
-import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
+import { authMiddleware } from "../../middlewares/auth.middleware";
 import { ValidationError } from "../../shared/errors";
 
 const router: IRouter = Router();
@@ -11,7 +11,7 @@ const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: process.env["NODE_ENV"] === "production",
   sameSite: "lax" as const,
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  maxAge: 7 * 24 * 60 * 60 * 1000,
 };
 
 const registerSchema = z.object({
@@ -24,18 +24,6 @@ const registerSchema = z.object({
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
-});
-
-const createUserSchema = z.object({
-  name: z.string().min(2),
-  email: z.string().email(),
-  password: z.string().min(6),
-  role: z.enum(["owner", "admin", "doctor", "accountant", "warehouse"]),
-});
-
-const updateUserSchema = z.object({
-  name: z.string().min(2).optional(),
-  role: z.enum(["owner", "admin", "doctor", "accountant", "warehouse"]).optional(),
 });
 
 router.post("/register", async (req: Request, res: Response, next: NextFunction) => {
@@ -70,7 +58,7 @@ router.post("/login", async (req: Request, res: Response, next: NextFunction) =>
   });
 });
 
-router.post("/logout", (req: Request, res: Response) => {
+router.post("/logout", (_req: Request, res: Response) => {
   res.clearCookie("auth_token");
   res.json({ success: true, message: "Logged out successfully" });
 });

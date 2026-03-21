@@ -7,6 +7,7 @@ import { useAuthStore } from "@/hooks/use-auth";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Lock, Mail, ArrowRight } from "lucide-react";
+import { getRoleDashboardPath } from "@/lib/role-redirect";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -26,7 +27,7 @@ export default function Login() {
             title: "Welcome back!",
             description: `Signed in to ${response.data.clinic.name}`,
           });
-          setLocation("/dashboard");
+          setLocation(getRoleDashboardPath(response.data.user.role));
         }
       },
       onError: (error) => {
