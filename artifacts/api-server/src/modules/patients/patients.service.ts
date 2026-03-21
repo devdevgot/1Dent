@@ -15,7 +15,7 @@ function maskPhone(phone: string, role: UserRole): string {
     // Show only last 2 digits: +7 *** *** **XX
     const cleaned = phone.replace(/\D/g, "");
     const last2 = cleaned.slice(-2);
-    return `+* *** *** **${last2}`;
+    return `+7 *** *** **${last2}`;
   }
   return phone;
 }

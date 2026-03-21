@@ -53,6 +53,17 @@ export default function KanbanPage() {
     setActiveDragPatient(patient ?? null);
   };
 
+  const resolveOverColumn = (overId: string | number): PatientStatus | null => {
+    const overIdStr = String(overId);
+    // Check if over.id is a column id directly
+    const col = KANBAN_COLUMNS.find((c) => c.id === overIdStr);
+    if (col) return col.id;
+    // Otherwise, find the patient being hovered over and use their column
+    const overPatient = patients.find((p) => p.id === overIdStr);
+    if (overPatient) return overPatient.status;
+    return null;
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveDragPatient(null);
@@ -62,7 +73,7 @@ export default function KanbanPage() {
     const draggedPatient = patients.find((p) => p.id === active.id);
     if (!draggedPatient) return;
 
-    const overColumnId = KANBAN_COLUMNS.find((c) => c.id === over.id)?.id;
+    const overColumnId = resolveOverColumn(over.id);
 
     if (overColumnId && draggedPatient.status !== overColumnId) {
       queryClient.setQueryData(getListPatientsQueryKey(), (old: typeof data) => {

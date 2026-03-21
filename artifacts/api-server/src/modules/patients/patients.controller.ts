@@ -7,7 +7,7 @@ import {
 } from "express";
 import { z } from "zod";
 import { PatientsService } from "./patients.service";
-import { authMiddleware } from "../../middlewares/auth.middleware";
+import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError } from "../../shared/errors";
 
 const router: IRouter = Router();
@@ -69,8 +69,12 @@ const addInteractionSchema = z.object({
 
 router.use(authMiddleware);
 
-// GET /patients
-router.get("/", async (req: Request, res: Response, next: NextFunction) => {
+const patientReadRoles = roleGuard("owner", "admin", "doctor");
+const patientWriteRoles = roleGuard("owner", "admin", "doctor");
+const patientDeleteRoles = roleGuard("owner", "admin");
+
+// GET /patients — owner/admin see all, doctor sees own only (service layer)
+router.get("/", patientReadRoles, async (req: Request, res: Response, next: NextFunction) => {
   const result = await service
     .list(req.user!.clinicId, req.user!.role, req.user!.userId)
     .catch(next);
@@ -79,7 +83,7 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
 });
 
 // POST /patients
-router.post("/", async (req: Request, res: Response, next: NextFunction) => {
+router.post("/", patientWriteRoles, async (req: Request, res: Response, next: NextFunction) => {
   const parsed = createPatientSchema.safeParse(req.body);
   if (!parsed.success) {
     return next(
@@ -98,6 +102,7 @@ router.post("/", async (req: Request, res: Response, next: NextFunction) => {
 // GET /patients/:id
 router.get(
   "/:id",
+  patientReadRoles,
   async (req: Request, res: Response, next: NextFunction) => {
     const id = String(req.params["id"]);
     const result = await service
@@ -111,6 +116,7 @@ router.get(
 // PUT /patients/:id
 router.put(
   "/:id",
+  patientWriteRoles,
   async (req: Request, res: Response, next: NextFunction) => {
     const parsed = updatePatientSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -132,6 +138,7 @@ router.put(
 // PATCH /patients/:id/status
 router.patch(
   "/:id/status",
+  patientWriteRoles,
   async (req: Request, res: Response, next: NextFunction) => {
     const parsed = updateStatusSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -150,9 +157,10 @@ router.patch(
   },
 );
 
-// DELETE /patients/:id
+// DELETE /patients/:id — owner/admin only
 router.delete(
   "/:id",
+  patientDeleteRoles,
   async (req: Request, res: Response, next: NextFunction) => {
     const id = String(req.params["id"]);
     try {
@@ -167,6 +175,7 @@ router.delete(
 // POST /patients/:id/interactions
 router.post(
   "/:id/interactions",
+  patientWriteRoles,
   async (req: Request, res: Response, next: NextFunction) => {
     const parsed = addInteractionSchema.safeParse(req.body);
     if (!parsed.success) {
