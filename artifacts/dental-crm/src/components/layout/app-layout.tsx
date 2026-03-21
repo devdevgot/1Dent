@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useLogout } from "@workspace/api-client-react";
+import { getRoleDashboardPath } from "@/lib/role-redirect";
 import { 
   LayoutDashboard, 
   KanbanSquare, 
@@ -20,8 +21,16 @@ import {
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 
+const ROLE_DASHBOARD_HREF: Record<string, string> = {
+  owner: "/dashboard",
+  admin: "/dashboard",
+  doctor: "/dashboard/doctor",
+  accountant: "/dashboard/accountant",
+  warehouse: "/dashboard/warehouse",
+};
+
 const ALL_NAV_ITEMS = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["owner", "admin", "doctor", "accountant", "warehouse"] },
+  { name: "Dashboard", href: "__role_dashboard__", icon: LayoutDashboard, roles: ["owner", "admin", "doctor", "accountant", "warehouse"] },
   { name: "Kanban", href: "/kanban", icon: KanbanSquare, roles: ["owner", "admin"] },
   { name: "Chat", href: "/chat", icon: MessageSquare, roles: ["owner", "admin"] },
   { name: "Patients", href: "/patients", icon: Users, roles: ["owner", "admin", "doctor"] },
@@ -59,10 +68,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
     logoutMutation.mutate();
   };
 
-  // Filter nav items based on current user role
-  const navItems = ALL_NAV_ITEMS.filter(item => 
+  const roleDashboardHref = user ? (ROLE_DASHBOARD_HREF[user.role] ?? getRoleDashboardPath(user.role)) : "/dashboard";
+
+  // Filter nav items based on current user role and resolve role-specific hrefs
+  const navItems = ALL_NAV_ITEMS.filter(item =>
     user && item.roles.includes(user.role)
-  );
+  ).map(item => ({
+    ...item,
+    href: item.href === "__role_dashboard__" ? roleDashboardHref : item.href,
+  }));
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">

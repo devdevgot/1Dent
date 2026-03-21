@@ -4,7 +4,7 @@ import { useAuthStore } from "@/hooks/use-auth";
 import { AppLayout } from "@/components/layout/app-layout";
 
 interface ProtectedRouteProps {
-  component: React.ComponentType<any>;
+  component: React.ComponentType<Record<string, never>>;
   allowedRoles?: string[];
 }
 
@@ -30,7 +30,7 @@ export function ProtectedRoute({ component: Component, allowedRoles = [] }: Prot
   }
 
   if (!isAuthenticated || !user) {
-    return null; // Will redirect in useEffect
+    return null;
   }
 
   if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
