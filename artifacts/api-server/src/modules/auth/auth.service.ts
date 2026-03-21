@@ -81,11 +81,14 @@ export class AuthService {
     return { user: safeUser, clinic, token };
   }
 
-  async getMe(userId: string): Promise<{ user: Omit<User, "passwordHash">; clinic: Clinic }> {
-    const user = await this.repo.findUserById(userId);
+  async getMe(
+    userId: string,
+    clinicId: string,
+  ): Promise<{ user: Omit<User, "passwordHash">; clinic: Clinic }> {
+    const user = await this.repo.findUserByIdAndClinic(userId, clinicId);
     if (!user) throw new NotFoundError("User not found");
 
-    const clinic = await this.repo.findClinicById(user.clinicId);
+    const clinic = await this.repo.findClinicById(clinicId);
     if (!clinic) throw new NotFoundError("Clinic not found");
 
     const { passwordHash: _, ...safeUser } = user;

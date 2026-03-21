@@ -64,7 +64,7 @@ router.post("/logout", (_req: Request, res: Response) => {
 });
 
 router.get("/me", authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
-  const result = await authService.getMe(req.user!.userId).catch(next);
+  const result = await authService.getMe(req.user!.userId, req.user!.clinicId).catch(next);
   if (!result) return;
 
   res.json({ success: true, data: result });

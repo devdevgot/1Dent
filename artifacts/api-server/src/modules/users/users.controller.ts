@@ -21,11 +21,15 @@ const updateUserSchema = z.object({
 
 router.use(authMiddleware);
 
-router.get("/", async (req: Request, res: Response, next: NextFunction) => {
-  const users = await authService.listUsers(req.user!.clinicId).catch(next);
-  if (!users) return;
-  res.json({ success: true, data: { users } });
-});
+router.get(
+  "/",
+  roleGuard("owner", "admin"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const users = await authService.listUsers(req.user!.clinicId).catch(next);
+    if (!users) return;
+    res.json({ success: true, data: { users } });
+  },
+);
 
 router.post(
   "/",
@@ -73,8 +77,12 @@ router.delete(
   roleGuard("owner"),
   async (req: Request, res: Response, next: NextFunction) => {
     const id = String(req.params["id"]);
-    await authService.deleteUser(id, req.user!.clinicId, req.user!.role).catch(next);
-    res.json({ success: true, message: "User deleted" });
+    try {
+      await authService.deleteUser(id, req.user!.clinicId, req.user!.role);
+      res.json({ success: true, message: "User deleted" });
+    } catch (err) {
+      next(err);
+    }
   },
 );
 
