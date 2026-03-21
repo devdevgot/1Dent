@@ -9,7 +9,7 @@ import {
 } from "@workspace/api-client-react";
 import type { Patient, Message } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
-import { AlertTriangle, Send, MessageSquare, Search, User } from "lucide-react";
+import { AlertTriangle, Send, MessageSquare, Search, User, Check, CheckCheck, Clock, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -32,7 +32,27 @@ function formatDate(dateStr: string) {
   });
 }
 
+type DeliveryStatus = "pending" | "sent" | "delivered" | "failed";
+
+function DeliveryIcon({ status }: { status: DeliveryStatus }) {
+  if (status === "pending") return <Clock className="w-3 h-3 inline ml-1 opacity-70" />;
+  if (status === "sent") return <Check className="w-3 h-3 inline ml-1 opacity-80" />;
+  if (status === "delivered") return <CheckCheck className="w-3 h-3 inline ml-1 opacity-90" />;
+  if (status === "failed") return <XCircle className="w-3 h-3 inline ml-1 text-red-300" />;
+  return null;
+}
+
+function getDeliveryStatus(message: Message): DeliveryStatus {
+  const isOptimistic = message.id.startsWith("optimistic-");
+  if (isOptimistic) return "pending";
+  if (message.direction === "outbound") {
+    return message.whatsappMessageId ? "delivered" : "sent";
+  }
+  return "delivered";
+}
+
 function MessageBubble({ message, isOutbound }: { message: Message; isOutbound: boolean }) {
+  const deliveryStatus = getDeliveryStatus(message);
   return (
     <div className={cn("flex mb-3", isOutbound ? "justify-end" : "justify-start")}>
       <div
@@ -53,7 +73,7 @@ function MessageBubble({ message, isOutbound }: { message: Message; isOutbound: 
         <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
         <p
           className={cn(
-            "text-[10px] mt-1 text-right",
+            "text-[10px] mt-1 text-right flex items-center justify-end gap-0.5",
             isOutbound ? "text-green-100" : "text-muted-foreground",
           )}
         >
@@ -61,6 +81,7 @@ function MessageBubble({ message, isOutbound }: { message: Message; isOutbound: 
           {message.isRedAlert && isOutbound && (
             <span className="ml-1">🚨</span>
           )}
+          {isOutbound && <DeliveryIcon status={deliveryStatus} />}
         </p>
       </div>
     </div>

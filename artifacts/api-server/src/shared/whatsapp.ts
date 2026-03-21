@@ -86,10 +86,17 @@ export async function verifyWebhookSignature(
   signatureHeader: string | undefined,
 ): Promise<boolean> {
   const appSecret = process.env["WHATSAPP_APP_SECRET"];
+  const isProd = process.env["NODE_ENV"] === "production";
+
   if (!appSecret) {
-    // Dev mode: no secret configured — skip verification
+    // Fail-closed in production: require secret to be set
+    if (isProd) {
+      return false;
+    }
+    // Dev/test: skip verification when no secret configured
     return true;
   }
+
   if (!signatureHeader?.startsWith("sha256=")) {
     return false;
   }

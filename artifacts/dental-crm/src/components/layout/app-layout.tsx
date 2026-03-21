@@ -33,7 +33,7 @@ const ROLE_DASHBOARD_HREF: Record<string, string> = {
 const ALL_NAV_ITEMS = [
   { name: "Dashboard", href: "__role_dashboard__", icon: LayoutDashboard, roles: ["owner", "admin", "doctor", "accountant", "warehouse"] },
   { name: "Kanban", href: "/kanban", icon: KanbanSquare, roles: ["owner", "admin"] },
-  { name: "Chat", href: "/chat", icon: MessageSquare, roles: ["owner", "admin"] },
+  { name: "Chat", href: "/chat", icon: MessageSquare, roles: ["owner", "admin", "doctor"] },
   { name: "Patients", href: "/patients", icon: Users, roles: ["owner", "admin", "doctor"] },
   { name: "Procedures", href: "/procedures", icon: Stethoscope, roles: ["owner", "admin", "doctor", "accountant"] },
   { name: "Schedule", href: "/schedule", icon: Calendar, roles: ["admin"] },
