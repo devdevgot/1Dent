@@ -143,7 +143,7 @@ export function ToothDetailPanel({
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border/50 bg-white shrink-0">
         <div
           className="w-8 h-8 rounded-lg border-2 shrink-0 flex items-center justify-center"
-          style={{ background: conditionCfg.fill, borderColor: conditionCfg.stroke }}
+          style={{ background: conditionCfg.crownFill, borderColor: conditionCfg.stroke }}
         >
           <span className="text-xs font-bold" style={{ color: conditionCfg.textColor }}>
             {toothFdi}
@@ -182,13 +182,13 @@ export function ToothDetailPanel({
                           : "border-border hover:border-primary/50",
                       )}
                       style={{
-                        background: currentCondition === cond ? cfg.fill : undefined,
+                        background: currentCondition === cond ? cfg.crownFill : undefined,
                         borderColor: currentCondition === cond ? cfg.stroke : undefined,
                       }}
                     >
                       <span
                         className="w-3 h-3 rounded-sm shrink-0 border"
-                        style={{ background: cfg.fill, borderColor: cfg.stroke }}
+                        style={{ background: cfg.crownFill, borderColor: cfg.stroke }}
                       />
                       <span className="truncate font-medium" style={{ color: currentCondition === cond ? cfg.textColor : undefined }}>
                         {cfg.label}
@@ -207,7 +207,7 @@ export function ToothDetailPanel({
               </p>
               <div
                 className="flex items-center gap-2 px-3 py-2 rounded-lg border"
-                style={{ background: conditionCfg.fill, borderColor: conditionCfg.stroke }}
+                style={{ background: conditionCfg.crownFill, borderColor: conditionCfg.stroke }}
               >
                 <span className="text-sm font-semibold" style={{ color: conditionCfg.textColor }}>
                   {conditionCfg.label}

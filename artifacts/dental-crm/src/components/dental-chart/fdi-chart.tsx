@@ -5,19 +5,124 @@ export type { ToothCondition };
 
 export const CONDITION_CONFIG: Record<
   ToothCondition,
-  { label: string; fill: string; stroke: string; textColor: string }
+  { label: string; crownFill: string; stroke: string; textColor: string }
 > = {
-  healthy:            { label: "Здоров",              fill: "#ffffff", stroke: "#d1d5db", textColor: "#374151" },
-  cavity:             { label: "Кариес",              fill: "#fde68a", stroke: "#f59e0b", textColor: "#92400e" },
-  treated:            { label: "Пролечен",            fill: "#bfdbfe", stroke: "#3b82f6", textColor: "#1e40af" },
-  crown:              { label: "Коронка",             fill: "#fef3c7", stroke: "#d97706", textColor: "#92400e" },
-  root_canal:         { label: "Канал",               fill: "#fed7aa", stroke: "#ea580c", textColor: "#7c2d12" },
-  implant:            { label: "Имплант",             fill: "#a7f3d0", stroke: "#10b981", textColor: "#064e3b" },
-  missing:            { label: "Отсутствует",         fill: "#f9fafb", stroke: "#9ca3af", textColor: "#6b7280" },
-  extraction_needed:  { label: "Удаление",            fill: "#fee2e2", stroke: "#ef4444", textColor: "#991b1b" },
+  healthy:           { label: "Здоров",      crownFill: "#ffffff",  stroke: "#c8d8c0",  textColor: "#166534" },
+  cavity:            { label: "Кариес",      crownFill: "#fde68a",  stroke: "#f59e0b",  textColor: "#92400e" },
+  treated:           { label: "Пролечен",    crownFill: "#bfdbfe",  stroke: "#3b82f6",  textColor: "#1e40af" },
+  crown:             { label: "Коронка",     crownFill: "#fcd34d",  stroke: "#d97706",  textColor: "#78350f" },
+  root_canal:        { label: "Канал",       crownFill: "#fed7aa",  stroke: "#ea580c",  textColor: "#7c2d12" },
+  implant:           { label: "Имплант",     crownFill: "#6ee7b7",  stroke: "#10b981",  textColor: "#064e3b" },
+  missing:           { label: "Отсутствует", crownFill: "#f3f4f6",  stroke: "#9ca3af",  textColor: "#6b7280" },
+  extraction_needed: { label: "Удаление",    crownFill: "#fca5a5",  stroke: "#ef4444",  textColor: "#991b1b" },
 };
 
+const ROOT_FILL = "#fef6ee";
+const ROOT_STROKE = "#e8d5c0";
+
 export type ToothMap = Map<number, ToothRecord>;
+
+type ToothType = "incisor" | "canine" | "premolar" | "molar";
+
+function getToothType(fdi: number): ToothType {
+  const n = fdi % 10;
+  if (n === 1 || n === 2) return "incisor";
+  if (n === 3) return "canine";
+  if (n === 4 || n === 5) return "premolar";
+  return "molar";
+}
+
+function toothWidth(fdi: number): number {
+  switch (getToothType(fdi)) {
+    case "molar":    return 26;
+    case "premolar": return 20;
+    case "canine":   return 18;
+    case "incisor":  return 15;
+  }
+}
+
+const f = (x: number, y: number) => `${x.toFixed(1)},${y.toFixed(1)}`;
+
+function getRootPath(isUpper: boolean, w: number, h: number): string {
+  const m = w / 2;
+  const rw = w * 0.22;
+  const cw = w * 0.46;
+  const cej = isUpper ? h * 0.42 : h * 0.58;
+  if (isUpper) {
+    return `M ${f(m - rw, 0)} L ${f(m + rw, 0)} Q ${f(m + cw, h * 0.09)} ${f(m + cw, cej)} L ${f(m - cw, cej)} Q ${f(m - cw, h * 0.09)} ${f(m - rw, 0)} Z`;
+  }
+  return `M ${f(m - rw, h)} L ${f(m + rw, h)} Q ${f(m + cw, h * 0.91)} ${f(m + cw, cej)} L ${f(m - cw, cej)} Q ${f(m - cw, h * 0.91)} ${f(m - rw, h)} Z`;
+}
+
+function getCrownPath(type: ToothType, isUpper: boolean, w: number, h: number): string {
+  const m = w / 2;
+  const cw = w * 0.46;
+  const cej = isUpper ? h * 0.42 : h * 0.58;
+
+  if (isUpper) {
+    const start = `M ${f(m + cw, cej)}`;
+    const end   = `L ${f(m - cw, cej)} Z`;
+    switch (type) {
+      case "incisor":
+        return `${start} L ${f(m + cw, h * 0.70)} Q ${f(m + cw * 0.94, h * 0.87)} ${f(m + cw * 0.80, h * 0.96)} Q ${f(m, h)} ${f(m - cw * 0.80, h * 0.96)} Q ${f(m - cw * 0.94, h * 0.87)} ${f(m - cw, h * 0.70)} ${end}`;
+      case "canine":
+        return `${start} L ${f(m + cw, h * 0.62)} L ${f(m, h)} L ${f(m - cw, h * 0.62)} ${end}`;
+      case "premolar":
+        return `${start} L ${f(m + cw, h * 0.62)} Q ${f(m + cw * 0.90, h * 0.80)} ${f(m + cw * 0.74, h)} Q ${f(m, h * 0.87)} ${f(m - cw * 0.74, h)} Q ${f(m - cw * 0.90, h * 0.80)} ${f(m - cw, h * 0.62)} ${end}`;
+      case "molar":
+        return `${start} L ${f(m + cw, h * 0.60)} Q ${f(m + cw * 0.88, h * 0.78)} ${f(m + cw * 0.70, h)} L ${f(m, h * 0.87)} L ${f(m - cw * 0.70, h)} Q ${f(m - cw * 0.88, h * 0.78)} ${f(m - cw, h * 0.60)} ${end}`;
+    }
+  } else {
+    const start = `M ${f(m + cw, cej)}`;
+    const end   = `L ${f(m - cw, cej)} Z`;
+    switch (type) {
+      case "incisor":
+        return `${start} L ${f(m + cw, h * 0.30)} Q ${f(m + cw * 0.94, h * 0.13)} ${f(m + cw * 0.80, h * 0.04)} Q ${f(m, 0)} ${f(m - cw * 0.80, h * 0.04)} Q ${f(m - cw * 0.94, h * 0.13)} ${f(m - cw, h * 0.30)} ${end}`;
+      case "canine":
+        return `${start} L ${f(m + cw, h * 0.38)} L ${f(m, 0)} L ${f(m - cw, h * 0.38)} ${end}`;
+      case "premolar":
+        return `${start} L ${f(m + cw, h * 0.38)} Q ${f(m + cw * 0.90, h * 0.20)} ${f(m + cw * 0.74, 0)} Q ${f(m, h * 0.13)} ${f(m - cw * 0.74, 0)} Q ${f(m - cw * 0.90, h * 0.20)} ${f(m - cw, h * 0.38)} ${end}`;
+      case "molar":
+        return `${start} L ${f(m + cw, h * 0.40)} Q ${f(m + cw * 0.88, h * 0.22)} ${f(m + cw * 0.70, 0)} L ${f(m, h * 0.13)} L ${f(m - cw * 0.70, 0)} Q ${f(m - cw * 0.88, h * 0.22)} ${f(m - cw, h * 0.40)} ${end}`;
+    }
+  }
+}
+
+function getFullOutlinePath(type: ToothType, isUpper: boolean, w: number, h: number): string {
+  const m = w / 2;
+  const rw = w * 0.22;
+  const cw = w * 0.46;
+  const cej = isUpper ? h * 0.42 : h * 0.58;
+
+  if (isUpper) {
+    const rootStart = `M ${f(m - rw, 0)} L ${f(m + rw, 0)} Q ${f(m + cw, h * 0.09)} ${f(m + cw, cej)}`;
+    const rootEnd   = `L ${f(m - cw, cej)} Q ${f(m - cw, h * 0.09)} ${f(m - rw, 0)} Z`;
+    switch (type) {
+      case "incisor":
+        return `${rootStart} L ${f(m + cw, h * 0.70)} Q ${f(m + cw * 0.94, h * 0.87)} ${f(m + cw * 0.80, h * 0.96)} Q ${f(m, h)} ${f(m - cw * 0.80, h * 0.96)} Q ${f(m - cw * 0.94, h * 0.87)} ${f(m - cw, h * 0.70)} ${rootEnd}`;
+      case "canine":
+        return `${rootStart} L ${f(m + cw, h * 0.62)} L ${f(m, h)} L ${f(m - cw, h * 0.62)} ${rootEnd}`;
+      case "premolar":
+        return `${rootStart} L ${f(m + cw, h * 0.62)} Q ${f(m + cw * 0.90, h * 0.80)} ${f(m + cw * 0.74, h)} Q ${f(m, h * 0.87)} ${f(m - cw * 0.74, h)} Q ${f(m - cw * 0.90, h * 0.80)} ${f(m - cw, h * 0.62)} ${rootEnd}`;
+      case "molar":
+        return `${rootStart} L ${f(m + cw, h * 0.60)} Q ${f(m + cw * 0.88, h * 0.78)} ${f(m + cw * 0.70, h)} L ${f(m, h * 0.87)} L ${f(m - cw * 0.70, h)} Q ${f(m - cw * 0.88, h * 0.78)} ${f(m - cw, h * 0.60)} ${rootEnd}`;
+    }
+  } else {
+    const rootStart = `M ${f(m - rw, h)} L ${f(m + rw, h)} Q ${f(m + cw, h * 0.91)} ${f(m + cw, cej)}`;
+    const rootEnd   = `L ${f(m - cw, cej)} Q ${f(m - cw, h * 0.91)} ${f(m - rw, h)} Z`;
+    switch (type) {
+      case "incisor":
+        return `${rootStart} L ${f(m + cw, h * 0.30)} Q ${f(m + cw * 0.94, h * 0.13)} ${f(m + cw * 0.80, h * 0.04)} Q ${f(m, 0)} ${f(m - cw * 0.80, h * 0.04)} Q ${f(m - cw * 0.94, h * 0.13)} ${f(m - cw, h * 0.30)} ${rootEnd}`;
+      case "canine":
+        return `${rootStart} L ${f(m + cw, h * 0.38)} L ${f(m, 0)} L ${f(m - cw, h * 0.38)} ${rootEnd}`;
+      case "premolar":
+        return `${rootStart} L ${f(m + cw, h * 0.38)} Q ${f(m + cw * 0.90, h * 0.20)} ${f(m + cw * 0.74, 0)} Q ${f(m, h * 0.13)} ${f(m - cw * 0.74, 0)} Q ${f(m - cw * 0.90, h * 0.20)} ${f(m - cw, h * 0.38)} ${rootEnd}`;
+      case "molar":
+        return `${rootStart} L ${f(m + cw, h * 0.40)} Q ${f(m + cw * 0.88, h * 0.22)} ${f(m + cw * 0.70, 0)} L ${f(m, h * 0.13)} L ${f(m - cw * 0.70, 0)} Q ${f(m - cw * 0.88, h * 0.22)} ${f(m - cw, h * 0.40)} ${rootEnd}`;
+    }
+  }
+  return "";
+}
 
 interface FdiChartProps {
   teethData: ToothMap;
@@ -26,23 +131,41 @@ interface FdiChartProps {
   className?: string;
 }
 
-const UPPER_LEFT  = [18, 17, 16, 15, 14, 13, 12, 11]; // Q1 — patient right → viewer left
-const UPPER_RIGHT = [21, 22, 23, 24, 25, 26, 27, 28]; // Q2 — patient left  → viewer right
-const LOWER_LEFT  = [48, 47, 46, 45, 44, 43, 42, 41]; // Q4 — patient right → viewer left
-const LOWER_RIGHT = [31, 32, 33, 34, 35, 36, 37, 38]; // Q3 — patient left  → viewer right
+const UPPER_LEFT  = [18, 17, 16, 15, 14, 13, 12, 11];
+const UPPER_RIGHT = [21, 22, 23, 24, 25, 26, 27, 28];
+const LOWER_LEFT  = [48, 47, 46, 45, 44, 43, 42, 41];
+const LOWER_RIGHT = [31, 32, 33, 34, 35, 36, 37, 38];
 
 const UPPER_ROW = [...UPPER_LEFT, ...UPPER_RIGHT];
 const LOWER_ROW = [...LOWER_LEFT, ...LOWER_RIGHT];
 
-function toothWidth(fdi: number): number {
-  const n = fdi % 10;
-  if (n >= 6) return 22; // molars
-  if (n === 5 || n === 4) return 18; // premolars
-  if (n === 3) return 16; // canine
-  return 14; // incisors 1, 2
+const GAP = 2;
+const CENTER_GAP = 8;
+
+function buildRowPositions(row: number[]): { fdi: number; x: number }[] {
+  const positions: { fdi: number; x: number }[] = [];
+  let cursor = 0;
+  for (let i = 0; i < row.length; i++) {
+    const fdi = row[i]!;
+    if (i === 8) cursor += CENTER_GAP;
+    positions.push({ fdi, x: cursor });
+    cursor += toothWidth(fdi) + GAP;
+  }
+  return positions;
 }
 
-function ToothShape({
+const TOOTH_H = 44;
+const TOP_PAD = 2;
+const MID_GAP = 32;
+
+const upperToothY  = TOP_PAD;
+const upperLabelY  = upperToothY + TOOTH_H + 11;
+const midlineY     = upperToothY + TOOTH_H + 16;
+const lowerLabelY  = upperToothY + TOOTH_H + 23;
+const lowerToothY  = upperToothY + TOOTH_H + MID_GAP;
+const SVG_H        = lowerToothY + TOOTH_H + TOP_PAD;
+
+function ToothGlyph({
   fdi,
   record,
   isSelected,
@@ -55,151 +178,192 @@ function ToothShape({
   isUpper: boolean;
   onClick: () => void;
 }) {
+  const type = getToothType(fdi);
   const condition: ToothCondition = record?.condition ?? "healthy";
-  const config = CONDITION_CONFIG[condition];
+  const cfg = CONDITION_CONFIG[condition];
   const w = toothWidth(fdi);
-  const h = 32;
-  const rx = condition === "missing" ? 2 : 5;
+  const h = TOOTH_H;
+  const m = w / 2;
+  const isMissing = condition === "missing";
 
-  const strokeDasharray = condition === "missing" ? "4 3" : undefined;
-  const selectedRing = isSelected ? "#6366f1" : undefined;
+  const rootPath    = getRootPath(isUpper, w, h);
+  const crownPath   = getCrownPath(type, isUpper, w, h);
+  const outlinePath = getFullOutlinePath(type, isUpper, w, h);
+
+  const strokeColor = isSelected ? "#6366f1" : cfg.stroke;
+  const strokeW     = isSelected ? 2 : 1.2;
 
   return (
     <g
       className="cursor-pointer"
       onClick={onClick}
       role="button"
-      aria-label={`Зуб ${fdi}: ${config.label}`}
+      aria-label={`Зуб ${fdi}: ${cfg.label}`}
     >
+      {/* Selected ring */}
       {isSelected && (
         <rect
-          x={-3}
-          y={isUpper ? -3 : -3}
-          width={w + 6}
-          height={h + 6}
-          rx={rx + 2}
+          x={-4} y={-4}
+          width={w + 8} height={h + 8}
+          rx={6}
           fill="none"
-          stroke={selectedRing}
-          strokeWidth={2}
-          opacity={0.8}
+          stroke="#6366f1"
+          strokeWidth={2.5}
+          strokeDasharray="0"
+          opacity={0.4}
         />
       )}
-      <rect
-        x={0}
-        y={0}
-        width={w}
-        height={h}
-        rx={rx}
-        fill={config.fill}
-        stroke={config.stroke}
-        strokeWidth={1.5}
-        strokeDasharray={strokeDasharray}
+
+      {/* Root */}
+      <path
+        d={rootPath}
+        fill={isMissing ? "#f9fafb" : ROOT_FILL}
+        stroke={ROOT_STROKE}
+        strokeWidth={0.6}
+        strokeDasharray={isMissing ? "3 2" : undefined}
       />
-      {/* Cusp lines for molars */}
-      {w >= 22 && condition !== "missing" && (
-        <>
-          <line x1={w / 3} y1={4} x2={w / 3} y2={h - 4} stroke={config.stroke} strokeWidth={0.5} opacity={0.4} />
-          <line x1={(w * 2) / 3} y1={4} x2={(w * 2) / 3} y2={h - 4} stroke={config.stroke} strokeWidth={0.5} opacity={0.4} />
-        </>
+
+      {/* Crown */}
+      <path
+        d={crownPath}
+        fill={isMissing ? "#f3f4f6" : cfg.crownFill}
+        stroke="none"
+        strokeDasharray={isMissing ? "3 2" : undefined}
+      />
+
+      {/* Full outline */}
+      <path
+        d={outlinePath}
+        fill="none"
+        stroke={strokeColor}
+        strokeWidth={strokeW}
+        strokeLinejoin="round"
+        strokeDasharray={isMissing ? "3 2" : undefined}
+        strokeOpacity={isMissing ? 0.7 : 1}
+      />
+
+      {/* Missing X */}
+      {isMissing && (
+        <g opacity={0.5}>
+          <line x1={w * 0.28} y1={h * 0.28} x2={w * 0.72} y2={h * 0.72} stroke="#9ca3af" strokeWidth={1.5} strokeLinecap="round" />
+          <line x1={w * 0.72} y1={h * 0.28} x2={w * 0.28} y2={h * 0.72} stroke="#9ca3af" strokeWidth={1.5} strokeLinecap="round" />
+        </g>
       )}
-      {/* FDI number label */}
-      <text
-        x={w / 2}
-        y={isUpper ? h + 12 : -4}
-        textAnchor="middle"
-        fontSize={9}
-        fill="#6b7280"
-        fontFamily="system-ui"
-      >
-        {fdi}
-      </text>
+
+      {/* CEJ divider line */}
+      {!isMissing && (
+        <line
+          x1={m - w * 0.46}
+          y1={isUpper ? h * 0.42 : h * 0.58}
+          x2={m + w * 0.46}
+          y2={isUpper ? h * 0.42 : h * 0.58}
+          stroke={cfg.stroke}
+          strokeWidth={0.5}
+          strokeOpacity={0.35}
+        />
+      )}
     </g>
   );
-}
-
-const GAP = 3; // gap between teeth
-const CENTER_GAP = 6; // midline gap
-
-function buildRowPositions(row: number[]): { fdi: number; x: number }[] {
-  const positions: { fdi: number; x: number }[] = [];
-  let cursor = 0;
-  for (let i = 0; i < row.length; i++) {
-    const fdi = row[i]!;
-    if (i === 8) cursor += CENTER_GAP; // midline
-    positions.push({ fdi, x: cursor });
-    cursor += toothWidth(fdi) + GAP;
-  }
-  return positions;
 }
 
 export function FdiChart({ teethData, selectedFdi, onToothClick, className }: FdiChartProps) {
   const upperPositions = buildRowPositions(UPPER_ROW);
   const lowerPositions = buildRowPositions(LOWER_ROW);
 
-  const totalWidth = upperPositions[upperPositions.length - 1]!.x + toothWidth(UPPER_ROW[UPPER_ROW.length - 1]!);
-  const toothH = 32;
-  const midGap = 18;
-  const labelPad = 14;
-  const svgH = toothH * 2 + midGap + labelPad * 2 + 8;
-  const upperY = labelPad;
-  const lowerY = upperY + toothH + midGap;
+  const lastUpper = upperPositions[upperPositions.length - 1]!;
+  const totalWidth = lastUpper.x + toothWidth(UPPER_ROW[UPPER_ROW.length - 1]!);
 
   return (
-    <div className={cn("w-full overflow-x-auto", className)}>
-      <svg
-        viewBox={`-4 0 ${totalWidth + 8} ${svgH}`}
-        className="w-full max-w-[640px] mx-auto select-none"
-        aria-label="FDI Dental Chart"
-      >
-        {/* Upper row */}
-        {upperPositions.map(({ fdi, x }) => (
-          <g key={fdi} transform={`translate(${x}, ${upperY})`}>
-            <ToothShape
-              fdi={fdi}
-              record={teethData.get(fdi)}
-              isSelected={selectedFdi === fdi}
-              isUpper={true}
-              onClick={() => onToothClick(fdi)}
-            />
-          </g>
-        ))}
+    <div className={cn("w-full", className)}>
+      <div className="overflow-x-auto">
+        <div style={{ minWidth: 360 }}>
+          <svg
+            viewBox={`-4 0 ${totalWidth + 8} ${SVG_H}`}
+            className="w-full select-none"
+            style={{ height: "auto" }}
+            aria-label="FDI зубная карта"
+          >
+            {/* Quadrant labels */}
+            <text x={2} y={upperToothY + 8} fontSize={7} fill="#c4b5a0" fontFamily="system-ui" fontWeight="600">Q1</text>
+            <text x={totalWidth / 2 + 6} y={upperToothY + 8} fontSize={7} fill="#c4b5a0" fontFamily="system-ui" fontWeight="600">Q2</text>
+            <text x={2} y={lowerToothY + TOOTH_H - 2} fontSize={7} fill="#c4b5a0" fontFamily="system-ui" fontWeight="600">Q4</text>
+            <text x={totalWidth / 2 + 6} y={lowerToothY + TOOTH_H - 2} fontSize={7} fill="#c4b5a0" fontFamily="system-ui" fontWeight="600">Q3</text>
 
-        {/* Midline */}
-        <line
-          x1={0}
-          y1={upperY + toothH + midGap / 2}
-          x2={totalWidth}
-          y2={upperY + toothH + midGap / 2}
-          stroke="#e5e7eb"
-          strokeWidth={1}
-          strokeDasharray="6 4"
-        />
+            {/* Upper row */}
+            {upperPositions.map(({ fdi, x }) => (
+              <g key={fdi} transform={`translate(${x}, ${upperToothY})`}>
+                <ToothGlyph
+                  fdi={fdi}
+                  record={teethData.get(fdi)}
+                  isSelected={selectedFdi === fdi}
+                  isUpper={true}
+                  onClick={() => onToothClick(fdi)}
+                />
+                {/* Upper label below crown */}
+                <text
+                  x={toothWidth(fdi) / 2}
+                  y={TOOTH_H + 11}
+                  textAnchor="middle"
+                  fontSize={7.5}
+                  fontFamily="system-ui"
+                  fontWeight={selectedFdi === fdi ? "700" : "500"}
+                  fill={selectedFdi === fdi ? "#6366f1" : "#94a3b8"}
+                >
+                  {fdi}
+                </text>
+              </g>
+            ))}
 
-        {/* Lower row */}
-        {lowerPositions.map(({ fdi, x }) => (
-          <g key={fdi} transform={`translate(${x}, ${lowerY})`}>
-            <ToothShape
-              fdi={fdi}
-              record={teethData.get(fdi)}
-              isSelected={selectedFdi === fdi}
-              isUpper={false}
-              onClick={() => onToothClick(fdi)}
+            {/* Midline */}
+            <line
+              x1={0} y1={midlineY}
+              x2={totalWidth} y2={midlineY}
+              stroke="#e2e8f0"
+              strokeWidth={1}
+              strokeDasharray="5 3"
             />
-          </g>
-        ))}
-      </svg>
+
+            {/* Lower row */}
+            {lowerPositions.map(({ fdi, x }) => (
+              <g key={fdi} transform={`translate(${x}, ${lowerToothY})`}>
+                {/* Lower label above crown */}
+                <text
+                  x={toothWidth(fdi) / 2}
+                  y={-5}
+                  textAnchor="middle"
+                  fontSize={7.5}
+                  fontFamily="system-ui"
+                  fontWeight={selectedFdi === fdi ? "700" : "500"}
+                  fill={selectedFdi === fdi ? "#6366f1" : "#94a3b8"}
+                >
+                  {fdi}
+                </text>
+                <ToothGlyph
+                  fdi={fdi}
+                  record={teethData.get(fdi)}
+                  isSelected={selectedFdi === fdi}
+                  isUpper={false}
+                  onClick={() => onToothClick(fdi)}
+                />
+              </g>
+            ))}
+          </svg>
+        </div>
+      </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-2 px-1">
-        {(Object.entries(CONDITION_CONFIG) as [ToothCondition, typeof CONDITION_CONFIG[ToothCondition]][]).map(([cond, cfg]) => (
-          <div key={cond} className="flex items-center gap-1.5">
-            <span
-              className="w-3 h-3 rounded-sm border shrink-0"
-              style={{ background: cfg.fill, borderColor: cfg.stroke }}
-            />
-            <span className="text-[10px] text-muted-foreground">{cfg.label}</span>
-          </div>
-        ))}
+      <div className="flex flex-wrap gap-x-3 gap-y-1.5 mt-3 px-0.5">
+        {(Object.entries(CONDITION_CONFIG) as [ToothCondition, (typeof CONDITION_CONFIG)[ToothCondition]][]).map(
+          ([cond, cfg]) => (
+            <div key={cond} className="flex items-center gap-1.5">
+              <span
+                className="w-3 h-3 rounded border shrink-0"
+                style={{ background: cfg.crownFill, borderColor: cfg.stroke }}
+              />
+              <span className="text-[10px] text-muted-foreground">{cfg.label}</span>
+            </div>
+          ),
+        )}
       </div>
     </div>
   );
