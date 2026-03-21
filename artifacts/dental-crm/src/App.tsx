@@ -14,6 +14,7 @@ import Login from "@/pages/login";
 import Register from "@/pages/register";
 import Dashboard from "@/pages/dashboard";
 import KanbanPage from "@/pages/kanban";
+import ChatPage from "@/pages/chat";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -96,12 +97,12 @@ function Router() {
         <ProtectedRoute component={KanbanPage} allowedRoles={['owner', 'admin', 'doctor']} />
       </Route>
 
-      {/* Feature Routes (WIP placeholders until Tasks #3-#8 complete) */}
+      {/* Feature Routes */}
       <Route path="/patients">
         <ProtectedRoute component={KanbanPage} allowedRoles={['owner', 'admin', 'doctor']} />
       </Route>
       <Route path="/chat">
-        <ProtectedRoute component={() => <div className="p-4 bg-white rounded-xl shadow-sm border h-full">Chat & Red Alert (WIP)</div>} allowedRoles={['owner', 'admin']} />
+        <ProtectedRoute component={ChatPage} allowedRoles={['owner', 'admin', 'doctor']} />
       </Route>
 
       {/* 404 */}

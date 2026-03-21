@@ -408,3 +408,115 @@ export const AddPatientInteractionBody = zod.object({
   type: zod.enum(["note", "call", "whatsapp", "status_change", "appointment"]),
   content: zod.string().min(1),
 });
+
+/**
+ * @summary List messages for a patient
+ */
+export const ListMessagesParams = zod.object({
+  patientId: zod.coerce.string(),
+});
+
+export const ListMessagesResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    messages: zod.array(
+      zod.object({
+        id: zod.string(),
+        clinicId: zod.string(),
+        patientId: zod.string(),
+        direction: zod.enum(["inbound", "outbound"]),
+        senderId: zod.string().nullable(),
+        content: zod.string(),
+        whatsappMessageId: zod.string().nullable(),
+        isRedAlert: zod.boolean(),
+        createdAt: zod.date(),
+      }),
+    ),
+  }),
+});
+
+/**
+ * @summary Send WhatsApp message to patient
+ */
+export const SendMessageParams = zod.object({
+  patientId: zod.coerce.string(),
+});
+
+export const sendMessageBodyContentMax = 4096;
+
+export const SendMessageBody = zod.object({
+  content: zod.string().min(1).max(sendMessageBodyContentMax),
+});
+
+/**
+ * @summary List notifications for current user
+ */
+export const ListNotificationsResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    notifications: zod.array(
+      zod.object({
+        id: zod.string(),
+        clinicId: zod.string(),
+        userId: zod.string(),
+        type: zod.enum(["red_alert", "new_message", "appointment", "system"]),
+        message: zod.string(),
+        read: zod.boolean(),
+        patientId: zod.string().nullable(),
+        messageId: zod.string().nullable(),
+        createdAt: zod.date(),
+      }),
+    ),
+  }),
+});
+
+/**
+ * @summary Get unread notification count
+ */
+export const GetUnreadNotificationsCountResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    count: zod.number(),
+  }),
+});
+
+/**
+ * @summary Mark all notifications as read
+ */
+export const MarkAllNotificationsReadResponse = zod.object({
+  success: zod.literal(true),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Mark a notification as read
+ */
+export const MarkNotificationReadParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const MarkNotificationReadResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    notification: zod.object({
+      id: zod.string(),
+      clinicId: zod.string(),
+      userId: zod.string(),
+      type: zod.enum(["red_alert", "new_message", "appointment", "system"]),
+      message: zod.string(),
+      read: zod.boolean(),
+      patientId: zod.string().nullable(),
+      messageId: zod.string().nullable(),
+      createdAt: zod.date(),
+    }),
+  }),
+});
+
+/**
+ * @summary Verify WhatsApp webhook (Meta challenge)
+ */
+export const VerifyWhatsappWebhookQueryParams = zod.object({
+  "hub.mode": zod.coerce.string().optional(),
+  "hub.verify_token": zod.coerce.string().optional(),
+  "hub.challenge": zod.coerce.string().optional(),
+});

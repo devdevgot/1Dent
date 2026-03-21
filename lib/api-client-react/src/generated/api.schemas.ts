@@ -238,3 +238,104 @@ export interface InteractionResponse {
   success: boolean;
   data: InteractionResponseData;
 }
+
+export type MessageDirection =
+  (typeof MessageDirection)[keyof typeof MessageDirection];
+
+export const MessageDirection = {
+  inbound: "inbound",
+  outbound: "outbound",
+} as const;
+
+export interface Message {
+  id: string;
+  clinicId: string;
+  patientId: string;
+  direction: MessageDirection;
+  senderId: string | null;
+  content: string;
+  whatsappMessageId: string | null;
+  isRedAlert: boolean;
+  createdAt: string;
+}
+
+export interface SendMessageRequest {
+  /**
+   * @minLength 1
+   * @maxLength 4096
+   */
+  content: string;
+}
+
+export type MessagesResponseData = {
+  messages: Message[];
+};
+
+export interface MessagesResponse {
+  success: boolean;
+  data: MessagesResponseData;
+}
+
+export type MessageResponseData = {
+  message: Message;
+};
+
+export interface MessageResponse {
+  success: boolean;
+  data: MessageResponseData;
+}
+
+export type NotificationType =
+  (typeof NotificationType)[keyof typeof NotificationType];
+
+export const NotificationType = {
+  red_alert: "red_alert",
+  new_message: "new_message",
+  appointment: "appointment",
+  system: "system",
+} as const;
+
+export interface Notification {
+  id: string;
+  clinicId: string;
+  userId: string;
+  type: NotificationType;
+  message: string;
+  read: boolean;
+  patientId: string | null;
+  messageId: string | null;
+  createdAt: string;
+}
+
+export type NotificationsResponseData = {
+  notifications: Notification[];
+};
+
+export interface NotificationsResponse {
+  success: boolean;
+  data: NotificationsResponseData;
+}
+
+export type NotificationResponseData = {
+  notification: Notification;
+};
+
+export interface NotificationResponse {
+  success: boolean;
+  data: NotificationResponseData;
+}
+
+export type UnreadCountResponseData = {
+  count: number;
+};
+
+export interface UnreadCountResponse {
+  success: boolean;
+  data: UnreadCountResponseData;
+}
+
+export type VerifyWhatsappWebhookParams = {
+  "hub.mode"?: string;
+  "hub.verify_token"?: string;
+  "hub.challenge"?: string;
+};

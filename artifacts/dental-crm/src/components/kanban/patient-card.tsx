@@ -1,9 +1,10 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Calendar, User } from "lucide-react";
+import { Calendar, User, AlertTriangle } from "lucide-react";
 import type { Patient } from "@workspace/api-client-react";
 import { SOURCE_LABELS, SOURCE_COLORS, KANBAN_COLUMNS, COLUMN_HEADER_COLOR } from "@/lib/patient-utils";
 import { useKanbanStore } from "@/hooks/use-kanban";
+import { useNotifications } from "@/hooks/use-notifications";
 
 interface PatientCardProps {
   patient: Patient;
@@ -11,6 +12,10 @@ interface PatientCardProps {
 
 export function PatientCard({ patient }: PatientCardProps) {
   const setSelectedPatientId = useKanbanStore((s) => s.setSelectedPatientId);
+  const { data: notificationsData } = useNotifications();
+  const hasRedAlert = (notificationsData?.data?.notifications ?? []).some(
+    (n) => n.type === "red_alert" && n.patientId === patient.id && !n.read,
+  );
 
   const {
     attributes,
@@ -44,14 +49,18 @@ export function PatientCard({ patient }: PatientCardProps) {
       {...listeners}
       onClick={() => setSelectedPatientId(patient.id)}
       className={`
-        bg-white rounded-xl border border-border/60 p-3.5 cursor-grab active:cursor-grabbing
+        bg-white rounded-xl border p-3.5 cursor-grab active:cursor-grabbing
         shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200
         select-none group
         ${isDragging ? "opacity-50 rotate-1 shadow-xl" : ""}
+        ${hasRedAlert ? "border-red-400 bg-red-50/40" : "border-border/60"}
       `}
     >
       <div className="flex items-start justify-between mb-2">
-        <p className="font-semibold text-sm text-foreground leading-tight line-clamp-1">
+        <p className="font-semibold text-sm text-foreground leading-tight line-clamp-1 flex items-center gap-1">
+          {hasRedAlert && (
+            <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0 animate-pulse" />
+          )}
           {patient.name}
         </p>
         <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ml-1 shrink-0 ${sourceColor}`}>

@@ -1,6 +1,7 @@
 import { randomBytes } from "crypto";
 import app from "./app";
 import { logger } from "./lib/logger";
+import { startAlertWorker } from "./shared/alert-queue";
 
 const isProd = process.env["NODE_ENV"] === "production";
 
@@ -39,4 +40,13 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+
+  // Start BullMQ worker for Red Alert processing
+  // Starts lazily; degrades gracefully when Redis is unavailable
+  try {
+    startAlertWorker();
+    logger.info("BullMQ Red Alert worker started");
+  } catch (err) {
+    logger.warn({ err }, "BullMQ worker failed to start (Redis may be unavailable)");
+  }
 });

@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useLogout } from "@workspace/api-client-react";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
+import { NotificationBell } from "./notification-bell";
 import { 
   LayoutDashboard, 
   KanbanSquare, 
@@ -140,9 +141,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
       {/* Main Content */}
       <main className="flex-1 flex flex-col relative overflow-hidden bg-slate-50/50">
         <header className="h-20 bg-white/60 backdrop-blur-md border-b border-border/50 flex items-center px-8 z-10 sticky top-0">
-          <h1 className="text-2xl font-display font-bold text-foreground capitalize">
+          <h1 className="text-2xl font-display font-bold text-foreground capitalize flex-1">
             {location.split('/')[1] || 'Dashboard'}
           </h1>
+          <NotificationBell />
         </header>
         
         <div className="flex-1 overflow-auto p-8 animate-in-fade">
