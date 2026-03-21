@@ -10,7 +10,7 @@ import {
 } from "@workspace/api-client-react";
 import type { ToothRecord } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { X, ChevronDown, ChevronLeft } from "lucide-react";
+import { X, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useKanbanStore } from "@/hooks/use-kanban";
 import { useAuthStore } from "@/hooks/use-auth";
@@ -166,40 +166,35 @@ export function PatientDetailPanel() {
           <>
           {/* ── Dental Chart Tab ── */}
           {activeTab === "dental" && (
-            <div className="flex-1 min-h-0 overflow-hidden relative">
-              {/* Tooth detail panel — slides in on top when a tooth is selected */}
-              {selectedToothFdi ? (
-                <div className="absolute inset-0 flex flex-col bg-white z-10">
-                  {/* Back bar */}
-                  <button
-                    onClick={() => setSelectedToothFdi(null)}
-                    className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/5 border-b border-border/50 shrink-0"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                    Зубная карта
-                  </button>
-                  <div className="flex-1 min-h-0">
-                    <ToothDetailPanel
-                      patientId={patient.id}
-                      toothFdi={selectedToothFdi}
-                      onClose={() => setSelectedToothFdi(null)}
-                    />
-                  </div>
+            <div className="flex-1 flex min-h-0 overflow-hidden">
+              {/* Chart column — always visible; scrolls horizontally when narrow */}
+              <div
+                className={`flex flex-col min-h-0 overflow-y-auto custom-scrollbar transition-all duration-200 ${
+                  selectedToothFdi ? "w-[52%] min-w-[180px]" : "w-full"
+                }`}
+              >
+                <div className="p-3">
+                  <p className="text-[11px] text-muted-foreground mb-2">
+                    Нажмите на зуб для просмотра и редактирования
+                  </p>
+                  <FdiChart
+                    teethData={teethMap}
+                    selectedFdi={selectedToothFdi}
+                    onToothClick={(fdi) =>
+                      setSelectedToothFdi((cur) => (cur === fdi ? null : fdi))
+                    }
+                  />
                 </div>
-              ) : (
-                <div className="h-full overflow-y-auto custom-scrollbar">
-                  <div className="p-4 space-y-1">
-                    <p className="text-xs text-muted-foreground mb-3">
-                      Нажмите на зуб для просмотра и редактирования
-                    </p>
-                    <FdiChart
-                      teethData={teethMap}
-                      selectedFdi={selectedToothFdi}
-                      onToothClick={(fdi) =>
-                        setSelectedToothFdi((cur) => (cur === fdi ? null : fdi))
-                      }
-                    />
-                  </div>
+              </div>
+
+              {/* Right-side tooth detail panel */}
+              {selectedToothFdi && (
+                <div className="flex-1 border-l border-border/50 flex flex-col min-h-0">
+                  <ToothDetailPanel
+                    patientId={patient.id}
+                    toothFdi={selectedToothFdi}
+                    onClose={() => setSelectedToothFdi(null)}
+                  />
                 </div>
               )}
             </div>
