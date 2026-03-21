@@ -58,8 +58,9 @@ router.put(
       return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
     }
 
+    const id = String(req.params["id"]);
     const user = await authService
-      .updateUser(req.params["id"]!, req.user!.clinicId, parsed.data)
+      .updateUser(id, req.user!.clinicId, parsed.data)
       .catch(next);
     if (!user) return;
 
@@ -71,7 +72,8 @@ router.delete(
   "/:id",
   roleGuard("owner"),
   async (req: Request, res: Response, next: NextFunction) => {
-    await authService.deleteUser(req.params["id"]!, req.user!.clinicId).catch(next);
+    const id = String(req.params["id"]);
+    await authService.deleteUser(id, req.user!.clinicId).catch(next);
     res.json({ success: true, message: "User deleted" });
   },
 );

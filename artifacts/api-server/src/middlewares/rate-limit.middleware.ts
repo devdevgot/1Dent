@@ -10,7 +10,9 @@ interface RateLimitOptions {
 
 function getClientKey(req: Request): string {
   const forwarded = req.headers["x-forwarded-for"];
-  const ip = Array.isArray(forwarded) ? forwarded[0] : forwarded?.split(",")[0]?.trim() ?? req.socket.remoteAddress ?? "unknown";
+  const ip = Array.isArray(forwarded)
+    ? forwarded[0]
+    : forwarded?.split(",")[0]?.trim() ?? req.socket.remoteAddress ?? "unknown";
   return ip;
 }
 
@@ -28,18 +30,21 @@ export function rateLimit(options: RateLimitOptions) {
     const redisKey = `${keyPrefix}:${clientKey}`;
 
     try {
-      const multi = redis.multi();
-      multi.incr(redisKey);
-      multi.expire(redisKey, windowSeconds);
-      const [count] = await multi.exec() as [number | null, number | null][];
+      const pipeline = redis.pipeline();
+      pipeline.incr(redisKey);
+      pipeline.expire(redisKey, windowSeconds);
+      const results = await pipeline.exec();
 
-      const current = count ?? 0;
+      const incrResult = results?.[0];
+      const count: number = Array.isArray(incrResult) && typeof incrResult[1] === "number"
+        ? incrResult[1]
+        : 1;
 
       res.setHeader("X-RateLimit-Limit", maxRequests);
-      res.setHeader("X-RateLimit-Remaining", Math.max(0, maxRequests - current));
+      res.setHeader("X-RateLimit-Remaining", Math.max(0, maxRequests - count));
       res.setHeader("X-RateLimit-Reset", Math.floor(Date.now() / 1000) + windowSeconds);
 
-      if (current > maxRequests) {
+      if (count > maxRequests) {
         res.setHeader("Retry-After", windowSeconds);
         return next(
           new AppError("Too many requests. Please try again later.", 429, "RATE_LIMIT_EXCEEDED"),

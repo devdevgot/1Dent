@@ -1,5 +1,22 @@
+import { randomBytes } from "crypto";
 import app from "./app";
 import { logger } from "./lib/logger";
+
+const isProd = process.env["NODE_ENV"] === "production";
+
+if (!process.env["JWT_SECRET"]) {
+  if (isProd) {
+    throw new Error(
+      "JWT_SECRET environment variable is required in production. Set it as a Replit Secret before deploying.",
+    );
+  }
+  const devSecret = randomBytes(64).toString("hex");
+  process.env["JWT_SECRET"] = devSecret;
+  logger.warn(
+    "JWT_SECRET is not set. A temporary random secret has been generated for this session. " +
+    "Tokens will be invalidated on restart. Set JWT_SECRET as a secret for persistent tokens.",
+  );
+}
 
 const rawPort = process.env["PORT"];
 

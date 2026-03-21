@@ -6,7 +6,9 @@ import type { UserRole } from "@workspace/db";
 function getJwtSecret(): string {
   const secret = process.env["JWT_SECRET"];
   if (!secret) {
-    throw new Error("JWT_SECRET environment variable is required. Set it before starting the server.");
+    throw new Error(
+      "JWT_SECRET is not set. The server should have set it at startup.",
+    );
   }
   return secret;
 }
