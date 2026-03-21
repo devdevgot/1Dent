@@ -6,17 +6,34 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./addInteractionRequest";
 export * from "./authResponse";
 export * from "./authResponseData";
 export * from "./clinic";
+export * from "./createPatientRequest";
 export * from "./createUserRequest";
 export * from "./errorResponse";
 export * from "./healthStatus";
+export * from "./interactionResponse";
+export * from "./interactionResponseData";
+export * from "./interactionType";
 export * from "./loginRequest";
 export * from "./meResponse";
 export * from "./meResponseData";
+export * from "./patient";
+export * from "./patientDetailResponse";
+export * from "./patientDetailResponseData";
+export * from "./patientInteraction";
+export * from "./patientResponse";
+export * from "./patientResponseData";
+export * from "./patientsListResponse";
+export * from "./patientsListResponseData";
+export * from "./patientSource";
+export * from "./patientStatus";
 export * from "./registerRequest";
 export * from "./successResponse";
+export * from "./updatePatientRequest";
+export * from "./updatePatientStatusRequest";
 export * from "./updateUserRequest";
 export * from "./user";
 export * from "./userResponse";

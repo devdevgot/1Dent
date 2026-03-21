@@ -160,3 +160,251 @@ export const DeleteUserResponse = zod.object({
   success: zod.literal(true),
   message: zod.string().optional(),
 });
+
+/**
+ * @summary List patients (doctor sees only own patients)
+ */
+export const ListPatientsResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    patients: zod.array(
+      zod.object({
+        id: zod.string(),
+        clinicId: zod.string(),
+        doctorId: zod.string().nullish(),
+        name: zod.string(),
+        phone: zod.string(),
+        age: zod.number().nullish(),
+        source: zod.enum([
+          "instagram",
+          "referral",
+          "walk_in",
+          "website",
+          "whatsapp",
+          "other",
+        ]),
+        status: zod.enum([
+          "new_request",
+          "initial_consultation",
+          "diagnostics",
+          "treatment_assigned",
+          "treatment_in_progress",
+          "post_op_monitoring",
+          "completed",
+        ]),
+        notes: zod.string().nullish(),
+        createdAt: zod.date(),
+        updatedAt: zod.date(),
+      }),
+    ),
+  }),
+});
+
+/**
+ * @summary Create a new patient
+ */
+export const createPatientBodyNameMin = 2;
+
+export const createPatientBodyPhoneMin = 5;
+
+export const CreatePatientBody = zod.object({
+  name: zod.string().min(createPatientBodyNameMin),
+  phone: zod.string().min(createPatientBodyPhoneMin),
+  age: zod.number().optional(),
+  source: zod
+    .enum(["instagram", "referral", "walk_in", "website", "whatsapp", "other"])
+    .optional(),
+  doctorId: zod.string().optional(),
+  notes: zod.string().optional(),
+});
+
+/**
+ * @summary Get patient with interactions
+ */
+export const GetPatientParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const GetPatientResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    patient: zod.object({
+      id: zod.string(),
+      clinicId: zod.string(),
+      doctorId: zod.string().nullish(),
+      name: zod.string(),
+      phone: zod.string(),
+      age: zod.number().nullish(),
+      source: zod.enum([
+        "instagram",
+        "referral",
+        "walk_in",
+        "website",
+        "whatsapp",
+        "other",
+      ]),
+      status: zod.enum([
+        "new_request",
+        "initial_consultation",
+        "diagnostics",
+        "treatment_assigned",
+        "treatment_in_progress",
+        "post_op_monitoring",
+        "completed",
+      ]),
+      notes: zod.string().nullish(),
+      createdAt: zod.date(),
+      updatedAt: zod.date(),
+    }),
+    interactions: zod.array(
+      zod.object({
+        id: zod.string(),
+        patientId: zod.string(),
+        clinicId: zod.string(),
+        userId: zod.string().nullish(),
+        type: zod.enum([
+          "note",
+          "call",
+          "whatsapp",
+          "status_change",
+          "appointment",
+        ]),
+        content: zod.string(),
+        createdAt: zod.date(),
+      }),
+    ),
+  }),
+});
+
+/**
+ * @summary Update patient
+ */
+export const UpdatePatientParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const updatePatientBodyNameMin = 2;
+
+export const updatePatientBodyPhoneMin = 5;
+
+export const UpdatePatientBody = zod.object({
+  name: zod.string().min(updatePatientBodyNameMin).optional(),
+  phone: zod.string().min(updatePatientBodyPhoneMin).optional(),
+  age: zod.number().optional(),
+  source: zod
+    .enum(["instagram", "referral", "walk_in", "website", "whatsapp", "other"])
+    .optional(),
+  doctorId: zod.string().optional(),
+  notes: zod.string().optional(),
+});
+
+export const UpdatePatientResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    patient: zod.object({
+      id: zod.string(),
+      clinicId: zod.string(),
+      doctorId: zod.string().nullish(),
+      name: zod.string(),
+      phone: zod.string(),
+      age: zod.number().nullish(),
+      source: zod.enum([
+        "instagram",
+        "referral",
+        "walk_in",
+        "website",
+        "whatsapp",
+        "other",
+      ]),
+      status: zod.enum([
+        "new_request",
+        "initial_consultation",
+        "diagnostics",
+        "treatment_assigned",
+        "treatment_in_progress",
+        "post_op_monitoring",
+        "completed",
+      ]),
+      notes: zod.string().nullish(),
+      createdAt: zod.date(),
+      updatedAt: zod.date(),
+    }),
+  }),
+});
+
+/**
+ * @summary Delete patient (owner/admin only)
+ */
+export const DeletePatientParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const DeletePatientResponse = zod.object({
+  success: zod.literal(true),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Update patient status (kanban move)
+ */
+export const UpdatePatientStatusParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const UpdatePatientStatusBody = zod.object({
+  status: zod.enum([
+    "new_request",
+    "initial_consultation",
+    "diagnostics",
+    "treatment_assigned",
+    "treatment_in_progress",
+    "post_op_monitoring",
+    "completed",
+  ]),
+});
+
+export const UpdatePatientStatusResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    patient: zod.object({
+      id: zod.string(),
+      clinicId: zod.string(),
+      doctorId: zod.string().nullish(),
+      name: zod.string(),
+      phone: zod.string(),
+      age: zod.number().nullish(),
+      source: zod.enum([
+        "instagram",
+        "referral",
+        "walk_in",
+        "website",
+        "whatsapp",
+        "other",
+      ]),
+      status: zod.enum([
+        "new_request",
+        "initial_consultation",
+        "diagnostics",
+        "treatment_assigned",
+        "treatment_in_progress",
+        "post_op_monitoring",
+        "completed",
+      ]),
+      notes: zod.string().nullish(),
+      createdAt: zod.date(),
+      updatedAt: zod.date(),
+    }),
+  }),
+});
+
+/**
+ * @summary Add interaction to patient history
+ */
+export const AddPatientInteractionParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const AddPatientInteractionBody = zod.object({
+  type: zod.enum(["note", "call", "whatsapp", "status_change", "appointment"]),
+  content: zod.string().min(1),
+});

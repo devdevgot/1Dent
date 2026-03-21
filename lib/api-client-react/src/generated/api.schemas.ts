@@ -111,3 +111,130 @@ export interface UsersListResponse {
   success: boolean;
   data: UsersListResponseData;
 }
+
+export type PatientStatus = (typeof PatientStatus)[keyof typeof PatientStatus];
+
+export const PatientStatus = {
+  new_request: "new_request",
+  initial_consultation: "initial_consultation",
+  diagnostics: "diagnostics",
+  treatment_assigned: "treatment_assigned",
+  treatment_in_progress: "treatment_in_progress",
+  post_op_monitoring: "post_op_monitoring",
+  completed: "completed",
+} as const;
+
+export type PatientSource = (typeof PatientSource)[keyof typeof PatientSource];
+
+export const PatientSource = {
+  instagram: "instagram",
+  referral: "referral",
+  walk_in: "walk_in",
+  website: "website",
+  whatsapp: "whatsapp",
+  other: "other",
+} as const;
+
+export type InteractionType =
+  (typeof InteractionType)[keyof typeof InteractionType];
+
+export const InteractionType = {
+  note: "note",
+  call: "call",
+  whatsapp: "whatsapp",
+  status_change: "status_change",
+  appointment: "appointment",
+} as const;
+
+export interface Patient {
+  id: string;
+  clinicId: string;
+  doctorId?: string | null;
+  name: string;
+  phone: string;
+  age?: number | null;
+  source: PatientSource;
+  status: PatientStatus;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PatientInteraction {
+  id: string;
+  patientId: string;
+  clinicId: string;
+  userId?: string | null;
+  type: InteractionType;
+  content: string;
+  createdAt: string;
+}
+
+export interface CreatePatientRequest {
+  /** @minLength 2 */
+  name: string;
+  /** @minLength 5 */
+  phone: string;
+  age?: number;
+  source?: PatientSource;
+  doctorId?: string;
+  notes?: string;
+}
+
+export interface UpdatePatientRequest {
+  /** @minLength 2 */
+  name?: string;
+  /** @minLength 5 */
+  phone?: string;
+  age?: number;
+  source?: PatientSource;
+  doctorId?: string;
+  notes?: string;
+}
+
+export interface UpdatePatientStatusRequest {
+  status: PatientStatus;
+}
+
+export interface AddInteractionRequest {
+  type: InteractionType;
+  /** @minLength 1 */
+  content: string;
+}
+
+export type PatientResponseData = {
+  patient: Patient;
+};
+
+export interface PatientResponse {
+  success: boolean;
+  data: PatientResponseData;
+}
+
+export type PatientDetailResponseData = {
+  patient: Patient;
+  interactions: PatientInteraction[];
+};
+
+export interface PatientDetailResponse {
+  success: boolean;
+  data: PatientDetailResponseData;
+}
+
+export type PatientsListResponseData = {
+  patients: Patient[];
+};
+
+export interface PatientsListResponse {
+  success: boolean;
+  data: PatientsListResponseData;
+}
+
+export type InteractionResponseData = {
+  interaction: PatientInteraction;
+};
+
+export interface InteractionResponse {
+  success: boolean;
+  data: InteractionResponseData;
+}

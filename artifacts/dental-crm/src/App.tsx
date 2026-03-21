@@ -13,6 +13,7 @@ import { getRoleDashboardPath } from "@/lib/role-redirect";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
 import Dashboard from "@/pages/dashboard";
+import KanbanPage from "@/pages/kanban";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -90,12 +91,14 @@ function Router() {
         <ProtectedRoute component={Dashboard} allowedRoles={['warehouse']} />
       </Route>
 
-      {/* Feature Routes (WIP placeholders until Tasks #2-#8 complete) */}
+      {/* Kanban board — full implementation */}
       <Route path="/kanban">
-        <ProtectedRoute component={() => <div className="p-4 bg-white rounded-xl shadow-sm border h-full">Kanban (WIP)</div>} allowedRoles={['owner', 'admin']} />
+        <ProtectedRoute component={KanbanPage} allowedRoles={['owner', 'admin', 'doctor']} />
       </Route>
+
+      {/* Feature Routes (WIP placeholders until Tasks #3-#8 complete) */}
       <Route path="/patients">
-        <ProtectedRoute component={() => <div className="p-4 bg-white rounded-xl shadow-sm border h-full">Patients (WIP)</div>} allowedRoles={['owner', 'admin', 'doctor']} />
+        <ProtectedRoute component={KanbanPage} allowedRoles={['owner', 'admin', 'doctor']} />
       </Route>
       <Route path="/chat">
         <ProtectedRoute component={() => <div className="p-4 bg-white rounded-xl shadow-sm border h-full">Chat & Red Alert (WIP)</div>} allowedRoles={['owner', 'admin']} />

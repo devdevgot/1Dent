@@ -72,6 +72,27 @@ Every package extends `tsconfig.base.json` which sets `composite: true`. The roo
 - `pnpm run build` — runs `typecheck` first, then recursively runs `build` in all packages that define it
 - `pnpm run typecheck` — runs `tsc --build --emitDeclarationOnly` using project references
 
+## Implemented Features
+
+### Task #1 — Auth Foundation
+- JWT httpOnly cookie auth (register/login/logout/me)
+- Multi-tenant clinic isolation via clinicId in JWT
+- Role-based access: owner/admin/doctor/accountant/warehouse
+- Frontend: login/register pages, protected routes, role-based sidebar, role-specific dashboard redirects
+
+### Task #2 — Kanban Board & Patient Card
+- DB schema: `patients` + `patient_interactions` tables (Drizzle, migrated)
+- Patients module: controller → service → repository
+- Phone masking: doctors see `+* *** *** **XX` format
+- Doctor isolation: doctors only see their own patients (repository-level)
+- Kanban UI: 7-column board with drag-and-drop (dnd-kit)
+- Columns: Новая заявка → Консультация → Диагностика → Назначено → Лечение → Постоп контроль → Завершено
+- Patient card: name, masked phone, source badge, date, age
+- Patient detail side panel: full data, interaction history, status change, add interaction
+- Create patient dialog: name/phone/age/source/doctor/notes
+- Optimistic kanban drag updates with server reconciliation
+- OpenAPI spec extended with patient endpoints; codegen re-run
+
 ## Packages
 
 ### `artifacts/api-server` (`@workspace/api-server`)

@@ -17,14 +17,22 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AddInteractionRequest,
   AuthResponse,
+  CreatePatientRequest,
   CreateUserRequest,
   ErrorResponse,
   HealthStatus,
+  InteractionResponse,
   LoginRequest,
   MeResponse,
+  PatientDetailResponse,
+  PatientResponse,
+  PatientsListResponse,
   RegisterRequest,
   SuccessResponse,
+  UpdatePatientRequest,
+  UpdatePatientStatusRequest,
   UpdateUserRequest,
   UserResponse,
   UsersListResponse,
@@ -753,4 +761,598 @@ export const useDeleteUser = <
   TContext
 > => {
   return useMutation(getDeleteUserMutationOptions(options));
+};
+
+/**
+ * @summary List patients (doctor sees only own patients)
+ */
+export const getListPatientsUrl = () => {
+  return `/api/patients`;
+};
+
+export const listPatients = async (
+  options?: RequestInit,
+): Promise<PatientsListResponse> => {
+  return customFetch<PatientsListResponse>(getListPatientsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListPatientsQueryKey = () => {
+  return [`/api/patients`] as const;
+};
+
+export const getListPatientsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPatients>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listPatients>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListPatientsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listPatients>>> = ({
+    signal,
+  }) => listPatients({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPatients>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListPatientsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPatients>>
+>;
+export type ListPatientsQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary List patients (doctor sees only own patients)
+ */
+
+export function useListPatients<
+  TData = Awaited<ReturnType<typeof listPatients>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listPatients>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListPatientsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a new patient
+ */
+export const getCreatePatientUrl = () => {
+  return `/api/patients`;
+};
+
+export const createPatient = async (
+  createPatientRequest: CreatePatientRequest,
+  options?: RequestInit,
+): Promise<PatientResponse> => {
+  return customFetch<PatientResponse>(getCreatePatientUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createPatientRequest),
+  });
+};
+
+export const getCreatePatientMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createPatient>>,
+    TError,
+    { data: BodyType<CreatePatientRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createPatient>>,
+  TError,
+  { data: BodyType<CreatePatientRequest> },
+  TContext
+> => {
+  const mutationKey = ["createPatient"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createPatient>>,
+    { data: BodyType<CreatePatientRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createPatient(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreatePatientMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createPatient>>
+>;
+export type CreatePatientMutationBody = BodyType<CreatePatientRequest>;
+export type CreatePatientMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Create a new patient
+ */
+export const useCreatePatient = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createPatient>>,
+    TError,
+    { data: BodyType<CreatePatientRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createPatient>>,
+  TError,
+  { data: BodyType<CreatePatientRequest> },
+  TContext
+> => {
+  return useMutation(getCreatePatientMutationOptions(options));
+};
+
+/**
+ * @summary Get patient with interactions
+ */
+export const getGetPatientUrl = (id: string) => {
+  return `/api/patients/${id}`;
+};
+
+export const getPatient = async (
+  id: string,
+  options?: RequestInit,
+): Promise<PatientDetailResponse> => {
+  return customFetch<PatientDetailResponse>(getGetPatientUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetPatientQueryKey = (id: string) => {
+  return [`/api/patients/${id}`] as const;
+};
+
+export const getGetPatientQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPatient>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPatient>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetPatientQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getPatient>>> = ({
+    signal,
+  }) => getPatient(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPatient>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetPatientQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPatient>>
+>;
+export type GetPatientQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get patient with interactions
+ */
+
+export function useGetPatient<
+  TData = Awaited<ReturnType<typeof getPatient>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPatient>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPatientQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update patient
+ */
+export const getUpdatePatientUrl = (id: string) => {
+  return `/api/patients/${id}`;
+};
+
+export const updatePatient = async (
+  id: string,
+  updatePatientRequest: UpdatePatientRequest,
+  options?: RequestInit,
+): Promise<PatientResponse> => {
+  return customFetch<PatientResponse>(getUpdatePatientUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updatePatientRequest),
+  });
+};
+
+export const getUpdatePatientMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updatePatient>>,
+    TError,
+    { id: string; data: BodyType<UpdatePatientRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updatePatient>>,
+  TError,
+  { id: string; data: BodyType<UpdatePatientRequest> },
+  TContext
+> => {
+  const mutationKey = ["updatePatient"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updatePatient>>,
+    { id: string; data: BodyType<UpdatePatientRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updatePatient(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdatePatientMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updatePatient>>
+>;
+export type UpdatePatientMutationBody = BodyType<UpdatePatientRequest>;
+export type UpdatePatientMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update patient
+ */
+export const useUpdatePatient = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updatePatient>>,
+    TError,
+    { id: string; data: BodyType<UpdatePatientRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updatePatient>>,
+  TError,
+  { id: string; data: BodyType<UpdatePatientRequest> },
+  TContext
+> => {
+  return useMutation(getUpdatePatientMutationOptions(options));
+};
+
+/**
+ * @summary Delete patient (owner/admin only)
+ */
+export const getDeletePatientUrl = (id: string) => {
+  return `/api/patients/${id}`;
+};
+
+export const deletePatient = async (
+  id: string,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getDeletePatientUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeletePatientMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deletePatient>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deletePatient>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["deletePatient"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deletePatient>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deletePatient(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeletePatientMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deletePatient>>
+>;
+
+export type DeletePatientMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete patient (owner/admin only)
+ */
+export const useDeletePatient = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deletePatient>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deletePatient>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getDeletePatientMutationOptions(options));
+};
+
+/**
+ * @summary Update patient status (kanban move)
+ */
+export const getUpdatePatientStatusUrl = (id: string) => {
+  return `/api/patients/${id}/status`;
+};
+
+export const updatePatientStatus = async (
+  id: string,
+  updatePatientStatusRequest: UpdatePatientStatusRequest,
+  options?: RequestInit,
+): Promise<PatientResponse> => {
+  return customFetch<PatientResponse>(getUpdatePatientStatusUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updatePatientStatusRequest),
+  });
+};
+
+export const getUpdatePatientStatusMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updatePatientStatus>>,
+    TError,
+    { id: string; data: BodyType<UpdatePatientStatusRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updatePatientStatus>>,
+  TError,
+  { id: string; data: BodyType<UpdatePatientStatusRequest> },
+  TContext
+> => {
+  const mutationKey = ["updatePatientStatus"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updatePatientStatus>>,
+    { id: string; data: BodyType<UpdatePatientStatusRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updatePatientStatus(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdatePatientStatusMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updatePatientStatus>>
+>;
+export type UpdatePatientStatusMutationBody =
+  BodyType<UpdatePatientStatusRequest>;
+export type UpdatePatientStatusMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update patient status (kanban move)
+ */
+export const useUpdatePatientStatus = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updatePatientStatus>>,
+    TError,
+    { id: string; data: BodyType<UpdatePatientStatusRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updatePatientStatus>>,
+  TError,
+  { id: string; data: BodyType<UpdatePatientStatusRequest> },
+  TContext
+> => {
+  return useMutation(getUpdatePatientStatusMutationOptions(options));
+};
+
+/**
+ * @summary Add interaction to patient history
+ */
+export const getAddPatientInteractionUrl = (id: string) => {
+  return `/api/patients/${id}/interactions`;
+};
+
+export const addPatientInteraction = async (
+  id: string,
+  addInteractionRequest: AddInteractionRequest,
+  options?: RequestInit,
+): Promise<InteractionResponse> => {
+  return customFetch<InteractionResponse>(getAddPatientInteractionUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(addInteractionRequest),
+  });
+};
+
+export const getAddPatientInteractionMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addPatientInteraction>>,
+    TError,
+    { id: string; data: BodyType<AddInteractionRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof addPatientInteraction>>,
+  TError,
+  { id: string; data: BodyType<AddInteractionRequest> },
+  TContext
+> => {
+  const mutationKey = ["addPatientInteraction"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof addPatientInteraction>>,
+    { id: string; data: BodyType<AddInteractionRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return addPatientInteraction(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AddPatientInteractionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof addPatientInteraction>>
+>;
+export type AddPatientInteractionMutationBody = BodyType<AddInteractionRequest>;
+export type AddPatientInteractionMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Add interaction to patient history
+ */
+export const useAddPatientInteraction = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addPatientInteraction>>,
+    TError,
+    { id: string; data: BodyType<AddInteractionRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof addPatientInteraction>>,
+  TError,
+  { id: string; data: BodyType<AddInteractionRequest> },
+  TContext
+> => {
+  return useMutation(getAddPatientInteractionMutationOptions(options));
 };

@@ -206,6 +206,177 @@ paths:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
 
+  /patients:
+    get:
+      operationId: listPatients
+      tags: [patients]
+      summary: List patients (doctor sees only own patients)
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: List of patients
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientsListResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createPatient
+      tags: [patients]
+      summary: Create a new patient
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePatientRequest"
+      responses:
+        "201":
+          description: Patient created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /patients/{id}:
+    get:
+      operationId: getPatient
+      tags: [patients]
+      summary: Get patient with interactions
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Patient with interactions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientDetailResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updatePatient
+      tags: [patients]
+      summary: Update patient
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePatientRequest"
+      responses:
+        "200":
+          description: Patient updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientResponse"
+    delete:
+      operationId: deletePatient
+      tags: [patients]
+      summary: Delete patient (owner/admin only)
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Patient deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /patients/{id}/status:
+    patch:
+      operationId: updatePatientStatus
+      tags: [patients]
+      summary: Update patient status (kanban move)
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePatientStatusRequest"
+      responses:
+        "200":
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientResponse"
+
+  /patients/{id}/interactions:
+    post:
+      operationId: addPatientInteraction
+      tags: [patients]
+      summary: Add interaction to patient history
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddInteractionRequest"
+      responses:
+        "201":
+          description: Interaction added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InteractionResponse"
+
 components:
   securitySchemes:
     cookieAuth:
@@ -423,6 +594,237 @@ components:
                 $ref: "#/components/schemas/User"
           required:
             - users
+      required:
+        - success
+        - data
+
+    PatientStatus:
+      type: string
+      enum:
+        - new_request
+        - initial_consultation
+        - diagnostics
+        - treatment_assigned
+        - treatment_in_progress
+        - post_op_monitoring
+        - completed
+
+    PatientSource:
+      type: string
+      enum:
+        - instagram
+        - referral
+        - walk_in
+        - website
+        - whatsapp
+        - other
+
+    InteractionType:
+      type: string
+      enum:
+        - note
+        - call
+        - whatsapp
+        - status_change
+        - appointment
+
+    Patient:
+      type: object
+      properties:
+        id:
+          type: string
+        clinicId:
+          type: string
+        doctorId:
+          type: string
+          nullable: true
+        name:
+          type: string
+        phone:
+          type: string
+        age:
+          type: integer
+          nullable: true
+        source:
+          $ref: "#/components/schemas/PatientSource"
+        status:
+          $ref: "#/components/schemas/PatientStatus"
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - clinicId
+        - name
+        - phone
+        - source
+        - status
+        - createdAt
+        - updatedAt
+
+    PatientInteraction:
+      type: object
+      properties:
+        id:
+          type: string
+        patientId:
+          type: string
+        clinicId:
+          type: string
+        userId:
+          type: string
+          nullable: true
+        type:
+          $ref: "#/components/schemas/InteractionType"
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - patientId
+        - clinicId
+        - type
+        - content
+        - createdAt
+
+    CreatePatientRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+        phone:
+          type: string
+          minLength: 5
+        age:
+          type: integer
+        source:
+          $ref: "#/components/schemas/PatientSource"
+        doctorId:
+          type: string
+        notes:
+          type: string
+      required:
+        - name
+        - phone
+
+    UpdatePatientRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+        phone:
+          type: string
+          minLength: 5
+        age:
+          type: integer
+        source:
+          $ref: "#/components/schemas/PatientSource"
+        doctorId:
+          type: string
+        notes:
+          type: string
+
+    UpdatePatientStatusRequest:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/PatientStatus"
+      required:
+        - status
+
+    AddInteractionRequest:
+      type: object
+      properties:
+        type:
+          $ref: "#/components/schemas/InteractionType"
+        content:
+          type: string
+          minLength: 1
+      required:
+        - type
+        - content
+
+    PatientResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            patient:
+              $ref: "#/components/schemas/Patient"
+          required:
+            - patient
+      required:
+        - success
+        - data
+
+    PatientDetailResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            patient:
+              $ref: "#/components/schemas/Patient"
+            interactions:
+              type: array
+              items:
+                $ref: "#/components/schemas/PatientInteraction"
+          required:
+            - patient
+            - interactions
+      required:
+        - success
+        - data
+
+    PatientsListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            patients:
+              type: array
+              items:
+                $ref: "#/components/schemas/Patient"
+          required:
+            - patients
+      required:
+        - success
+        - data
+
+    InteractionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            interaction:
+              $ref: "#/components/schemas/PatientInteraction"
+          required:
+            - interaction
       required:
         - success
         - data
