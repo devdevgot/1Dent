@@ -93,7 +93,7 @@ router.post("/", patientWriteRoles, async (req: Request, res: Response, next: Ne
     );
   }
   const result = await service
-    .create(req.user!.clinicId, parsed.data, req.user!.role)
+    .create(req.user!.clinicId, parsed.data, req.user!.role, req.user!.userId)
     .catch(next);
   if (!result) return;
   res.status(201).json({ success: true, data: { patient: result } });

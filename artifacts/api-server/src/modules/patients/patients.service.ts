@@ -72,10 +72,15 @@ export class PatientsService {
       notes?: string;
     },
     requestingRole: UserRole,
+    requestingUserId: string,
   ): Promise<PatientDTO> {
     if (!["owner", "admin", "doctor"].includes(requestingRole)) {
       throw new ForbiddenError("Insufficient permissions");
     }
+
+    // Doctors always own the patients they create; ignore client-provided doctorId
+    const resolvedDoctorId =
+      requestingRole === "doctor" ? requestingUserId : (data.doctorId ?? null);
 
     const patient = await this.repo.create({
       id: randomUUID(),
@@ -84,7 +89,7 @@ export class PatientsService {
       phone: data.phone,
       age: data.age ?? null,
       source: data.source ?? "other",
-      doctorId: data.doctorId ?? null,
+      doctorId: resolvedDoctorId,
       notes: data.notes ?? null,
       status: "new_request",
     });
