@@ -159,9 +159,7 @@ const TOP_PAD = 2;
 const MID_GAP = 32;
 
 const upperToothY  = TOP_PAD;
-const upperLabelY  = upperToothY + TOOTH_H + 11;
 const midlineY     = upperToothY + TOOTH_H + 16;
-const lowerLabelY  = upperToothY + TOOTH_H + 23;
 const lowerToothY  = upperToothY + TOOTH_H + MID_GAP;
 const SVG_H        = lowerToothY + TOOTH_H + TOP_PAD;
 
@@ -197,8 +195,11 @@ function ToothGlyph({
     <g
       className="cursor-pointer"
       onClick={onClick}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
       role="button"
+      tabIndex={0}
       aria-label={`Зуб ${fdi}: ${cfg.label}`}
+      aria-pressed={isSelected}
     >
       {/* Selected ring */}
       {isSelected && (
