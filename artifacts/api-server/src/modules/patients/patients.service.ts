@@ -118,7 +118,13 @@ export class PatientsService {
       throw new ForbiddenError("Access denied");
     }
 
-    const updated = await this.repo.update(id, clinicId, data);
+    // Doctors cannot reassign patients to other doctors
+    const sanitizedData = { ...data };
+    if (requestingRole === "doctor") {
+      delete sanitizedData.doctorId;
+    }
+
+    const updated = await this.repo.update(id, clinicId, sanitizedData);
     if (!updated) throw new NotFoundError("Patient not found");
 
     return { ...updated, phone: maskPhone(updated.phone, requestingRole) };
@@ -140,6 +146,18 @@ export class PatientsService {
 
     const updated = await this.repo.updateStatus(id, clinicId, status);
     if (!updated) throw new NotFoundError("Patient not found");
+
+    // Auto-record a status_change interaction for audit trail
+    if (existing.status !== status) {
+      await this.repo.createInteraction({
+        id: randomUUID(),
+        patientId: id,
+        clinicId,
+        userId: requestingUserId,
+        type: "status_change",
+        content: `${existing.status} → ${status}`,
+      });
+    }
 
     return { ...updated, phone: maskPhone(updated.phone, requestingRole) };
   }

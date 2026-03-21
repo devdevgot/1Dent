@@ -2,7 +2,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Calendar, User } from "lucide-react";
 import type { Patient } from "@workspace/api-client-react";
-import { SOURCE_LABELS, SOURCE_COLORS } from "@/lib/patient-utils";
+import { SOURCE_LABELS, SOURCE_COLORS, KANBAN_COLUMNS, COLUMN_HEADER_COLOR } from "@/lib/patient-utils";
 import { useKanbanStore } from "@/hooks/use-kanban";
 
 interface PatientCardProps {
@@ -28,6 +28,8 @@ export function PatientCard({ patient }: PatientCardProps) {
 
   const sourceLabel = SOURCE_LABELS[patient.source] ?? patient.source;
   const sourceColor = SOURCE_COLORS[patient.source] ?? "bg-slate-100 text-slate-600";
+  const statusLabel = KANBAN_COLUMNS.find((c) => c.id === patient.status)?.label ?? patient.status;
+  const statusColor = COLUMN_HEADER_COLOR[patient.status] ?? "text-slate-600 bg-slate-100";
 
   const formattedDate = new Date(patient.createdAt).toLocaleDateString("ru-RU", {
     day: "2-digit",
@@ -57,9 +59,13 @@ export function PatientCard({ patient }: PatientCardProps) {
         </span>
       </div>
 
-      <p className="text-xs text-muted-foreground mb-2.5 font-mono tracking-tight">
+      <p className="text-xs text-muted-foreground mb-2 font-mono tracking-tight">
         {patient.phone}
       </p>
+
+      <span className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded-full mb-2.5 ${statusColor}`}>
+        {statusLabel}
+      </span>
 
       <div className="flex items-center justify-between text-[11px] text-muted-foreground">
         <div className="flex items-center gap-1">
