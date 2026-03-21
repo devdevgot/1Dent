@@ -1,0 +1,20 @@
+packages:
+  "zustand": "State management for authentication and user context"
+  "react-hook-form": "Form state management"
+  "@hookform/resolvers": "Zod resolver for form validation"
+  "framer-motion": "Animations and page transitions"
+  "lucide-react": "Beautiful icons for UI elements and sidebar"
+  "clsx": "Utility for constructing className strings"
+  "tailwind-merge": "Utility to cleanly merge tailwind classes"
+
+images:
+  - path: "artifacts/dental-crm/public/images/auth-bg.png"
+    description: "Abstract 3D gradient mesh in clean medical white and deep cyan blue, soft lighting, professional dental tech aesthetic, minimalist"
+    aspect_ratio: "9:16"
+  - path: "artifacts/dental-crm/public/images/logo.png"
+    description: "Minimalist geometric tooth logo mark in modern deep blue gradient, transparent background, premium SaaS aesthetic"
+    aspect_ratio: "1:1"
+
+notes:
+  - "Authentication expects standard JSON endpoints and returns a cookie for session."
+  - "Zustand is used to manage global auth state seamlessly without context boilerplate."

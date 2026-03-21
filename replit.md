@@ -2,7 +2,7 @@
 
 ## Overview
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+Dental CRM — SaaS platform for dental clinics with multi-tenant architecture. Anti-theft system protecting patient data from staff copying.
 
 ## Stack
 
@@ -15,6 +15,30 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
+- **Auth**: JWT (httpOnly cookies), bcryptjs
+- **Cache/Redis**: ioredis (optional, no REDIS_URL = disabled)
+- **Frontend**: React + Vite + TypeScript, Zustand, TanStack Query, Tailwind CSS, react-hook-form
+
+## Multi-tenancy
+
+Every clinic is a separate tenant, isolated by `clinicId` in JWT payload and all repository queries.
+
+## Architecture
+
+Backend follows modular monolith pattern: `modules/<feature>/controller → service → repository`.
+Standard API response format: `{ success, data?, error?, code?, message? }`.
+
+## Roles
+
+- `owner` — full access
+- `admin` — operational management
+- `doctor` — own patients only, masked phone numbers
+- `accountant` — read-only financials
+- `warehouse` — read-only inventory
+
+## Phone masking
+
+Doctors never see full phone numbers — server returns `+7 *** *** **XX` format.
 
 ## Structure
 
