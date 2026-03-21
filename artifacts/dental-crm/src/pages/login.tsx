@@ -33,7 +33,7 @@ export default function Login() {
       onError: (error) => {
         toast({
           title: "Login failed",
-          description: error.error || "Please check your credentials and try again.",
+          description: (error.data as { error?: string })?.error || "Please check your credentials and try again.",
           variant: "destructive"
         });
       }

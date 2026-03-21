@@ -60,7 +60,7 @@ router.put(
 
     const id = String(req.params["id"]);
     const user = await authService
-      .updateUser(id, req.user!.clinicId, parsed.data)
+      .updateUser(id, req.user!.clinicId, parsed.data, req.user!.role)
       .catch(next);
     if (!user) return;
 
@@ -73,7 +73,7 @@ router.delete(
   roleGuard("owner"),
   async (req: Request, res: Response, next: NextFunction) => {
     const id = String(req.params["id"]);
-    await authService.deleteUser(id, req.user!.clinicId).catch(next);
+    await authService.deleteUser(id, req.user!.clinicId, req.user!.role).catch(next);
     res.json({ success: true, message: "User deleted" });
   },
 );

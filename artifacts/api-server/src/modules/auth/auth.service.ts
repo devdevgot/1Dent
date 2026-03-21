@@ -133,21 +133,32 @@ export class AuthService {
     id: string,
     clinicId: string,
     data: Partial<Pick<User, "name" | "role">>,
+    requestingRole: UserRole,
   ): Promise<Omit<User, "passwordHash">> {
-    const user = await this.repo.findUserById(id);
-    if (!user || user.clinicId !== clinicId) throw new NotFoundError("User not found");
+    const user = await this.repo.findUserByIdAndClinic(id, clinicId);
+    if (!user) throw new NotFoundError("User not found");
 
-    const updated = await this.repo.updateUser(id, data);
+    if (data.role === "owner" && requestingRole !== "owner") {
+      throw new ForbiddenError("Only owners can promote users to owner role");
+    }
+    if (user.role === "owner" && requestingRole !== "owner") {
+      throw new ForbiddenError("Only owners can modify other owners");
+    }
+
+    const updated = await this.repo.updateUser(id, clinicId, data);
     if (!updated) throw new NotFoundError("User not found");
 
     const { passwordHash: _, ...safeUser } = updated;
     return safeUser;
   }
 
-  async deleteUser(id: string, clinicId: string): Promise<void> {
-    const user = await this.repo.findUserById(id);
-    if (!user || user.clinicId !== clinicId) throw new NotFoundError("User not found");
-    await this.repo.deleteUser(id);
+  async deleteUser(id: string, clinicId: string, requestingRole: UserRole): Promise<void> {
+    const user = await this.repo.findUserByIdAndClinic(id, clinicId);
+    if (!user) throw new NotFoundError("User not found");
+    if (user.role === "owner" && requestingRole !== "owner") {
+      throw new ForbiddenError("Only owners can delete other owners");
+    }
+    await this.repo.deleteUser(id, clinicId);
   }
 
   private generateToken(user: User, clinicId: string): string {

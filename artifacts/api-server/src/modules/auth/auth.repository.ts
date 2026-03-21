@@ -1,5 +1,5 @@
 import { db, usersTable, clinicsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import type { InsertUser, InsertClinic, User, Clinic } from "@workspace/db";
 
 export class AuthRepository {
@@ -17,6 +17,15 @@ export class AuthRepository {
       .select()
       .from(usersTable)
       .where(eq(usersTable.id, id))
+      .limit(1);
+    return user;
+  }
+
+  async findUserByIdAndClinic(id: string, clinicId: string): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(usersTable)
+      .where(and(eq(usersTable.id, id), eq(usersTable.clinicId, clinicId)))
       .limit(1);
     return user;
   }
@@ -47,16 +56,22 @@ export class AuthRepository {
       .where(eq(usersTable.clinicId, clinicId));
   }
 
-  async updateUser(id: string, data: Partial<Pick<User, "name" | "role">>): Promise<User | undefined> {
+  async updateUser(
+    id: string,
+    clinicId: string,
+    data: Partial<Pick<User, "name" | "role">>,
+  ): Promise<User | undefined> {
     const [user] = await db
       .update(usersTable)
       .set(data)
-      .where(eq(usersTable.id, id))
+      .where(and(eq(usersTable.id, id), eq(usersTable.clinicId, clinicId)))
       .returning();
     return user;
   }
 
-  async deleteUser(id: string): Promise<void> {
-    await db.delete(usersTable).where(eq(usersTable.id, id));
+  async deleteUser(id: string, clinicId: string): Promise<void> {
+    await db
+      .delete(usersTable)
+      .where(and(eq(usersTable.id, id), eq(usersTable.clinicId, clinicId)));
   }
 }

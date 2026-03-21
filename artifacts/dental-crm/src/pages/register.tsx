@@ -33,7 +33,7 @@ export default function Register() {
       onError: (error) => {
         toast({
           title: "Registration failed",
-          description: error.error || "An error occurred during registration.",
+          description: (error.data as { error?: string })?.error || "An error occurred during registration.",
           variant: "destructive"
         });
       }

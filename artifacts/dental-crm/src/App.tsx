@@ -4,9 +4,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-import { useGetMe } from "@workspace/api-client-react";
+import { useGetMe, getGetMeQueryKey } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/components/auth/protected-route";
+import { getRoleDashboardPath } from "@/lib/role-redirect";
 
 // Pages
 import Login from "@/pages/login";
@@ -18,13 +19,10 @@ const queryClient = new QueryClient();
 
 function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setAuth, clearAuth, setLoading } = useAuthStore();
-  const [location] = useLocation();
-  
-  // Only fetch /me if we are not on public routes (or we can always fetch to redirect logged in users)
-  const isPublicRoute = location === "/login" || location === "/register";
 
   const { data, isLoading, error } = useGetMe({
     query: {
+      queryKey: getGetMeQueryKey(),
       retry: false,
       refetchOnWindowFocus: false,
     }
@@ -54,29 +52,31 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
 }
 
 function Router() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   const [location, setLocation] = useLocation();
 
-  // Redirect authenticated users away from public routes
+  const roleDashboard = user ? getRoleDashboardPath(user.role) : "/dashboard";
+
+  // Redirect authenticated users away from public routes to their role-specific dashboard
   useEffect(() => {
     if (isAuthenticated && (location === "/login" || location === "/register")) {
-      setLocation("/dashboard");
+      setLocation(roleDashboard);
     }
-  }, [isAuthenticated, location, setLocation]);
+  }, [isAuthenticated, location, setLocation, roleDashboard]);
 
-  // Root redirect
+  // Root redirect: authenticated → role dashboard, unauthenticated → login
   useEffect(() => {
     if (location === "/") {
-      setLocation(isAuthenticated ? "/dashboard" : "/login");
+      setLocation(isAuthenticated ? roleDashboard : "/login");
     }
-  }, [location, isAuthenticated, setLocation]);
+  }, [location, isAuthenticated, setLocation, roleDashboard]);
 
   return (
     <Switch>
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
-      
-      {/* Protected Routes */}
+
+      {/* Protected Routes — each role maps to its own dashboard path */}
       <Route path="/dashboard">
         <ProtectedRoute component={Dashboard} allowedRoles={['owner', 'admin']} />
       </Route>
@@ -100,7 +100,7 @@ function Router() {
       <Route path="/chat">
         <ProtectedRoute component={() => <div className="p-4 bg-white rounded-xl shadow-sm border h-full">Chat & Red Alert (WIP)</div>} allowedRoles={['owner', 'admin']} />
       </Route>
-      
+
       {/* 404 */}
       <Route path="/:rest*" component={NotFound} />
     </Switch>
