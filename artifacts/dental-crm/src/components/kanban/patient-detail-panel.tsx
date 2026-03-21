@@ -166,13 +166,9 @@ export function PatientDetailPanel() {
           <>
           {/* ── Dental Chart Tab ── */}
           {activeTab === "dental" && (
-            <div className="flex-1 flex min-h-0 overflow-hidden">
-              {/* Chart column — always visible; scrolls horizontally when narrow */}
-              <div
-                className={`flex flex-col min-h-0 overflow-y-auto custom-scrollbar transition-all duration-200 ${
-                  selectedToothFdi ? "w-[52%] min-w-[180px]" : "w-full"
-                }`}
-              >
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
+              {/* Chart — always full width */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
                 <div className="p-3">
                   <p className="text-[11px] text-muted-foreground mb-2">
                     Нажмите на зуб для просмотра и редактирования
@@ -187,16 +183,37 @@ export function PatientDetailPanel() {
                 </div>
               </div>
 
-              {/* Right-side tooth detail panel */}
-              {selectedToothFdi && (
-                <div className="flex-1 border-l border-border/50 flex flex-col min-h-0">
-                  <ToothDetailPanel
-                    patientId={patient.id}
-                    toothFdi={selectedToothFdi}
-                    onClose={() => setSelectedToothFdi(null)}
-                  />
+              {/* Bottom-sheet backdrop */}
+              <div
+                className={`absolute inset-0 bg-black/20 transition-opacity duration-300 ${
+                  selectedToothFdi ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+                }`}
+                onClick={() => setSelectedToothFdi(null)}
+              />
+
+              {/* Bottom sheet — slides up from bottom */}
+              <div
+                className={`absolute bottom-0 left-0 right-0 flex flex-col bg-background rounded-t-2xl shadow-2xl border-t border-border transition-transform duration-300 ease-out ${
+                  selectedToothFdi ? "translate-y-0" : "translate-y-full"
+                }`}
+                style={{ maxHeight: "75%" }}
+              >
+                {/* Drag handle */}
+                <div className="flex items-center justify-center pt-3 pb-1 shrink-0">
+                  <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
                 </div>
-              )}
+
+                {/* Content */}
+                <div className="flex-1 min-h-0">
+                  {selectedToothFdi && (
+                    <ToothDetailPanel
+                      patientId={patient.id}
+                      toothFdi={selectedToothFdi}
+                      onClose={() => setSelectedToothFdi(null)}
+                    />
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
