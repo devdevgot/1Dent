@@ -68,10 +68,9 @@ export class MessagesService {
     });
 
     if (alertFlag) {
-      const REDIS_URL = process.env["REDIS_URL"];
-      if (REDIS_URL) {
-        // BullMQ path — only when Redis is explicitly configured
-        getAlertQueue()
+      const queue = getAlertQueue();
+      if (queue) {
+        queue
           .add("red-alert", {
             clinicId,
             patientId,
@@ -157,9 +156,9 @@ export class MessagesService {
     });
 
     if (alertFlag) {
-      const REDIS_URL = process.env["REDIS_URL"];
-      if (REDIS_URL) {
-        getAlertQueue()
+      const queue = getAlertQueue();
+      if (queue) {
+        queue
           .add("red-alert", {
             clinicId,
             patientId: patient.id,

@@ -4,10 +4,16 @@ import { notificationsTable, usersTable } from "@workspace/db";
 import { randomUUID } from "crypto";
 import { eq, and, inArray } from "drizzle-orm";
 
-const REDIS_URL = process.env["REDIS_URL"] ?? "redis://127.0.0.1:6379";
+export interface AlertJobData {
+  clinicId: string;
+  patientId: string;
+  messageId: string;
+  content: string;
+  patientName: string;
+}
 
-// Parse redis URL into host/port/password for BullMQ connection options
-// BullMQ expects { host, port } not a URL string or IORedis instance
+const QUEUE_NAME = "red-alerts";
+
 function parseRedisUrl(url: string) {
   try {
     const u = new URL(url);
@@ -22,32 +28,40 @@ function parseRedisUrl(url: string) {
   }
 }
 
-const redisConnection = parseRedisUrl(REDIS_URL);
+let _queue: Queue | null = null;
+let _worker: Worker | null = null;
 
-export interface AlertJobData {
-  clinicId: string;
-  patientId: string;
-  messageId: string;
-  content: string;
-  patientName: string;
+function getRedisConnection() {
+  const url = process.env["REDIS_URL"];
+  if (!url) return null;
+  return parseRedisUrl(url);
 }
 
-const QUEUE_NAME = "red-alerts";
+export function getAlertQueue(): Queue | null {
+  const conn = getRedisConnection();
+  if (!conn) return null;
 
-export function getAlertQueue(): Queue {
-  return new Queue(QUEUE_NAME, {
-    connection: redisConnection,
-    defaultJobOptions: {
-      attempts: 3,
-      backoff: { type: "exponential", delay: 2000 },
-      removeOnComplete: 100,
-      removeOnFail: 50,
-    },
-  });
+  if (!_queue) {
+    _queue = new Queue(QUEUE_NAME, {
+      connection: conn,
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: { type: "exponential", delay: 2000 },
+        removeOnComplete: 100,
+        removeOnFail: 50,
+      },
+    });
+  }
+  return _queue;
 }
 
-export function startAlertWorker(): Worker {
-  const worker = new Worker(
+export function startAlertWorker(): Worker | null {
+  const conn = getRedisConnection();
+  if (!conn) return null;
+
+  if (_worker) return _worker;
+
+  _worker = new Worker(
     QUEUE_NAME,
     async (job) => {
       const data = job.data as AlertJobData;
@@ -81,14 +95,14 @@ export function startAlertWorker(): Worker {
       }
     },
     {
-      connection: redisConnection,
+      connection: conn,
       concurrency: 5,
     },
   );
 
-  worker.on("failed", (job, err) => {
+  _worker.on("failed", (job, err) => {
     console.error(`Red alert job ${job?.id} failed:`, err);
   });
 
-  return worker;
+  return _worker;
 }

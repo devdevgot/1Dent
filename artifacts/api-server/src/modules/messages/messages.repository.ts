@@ -23,13 +23,23 @@ export class MessagesRepository {
       .select()
       .from(patientsTable)
       .where(eq(patientsTable.clinicId, clinicId));
-    // Normalize: strip all non-digit chars and match suffix
-    const digits = rawPhone.replace(/\D/g, "");
-    const match = all.find((p) => {
-      const pDigits = p.phone.replace(/\D/g, "");
-      return pDigits === digits || pDigits.endsWith(digits) || digits.endsWith(pDigits);
+
+    // Normalize both sides to digits only for exact comparison.
+    // Meta sends phone numbers without "+" and without spaces, e.g. "79001234567".
+    // Our DB stores them with "+", spaces, or dashes, e.g. "+7 900 123-45-67".
+    // We strip all non-digit chars from both and require an exact match.
+    const incomingDigits = rawPhone.replace(/\D/g, "");
+    if (incomingDigits.length < 7) return null; // Sanity check: reject suspiciously short numbers
+
+    const matches = all.filter((p) => {
+      const storedDigits = p.phone.replace(/\D/g, "");
+      return storedDigits === incomingDigits;
     });
-    return match ?? null;
+
+    // If multiple patients have the same digit-normalized number (data anomaly),
+    // reject to avoid attaching message to the wrong patient.
+    if (matches.length !== 1) return null;
+    return matches[0] ?? null;
   }
 
   async listByPatient(patientId: string, clinicId: string): Promise<Message[]> {

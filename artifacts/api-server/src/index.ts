@@ -41,12 +41,17 @@ app.listen(port, (err) => {
 
   logger.info({ port }, "Server listening");
 
-  // Start BullMQ worker for Red Alert processing
-  // Starts lazily; degrades gracefully when Redis is unavailable
-  try {
-    startAlertWorker();
-    logger.info("BullMQ Red Alert worker started");
-  } catch (err) {
-    logger.warn({ err }, "BullMQ worker failed to start (Redis may be unavailable)");
+  // Start BullMQ worker only if Redis is configured
+  if (process.env["REDIS_URL"]) {
+    try {
+      const worker = startAlertWorker();
+      if (worker) {
+        logger.info("BullMQ Red Alert worker started");
+      }
+    } catch (err) {
+      logger.warn({ err }, "BullMQ worker failed to start");
+    }
+  } else {
+    logger.info("REDIS_URL not set — BullMQ worker disabled; using direct DB writes for Red Alerts");
   }
 });
