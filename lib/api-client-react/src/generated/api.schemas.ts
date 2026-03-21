@@ -360,6 +360,157 @@ export interface NotificationResponse {
   data: NotificationResponseData;
 }
 
+export type ToothCondition =
+  (typeof ToothCondition)[keyof typeof ToothCondition];
+
+export const ToothCondition = {
+  healthy: "healthy",
+  cavity: "cavity",
+  treated: "treated",
+  crown: "crown",
+  root_canal: "root_canal",
+  implant: "implant",
+  missing: "missing",
+  extraction_needed: "extraction_needed",
+} as const;
+
+export interface ToothRecord {
+  id: string;
+  clinicId: string;
+  patientId: string;
+  toothFdi: number;
+  condition: ToothCondition;
+  notes?: string | null;
+  updatedAt: string;
+  updatedBy?: string | null;
+}
+
+export interface UpdateToothRequest {
+  condition: ToothCondition;
+  notes?: string;
+}
+
+export type ToothResponseData = {
+  tooth: ToothRecord;
+};
+
+export interface ToothResponse {
+  success: boolean;
+  data: ToothResponseData;
+}
+
+export type TeethResponseData = {
+  teeth: ToothRecord[];
+};
+
+export interface TeethResponse {
+  success: boolean;
+  data: TeethResponseData;
+}
+
+export interface ToothTreatment {
+  id: string;
+  clinicId: string;
+  patientId: string;
+  toothFdi: number;
+  itemId?: string | null;
+  description: string;
+  quantityUsed?: number | null;
+  performedBy?: string | null;
+  performedAt: string;
+}
+
+export interface AddToothTreatmentRequest {
+  /** @minLength 1 */
+  description: string;
+  itemId?: string;
+  quantityUsed?: number;
+}
+
+export type ToothTreatmentResponseData = {
+  treatment: ToothTreatment;
+};
+
+export interface ToothTreatmentResponse {
+  success: boolean;
+  data: ToothTreatmentResponseData;
+}
+
+export type ToothTreatmentsResponseData = {
+  treatments: ToothTreatment[];
+};
+
+export interface ToothTreatmentsResponse {
+  success: boolean;
+  data: ToothTreatmentsResponseData;
+}
+
+export type InventoryCategory =
+  (typeof InventoryCategory)[keyof typeof InventoryCategory];
+
+export const InventoryCategory = {
+  materials: "materials",
+  instruments: "instruments",
+  medications: "medications",
+  consumables: "consumables",
+  prosthetics: "prosthetics",
+  implants: "implants",
+  other: "other",
+} as const;
+
+export interface InventoryItem {
+  id: string;
+  clinicId: string;
+  name: string;
+  category: InventoryCategory;
+  unit: string;
+  unitPrice: number;
+  isActive: boolean;
+  quantity: number;
+  minQuantity: number;
+  createdAt: string;
+}
+
+export interface CreateInventoryItemRequest {
+  /** @minLength 1 */
+  name: string;
+  category?: InventoryCategory;
+  unit?: string;
+  unitPrice?: number;
+  quantity?: number;
+  minQuantity?: number;
+}
+
+export interface UpdateInventoryItemRequest {
+  name?: string;
+  category?: InventoryCategory;
+  unit?: string;
+  unitPrice?: number;
+  minQuantity?: number;
+}
+
+export interface UpdateStockRequest {
+  quantity: number;
+}
+
+export type InventoryItemResponseData = {
+  item: InventoryItem;
+};
+
+export interface InventoryItemResponse {
+  success: boolean;
+  data: InventoryItemResponseData;
+}
+
+export type InventoryListResponseData = {
+  items: InventoryItem[];
+};
+
+export interface InventoryListResponse {
+  success: boolean;
+  data: InventoryListResponseData;
+}
+
 export type UnreadCountResponseData = {
   count: number;
 };

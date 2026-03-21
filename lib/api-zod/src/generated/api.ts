@@ -513,6 +513,282 @@ export const MarkNotificationReadResponse = zod.object({
 });
 
 /**
+ * @summary Get all tooth records for a patient
+ */
+export const ListTeethParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const ListTeethResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    teeth: zod.array(
+      zod.object({
+        id: zod.string(),
+        clinicId: zod.string(),
+        patientId: zod.string(),
+        toothFdi: zod.number(),
+        condition: zod.enum([
+          "healthy",
+          "cavity",
+          "treated",
+          "crown",
+          "root_canal",
+          "implant",
+          "missing",
+          "extraction_needed",
+        ]),
+        notes: zod.string().nullish(),
+        updatedAt: zod.date(),
+        updatedBy: zod.string().nullish(),
+      }),
+    ),
+  }),
+});
+
+/**
+ * @summary Update condition/notes for a specific tooth
+ */
+export const UpdateToothParams = zod.object({
+  id: zod.coerce.string(),
+  toothFdi: zod.coerce.number(),
+});
+
+export const UpdateToothBody = zod.object({
+  condition: zod.enum([
+    "healthy",
+    "cavity",
+    "treated",
+    "crown",
+    "root_canal",
+    "implant",
+    "missing",
+    "extraction_needed",
+  ]),
+  notes: zod.string().optional(),
+});
+
+export const UpdateToothResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    tooth: zod.object({
+      id: zod.string(),
+      clinicId: zod.string(),
+      patientId: zod.string(),
+      toothFdi: zod.number(),
+      condition: zod.enum([
+        "healthy",
+        "cavity",
+        "treated",
+        "crown",
+        "root_canal",
+        "implant",
+        "missing",
+        "extraction_needed",
+      ]),
+      notes: zod.string().nullish(),
+      updatedAt: zod.date(),
+      updatedBy: zod.string().nullish(),
+    }),
+  }),
+});
+
+/**
+ * @summary Get treatment history for a specific tooth
+ */
+export const ListToothTreatmentsParams = zod.object({
+  id: zod.coerce.string(),
+  toothFdi: zod.coerce.number(),
+});
+
+export const ListToothTreatmentsResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    treatments: zod.array(
+      zod.object({
+        id: zod.string(),
+        clinicId: zod.string(),
+        patientId: zod.string(),
+        toothFdi: zod.number(),
+        itemId: zod.string().nullish(),
+        description: zod.string(),
+        quantityUsed: zod.number().nullish(),
+        performedBy: zod.string().nullish(),
+        performedAt: zod.date(),
+      }),
+    ),
+  }),
+});
+
+/**
+ * @summary Record a treatment on a specific tooth
+ */
+export const AddToothTreatmentParams = zod.object({
+  id: zod.coerce.string(),
+  toothFdi: zod.coerce.number(),
+});
+
+export const AddToothTreatmentBody = zod.object({
+  description: zod.string().min(1),
+  itemId: zod.string().optional(),
+  quantityUsed: zod.number().optional(),
+});
+
+/**
+ * @summary List inventory items with stock levels
+ */
+export const ListInventoryResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    items: zod.array(
+      zod.object({
+        id: zod.string(),
+        clinicId: zod.string(),
+        name: zod.string(),
+        category: zod.enum([
+          "materials",
+          "instruments",
+          "medications",
+          "consumables",
+          "prosthetics",
+          "implants",
+          "other",
+        ]),
+        unit: zod.string(),
+        unitPrice: zod.number(),
+        isActive: zod.boolean(),
+        quantity: zod.number(),
+        minQuantity: zod.number(),
+        createdAt: zod.date(),
+      }),
+    ),
+  }),
+});
+
+/**
+ * @summary Create a new inventory item (warehouse/admin/owner)
+ */
+
+export const CreateInventoryItemBody = zod.object({
+  name: zod.string().min(1),
+  category: zod
+    .enum([
+      "materials",
+      "instruments",
+      "medications",
+      "consumables",
+      "prosthetics",
+      "implants",
+      "other",
+    ])
+    .optional(),
+  unit: zod.string().optional(),
+  unitPrice: zod.number().optional(),
+  quantity: zod.number().optional(),
+  minQuantity: zod.number().optional(),
+});
+
+/**
+ * @summary Update an inventory item
+ */
+export const UpdateInventoryItemParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const UpdateInventoryItemBody = zod.object({
+  name: zod.string().optional(),
+  category: zod
+    .enum([
+      "materials",
+      "instruments",
+      "medications",
+      "consumables",
+      "prosthetics",
+      "implants",
+      "other",
+    ])
+    .optional(),
+  unit: zod.string().optional(),
+  unitPrice: zod.number().optional(),
+  minQuantity: zod.number().optional(),
+});
+
+export const UpdateInventoryItemResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    item: zod.object({
+      id: zod.string(),
+      clinicId: zod.string(),
+      name: zod.string(),
+      category: zod.enum([
+        "materials",
+        "instruments",
+        "medications",
+        "consumables",
+        "prosthetics",
+        "implants",
+        "other",
+      ]),
+      unit: zod.string(),
+      unitPrice: zod.number(),
+      isActive: zod.boolean(),
+      quantity: zod.number(),
+      minQuantity: zod.number(),
+      createdAt: zod.date(),
+    }),
+  }),
+});
+
+/**
+ * @summary Delete (deactivate) an inventory item
+ */
+export const DeleteInventoryItemParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const DeleteInventoryItemResponse = zod.object({
+  success: zod.literal(true),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Update stock quantity for an item
+ */
+export const UpdateInventoryStockParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const UpdateInventoryStockBody = zod.object({
+  quantity: zod.number(),
+});
+
+export const UpdateInventoryStockResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    item: zod.object({
+      id: zod.string(),
+      clinicId: zod.string(),
+      name: zod.string(),
+      category: zod.enum([
+        "materials",
+        "instruments",
+        "medications",
+        "consumables",
+        "prosthetics",
+        "implants",
+        "other",
+      ]),
+      unit: zod.string(),
+      unitPrice: zod.number(),
+      isActive: zod.boolean(),
+      quantity: zod.number(),
+      minQuantity: zod.number(),
+      createdAt: zod.date(),
+    }),
+  }),
+});
+
+/**
  * @summary Verify WhatsApp webhook (Meta challenge)
  */
 export const VerifyWhatsappWebhookQueryParams = zod.object({

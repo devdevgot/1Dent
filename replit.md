@@ -34,7 +34,7 @@ Standard API response format: `{ success, data?, error?, code?, message? }`.
 - `admin` — operational management
 - `doctor` — own patients only, masked phone numbers
 - `accountant` — read-only financials
-- `warehouse` — read-only inventory
+- `warehouse` — inventory management (read + update stock)
 
 ## Phone masking
 
@@ -92,6 +92,25 @@ Every package extends `tsconfig.base.json` which sets `composite: true`. The roo
 - Create patient dialog: name/phone/age/source/doctor/notes
 - Optimistic kanban drag updates with server reconciliation
 - OpenAPI spec extended with patient endpoints; codegen re-run
+
+### Task #3 — WhatsApp Integration & Red Alert
+- WhatsApp Business Cloud API proxy (masks real phone numbers from frontend)
+- Webhook endpoint for inbound messages with Hub verification
+- Red Alert pipeline: BullMQ-gated (returns null if no REDIS_URL) — auto-detects missed patient follow-ups
+- Chat UI: mobile single-panel navigation with back button, h-[calc(100dvh-7.5rem)] scroll area
+- AppLayout: bottom navigation with Sheet "More" drawer for overflow items, safe-area CSS, viewport-fit=cover
+- Role isolation: doctors redirected to /dashboard/doctor, accountants to /dashboard/accountant, etc.
+
+### Task #4 — FDI Dental Chart & Inventory
+- DB: `tooth_records` + `inventory_items` + `inventory_stock` + `tooth_treatments` tables (Drizzle, pushed)
+- API: `PUT /patients/:id/teeth/:toothFdi` (upsert), `GET /patients/:id/teeth`, treatment endpoints
+- Inventory CRUD: `GET/POST /inventory`, `PATCH /inventory/:id/stock`, `DELETE /inventory/:id`
+- FDI chart: 32-tooth SVG with FDI numbering, color-coded conditions, legend; `buildRowPositions()` layout engine
+- Tooth conditions: healthy, cavity, treated, crown, root_canal, implant, missing, extraction_needed
+- Tooth detail panel: condition editor, treatment history list, inventory item selector
+- Patient detail panel: История / Зубная карта tabs
+- Inventory page: mobile-first card list, category filters, inline stock editor, low-stock alerts, role-gated create/edit/delete
+- OpenAPI spec updated, codegen run, TypeScript passes cleanly
 
 ## Packages
 

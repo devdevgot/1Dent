@@ -104,7 +104,7 @@ export default function KanbanPage() {
   const totalPatients = patients.length;
 
   return (
-    <div className="flex flex-col h-full gap-4">
+    <div className="flex flex-col h-[calc(100dvh-7.5rem)] gap-4 p-4">
       <div className="flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
           <p className="text-sm text-muted-foreground">

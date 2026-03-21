@@ -1,11 +1,14 @@
 import { useState } from "react";
 import {
   useGetPatient,
+  useListTeeth,
   useUpdatePatientStatus,
   useAddPatientInteraction,
   getListPatientsQueryKey,
   getGetPatientQueryKey,
+  getListTeethQueryKey,
 } from "@workspace/api-client-react";
+import type { ToothRecord } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { X, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,6 +23,8 @@ import {
   SOURCE_COLORS,
 } from "@/lib/patient-utils";
 import type { PatientStatus, InteractionType } from "@workspace/api-client-react";
+import { FdiChart } from "@/components/dental-chart/fdi-chart";
+import { ToothDetailPanel } from "@/components/dental-chart/tooth-detail-panel";
 
 const INTERACTION_TYPES = [
   { value: "note", label: "Заметка" },
@@ -35,6 +40,8 @@ export function PatientDetailPanel() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const [activeTab, setActiveTab] = useState<"history" | "dental">("history");
+  const [selectedToothFdi, setSelectedToothFdi] = useState<number | null>(null);
   const [interactionType, setInteractionType] = useState<InteractionType>("note");
   const [interactionContent, setInteractionContent] = useState("");
   const [isStatusOpen, setIsStatusOpen] = useState(false);
@@ -45,6 +52,15 @@ export function PatientDetailPanel() {
       enabled: !!selectedPatientId,
     },
   });
+
+  const { data: teethData } = useListTeeth(selectedPatientId ?? "", {
+    query: {
+      queryKey: getListTeethQueryKey(selectedPatientId ?? ""),
+      enabled: !!selectedPatientId && activeTab === "dental",
+    },
+  });
+  const teethRecords: ToothRecord[] = teethData?.data?.teeth ?? [];
+  const teethMap = new Map(teethRecords.map((t) => [t.toothFdi, t]));
 
   const statusMutation = useUpdatePatientStatus({
     mutation: {
@@ -109,14 +125,37 @@ export function PatientDetailPanel() {
         onClick={() => setSelectedPatientId(null)}
       />
       <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl z-50 flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-5 border-b border-border/50">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border/50">
           <h2 className="font-bold text-lg">Карточка пациента</h2>
           <button
-            onClick={() => setSelectedPatientId(null)}
+            onClick={() => {
+              setSelectedPatientId(null);
+              setSelectedToothFdi(null);
+              setActiveTab("history");
+            }}
             className="text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
+        </div>
+        {/* Tab bar */}
+        <div className="flex border-b border-border/50 px-6 bg-white shrink-0">
+          {[
+            { id: "history" as const, label: "История" },
+            { id: "dental" as const, label: "Зубная карта" },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => { setActiveTab(tab.id); setSelectedToothFdi(null); }}
+              className={`py-3 px-1 mr-6 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === tab.id
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
         {isLoading ? (
@@ -124,6 +163,42 @@ export function PatientDetailPanel() {
             <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
           </div>
         ) : patient ? (
+          <>
+          {/* ── Dental Chart Tab ── */}
+          {activeTab === "dental" && (
+            <div className="flex-1 flex min-h-0 overflow-hidden">
+              <div
+                className={`flex flex-col overflow-y-auto custom-scrollbar transition-all duration-200 ${
+                  selectedToothFdi ? "w-1/2" : "w-full"
+                }`}
+              >
+                <div className="p-4">
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Нажмите на зуб для просмотра и редактирования
+                  </p>
+                  <FdiChart
+                    teethData={teethMap}
+                    selectedFdi={selectedToothFdi}
+                    onToothClick={(fdi) =>
+                      setSelectedToothFdi((cur) => (cur === fdi ? null : fdi))
+                    }
+                  />
+                </div>
+              </div>
+              {selectedToothFdi && (
+                <div className="w-1/2 border-l border-border/50 flex flex-col min-h-0">
+                  <ToothDetailPanel
+                    patientId={patient.id}
+                    toothFdi={selectedToothFdi}
+                    onClose={() => setSelectedToothFdi(null)}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── History Tab ── */}
+          {activeTab === "history" && (
           <div className="flex-1 overflow-y-auto custom-scrollbar">
             <div className="px-6 py-5 space-y-4">
               <div>
@@ -256,6 +331,8 @@ export function PatientDetailPanel() {
               </form>
             </div>
           </div>
+          )}
+          </>
         ) : (
           <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
             Пациент не найден

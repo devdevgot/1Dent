@@ -12,6 +12,12 @@ tags:
     description: Health operations
   - name: auth
     description: Authentication operations
+  - name: patients
+    description: Patient management operations
+  - name: dental
+    description: Dental chart and tooth records
+  - name: inventory
+    description: Inventory and stock management
 
 paths:
   /healthz:
@@ -482,6 +488,232 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotificationResponse"
+
+  # ─── Dental Chart ───────────────────────────────────────────────────────────
+
+  /patients/{id}/teeth:
+    get:
+      operationId: listTeeth
+      tags: [dental]
+      summary: Get all tooth records for a patient
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Tooth records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeethResponse"
+        "404":
+          description: Patient not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /patients/{id}/teeth/{toothFdi}:
+    put:
+      operationId: updateTooth
+      tags: [dental]
+      summary: Update condition/notes for a specific tooth
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: toothFdi
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateToothRequest"
+      responses:
+        "200":
+          description: Tooth updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ToothResponse"
+
+  /patients/{id}/teeth/{toothFdi}/treatments:
+    get:
+      operationId: listToothTreatments
+      tags: [dental]
+      summary: Get treatment history for a specific tooth
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: toothFdi
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Treatment records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ToothTreatmentsResponse"
+    post:
+      operationId: addToothTreatment
+      tags: [dental]
+      summary: Record a treatment on a specific tooth
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: toothFdi
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddToothTreatmentRequest"
+      responses:
+        "201":
+          description: Treatment recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ToothTreatmentResponse"
+
+  # ─── Inventory ───────────────────────────────────────────────────────────────
+
+  /inventory:
+    get:
+      operationId: listInventory
+      tags: [inventory]
+      summary: List inventory items with stock levels
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Inventory list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryListResponse"
+    post:
+      operationId: createInventoryItem
+      tags: [inventory]
+      summary: Create a new inventory item (warehouse/admin/owner)
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInventoryItemRequest"
+      responses:
+        "201":
+          description: Item created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryItemResponse"
+
+  /inventory/{id}:
+    put:
+      operationId: updateInventoryItem
+      tags: [inventory]
+      summary: Update an inventory item
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateInventoryItemRequest"
+      responses:
+        "200":
+          description: Item updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryItemResponse"
+    delete:
+      operationId: deleteInventoryItem
+      tags: [inventory]
+      summary: Delete (deactivate) an inventory item
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Item deactivated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /inventory/{id}/stock:
+    patch:
+      operationId: updateInventoryStock
+      tags: [inventory]
+      summary: Update stock quantity for an item
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStockRequest"
+      responses:
+        "200":
+          description: Stock updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryItemResponse"
 
   /webhook/whatsapp:
     get:
@@ -1200,6 +1432,304 @@ components:
               $ref: "#/components/schemas/Notification"
           required:
             - notification
+      required:
+        - success
+        - data
+
+    # ─── Dental Chart ────────────────────────────────────────────────────────
+
+    ToothCondition:
+      type: string
+      enum:
+        - healthy
+        - cavity
+        - treated
+        - crown
+        - root_canal
+        - implant
+        - missing
+        - extraction_needed
+
+    ToothRecord:
+      type: object
+      properties:
+        id:
+          type: string
+        clinicId:
+          type: string
+        patientId:
+          type: string
+        toothFdi:
+          type: integer
+        condition:
+          $ref: "#/components/schemas/ToothCondition"
+        notes:
+          type: string
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+        updatedBy:
+          type: string
+          nullable: true
+      required:
+        - id
+        - clinicId
+        - patientId
+        - toothFdi
+        - condition
+        - updatedAt
+
+    UpdateToothRequest:
+      type: object
+      properties:
+        condition:
+          $ref: "#/components/schemas/ToothCondition"
+        notes:
+          type: string
+      required:
+        - condition
+
+    ToothResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            tooth:
+              $ref: "#/components/schemas/ToothRecord"
+          required:
+            - tooth
+      required:
+        - success
+        - data
+
+    TeethResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            teeth:
+              type: array
+              items:
+                $ref: "#/components/schemas/ToothRecord"
+          required:
+            - teeth
+      required:
+        - success
+        - data
+
+    ToothTreatment:
+      type: object
+      properties:
+        id:
+          type: string
+        clinicId:
+          type: string
+        patientId:
+          type: string
+        toothFdi:
+          type: integer
+        itemId:
+          type: string
+          nullable: true
+        description:
+          type: string
+        quantityUsed:
+          type: number
+          nullable: true
+        performedBy:
+          type: string
+          nullable: true
+        performedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - clinicId
+        - patientId
+        - toothFdi
+        - description
+        - performedAt
+
+    AddToothTreatmentRequest:
+      type: object
+      properties:
+        description:
+          type: string
+          minLength: 1
+        itemId:
+          type: string
+        quantityUsed:
+          type: number
+      required:
+        - description
+
+    ToothTreatmentResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            treatment:
+              $ref: "#/components/schemas/ToothTreatment"
+          required:
+            - treatment
+      required:
+        - success
+        - data
+
+    ToothTreatmentsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            treatments:
+              type: array
+              items:
+                $ref: "#/components/schemas/ToothTreatment"
+          required:
+            - treatments
+      required:
+        - success
+        - data
+
+    # ─── Inventory ────────────────────────────────────────────────────────────
+
+    InventoryCategory:
+      type: string
+      enum:
+        - materials
+        - instruments
+        - medications
+        - consumables
+        - prosthetics
+        - implants
+        - other
+
+    InventoryItem:
+      type: object
+      properties:
+        id:
+          type: string
+        clinicId:
+          type: string
+        name:
+          type: string
+        category:
+          $ref: "#/components/schemas/InventoryCategory"
+        unit:
+          type: string
+        unitPrice:
+          type: number
+        isActive:
+          type: boolean
+        quantity:
+          type: number
+        minQuantity:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - clinicId
+        - name
+        - category
+        - unit
+        - unitPrice
+        - isActive
+        - quantity
+        - minQuantity
+        - createdAt
+
+    CreateInventoryItemRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        category:
+          $ref: "#/components/schemas/InventoryCategory"
+        unit:
+          type: string
+        unitPrice:
+          type: number
+        quantity:
+          type: number
+        minQuantity:
+          type: number
+      required:
+        - name
+
+    UpdateInventoryItemRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        category:
+          $ref: "#/components/schemas/InventoryCategory"
+        unit:
+          type: string
+        unitPrice:
+          type: number
+        minQuantity:
+          type: number
+
+    UpdateStockRequest:
+      type: object
+      properties:
+        quantity:
+          type: number
+      required:
+        - quantity
+
+    InventoryItemResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            item:
+              $ref: "#/components/schemas/InventoryItem"
+          required:
+            - item
+      required:
+        - success
+        - data
+
+    InventoryListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/InventoryItem"
+          required:
+            - items
       required:
         - success
         - data

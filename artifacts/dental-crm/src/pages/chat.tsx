@@ -88,7 +88,7 @@ function MessageBubble({ message, isOutbound }: { message: Message; isOutbound: 
   );
 }
 
-function ChatPanel({ patient }: { patient: Patient }) {
+function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void }) {
   const { user } = useAuthStore();
   const [text, setText] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -166,13 +166,24 @@ function ChatPanel({ patient }: { patient: Patient }) {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center gap-3 px-6 py-4 border-b border-border/50 bg-white">
-        <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-          <User className="w-5 h-5 text-green-600" />
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-border/50 bg-white">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="md:hidden p-2 -ml-1 rounded-lg hover:bg-slate-100 text-muted-foreground"
+            aria-label="Назад"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+        )}
+        <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+          <User className="w-4 h-4 text-green-600" />
         </div>
-        <div>
-          <p className="font-semibold text-foreground">{patient.name}</p>
-          <p className="text-xs text-muted-foreground">{patient.phone}</p>
+        <div className="min-w-0">
+          <p className="font-semibold text-foreground truncate">{patient.name}</p>
+          <p className="text-xs text-muted-foreground truncate">{patient.phone}</p>
         </div>
         {messages.some((m) => m.isRedAlert) && (
           <Badge variant="destructive" className="ml-auto flex items-center gap-1">
@@ -246,17 +257,27 @@ export default function ChatPage() {
   });
 
   const patients = data?.data?.patients ?? [];
-
   const filtered = patients.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase()),
   );
-
   const selectedPatient = patients.find((p) => p.id === selectedPatientId);
 
+  const handleBack = () => setSelectedPatientId(null);
+
+  const H = "h-[calc(100dvh-7.5rem)]";
+
   return (
-    <div className="flex h-full rounded-xl overflow-hidden border border-border/50 shadow-sm bg-white">
-      {/* Left Panel — patient list */}
-      <aside className="w-80 border-r border-border/50 flex flex-col bg-white shrink-0">
+    <div className={cn("flex overflow-hidden bg-white", H)}>
+      {/* ── Patient List Panel ──
+          Mobile: full-width, hidden when a patient is selected
+          Desktop (md+): always visible, fixed 320px wide */}
+      <aside
+        className={cn(
+          "flex flex-col bg-white border-r border-border/50",
+          "w-full md:w-80 md:shrink-0",
+          selectedPatientId ? "hidden md:flex" : "flex",
+        )}
+      >
         <div className="p-4 border-b border-border/50">
           <h2 className="font-semibold text-foreground mb-3">WhatsApp Чат</h2>
           <div className="relative">
@@ -269,7 +290,6 @@ export default function ChatPage() {
             />
           </div>
         </div>
-
         <ScrollArea className="flex-1">
           {filtered.length === 0 && (
             <div className="p-6 text-center text-sm text-muted-foreground">
@@ -287,10 +307,17 @@ export default function ChatPage() {
         </ScrollArea>
       </aside>
 
-      {/* Right Panel — chat */}
-      <main className="flex-1 flex flex-col">
+      {/* ── Chat Panel ──
+          Mobile: full-width, shown only when a patient is selected (with back button)
+          Desktop: flex-1, always visible */}
+      <main
+        className={cn(
+          "flex-1 flex flex-col",
+          selectedPatientId ? "flex" : "hidden md:flex",
+        )}
+      >
         {selectedPatient ? (
-          <ChatPanel patient={selectedPatient} />
+          <ChatPanel patient={selectedPatient} onBack={handleBack} />
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center gap-4 text-muted-foreground bg-[#ECE5DD]">
             <MessageSquare className="w-16 h-16 opacity-20" />
