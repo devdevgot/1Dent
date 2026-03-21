@@ -3,7 +3,7 @@ import { z } from "zod";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError } from "../../shared/errors";
 import { MessagesService } from "./messages.service";
-import { verifyWebhook } from "../../shared/whatsapp";
+import { verifyWebhook, verifyWebhookSignature } from "../../shared/whatsapp";
 
 const router = Router();
 const service = new MessagesService();
@@ -52,13 +52,22 @@ router.get("/webhook/whatsapp", (req: Request, res: Response) => {
 });
 
 // ─── Webhook: POST incoming messages from Meta ────────────────────────────────
-// NOTE: This is called by Meta's servers with the clinic token in the URL.
-// Real matching of phone→patient is done server-side.
-// For MVP we require the clinic's WHATSAPP_PHONE_ID to route to the right clinic.
+// Meta calls this URL with clinicId in path. We verify the HMAC signature
+// using WHATSAPP_APP_SECRET (if set) before processing any payload.
+// Phone-to-patient resolution happens server-side via phone suffix matching.
 router.post(
   "/webhook/whatsapp/:clinicId",
   async (req: Request, res: Response) => {
-    // Always acknowledge quickly to Meta
+    // Verify Meta HMAC signature (X-Hub-Signature-256)
+    const rawBody: Buffer = (req as Request & { rawBody?: Buffer }).rawBody ?? Buffer.from(JSON.stringify(req.body));
+    const sigHeader = String(req.headers["x-hub-signature-256"] ?? "");
+    const valid = await verifyWebhookSignature(rawBody, sigHeader || undefined);
+    if (!valid) {
+      res.status(403).json({ success: false, error: "Invalid webhook signature" });
+      return;
+    }
+
+    // Always acknowledge quickly to Meta before processing
     res.status(200).json({ status: "ok" });
 
     const parsed = inboundWebhookSchema.safeParse(req.body);
@@ -71,16 +80,11 @@ router.post(
         for (const msg of change.value.messages ?? []) {
           const content = msg.text?.body;
           if (!content) continue;
+          // senderPhone is the patient's WhatsApp number (format: "79001234567")
+          const senderPhone = msg.from;
 
-          // For inbound messages we need to find patient by phone.
-          // Store raw for now; the AI chatbot (task #7) will handle routing.
           await service
-            .handleInboundWebhook(
-              clinicId,
-              "unassigned", // patientId resolved later by chatbot
-              content,
-              msg.id,
-            )
+            .handleInboundWebhook(clinicId, senderPhone, content, msg.id)
             .catch(console.error);
         }
       }

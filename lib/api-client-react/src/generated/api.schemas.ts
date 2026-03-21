@@ -5,6 +5,41 @@
  * Dental CRM API specification
  * OpenAPI spec version: 0.1.0
  */
+export type WhatsAppWebhookPayloadEntryItemChangesItemValueMessagesItemText = {
+  body?: string;
+};
+
+export type WhatsAppWebhookPayloadEntryItemChangesItemValueMessagesItem = {
+  id?: string;
+  /** Sender's WhatsApp phone number (digits only, e.g. "79001234567") */
+  from?: string;
+  text?: WhatsAppWebhookPayloadEntryItemChangesItemValueMessagesItemText;
+};
+
+export type WhatsAppWebhookPayloadEntryItemChangesItemValueMetadata = {
+  phone_number_id?: string;
+};
+
+export type WhatsAppWebhookPayloadEntryItemChangesItemValue = {
+  messages?: WhatsAppWebhookPayloadEntryItemChangesItemValueMessagesItem[];
+  metadata?: WhatsAppWebhookPayloadEntryItemChangesItemValueMetadata;
+};
+
+export type WhatsAppWebhookPayloadEntryItemChangesItem = {
+  value?: WhatsAppWebhookPayloadEntryItemChangesItemValue;
+};
+
+export type WhatsAppWebhookPayloadEntryItem = {
+  changes?: WhatsAppWebhookPayloadEntryItemChangesItem[];
+};
+
+/**
+ * Inbound webhook payload from Meta WhatsApp Business API
+ */
+export interface WhatsAppWebhookPayload {
+  entry?: WhatsAppWebhookPayloadEntryItem[];
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -338,4 +373,8 @@ export type VerifyWhatsappWebhookParams = {
   "hub.mode"?: string;
   "hub.verify_token"?: string;
   "hub.challenge"?: string;
+};
+
+export type InboundWhatsappWebhook200 = {
+  status?: string;
 };

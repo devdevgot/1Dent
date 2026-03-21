@@ -130,16 +130,25 @@ export class MessagesService {
 
   async handleInboundWebhook(
     clinicId: string,
-    patientId: string,
+    senderPhone: string,
     content: string,
     whatsappMessageId: string,
-  ): Promise<Message> {
+  ): Promise<Message | null> {
+    // Resolve phone → patient. Skip insert if phone not matched to avoid FK violation.
+    const patient = await this.repo.findPatientByPhone(senderPhone, clinicId);
+    if (!patient) {
+      console.info(
+        `[inbound-webhook] No patient found for phone "${senderPhone}" in clinic ${clinicId} — message skipped`,
+      );
+      return null;
+    }
+
     const alertFlag = isRedAlert(content);
 
     const message = await this.repo.create({
       id: randomUUID(),
       clinicId,
-      patientId,
+      patientId: patient.id,
       direction: "inbound",
       senderId: null,
       content,
@@ -148,17 +157,25 @@ export class MessagesService {
     });
 
     if (alertFlag) {
-      const patient = await this.repo.findPatient(patientId, clinicId);
-      if (patient) {
+      const REDIS_URL = process.env["REDIS_URL"];
+      if (REDIS_URL) {
         getAlertQueue()
           .add("red-alert", {
             clinicId,
-            patientId,
+            patientId: patient.id,
             messageId: message.id,
             content,
             patientName: patient.name,
           })
-          .catch((err) => console.warn("Failed to queue red alert:", err));
+          .catch(() => {
+            this.writeRedAlertNotifications(
+              clinicId, patient.id, message.id, content, patient.name,
+            ).catch(console.error);
+          });
+      } else {
+        this.writeRedAlertNotifications(
+          clinicId, patient.id, message.id, content, patient.name,
+        ).catch(console.error);
       }
     }
 

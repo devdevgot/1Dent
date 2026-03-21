@@ -18,6 +18,20 @@ export class MessagesRepository {
     return patient ?? null;
   }
 
+  async findPatientByPhone(rawPhone: string, clinicId: string) {
+    const all = await db
+      .select()
+      .from(patientsTable)
+      .where(eq(patientsTable.clinicId, clinicId));
+    // Normalize: strip all non-digit chars and match suffix
+    const digits = rawPhone.replace(/\D/g, "");
+    const match = all.find((p) => {
+      const pDigits = p.phone.replace(/\D/g, "");
+      return pDigits === digits || pDigits.endsWith(digits) || digits.endsWith(pDigits);
+    });
+    return match ?? null;
+  }
+
   async listByPatient(patientId: string, clinicId: string): Promise<Message[]> {
     return db
       .select()

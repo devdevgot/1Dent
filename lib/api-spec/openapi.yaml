@@ -508,6 +508,48 @@ paths:
               schema:
                 type: string
 
+  /webhook/whatsapp/{clinicId}:
+    post:
+      operationId: inboundWhatsappWebhook
+      summary: Receive inbound WhatsApp messages from Meta
+      description: |
+        Called by Meta's servers when a patient sends a WhatsApp message.
+        Requires valid X-Hub-Signature-256 HMAC when WHATSAPP_APP_SECRET is set.
+        Resolves sender phone number to a known patient before persisting.
+        Returns 200 immediately to prevent Meta retries.
+      parameters:
+        - name: clinicId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: X-Hub-Signature-256
+          in: header
+          required: false
+          schema:
+            type: string
+          description: "HMAC-SHA256 signature: sha256=<hex>. Required in production."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WhatsAppWebhookPayload"
+      responses:
+        "200":
+          description: Acknowledged
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+        "403":
+          description: Invalid webhook signature
+
 components:
   securitySchemes:
     cookieAuth:
@@ -516,6 +558,44 @@ components:
       name: auth_token
 
   schemas:
+    WhatsAppWebhookPayload:
+      type: object
+      description: Inbound webhook payload from Meta WhatsApp Business API
+      properties:
+        entry:
+          type: array
+          items:
+            type: object
+            properties:
+              changes:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    value:
+                      type: object
+                      properties:
+                        messages:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                              from:
+                                type: string
+                                description: Sender's WhatsApp phone number (digits only, e.g. "79001234567")
+                              text:
+                                type: object
+                                properties:
+                                  body:
+                                    type: string
+                        metadata:
+                          type: object
+                          properties:
+                            phone_number_id:
+                              type: string
+
     HealthStatus:
       type: object
       properties:

@@ -520,3 +520,70 @@ export const VerifyWhatsappWebhookQueryParams = zod.object({
   "hub.verify_token": zod.coerce.string().optional(),
   "hub.challenge": zod.coerce.string().optional(),
 });
+
+/**
+ * Called by Meta's servers when a patient sends a WhatsApp message.
+Requires valid X-Hub-Signature-256 HMAC when WHATSAPP_APP_SECRET is set.
+Resolves sender phone number to a known patient before persisting.
+Returns 200 immediately to prevent Meta retries.
+
+ * @summary Receive inbound WhatsApp messages from Meta
+ */
+export const InboundWhatsappWebhookParams = zod.object({
+  clinicId: zod.coerce.string().uuid(),
+});
+
+export const InboundWhatsappWebhookHeader = zod.object({
+  "X-Hub-Signature-256": zod
+    .string()
+    .optional()
+    .describe("HMAC-SHA256 signature: sha256=<hex>. Required in production."),
+});
+
+export const InboundWhatsappWebhookBody = zod
+  .object({
+    entry: zod
+      .array(
+        zod.object({
+          changes: zod
+            .array(
+              zod.object({
+                value: zod
+                  .object({
+                    messages: zod
+                      .array(
+                        zod.object({
+                          id: zod.string().optional(),
+                          from: zod
+                            .string()
+                            .optional()
+                            .describe(
+                              'Sender\'s WhatsApp phone number (digits only, e.g. \"79001234567\")',
+                            ),
+                          text: zod
+                            .object({
+                              body: zod.string().optional(),
+                            })
+                            .optional(),
+                        }),
+                      )
+                      .optional(),
+                    metadata: zod
+                      .object({
+                        phone_number_id: zod.string().optional(),
+                      })
+                      .optional(),
+                  })
+                  .optional(),
+              }),
+            )
+            .optional(),
+        }),
+      )
+      .optional(),
+  })
+  .describe("Inbound webhook payload from Meta WhatsApp Business API");
+
+export const InboundWhatsappWebhookResponse = zod.object({
+  status: zod.string().optional(),
+});

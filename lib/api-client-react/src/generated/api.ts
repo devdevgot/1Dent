@@ -23,6 +23,7 @@ import type {
   CreateUserRequest,
   ErrorResponse,
   HealthStatus,
+  InboundWhatsappWebhook200,
   InteractionResponse,
   LoginRequest,
   MeResponse,
@@ -43,6 +44,7 @@ import type {
   UserResponse,
   UsersListResponse,
   VerifyWhatsappWebhookParams,
+  WhatsAppWebhookPayload,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -1954,3 +1956,99 @@ export function useVerifyWhatsappWebhook<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * Called by Meta's servers when a patient sends a WhatsApp message.
+Requires valid X-Hub-Signature-256 HMAC when WHATSAPP_APP_SECRET is set.
+Resolves sender phone number to a known patient before persisting.
+Returns 200 immediately to prevent Meta retries.
+
+ * @summary Receive inbound WhatsApp messages from Meta
+ */
+export const getInboundWhatsappWebhookUrl = (clinicId: string) => {
+  return `/api/webhook/whatsapp/${clinicId}`;
+};
+
+export const inboundWhatsappWebhook = async (
+  clinicId: string,
+  whatsAppWebhookPayload: WhatsAppWebhookPayload,
+  options?: RequestInit,
+): Promise<InboundWhatsappWebhook200> => {
+  return customFetch<InboundWhatsappWebhook200>(
+    getInboundWhatsappWebhookUrl(clinicId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(whatsAppWebhookPayload),
+    },
+  );
+};
+
+export const getInboundWhatsappWebhookMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof inboundWhatsappWebhook>>,
+    TError,
+    { clinicId: string; data: BodyType<WhatsAppWebhookPayload> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof inboundWhatsappWebhook>>,
+  TError,
+  { clinicId: string; data: BodyType<WhatsAppWebhookPayload> },
+  TContext
+> => {
+  const mutationKey = ["inboundWhatsappWebhook"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof inboundWhatsappWebhook>>,
+    { clinicId: string; data: BodyType<WhatsAppWebhookPayload> }
+  > = (props) => {
+    const { clinicId, data } = props ?? {};
+
+    return inboundWhatsappWebhook(clinicId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type InboundWhatsappWebhookMutationResult = NonNullable<
+  Awaited<ReturnType<typeof inboundWhatsappWebhook>>
+>;
+export type InboundWhatsappWebhookMutationBody =
+  BodyType<WhatsAppWebhookPayload>;
+export type InboundWhatsappWebhookMutationError = ErrorType<void>;
+
+/**
+ * @summary Receive inbound WhatsApp messages from Meta
+ */
+export const useInboundWhatsappWebhook = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof inboundWhatsappWebhook>>,
+    TError,
+    { clinicId: string; data: BodyType<WhatsAppWebhookPayload> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof inboundWhatsappWebhook>>,
+  TError,
+  { clinicId: string; data: BodyType<WhatsAppWebhookPayload> },
+  TContext
+> => {
+  return useMutation(getInboundWhatsappWebhookMutationOptions(options));
+};

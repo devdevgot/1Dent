@@ -77,6 +77,33 @@ export function verifyWebhook(
 }
 
 /**
+ * Verify Meta X-Hub-Signature-256 HMAC signature on inbound webhook payloads.
+ * Uses WHATSAPP_APP_SECRET env var. In dev (no secret set) returns true.
+ * Returns false and should be rejected with 403 if verification fails in prod.
+ */
+export async function verifyWebhookSignature(
+  rawBody: Buffer,
+  signatureHeader: string | undefined,
+): Promise<boolean> {
+  const appSecret = process.env["WHATSAPP_APP_SECRET"];
+  if (!appSecret) {
+    // Dev mode: no secret configured — skip verification
+    return true;
+  }
+  if (!signatureHeader?.startsWith("sha256=")) {
+    return false;
+  }
+  const { createHmac, timingSafeEqual } = await import("crypto");
+  const expected = createHmac("sha256", appSecret)
+    .update(rawBody)
+    .digest("hex");
+  const expectedBuf = Buffer.from(`sha256=${expected}`, "utf8");
+  const actualBuf = Buffer.from(signatureHeader, "utf8");
+  if (expectedBuf.length !== actualBuf.length) return false;
+  return timingSafeEqual(expectedBuf, actualBuf);
+}
+
+/**
  * RED ALERT keywords — Russian and common transliterations.
  */
 export const RED_ALERT_KEYWORDS = [
