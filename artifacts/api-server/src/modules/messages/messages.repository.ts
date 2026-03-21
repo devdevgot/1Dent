@@ -5,7 +5,7 @@ import type {
   Notification,
   InsertNotification,
 } from "@workspace/db";
-import { eq, and, desc, asc } from "drizzle-orm";
+import { eq, and, desc, asc, sql } from "drizzle-orm";
 
 export class MessagesRepository {
   async findPatient(patientId: string, clinicId: string) {
@@ -74,8 +74,8 @@ export class MessagesRepository {
   }
 
   async countUnread(userId: string, clinicId: string): Promise<number> {
-    const rows = await db
-      .select()
+    const [row] = await db
+      .select({ count: sql<number>`count(*)::int` })
       .from(notificationsTable)
       .where(
         and(
@@ -84,7 +84,7 @@ export class MessagesRepository {
           eq(notificationsTable.read, false),
         ),
       );
-    return rows.length;
+    return row?.count ?? 0;
   }
 
   async markNotificationRead(id: string, userId: string, clinicId: string): Promise<Notification | null> {

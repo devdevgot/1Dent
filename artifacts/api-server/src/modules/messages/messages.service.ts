@@ -6,6 +6,7 @@ import { MessagesRepository } from "./messages.repository";
 import { sendWhatsAppMessage, isRedAlert } from "../../shared/whatsapp";
 import { getAlertQueue } from "../../shared/alert-queue";
 import { NotFoundError, ForbiddenError } from "../../shared/errors";
+import { logger } from "../../lib/logger";
 import type { UserRole, Message, Notification } from "@workspace/db";
 
 const WHATSAPP_ENABLED = !!(
@@ -81,13 +82,13 @@ export class MessagesService {
           .catch(() => {
             this.writeRedAlertNotifications(
               clinicId, patientId, message.id, content, patient.name,
-            ).catch(console.error);
+            ).catch((err) => logger.error({ err }, "Failed to write red alert notifications (BullMQ fallback)"));
           });
       } else {
         // Direct DB path — no Redis configured
         this.writeRedAlertNotifications(
           clinicId, patientId, message.id, content, patient.name,
-        ).catch(console.error);
+        ).catch((err) => logger.error({ err }, "Failed to write red alert notifications"));
       }
     }
 
@@ -136,8 +137,9 @@ export class MessagesService {
     // Resolve phone → patient. Skip insert if phone not matched to avoid FK violation.
     const patient = await this.repo.findPatientByPhone(senderPhone, clinicId);
     if (!patient) {
-      console.info(
-        `[inbound-webhook] No patient found for phone "${senderPhone}" in clinic ${clinicId} — message skipped`,
+      logger.info(
+        { senderPhone, clinicId },
+        "No patient matched for inbound webhook phone — message skipped",
       );
       return null;
     }
@@ -169,12 +171,12 @@ export class MessagesService {
           .catch(() => {
             this.writeRedAlertNotifications(
               clinicId, patient.id, message.id, content, patient.name,
-            ).catch(console.error);
+            ).catch((err) => logger.error({ err }, "Failed to write inbound red alert notifications (BullMQ fallback)"));
           });
       } else {
         this.writeRedAlertNotifications(
           clinicId, patient.id, message.id, content, patient.name,
-        ).catch(console.error);
+        ).catch((err) => logger.error({ err }, "Failed to write inbound red alert notifications"));
       }
     }
 

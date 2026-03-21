@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { notificationsTable, usersTable } from "@workspace/db";
 import { randomUUID } from "crypto";
 import { eq, and, inArray } from "drizzle-orm";
+import { logger } from "../lib/logger";
 
 export interface AlertJobData {
   clinicId: string;
@@ -17,11 +18,14 @@ const QUEUE_NAME = "red-alerts";
 function parseRedisUrl(url: string) {
   try {
     const u = new URL(url);
+    const isTLS = u.protocol === "rediss:";
     return {
       host: u.hostname || "127.0.0.1",
-      port: u.port ? parseInt(u.port, 10) : 6379,
-      password: u.password || undefined,
+      port: u.port ? parseInt(u.port, 10) : isTLS ? 6380 : 6379,
+      username: u.username || undefined,
+      password: u.password ? decodeURIComponent(u.password) : undefined,
       db: u.pathname && u.pathname !== "/" ? parseInt(u.pathname.slice(1), 10) : 0,
+      tls: isTLS ? {} : undefined,
     };
   } catch {
     return { host: "127.0.0.1", port: 6379 };
@@ -101,7 +105,7 @@ export function startAlertWorker(): Worker | null {
   );
 
   _worker.on("failed", (job, err) => {
-    console.error(`Red alert job ${job?.id} failed:`, err);
+    logger.error({ jobId: job?.id, err }, "Red alert BullMQ job failed");
   });
 
   return _worker;
