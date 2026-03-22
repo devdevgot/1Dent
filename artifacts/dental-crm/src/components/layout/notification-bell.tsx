@@ -10,6 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { Notification } from "@workspace/api-client-react";
+import { useTranslation } from "react-i18next";
 
 function NotificationItem({
   notification,
@@ -35,34 +36,29 @@ function NotificationItem({
           isRedAlert ? "bg-red-100 text-red-600" : "bg-blue-100 text-blue-600",
         )}
       >
-        {isRedAlert ? (
-          <AlertTriangle className="w-4 h-4" />
-        ) : (
-          <Bell className="w-4 h-4" />
-        )}
+        {isRedAlert ? <AlertTriangle className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-xs text-foreground leading-relaxed">{notification.message}</p>
         <p className="text-[10px] text-muted-foreground mt-1">
-          {new Date(notification.createdAt).toLocaleTimeString("ru-RU", {
+          {new Date(notification.createdAt).toLocaleTimeString(undefined, {
             hour: "2-digit",
             minute: "2-digit",
           })}{" "}
           &bull;{" "}
-          {new Date(notification.createdAt).toLocaleDateString("ru-RU", {
+          {new Date(notification.createdAt).toLocaleDateString(undefined, {
             day: "2-digit",
             month: "short",
           })}
         </p>
       </div>
-      {!notification.read && (
-        <div className="w-2 h-2 rounded-full bg-primary mt-2 shrink-0" />
-      )}
+      {!notification.read && <div className="w-2 h-2 rounded-full bg-primary mt-2 shrink-0" />}
     </button>
   );
 }
 
 export function NotificationBell() {
+  const { t } = useTranslation();
   const { data: countData } = useUnreadCount();
   const { data: notificationsData } = useNotifications();
   const markReadMutation = useMarkRead();
@@ -70,9 +66,7 @@ export function NotificationBell() {
 
   const count = countData?.data?.count ?? 0;
   const notifications = notificationsData?.data?.notifications ?? [];
-  const unreadRedAlerts = notifications.filter(
-    (n) => n.type === "red_alert" && !n.read,
-  ).length;
+  const unreadRedAlerts = notifications.filter((n) => n.type === "red_alert" && !n.read).length;
 
   return (
     <Popover>
@@ -94,10 +88,10 @@ export function NotificationBell() {
       <PopoverContent className="w-96 p-0 shadow-xl" align="end">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
           <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-sm">Уведомления</h3>
+            <h3 className="font-semibold text-sm">{t("notifications.title")}</h3>
             {unreadRedAlerts > 0 && (
               <Badge variant="destructive" className="text-[10px] py-0">
-                {unreadRedAlerts} алерт
+                {t("notifications.redAlerts", { count: unreadRedAlerts })}
               </Badge>
             )}
           </div>
@@ -110,7 +104,7 @@ export function NotificationBell() {
               disabled={markAllMutation.isPending}
             >
               <CheckCheck className="w-3 h-3 mr-1" />
-              Все прочитано
+              {t("notifications.markAllRead")}
             </Button>
           )}
         </div>
@@ -118,7 +112,7 @@ export function NotificationBell() {
         <ScrollArea className="max-h-96">
           {notifications.length === 0 && (
             <div className="py-8 text-center text-sm text-muted-foreground">
-              Уведомлений нет
+              {t("notifications.empty")}
             </div>
           )}
           {notifications.map((n) => (

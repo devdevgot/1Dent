@@ -19,29 +19,28 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { Plus, Package, AlertTriangle, Pencil, Trash2, Check, X } from "lucide-react";
+import { Plus, Package, AlertTriangle, Trash2, Check, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
-const CATEGORY_LABELS: Record<string, string> = {
-  materials:    "Материалы",
-  instruments:  "Инструменты",
-  medications:  "Медикаменты",
-  consumables:  "Расходники",
-  prosthetics:  "Протезы",
-  implants:     "Имплантаты",
-  other:        "Прочее",
-};
+const CATEGORY_KEYS = [
+  "materials",
+  "instruments",
+  "medications",
+  "consumables",
+  "prosthetics",
+  "implants",
+  "other",
+] as const;
 
 const CATEGORY_COLORS: Record<string, string> = {
-  materials:    "bg-blue-50 text-blue-700",
-  instruments:  "bg-purple-50 text-purple-700",
-  medications:  "bg-green-50 text-green-700",
-  consumables:  "bg-amber-50 text-amber-700",
-  prosthetics:  "bg-pink-50 text-pink-700",
-  implants:     "bg-teal-50 text-teal-700",
-  other:        "bg-slate-100 text-slate-600",
+  materials:   "bg-blue-50 text-blue-700",
+  instruments: "bg-purple-50 text-purple-700",
+  medications: "bg-green-50 text-green-700",
+  consumables: "bg-amber-50 text-amber-700",
+  prosthetics: "bg-pink-50 text-pink-700",
+  implants:    "bg-teal-50 text-teal-700",
+  other:       "bg-slate-100 text-slate-600",
 };
-
-const CATEGORIES = Object.keys(CATEGORY_LABELS);
 
 interface CreateForm {
   name: string;
@@ -84,6 +83,7 @@ function StockEditor({
 }
 
 export default function InventoryPage() {
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
@@ -93,7 +93,7 @@ export default function InventoryPage() {
   const [form, setForm] = useState<CreateForm>({
     name: "",
     category: "materials",
-    unit: "шт",
+    unit: t("inventory.unit").split(" ")[0] || "шт",
     unitPrice: "0",
     quantity: "0",
     minQuantity: "0",
@@ -161,17 +161,18 @@ export default function InventoryPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-display font-bold text-foreground">Склад</h1>
+          <h1 className="text-2xl font-display font-bold text-foreground">{t("inventory.title")}</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {items.length} позиций · {lowStock.length > 0 && (
-              <span className="text-destructive font-semibold">{lowStock.length} заканчиваются</span>
+            {t("inventory.items", { count: items.length })}
+            {lowStock.length > 0 && (
+              <> · <span className="text-destructive font-semibold">{t("inventory.lowStock", { count: lowStock.length })}</span></>
             )}
           </p>
         </div>
         {canWrite && (
           <Button onClick={() => setShowCreate((v) => !v)} size="sm" className="gap-1.5">
             <Plus className="w-4 h-4" />
-            Добавить
+            {t("inventory.add")}
           </Button>
         )}
       </div>
@@ -181,10 +182,8 @@ export default function InventoryPage() {
         <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-3 flex items-center gap-3">
           <AlertTriangle className="w-5 h-5 text-destructive shrink-0" />
           <div>
-            <p className="text-sm font-semibold text-destructive">Низкий запас</p>
-            <p className="text-xs text-destructive/80">
-              {lowStock.map((i) => i.name).join(", ")}
-            </p>
+            <p className="text-sm font-semibold text-destructive">{t("inventory.lowStockTitle")}</p>
+            <p className="text-xs text-destructive/80">{lowStock.map((i) => i.name).join(", ")}</p>
           </div>
         </div>
       )}
@@ -195,30 +194,27 @@ export default function InventoryPage() {
           onSubmit={handleCreate}
           className="bg-white rounded-xl border border-border/50 p-4 space-y-3 shadow-sm"
         >
-          <p className="font-semibold text-sm mb-1">Новый товар / материал</p>
+          <p className="font-semibold text-sm mb-1">{t("inventory.newItem")}</p>
           <Input
-            placeholder="Название"
+            placeholder={t("inventory.name")}
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             required
             className="text-sm"
           />
           <div className="grid grid-cols-2 gap-2">
-            <Select
-              value={form.category}
-              onValueChange={(v) => setForm({ ...form, category: v })}
-            >
+            <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
               <SelectTrigger className="text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {CATEGORIES.map((c) => (
-                  <SelectItem key={c} value={c}>{CATEGORY_LABELS[c]}</SelectItem>
+                {CATEGORY_KEYS.map((c) => (
+                  <SelectItem key={c} value={c}>{t(`category.${c}`)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <Input
-              placeholder="Единица (шт, мл, г)"
+              placeholder={t("inventory.unit")}
               value={form.unit}
               onChange={(e) => setForm({ ...form, unit: e.target.value })}
               className="text-sm"
@@ -227,21 +223,21 @@ export default function InventoryPage() {
           <div className="grid grid-cols-3 gap-2">
             <Input
               type="number"
-              placeholder="Цена"
+              placeholder={t("inventory.price")}
               value={form.unitPrice}
               onChange={(e) => setForm({ ...form, unitPrice: e.target.value })}
               className="text-sm"
             />
             <Input
               type="number"
-              placeholder="Кол-во"
+              placeholder={t("inventory.qty")}
               value={form.quantity}
               onChange={(e) => setForm({ ...form, quantity: e.target.value })}
               className="text-sm"
             />
             <Input
               type="number"
-              placeholder="Мин. запас"
+              placeholder={t("inventory.minQty")}
               value={form.minQuantity}
               onChange={(e) => setForm({ ...form, minQuantity: e.target.value })}
               className="text-sm"
@@ -249,10 +245,10 @@ export default function InventoryPage() {
           </div>
           <div className="flex gap-2">
             <Button type="submit" size="sm" disabled={createMutation.isPending} className="flex-1">
-              {createMutation.isPending ? "Сохранение..." : "Создать"}
+              {createMutation.isPending ? t("inventory.creating") : t("inventory.create")}
             </Button>
             <Button type="button" variant="ghost" size="sm" onClick={() => setShowCreate(false)}>
-              Отмена
+              {t("inventory.cancel")}
             </Button>
           </div>
         </form>
@@ -269,9 +265,9 @@ export default function InventoryPage() {
               : "bg-slate-100 text-slate-600 hover:bg-slate-200",
           )}
         >
-          Все ({items.length})
+          {t("inventory.allFilter", { count: items.length })}
         </button>
-        {CATEGORIES.map((cat) => {
+        {CATEGORY_KEYS.map((cat) => {
           const count = items.filter((i) => i.category === cat).length;
           if (count === 0) return null;
           return (
@@ -285,7 +281,7 @@ export default function InventoryPage() {
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200",
               )}
             >
-              {CATEGORY_LABELS[cat]} ({count})
+              {t(`category.${cat}`)} ({count})
             </button>
           );
         })}
@@ -293,13 +289,13 @@ export default function InventoryPage() {
 
       {/* Search */}
       <Input
-        placeholder="Поиск по названию..."
+        placeholder={t("inventory.searchPlaceholder")}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="text-sm"
       />
 
-      {/* Table / List */}
+      {/* List */}
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
@@ -308,7 +304,7 @@ export default function InventoryPage() {
         <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
           <Package className="w-10 h-10 opacity-30" />
           <p className="text-sm">
-            {items.length === 0 ? "Склад пустой. Добавьте первый товар." : "Ничего не найдено"}
+            {items.length === 0 ? t("inventory.emptyFirst") : t("inventory.emptySearch")}
           </p>
         </div>
       ) : (
@@ -326,22 +322,26 @@ export default function InventoryPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-medium text-sm text-foreground truncate">{item.name}</p>
-                    <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium", CATEGORY_COLORS[item.category])}>
-                      {CATEGORY_LABELS[item.category]}
+                    <span
+                      className={cn(
+                        "text-[10px] px-1.5 py-0.5 rounded-full font-medium",
+                        CATEGORY_COLORS[item.category],
+                      )}
+                    >
+                      {t(`category.${item.category}`)}
                     </span>
                     {isLow && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive font-medium">
-                        Мало
+                        {t("inventory.low")}
                       </span>
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {item.unitPrice > 0 && `${item.unitPrice.toLocaleString("ru-RU")} ₽ / ${item.unit}`}
-                    {item.minQuantity > 0 && ` · Мин: ${item.minQuantity} ${item.unit}`}
+                    {item.unitPrice > 0 && `${item.unitPrice.toLocaleString()} / ${item.unit}`}
+                    {item.minQuantity > 0 && ` · ${t("inventory.min", { qty: item.minQuantity, unit: item.unit })}`}
                   </p>
                 </div>
 
-                {/* Stock editor */}
                 <div className="shrink-0 text-right">
                   {canWrite && editingStockId === item.id ? (
                     <StockEditor

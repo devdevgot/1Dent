@@ -24,8 +24,10 @@ import { CreatePatientDialog } from "@/components/kanban/create-patient-dialog";
 import { useKanbanStore } from "@/hooks/use-kanban";
 import { KANBAN_COLUMNS } from "@/lib/patient-utils";
 import type { Patient, PatientStatus } from "@workspace/api-client-react";
+import { useTranslation } from "react-i18next";
 
 export default function KanbanPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { isCreateOpen, setIsCreateOpen } = useKanbanStore();
   const [activeDragPatient, setActiveDragPatient] = useState<Patient | null>(null);
@@ -55,10 +57,8 @@ export default function KanbanPage() {
 
   const resolveOverColumn = (overId: string | number): PatientStatus | null => {
     const overIdStr = String(overId);
-    // Check if over.id is a column id directly
     const col = KANBAN_COLUMNS.find((c) => c.id === overIdStr);
     if (col) return col.id;
-    // Otherwise, find the patient being hovered over and use their column
     const overPatient = patients.find((p) => p.id === overIdStr);
     if (overPatient) return overPatient.status;
     return null;
@@ -108,23 +108,21 @@ export default function KanbanPage() {
       <div className="flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
           <p className="text-sm text-muted-foreground">
-            Всего пациентов: <span className="font-bold text-foreground">{totalPatients}</span>
+            {t("kanban.totalPatients", { count: totalPatients })}
           </p>
           <Button
             variant="ghost"
             size="icon"
-            onClick={() =>
-              queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() })
-            }
+            onClick={() => queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() })}
             className="w-8 h-8"
-            title="Обновить"
+            title={t("kanban.refresh")}
           >
             <RefreshCw className="w-4 h-4" />
           </Button>
         </div>
         <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
           <Plus className="w-4 h-4" />
-          Новый пациент
+          {t("kanban.newPatient")}
         </Button>
       </div>
 
@@ -134,7 +132,7 @@ export default function KanbanPage() {
         </div>
       ) : error ? (
         <div className="flex-1 flex items-center justify-center text-destructive text-sm">
-          Ошибка загрузки пациентов
+          {t("kanban.loadError")}
         </div>
       ) : (
         <DndContext
@@ -167,9 +165,7 @@ export default function KanbanPage() {
 
       <PatientDetailPanel />
 
-      {isCreateOpen && (
-        <CreatePatientDialog onClose={() => setIsCreateOpen(false)} />
-      )}
+      {isCreateOpen && <CreatePatientDialog onClose={() => setIsCreateOpen(false)} />}
     </div>
   );
 }

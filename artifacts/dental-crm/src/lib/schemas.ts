@@ -1,17 +1,28 @@
 import { z } from "zod";
+import i18n from "@/lib/i18n";
 
-export const loginSchema = z.object({
-  email: z.string().email("Введите корректный email"),
-  password: z.string().min(1, "Пароль обязателен"),
-});
+export const createLoginSchema = () =>
+  z.object({
+    email: z.string().email(i18n.t("validation.emailInvalid")),
+    password: z.string().min(1, i18n.t("validation.passwordRequired")),
+  });
 
-export type LoginFormValues = z.infer<typeof loginSchema>;
+export type LoginFormValues = {
+  email: string;
+  password: string;
+};
 
-export const registerSchema = z.object({
-  clinicName: z.string().min(2, "Название клиники — минимум 2 символа"),
-  name: z.string().min(2, "Имя — минимум 2 символа"),
-  email: z.string().email("Введите корректный email"),
-  password: z.string().min(6, "Пароль — минимум 6 символов"),
-});
+export const createRegisterSchema = () =>
+  z.object({
+    clinicName: z.string().min(2, i18n.t("validation.clinicNameMin")),
+    name: z.string().min(2, i18n.t("validation.nameMin")),
+    email: z.string().email(i18n.t("validation.emailInvalid")),
+    password: z.string().min(6, i18n.t("validation.passwordMin")),
+  });
 
-export type RegisterFormValues = z.infer<typeof registerSchema>;
+export type RegisterFormValues = {
+  clinicName: string;
+  name: string;
+  email: string;
+  password: string;
+};

@@ -16,16 +16,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 function formatTime(dateStr: string) {
-  return new Date(dateStr).toLocaleTimeString("ru-RU", {
+  return new Date(dateStr).toLocaleTimeString(undefined, {
     hour: "2-digit",
     minute: "2-digit",
   });
 }
 
 function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("ru-RU", {
+  return new Date(dateStr).toLocaleDateString(undefined, {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -52,6 +53,7 @@ function getDeliveryStatus(message: Message): DeliveryStatus {
 }
 
 function MessageBubble({ message, isOutbound }: { message: Message; isOutbound: boolean }) {
+  const { t } = useTranslation();
   const deliveryStatus = getDeliveryStatus(message);
   return (
     <div className={cn("flex mb-3", isOutbound ? "justify-end" : "justify-start")}>
@@ -67,7 +69,7 @@ function MessageBubble({ message, isOutbound }: { message: Message; isOutbound: 
         {message.isRedAlert && (
           <div className="flex items-center gap-1 text-red-600 mb-1 text-xs font-semibold">
             <AlertTriangle className="w-3 h-3" />
-            <span>Red Alert</span>
+            <span>{t("chat.redAlert")}</span>
           </div>
         )}
         <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
@@ -78,9 +80,7 @@ function MessageBubble({ message, isOutbound }: { message: Message; isOutbound: 
           )}
         >
           {formatTime(message.createdAt)}
-          {message.isRedAlert && isOutbound && (
-            <span className="ml-1">🚨</span>
-          )}
+          {message.isRedAlert && isOutbound && <span className="ml-1">🚨</span>}
           {isOutbound && <DeliveryIcon status={deliveryStatus} />}
         </p>
       </div>
@@ -89,6 +89,7 @@ function MessageBubble({ message, isOutbound }: { message: Message; isOutbound: 
 }
 
 function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void }) {
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const [text, setText] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -97,14 +98,13 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
   const { data, isLoading } = useListMessages(patient.id, {
     query: {
       queryKey: getListMessagesQueryKey(patient.id),
-      refetchInterval: 5000, // poll for new messages every 5s
+      refetchInterval: 5000,
     },
   });
 
   const sendMutation = useSendMessage({
     mutation: {
       onMutate: async (vars) => {
-        // Optimistic update
         const optimistic: Message = {
           id: `optimistic-${Date.now()}`,
           clinicId: user!.clinicId,
@@ -118,10 +118,7 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
         };
         qc.setQueryData(getListMessagesQueryKey(patient.id), (old: typeof data) => {
           if (!old?.data?.messages) return old;
-          return {
-            ...old,
-            data: { messages: [...old.data.messages, optimistic] },
-          };
+          return { ...old, data: { messages: [...old.data.messages, optimistic] } };
         });
         return { optimistic };
       },
@@ -151,7 +148,6 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
     }
   };
 
-  // Group messages by date
   const grouped: { date: string; messages: Message[] }[] = [];
   for (const msg of messages) {
     const d = formatDate(msg.createdAt);
@@ -165,13 +161,12 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border/50 bg-white">
         {onBack && (
           <button
             onClick={onBack}
             className="md:hidden p-2 -ml-1 rounded-lg hover:bg-slate-100 text-muted-foreground"
-            aria-label="Назад"
+            aria-label="Back"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -188,22 +183,21 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
         {messages.some((m) => m.isRedAlert) && (
           <Badge variant="destructive" className="ml-auto flex items-center gap-1">
             <AlertTriangle className="w-3 h-3" />
-            Красный алерт
+            {t("chat.redAlert")}
           </Badge>
         )}
       </div>
 
-      {/* Messages */}
       <ScrollArea className="flex-1 px-6 py-4 bg-[#ECE5DD]">
         {isLoading && (
           <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-            Загрузка сообщений...
+            {t("chat.loadingMessages")}
           </div>
         )}
         {!isLoading && messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground">
             <MessageSquare className="w-10 h-10 opacity-30" />
-            <p className="text-sm">Нет сообщений. Начните переписку.</p>
+            <p className="text-sm">{t("chat.noMessages")}</p>
           </div>
         )}
         {grouped.map((group) => (
@@ -225,13 +219,12 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
         <div ref={bottomRef} />
       </ScrollArea>
 
-      {/* Input */}
       <div className="px-4 py-3 bg-white border-t border-border/50 flex items-end gap-3">
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Введите сообщение... (Enter для отправки)"
+          placeholder={t("chat.messagePlaceholder")}
           className="resize-none min-h-[44px] max-h-32 flex-1 text-sm"
           rows={1}
         />
@@ -249,6 +242,7 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
 }
 
 export default function ChatPage() {
+  const { t } = useTranslation();
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
@@ -263,14 +257,10 @@ export default function ChatPage() {
   const selectedPatient = patients.find((p) => p.id === selectedPatientId);
 
   const handleBack = () => setSelectedPatientId(null);
-
   const H = "h-[calc(100dvh-7.5rem)]";
 
   return (
     <div className={cn("flex overflow-hidden bg-white", H)}>
-      {/* ── Patient List Panel ──
-          Mobile: full-width, hidden when a patient is selected
-          Desktop (md+): always visible, fixed 320px wide */}
       <aside
         className={cn(
           "flex flex-col bg-white border-r border-border/50",
@@ -279,13 +269,13 @@ export default function ChatPage() {
         )}
       >
         <div className="p-4 border-b border-border/50">
-          <h2 className="font-semibold text-foreground mb-3">WhatsApp Чат</h2>
+          <h2 className="font-semibold text-foreground mb-3">{t("chat.title")}</h2>
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Поиск пациента..."
+              placeholder={t("chat.searchPlaceholder")}
               className="pl-9 text-sm"
             />
           </div>
@@ -293,7 +283,7 @@ export default function ChatPage() {
         <ScrollArea className="flex-1">
           {filtered.length === 0 && (
             <div className="p-6 text-center text-sm text-muted-foreground">
-              Пациенты не найдены
+              {t("chat.noPatients")}
             </div>
           )}
           {filtered.map((patient) => (
@@ -307,9 +297,6 @@ export default function ChatPage() {
         </ScrollArea>
       </aside>
 
-      {/* ── Chat Panel ──
-          Mobile: full-width, shown only when a patient is selected (with back button)
-          Desktop: flex-1, always visible */}
       <main
         className={cn(
           "flex-1 flex flex-col",
@@ -321,7 +308,7 @@ export default function ChatPage() {
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center gap-4 text-muted-foreground bg-[#ECE5DD]">
             <MessageSquare className="w-16 h-16 opacity-20" />
-            <p className="text-sm font-medium">Выберите пациента для переписки</p>
+            <p className="text-sm font-medium">{t("chat.selectPatient")}</p>
           </div>
         )}
       </main>
@@ -343,9 +330,7 @@ function PatientListItem({
       onClick={onSelect}
       className={cn(
         "w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-b border-border/30",
-        isSelected
-          ? "bg-green-50 border-l-2 border-l-green-500"
-          : "hover:bg-slate-50",
+        isSelected ? "bg-green-50 border-l-2 border-l-green-500" : "hover:bg-slate-50",
       )}
     >
       <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">

@@ -25,9 +25,10 @@ import {
 import { cn } from "@/lib/utils";
 import { X, Clock, Beaker } from "lucide-react";
 import { useAuthStore } from "@/hooks/use-auth";
+import { useTranslation } from "react-i18next";
 
 function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("ru-RU", {
+  return new Date(dateStr).toLocaleDateString(undefined, {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -47,6 +48,7 @@ export function ToothDetailPanel({
   onClose,
   readOnly = false,
 }: ToothDetailPanelProps) {
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const qc = useQueryClient();
   const [notes, setNotes] = useState("");
@@ -69,9 +71,7 @@ export function ToothDetailPanel({
     patientId,
     toothFdi,
     {
-      query: {
-        queryKey: getListToothTreatmentsQueryKey(patientId, toothFdi),
-      },
+      query: { queryKey: getListToothTreatmentsQueryKey(patientId, toothFdi) },
     },
   );
   const treatments = treatmentsData?.data?.treatments ?? [];
@@ -134,7 +134,7 @@ export function ToothDetailPanel({
     (notes.length > 0 && notes !== (record?.notes ?? ""));
 
   const conditionCfg = CONDITION_CONFIG[currentCondition];
-
+  const conditionLabel = t(`condition.${currentCondition}`);
   const canWrite = !readOnly && ["owner", "admin", "doctor"].includes(user?.role ?? "");
 
   return (
@@ -150,8 +150,8 @@ export function ToothDetailPanel({
           </span>
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-foreground text-sm">Зуб {toothFdi}</p>
-          <p className="text-xs text-muted-foreground">{conditionCfg.label}</p>
+          <p className="font-semibold text-foreground text-sm">{t("tooth.title", { fdi: toothFdi })}</p>
+          <p className="text-xs text-muted-foreground">{conditionLabel}</p>
         </div>
         <button
           onClick={onClose}
@@ -167,35 +167,41 @@ export function ToothDetailPanel({
           {canWrite && (
             <div>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                Состояние
+                {t("tooth.condition")}
               </p>
               <div className="grid grid-cols-2 gap-1.5">
-                {(Object.entries(CONDITION_CONFIG) as [ToothCondition, typeof CONDITION_CONFIG[ToothCondition]][]).map(
-                  ([cond, cfg]) => (
-                    <button
-                      key={cond}
-                      onClick={() => setSelectedCondition(cond)}
-                      className={cn(
-                        "flex items-center gap-2 px-2.5 py-2 rounded-lg border text-left text-xs transition-all",
-                        currentCondition === cond
-                          ? "ring-2 ring-primary ring-offset-1 border-transparent"
-                          : "border-border hover:border-primary/50",
-                      )}
-                      style={{
-                        background: currentCondition === cond ? cfg.crownFill : undefined,
-                        borderColor: currentCondition === cond ? cfg.stroke : undefined,
-                      }}
+                {(
+                  Object.entries(CONDITION_CONFIG) as [ToothCondition, (typeof CONDITION_CONFIG)[ToothCondition]][]
+                ).map(([cond, cfg]) => (
+                  <button
+                    key={cond}
+                    onClick={() => setSelectedCondition(cond)}
+                    tabIndex={0}
+                    aria-pressed={currentCondition === cond}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedCondition(cond); } }}
+                    className={cn(
+                      "flex items-center gap-2 px-2.5 py-2 rounded-lg border text-left text-xs transition-all",
+                      currentCondition === cond
+                        ? "ring-2 ring-primary ring-offset-1 border-transparent"
+                        : "border-border hover:border-primary/50",
+                    )}
+                    style={{
+                      background: currentCondition === cond ? cfg.crownFill : undefined,
+                      borderColor: currentCondition === cond ? cfg.stroke : undefined,
+                    }}
+                  >
+                    <span
+                      className="w-3 h-3 rounded-sm shrink-0 border"
+                      style={{ background: cfg.crownFill, borderColor: cfg.stroke }}
+                    />
+                    <span
+                      className="truncate font-medium"
+                      style={{ color: currentCondition === cond ? cfg.textColor : undefined }}
                     >
-                      <span
-                        className="w-3 h-3 rounded-sm shrink-0 border"
-                        style={{ background: cfg.crownFill, borderColor: cfg.stroke }}
-                      />
-                      <span className="truncate font-medium" style={{ color: currentCondition === cond ? cfg.textColor : undefined }}>
-                        {cfg.label}
-                      </span>
-                    </button>
-                  ),
-                )}
+                      {t(`condition.${cond}`)}
+                    </span>
+                  </button>
+                ))}
               </div>
             </div>
           )}
@@ -203,14 +209,14 @@ export function ToothDetailPanel({
           {!canWrite && (
             <div>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                Состояние
+                {t("tooth.condition")}
               </p>
               <div
                 className="flex items-center gap-2 px-3 py-2 rounded-lg border"
                 style={{ background: conditionCfg.crownFill, borderColor: conditionCfg.stroke }}
               >
                 <span className="text-sm font-semibold" style={{ color: conditionCfg.textColor }}>
-                  {conditionCfg.label}
+                  {conditionLabel}
                 </span>
               </div>
             </div>
@@ -220,10 +226,10 @@ export function ToothDetailPanel({
           {canWrite && (
             <div>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                Заметки врача
+                {t("tooth.doctorNotes")}
               </p>
               <Textarea
-                placeholder={record?.notes || "Добавить заметку..."}
+                placeholder={record?.notes || t("tooth.notesPlaceholder")}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 className="text-sm resize-none"
@@ -235,7 +241,7 @@ export function ToothDetailPanel({
           {!canWrite && record?.notes && (
             <div>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                Заметки
+                {t("tooth.notes")}
               </p>
               <p className="text-sm text-foreground">{record.notes}</p>
             </div>
@@ -249,7 +255,7 @@ export function ToothDetailPanel({
               size="sm"
               className="w-full"
             >
-              {updateMutation.isPending ? "Сохранение..." : "Сохранить изменения"}
+              {updateMutation.isPending ? t("tooth.saving") : t("tooth.save")}
             </Button>
           )}
 
@@ -257,14 +263,14 @@ export function ToothDetailPanel({
           <div>
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                История лечения
+                {t("tooth.treatmentHistory")}
               </p>
               {canWrite && (
                 <button
                   onClick={() => setShowAddTreatment((v) => !v)}
                   className="text-xs text-primary font-semibold hover:underline"
                 >
-                  {showAddTreatment ? "Отмена" : "+ Добавить"}
+                  {showAddTreatment ? t("tooth.cancel") : t("tooth.add")}
                 </button>
               )}
             </div>
@@ -273,7 +279,7 @@ export function ToothDetailPanel({
             {showAddTreatment && (
               <div className="bg-slate-50 rounded-xl p-3 space-y-3 mb-3 border border-border/50">
                 <Textarea
-                  placeholder="Описание процедуры..."
+                  placeholder={t("tooth.treatmentDescPlaceholder")}
                   value={treatmentDesc}
                   onChange={(e) => setTreatmentDesc(e.target.value)}
                   rows={2}
@@ -286,10 +292,10 @@ export function ToothDetailPanel({
                       onValueChange={(v) => setTreatmentItemId(v === "none" ? undefined : v)}
                     >
                       <SelectTrigger className="text-xs flex-1">
-                        <SelectValue placeholder="Материал из склада" />
+                        <SelectValue placeholder={t("tooth.material")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">Без материала</SelectItem>
+                        <SelectItem value="none">{t("tooth.noMaterial")}</SelectItem>
                         {inventoryItems.map((item) => (
                           <SelectItem key={item.id} value={item.id}>
                             {item.name} ({item.unit})
@@ -305,7 +311,7 @@ export function ToothDetailPanel({
                         value={treatmentQty}
                         onChange={(e) => setTreatmentQty(e.target.value)}
                         className="w-16 text-xs px-2 py-1.5 rounded-md border border-input bg-white"
-                        placeholder="Кол-во"
+                        placeholder={t("tooth.qtyPlaceholder")}
                       />
                     )}
                   </div>
@@ -316,40 +322,34 @@ export function ToothDetailPanel({
                   disabled={!treatmentDesc.trim() || addTreatmentMutation.isPending}
                   className="w-full"
                 >
-                  {addTreatmentMutation.isPending ? "Сохранение..." : "Записать процедуру"}
+                  {addTreatmentMutation.isPending ? t("tooth.saving") : t("tooth.saveTreatment")}
                 </Button>
               </div>
             )}
 
             {treatmentsLoading ? (
-              <div className="text-xs text-muted-foreground py-4 text-center">Загрузка...</div>
+              <div className="text-xs text-muted-foreground py-4 text-center">{t("tooth.loading")}</div>
             ) : treatments.length === 0 ? (
-              <div className="text-xs text-muted-foreground py-4 text-center">
-                Процедур не записано
-              </div>
+              <div className="text-xs text-muted-foreground py-4 text-center">{t("tooth.noTreatments")}</div>
             ) : (
               <div className="space-y-2">
                 {[...treatments]
-                  .sort(
-                    (a, b) =>
-                      new Date(b.performedAt).getTime() -
-                      new Date(a.performedAt).getTime(),
-                  )
-                  .map((t) => (
+                  .sort((a, b) => new Date(b.performedAt).getTime() - new Date(a.performedAt).getTime())
+                  .map((tr) => (
                     <div
-                      key={t.id}
+                      key={tr.id}
                       className="bg-white rounded-lg p-3 border border-border/50 text-sm"
                     >
-                      <p className="font-medium text-foreground">{t.description}</p>
+                      <p className="font-medium text-foreground">{tr.description}</p>
                       <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          {formatDate(t.performedAt)}
+                          {formatDate(tr.performedAt)}
                         </span>
-                        {t.quantityUsed && (
+                        {tr.quantityUsed && (
                           <span className="flex items-center gap-1">
                             <Beaker className="w-3 h-3" />
-                            {t.quantityUsed} ед.
+                            {tr.quantityUsed} {t("tooth.units")}
                           </span>
                         )}
                       </div>
