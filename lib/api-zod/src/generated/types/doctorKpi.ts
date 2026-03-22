@@ -12,4 +12,8 @@ export interface DoctorKpi {
   patientsCount: number;
   proceduresCount: number;
   revenueTotal: number;
+  /** Average revenue per procedure (revenueTotal / proceduresCount) */
+  averageCheck: number;
+  /** Net Promoter Score (0 if not yet tracked) */
+  nps: number;
 }

@@ -3283,6 +3283,86 @@ export const useUpdateProcedureStatus = <
 };
 
 /**
+ * @summary List procedure templates (alias)
+ */
+export const getListProcedureTemplatesAliasUrl = () => {
+  return `/api/procedure-templates`;
+};
+
+export const listProcedureTemplatesAlias = async (
+  options?: RequestInit,
+): Promise<ProcedureTemplateListResponse> => {
+  return customFetch<ProcedureTemplateListResponse>(
+    getListProcedureTemplatesAliasUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListProcedureTemplatesAliasQueryKey = () => {
+  return [`/api/procedure-templates`] as const;
+};
+
+export const getListProcedureTemplatesAliasQueryOptions = <
+  TData = Awaited<ReturnType<typeof listProcedureTemplatesAlias>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listProcedureTemplatesAlias>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListProcedureTemplatesAliasQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listProcedureTemplatesAlias>>
+  > = ({ signal }) =>
+    listProcedureTemplatesAlias({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listProcedureTemplatesAlias>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListProcedureTemplatesAliasQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listProcedureTemplatesAlias>>
+>;
+export type ListProcedureTemplatesAliasQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List procedure templates (alias)
+ */
+
+export function useListProcedureTemplatesAlias<
+  TData = Awaited<ReturnType<typeof listProcedureTemplatesAlias>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listProcedureTemplatesAlias>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListProcedureTemplatesAliasQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
  * @summary List procedure templates
  */
 export const getListProcedureTemplatesUrl = () => {

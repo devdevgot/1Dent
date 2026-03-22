@@ -245,7 +245,7 @@ export default function Dashboard() {
                         ₸ {Number(kpi.revenueTotal).toLocaleString("ru-KZ")}
                       </td>
                       <td className="py-3 text-right text-muted-foreground">
-                        ₸ {Number((kpi as { averageCheck?: number }).averageCheck ?? 0).toLocaleString("ru-KZ")}
+                        ₸ {Number(kpi.averageCheck ?? 0).toLocaleString("ru-KZ")}
                       </td>
                     </motion.tr>
                   ))}

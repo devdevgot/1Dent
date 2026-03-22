@@ -126,6 +126,22 @@ router.post("/", writeRoles, async (req: Request, res: Response, next: NextFunct
     if (!template) return next(new NotFoundError("Procedure template not found"));
     if (!rest.name || rest.name === template.name) resolvedName = template.name;
     if (resolvedPrice == null && template.defaultPrice != null) resolvedPrice = template.defaultPrice;
+
+    // Parse template materials and map to inventory item IDs by name
+    let rawMaterials: { name: string; quantity: number; unit?: string }[] = [];
+    try {
+      rawMaterials = JSON.parse(String(template.materials)) as { name: string; quantity: number; unit?: string }[];
+    } catch {
+      rawMaterials = [];
+    }
+    if (rawMaterials.length > 0) {
+      const names = rawMaterials.map((m) => m.name);
+      const inventoryMatches = await repo.findInventoryItemsByNames(names, clinicId).catch(() => []);
+      const nameToId = new Map(inventoryMatches.map((item) => [item.name.toLowerCase(), item.id]));
+      templateMaterials = rawMaterials
+        .map((m) => ({ itemId: nameToId.get(m.name.toLowerCase()) ?? "", quantity: m.quantity }))
+        .filter((m) => m.itemId !== "");
+    }
   }
 
   // Materials from request take precedence over template materials

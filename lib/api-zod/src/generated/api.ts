@@ -994,6 +994,26 @@ export const UpdateProcedureStatusResponse = zod.object({
 });
 
 /**
+ * @summary List procedure templates (alias)
+ */
+export const ListProcedureTemplatesAliasResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    templates: zod.array(
+      zod.object({
+        id: zod.string(),
+        clinicId: zod.string(),
+        name: zod.string(),
+        description: zod.string().nullish(),
+        defaultPrice: zod.number(),
+        materials: zod.string(),
+        createdAt: zod.date(),
+      }),
+    ),
+  }),
+});
+
+/**
  * @summary List procedure templates
  */
 export const ListProcedureTemplatesResponse = zod.object({
@@ -1067,6 +1087,12 @@ export const GetDoctorKpisResponse = zod.object({
         patientsCount: zod.number(),
         proceduresCount: zod.number(),
         revenueTotal: zod.number(),
+        averageCheck: zod
+          .number()
+          .describe(
+            "Average revenue per procedure (revenueTotal \/ proceduresCount)",
+          ),
+        nps: zod.number().describe("Net Promoter Score (0 if not yet tracked)"),
       }),
     ),
   }),

@@ -943,6 +943,21 @@ paths:
               schema:
                 $ref: "#/components/schemas/ProcedureResponse"
 
+  /procedure-templates:
+    get:
+      operationId: listProcedureTemplatesAlias
+      tags: [procedures]
+      summary: List procedure templates (alias)
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: List of templates
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProcedureTemplateListResponse"
+
   /procedures/templates:
     get:
       operationId: listProcedureTemplates
@@ -2132,12 +2147,20 @@ components:
           type: integer
         revenueTotal:
           type: number
+        averageCheck:
+          type: number
+          description: Average revenue per procedure (revenueTotal / proceduresCount)
+        nps:
+          type: number
+          description: Net Promoter Score (0 if not yet tracked)
       required:
         - doctorId
         - doctorName
         - patientsCount
         - proceduresCount
         - revenueTotal
+        - averageCheck
+        - nps
 
     AnalyticsData:
       type: object

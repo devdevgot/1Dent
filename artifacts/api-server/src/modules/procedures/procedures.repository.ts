@@ -5,8 +5,9 @@ import {
   procedureMaterialsTable,
   usersTable,
   inventoryStockTable,
+  inventoryItemsTable,
 } from "@workspace/db";
-import { eq, and, gte, lte, desc } from "drizzle-orm";
+import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import type { Procedure, ProcedureTemplate, ProcedureStatus } from "@workspace/db";
 
@@ -144,6 +145,19 @@ export class ProceduresRepository {
       })
       .returning();
     return template!;
+  }
+
+  async findInventoryItemsByNames(
+    names: string[],
+    clinicId: string,
+  ): Promise<{ id: string; name: string }[]> {
+    if (names.length === 0) return [];
+    const lowerNames = names.map((n) => n.toLowerCase());
+    const items = await db
+      .select({ id: inventoryItemsTable.id, name: inventoryItemsTable.name })
+      .from(inventoryItemsTable)
+      .where(eq(inventoryItemsTable.clinicId, clinicId));
+    return items.filter((item) => lowerNames.includes(item.name.toLowerCase()));
   }
 
   async findTemplateById(id: string, clinicId: string): Promise<ProcedureTemplate | null> {
