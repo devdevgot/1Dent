@@ -97,7 +97,7 @@ export function NotificationBell() {
             <h3 className="font-semibold text-sm">Уведомления</h3>
             {unreadRedAlerts > 0 && (
               <Badge variant="destructive" className="text-[10px] py-0">
-                {unreadRedAlerts} Red Alert
+                {unreadRedAlerts} алерт
               </Badge>
             )}
           </div>

@@ -24,16 +24,16 @@ export default function Login() {
         if (response.success) {
           setAuth(response.data.user, response.data.clinic);
           toast({
-            title: "Welcome back!",
-            description: `Signed in to ${response.data.clinic.name}`,
+            title: "Добро пожаловать!",
+            description: `Вход в ${response.data.clinic.name}`,
           });
           setLocation(getRoleDashboardPath(response.data.user.role));
         }
       },
       onError: (error) => {
         toast({
-          title: "Login failed",
-          description: (error.data as { error?: string })?.error || "Please check your credentials and try again.",
+          title: "Ошибка входа",
+          description: (error.data as { error?: string })?.error || "Проверьте данные и попробуйте снова.",
           variant: "destructive"
         });
       }
@@ -46,12 +46,12 @@ export default function Login() {
 
   return (
     <div className="min-h-screen w-full flex bg-background">
-      {/* Left side - Image/Branding */}
+      {/* Левая панель — брендинг */}
       <div className="hidden lg:flex w-1/2 relative overflow-hidden bg-slate-900 items-center justify-center">
         <div className="absolute inset-0 z-0">
           <img 
             src={`${import.meta.env.BASE_URL}images/auth-bg.png`} 
-            alt="Dental CRM Background" 
+            alt="Dental CRM" 
             className="w-full h-full object-cover opacity-80"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
@@ -63,20 +63,20 @@ export default function Login() {
             className="w-16 h-16 object-contain mb-8 bg-white/10 p-2 rounded-2xl backdrop-blur-md"
           />
           <h1 className="font-display font-bold text-5xl mb-6 leading-tight">
-            The anti-theft operating system for dental clinics.
+            Антивор: операционная система для стоматологических клиник.
           </h1>
           <p className="text-xl text-white/80 font-light">
-            Secure multi-tenant architecture. Centralized AI communications. Total control over your clinical processes.
+            Безопасная мультитенантная архитектура. Централизованные AI-коммуникации. Полный контроль над клиническими процессами.
           </p>
         </div>
       </div>
 
-      {/* Right side - Form */}
+      {/* Правая панель — форма */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 relative">
         <div className="absolute top-8 right-8">
-          <span className="text-sm text-muted-foreground mr-2">New clinic?</span>
+          <span className="text-sm text-muted-foreground mr-2">Новая клиника?</span>
           <Link href="/register" className="text-sm font-semibold text-primary hover:underline">
-            Create account
+            Создать аккаунт
           </Link>
         </div>
 
@@ -87,8 +87,8 @@ export default function Login() {
           className="w-full max-w-md"
         >
           <div className="mb-10">
-            <h2 className="text-3xl font-display font-bold text-foreground mb-2">Welcome back</h2>
-            <p className="text-muted-foreground">Please enter your details to sign in.</p>
+            <h2 className="text-3xl font-display font-bold text-foreground mb-2">Добро пожаловать</h2>
+            <p className="text-muted-foreground">Введите ваши данные для входа.</p>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
@@ -113,8 +113,8 @@ export default function Login() {
 
             <div className="space-y-1.5">
               <div className="flex justify-between items-center">
-                <label className="text-sm font-semibold text-foreground">Password</label>
-                <a href="#" className="text-sm font-medium text-primary hover:underline">Forgot password?</a>
+                <label className="text-sm font-semibold text-foreground">Пароль</label>
+                <a href="#" className="text-sm font-medium text-primary hover:underline">Забыли пароль?</a>
               </div>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -138,7 +138,7 @@ export default function Login() {
               disabled={loginMutation.isPending}
               className="w-full mt-8 group flex items-center justify-center px-6 py-3.5 text-base font-semibold text-white bg-primary hover:bg-primary/90 rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
             >
-              {loginMutation.isPending ? "Signing in..." : "Sign in"}
+              {loginMutation.isPending ? "Вход..." : "Войти"}
               {!loginMutation.isPending && <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />}
             </button>
           </form>

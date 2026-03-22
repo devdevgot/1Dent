@@ -33,36 +33,44 @@ const ROLE_DASHBOARD_HREF: Record<string, string> = {
 };
 
 const ALL_NAV_ITEMS = [
-  { name: "Dashboard", href: "__role_dashboard__", icon: LayoutDashboard, roles: ["owner", "admin", "doctor", "accountant", "warehouse"] },
-  { name: "Kanban", href: "/kanban", icon: KanbanSquare, roles: ["owner", "admin"] },
-  { name: "Chat", href: "/chat", icon: MessageSquare, roles: ["owner", "admin", "doctor"] },
-  { name: "Patients", href: "/patients", icon: Users, roles: ["owner", "admin", "doctor"] },
-  { name: "Procedures", href: "/procedures", icon: Stethoscope, roles: ["owner", "admin", "doctor", "accountant"] },
-  { name: "Schedule", href: "/schedule", icon: Calendar, roles: ["admin"] },
-  { name: "Analytics", href: "/analytics", icon: BarChart3, roles: ["owner"] },
-  { name: "Financials", href: "/financials", icon: Wallet, roles: ["accountant"] },
-  { name: "Inventory", href: "/inventory", icon: Package, roles: ["owner", "admin", "warehouse"] },
-  { name: "Users", href: "/users", icon: Settings, roles: ["owner"] },
-  { name: "Activity Log", href: "/logs", icon: Activity, roles: ["owner"] },
+  { name: "Главная", href: "__role_dashboard__", icon: LayoutDashboard, roles: ["owner", "admin", "doctor", "accountant", "warehouse"] },
+  { name: "Канбан", href: "/kanban", icon: KanbanSquare, roles: ["owner", "admin"] },
+  { name: "Чат", href: "/chat", icon: MessageSquare, roles: ["owner", "admin", "doctor"] },
+  { name: "Пациенты", href: "/patients", icon: Users, roles: ["owner", "admin", "doctor"] },
+  { name: "Процедуры", href: "/procedures", icon: Stethoscope, roles: ["owner", "admin", "doctor", "accountant"] },
+  { name: "Расписание", href: "/schedule", icon: Calendar, roles: ["admin"] },
+  { name: "Аналитика", href: "/analytics", icon: BarChart3, roles: ["owner"] },
+  { name: "Финансы", href: "/financials", icon: Wallet, roles: ["accountant"] },
+  { name: "Склад", href: "/inventory", icon: Package, roles: ["owner", "admin", "warehouse"] },
+  { name: "Пользователи", href: "/users", icon: Settings, roles: ["owner"] },
+  { name: "Журнал", href: "/logs", icon: Activity, roles: ["owner"] },
 ];
+
+const ROLE_LABELS: Record<string, string> = {
+  owner: "Владелец",
+  admin: "Администратор",
+  doctor: "Врач",
+  accountant: "Бухгалтер",
+  warehouse: "Склад",
+};
 
 const MAX_BOTTOM_TABS = 4;
 
 const PAGE_TITLES: Record<string, string> = {
-  "/dashboard": "Dashboard",
-  "/dashboard/doctor": "My Dashboard",
-  "/dashboard/accountant": "Financials",
-  "/dashboard/warehouse": "Warehouse",
-  "/kanban": "Patients",
-  "/chat": "Chat",
-  "/patients": "Patients",
-  "/procedures": "Procedures",
-  "/schedule": "Schedule",
-  "/analytics": "Analytics",
-  "/financials": "Financials",
-  "/inventory": "Inventory",
-  "/users": "Users",
-  "/logs": "Activity Log",
+  "/dashboard": "Главная",
+  "/dashboard/doctor": "Мой кабинет",
+  "/dashboard/accountant": "Финансы",
+  "/dashboard/warehouse": "Склад",
+  "/kanban": "Пациенты",
+  "/chat": "Чат",
+  "/patients": "Пациенты",
+  "/procedures": "Процедуры",
+  "/schedule": "Расписание",
+  "/analytics": "Аналитика",
+  "/financials": "Финансы",
+  "/inventory": "Склад",
+  "/users": "Пользователи",
+  "/logs": "Журнал",
 };
 
 export function AppLayout({ children }: { children: ReactNode }) {
@@ -80,8 +88,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
       },
       onError: () => {
         toast({
-          title: "Error",
-          description: "Failed to log out. Please try again.",
+          title: "Ошибка",
+          description: "Не удалось выйти из системы. Попробуйте снова.",
           variant: "destructive",
         });
       },
@@ -112,7 +120,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     PAGE_TITLES[location] ||
     Object.entries(PAGE_TITLES).find(([k]) => location.startsWith(k + "/"))?.[1] ||
     location.split("/")[1]?.replace(/-/g, " ") ||
-    "Dashboard";
+    "Главная";
 
   const isOverflowActive = overflowItems.some(
     (item) => location === item.href || location.startsWith(`${item.href}/`),
@@ -120,9 +128,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background overflow-hidden">
-      {/* ── Top Header ── */}
+      {/* ── Верхний хэдер ── */}
       <header className="flex-none flex items-center h-14 px-4 bg-white border-b border-border/50 z-20 safe-area-top">
-        {/* Clinic Logo + Title */}
         <div className="flex items-center gap-2.5 flex-1 min-w-0">
           <img
             src={`${import.meta.env.BASE_URL}images/logo.png`}
@@ -139,7 +146,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
 
-        {/* Right side: Notifications + Avatar */}
         <div className="flex items-center gap-2">
           <NotificationBell />
           <button
@@ -151,12 +157,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      {/* ── Main Content ── */}
+      {/* ── Основной контент ── */}
       <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
         {children}
       </main>
 
-      {/* ── Bottom Navigation Bar ── */}
+      {/* ── Нижняя навигация ── */}
       <nav className="flex-none h-16 bg-white border-t border-border/50 flex items-stretch z-20 safe-area-bottom">
         {bottomItems.map((item) => {
           const isActive =
@@ -187,7 +193,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
           );
         })}
 
-        {/* More button */}
         {hasMore && (
           <button
             onClick={() => setMoreOpen(true)}
@@ -200,16 +205,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
               className={cn("w-5 h-5", isOverflowActive ? "text-primary" : "text-muted-foreground")}
               strokeWidth={1.8}
             />
-            <span>More</span>
+            <span>Ещё</span>
           </button>
         )}
       </nav>
 
-      {/* ── More Sheet (overflow nav) ── */}
+      {/* ── Sheet: дополнительные пункты меню ── */}
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
         <SheetContent side="bottom" className="rounded-t-2xl pb-safe">
           <SheetHeader className="mb-2">
-            <SheetTitle className="text-left text-base">More</SheetTitle>
+            <SheetTitle className="text-left text-base">Ещё</SheetTitle>
           </SheetHeader>
           <div className="divide-y divide-border/50">
             {overflowItems.map((item) => {
@@ -247,11 +252,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </SheetContent>
       </Sheet>
 
-      {/* ── Profile Sheet ── */}
+      {/* ── Sheet: профиль ── */}
       <Sheet open={profileOpen} onOpenChange={setProfileOpen}>
         <SheetContent side="bottom" className="rounded-t-2xl pb-safe">
           <SheetHeader className="mb-4">
-            <SheetTitle className="text-left text-base">Account</SheetTitle>
+            <SheetTitle className="text-left text-base">Аккаунт</SheetTitle>
           </SheetHeader>
           <div className="flex items-center gap-3 pb-4 border-b border-border/50 mb-4">
             <div className="w-12 h-12 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold text-lg flex-none">
@@ -261,7 +266,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               <p className="font-semibold text-foreground truncate">{user?.name}</p>
               <p className="text-sm text-muted-foreground truncate">{user?.email}</p>
               <span className="inline-block mt-0.5 text-[10px] font-bold text-primary uppercase tracking-wider bg-primary/10 px-2 py-0.5 rounded-full">
-                {user?.role}
+                {ROLE_LABELS[user?.role ?? ""] ?? user?.role}
               </span>
             </div>
           </div>
@@ -273,7 +278,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <span className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center flex-none">
               <LogOut className="w-5 h-5 text-destructive" />
             </span>
-            {logoutMutation.isPending ? "Signing out…" : "Sign out"}
+            {logoutMutation.isPending ? "Выход..." : "Выйти"}
           </button>
         </SheetContent>
       </Sheet>

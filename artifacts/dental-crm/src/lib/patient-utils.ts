@@ -26,11 +26,11 @@ export const COLUMN_HEADER_COLOR: Record<PatientStatus, string> = {
 
 export const SOURCE_LABELS: Record<PatientSource, string> = {
   instagram: "Instagram",
-  referral: "Referral",
-  walk_in: "Walk-in",
-  website: "Website",
+  referral: "Направление",
+  walk_in: "Сам пришёл",
+  website: "Сайт",
   whatsapp: "WhatsApp",
-  other: "Other",
+  other: "Другое",
 };
 
 export const SOURCE_COLORS: Record<PatientSource, string> = {

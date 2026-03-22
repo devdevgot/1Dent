@@ -9,16 +9,16 @@ export default function NotFound() {
           <AlertCircle className="w-10 h-10 text-muted-foreground" />
         </div>
         <h1 className="text-4xl font-display font-bold text-foreground mb-3">404</h1>
-        <h2 className="text-xl font-semibold text-slate-700 mb-2">Page Not Found</h2>
+        <h2 className="text-xl font-semibold text-slate-700 mb-2">Страница не найдена</h2>
         <p className="text-muted-foreground mb-8">
-          The page you are looking for doesn't exist or has been moved.
+          Страница не существует или была перемещена.
         </p>
         <Link 
           href="/" 
           className="inline-flex items-center justify-center px-6 py-3 bg-primary text-white font-semibold rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Return to Dashboard
+          Вернуться на главную
         </Link>
       </div>
     </div>

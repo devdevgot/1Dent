@@ -188,7 +188,7 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
         {messages.some((m) => m.isRedAlert) && (
           <Badge variant="destructive" className="ml-auto flex items-center gap-1">
             <AlertTriangle className="w-3 h-3" />
-            Red Alert
+            Красный алерт
           </Badge>
         )}
       </div>
