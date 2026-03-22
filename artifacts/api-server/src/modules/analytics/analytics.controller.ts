@@ -17,7 +17,7 @@ router.use(authMiddleware);
 const ownerAdminRoles = roleGuard("owner", "admin");
 const allRoles = roleGuard("owner", "admin", "doctor", "accountant", "warehouse");
 
-// GET /analytics — role-adaptive endpoint
+// GET /analytics — role-adaptive endpoint (used by frontend)
 router.get(
   "/analytics",
   allRoles,
@@ -26,29 +26,65 @@ router.get(
 
     if (role === "owner" || role === "accountant") {
       const analytics = await repo.getOwnerAnalytics(clinicId).catch(next);
-      if (!analytics) return;
-      return res.json({ success: true, data: { role: "owner", analytics } });
+      if (analytics === undefined) return;
+      return res.json({ success: true, data: { role: role === "accountant" ? "accountant" : "owner", analytics } });
     }
 
     if (role === "admin") {
       const analytics = await repo.getAdminAnalytics(clinicId).catch(next);
-      if (!analytics) return;
+      if (analytics === undefined) return;
       return res.json({ success: true, data: { role: "admin", analytics } });
     }
 
     if (role === "doctor") {
       const analytics = await repo.getDoctorAnalytics(clinicId, userId).catch(next);
-      if (!analytics) return;
+      if (analytics === undefined) return;
       return res.json({ success: true, data: { role: "doctor", analytics } });
     }
 
     if (role === "warehouse") {
       const analytics = await repo.getAdminAnalytics(clinicId).catch(next);
-      if (!analytics) return;
+      if (analytics === undefined) return;
       return res.json({ success: true, data: { role: "warehouse", analytics } });
     }
 
     return next(new ForbiddenError("Insufficient permissions"));
+  },
+);
+
+// GET /analytics/owner — owner/accountant analytics
+router.get(
+  "/analytics/owner",
+  roleGuard("owner", "accountant"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { clinicId } = req.user!;
+    const analytics = await repo.getOwnerAnalytics(clinicId).catch(next);
+    if (analytics === undefined) return;
+    res.json({ success: true, data: { role: "owner", analytics } });
+  },
+);
+
+// GET /analytics/admin — admin/warehouse analytics
+router.get(
+  "/analytics/admin",
+  roleGuard("owner", "admin", "warehouse"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { clinicId } = req.user!;
+    const analytics = await repo.getAdminAnalytics(clinicId).catch(next);
+    if (analytics === undefined) return;
+    res.json({ success: true, data: { role: "admin", analytics } });
+  },
+);
+
+// GET /analytics/doctor — doctor's own analytics
+router.get(
+  "/analytics/doctor",
+  roleGuard("owner", "admin", "doctor"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { clinicId, userId } = req.user!;
+    const analytics = await repo.getDoctorAnalytics(clinicId, userId).catch(next);
+    if (analytics === undefined) return;
+    res.json({ success: true, data: { role: "doctor", analytics } });
   },
 );
 
@@ -59,9 +95,10 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     const { clinicId } = req.user!;
     const kpis = await repo.getDoctorKpis(clinicId).catch(next);
-    if (!kpis) return;
+    if (kpis === undefined) return;
     res.json({ success: true, data: { kpis } });
   },
 );
 
+export { repo as analyticsRepo };
 export default router;

@@ -6,6 +6,7 @@ import {
   notificationsTable,
 } from "@workspace/db";
 import { eq, and, gte, count, sum, sql } from "drizzle-orm";
+import { analyticsCache } from "../../shared/analytics-cache";
 
 export interface OwnerAnalytics {
   totalPatients: number;
@@ -55,6 +56,10 @@ function startOfDay(): Date {
 
 export class AnalyticsRepository {
   async getOwnerAnalytics(clinicId: string): Promise<OwnerAnalytics> {
+    const cacheKey = analyticsCache.key("owner", clinicId);
+    const cached = analyticsCache.get<OwnerAnalytics>(cacheKey);
+    if (cached) return cached;
+
     const monthStart = startOfMonth();
 
     const [allPatients, newPatients, monthlyProcedures, redAlerts, doctors] =
@@ -144,7 +149,7 @@ export class AnalyticsRepository {
       }),
     );
 
-    return {
+    const result: OwnerAnalytics = {
       totalPatients: allPatients.length,
       newPatientsThisMonth: newPatients.length,
       patientsByStatus,
@@ -153,9 +158,15 @@ export class AnalyticsRepository {
       redAlertCount: redAlerts.length,
       doctorKpis,
     };
+    analyticsCache.set(cacheKey, result);
+    return result;
   }
 
   async getDoctorAnalytics(clinicId: string, doctorId: string): Promise<DoctorAnalytics> {
+    const cacheKey = analyticsCache.key("doctor", clinicId, doctorId);
+    const cached = analyticsCache.get<DoctorAnalytics>(cacheKey);
+    if (cached) return cached;
+
     const monthStart = startOfMonth();
     const dayStart = startOfDay();
 
@@ -195,15 +206,21 @@ export class AnalyticsRepository {
 
     const myRevenueThisMonth = monthlyProcedures.reduce((acc, p) => acc + (p.price ?? 0), 0);
 
-    return {
+    const result: DoctorAnalytics = {
       myPatientsCount: myPatients.length,
       myProceduresThisMonth: monthlyProcedures.length,
       myRevenueThisMonth,
       scheduledToday: todayScheduled.length,
     };
+    analyticsCache.set(cacheKey, result);
+    return result;
   }
 
   async getAdminAnalytics(clinicId: string): Promise<AdminAnalytics> {
+    const cacheKey = analyticsCache.key("admin", clinicId);
+    const cached = analyticsCache.get<AdminAnalytics>(cacheKey);
+    if (cached) return cached;
+
     const dayStart = startOfDay();
 
     const [allPatients, newToday, scheduledToday, redAlerts] = await Promise.all([
@@ -244,16 +261,29 @@ export class AnalyticsRepository {
       patientsByStatus[p.status] = (patientsByStatus[p.status] ?? 0) + 1;
     }
 
-    return {
+    const result: AdminAnalytics = {
       totalPatients: allPatients.length,
       newPatientsToday: newToday.length,
       patientsByStatus,
       scheduledToday: scheduledToday.length,
       redAlertCount: redAlerts.length,
     };
+    analyticsCache.set(cacheKey, result);
+    return result;
+  }
+
+  invalidateClinicCache(clinicId: string): void {
+    analyticsCache.invalidate(`owner:${clinicId}`);
+    analyticsCache.invalidate(`admin:${clinicId}`);
+    analyticsCache.invalidate(`doctor:${clinicId}`);
+    analyticsCache.invalidate(`kpi:${clinicId}`);
   }
 
   async getDoctorKpis(clinicId: string): Promise<DoctorKpi[]> {
+    const cacheKey = analyticsCache.key("kpi", clinicId);
+    const cached = analyticsCache.get<DoctorKpi[]>(cacheKey);
+    if (cached) return cached;
+
     const doctors = await db
       .select()
       .from(usersTable)
@@ -264,7 +294,7 @@ export class AnalyticsRepository {
         ),
       );
 
-    return Promise.all(
+    const kpis = await Promise.all(
       doctors.map(async (doc) => {
         const [patients, procedures] = await Promise.all([
           db
@@ -297,5 +327,7 @@ export class AnalyticsRepository {
         };
       }),
     );
+    analyticsCache.set(cacheKey, kpis);
+    return kpis;
   }
 }

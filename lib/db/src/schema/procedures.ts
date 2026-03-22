@@ -3,11 +3,13 @@ import {
   text,
   timestamp,
   real,
+  integer,
   pgEnum,
 } from "drizzle-orm/pg-core";
 import { clinicsTable } from "./clinics";
 import { usersTable } from "./users";
 import { patientsTable } from "./patients";
+import { inventoryItemsTable } from "./dental";
 
 export const procedureStatusEnum = pgEnum("procedure_status", [
   "scheduled",
@@ -52,9 +54,45 @@ export const procedureTemplatesTable = pgTable("procedure_templates", {
     .notNull(),
 });
 
+export const procedureMaterialsTable = pgTable("procedure_materials", {
+  id: text("id").primaryKey(),
+  procedureId: text("procedure_id")
+    .notNull()
+    .references(() => proceduresTable.id, { onDelete: "cascade" }),
+  inventoryItemId: text("inventory_item_id")
+    .notNull()
+    .references(() => inventoryItemsTable.id, { onDelete: "restrict" }),
+  quantity: integer("quantity").notNull().default(1),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export const doctorKpisTable = pgTable("doctor_kpis", {
+  id: text("id").primaryKey(),
+  clinicId: text("clinic_id")
+    .notNull()
+    .references(() => clinicsTable.id, { onDelete: "cascade" }),
+  doctorId: text("doctor_id")
+    .notNull()
+    .references(() => usersTable.id, { onDelete: "cascade" }),
+  period: text("period").notNull(),
+  patientsCount: integer("patients_count").notNull().default(0),
+  proceduresCount: integer("procedures_count").notNull().default(0),
+  revenueTotal: real("revenue_total").notNull().default(0),
+  computedAt: timestamp("computed_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
 export type Procedure = typeof proceduresTable.$inferSelect;
 export type InsertProcedure = typeof proceduresTable.$inferInsert;
 export type ProcedureStatus = (typeof procedureStatusEnum.enumValues)[number];
 export type ProcedureTemplate = typeof procedureTemplatesTable.$inferSelect;
 export type InsertProcedureTemplate =
   typeof procedureTemplatesTable.$inferInsert;
+export type ProcedureMaterial = typeof procedureMaterialsTable.$inferSelect;
+export type InsertProcedureMaterial =
+  typeof procedureMaterialsTable.$inferInsert;
+export type DoctorKpiRecord = typeof doctorKpisTable.$inferSelect;
+export type InsertDoctorKpiRecord = typeof doctorKpisTable.$inferInsert;

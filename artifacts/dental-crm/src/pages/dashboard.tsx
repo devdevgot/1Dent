@@ -108,12 +108,12 @@ export default function Dashboard() {
         { titleKey: "dashboard.newPatients",      value: fmt(analytics.newPatientsThisMonth),       icon: Star,       delay: 0.15 },
       ];
     }
-    if (role === "warehouse") {
+    if (role === "warehouse" || role === "admin") {
       return [
-        { titleKey: "dashboard.totalPatients",   value: fmt(analytics.totalPatients),   icon: Users,    delay: 0 },
-        { titleKey: "dashboard.scheduledToday",  value: fmt(analytics.scheduledToday),  icon: Calendar, delay: 0.05 },
-        { titleKey: "dashboard.newToday",        value: fmt(analytics.newPatientsToday),icon: Star,     delay: 0.1 },
-        { titleKey: "dashboard.redAlerts",       value: fmt(analytics.redAlertCount),   icon: AlertTriangle, delay: 0.15 },
+        { titleKey: "dashboard.totalPatients",  value: fmt(analytics.totalPatients),    icon: Users,         delay: 0 },
+        { titleKey: "dashboard.scheduledToday", value: fmt(analytics.scheduledToday),   icon: Calendar,      delay: 0.05 },
+        { titleKey: "dashboard.newToday",       value: fmt(analytics.newPatientsToday), icon: Star,          delay: 0.1 },
+        { titleKey: "dashboard.redAlerts",      value: fmt(analytics.redAlertCount),    icon: AlertTriangle, delay: 0.15 },
       ];
     }
     return [

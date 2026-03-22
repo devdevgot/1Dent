@@ -8,8 +8,9 @@ import {
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { ProceduresRepository } from "./procedures.repository";
+import { analyticsRepo } from "../analytics/analytics.controller";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
-import { ValidationError, NotFoundError } from "../../shared/errors";
+import { ValidationError, NotFoundError, ForbiddenError } from "../../shared/errors";
 import type { ProcedureStatus } from "@workspace/db";
 
 const router: IRouter = Router();
@@ -64,6 +65,26 @@ const writeRoles = roleGuard("owner", "admin", "doctor");
 const deleteRoles = roleGuard("owner", "admin");
 const ownerAdminRoles = roleGuard("owner", "admin");
 
+async function assertDoctorOwnership(
+  id: string,
+  clinicId: string,
+  userId: string,
+  role: string,
+  next: NextFunction,
+): Promise<boolean> {
+  if (role === "owner" || role === "admin") return true;
+  const proc = await repo.findById(id, clinicId).catch(next);
+  if (!proc) {
+    next(new NotFoundError("Procedure not found"));
+    return false;
+  }
+  if (proc.doctorId !== userId) {
+    next(new ForbiddenError("You can only modify your own procedures"));
+    return false;
+  }
+  return true;
+}
+
 // GET /procedures
 router.get("/", allRoles, async (req: Request, res: Response, next: NextFunction) => {
   const { clinicId, role, userId } = req.user!;
@@ -72,6 +93,17 @@ router.get("/", allRoles, async (req: Request, res: Response, next: NextFunction
   if (procedures === undefined) return;
   res.json({ success: true, data: { procedures } });
 });
+
+// GET /procedures/templates (MUST be before /:id)
+router.get(
+  "/templates",
+  allRoles,
+  async (req: Request, res: Response, next: NextFunction) => {
+    const templates = await repo.listTemplates(req.user!.clinicId).catch(next);
+    if (!templates) return;
+    res.json({ success: true, data: { templates } });
+  },
+);
 
 // POST /procedures
 router.post("/", writeRoles, async (req: Request, res: Response, next: NextFunction) => {
@@ -94,13 +126,18 @@ router.post("/", writeRoles, async (req: Request, res: Response, next: NextFunct
   if (!procedure) return;
 
   if (materials && materials.length > 0) {
-    await repo.deductMaterials(clinicId, materials).catch(() => {});
+    const deductError = await repo.deductMaterials(clinicId, materials).then(() => null).catch((e) => e);
+    if (deductError) {
+      await repo.delete(procedure.id, clinicId).catch(() => {});
+      return next(new ValidationError(`Stock deduction failed: ${(deductError as Error).message}`));
+    }
   }
 
+  analyticsRepo.invalidateClinicCache(clinicId);
   res.status(201).json({ success: true, data: { procedure } });
 });
 
-// PATCH /procedures/:id/status
+// PATCH /procedures/:id/status (MUST be before /:id)
 router.patch(
   "/:id/status",
   writeRoles,
@@ -110,10 +147,17 @@ router.patch(
       return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
     }
     const id = String(req.params["id"]);
+    const { clinicId, role, userId } = req.user!;
+
+    const authorized = await assertDoctorOwnership(id, clinicId, userId, role, next);
+    if (!authorized) return;
+
     const procedure = await repo
-      .updateStatus(id, req.user!.clinicId, parsed.data.status as ProcedureStatus)
+      .updateStatus(id, clinicId, parsed.data.status as ProcedureStatus)
       .catch(next);
     if (!procedure) return next(new NotFoundError("Procedure not found"));
+
+    analyticsRepo.invalidateClinicCache(clinicId);
     res.json({ success: true, data: { procedure } });
   },
 );
@@ -128,15 +172,22 @@ router.put(
       return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
     }
     const id = String(req.params["id"]);
+    const { clinicId, role, userId } = req.user!;
+
+    const authorized = await assertDoctorOwnership(id, clinicId, userId, role, next);
+    if (!authorized) return;
+
     const { scheduledAt, ...rest } = parsed.data;
     const procedure = await repo
-      .update(id, req.user!.clinicId, {
+      .update(id, clinicId, {
         ...rest,
         doctorId: rest.doctorId as string | null | undefined,
         scheduledAt: scheduledAt ? new Date(scheduledAt) : scheduledAt === null ? null : undefined,
       })
       .catch(next);
     if (!procedure) return next(new NotFoundError("Procedure not found"));
+
+    analyticsRepo.invalidateClinicCache(clinicId);
     res.json({ success: true, data: { procedure } });
   },
 );
@@ -147,19 +198,10 @@ router.delete(
   deleteRoles,
   async (req: Request, res: Response, next: NextFunction) => {
     const id = String(req.params["id"]);
-    await repo.delete(id, req.user!.clinicId).catch(next);
+    const { clinicId } = req.user!;
+    await repo.delete(id, clinicId).catch(next);
+    analyticsRepo.invalidateClinicCache(clinicId);
     res.json({ success: true, message: "Procedure deleted" });
-  },
-);
-
-// GET /procedure-templates
-router.get(
-  "/templates",
-  allRoles,
-  async (req: Request, res: Response, next: NextFunction) => {
-    const templates = await repo.listTemplates(req.user!.clinicId).catch(next);
-    if (!templates) return;
-    res.json({ success: true, data: { templates } });
   },
 );
 
