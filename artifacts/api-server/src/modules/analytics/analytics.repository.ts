@@ -39,6 +39,8 @@ export interface DoctorKpi {
   patientsCount: number;
   proceduresCount: number;
   revenueTotal: number;
+  averageCheck: number;
+  nps: number;
 }
 
 function startOfMonth(): Date {
@@ -57,7 +59,7 @@ function startOfDay(): Date {
 export class AnalyticsRepository {
   async getOwnerAnalytics(clinicId: string): Promise<OwnerAnalytics> {
     const cacheKey = analyticsCache.key("owner", clinicId);
-    const cached = analyticsCache.get<OwnerAnalytics>(cacheKey);
+    const cached = await analyticsCache.get<OwnerAnalytics>(cacheKey);
     if (cached) return cached;
 
     const monthStart = startOfMonth();
@@ -138,6 +140,7 @@ export class AnalyticsRepository {
         ]);
 
         const revenueTotal = doctorProcedures.reduce((acc, p) => acc + (p.price ?? 0), 0);
+        const averageCheck = doctorProcedures.length > 0 ? revenueTotal / doctorProcedures.length : 0;
 
         return {
           doctorId: doc.id,
@@ -145,6 +148,8 @@ export class AnalyticsRepository {
           patientsCount: doctorPatients.length,
           proceduresCount: doctorProcedures.length,
           revenueTotal,
+          averageCheck,
+          nps: 0,
         };
       }),
     );
@@ -158,13 +163,13 @@ export class AnalyticsRepository {
       redAlertCount: redAlerts.length,
       doctorKpis,
     };
-    analyticsCache.set(cacheKey, result);
+    await analyticsCache.set(cacheKey, result);
     return result;
   }
 
   async getDoctorAnalytics(clinicId: string, doctorId: string): Promise<DoctorAnalytics> {
     const cacheKey = analyticsCache.key("doctor", clinicId, doctorId);
-    const cached = analyticsCache.get<DoctorAnalytics>(cacheKey);
+    const cached = await analyticsCache.get<DoctorAnalytics>(cacheKey);
     if (cached) return cached;
 
     const monthStart = startOfMonth();
@@ -212,13 +217,13 @@ export class AnalyticsRepository {
       myRevenueThisMonth,
       scheduledToday: todayScheduled.length,
     };
-    analyticsCache.set(cacheKey, result);
+    await analyticsCache.set(cacheKey, result);
     return result;
   }
 
   async getAdminAnalytics(clinicId: string): Promise<AdminAnalytics> {
     const cacheKey = analyticsCache.key("admin", clinicId);
-    const cached = analyticsCache.get<AdminAnalytics>(cacheKey);
+    const cached = await analyticsCache.get<AdminAnalytics>(cacheKey);
     if (cached) return cached;
 
     const dayStart = startOfDay();
@@ -268,20 +273,22 @@ export class AnalyticsRepository {
       scheduledToday: scheduledToday.length,
       redAlertCount: redAlerts.length,
     };
-    analyticsCache.set(cacheKey, result);
+    await analyticsCache.set(cacheKey, result);
     return result;
   }
 
-  invalidateClinicCache(clinicId: string): void {
-    analyticsCache.invalidate(`owner:${clinicId}`);
-    analyticsCache.invalidate(`admin:${clinicId}`);
-    analyticsCache.invalidate(`doctor:${clinicId}`);
-    analyticsCache.invalidate(`kpi:${clinicId}`);
+  async invalidateClinicCache(clinicId: string): Promise<void> {
+    await Promise.allSettled([
+      analyticsCache.invalidate(analyticsCache.key("owner", clinicId)),
+      analyticsCache.invalidate(analyticsCache.key("admin", clinicId)),
+      analyticsCache.invalidate(analyticsCache.key("doctor", clinicId)),
+      analyticsCache.invalidate(analyticsCache.key("kpi", clinicId)),
+    ]);
   }
 
   async getDoctorKpis(clinicId: string): Promise<DoctorKpi[]> {
     const cacheKey = analyticsCache.key("kpi", clinicId);
-    const cached = analyticsCache.get<DoctorKpi[]>(cacheKey);
+    const cached = await analyticsCache.get<DoctorKpi[]>(cacheKey);
     if (cached) return cached;
 
     const doctors = await db
@@ -318,16 +325,19 @@ export class AnalyticsRepository {
             ),
         ]);
         const revenueTotal = procedures.reduce((acc, p) => acc + (p.price ?? 0), 0);
+        const averageCheck = procedures.length > 0 ? revenueTotal / procedures.length : 0;
         return {
           doctorId: doc.id,
           doctorName: doc.name,
           patientsCount: patients.length,
           proceduresCount: procedures.length,
           revenueTotal,
+          averageCheck,
+          nps: 0,
         };
       }),
     );
-    analyticsCache.set(cacheKey, kpis);
+    await analyticsCache.set(cacheKey, kpis);
     return kpis;
   }
 }

@@ -640,6 +640,7 @@ export type CreateProcedureBodyMaterialsItem = {
 export type CreateProcedureBody = {
   patientId: string;
   doctorId?: string;
+  templateId?: string;
   name: string;
   price?: number;
   notes?: string;

@@ -26,6 +26,7 @@ const procedureStatusValues = [
 const createProcedureSchema = z.object({
   patientId: z.string().min(1),
   doctorId: z.string().optional(),
+  templateId: z.string().optional(),
   name: z.string().min(1),
   price: z.number().min(0).optional(),
   notes: z.string().optional(),
@@ -112,28 +113,46 @@ router.post("/", writeRoles, async (req: Request, res: Response, next: NextFunct
     return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
   }
 
-  const { materials, scheduledAt, ...rest } = parsed.data;
+  const { materials, scheduledAt, templateId, ...rest } = parsed.data;
   const { clinicId } = req.user!;
+
+  // If templateId given, load template defaults (name/price override explicit fields if not provided)
+  let resolvedName = rest.name;
+  let resolvedPrice = rest.price;
+  let templateMaterials: { itemId: string; quantity: number }[] = [];
+
+  if (templateId) {
+    const template = await repo.findTemplateById(templateId, clinicId).catch(next);
+    if (!template) return next(new NotFoundError("Procedure template not found"));
+    if (!rest.name || rest.name === template.name) resolvedName = template.name;
+    if (resolvedPrice == null && template.defaultPrice != null) resolvedPrice = template.defaultPrice;
+  }
+
+  // Materials from request take precedence over template materials
+  const effectiveMaterials = (materials && materials.length > 0) ? materials : templateMaterials;
 
   const procedure = await repo
     .create({
       id: randomUUID(),
       clinicId,
       ...rest,
+      name: resolvedName,
+      price: resolvedPrice,
       scheduledAt: scheduledAt ? new Date(scheduledAt) : undefined,
     })
     .catch(next);
   if (!procedure) return;
 
-  if (materials && materials.length > 0) {
-    const deductError = await repo.deductMaterials(clinicId, materials).then(() => null).catch((e) => e);
+  if (effectiveMaterials.length > 0) {
+    const deductError = await repo.deductMaterials(clinicId, effectiveMaterials).then(() => null).catch((e) => e);
     if (deductError) {
       await repo.delete(procedure.id, clinicId).catch(() => {});
       return next(new ValidationError(`Stock deduction failed: ${(deductError as Error).message}`));
     }
+    await repo.saveProcedureMaterials(procedure.id, effectiveMaterials).catch(() => {});
   }
 
-  analyticsRepo.invalidateClinicCache(clinicId);
+  analyticsRepo.invalidateClinicCache(clinicId).catch(() => {});
   res.status(201).json({ success: true, data: { procedure } });
 });
 
@@ -157,7 +176,7 @@ router.patch(
       .catch(next);
     if (!procedure) return next(new NotFoundError("Procedure not found"));
 
-    analyticsRepo.invalidateClinicCache(clinicId);
+    analyticsRepo.invalidateClinicCache(clinicId).catch(() => {});
     res.json({ success: true, data: { procedure } });
   },
 );
@@ -187,7 +206,7 @@ router.put(
       .catch(next);
     if (!procedure) return next(new NotFoundError("Procedure not found"));
 
-    analyticsRepo.invalidateClinicCache(clinicId);
+    analyticsRepo.invalidateClinicCache(clinicId).catch(() => {});
     res.json({ success: true, data: { procedure } });
   },
 );
@@ -200,7 +219,7 @@ router.delete(
     const id = String(req.params["id"]);
     const { clinicId } = req.user!;
     await repo.delete(id, clinicId).catch(next);
-    analyticsRepo.invalidateClinicCache(clinicId);
+    analyticsRepo.invalidateClinicCache(clinicId).catch(() => {});
     res.json({ success: true, message: "Procedure deleted" });
   },
 );

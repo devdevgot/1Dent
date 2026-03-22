@@ -10,12 +10,13 @@ import {
   useListUsers,
   useListProcedureTemplates,
   useCreateProcedureTemplate,
+  useListInventory,
 } from "@workspace/api-client-react";
 import type { Procedure, ProcedureStatus } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import {
   Plus, Search, Filter, MoreVertical, CheckCircle2,
-  Clock, XCircle, PlayCircle, Trash2, ClipboardList, X, ChevronDown,
+  Clock, XCircle, PlayCircle, Trash2, ClipboardList, X, ChevronDown, Minus,
 } from "lucide-react";
 
 const STATUS_COLORS: Record<ProcedureStatus, string> = {
@@ -56,31 +57,51 @@ function NewProcedureModal({
   const { data: patientsData } = useListPatients();
   const { data: usersData } = useListUsers();
   const { data: templatesData } = useListProcedureTemplates();
+  const { data: inventoryData } = useListInventory();
 
   const patients = patientsData?.data?.patients ?? [];
   const doctors  = (usersData?.data?.users ?? []).filter((u) => u.role === "doctor");
   const templates = templatesData?.data?.templates ?? [];
+  const inventoryItems = inventoryData?.data?.items ?? [];
 
   const createMutation = useCreateProcedure();
 
   const [form, setForm] = useState({
     patientId:   "",
     doctorId:    user?.role === "doctor" ? user.id : "",
+    templateId:  "",
     name:        "",
     price:       "",
     notes:       "",
     scheduledAt: "",
   });
 
+  const [materials, setMaterials] = useState<{ itemId: string; quantity: number }[]>([]);
+
   const handleTemplate = (templateId: string) => {
+    setForm((f) => ({ ...f, templateId }));
     const tpl = templates.find((t) => t.id === templateId);
     if (tpl) {
       setForm((f) => ({
         ...f,
+        templateId,
         name:  tpl.name,
         price: String(tpl.defaultPrice ?? ""),
       }));
     }
+  };
+
+  const addMaterial = () => {
+    if (inventoryItems.length === 0) return;
+    setMaterials((m) => [...m, { itemId: inventoryItems[0]!.id, quantity: 1 }]);
+  };
+
+  const removeMaterial = (idx: number) => {
+    setMaterials((m) => m.filter((_, i) => i !== idx));
+  };
+
+  const updateMaterial = (idx: number, field: "itemId" | "quantity", value: string | number) => {
+    setMaterials((m) => m.map((mat, i) => i === idx ? { ...mat, [field]: value } : mat));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -90,10 +111,12 @@ function NewProcedureModal({
         data: {
           patientId:   form.patientId,
           doctorId:    form.doctorId || undefined,
+          templateId:  form.templateId || undefined,
           name:        form.name,
           price:       Number(form.price) || 0,
           notes:       form.notes || undefined,
           scheduledAt: form.scheduledAt || undefined,
+          materials:   materials.length > 0 ? materials : undefined,
         },
       });
       onSuccess();
@@ -244,6 +267,51 @@ function NewProcedureModal({
               placeholder={t("procedure.notesPlaceholder")}
             />
           </div>
+
+          {/* Materials */}
+          {inventoryItems.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-semibold text-muted-foreground">{t("procedure.materials")}</label>
+                <button
+                  type="button"
+                  onClick={addMaterial}
+                  className="flex items-center gap-1 text-xs text-primary font-semibold hover:underline"
+                >
+                  <Plus className="w-3.5 h-3.5" /> {t("procedure.addMaterial")}
+                </button>
+              </div>
+              <div className="space-y-2">
+                {materials.map((mat, idx) => (
+                  <div key={idx} className="flex gap-2 items-center">
+                    <select
+                      value={mat.itemId}
+                      onChange={(e) => updateMaterial(idx, "itemId", e.target.value)}
+                      className="flex-1 border border-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white"
+                    >
+                      {inventoryItems.map((item) => (
+                        <option key={item.id} value={item.id}>{item.name}</option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      min="1"
+                      value={mat.quantity}
+                      onChange={(e) => updateMaterial(idx, "quantity", Number(e.target.value))}
+                      className="w-20 border border-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-center"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeMaterial(idx)}
+                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Minus className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Submit */}
           <div className="flex gap-3 pt-2">

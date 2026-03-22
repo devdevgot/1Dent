@@ -10,6 +10,7 @@ import type { CreateProcedureBodyMaterialsItem } from "./createProcedureBodyMate
 export type CreateProcedureBody = {
   patientId: string;
   doctorId?: string;
+  templateId?: string;
   name: string;
   price?: number;
   notes?: string;

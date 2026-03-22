@@ -2,10 +2,12 @@ import {
   db,
   proceduresTable,
   procedureTemplatesTable,
+  procedureMaterialsTable,
   usersTable,
   inventoryStockTable,
 } from "@workspace/db";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
+import { randomUUID } from "crypto";
 import type { Procedure, ProcedureTemplate, ProcedureStatus } from "@workspace/db";
 
 export type ProcedureWithDoctor = Procedure & {
@@ -144,12 +146,38 @@ export class ProceduresRepository {
     return template!;
   }
 
+  async findTemplateById(id: string, clinicId: string): Promise<ProcedureTemplate | null> {
+    const [template] = await db
+      .select()
+      .from(procedureTemplatesTable)
+      .where(
+        and(eq(procedureTemplatesTable.id, id), eq(procedureTemplatesTable.clinicId, clinicId)),
+      )
+      .limit(1);
+    return template ?? null;
+  }
+
   async deleteTemplate(id: string, clinicId: string): Promise<void> {
     await db
       .delete(procedureTemplatesTable)
       .where(
         and(eq(procedureTemplatesTable.id, id), eq(procedureTemplatesTable.clinicId, clinicId)),
       );
+  }
+
+  async saveProcedureMaterials(
+    procedureId: string,
+    materials: { itemId: string; quantity: number }[],
+  ): Promise<void> {
+    if (materials.length === 0) return;
+    await db.insert(procedureMaterialsTable).values(
+      materials.map((m) => ({
+        id: randomUUID(),
+        procedureId,
+        inventoryItemId: m.itemId,
+        quantity: m.quantity,
+      })),
+    );
   }
 
   async deductMaterials(
@@ -168,17 +196,24 @@ export class ProceduresRepository {
         )
         .limit(1);
 
-      if (stock && stock.quantity >= m.quantity) {
-        await db
-          .update(inventoryStockTable)
-          .set({ quantity: stock.quantity - m.quantity, updatedAt: new Date() })
-          .where(
-            and(
-              eq(inventoryStockTable.itemId, m.itemId),
-              eq(inventoryStockTable.clinicId, clinicId),
-            ),
-          );
+      if (!stock) {
+        throw new Error(`Material ${m.itemId} not found in inventory`);
       }
+      if (stock.quantity < m.quantity) {
+        throw new Error(
+          `Insufficient stock for item ${m.itemId}: required ${m.quantity}, available ${stock.quantity}`,
+        );
+      }
+
+      await db
+        .update(inventoryStockTable)
+        .set({ quantity: stock.quantity - m.quantity, updatedAt: new Date() })
+        .where(
+          and(
+            eq(inventoryStockTable.itemId, m.itemId),
+            eq(inventoryStockTable.clinicId, clinicId),
+          ),
+        );
     }
   }
 }

@@ -219,6 +219,7 @@ export default function Dashboard() {
                     <th className="text-right pb-3 font-semibold text-muted-foreground">{t("dashboard.patients")}</th>
                     <th className="text-right pb-3 font-semibold text-muted-foreground">{t("dashboard.procedures")}</th>
                     <th className="text-right pb-3 font-semibold text-muted-foreground">{t("dashboard.revenue")}</th>
+                    <th className="text-right pb-3 font-semibold text-muted-foreground">{t("dashboard.avgCheck")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/30">
@@ -242,6 +243,9 @@ export default function Dashboard() {
                       <td className="py-3 text-right text-foreground">{kpi.proceduresCount}</td>
                       <td className="py-3 text-right font-semibold text-foreground">
                         ₸ {Number(kpi.revenueTotal).toLocaleString("ru-KZ")}
+                      </td>
+                      <td className="py-3 text-right text-muted-foreground">
+                        ₸ {Number((kpi as { averageCheck?: number }).averageCheck ?? 0).toLocaleString("ru-KZ")}
                       </td>
                     </motion.tr>
                   ))}

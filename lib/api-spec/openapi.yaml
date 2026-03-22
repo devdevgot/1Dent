@@ -817,6 +817,8 @@ paths:
                   type: string
                 doctorId:
                   type: string
+                templateId:
+                  type: string
                 name:
                   type: string
                 price:

@@ -900,6 +900,7 @@ export const ListProceduresResponse = zod.object({
 export const CreateProcedureBody = zod.object({
   patientId: zod.string(),
   doctorId: zod.string().optional(),
+  templateId: zod.string().optional(),
   name: zod.string(),
   price: zod.number().optional(),
   notes: zod.string().optional(),

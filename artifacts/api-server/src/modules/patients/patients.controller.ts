@@ -9,6 +9,7 @@ import { z } from "zod";
 import { PatientsService } from "./patients.service";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError } from "../../shared/errors";
+import { analyticsRepo } from "../analytics/analytics.controller";
 
 const router: IRouter = Router();
 const service = new PatientsService();
@@ -96,6 +97,7 @@ router.post("/", patientWriteRoles, async (req: Request, res: Response, next: Ne
     .create(req.user!.clinicId, parsed.data, req.user!.role, req.user!.userId)
     .catch(next);
   if (!result) return;
+  analyticsRepo.invalidateClinicCache(req.user!.clinicId).catch(() => {});
   res.status(201).json({ success: true, data: { patient: result } });
 });
 
@@ -131,6 +133,7 @@ router.put(
       .update(id, req.user!.clinicId, parsed.data, req.user!.role, req.user!.userId)
       .catch(next);
     if (!result) return;
+    analyticsRepo.invalidateClinicCache(req.user!.clinicId).catch(() => {});
     res.json({ success: true, data: { patient: result } });
   },
 );
@@ -153,6 +156,7 @@ router.patch(
       .updateStatus(id, req.user!.clinicId, parsed.data.status, req.user!.role, req.user!.userId)
       .catch(next);
     if (!result) return;
+    analyticsRepo.invalidateClinicCache(req.user!.clinicId).catch(() => {});
     res.json({ success: true, data: { patient: result } });
   },
 );
