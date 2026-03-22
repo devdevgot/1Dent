@@ -99,7 +99,24 @@
     "activityFeedDesc": "Detailed charts and real-time activity feed based on clinic data will appear here.",
     "upcomingTasks": "Upcoming Tasks",
     "reviewTreatment": "Review Treatment Plan",
-    "patient": "Patient: {{name}} • {{time}}"
+    "patient": "Patient: {{name}} • {{time}}",
+    "myPatients": "My Patients",
+    "scheduledToday": "Scheduled Today",
+    "monthlyProcs": "Procedures This Month",
+    "newPatients": "New This Month",
+    "newToday": "New Today",
+    "redAlerts": "Red Alerts",
+    "doctorKpi": "Doctor Rankings",
+    "viewAll": "View All",
+    "doctor": "Doctor",
+    "patients": "Patients",
+    "procedures": "Procedures",
+    "quickActions": "Quick Actions",
+    "openKanban": "Open Kanban",
+    "openDentalChart": "Dental Chart",
+    "openInventory": "Inventory",
+    "openProcedures": "Procedures",
+    "goToProcedures": "Go to Procedures"
   },
   "notFound": {
     "title": "Page Not Found",
@@ -257,5 +274,47 @@
     "ru": "Рус",
     "kz": "Қаз",
     "en": "Eng"
+  },
+  "procedure": {
+    "pageTitle": "Procedures",
+    "pageDesc": "Manage patient treatment procedures",
+    "new": "New Procedure",
+    "newProcedure": "Add Procedure",
+    "fromTemplate": "From Template",
+    "noTemplate": "No template",
+    "patient": "Patient",
+    "selectPatient": "Select patient",
+    "doctor": "Doctor",
+    "noDoctor": "Not assigned",
+    "name": "Name",
+    "namePlaceholder": "e.g. Wisdom tooth extraction",
+    "price": "Price",
+    "scheduledAt": "Scheduled at",
+    "notes": "Notes",
+    "notesPlaceholder": "Description, treatment plan...",
+    "create": "Create",
+    "confirmDelete": "Delete this procedure?",
+    "emptyTitle": "No procedures",
+    "emptyDesc": "Create the first procedure for a patient",
+    "searchPlaceholder": "Search by name...",
+    "statusAll": "All",
+    "status": {
+      "scheduled":   "Scheduled",
+      "in_progress": "In Progress",
+      "completed":   "Completed",
+      "cancelled":   "Cancelled"
+    },
+    "markAs": {
+      "in_progress": "Start",
+      "completed":   "Complete",
+      "cancelled":   "Cancel"
+    },
+    "col": {
+      "name":      "Procedure",
+      "doctor":    "Doctor",
+      "status":    "Status",
+      "price":     "Price",
+      "scheduled": "Date"
+    }
   }
 }

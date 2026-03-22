@@ -18,6 +18,10 @@ tags:
     description: Dental chart and tooth records
   - name: inventory
     description: Inventory and stock management
+  - name: procedures
+    description: Procedure management
+  - name: analytics
+    description: Analytics and KPI
 
 paths:
   /healthz:
@@ -781,6 +785,268 @@ paths:
                     example: "ok"
         "403":
           description: Invalid webhook signature
+
+  /procedures:
+    get:
+      operationId: listProcedures
+      tags: [procedures]
+      summary: List procedures
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: List of procedures
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProcedureListResponse"
+    post:
+      operationId: createProcedure
+      tags: [procedures]
+      summary: Create a procedure
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                patientId:
+                  type: string
+                doctorId:
+                  type: string
+                name:
+                  type: string
+                price:
+                  type: number
+                notes:
+                  type: string
+                scheduledAt:
+                  type: string
+                  format: date-time
+                materials:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      itemId:
+                        type: string
+                      quantity:
+                        type: number
+                    required:
+                      - itemId
+                      - quantity
+              required:
+                - patientId
+                - name
+      responses:
+        "201":
+          description: Procedure created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProcedureResponse"
+
+  /procedures/{id}:
+    put:
+      operationId: updateProcedure
+      tags: [procedures]
+      summary: Update procedure
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                price:
+                  type: number
+                notes:
+                  type: string
+                doctorId:
+                  type: string
+                  nullable: true
+                scheduledAt:
+                  type: string
+                  format: date-time
+                  nullable: true
+      responses:
+        "200":
+          description: Procedure updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProcedureResponse"
+    delete:
+      operationId: deleteProcedure
+      tags: [procedures]
+      summary: Delete procedure
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Procedure deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessMessage"
+
+  /procedures/{id}/status:
+    patch:
+      operationId: updateProcedureStatus
+      tags: [procedures]
+      summary: Update procedure status
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  $ref: "#/components/schemas/ProcedureStatus"
+              required:
+                - status
+      responses:
+        "200":
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProcedureResponse"
+
+  /procedures/templates:
+    get:
+      operationId: listProcedureTemplates
+      tags: [procedures]
+      summary: List procedure templates
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: List of templates
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProcedureTemplateListResponse"
+    post:
+      operationId: createProcedureTemplate
+      tags: [procedures]
+      summary: Create procedure template
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                defaultPrice:
+                  type: number
+                materials:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/ProcedureMaterial"
+              required:
+                - name
+      responses:
+        "201":
+          description: Template created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    type: object
+                    properties:
+                      template:
+                        $ref: "#/components/schemas/ProcedureTemplate"
+
+  /procedures/templates/{id}:
+    delete:
+      operationId: deleteProcedureTemplate
+      tags: [procedures]
+      summary: Delete procedure template
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Template deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessMessage"
+
+  /analytics:
+    get:
+      operationId: getAnalytics
+      tags: [analytics]
+      summary: Get role-based analytics
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Analytics data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsResponse"
+
+  /kpi/doctors:
+    get:
+      operationId: getDoctorKpis
+      tags: [analytics]
+      summary: Get doctor KPI rankings
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Doctor KPI list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DoctorKpiListResponse"
 
 components:
   securitySchemes:
@@ -1747,6 +2013,224 @@ components:
               type: integer
           required:
             - count
+      required:
+        - success
+        - data
+
+    SuccessMessage:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+      required:
+        - success
+        - message
+
+    ProcedureStatus:
+      type: string
+      enum: [scheduled, in_progress, completed, cancelled]
+
+    Procedure:
+      type: object
+      properties:
+        id:
+          type: string
+        clinicId:
+          type: string
+        patientId:
+          type: string
+        doctorId:
+          type: string
+          nullable: true
+        doctorName:
+          type: string
+          nullable: true
+        name:
+          type: string
+        status:
+          $ref: "#/components/schemas/ProcedureStatus"
+        price:
+          type: number
+        notes:
+          type: string
+          nullable: true
+        scheduledAt:
+          type: string
+          format: date-time
+          nullable: true
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - clinicId
+        - patientId
+        - name
+        - status
+        - price
+        - createdAt
+
+    ProcedureMaterial:
+      type: object
+      properties:
+        name:
+          type: string
+        quantity:
+          type: number
+        unit:
+          type: string
+      required:
+        - name
+        - quantity
+
+    ProcedureTemplate:
+      type: object
+      properties:
+        id:
+          type: string
+        clinicId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        defaultPrice:
+          type: number
+        materials:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - clinicId
+        - name
+        - defaultPrice
+        - materials
+        - createdAt
+
+    DoctorKpi:
+      type: object
+      properties:
+        doctorId:
+          type: string
+        doctorName:
+          type: string
+        patientsCount:
+          type: integer
+        proceduresCount:
+          type: integer
+        revenueTotal:
+          type: number
+      required:
+        - doctorId
+        - doctorName
+        - patientsCount
+        - proceduresCount
+        - revenueTotal
+
+    AnalyticsData:
+      type: object
+      properties:
+        role:
+          type: string
+        analytics:
+          type: object
+          additionalProperties: true
+      required:
+        - role
+        - analytics
+
+    ProcedureListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            procedures:
+              type: array
+              items:
+                $ref: "#/components/schemas/Procedure"
+          required:
+            - procedures
+      required:
+        - success
+        - data
+
+    ProcedureResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            procedure:
+              $ref: "#/components/schemas/Procedure"
+          required:
+            - procedure
+      required:
+        - success
+        - data
+
+    ProcedureTemplateListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            templates:
+              type: array
+              items:
+                $ref: "#/components/schemas/ProcedureTemplate"
+          required:
+            - templates
+      required:
+        - success
+        - data
+
+    AnalyticsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: "#/components/schemas/AnalyticsData"
+      required:
+        - success
+        - data
+
+    DoctorKpiListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            kpis:
+              type: array
+              items:
+                $ref: "#/components/schemas/DoctorKpi"
+          required:
+            - kpis
       required:
         - success
         - data

@@ -520,6 +520,108 @@ export interface UnreadCountResponse {
   data: UnreadCountResponseData;
 }
 
+export interface SuccessMessage {
+  success: boolean;
+  message: string;
+}
+
+export type ProcedureStatus =
+  (typeof ProcedureStatus)[keyof typeof ProcedureStatus];
+
+export const ProcedureStatus = {
+  scheduled: "scheduled",
+  in_progress: "in_progress",
+  completed: "completed",
+  cancelled: "cancelled",
+} as const;
+
+export interface Procedure {
+  id: string;
+  clinicId: string;
+  patientId: string;
+  doctorId?: string | null;
+  doctorName?: string | null;
+  name: string;
+  status: ProcedureStatus;
+  price: number;
+  notes?: string | null;
+  scheduledAt?: string | null;
+  completedAt?: string | null;
+  createdAt: string;
+}
+
+export interface ProcedureMaterial {
+  name: string;
+  quantity: number;
+  unit?: string;
+}
+
+export interface ProcedureTemplate {
+  id: string;
+  clinicId: string;
+  name: string;
+  description?: string | null;
+  defaultPrice: number;
+  materials: string;
+  createdAt: string;
+}
+
+export interface DoctorKpi {
+  doctorId: string;
+  doctorName: string;
+  patientsCount: number;
+  proceduresCount: number;
+  revenueTotal: number;
+}
+
+export type AnalyticsDataAnalytics = { [key: string]: unknown };
+
+export interface AnalyticsData {
+  role: string;
+  analytics: AnalyticsDataAnalytics;
+}
+
+export type ProcedureListResponseData = {
+  procedures: Procedure[];
+};
+
+export interface ProcedureListResponse {
+  success: boolean;
+  data: ProcedureListResponseData;
+}
+
+export type ProcedureResponseData = {
+  procedure: Procedure;
+};
+
+export interface ProcedureResponse {
+  success: boolean;
+  data: ProcedureResponseData;
+}
+
+export type ProcedureTemplateListResponseData = {
+  templates: ProcedureTemplate[];
+};
+
+export interface ProcedureTemplateListResponse {
+  success: boolean;
+  data: ProcedureTemplateListResponseData;
+}
+
+export interface AnalyticsResponse {
+  success: boolean;
+  data: AnalyticsData;
+}
+
+export type DoctorKpiListResponseData = {
+  kpis: DoctorKpi[];
+};
+
+export interface DoctorKpiListResponse {
+  success: boolean;
+  data: DoctorKpiListResponseData;
+}
+
 export type VerifyWhatsappWebhookParams = {
   "hub.mode"?: string;
   "hub.verify_token"?: string;
@@ -528,4 +630,47 @@ export type VerifyWhatsappWebhookParams = {
 
 export type InboundWhatsappWebhook200 = {
   status?: string;
+};
+
+export type CreateProcedureBodyMaterialsItem = {
+  itemId: string;
+  quantity: number;
+};
+
+export type CreateProcedureBody = {
+  patientId: string;
+  doctorId?: string;
+  name: string;
+  price?: number;
+  notes?: string;
+  scheduledAt?: string;
+  materials?: CreateProcedureBodyMaterialsItem[];
+};
+
+export type UpdateProcedureBody = {
+  name?: string;
+  price?: number;
+  notes?: string;
+  doctorId?: string | null;
+  scheduledAt?: string | null;
+};
+
+export type UpdateProcedureStatusBody = {
+  status: ProcedureStatus;
+};
+
+export type CreateProcedureTemplateBody = {
+  name: string;
+  description?: string;
+  defaultPrice?: number;
+  materials?: ProcedureMaterial[];
+};
+
+export type CreateProcedureTemplate201Data = {
+  template?: ProcedureTemplate;
+};
+
+export type CreateProcedureTemplate201 = {
+  success?: boolean;
+  data?: CreateProcedureTemplate201Data;
 };

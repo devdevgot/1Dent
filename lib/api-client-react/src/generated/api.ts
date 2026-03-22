@@ -19,10 +19,15 @@ import type {
 import type {
   AddInteractionRequest,
   AddToothTreatmentRequest,
+  AnalyticsResponse,
   AuthResponse,
   CreateInventoryItemRequest,
   CreatePatientRequest,
+  CreateProcedureBody,
+  CreateProcedureTemplate201,
+  CreateProcedureTemplateBody,
   CreateUserRequest,
+  DoctorKpiListResponse,
   ErrorResponse,
   HealthStatus,
   InboundWhatsappWebhook200,
@@ -38,8 +43,12 @@ import type {
   PatientDetailResponse,
   PatientResponse,
   PatientsListResponse,
+  ProcedureListResponse,
+  ProcedureResponse,
+  ProcedureTemplateListResponse,
   RegisterRequest,
   SendMessageRequest,
+  SuccessMessage,
   SuccessResponse,
   TeethResponse,
   ToothResponse,
@@ -49,6 +58,8 @@ import type {
   UpdateInventoryItemRequest,
   UpdatePatientRequest,
   UpdatePatientStatusRequest,
+  UpdateProcedureBody,
+  UpdateProcedureStatusBody,
   UpdateStockRequest,
   UpdateToothRequest,
   UpdateUserRequest,
@@ -2850,3 +2861,826 @@ export const useInboundWhatsappWebhook = <
 > => {
   return useMutation(getInboundWhatsappWebhookMutationOptions(options));
 };
+
+/**
+ * @summary List procedures
+ */
+export const getListProceduresUrl = () => {
+  return `/api/procedures`;
+};
+
+export const listProcedures = async (
+  options?: RequestInit,
+): Promise<ProcedureListResponse> => {
+  return customFetch<ProcedureListResponse>(getListProceduresUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListProceduresQueryKey = () => {
+  return [`/api/procedures`] as const;
+};
+
+export const getListProceduresQueryOptions = <
+  TData = Awaited<ReturnType<typeof listProcedures>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listProcedures>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListProceduresQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listProcedures>>> = ({
+    signal,
+  }) => listProcedures({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listProcedures>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListProceduresQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listProcedures>>
+>;
+export type ListProceduresQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List procedures
+ */
+
+export function useListProcedures<
+  TData = Awaited<ReturnType<typeof listProcedures>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listProcedures>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListProceduresQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a procedure
+ */
+export const getCreateProcedureUrl = () => {
+  return `/api/procedures`;
+};
+
+export const createProcedure = async (
+  createProcedureBody: CreateProcedureBody,
+  options?: RequestInit,
+): Promise<ProcedureResponse> => {
+  return customFetch<ProcedureResponse>(getCreateProcedureUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createProcedureBody),
+  });
+};
+
+export const getCreateProcedureMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createProcedure>>,
+    TError,
+    { data: BodyType<CreateProcedureBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createProcedure>>,
+  TError,
+  { data: BodyType<CreateProcedureBody> },
+  TContext
+> => {
+  const mutationKey = ["createProcedure"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createProcedure>>,
+    { data: BodyType<CreateProcedureBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createProcedure(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateProcedureMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createProcedure>>
+>;
+export type CreateProcedureMutationBody = BodyType<CreateProcedureBody>;
+export type CreateProcedureMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a procedure
+ */
+export const useCreateProcedure = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createProcedure>>,
+    TError,
+    { data: BodyType<CreateProcedureBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createProcedure>>,
+  TError,
+  { data: BodyType<CreateProcedureBody> },
+  TContext
+> => {
+  return useMutation(getCreateProcedureMutationOptions(options));
+};
+
+/**
+ * @summary Update procedure
+ */
+export const getUpdateProcedureUrl = (id: string) => {
+  return `/api/procedures/${id}`;
+};
+
+export const updateProcedure = async (
+  id: string,
+  updateProcedureBody: UpdateProcedureBody,
+  options?: RequestInit,
+): Promise<ProcedureResponse> => {
+  return customFetch<ProcedureResponse>(getUpdateProcedureUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateProcedureBody),
+  });
+};
+
+export const getUpdateProcedureMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateProcedure>>,
+    TError,
+    { id: string; data: BodyType<UpdateProcedureBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateProcedure>>,
+  TError,
+  { id: string; data: BodyType<UpdateProcedureBody> },
+  TContext
+> => {
+  const mutationKey = ["updateProcedure"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateProcedure>>,
+    { id: string; data: BodyType<UpdateProcedureBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateProcedure(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateProcedureMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateProcedure>>
+>;
+export type UpdateProcedureMutationBody = BodyType<UpdateProcedureBody>;
+export type UpdateProcedureMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update procedure
+ */
+export const useUpdateProcedure = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateProcedure>>,
+    TError,
+    { id: string; data: BodyType<UpdateProcedureBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateProcedure>>,
+  TError,
+  { id: string; data: BodyType<UpdateProcedureBody> },
+  TContext
+> => {
+  return useMutation(getUpdateProcedureMutationOptions(options));
+};
+
+/**
+ * @summary Delete procedure
+ */
+export const getDeleteProcedureUrl = (id: string) => {
+  return `/api/procedures/${id}`;
+};
+
+export const deleteProcedure = async (
+  id: string,
+  options?: RequestInit,
+): Promise<SuccessMessage> => {
+  return customFetch<SuccessMessage>(getDeleteProcedureUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteProcedureMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteProcedure>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteProcedure>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["deleteProcedure"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteProcedure>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteProcedure(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteProcedureMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteProcedure>>
+>;
+
+export type DeleteProcedureMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete procedure
+ */
+export const useDeleteProcedure = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteProcedure>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteProcedure>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getDeleteProcedureMutationOptions(options));
+};
+
+/**
+ * @summary Update procedure status
+ */
+export const getUpdateProcedureStatusUrl = (id: string) => {
+  return `/api/procedures/${id}/status`;
+};
+
+export const updateProcedureStatus = async (
+  id: string,
+  updateProcedureStatusBody: UpdateProcedureStatusBody,
+  options?: RequestInit,
+): Promise<ProcedureResponse> => {
+  return customFetch<ProcedureResponse>(getUpdateProcedureStatusUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateProcedureStatusBody),
+  });
+};
+
+export const getUpdateProcedureStatusMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateProcedureStatus>>,
+    TError,
+    { id: string; data: BodyType<UpdateProcedureStatusBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateProcedureStatus>>,
+  TError,
+  { id: string; data: BodyType<UpdateProcedureStatusBody> },
+  TContext
+> => {
+  const mutationKey = ["updateProcedureStatus"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateProcedureStatus>>,
+    { id: string; data: BodyType<UpdateProcedureStatusBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateProcedureStatus(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateProcedureStatusMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateProcedureStatus>>
+>;
+export type UpdateProcedureStatusMutationBody =
+  BodyType<UpdateProcedureStatusBody>;
+export type UpdateProcedureStatusMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update procedure status
+ */
+export const useUpdateProcedureStatus = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateProcedureStatus>>,
+    TError,
+    { id: string; data: BodyType<UpdateProcedureStatusBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateProcedureStatus>>,
+  TError,
+  { id: string; data: BodyType<UpdateProcedureStatusBody> },
+  TContext
+> => {
+  return useMutation(getUpdateProcedureStatusMutationOptions(options));
+};
+
+/**
+ * @summary List procedure templates
+ */
+export const getListProcedureTemplatesUrl = () => {
+  return `/api/procedures/templates`;
+};
+
+export const listProcedureTemplates = async (
+  options?: RequestInit,
+): Promise<ProcedureTemplateListResponse> => {
+  return customFetch<ProcedureTemplateListResponse>(
+    getListProcedureTemplatesUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListProcedureTemplatesQueryKey = () => {
+  return [`/api/procedures/templates`] as const;
+};
+
+export const getListProcedureTemplatesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listProcedureTemplates>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listProcedureTemplates>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListProcedureTemplatesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listProcedureTemplates>>
+  > = ({ signal }) => listProcedureTemplates({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listProcedureTemplates>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListProcedureTemplatesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listProcedureTemplates>>
+>;
+export type ListProcedureTemplatesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List procedure templates
+ */
+
+export function useListProcedureTemplates<
+  TData = Awaited<ReturnType<typeof listProcedureTemplates>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listProcedureTemplates>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListProcedureTemplatesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create procedure template
+ */
+export const getCreateProcedureTemplateUrl = () => {
+  return `/api/procedures/templates`;
+};
+
+export const createProcedureTemplate = async (
+  createProcedureTemplateBody: CreateProcedureTemplateBody,
+  options?: RequestInit,
+): Promise<CreateProcedureTemplate201> => {
+  return customFetch<CreateProcedureTemplate201>(
+    getCreateProcedureTemplateUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(createProcedureTemplateBody),
+    },
+  );
+};
+
+export const getCreateProcedureTemplateMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createProcedureTemplate>>,
+    TError,
+    { data: BodyType<CreateProcedureTemplateBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createProcedureTemplate>>,
+  TError,
+  { data: BodyType<CreateProcedureTemplateBody> },
+  TContext
+> => {
+  const mutationKey = ["createProcedureTemplate"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createProcedureTemplate>>,
+    { data: BodyType<CreateProcedureTemplateBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createProcedureTemplate(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateProcedureTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createProcedureTemplate>>
+>;
+export type CreateProcedureTemplateMutationBody =
+  BodyType<CreateProcedureTemplateBody>;
+export type CreateProcedureTemplateMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create procedure template
+ */
+export const useCreateProcedureTemplate = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createProcedureTemplate>>,
+    TError,
+    { data: BodyType<CreateProcedureTemplateBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createProcedureTemplate>>,
+  TError,
+  { data: BodyType<CreateProcedureTemplateBody> },
+  TContext
+> => {
+  return useMutation(getCreateProcedureTemplateMutationOptions(options));
+};
+
+/**
+ * @summary Delete procedure template
+ */
+export const getDeleteProcedureTemplateUrl = (id: string) => {
+  return `/api/procedures/templates/${id}`;
+};
+
+export const deleteProcedureTemplate = async (
+  id: string,
+  options?: RequestInit,
+): Promise<SuccessMessage> => {
+  return customFetch<SuccessMessage>(getDeleteProcedureTemplateUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteProcedureTemplateMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteProcedureTemplate>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteProcedureTemplate>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["deleteProcedureTemplate"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteProcedureTemplate>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteProcedureTemplate(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteProcedureTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteProcedureTemplate>>
+>;
+
+export type DeleteProcedureTemplateMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete procedure template
+ */
+export const useDeleteProcedureTemplate = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteProcedureTemplate>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteProcedureTemplate>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getDeleteProcedureTemplateMutationOptions(options));
+};
+
+/**
+ * @summary Get role-based analytics
+ */
+export const getGetAnalyticsUrl = () => {
+  return `/api/analytics`;
+};
+
+export const getAnalytics = async (
+  options?: RequestInit,
+): Promise<AnalyticsResponse> => {
+  return customFetch<AnalyticsResponse>(getGetAnalyticsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAnalyticsQueryKey = () => {
+  return [`/api/analytics`] as const;
+};
+
+export const getGetAnalyticsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAnalytics>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAnalytics>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAnalyticsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAnalytics>>> = ({
+    signal,
+  }) => getAnalytics({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAnalytics>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAnalyticsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAnalytics>>
+>;
+export type GetAnalyticsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get role-based analytics
+ */
+
+export function useGetAnalytics<
+  TData = Awaited<ReturnType<typeof getAnalytics>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAnalytics>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAnalyticsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get doctor KPI rankings
+ */
+export const getGetDoctorKpisUrl = () => {
+  return `/api/kpi/doctors`;
+};
+
+export const getDoctorKpis = async (
+  options?: RequestInit,
+): Promise<DoctorKpiListResponse> => {
+  return customFetch<DoctorKpiListResponse>(getGetDoctorKpisUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetDoctorKpisQueryKey = () => {
+  return [`/api/kpi/doctors`] as const;
+};
+
+export const getGetDoctorKpisQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDoctorKpis>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDoctorKpis>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetDoctorKpisQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getDoctorKpis>>> = ({
+    signal,
+  }) => getDoctorKpis({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getDoctorKpis>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetDoctorKpisQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getDoctorKpis>>
+>;
+export type GetDoctorKpisQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get doctor KPI rankings
+ */
+
+export function useGetDoctorKpis<
+  TData = Awaited<ReturnType<typeof getDoctorKpis>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDoctorKpis>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetDoctorKpisQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}

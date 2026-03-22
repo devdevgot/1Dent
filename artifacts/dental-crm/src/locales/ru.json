@@ -99,7 +99,24 @@
     "activityFeedDesc": "Здесь будут отображаться детальные графики и лента активности на основе данных клиники в реальном времени.",
     "upcomingTasks": "Предстоящие задачи",
     "reviewTreatment": "Проверить план лечения",
-    "patient": "Пациент: {{name}} • {{time}}"
+    "patient": "Пациент: {{name}} • {{time}}",
+    "myPatients": "Мои пациенты",
+    "scheduledToday": "Приёмов сегодня",
+    "monthlyProcs": "Процедур за месяц",
+    "newPatients": "Новых за месяц",
+    "newToday": "Новых сегодня",
+    "redAlerts": "Красных алертов",
+    "doctorKpi": "Рейтинг врачей",
+    "viewAll": "Смотреть все",
+    "doctor": "Врач",
+    "patients": "Пациенты",
+    "procedures": "Процедуры",
+    "quickActions": "Быстрые действия",
+    "openKanban": "Открыть Kanban",
+    "openDentalChart": "Карта зубов",
+    "openInventory": "Склад",
+    "openProcedures": "Процедуры",
+    "goToProcedures": "Перейти к процедурам"
   },
   "notFound": {
     "title": "Страница не найдена",
@@ -257,5 +274,47 @@
     "ru": "Рус",
     "kz": "Қаз",
     "en": "Eng"
+  },
+  "procedure": {
+    "pageTitle": "Процедуры",
+    "pageDesc": "Управление лечебными процедурами пациентов",
+    "new": "Новая процедура",
+    "newProcedure": "Добавить процедуру",
+    "fromTemplate": "Из шаблона",
+    "noTemplate": "Без шаблона",
+    "patient": "Пациент",
+    "selectPatient": "Выберите пациента",
+    "doctor": "Врач",
+    "noDoctor": "Не назначен",
+    "name": "Название",
+    "namePlaceholder": "Например: Удаление зуба мудрости",
+    "price": "Стоимость",
+    "scheduledAt": "Дата приёма",
+    "notes": "Примечания",
+    "notesPlaceholder": "Описание, план лечения...",
+    "create": "Создать",
+    "confirmDelete": "Удалить эту процедуру?",
+    "emptyTitle": "Процедур нет",
+    "emptyDesc": "Создайте первую процедуру для пациента",
+    "searchPlaceholder": "Поиск по названию...",
+    "statusAll": "Все",
+    "status": {
+      "scheduled":   "Запланирована",
+      "in_progress": "В процессе",
+      "completed":   "Завершена",
+      "cancelled":   "Отменена"
+    },
+    "markAs": {
+      "in_progress": "Начать",
+      "completed":   "Завершить",
+      "cancelled":   "Отменить"
+    },
+    "col": {
+      "name":      "Процедура",
+      "doctor":    "Врач",
+      "status":    "Статус",
+      "price":     "Стоимость",
+      "scheduled": "Дата"
+    }
   }
 }

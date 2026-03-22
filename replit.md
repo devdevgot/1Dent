@@ -101,6 +101,17 @@ Every package extends `tsconfig.base.json` which sets `composite: true`. The roo
 - AppLayout: bottom navigation with Sheet "More" drawer for overflow items, safe-area CSS, viewport-fit=cover
 - Role isolation: doctors redirected to /dashboard/doctor, accountants to /dashboard/accountant, etc.
 
+### Task #5 — Dashboards, Doctor KPI & Procedure Management
+- DB: `procedures` + `procedure_templates` tables (Drizzle, pushed)
+- API: full CRUD for procedures (`GET/POST /procedures`, `PUT/PATCH/DELETE /procedures/:id`, `PATCH /procedures/:id/status`)
+- Templates API: `GET/POST /procedures/templates`, `DELETE /procedures/templates/:id`
+- Analytics: `GET /analytics` (role-adaptive: owner/accountant get revenue metrics, doctor gets own stats, admin/warehouse get clinic overview)
+- Doctor KPI: `GET /kpi/doctors` (owner/admin only) — patientsCount, proceduresCount, revenueTotal per doctor
+- OpenAPI: procedures, analytics, kpi/doctors endpoints + schemas added; codegen re-run
+- Dashboard: rewritten with real analytics data, doctor KPI table for owners, role-adaptive KPI cards, quick action shortcuts
+- Procedures page: table with status filter pills, search, status transition menu (scheduled→in_progress→completed/cancelled), create dialog with template picker and patient/doctor selectors, role-gated write access
+- i18n: procedure and dashboard translations added to ru/en/kz
+
 ### Task #4 — FDI Dental Chart & Inventory
 - DB: `tooth_records` + `inventory_items` + `inventory_stock` + `tooth_treatments` tables (Drizzle, pushed)
 - API: `PUT /patients/:id/teeth/:toothFdi` (upsert), `GET /patients/:id/teeth`, treatment endpoints

@@ -16,6 +16,7 @@ import Dashboard from "@/pages/dashboard";
 import KanbanPage from "@/pages/kanban";
 import ChatPage from "@/pages/chat";
 import InventoryPage from "@/pages/inventory";
+import ProceduresPage from "@/pages/procedures";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -107,6 +108,9 @@ function Router() {
       </Route>
       <Route path="/inventory">
         <ProtectedRoute component={InventoryPage} allowedRoles={['owner', 'admin', 'warehouse', 'doctor', 'accountant']} />
+      </Route>
+      <Route path="/procedures">
+        <ProtectedRoute component={ProceduresPage} allowedRoles={['owner', 'admin', 'doctor', 'accountant']} />
       </Route>
 
       {/* 404 */}

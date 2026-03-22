@@ -863,3 +863,210 @@ export const InboundWhatsappWebhookBody = zod
 export const InboundWhatsappWebhookResponse = zod.object({
   status: zod.string().optional(),
 });
+
+/**
+ * @summary List procedures
+ */
+export const ListProceduresResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    procedures: zod.array(
+      zod.object({
+        id: zod.string(),
+        clinicId: zod.string(),
+        patientId: zod.string(),
+        doctorId: zod.string().nullish(),
+        doctorName: zod.string().nullish(),
+        name: zod.string(),
+        status: zod.enum([
+          "scheduled",
+          "in_progress",
+          "completed",
+          "cancelled",
+        ]),
+        price: zod.number(),
+        notes: zod.string().nullish(),
+        scheduledAt: zod.date().nullish(),
+        completedAt: zod.date().nullish(),
+        createdAt: zod.date(),
+      }),
+    ),
+  }),
+});
+
+/**
+ * @summary Create a procedure
+ */
+export const CreateProcedureBody = zod.object({
+  patientId: zod.string(),
+  doctorId: zod.string().optional(),
+  name: zod.string(),
+  price: zod.number().optional(),
+  notes: zod.string().optional(),
+  scheduledAt: zod.date().optional(),
+  materials: zod
+    .array(
+      zod.object({
+        itemId: zod.string(),
+        quantity: zod.number(),
+      }),
+    )
+    .optional(),
+});
+
+/**
+ * @summary Update procedure
+ */
+export const UpdateProcedureParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const UpdateProcedureBody = zod.object({
+  name: zod.string().optional(),
+  price: zod.number().optional(),
+  notes: zod.string().optional(),
+  doctorId: zod.string().nullish(),
+  scheduledAt: zod.date().nullish(),
+});
+
+export const UpdateProcedureResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    procedure: zod.object({
+      id: zod.string(),
+      clinicId: zod.string(),
+      patientId: zod.string(),
+      doctorId: zod.string().nullish(),
+      doctorName: zod.string().nullish(),
+      name: zod.string(),
+      status: zod.enum(["scheduled", "in_progress", "completed", "cancelled"]),
+      price: zod.number(),
+      notes: zod.string().nullish(),
+      scheduledAt: zod.date().nullish(),
+      completedAt: zod.date().nullish(),
+      createdAt: zod.date(),
+    }),
+  }),
+});
+
+/**
+ * @summary Delete procedure
+ */
+export const DeleteProcedureParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const DeleteProcedureResponse = zod.object({
+  success: zod.literal(true),
+  message: zod.string(),
+});
+
+/**
+ * @summary Update procedure status
+ */
+export const UpdateProcedureStatusParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const UpdateProcedureStatusBody = zod.object({
+  status: zod.enum(["scheduled", "in_progress", "completed", "cancelled"]),
+});
+
+export const UpdateProcedureStatusResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    procedure: zod.object({
+      id: zod.string(),
+      clinicId: zod.string(),
+      patientId: zod.string(),
+      doctorId: zod.string().nullish(),
+      doctorName: zod.string().nullish(),
+      name: zod.string(),
+      status: zod.enum(["scheduled", "in_progress", "completed", "cancelled"]),
+      price: zod.number(),
+      notes: zod.string().nullish(),
+      scheduledAt: zod.date().nullish(),
+      completedAt: zod.date().nullish(),
+      createdAt: zod.date(),
+    }),
+  }),
+});
+
+/**
+ * @summary List procedure templates
+ */
+export const ListProcedureTemplatesResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    templates: zod.array(
+      zod.object({
+        id: zod.string(),
+        clinicId: zod.string(),
+        name: zod.string(),
+        description: zod.string().nullish(),
+        defaultPrice: zod.number(),
+        materials: zod.string(),
+        createdAt: zod.date(),
+      }),
+    ),
+  }),
+});
+
+/**
+ * @summary Create procedure template
+ */
+export const CreateProcedureTemplateBody = zod.object({
+  name: zod.string(),
+  description: zod.string().optional(),
+  defaultPrice: zod.number().optional(),
+  materials: zod
+    .array(
+      zod.object({
+        name: zod.string(),
+        quantity: zod.number(),
+        unit: zod.string().optional(),
+      }),
+    )
+    .optional(),
+});
+
+/**
+ * @summary Delete procedure template
+ */
+export const DeleteProcedureTemplateParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const DeleteProcedureTemplateResponse = zod.object({
+  success: zod.literal(true),
+  message: zod.string(),
+});
+
+/**
+ * @summary Get role-based analytics
+ */
+export const GetAnalyticsResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    role: zod.string(),
+    analytics: zod.record(zod.string(), zod.unknown()),
+  }),
+});
+
+/**
+ * @summary Get doctor KPI rankings
+ */
+export const GetDoctorKpisResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    kpis: zod.array(
+      zod.object({
+        doctorId: zod.string(),
+        doctorName: zod.string(),
+        patientsCount: zod.number(),
+        proceduresCount: zod.number(),
+        revenueTotal: zod.number(),
+      }),
+    ),
+  }),
+});

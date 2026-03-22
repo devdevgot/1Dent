@@ -99,7 +99,24 @@
     "activityFeedDesc": "Клиника деректеріне негізделген егжей-тегжейлі графиктер мен белсенділік ленті осында көрсетіледі.",
     "upcomingTasks": "Алдағы тапсырмалар",
     "reviewTreatment": "Емдеу жоспарын тексеру",
-    "patient": "Пациент: {{name}} • {{time}}"
+    "patient": "Пациент: {{name}} • {{time}}",
+    "myPatients": "Менің пациенттерім",
+    "scheduledToday": "Бүгінгі қабылдау",
+    "monthlyProcs": "Айдағы процедуралар",
+    "newPatients": "Айдағы жаңалар",
+    "newToday": "Бүгін жаңа",
+    "redAlerts": "Қызыл дабылдар",
+    "doctorKpi": "Дәрігерлер рейтингі",
+    "viewAll": "Барлығын көру",
+    "doctor": "Дәрігер",
+    "patients": "Пациенттер",
+    "procedures": "Процедуралар",
+    "quickActions": "Жылдам әрекеттер",
+    "openKanban": "Kanban ашу",
+    "openDentalChart": "Тіс картасы",
+    "openInventory": "Қойма",
+    "openProcedures": "Процедуралар",
+    "goToProcedures": "Процедураларға өту"
   },
   "notFound": {
     "title": "Бет табылмады",
@@ -257,5 +274,47 @@
     "ru": "Рус",
     "kz": "Қаз",
     "en": "Eng"
+  },
+  "procedure": {
+    "pageTitle": "Процедуралар",
+    "pageDesc": "Пациенттердің емдеу процедураларын басқару",
+    "new": "Жаңа процедура",
+    "newProcedure": "Процедура қосу",
+    "fromTemplate": "Үлгіден",
+    "noTemplate": "Үлгісіз",
+    "patient": "Пациент",
+    "selectPatient": "Пациент таңдаңыз",
+    "doctor": "Дәрігер",
+    "noDoctor": "Тағайындалмаған",
+    "name": "Атауы",
+    "namePlaceholder": "Мысалы: Дана тіс алу",
+    "price": "Бағасы",
+    "scheduledAt": "Қабылдау күні",
+    "notes": "Ескертпелер",
+    "notesPlaceholder": "Сипаттама, емдеу жоспары...",
+    "create": "Жасау",
+    "confirmDelete": "Бұл процедураны жою керек пе?",
+    "emptyTitle": "Процедура жоқ",
+    "emptyDesc": "Пациент үшін бірінші процедураны жасаңыз",
+    "searchPlaceholder": "Атауы бойынша іздеу...",
+    "statusAll": "Барлығы",
+    "status": {
+      "scheduled":   "Жоспарланған",
+      "in_progress": "Орындалуда",
+      "completed":   "Аяқталды",
+      "cancelled":   "Болдырмады"
+    },
+    "markAs": {
+      "in_progress": "Бастау",
+      "completed":   "Аяқтау",
+      "cancelled":   "Болдырмау"
+    },
+    "col": {
+      "name":      "Процедура",
+      "doctor":    "Дәрігер",
+      "status":    "Мәртебе",
+      "price":     "Бағасы",
+      "scheduled": "Күні"
+    }
   }
 }
