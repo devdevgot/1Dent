@@ -335,23 +335,6 @@ export default function OwnerDashboard() {
         </div>
       </div>
 
-      {/* ─── My Analytics Button ─── */}
-      <motion.button
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        onClick={() => navigate("/doctor-analytics")}
-        className="mx-4 mt-4 w-full bg-gradient-to-r from-primary to-primary/80 rounded-2xl p-5 text-white shadow-lg shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-all"
-      >
-        <div className="flex items-center justify-between">
-          <div className="text-left">
-            <p className="text-sm font-bold">{t("dashboard.myAnalytics")}</p>
-            <p className="text-xs text-white/80 mt-1">{t("dashboard.myAnalyticsDesc")}</p>
-          </div>
-          <ChevronRight className="w-5 h-5" />
-        </div>
-      </motion.button>
-
       {/* ─── Doctor KPIs ─── */}
       {kpis.length > 0 && (
         <div className="mx-4 mt-4">
