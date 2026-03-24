@@ -22,6 +22,7 @@ import type {
   AddToothTreatmentRequest,
   AnalyticsResponse,
   AuthResponse,
+  ChatbotSettingsUpdate,
   CreateFollowupsRequest,
   CreateInventoryItemRequest,
   CreatePatientRequest,
@@ -29,11 +30,13 @@ import type {
   CreateProcedureTemplate201,
   CreateProcedureTemplateBody,
   CreateUserRequest,
+  DeleteChatbotSession200,
   DoctorKpiListResponse,
   ErrorResponse,
   FollowupResponse,
   FollowupsResponse,
   GetActionLogsParams,
+  GetChatbotSettings200,
   GetFollowupsParams,
   GetInventoryConsumptionParams,
   HealthStatus,
@@ -42,6 +45,7 @@ import type {
   InventoryConsumptionResponse,
   InventoryItemResponse,
   InventoryListResponse,
+  ListChatbotSessions200,
   LoginRequest,
   MeResponse,
   MessageResponse,
@@ -63,6 +67,7 @@ import type {
   ToothTreatmentResponse,
   ToothTreatmentsResponse,
   UnreadCountResponse,
+  UpdateChatbotSettings200,
   UpdateInventoryItemRequest,
   UpdatePatientRequest,
   UpdatePatientStatusRequest,
@@ -4157,6 +4162,329 @@ export const useCancelFollowup = <
   TContext
 > => {
   return useMutation(getCancelFollowupMutationOptions(options));
+};
+
+/**
+ * @summary Get chatbot settings for the clinic
+ */
+export const getGetChatbotSettingsUrl = () => {
+  return `/api/chatbot/settings`;
+};
+
+export const getChatbotSettings = async (
+  options?: RequestInit,
+): Promise<GetChatbotSettings200> => {
+  return customFetch<GetChatbotSettings200>(getGetChatbotSettingsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetChatbotSettingsQueryKey = () => {
+  return [`/api/chatbot/settings`] as const;
+};
+
+export const getGetChatbotSettingsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getChatbotSettings>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getChatbotSettings>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetChatbotSettingsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getChatbotSettings>>
+  > = ({ signal }) => getChatbotSettings({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getChatbotSettings>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetChatbotSettingsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getChatbotSettings>>
+>;
+export type GetChatbotSettingsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get chatbot settings for the clinic
+ */
+
+export function useGetChatbotSettings<
+  TData = Awaited<ReturnType<typeof getChatbotSettings>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getChatbotSettings>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetChatbotSettingsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update chatbot settings
+ */
+export const getUpdateChatbotSettingsUrl = () => {
+  return `/api/chatbot/settings`;
+};
+
+export const updateChatbotSettings = async (
+  chatbotSettingsUpdate: ChatbotSettingsUpdate,
+  options?: RequestInit,
+): Promise<UpdateChatbotSettings200> => {
+  return customFetch<UpdateChatbotSettings200>(getUpdateChatbotSettingsUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(chatbotSettingsUpdate),
+  });
+};
+
+export const getUpdateChatbotSettingsMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateChatbotSettings>>,
+    TError,
+    { data: BodyType<ChatbotSettingsUpdate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateChatbotSettings>>,
+  TError,
+  { data: BodyType<ChatbotSettingsUpdate> },
+  TContext
+> => {
+  const mutationKey = ["updateChatbotSettings"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateChatbotSettings>>,
+    { data: BodyType<ChatbotSettingsUpdate> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateChatbotSettings(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateChatbotSettingsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateChatbotSettings>>
+>;
+export type UpdateChatbotSettingsMutationBody = BodyType<ChatbotSettingsUpdate>;
+export type UpdateChatbotSettingsMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update chatbot settings
+ */
+export const useUpdateChatbotSettings = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateChatbotSettings>>,
+    TError,
+    { data: BodyType<ChatbotSettingsUpdate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateChatbotSettings>>,
+  TError,
+  { data: BodyType<ChatbotSettingsUpdate> },
+  TContext
+> => {
+  return useMutation(getUpdateChatbotSettingsMutationOptions(options));
+};
+
+/**
+ * @summary List active chatbot sessions
+ */
+export const getListChatbotSessionsUrl = () => {
+  return `/api/chatbot/sessions`;
+};
+
+export const listChatbotSessions = async (
+  options?: RequestInit,
+): Promise<ListChatbotSessions200> => {
+  return customFetch<ListChatbotSessions200>(getListChatbotSessionsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListChatbotSessionsQueryKey = () => {
+  return [`/api/chatbot/sessions`] as const;
+};
+
+export const getListChatbotSessionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listChatbotSessions>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listChatbotSessions>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListChatbotSessionsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listChatbotSessions>>
+  > = ({ signal }) => listChatbotSessions({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listChatbotSessions>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListChatbotSessionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listChatbotSessions>>
+>;
+export type ListChatbotSessionsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List active chatbot sessions
+ */
+
+export function useListChatbotSessions<
+  TData = Awaited<ReturnType<typeof listChatbotSessions>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listChatbotSessions>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListChatbotSessionsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Reset a chatbot session by phone number
+ */
+export const getDeleteChatbotSessionUrl = (phone: string) => {
+  return `/api/chatbot/sessions/${phone}`;
+};
+
+export const deleteChatbotSession = async (
+  phone: string,
+  options?: RequestInit,
+): Promise<DeleteChatbotSession200> => {
+  return customFetch<DeleteChatbotSession200>(
+    getDeleteChatbotSessionUrl(phone),
+    {
+      ...options,
+      method: "DELETE",
+    },
+  );
+};
+
+export const getDeleteChatbotSessionMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteChatbotSession>>,
+    TError,
+    { phone: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteChatbotSession>>,
+  TError,
+  { phone: string },
+  TContext
+> => {
+  const mutationKey = ["deleteChatbotSession"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteChatbotSession>>,
+    { phone: string }
+  > = (props) => {
+    const { phone } = props ?? {};
+
+    return deleteChatbotSession(phone, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteChatbotSessionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteChatbotSession>>
+>;
+
+export type DeleteChatbotSessionMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Reset a chatbot session by phone number
+ */
+export const useDeleteChatbotSession = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteChatbotSession>>,
+    TError,
+    { phone: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteChatbotSession>>,
+  TError,
+  { phone: string },
+  TContext
+> => {
+  return useMutation(getDeleteChatbotSessionMutationOptions(options));
 };
 
 /**

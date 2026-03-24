@@ -7,6 +7,7 @@ import { sendWhatsAppMessage, isRedAlert } from "../../shared/whatsapp";
 import { getAlertQueue } from "../../shared/alert-queue";
 import { NotFoundError, ForbiddenError } from "../../shared/errors";
 import { logger } from "../../lib/logger";
+import { ChatbotService } from "../chatbot/chatbot.service";
 import type { UserRole, Message, Notification } from "@workspace/db";
 
 const WHATSAPP_ENABLED = !!(
@@ -15,6 +16,7 @@ const WHATSAPP_ENABLED = !!(
 
 export class MessagesService {
   private repo = new MessagesRepository();
+  private chatbot = new ChatbotService();
 
   async listMessages(
     patientId: string,
@@ -134,12 +136,18 @@ export class MessagesService {
     content: string,
     whatsappMessageId: string,
   ): Promise<Message | null> {
-    // Resolve phone → patient. Skip insert if phone not matched to avoid FK violation.
+    // Resolve phone → patient (may be null for new contacts)
     const patient = await this.repo.findPatientByPhone(senderPhone, clinicId);
+
+    // Run chatbot FSM for every inbound message (handles unknown phones too)
+    this.chatbot.processMessage(clinicId, senderPhone, content).catch((err) =>
+      logger.error({ err }, "ChatbotService.processMessage failed"),
+    );
+
     if (!patient) {
       logger.info(
         { senderPhone, clinicId },
-        "No patient matched for inbound webhook phone — message skipped",
+        "No patient matched for inbound webhook phone — chatbot session started, message not stored",
       );
       return null;
     }

@@ -17,7 +17,7 @@ export default function WarehouseDashboard() {
 
   const items = inventoryData?.data?.items ?? [];
   const lowStockItems = items.filter((item) => item.quantity <= item.minQuantity);
-  const totalValue = items.reduce((acc, item) => acc + (item.price ?? 0) * item.quantity, 0);
+  const totalValue = items.reduce((acc, item) => acc + (item.unitPrice ?? 0) * item.quantity, 0);
 
   const procedures = proceduresData?.data?.procedures ?? [];
   const recentCompleted = procedures

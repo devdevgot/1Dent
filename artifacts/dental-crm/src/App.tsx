@@ -25,6 +25,7 @@ import LogsPage from "@/pages/logs";
 import FinancialsPage from "@/pages/financials";
 import WarehousePage from "@/pages/warehouse";
 import UsersPage from "@/pages/users";
+import ChatbotPage from "@/pages/chatbot";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -142,6 +143,11 @@ function Router() {
       {/* Users management */}
       <Route path="/users">
         <ProtectedRoute component={UsersPage} allowedRoles={['owner', 'admin']} />
+      </Route>
+
+      {/* Chatbot management */}
+      <Route path="/chatbot">
+        <ProtectedRoute component={ChatbotPage} allowedRoles={['owner', 'admin']} />
       </Route>
 
       {/* 404 */}

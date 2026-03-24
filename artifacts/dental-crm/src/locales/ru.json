@@ -50,6 +50,7 @@
     "financials": "Финансы",
     "inventory": "Склад",
     "users": "Пользователи",
+    "chatbot": "Чатбот",
     "logs": "Журнал",
     "more": "Ещё"
   },
@@ -69,7 +70,18 @@
     "inventory": "Склад",
     "warehouse": "Склад",
     "users": "Пользователи",
+    "chatbot": "AI-чатбот",
     "logs": "Журнал"
+  },
+  "common": {
+    "loading": "Загрузка...",
+    "save": "Сохранить",
+    "saving": "Сохранение...",
+    "saved": "Сохранено",
+    "refresh": "Обновить",
+    "cancel": "Отмена",
+    "delete": "Удалить",
+    "edit": "Редактировать"
   },
   "account": {
     "title": "Аккаунт",
@@ -446,6 +458,29 @@
     "proceduresList": "Список процедур",
     "empty": "Процедур не найдено",
     "unassigned": "Не назначен"
+  },
+  "chatbot": {
+    "title": "AI-чатбот",
+    "subtitle": "Управление автоматическими диалогами WhatsApp",
+    "enabled": "Включён",
+    "disabled": "Отключён",
+    "activeSessions": "Активных диалогов",
+    "sessionsEmpty": "Нет активных диалогов с ботом",
+    "operatorMode": "Оператор",
+    "resetSession": "Сбросить сессию",
+    "tab": {
+      "sessions": "Диалоги",
+      "settings": "Настройки"
+    },
+    "settings": {
+      "enableBot": "Включить чатбот",
+      "enableBotDesc": "Автоматически отвечать на входящие сообщения от новых пациентов",
+      "templates": "Шаблоны сообщений",
+      "greetingTemplate": "Приветствие",
+      "followup24h": "Послеоперационный (24 часа)",
+      "followup72h": "Послеоперационный (3 дня)",
+      "followup168h": "Послеоперационный (7 дней)"
+    }
   },
   "warehouse": {
     "title": "Склад",

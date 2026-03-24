@@ -50,6 +50,7 @@
     "financials": "Қаржы",
     "inventory": "Қойма",
     "users": "Пайдаланушылар",
+    "chatbot": "Чатбот",
     "logs": "Журнал",
     "more": "Көбірек"
   },
@@ -69,7 +70,18 @@
     "inventory": "Қойма",
     "warehouse": "Қойма",
     "users": "Пайдаланушылар",
+    "chatbot": "AI-чатбот",
     "logs": "Журнал"
+  },
+  "common": {
+    "loading": "Жүктелуде...",
+    "save": "Сақтау",
+    "saving": "Сақталуда...",
+    "saved": "Сақталды",
+    "refresh": "Жаңарту",
+    "cancel": "Болдырмау",
+    "delete": "Жою",
+    "edit": "Өңдеу"
   },
   "account": {
     "title": "Аккаунт",
@@ -446,6 +458,29 @@
     "proceduresList": "Процедуралар тізімі",
     "empty": "Процедура табылмады",
     "unassigned": "Тағайындалмаған"
+  },
+  "chatbot": {
+    "title": "AI-чатбот",
+    "subtitle": "WhatsApp автоматты диалогтарды басқару",
+    "enabled": "Қосылған",
+    "disabled": "Өшірілген",
+    "activeSessions": "Белсенді диалогтар",
+    "sessionsEmpty": "Бот диалогтары жоқ",
+    "operatorMode": "Оператор",
+    "resetSession": "Сессияны қалпына келтіру",
+    "tab": {
+      "sessions": "Диалогтар",
+      "settings": "Баптаулар"
+    },
+    "settings": {
+      "enableBot": "Чатботты қосу",
+      "enableBotDesc": "Жаңа науқастардың хабарламаларына автоматты жауап беру",
+      "templates": "Хабарлама шаблондары",
+      "greetingTemplate": "Сәлемдесу",
+      "followup24h": "Операциядан кейін (24 сағат)",
+      "followup72h": "Операциядан кейін (3 күн)",
+      "followup168h": "Операциядан кейін (7 күн)"
+    }
   },
   "warehouse": {
     "title": "Қойма",

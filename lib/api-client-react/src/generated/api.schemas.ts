@@ -561,6 +561,38 @@ export interface ProcedureMaterialLineItem {
   quantity: number;
 }
 
+export interface ChatbotSettings {
+  id: string;
+  clinicId: string;
+  enabled: boolean;
+  greetingTemplate: string;
+  followup24hTemplate: string;
+  followup72hTemplate: string;
+  followup168hTemplate: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChatbotSettingsUpdate {
+  enabled?: boolean;
+  greetingTemplate?: string;
+  followup24hTemplate?: string;
+  followup72hTemplate?: string;
+  followup168hTemplate?: string;
+}
+
+export type ChatbotSessionData = { [key: string]: unknown };
+
+export interface ChatbotSession {
+  id: string;
+  clinicId: string;
+  phone: string;
+  state: string;
+  data?: ChatbotSessionData;
+  humanTakeover: boolean;
+  updatedAt: string;
+}
+
 export interface Procedure {
   id: string;
   clinicId: string;
@@ -791,4 +823,35 @@ export type GetActionLogsParams = {
 export type GetFollowupsParams = {
   procedureId?: string;
   patientId?: string;
+};
+
+export type GetChatbotSettings200Data = {
+  settings?: ChatbotSettings;
+};
+
+export type GetChatbotSettings200 = {
+  success?: boolean;
+  data?: GetChatbotSettings200Data;
+};
+
+export type UpdateChatbotSettings200Data = {
+  settings?: ChatbotSettings;
+};
+
+export type UpdateChatbotSettings200 = {
+  success?: boolean;
+  data?: UpdateChatbotSettings200Data;
+};
+
+export type ListChatbotSessions200Data = {
+  sessions?: ChatbotSession[];
+};
+
+export type ListChatbotSessions200 = {
+  success?: boolean;
+  data?: ListChatbotSessions200Data;
+};
+
+export type DeleteChatbotSession200 = {
+  success?: boolean;
 };

@@ -1184,6 +1184,105 @@ paths:
               schema:
                 $ref: "#/components/schemas/FollowupResponse"
 
+  /chatbot/settings:
+    get:
+      operationId: getChatbotSettings
+      tags: [chatbot]
+      summary: Get chatbot settings for the clinic
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Chatbot settings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      settings:
+                        $ref: "#/components/schemas/ChatbotSettings"
+    put:
+      operationId: updateChatbotSettings
+      tags: [chatbot]
+      summary: Update chatbot settings
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatbotSettingsUpdate"
+      responses:
+        "200":
+          description: Updated chatbot settings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      settings:
+                        $ref: "#/components/schemas/ChatbotSettings"
+
+  /chatbot/sessions:
+    get:
+      operationId: listChatbotSessions
+      tags: [chatbot]
+      summary: List active chatbot sessions
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: List of chatbot sessions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      sessions:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/ChatbotSession"
+
+  /chatbot/sessions/{phone}:
+    delete:
+      operationId: deleteChatbotSession
+      tags: [chatbot]
+      summary: Reset a chatbot session by phone number
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: phone
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Session reset
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
   /analytics/owner:
     get:
       operationId: getOwnerAnalytics
@@ -2288,6 +2387,81 @@ components:
         - itemId
         - itemName
         - quantity
+
+    ChatbotSettings:
+      type: object
+      properties:
+        id:
+          type: string
+        clinicId:
+          type: string
+        enabled:
+          type: boolean
+        greetingTemplate:
+          type: string
+        followup24hTemplate:
+          type: string
+        followup72hTemplate:
+          type: string
+        followup168hTemplate:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - clinicId
+        - enabled
+        - greetingTemplate
+        - followup24hTemplate
+        - followup72hTemplate
+        - followup168hTemplate
+        - createdAt
+        - updatedAt
+
+    ChatbotSettingsUpdate:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        greetingTemplate:
+          type: string
+        followup24hTemplate:
+          type: string
+        followup72hTemplate:
+          type: string
+        followup168hTemplate:
+          type: string
+
+    ChatbotSession:
+      type: object
+      properties:
+        id:
+          type: string
+        clinicId:
+          type: string
+        phone:
+          type: string
+        state:
+          type: string
+        data:
+          type: object
+          additionalProperties: true
+        humanTakeover:
+          type: boolean
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - clinicId
+        - phone
+        - state
+        - humanTakeover
+        - updatedAt
 
     Procedure:
       type: object

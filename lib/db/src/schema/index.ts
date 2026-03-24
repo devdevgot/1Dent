@@ -5,3 +5,4 @@ export * from "./messages";
 export * from "./dental";
 export * from "./procedures";
 export * from "./logs";
+export * from "./chatbot";

@@ -1221,6 +1221,97 @@ export const CancelFollowupResponse = zod.object({
 });
 
 /**
+ * @summary Get chatbot settings for the clinic
+ */
+export const GetChatbotSettingsResponse = zod.object({
+  success: zod.boolean().optional(),
+  data: zod
+    .object({
+      settings: zod
+        .object({
+          id: zod.string(),
+          clinicId: zod.string(),
+          enabled: zod.boolean(),
+          greetingTemplate: zod.string(),
+          followup24hTemplate: zod.string(),
+          followup72hTemplate: zod.string(),
+          followup168hTemplate: zod.string(),
+          createdAt: zod.date(),
+          updatedAt: zod.date(),
+        })
+        .optional(),
+    })
+    .optional(),
+});
+
+/**
+ * @summary Update chatbot settings
+ */
+export const UpdateChatbotSettingsBody = zod.object({
+  enabled: zod.boolean().optional(),
+  greetingTemplate: zod.string().optional(),
+  followup24hTemplate: zod.string().optional(),
+  followup72hTemplate: zod.string().optional(),
+  followup168hTemplate: zod.string().optional(),
+});
+
+export const UpdateChatbotSettingsResponse = zod.object({
+  success: zod.boolean().optional(),
+  data: zod
+    .object({
+      settings: zod
+        .object({
+          id: zod.string(),
+          clinicId: zod.string(),
+          enabled: zod.boolean(),
+          greetingTemplate: zod.string(),
+          followup24hTemplate: zod.string(),
+          followup72hTemplate: zod.string(),
+          followup168hTemplate: zod.string(),
+          createdAt: zod.date(),
+          updatedAt: zod.date(),
+        })
+        .optional(),
+    })
+    .optional(),
+});
+
+/**
+ * @summary List active chatbot sessions
+ */
+export const ListChatbotSessionsResponse = zod.object({
+  success: zod.boolean().optional(),
+  data: zod
+    .object({
+      sessions: zod
+        .array(
+          zod.object({
+            id: zod.string(),
+            clinicId: zod.string(),
+            phone: zod.string(),
+            state: zod.string(),
+            data: zod.record(zod.string(), zod.unknown()).optional(),
+            humanTakeover: zod.boolean(),
+            updatedAt: zod.date(),
+          }),
+        )
+        .optional(),
+    })
+    .optional(),
+});
+
+/**
+ * @summary Reset a chatbot session by phone number
+ */
+export const DeleteChatbotSessionParams = zod.object({
+  phone: zod.coerce.string(),
+});
+
+export const DeleteChatbotSessionResponse = zod.object({
+  success: zod.boolean().optional(),
+});
+
+/**
  * @summary Get owner analytics (owner role only)
  */
 export const GetOwnerAnalyticsResponse = zod.object({

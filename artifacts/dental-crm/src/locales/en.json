@@ -50,6 +50,7 @@
     "financials": "Financials",
     "inventory": "Inventory",
     "users": "Users",
+    "chatbot": "Chatbot",
     "logs": "Audit Log",
     "more": "More"
   },
@@ -69,7 +70,18 @@
     "inventory": "Inventory",
     "warehouse": "Warehouse",
     "users": "Users",
+    "chatbot": "AI Chatbot",
     "logs": "Audit Log"
+  },
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "saving": "Saving...",
+    "saved": "Saved",
+    "refresh": "Refresh",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit"
   },
   "account": {
     "title": "Account",
@@ -446,6 +458,29 @@
     "proceduresList": "Procedures List",
     "empty": "No procedures found",
     "unassigned": "Unassigned"
+  },
+  "chatbot": {
+    "title": "AI Chatbot",
+    "subtitle": "Manage automated WhatsApp conversations",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "activeSessions": "Active sessions",
+    "sessionsEmpty": "No active bot sessions",
+    "operatorMode": "Operator",
+    "resetSession": "Reset session",
+    "tab": {
+      "sessions": "Conversations",
+      "settings": "Settings"
+    },
+    "settings": {
+      "enableBot": "Enable chatbot",
+      "enableBotDesc": "Automatically reply to incoming messages from new patients",
+      "templates": "Message templates",
+      "greetingTemplate": "Greeting",
+      "followup24h": "Post-op (24 hours)",
+      "followup72h": "Post-op (3 days)",
+      "followup168h": "Post-op (7 days)"
+    }
   },
   "warehouse": {
     "title": "Warehouse",

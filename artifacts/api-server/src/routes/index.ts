@@ -10,6 +10,7 @@ import proceduresRouter from "../modules/procedures/procedures.controller";
 import analyticsRouter from "../modules/analytics/analytics.controller";
 import logsRouter from "../modules/logs/logs.controller";
 import followupsRouter from "../modules/followups/followups.controller";
+import chatbotRouter from "../modules/chatbot/chatbot.controller";
 import { actionLogMiddleware } from "../middlewares/action-log.middleware";
 import { authRateLimit } from "../middlewares/rate-limit.middleware";
 import { authMiddleware } from "../middlewares/auth.middleware";
@@ -28,6 +29,7 @@ router.use("/inventory", inventoryRouter);
 router.use("/procedures", proceduresRouter);
 router.use("/logs", logsRouter);
 router.use("/followups", followupsRouter);
+router.use("/chatbot", chatbotRouter);
 router.use("/", analyticsRouter);
 router.use(messagesRouter);
 
