@@ -7,7 +7,7 @@ import {
 } from "@workspace/api-client-react";
 import {
   Users, Calendar, Activity, TrendingUp, RefreshCw,
-  Stethoscope, ChevronRight, Clock, BarChart3,
+  Stethoscope, ChevronRight, Clock, BarChart3, ArrowUpRight,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
@@ -107,34 +107,51 @@ export default function DoctorDashboard() {
   return (
     <div className="space-y-4 p-4 pb-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-white p-6 rounded-2xl border border-border shadow-sm">
-        <div>
-          <h2 className="text-3xl font-display font-bold text-foreground">
-            {t("dashboard.welcomeBack", { name: user?.name.split(" ")[0] })}
-          </h2>
-          <p className="text-muted-foreground mt-1 text-lg">
-            {t("doctorDashboard.subtitle", { clinic: clinic?.name })}
-          </p>
-        </div>
-        <div className="flex gap-3">
-          <button
-            onClick={() => refetch()}
-            className="p-2.5 border border-border rounded-xl text-muted-foreground hover:bg-slate-50 transition-colors"
-          >
-            <RefreshCw className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => navigate("/doctor-analytics")}
-            className="px-5 py-2.5 bg-slate-100 text-foreground font-semibold rounded-xl hover:bg-slate-200 transition-colors"
-          >
-            {t("doctorDashboard.myAnalytics")}
-          </button>
-          <button
-            onClick={() => navigate("/procedures")}
-            className="px-5 py-2.5 bg-primary text-white font-semibold rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all"
-          >
-            {t("doctorDashboard.myProcedures")}
-          </button>
+      <div className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-white to-blue-50/50 p-8 rounded-3xl border border-primary/10 shadow-lg">
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 bg-primary/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-48 h-48 bg-blue-200/5 rounded-full blur-3xl" />
+        
+        <div className="relative z-10 flex flex-col gap-6">
+          {/* Top row with content */}
+          <div className="flex items-start justify-between gap-6">
+            {/* Left side - text content */}
+            <div className="flex-1 min-w-0">
+              <h2 className="text-4xl font-display font-bold text-foreground leading-tight">
+                {t("dashboard.welcomeBack", { name: user?.name.split(" ")[0] })}
+              </h2>
+              <p className="text-muted-foreground mt-2 text-lg leading-relaxed">
+                {t("doctorDashboard.subtitle", { clinic: clinic?.name })}
+              </p>
+            </div>
+            
+            {/* Right side - refresh button */}
+            <button
+              onClick={() => refetch()}
+              className="flex-shrink-0 p-3 bg-white border border-border/50 rounded-xl text-muted-foreground hover:bg-slate-50 hover:text-primary transition-all hover:shadow-md"
+              title="Обновить"
+            >
+              <RefreshCw className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Bottom row with action buttons */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={() => navigate("/doctor-analytics")}
+              className="flex items-center justify-center gap-3 px-6 py-3 bg-white border border-border/50 text-foreground font-semibold rounded-2xl hover:bg-slate-50 hover:shadow-md transition-all group"
+            >
+              <BarChart3 className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
+              <span>{t("doctorDashboard.myAnalytics")}</span>
+            </button>
+            <button
+              onClick={() => navigate("/procedures")}
+              className="flex items-center justify-center gap-3 px-8 py-3 bg-gradient-to-r from-primary to-blue-600 text-white font-semibold rounded-2xl shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover:scale-105 transition-all group"
+            >
+              <Stethoscope className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+              <span>{t("doctorDashboard.myProcedures")}</span>
+              <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+            </button>
+          </div>
         </div>
       </div>
 
