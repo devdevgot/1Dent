@@ -2,10 +2,12 @@ import { useParams, useLocation } from "wouter";
 import { ArrowLeft } from "lucide-react";
 import { ToothDetailPanel } from "@/components/dental-chart/tooth-detail-panel";
 import { useGetPatient, useListTeeth } from "@workspace/api-client-react";
+import { useKanbanStore } from "@/hooks/use-kanban";
 
 export default function ToothDetailPage() {
   const { patientId, fdi } = useParams<{ patientId: string; fdi: string }>();
   const [, setLocation] = useLocation();
+  const setSelectedPatientId = useKanbanStore((s) => s.setSelectedPatientId);
 
   const { data: patientRes } = useGetPatient(patientId ?? "");
   const { data: teethRes } = useListTeeth(patientId ?? "");
@@ -22,12 +24,17 @@ export default function ToothDetailPage() {
     );
   }
 
+  const handleClose = () => {
+    setSelectedPatientId(patientId!);
+    setLocation("/patients");
+  };
+
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Header with back button */}
       <div className="shrink-0 border-b border-border/50 bg-white px-4 py-3">
         <button
-          onClick={() => setLocation("/patients")}
+          onClick={handleClose}
           className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -41,7 +48,7 @@ export default function ToothDetailPage() {
           <ToothDetailPanel
             patientId={patientId}
             toothFdi={fdiNum}
-            onClose={() => setLocation("/patients")}
+            onClose={handleClose}
             patient={patient}
             teeth={teeth}
           />
