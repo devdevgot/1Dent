@@ -5,12 +5,36 @@ import {
   type Response,
   type NextFunction,
 } from "express";
-import { AnalyticsRepository } from "./analytics.repository";
+import { AnalyticsRepository, type DoctorAnalyticsFilters } from "./analytics.repository";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ForbiddenError } from "../../shared/errors";
 
 const router: IRouter = Router();
 const repo = new AnalyticsRepository();
+
+function parseAnalyticsFilters(query: Request["query"]): DoctorAnalyticsFilters | undefined {
+  const { dateFrom, dateTo, procedureType, minRevenue } = query;
+  const filters: DoctorAnalyticsFilters = {};
+  let hasAny = false;
+
+  if (typeof dateFrom === "string" && dateFrom) {
+    const d = new Date(dateFrom);
+    if (!isNaN(d.getTime())) { filters.dateFrom = d; hasAny = true; }
+  }
+  if (typeof dateTo === "string" && dateTo) {
+    const d = new Date(dateTo);
+    if (!isNaN(d.getTime())) { d.setHours(23, 59, 59, 999); filters.dateTo = d; hasAny = true; }
+  }
+  if (typeof procedureType === "string" && procedureType) {
+    filters.procedureType = procedureType; hasAny = true;
+  }
+  if (typeof minRevenue === "string" && minRevenue) {
+    const n = Number(minRevenue);
+    if (!isNaN(n)) { filters.minRevenue = n; hasAny = true; }
+  }
+
+  return hasAny ? filters : undefined;
+}
 
 router.use(authMiddleware);
 
@@ -94,7 +118,8 @@ router.get(
   roleGuard("doctor"),
   async (req: Request, res: Response, next: NextFunction) => {
     const { clinicId, userId } = req.user!;
-    const analytics = await repo.getDoctorDetailedAnalytics(clinicId, userId).catch(next);
+    const filters = parseAnalyticsFilters(req.query);
+    const analytics = await repo.getDoctorDetailedAnalytics(clinicId, userId, filters).catch(next);
     if (analytics === undefined) return;
     res.json({ success: true, data: { analytics } });
   },
@@ -107,7 +132,8 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     const { clinicId } = req.user!;
     const { doctorId } = req.params;
-    const analytics = await repo.getDoctorDetailedAnalytics(clinicId, doctorId!).catch(next);
+    const filters = parseAnalyticsFilters(req.query);
+    const analytics = await repo.getDoctorDetailedAnalytics(clinicId, doctorId!, filters).catch(next);
     if (analytics === undefined) return;
     res.json({ success: true, data: { analytics } });
   },

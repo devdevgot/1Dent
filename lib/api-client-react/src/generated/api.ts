@@ -41,6 +41,8 @@ import type {
   FollowupsResponse,
   GetActionLogsParams,
   GetChatbotSettings200,
+  GetDoctorDetailedAnalyticsMeParams,
+  GetDoctorDetailedAnalyticsParams,
   GetFollowupsParams,
   GetInventoryConsumptionParams,
   HealthStatus,
@@ -4725,15 +4727,30 @@ export function useGetDoctorAnalytics<
 /**
  * @summary Get current doctor's detailed analytics (charts)
  */
-export const getGetDoctorDetailedAnalyticsMeUrl = () => {
-  return `/api/analytics/doctor/me/detailed`;
+export const getGetDoctorDetailedAnalyticsMeUrl = (
+  params?: GetDoctorDetailedAnalyticsMeParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/analytics/doctor/me/detailed?${stringifiedParams}`
+    : `/api/analytics/doctor/me/detailed`;
 };
 
 export const getDoctorDetailedAnalyticsMe = async (
+  params?: GetDoctorDetailedAnalyticsMeParams,
   options?: RequestInit,
 ): Promise<DoctorDetailedAnalyticsResponse> => {
   return customFetch<DoctorDetailedAnalyticsResponse>(
-    getGetDoctorDetailedAnalyticsMeUrl(),
+    getGetDoctorDetailedAnalyticsMeUrl(params),
     {
       ...options,
       method: "GET",
@@ -4741,30 +4758,38 @@ export const getDoctorDetailedAnalyticsMe = async (
   );
 };
 
-export const getGetDoctorDetailedAnalyticsMeQueryKey = () => {
-  return [`/api/analytics/doctor/me/detailed`] as const;
+export const getGetDoctorDetailedAnalyticsMeQueryKey = (
+  params?: GetDoctorDetailedAnalyticsMeParams,
+) => {
+  return [
+    `/api/analytics/doctor/me/detailed`,
+    ...(params ? [params] : []),
+  ] as const;
 };
 
 export const getGetDoctorDetailedAnalyticsMeQueryOptions = <
   TData = Awaited<ReturnType<typeof getDoctorDetailedAnalyticsMe>>,
   TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof getDoctorDetailedAnalyticsMe>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}) => {
+>(
+  params?: GetDoctorDetailedAnalyticsMeParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getDoctorDetailedAnalyticsMe>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
-    queryOptions?.queryKey ?? getGetDoctorDetailedAnalyticsMeQueryKey();
+    queryOptions?.queryKey ?? getGetDoctorDetailedAnalyticsMeQueryKey(params);
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getDoctorDetailedAnalyticsMe>>
   > = ({ signal }) =>
-    getDoctorDetailedAnalyticsMe({ signal, ...requestOptions });
+    getDoctorDetailedAnalyticsMe(params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getDoctorDetailedAnalyticsMe>>,
@@ -4785,15 +4810,21 @@ export type GetDoctorDetailedAnalyticsMeQueryError = ErrorType<unknown>;
 export function useGetDoctorDetailedAnalyticsMe<
   TData = Awaited<ReturnType<typeof getDoctorDetailedAnalyticsMe>>,
   TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof getDoctorDetailedAnalyticsMe>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getGetDoctorDetailedAnalyticsMeQueryOptions(options);
+>(
+  params?: GetDoctorDetailedAnalyticsMeParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getDoctorDetailedAnalyticsMe>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetDoctorDetailedAnalyticsMeQueryOptions(
+    params,
+    options,
+  );
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
@@ -4805,16 +4836,32 @@ export function useGetDoctorDetailedAnalyticsMe<
 /**
  * @summary Get detailed analytics for a specific doctor (owner/admin)
  */
-export const getGetDoctorDetailedAnalyticsUrl = (doctorId: string) => {
-  return `/api/analytics/doctor/${doctorId}`;
+export const getGetDoctorDetailedAnalyticsUrl = (
+  doctorId: string,
+  params?: GetDoctorDetailedAnalyticsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/analytics/doctor/${doctorId}?${stringifiedParams}`
+    : `/api/analytics/doctor/${doctorId}`;
 };
 
 export const getDoctorDetailedAnalytics = async (
   doctorId: string,
+  params?: GetDoctorDetailedAnalyticsParams,
   options?: RequestInit,
 ): Promise<DoctorDetailedAnalyticsResponse> => {
   return customFetch<DoctorDetailedAnalyticsResponse>(
-    getGetDoctorDetailedAnalyticsUrl(doctorId),
+    getGetDoctorDetailedAnalyticsUrl(doctorId, params),
     {
       ...options,
       method: "GET",
@@ -4822,8 +4869,14 @@ export const getDoctorDetailedAnalytics = async (
   );
 };
 
-export const getGetDoctorDetailedAnalyticsQueryKey = (doctorId: string) => {
-  return [`/api/analytics/doctor/${doctorId}`] as const;
+export const getGetDoctorDetailedAnalyticsQueryKey = (
+  doctorId: string,
+  params?: GetDoctorDetailedAnalyticsParams,
+) => {
+  return [
+    `/api/analytics/doctor/${doctorId}`,
+    ...(params ? [params] : []),
+  ] as const;
 };
 
 export const getGetDoctorDetailedAnalyticsQueryOptions = <
@@ -4831,6 +4884,7 @@ export const getGetDoctorDetailedAnalyticsQueryOptions = <
   TError = ErrorType<unknown>,
 >(
   doctorId: string,
+  params?: GetDoctorDetailedAnalyticsParams,
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof getDoctorDetailedAnalytics>>,
@@ -4843,12 +4897,13 @@ export const getGetDoctorDetailedAnalyticsQueryOptions = <
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
-    queryOptions?.queryKey ?? getGetDoctorDetailedAnalyticsQueryKey(doctorId);
+    queryOptions?.queryKey ??
+    getGetDoctorDetailedAnalyticsQueryKey(doctorId, params);
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getDoctorDetailedAnalytics>>
   > = ({ signal }) =>
-    getDoctorDetailedAnalytics(doctorId, { signal, ...requestOptions });
+    getDoctorDetailedAnalytics(doctorId, params, { signal, ...requestOptions });
 
   return {
     queryKey,
@@ -4876,6 +4931,7 @@ export function useGetDoctorDetailedAnalytics<
   TError = ErrorType<unknown>,
 >(
   doctorId: string,
+  params?: GetDoctorDetailedAnalyticsParams,
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof getDoctorDetailedAnalytics>>,
@@ -4887,6 +4943,7 @@ export function useGetDoctorDetailedAnalytics<
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetDoctorDetailedAnalyticsQueryOptions(
     doctorId,
+    params,
     options,
   );
 

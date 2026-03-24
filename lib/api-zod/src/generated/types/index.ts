@@ -56,6 +56,8 @@ export * from "./followupsResponseData";
 export * from "./getActionLogsParams";
 export * from "./getChatbotSettings200";
 export * from "./getChatbotSettings200Data";
+export * from "./getDoctorDetailedAnalyticsMeParams";
+export * from "./getDoctorDetailedAnalyticsParams";
 export * from "./getFollowupsParams";
 export * from "./getInventoryConsumptionParams";
 export * from "./healthStatus";

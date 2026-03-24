@@ -1347,6 +1347,27 @@ export const GetDoctorAnalyticsResponse = zod.object({
 /**
  * @summary Get current doctor's detailed analytics (charts)
  */
+export const GetDoctorDetailedAnalyticsMeQueryParams = zod.object({
+  dateFrom: zod
+    .date()
+    .optional()
+    .describe("Filter procedures completed on or after this date (YYYY-MM-DD)"),
+  dateTo: zod
+    .date()
+    .optional()
+    .describe(
+      "Filter procedures completed on or before this date (YYYY-MM-DD)",
+    ),
+  procedureType: zod.coerce
+    .string()
+    .optional()
+    .describe("Filter by procedure name (exact match)"),
+  minRevenue: zod.coerce
+    .number()
+    .optional()
+    .describe("Filter procedures with price >= minRevenue"),
+});
+
 export const GetDoctorDetailedAnalyticsMeResponse = zod.object({
   success: zod.literal(true),
   data: zod.object({
@@ -1381,6 +1402,27 @@ export const GetDoctorDetailedAnalyticsMeResponse = zod.object({
  */
 export const GetDoctorDetailedAnalyticsParams = zod.object({
   doctorId: zod.coerce.string(),
+});
+
+export const GetDoctorDetailedAnalyticsQueryParams = zod.object({
+  dateFrom: zod
+    .date()
+    .optional()
+    .describe("Filter procedures completed on or after this date (YYYY-MM-DD)"),
+  dateTo: zod
+    .date()
+    .optional()
+    .describe(
+      "Filter procedures completed on or before this date (YYYY-MM-DD)",
+    ),
+  procedureType: zod.coerce
+    .string()
+    .optional()
+    .describe("Filter by procedure name (exact match)"),
+  minRevenue: zod.coerce
+    .number()
+    .optional()
+    .describe("Filter procedures with price >= minRevenue"),
 });
 
 export const GetDoctorDetailedAnalyticsResponse = zod.object({

@@ -1021,3 +1021,41 @@ export type ListChatbotSessions200 = {
 export type DeleteChatbotSession200 = {
   success?: boolean;
 };
+
+export type GetDoctorDetailedAnalyticsMeParams = {
+  /**
+   * Filter procedures completed on or after this date (YYYY-MM-DD)
+   */
+  dateFrom?: string;
+  /**
+   * Filter procedures completed on or before this date (YYYY-MM-DD)
+   */
+  dateTo?: string;
+  /**
+   * Filter by procedure name (exact match)
+   */
+  procedureType?: string;
+  /**
+   * Filter procedures with price >= minRevenue
+   */
+  minRevenue?: number;
+};
+
+export type GetDoctorDetailedAnalyticsParams = {
+  /**
+   * Filter procedures completed on or after this date (YYYY-MM-DD)
+   */
+  dateFrom?: string;
+  /**
+   * Filter procedures completed on or before this date (YYYY-MM-DD)
+   */
+  dateTo?: string;
+  /**
+   * Filter by procedure name (exact match)
+   */
+  procedureType?: string;
+  /**
+   * Filter procedures with price >= minRevenue
+   */
+  minRevenue?: number;
+};

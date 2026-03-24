@@ -5,8 +5,15 @@ import {
   usersTable,
   notificationsTable,
 } from "@workspace/db";
-import { eq, and, gte, lte, count, sum, sql, isNotNull } from "drizzle-orm";
+import { eq, and, gte, lte, count, sum, sql, isNotNull, SQL } from "drizzle-orm";
 import { analyticsCache } from "../../shared/analytics-cache";
+
+export interface DoctorAnalyticsFilters {
+  dateFrom?: Date;
+  dateTo?: Date;
+  procedureType?: string;
+  minRevenue?: number;
+}
 
 export interface OwnerAnalytics {
   totalPatients: number;
@@ -305,13 +312,37 @@ export class AnalyticsRepository {
     return result;
   }
 
-  async getDoctorDetailedAnalytics(clinicId: string, doctorId: string): Promise<DoctorDetailedAnalytics> {
-    const cacheKey = analyticsCache.key("doctor-detail", clinicId, doctorId);
-    const cached = await analyticsCache.get<DoctorDetailedAnalytics>(cacheKey);
-    if (cached) return cached;
+  async getDoctorDetailedAnalytics(
+    clinicId: string,
+    doctorId: string,
+    filters?: DoctorAnalyticsFilters,
+  ): Promise<DoctorDetailedAnalytics> {
+    const hasFilters =
+      filters &&
+      (filters.dateFrom != null ||
+        filters.dateTo != null ||
+        filters.procedureType != null ||
+        filters.minRevenue != null);
+
+    // Only cache when no filters applied
+    if (!hasFilters) {
+      const cacheKey = analyticsCache.key("doctor-detail", clinicId, doctorId);
+      const cached = await analyticsCache.get<DoctorDetailedAnalytics>(cacheKey);
+      if (cached) return cached;
+    }
 
     const dayStart = startOfDay();
     const dayEnd = endOfDay();
+
+    // Build procedure conditions dynamically
+    const procConditions: SQL[] = [
+      eq(proceduresTable.clinicId, clinicId),
+      eq(proceduresTable.doctorId, doctorId),
+    ];
+    if (filters?.dateFrom) procConditions.push(gte(proceduresTable.completedAt, filters.dateFrom));
+    if (filters?.dateTo) procConditions.push(lte(proceduresTable.completedAt, filters.dateTo));
+    if (filters?.procedureType) procConditions.push(eq(proceduresTable.name, filters.procedureType));
+    if (filters?.minRevenue != null) procConditions.push(gte(proceduresTable.price, filters.minRevenue));
 
     const [doctor, patients, allProcedures, todayScheduled] = await Promise.all([
       db
@@ -332,7 +363,7 @@ export class AnalyticsRepository {
           completedAt: proceduresTable.completedAt,
         })
         .from(proceduresTable)
-        .where(and(eq(proceduresTable.clinicId, clinicId), eq(proceduresTable.doctorId, doctorId))),
+        .where(and(...procConditions)),
       db
         .select({ id: proceduresTable.id })
         .from(proceduresTable)
@@ -347,13 +378,13 @@ export class AnalyticsRepository {
         ),
     ]);
 
-    // Patient status breakdown
+    // Patient status breakdown (always unfiltered — reflects current lifecycle state)
     const patientsByStatus: Record<string, number> = {};
     for (const p of patients) {
       patientsByStatus[p.status] = (patientsByStatus[p.status] ?? 0) + 1;
     }
 
-    // Procedure counts by status
+    // Procedure counts by status (within filtered set)
     const proceduresByStatus = { completed: 0, scheduled: 0, in_progress: 0, cancelled: 0 };
     for (const p of allProcedures) {
       if (p.status === "completed") proceduresByStatus.completed++;
@@ -376,14 +407,18 @@ export class AnalyticsRepository {
       .sort((a, b) => b.count - a.count)
       .slice(0, 6);
 
-    // Monthly revenue for last 6 months
+    // Monthly revenue — span from dateFrom to dateTo (or last 6 months if no filter)
     const now = new Date();
+    const rangeStart = filters?.dateFrom ?? new Date(now.getFullYear(), now.getMonth() - 5, 1);
+    const rangeEnd = filters?.dateTo ?? now;
+
+    // Build month buckets between rangeStart and rangeEnd
     const revenueByMonth: MonthlyRevenue[] = [];
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const mStart = new Date(d.getFullYear(), d.getMonth(), 1);
-      const mEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
-      const monthLabel = d.toLocaleDateString("ru", { month: "short", year: "numeric" });
+    const cursor = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), 1);
+    while (cursor <= rangeEnd) {
+      const mStart = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+      const mEnd = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0, 23, 59, 59, 999);
+      const monthLabel = cursor.toLocaleDateString("ru", { month: "short", year: "numeric" });
 
       const monthProcs = allProcedures.filter(
         (p) =>
@@ -397,6 +432,7 @@ export class AnalyticsRepository {
         revenue: monthProcs.reduce((acc, p) => acc + (p.price ?? 0), 0),
         procedures: monthProcs.length,
       });
+      cursor.setMonth(cursor.getMonth() + 1);
     }
 
     const completedProcs = allProcedures.filter((p) => p.status === "completed");
@@ -417,7 +453,10 @@ export class AnalyticsRepository {
       scheduledToday: todayScheduled.length,
     };
 
-    await analyticsCache.set(cacheKey, result, 60);
+    if (!hasFilters) {
+      const cacheKey = analyticsCache.key("doctor-detail", clinicId, doctorId);
+      await analyticsCache.set(cacheKey, result, 60);
+    }
     return result;
   }
 

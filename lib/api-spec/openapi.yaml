@@ -1335,6 +1335,33 @@ paths:
       summary: Get current doctor's detailed analytics (charts)
       security:
         - cookieAuth: []
+      parameters:
+        - in: query
+          name: dateFrom
+          required: false
+          schema:
+            type: string
+            format: date
+          description: Filter procedures completed on or after this date (YYYY-MM-DD)
+        - in: query
+          name: dateTo
+          required: false
+          schema:
+            type: string
+            format: date
+          description: Filter procedures completed on or before this date (YYYY-MM-DD)
+        - in: query
+          name: procedureType
+          required: false
+          schema:
+            type: string
+          description: Filter by procedure name (exact match)
+        - in: query
+          name: minRevenue
+          required: false
+          schema:
+            type: number
+          description: Filter procedures with price >= minRevenue
       responses:
         "200":
           description: Doctor detailed analytics
@@ -1356,6 +1383,32 @@ paths:
           required: true
           schema:
             type: string
+        - in: query
+          name: dateFrom
+          required: false
+          schema:
+            type: string
+            format: date
+          description: Filter procedures completed on or after this date (YYYY-MM-DD)
+        - in: query
+          name: dateTo
+          required: false
+          schema:
+            type: string
+            format: date
+          description: Filter procedures completed on or before this date (YYYY-MM-DD)
+        - in: query
+          name: procedureType
+          required: false
+          schema:
+            type: string
+          description: Filter by procedure name (exact match)
+        - in: query
+          name: minRevenue
+          required: false
+          schema:
+            type: number
+          description: Filter procedures with price >= minRevenue
       responses:
         "200":
           description: Doctor detailed analytics
