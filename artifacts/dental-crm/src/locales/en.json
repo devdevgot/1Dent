@@ -529,5 +529,27 @@
     "consumptionEmpty": "No consumption data",
     "consumptionByItem": "Consumption by Item",
     "procedures": "proc."
+  },
+  "analytics": {
+    "title": "Analytics",
+    "subtitle": "Overview of key metrics and indicators",
+    "totalPatients": "Total Patients",
+    "newPatients": "New Patients",
+    "myPatients": "My Patients",
+    "revenue": "Revenue (this month)",
+    "myRevenue": "My Revenue",
+    "completedProcedures": "Completed Procedures",
+    "redAlerts": "Red Alerts",
+    "myProcedures": "My Procedures",
+    "scheduledToday": "Scheduled Today",
+    "patientsByStatus": "Patients by Status",
+    "distribution": "Patient Distribution",
+    "doctorKpis": "Doctor KPIs",
+    "doctorName": "Doctor",
+    "patients": "Patients",
+    "procedures": "Procedures",
+    "revenue": "Revenue (₸)",
+    "avgCheck": "Average Check",
+    "nps": "NPS"
   }
 }

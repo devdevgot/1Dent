@@ -529,5 +529,27 @@
     "consumptionEmpty": "Данных о расходе нет",
     "consumptionByItem": "Расход по позициям",
     "procedures": "проц."
+  },
+  "analytics": {
+    "title": "Аналитика",
+    "subtitle": "Обзор ключевых метрик и показателей",
+    "totalPatients": "Всего пациентов",
+    "newPatients": "Новых пациентов",
+    "myPatients": "Мои пациенты",
+    "revenue": "Доход (этот месяц)",
+    "myRevenue": "Мой доход",
+    "completedProcedures": "Завершённые процедуры",
+    "redAlerts": "Красные алерты",
+    "myProcedures": "Мои процедуры",
+    "scheduledToday": "Запланировано сегодня",
+    "patientsByStatus": "Пациенты по статусам",
+    "distribution": "Распределение пациентов",
+    "doctorKpis": "KPI врачей",
+    "doctorName": "Врач",
+    "patients": "Пациентов",
+    "procedures": "Процедур",
+    "revenue": "Доход (₸)",
+    "avgCheck": "Средний чек",
+    "nps": "NPS"
   }
 }

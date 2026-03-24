@@ -21,6 +21,7 @@ import KanbanPage from "@/pages/kanban";
 import PatientsPage from "@/pages/patients";
 import ToothDetailPage from "@/pages/tooth-detail";
 import ChatPage from "@/pages/chat";
+import AnalyticsPage from "@/pages/analytics";
 import InventoryPage from "@/pages/inventory";
 import ProceduresPage from "@/pages/procedures";
 import LogsPage from "@/pages/logs";
@@ -129,6 +130,9 @@ function Router() {
       </Route>
       <Route path="/chat">
         <ProtectedRoute component={ChatPage} allowedRoles={['owner', 'admin', 'doctor']} />
+      </Route>
+      <Route path="/analytics">
+        <ProtectedRoute component={AnalyticsPage} allowedRoles={['owner', 'admin', 'doctor', 'accountant', 'warehouse']} />
       </Route>
       <Route path="/inventory">
         <ProtectedRoute component={InventoryPage} allowedRoles={['owner', 'admin', 'warehouse', 'doctor', 'accountant']} />

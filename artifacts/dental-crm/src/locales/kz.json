@@ -529,5 +529,27 @@
     "consumptionEmpty": "Шығыс деректері жоқ",
     "consumptionByItem": "Позиция бойынша шығыс",
     "procedures": "проц."
+  },
+  "analytics": {
+    "title": "Аналитика",
+    "subtitle": "Негіздік көрсеткіштер мен индикаторларының шолуы",
+    "totalPatients": "Барлық пациенттер",
+    "newPatients": "Жаңа пациенттер",
+    "myPatients": "Менің пациенттерім",
+    "revenue": "Табыс (осы ай)",
+    "myRevenue": "Менің табысым",
+    "completedProcedures": "Аяқталған процедуралар",
+    "redAlerts": "Қызыл ескертулер",
+    "myProcedures": "Менің процедураларым",
+    "scheduledToday": "Бүгін жоспарланған",
+    "patientsByStatus": "Статус бойынша пациенттер",
+    "distribution": "Пациенттердің бөлінісі",
+    "doctorKpis": "Дәрігерлердің KPI",
+    "doctorName": "Дәрігер",
+    "patients": "Пациенттер",
+    "procedures": "Процедуралар",
+    "revenue": "Табыс (₸)",
+    "avgCheck": "Орташа чек",
+    "nps": "NPS"
   }
 }
