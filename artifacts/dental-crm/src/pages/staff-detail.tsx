@@ -236,33 +236,39 @@ export default function StaffDetailPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Patient Status Distribution */}
             <div className="bg-white rounded-xl border border-border/50 p-6 shadow-sm">
-              <h3 className="text-sm font-semibold text-foreground mb-4">{t("staff.patientStatus")}</h3>
-              <div className="flex items-center gap-6">
-                <ResponsiveContainer width="55%" height={220}>
-                  <PieChart>
-                    <Pie
-                      data={patientStatusData}
-                      cx="50%" cy="50%"
-                      innerRadius={55} outerRadius={90}
-                      paddingAngle={3}
-                      dataKey="value"
-                    >
-                      {patientStatusData.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="flex-1 space-y-3">
-                  {patientStatusData.map((item, index) => (
-                    <div key={item.name} className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                      <span className="text-xs text-muted-foreground flex-1">{item.name}</span>
-                      <span className="text-sm font-bold text-foreground">{item.value}</span>
-                    </div>
-                  ))}
-                </div>
+              <h3 className="text-sm font-semibold text-foreground mb-6">{t("staff.patientStatus")}</h3>
+              <ResponsiveContainer width="100%" height={280}>
+                <PieChart>
+                  <Pie
+                    data={patientStatusData}
+                    cx="50%" cy="50%"
+                    innerRadius={60} outerRadius={110}
+                    paddingAngle={3}
+                    dataKey="value"
+                  >
+                    {patientStatusData.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: "#fff", 
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "8px",
+                      padding: "8px 12px"
+                    }}
+                    formatter={(value: number) => `${value} пац.`}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="mt-5 grid grid-cols-3 gap-2">
+                {patientStatusData.map((item, index) => (
+                  <div key={item.name} className="text-center p-3 bg-gray-50 rounded-lg border border-border/20">
+                    <div className="w-4 h-4 rounded-full mx-auto mb-2" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                    <p className="text-xs text-muted-foreground">{item.name}</p>
+                    <p className="text-lg font-bold text-foreground mt-1">{item.value}</p>
+                  </div>
+                ))}
               </div>
             </div>
 
