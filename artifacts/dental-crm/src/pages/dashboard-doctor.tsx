@@ -12,7 +12,22 @@ import {
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import {
+  LineChart, Line, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from "recharts";
+
+const COLORS = ["#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#ef4444", "#06b6d4"];
+
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  new_request: "status.new_request",
+  initial_consultation: "status.initial_consultation",
+  diagnostics: "status.diagnostics",
+  treatment_assigned: "status.treatment_assigned",
+  treatment_in_progress: "status.treatment_in_progress",
+  post_op_monitoring: "status.post_op_monitoring",
+  completed: "status.completed",
+};
 
 function StatCard({
   titleKey,
@@ -104,6 +119,14 @@ export default function DoctorDashboard() {
     { titleKey: "dashboard.revenue",       value: fmtMoney(analytics.myRevenueThisMonth), icon: TrendingUp, delay: 0.15 },
   ];
 
+  const patientsByStatus = (analytics.patientsByStatus ?? {}) as Record<string, number>;
+  const patientStatusData = Object.entries(patientsByStatus)
+    .map(([key, value]) => ({
+      name: t(STATUS_LABEL_KEYS[key] ?? key),
+      value: Number(value),
+    }))
+    .filter((e) => e.value > 0);
+
   return (
     <div className="space-y-4 p-4 pb-8">
       {/* Header */}
@@ -175,6 +198,58 @@ export default function DoctorDashboard() {
         <div className="h-[300px] flex items-center justify-center text-sm text-muted-foreground">
           {t("common.noData")}
         </div>
+      </motion.div>
+
+      {/* Patient Status Chart */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="bg-card rounded-2xl border border-border/50 p-6 shadow-sm"
+      >
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h3 className="text-lg font-bold font-display flex items-center gap-2">
+              <Users className="w-5 h-5 text-primary" />
+              {t("doctorAnalytics.patientStatus")}
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1">{t("doctorDashboard.subtitle", { clinic: clinic?.name })}</p>
+          </div>
+        </div>
+
+        {patientStatusData.length === 0 ? (
+          <div className="h-[300px] flex items-center justify-center text-sm text-muted-foreground">
+            {t("common.noData")}
+          </div>
+        ) : (
+          <>
+            <ResponsiveContainer width="100%" height={240}>
+              <PieChart>
+                <Pie
+                  data={patientStatusData}
+                  cx="50%" cy="50%"
+                  innerRadius={60} outerRadius={100}
+                  paddingAngle={2}
+                  dataKey="value"
+                >
+                  {patientStatusData.map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="mt-4 space-y-2">
+              {patientStatusData.map((item, index) => (
+                <div key={item.name} className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                  <span className="text-xs text-muted-foreground flex-1 truncate">{item.name}</span>
+                  <span className="text-xs font-semibold text-foreground">{item.value}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </motion.div>
 
       {/* Quick Actions */}
