@@ -584,6 +584,7 @@
     "patientsRemaining": "In Treatment",
     "vsLastPeriod": "vs last period",
     "ofTotal": "of total",
+    "perPatient": "per patient",
     "statusInProgress": "In Progress",
     "statusCompleted": "Completed",
     "statusNew": "New",

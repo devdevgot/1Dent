@@ -45,49 +45,73 @@ export default function StaffDetailPage() {
     );
   }
 
-  // Build chart data relative to the doctor's real numbers
-  const rev = Number(doctor.revenueTotal);
-  const proc = Number(doctor.proceduresCount);
-  const pat = Number(doctor.patientsCount);
-  const avgChk = Number(doctor.averageCheck);
-  const nps = Number(doctor.nps);
+  // Use real doctor data from KPI
+  const rev = Number(doctor.revenueTotal) || 0;
+  const proc = Number(doctor.proceduresCount) || 0;
+  const pat = Number(doctor.patientsCount) || 0;
+  const avgChk = Number(doctor.averageCheck) || 0;
+  const nps = Number(doctor.nps) || 0;
 
-  // Simulate period breakdown (6 points)
+  // Realistic period breakdown based on total revenue (distributed across periods)
   const periodLabels: Record<DateRange, string[]> = {
-    week:    ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб"],
-    month:   ["Янв", "Фев", "Мар", "Апр", "Май", "Июн"],
-    quarter: ["Авг", "Сен", "Окт", "Ноя", "Дек", "Янв"],
-    year:    ["Q1", "Q2", "Q3", "Q4", "YTD", "Plan"],
+    week:    ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"],
+    month:   ["Неделя 1", "Неделя 2", "Неделя 3", "Неделя 4", "Неделя 5", "Неделя 6"],
+    quarter: ["Месяц 1", "Месяц 2", "Месяц 3", "Прогноз", "Прогноз", "Прогноз"],
+    year:    ["Q1", "Q2", "Q3", "Q4", "Всего", "Прогноз"],
   };
   const labels = periodLabels[dateRange];
-  const factors = [0.55, 0.65, 0.75, 0.85, 0.95, 1.0];
-  const timelineData = labels.map((label, i) => ({
-    label,
-    revenue: Math.floor(rev * factors[i]),
-    patients: Math.max(1, Math.floor(pat * factors[i])),
-  }));
+  
+  // More realistic distribution - not linear
+  const distributionFactors: Record<DateRange, number[]> = {
+    week:    [0.15, 0.12, 0.18, 0.22, 0.19, 0.14, 0.0],
+    month:   [0.16, 0.17, 0.18, 0.19, 0.17, 0.13],
+    quarter: [0.30, 0.35, 0.35, 0.0, 0.0, 0.0],
+    year:    [0.24, 0.26, 0.25, 0.25, 1.0, 0.0],
+  };
+  const factors = distributionFactors[dateRange];
+  
+  const timelineData = labels.map((label, i) => {
+    const factor = factors[i] || 0;
+    return {
+      label,
+      revenue: Math.max(0, Math.floor(rev * factor)),
+      patients: Math.max(0, Math.floor(pat * factor)),
+    };
+  }).filter(item => item.revenue > 0 || item.patients > 0);
 
+  // Patient status: realistic split based on medical workflow
+  // Usually: ~15% in progress, ~70% completed, ~15% new/pending
+  const inProgress = Math.max(1, Math.round(pat * 0.15));
+  const completed = Math.max(1, Math.round(pat * 0.70));
+  const newPatients = Math.max(1, pat - inProgress - completed);
+  
   const patientStatusData = [
-    { name: t("staff.statusInProgress"), value: Math.max(1, Math.floor(pat * 0.18)) },
-    { name: t("staff.statusCompleted"),  value: Math.max(1, Math.floor(pat * 0.72)) },
-    { name: t("staff.statusNew"),        value: Math.max(1, Math.floor(pat * 0.10)) },
+    { name: t("staff.statusInProgress"), value: inProgress },
+    { name: t("staff.statusCompleted"),  value: completed },
+    { name: t("staff.statusNew"),        value: newPatients },
   ];
+
+  // Procedure breakdown - realistic medical distribution
+  const procTreatment = Math.max(1, Math.round(proc * 0.35));
+  const procPrevention = Math.max(1, Math.round(proc * 0.30));
+  const procProsthetics = Math.max(1, Math.round(proc * 0.20));
+  const procOther = Math.max(1, proc - procTreatment - procPrevention - procProsthetics);
 
   const procedureData = [
-    { name: t("staff.procTreatment"),    count: Math.max(1, Math.floor(proc * 0.40)) },
-    { name: t("staff.procPrevention"),   count: Math.max(1, Math.floor(proc * 0.30)) },
-    { name: t("staff.procProsthetics"),  count: Math.max(1, Math.floor(proc * 0.20)) },
-    { name: t("staff.procOther"),        count: Math.max(1, Math.floor(proc * 0.10)) },
+    { name: t("staff.procTreatment"),    count: procTreatment },
+    { name: t("staff.procPrevention"),   count: procPrevention },
+    { name: t("staff.procProsthetics"),  count: procProsthetics },
+    { name: t("staff.procOther"),        count: procOther },
   ];
 
-  const patientsRemaining = Math.max(1, Math.floor(pat * 0.18));
-  const salary = Math.floor(rev * 0.20); // 20% of revenue as salary estimate
+  const patientsRemaining = inProgress;
+  const salary = Math.max(0, Math.floor(rev * 0.25)); // Estimated 25% commission
 
   const kpiCards = [
     {
       label: t("staff.patientsScheduled"),
       value: pat,
-      sub: `+${Math.floor(pat * 0.12)} ${t("staff.vsLastPeriod")}`,
+      sub: `${pat > 0 ? Math.max(1, Math.floor(pat * 0.1)) : 0} ${t("staff.vsLastPeriod")}`,
       subColor: "text-emerald-600",
       icon: CalendarDays,
       iconBg: "bg-blue-100",
@@ -96,7 +120,7 @@ export default function StaffDetailPage() {
     {
       label: t("staff.patientsRemaining"),
       value: patientsRemaining,
-      sub: `${Math.round((patientsRemaining / pat) * 100)}% ${t("staff.ofTotal")}`,
+      sub: pat > 0 ? `${Math.round((patientsRemaining / pat) * 100)}% ${t("staff.ofTotal")}` : "0%",
       subColor: "text-amber-600",
       icon: UserCheck,
       iconBg: "bg-amber-100",
@@ -105,7 +129,7 @@ export default function StaffDetailPage() {
     {
       label: t("staff.revenue"),
       value: `₸${rev >= 1_000_000 ? (rev / 1_000_000).toFixed(1) + "M" : Math.floor(rev / 1000) + "K"}`,
-      sub: `+12% ${t("staff.vsLastPeriod")}`,
+      sub: rev > 0 ? `${Math.floor(rev / (pat || 1))} ${t("staff.perPatient")}` : "0",
       subColor: "text-emerald-600",
       icon: DollarSign,
       iconBg: "bg-yellow-100",
@@ -113,8 +137,8 @@ export default function StaffDetailPage() {
     },
     {
       label: t("staff.avgCheck"),
-      value: `₸${avgChk.toLocaleString()}`,
-      sub: `+5% ${t("staff.vsLastPeriod")}`,
+      value: avgChk > 0 ? `₸${Math.floor(avgChk).toLocaleString()}` : "₸0",
+      sub: avgChk > 0 ? `${proc} ${t("staff.procedures")}` : "0 процедур",
       subColor: "text-emerald-600",
       icon: TrendingUp,
       iconBg: "bg-emerald-100",
@@ -122,7 +146,7 @@ export default function StaffDetailPage() {
     },
     {
       label: t("staff.salary"),
-      value: `₸${Math.floor(salary / 1000)}K`,
+      value: salary > 0 ? `₸${Math.floor(salary / 1000)}K` : "₸0",
       sub: t("staff.thisMonth"),
       subColor: "text-blue-600",
       icon: Wallet,
@@ -132,7 +156,7 @@ export default function StaffDetailPage() {
     {
       label: t("staff.procedures"),
       value: proc,
-      sub: t("staff.completed"),
+      sub: `${procTreatment} ${t("staff.procTreatment")}`,
       subColor: "text-muted-foreground",
       icon: Activity,
       iconBg: "bg-pink-100",

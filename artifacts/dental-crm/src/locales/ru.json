@@ -584,6 +584,7 @@
     "patientsRemaining": "В процессе лечения",
     "vsLastPeriod": "vs прошлый период",
     "ofTotal": "от общего",
+    "perPatient": "на пациента",
     "statusInProgress": "В процессе",
     "statusCompleted": "Завершено",
     "statusNew": "Новые",
