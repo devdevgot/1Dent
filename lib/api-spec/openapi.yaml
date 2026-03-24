@@ -1050,6 +1050,114 @@ paths:
               schema:
                 $ref: "#/components/schemas/AnalyticsResponse"
 
+  /logs:
+    get:
+      operationId: getActionLogs
+      tags: [logs]
+      summary: Get action logs (owner only)
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: query
+          name: userId
+          schema:
+            type: string
+        - in: query
+          name: actionType
+          schema:
+            type: string
+        - in: query
+          name: entityType
+          schema:
+            type: string
+        - in: query
+          name: dateFrom
+          schema:
+            type: string
+        - in: query
+          name: dateTo
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: limit
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Paginated action logs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionLogsResponse"
+
+  /followups:
+    get:
+      operationId: getFollowups
+      tags: [followups]
+      summary: Get post-op followups for a clinic
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: query
+          name: procedureId
+          schema:
+            type: string
+        - in: query
+          name: patientId
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of followups
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FollowupsResponse"
+    post:
+      operationId: createFollowups
+      tags: [followups]
+      summary: Schedule post-op followup messages
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFollowupsRequest"
+      responses:
+        "201":
+          description: Followups created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FollowupsResponse"
+
+  /followups/{id}/cancel:
+    patch:
+      operationId: cancelFollowup
+      tags: [followups]
+      summary: Cancel a scheduled followup
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Followup cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FollowupResponse"
+
   /analytics/owner:
     get:
       operationId: getOwnerAnalytics
@@ -2304,3 +2412,136 @@ components:
       required:
         - success
         - data
+
+    ActionLog:
+      type: object
+      properties:
+        id:
+          type: string
+        clinicId:
+          type: string
+        userId:
+          type: string
+          nullable: true
+        actionType:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          type: string
+          nullable: true
+        details:
+          type: string
+          nullable: true
+        ipAddress:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required:
+        - id
+        - clinicId
+        - actionType
+        - entityType
+        - createdAt
+
+    ActionLogsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            logs:
+              type: array
+              items:
+                $ref: "#/components/schemas/ActionLog"
+            total:
+              type: integer
+          required:
+            - logs
+            - total
+      required:
+        - success
+        - data
+
+    PostopFollowup:
+      type: object
+      properties:
+        id:
+          type: string
+        clinicId:
+          type: string
+        patientId:
+          type: string
+        procedureId:
+          type: string
+        sendAt:
+          type: string
+        status:
+          type: string
+          enum: [pending, sent, cancelled]
+        messageTemplate:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - clinicId
+        - patientId
+        - procedureId
+        - sendAt
+        - status
+        - messageTemplate
+        - createdAt
+
+    FollowupsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            followups:
+              type: array
+              items:
+                $ref: "#/components/schemas/PostopFollowup"
+          required:
+            - followups
+      required:
+        - success
+        - data
+
+    FollowupResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            followup:
+              $ref: "#/components/schemas/PostopFollowup"
+          required:
+            - followup
+      required:
+        - success
+        - data
+
+    CreateFollowupsRequest:
+      type: object
+      properties:
+        patientId:
+          type: string
+        procedureId:
+          type: string
+        patientName:
+          type: string
+      required:
+        - patientId
+        - procedureId

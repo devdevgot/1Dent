@@ -6,6 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./actionLog";
+export * from "./actionLogsResponse";
+export * from "./actionLogsResponseData";
 export * from "./addInteractionRequest";
 export * from "./addToothTreatmentRequest";
 export * from "./analyticsData";
@@ -14,6 +17,7 @@ export * from "./analyticsResponse";
 export * from "./authResponse";
 export * from "./authResponseData";
 export * from "./clinic";
+export * from "./createFollowupsRequest";
 export * from "./createInventoryItemRequest";
 export * from "./createPatientRequest";
 export * from "./createProcedureBody";
@@ -26,6 +30,12 @@ export * from "./doctorKpi";
 export * from "./doctorKpiListResponse";
 export * from "./doctorKpiListResponseData";
 export * from "./errorResponse";
+export * from "./followupResponse";
+export * from "./followupResponseData";
+export * from "./followupsResponse";
+export * from "./followupsResponseData";
+export * from "./getActionLogsParams";
+export * from "./getFollowupsParams";
 export * from "./healthStatus";
 export * from "./inboundWhatsappWebhook200";
 export * from "./interactionResponse";
@@ -62,6 +72,8 @@ export * from "./patientsListResponse";
 export * from "./patientsListResponseData";
 export * from "./patientSource";
 export * from "./patientStatus";
+export * from "./postopFollowup";
+export * from "./postopFollowupStatus";
 export * from "./procedure";
 export * from "./procedureListResponse";
 export * from "./procedureListResponseData";

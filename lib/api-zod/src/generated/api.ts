@@ -1075,6 +1075,97 @@ export const GetAnalyticsResponse = zod.object({
 });
 
 /**
+ * @summary Get action logs (owner only)
+ */
+export const GetActionLogsQueryParams = zod.object({
+  userId: zod.coerce.string().optional(),
+  actionType: zod.coerce.string().optional(),
+  entityType: zod.coerce.string().optional(),
+  dateFrom: zod.coerce.string().optional(),
+  dateTo: zod.coerce.string().optional(),
+  page: zod.coerce.number().optional(),
+  limit: zod.coerce.number().optional(),
+});
+
+export const GetActionLogsResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    logs: zod.array(
+      zod.object({
+        id: zod.string(),
+        clinicId: zod.string(),
+        userId: zod.string().nullish(),
+        actionType: zod.string(),
+        entityType: zod.string(),
+        entityId: zod.string().nullish(),
+        details: zod.string().nullish(),
+        ipAddress: zod.string().nullish(),
+        createdAt: zod.string(),
+      }),
+    ),
+    total: zod.number(),
+  }),
+});
+
+/**
+ * @summary Get post-op followups for a clinic
+ */
+export const GetFollowupsQueryParams = zod.object({
+  procedureId: zod.coerce.string().optional(),
+  patientId: zod.coerce.string().optional(),
+});
+
+export const GetFollowupsResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    followups: zod.array(
+      zod.object({
+        id: zod.string(),
+        clinicId: zod.string(),
+        patientId: zod.string(),
+        procedureId: zod.string(),
+        sendAt: zod.string(),
+        status: zod.enum(["pending", "sent", "cancelled"]),
+        messageTemplate: zod.string(),
+        createdAt: zod.string(),
+      }),
+    ),
+  }),
+});
+
+/**
+ * @summary Schedule post-op followup messages
+ */
+export const CreateFollowupsBody = zod.object({
+  patientId: zod.string(),
+  procedureId: zod.string(),
+  patientName: zod.string().optional(),
+});
+
+/**
+ * @summary Cancel a scheduled followup
+ */
+export const CancelFollowupParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const CancelFollowupResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    followup: zod.object({
+      id: zod.string(),
+      clinicId: zod.string(),
+      patientId: zod.string(),
+      procedureId: zod.string(),
+      sendAt: zod.string(),
+      status: zod.enum(["pending", "sent", "cancelled"]),
+      messageTemplate: zod.string(),
+      createdAt: zod.string(),
+    }),
+  }),
+});
+
+/**
  * @summary Get owner analytics (owner role only)
  */
 export const GetOwnerAnalyticsResponse = zod.object({

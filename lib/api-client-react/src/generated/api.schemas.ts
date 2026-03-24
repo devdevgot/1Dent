@@ -626,6 +626,72 @@ export interface DoctorKpiListResponse {
   data: DoctorKpiListResponseData;
 }
 
+export interface ActionLog {
+  id: string;
+  clinicId: string;
+  userId?: string | null;
+  actionType: string;
+  entityType: string;
+  entityId?: string | null;
+  details?: string | null;
+  ipAddress?: string | null;
+  createdAt: string;
+}
+
+export type ActionLogsResponseData = {
+  logs: ActionLog[];
+  total: number;
+};
+
+export interface ActionLogsResponse {
+  success: boolean;
+  data: ActionLogsResponseData;
+}
+
+export type PostopFollowupStatus =
+  (typeof PostopFollowupStatus)[keyof typeof PostopFollowupStatus];
+
+export const PostopFollowupStatus = {
+  pending: "pending",
+  sent: "sent",
+  cancelled: "cancelled",
+} as const;
+
+export interface PostopFollowup {
+  id: string;
+  clinicId: string;
+  patientId: string;
+  procedureId: string;
+  sendAt: string;
+  status: PostopFollowupStatus;
+  messageTemplate: string;
+  createdAt: string;
+}
+
+export type FollowupsResponseData = {
+  followups: PostopFollowup[];
+};
+
+export interface FollowupsResponse {
+  success: boolean;
+  data: FollowupsResponseData;
+}
+
+export type FollowupResponseData = {
+  followup: PostopFollowup;
+};
+
+export interface FollowupResponse {
+  success: boolean;
+  data: FollowupResponseData;
+}
+
+export interface CreateFollowupsRequest {
+  patientId: string;
+  procedureId: string;
+  patientName?: string;
+}
+
 export type VerifyWhatsappWebhookParams = {
   "hub.mode"?: string;
   "hub.verify_token"?: string;
@@ -678,4 +744,19 @@ export type CreateProcedureTemplate201Data = {
 export type CreateProcedureTemplate201 = {
   success?: boolean;
   data?: CreateProcedureTemplate201Data;
+};
+
+export type GetActionLogsParams = {
+  userId?: string;
+  actionType?: string;
+  entityType?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  page?: number;
+  limit?: number;
+};
+
+export type GetFollowupsParams = {
+  procedureId?: string;
+  patientId?: string;
 };

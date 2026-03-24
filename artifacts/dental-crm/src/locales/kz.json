@@ -66,6 +66,7 @@
     "analytics": "Аналитика",
     "financials": "Қаржы",
     "inventory": "Қойма",
+    "warehouse": "Қойма",
     "users": "Пайдаланушылар",
     "logs": "Журнал"
   },
@@ -319,5 +320,49 @@
       "price":     "Бағасы",
       "scheduled": "Күні"
     }
+  },
+  "logs": {
+    "title": "Әрекеттер журналы",
+    "subtitle": "Жүйедегі барлық өзгерістердің аудиті",
+    "filters": "Сүзгілер",
+    "allUsers": "Барлық пайдаланушылар",
+    "allActions": "Барлық әрекеттер",
+    "allEntities": "Барлық нысандар",
+    "dateFrom": "Күнінен бастап",
+    "dateTo": "Күніне дейін",
+    "clearFilters": "Тазалау",
+    "total": "Жалпы жазбалар",
+    "empty": "Жазба табылмады",
+    "unknownUser": "Белгісіз"
+  },
+  "financials": {
+    "title": "Қаржы",
+    "subtitle": "Кіріс және процедура статистикасы",
+    "totalRevenue": "Жалпы кіріс",
+    "avgCheck": "Орташа чек",
+    "perProcedure": "процедура үшін",
+    "procedures": "процедура",
+    "byDoctor": "Дәрігер бойынша",
+    "pcs": "дана",
+    "allDoctors": "Барлық дәрігерлер",
+    "allStatuses": "Барлық мәртебелер",
+    "completed": "Аяқталды",
+    "scheduled": "Жоспарланған",
+    "inProgress": "Орындалуда",
+    "cancelled": "Болдырмады",
+    "proceduresList": "Процедуралар тізімі",
+    "empty": "Процедура табылмады",
+    "unassigned": "Тағайындалмаған"
+  },
+  "warehouse": {
+    "title": "Қойма",
+    "subtitle": "Материалдар мен жабдықтардың қалдықтары",
+    "totalItems": "Позиция",
+    "inStock": "Қорда",
+    "lowStock": "Аяқталуда",
+    "lowStockAlert": "Критикалық қалдық",
+    "allItems": "Барлық позициялар",
+    "empty": "Қойма бос",
+    "min": "мин"
   }
 }

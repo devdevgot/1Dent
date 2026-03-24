@@ -17,6 +17,9 @@ import KanbanPage from "@/pages/kanban";
 import ChatPage from "@/pages/chat";
 import InventoryPage from "@/pages/inventory";
 import ProceduresPage from "@/pages/procedures";
+import LogsPage from "@/pages/logs";
+import FinancialsPage from "@/pages/financials";
+import WarehousePage from "@/pages/warehouse";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -111,6 +114,15 @@ function Router() {
       </Route>
       <Route path="/procedures">
         <ProtectedRoute component={ProceduresPage} allowedRoles={['owner', 'admin', 'doctor', 'accountant']} />
+      </Route>
+      <Route path="/logs">
+        <ProtectedRoute component={LogsPage} allowedRoles={['owner']} />
+      </Route>
+      <Route path="/financials">
+        <ProtectedRoute component={FinancialsPage} allowedRoles={['owner', 'accountant']} />
+      </Route>
+      <Route path="/warehouse">
+        <ProtectedRoute component={WarehousePage} allowedRoles={['owner', 'admin', 'warehouse']} />
       </Route>
 
       {/* 404 */}

@@ -66,6 +66,7 @@
     "analytics": "Аналитика",
     "financials": "Финансы",
     "inventory": "Склад",
+    "warehouse": "Склад",
     "users": "Пользователи",
     "logs": "Журнал"
   },
@@ -319,5 +320,49 @@
       "price":     "Стоимость",
       "scheduled": "Дата"
     }
+  },
+  "logs": {
+    "title": "Журнал действий",
+    "subtitle": "Аудит всех изменений в системе",
+    "filters": "Фильтры",
+    "allUsers": "Все пользователи",
+    "allActions": "Все действия",
+    "allEntities": "Все объекты",
+    "dateFrom": "С даты",
+    "dateTo": "По дату",
+    "clearFilters": "Сбросить",
+    "total": "Всего записей",
+    "empty": "Записей не найдено",
+    "unknownUser": "Неизвестно"
+  },
+  "financials": {
+    "title": "Финансы",
+    "subtitle": "Выручка и статистика по процедурам",
+    "totalRevenue": "Общая выручка",
+    "avgCheck": "Средний чек",
+    "perProcedure": "за процедуру",
+    "procedures": "процедур",
+    "byDoctor": "По врачам",
+    "pcs": "шт.",
+    "allDoctors": "Все врачи",
+    "allStatuses": "Все статусы",
+    "completed": "Завершена",
+    "scheduled": "Запланирована",
+    "inProgress": "В процессе",
+    "cancelled": "Отменена",
+    "proceduresList": "Список процедур",
+    "empty": "Процедур не найдено",
+    "unassigned": "Не назначен"
+  },
+  "warehouse": {
+    "title": "Склад",
+    "subtitle": "Остатки материалов и расходников",
+    "totalItems": "Позиций",
+    "inStock": "В наличии",
+    "lowStock": "Заканчивается",
+    "lowStockAlert": "Критический остаток",
+    "allItems": "Все позиции",
+    "empty": "Склад пуст",
+    "min": "мин"
   }
 }

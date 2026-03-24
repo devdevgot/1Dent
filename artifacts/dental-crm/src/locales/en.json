@@ -66,6 +66,7 @@
     "analytics": "Analytics",
     "financials": "Financials",
     "inventory": "Inventory",
+    "warehouse": "Warehouse",
     "users": "Users",
     "logs": "Audit Log"
   },
@@ -319,5 +320,49 @@
       "price":     "Price",
       "scheduled": "Date"
     }
+  },
+  "logs": {
+    "title": "Action Log",
+    "subtitle": "Audit trail of all system changes",
+    "filters": "Filters",
+    "allUsers": "All users",
+    "allActions": "All actions",
+    "allEntities": "All entities",
+    "dateFrom": "From date",
+    "dateTo": "To date",
+    "clearFilters": "Clear",
+    "total": "Total records",
+    "empty": "No records found",
+    "unknownUser": "Unknown"
+  },
+  "financials": {
+    "title": "Financials",
+    "subtitle": "Revenue and procedure statistics",
+    "totalRevenue": "Total Revenue",
+    "avgCheck": "Average Check",
+    "perProcedure": "per procedure",
+    "procedures": "procedures",
+    "byDoctor": "By Doctor",
+    "pcs": "pcs.",
+    "allDoctors": "All doctors",
+    "allStatuses": "All statuses",
+    "completed": "Completed",
+    "scheduled": "Scheduled",
+    "inProgress": "In Progress",
+    "cancelled": "Cancelled",
+    "proceduresList": "Procedures List",
+    "empty": "No procedures found",
+    "unassigned": "Unassigned"
+  },
+  "warehouse": {
+    "title": "Warehouse",
+    "subtitle": "Stock levels of materials and supplies",
+    "totalItems": "Items",
+    "inStock": "In Stock",
+    "lowStock": "Low Stock",
+    "lowStockAlert": "Critical Stock",
+    "allItems": "All Items",
+    "empty": "Warehouse is empty",
+    "min": "min"
   }
 }

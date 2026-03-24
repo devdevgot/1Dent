@@ -17,10 +17,12 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  ActionLogsResponse,
   AddInteractionRequest,
   AddToothTreatmentRequest,
   AnalyticsResponse,
   AuthResponse,
+  CreateFollowupsRequest,
   CreateInventoryItemRequest,
   CreatePatientRequest,
   CreateProcedureBody,
@@ -29,6 +31,10 @@ import type {
   CreateUserRequest,
   DoctorKpiListResponse,
   ErrorResponse,
+  FollowupResponse,
+  FollowupsResponse,
+  GetActionLogsParams,
+  GetFollowupsParams,
   HealthStatus,
   InboundWhatsappWebhook200,
   InteractionResponse,
@@ -3689,6 +3695,364 @@ export function useGetAnalytics<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Get action logs (owner only)
+ */
+export const getGetActionLogsUrl = (params?: GetActionLogsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/logs?${stringifiedParams}`
+    : `/api/logs`;
+};
+
+export const getActionLogs = async (
+  params?: GetActionLogsParams,
+  options?: RequestInit,
+): Promise<ActionLogsResponse> => {
+  return customFetch<ActionLogsResponse>(getGetActionLogsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetActionLogsQueryKey = (params?: GetActionLogsParams) => {
+  return [`/api/logs`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetActionLogsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getActionLogs>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetActionLogsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getActionLogs>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetActionLogsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getActionLogs>>> = ({
+    signal,
+  }) => getActionLogs(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getActionLogs>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetActionLogsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getActionLogs>>
+>;
+export type GetActionLogsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get action logs (owner only)
+ */
+
+export function useGetActionLogs<
+  TData = Awaited<ReturnType<typeof getActionLogs>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetActionLogsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getActionLogs>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetActionLogsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get post-op followups for a clinic
+ */
+export const getGetFollowupsUrl = (params?: GetFollowupsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/followups?${stringifiedParams}`
+    : `/api/followups`;
+};
+
+export const getFollowups = async (
+  params?: GetFollowupsParams,
+  options?: RequestInit,
+): Promise<FollowupsResponse> => {
+  return customFetch<FollowupsResponse>(getGetFollowupsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetFollowupsQueryKey = (params?: GetFollowupsParams) => {
+  return [`/api/followups`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetFollowupsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getFollowups>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetFollowupsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getFollowups>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetFollowupsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getFollowups>>> = ({
+    signal,
+  }) => getFollowups(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getFollowups>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetFollowupsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getFollowups>>
+>;
+export type GetFollowupsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get post-op followups for a clinic
+ */
+
+export function useGetFollowups<
+  TData = Awaited<ReturnType<typeof getFollowups>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetFollowupsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getFollowups>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetFollowupsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Schedule post-op followup messages
+ */
+export const getCreateFollowupsUrl = () => {
+  return `/api/followups`;
+};
+
+export const createFollowups = async (
+  createFollowupsRequest: CreateFollowupsRequest,
+  options?: RequestInit,
+): Promise<FollowupsResponse> => {
+  return customFetch<FollowupsResponse>(getCreateFollowupsUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createFollowupsRequest),
+  });
+};
+
+export const getCreateFollowupsMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createFollowups>>,
+    TError,
+    { data: BodyType<CreateFollowupsRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createFollowups>>,
+  TError,
+  { data: BodyType<CreateFollowupsRequest> },
+  TContext
+> => {
+  const mutationKey = ["createFollowups"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createFollowups>>,
+    { data: BodyType<CreateFollowupsRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createFollowups(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateFollowupsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createFollowups>>
+>;
+export type CreateFollowupsMutationBody = BodyType<CreateFollowupsRequest>;
+export type CreateFollowupsMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Schedule post-op followup messages
+ */
+export const useCreateFollowups = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createFollowups>>,
+    TError,
+    { data: BodyType<CreateFollowupsRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createFollowups>>,
+  TError,
+  { data: BodyType<CreateFollowupsRequest> },
+  TContext
+> => {
+  return useMutation(getCreateFollowupsMutationOptions(options));
+};
+
+/**
+ * @summary Cancel a scheduled followup
+ */
+export const getCancelFollowupUrl = (id: string) => {
+  return `/api/followups/${id}/cancel`;
+};
+
+export const cancelFollowup = async (
+  id: string,
+  options?: RequestInit,
+): Promise<FollowupResponse> => {
+  return customFetch<FollowupResponse>(getCancelFollowupUrl(id), {
+    ...options,
+    method: "PATCH",
+  });
+};
+
+export const getCancelFollowupMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelFollowup>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof cancelFollowup>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["cancelFollowup"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof cancelFollowup>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return cancelFollowup(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CancelFollowupMutationResult = NonNullable<
+  Awaited<ReturnType<typeof cancelFollowup>>
+>;
+
+export type CancelFollowupMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Cancel a scheduled followup
+ */
+export const useCancelFollowup = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelFollowup>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof cancelFollowup>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getCancelFollowupMutationOptions(options));
+};
 
 /**
  * @summary Get owner analytics (owner role only)

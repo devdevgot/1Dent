@@ -47,6 +47,7 @@ const PAGE_HREF_TITLE_KEY: Record<string, string> = {
   "/analytics":            "page.analytics",
   "/financials":           "page.financials",
   "/inventory":            "page.inventory",
+  "/warehouse":            "page.warehouse",
   "/users":                "page.users",
   "/logs":                 "page.logs",
 };
@@ -73,8 +74,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
     { nameKey: "nav.procedures",href: "/procedures", icon: Stethoscope,   roles: ["owner", "admin", "doctor", "accountant"] },
     { nameKey: "nav.schedule",  href: "/schedule",   icon: Calendar,      roles: ["admin"] },
     { nameKey: "nav.analytics", href: "/analytics",  icon: BarChart3,     roles: ["owner"] },
-    { nameKey: "nav.financials",href: "/financials", icon: Wallet,        roles: ["accountant"] },
-    { nameKey: "nav.inventory", href: "/inventory",  icon: Package,       roles: ["owner", "admin", "warehouse"] },
+    { nameKey: "nav.financials",href: "/financials", icon: Wallet,        roles: ["owner", "accountant"] },
+    { nameKey: "nav.inventory", href: "/inventory",  icon: Package,       roles: ["owner", "admin"] },
+    { nameKey: "nav.warehouse", href: "/warehouse",  icon: Package,       roles: ["warehouse"] },
     { nameKey: "nav.users",     href: "/users",      icon: Settings,      roles: ["owner"] },
     { nameKey: "nav.logs",      href: "/logs",       icon: Activity,      roles: ["owner"] },
   ];
