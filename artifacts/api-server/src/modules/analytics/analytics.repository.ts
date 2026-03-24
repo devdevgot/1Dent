@@ -155,7 +155,7 @@ export class AnalyticsRepository {
           proceduresCount: doctorProcedures.length,
           revenueTotal,
           averageCheck,
-          nps: 0,
+          nps: 0, // placeholder — will be populated from patient survey results (Task #7)
         };
       }),
     );
@@ -341,7 +341,7 @@ export class AnalyticsRepository {
           proceduresCount: procedures.length,
           revenueTotal,
           averageCheck,
-          nps: 0,
+          nps: 0, // placeholder — will be populated from patient survey results (Task #7)
         };
       }),
     );

@@ -4,7 +4,6 @@ import {
   procedureTemplatesTable,
   procedureMaterialsTable,
   usersTable,
-  inventoryStockTable,
   inventoryItemsTable,
 } from "@workspace/db";
 import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
@@ -194,40 +193,4 @@ export class ProceduresRepository {
     );
   }
 
-  async deductMaterials(
-    clinicId: string,
-    materials: { itemId: string; quantity: number }[],
-  ): Promise<void> {
-    for (const m of materials) {
-      const [stock] = await db
-        .select()
-        .from(inventoryStockTable)
-        .where(
-          and(
-            eq(inventoryStockTable.itemId, m.itemId),
-            eq(inventoryStockTable.clinicId, clinicId),
-          ),
-        )
-        .limit(1);
-
-      if (!stock) {
-        throw new Error(`Material ${m.itemId} not found in inventory`);
-      }
-      if (stock.quantity < m.quantity) {
-        throw new Error(
-          `Insufficient stock for item ${m.itemId}: required ${m.quantity}, available ${stock.quantity}`,
-        );
-      }
-
-      await db
-        .update(inventoryStockTable)
-        .set({ quantity: stock.quantity - m.quantity, updatedAt: new Date() })
-        .where(
-          and(
-            eq(inventoryStockTable.itemId, m.itemId),
-            eq(inventoryStockTable.clinicId, clinicId),
-          ),
-        );
-    }
-  }
 }

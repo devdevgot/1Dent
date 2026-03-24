@@ -8,6 +8,7 @@ import {
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { ProceduresRepository } from "./procedures.repository";
+import { InventoryRepository } from "../inventory/inventory.repository";
 import { analyticsRepo } from "../analytics/analytics.controller";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError, ForbiddenError } from "../../shared/errors";
@@ -15,6 +16,7 @@ import type { ProcedureStatus } from "@workspace/db";
 
 const router: IRouter = Router();
 const repo = new ProceduresRepository();
+const inventoryRepo = new InventoryRepository();
 
 const procedureStatusValues = [
   "scheduled",
@@ -160,7 +162,7 @@ router.post("/", writeRoles, async (req: Request, res: Response, next: NextFunct
   if (!procedure) return;
 
   if (effectiveMaterials.length > 0) {
-    const deductError = await repo.deductMaterials(clinicId, effectiveMaterials).then(() => null).catch((e) => e);
+    const deductError = await inventoryRepo.deductMaterials(clinicId, effectiveMaterials).then(() => null).catch((e) => e);
     if (deductError) {
       await repo.delete(procedure.id, clinicId).catch(() => {});
       return next(new ValidationError(`Stock deduction failed: ${(deductError as Error).message}`));
