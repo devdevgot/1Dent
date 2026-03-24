@@ -149,7 +149,9 @@ export class MessagesService {
       : true; // unknown phone always gets the chatbot
 
     if (hasChatbotSession) {
-      this.chatbot.processMessage(clinicId, senderPhone, content).catch((err) =>
+      // Pass skipRedAlert=true for known patients so MessagesService handles
+      // the alert on the stored message (avoids duplicate notifications).
+      this.chatbot.processMessage(clinicId, senderPhone, content, { skipRedAlert: !!patient }).catch((err) =>
         logger.error({ err }, "ChatbotService.processMessage failed"),
       );
     }

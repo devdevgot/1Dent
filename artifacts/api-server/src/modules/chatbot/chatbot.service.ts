@@ -8,7 +8,7 @@ import {
   notificationsTable,
   usersTable,
 } from "@workspace/db";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, gte } from "drizzle-orm";
 import { sendWhatsAppMessage, isRedAlert } from "../../shared/whatsapp";
 import { getAlertQueue } from "../../shared/alert-queue";
 import { logger } from "../../lib/logger";
@@ -256,6 +256,7 @@ export class ChatbotService {
     clinicId: string,
     phone: string,
     text: string,
+    options?: { skipRedAlert?: boolean },
   ): Promise<string | null> {
     let settings: Awaited<ReturnType<typeof getSettings>>;
     try {
@@ -295,7 +296,10 @@ export class ChatbotService {
     }
 
     if (state === "done") {
-      if (isRedAlert(text)) {
+      // Only run red-alert detection here for UNKNOWN phones (no patient record in CRM).
+      // For known patients, MessagesService.handleInboundWebhook already handles red alerts
+      // on the stored message — deduplicating to avoid double notifications.
+      if (!options?.skipRedAlert && isRedAlert(text)) {
         await triggerRedAlert(clinicId, phone, text, data.createdPatientId);
         const response = "🚨 Мы видим вашу проблему и передаём её администратору. Ожидайте, пожалуйста.";
         if (WHATSAPP_ENABLED) sendWhatsAppMessage(phone, response).catch(() => {});
@@ -467,10 +471,11 @@ export class ChatbotService {
   }
 
   async listSessions(clinicId: string) {
+    const cutoff = new Date(Date.now() - SESSION_TTL_SECONDS * 1000);
     return db
       .select()
       .from(chatbotSessionsTable)
-      .where(eq(chatbotSessionsTable.clinicId, clinicId))
+      .where(and(eq(chatbotSessionsTable.clinicId, clinicId), gte(chatbotSessionsTable.updatedAt, cutoff)))
       .orderBy(chatbotSessionsTable.updatedAt);
   }
 
