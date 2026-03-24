@@ -351,7 +351,9 @@
     "myRevenue": "Менің табысым",
     "todayProcedures": "Бүгінгі менің процедураларым",
     "noToday": "Бүгін жоспарланған процедура жоқ",
-    "noPatients": "Пациенттер жоқ"
+    "noPatients": "Пациенттер жоқ",
+    "salary": "Жалақы",
+    "salaryDescription": "Аралық кезеңдегі сіздің жалақыңыз"
   },
   "accountantDashboard": {
     "subtitle": "{{clinic}} клиникасының қаржылық жиынтығы.",

@@ -351,7 +351,9 @@
     "myRevenue": "My Revenue",
     "todayProcedures": "My Procedures Today",
     "noToday": "No procedures scheduled for today",
-    "noPatients": "No patients yet"
+    "noPatients": "No patients yet",
+    "salary": "Salary",
+    "salaryDescription": "Your salary for the period"
   },
   "accountantDashboard": {
     "subtitle": "Financial overview for {{clinic}}.",

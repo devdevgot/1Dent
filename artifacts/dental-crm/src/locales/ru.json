@@ -351,7 +351,9 @@
     "myRevenue": "Моя выручка",
     "todayProcedures": "Мои процедуры сегодня",
     "noToday": "Процедур на сегодня нет",
-    "noPatients": "Пациентов нет"
+    "noPatients": "Пациентов нет",
+    "salary": "Заработная плата",
+    "salaryDescription": "Ваша заработная плата за период"
   },
   "accountantDashboard": {
     "subtitle": "Финансовая сводка клиники {{clinic}}.",

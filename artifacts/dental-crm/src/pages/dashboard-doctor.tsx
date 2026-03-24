@@ -12,6 +12,7 @@ import {
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 function StatCard({
   titleKey,
@@ -136,6 +137,28 @@ export default function DoctorDashboard() {
           </button>
         </div>
       </div>
+
+      {/* Salary Chart */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="bg-card rounded-2xl border border-border/50 p-6 shadow-sm"
+      >
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h3 className="text-lg font-bold font-display flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-primary" />
+              {t("doctorDashboard.salary")}
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1">{t("doctorDashboard.salaryDescription")}</p>
+          </div>
+        </div>
+
+        <div className="h-[300px] flex items-center justify-center text-sm text-muted-foreground">
+          {t("common.noData")}
+        </div>
+      </motion.div>
 
       {/* Quick Actions */}
       <div className="max-w-sm">
