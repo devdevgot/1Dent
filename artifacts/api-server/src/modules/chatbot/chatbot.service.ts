@@ -112,7 +112,7 @@ async function saveSession(session: SessionRecord): Promise<void> {
       clinicId: session.clinicId,
       phone: session.phone,
       state: session.state,
-      data: session.data as Record<string, string | null>,
+      data: session.data as Record<string, unknown>,
       humanTakeover: session.humanTakeover,
       updatedAt: new Date(),
     })
@@ -120,7 +120,7 @@ async function saveSession(session: SessionRecord): Promise<void> {
       target: [chatbotSessionsTable.clinicId, chatbotSessionsTable.phone],
       set: {
         state: session.state,
-        data: session.data as Record<string, string | null>,
+        data: session.data as Record<string, unknown>,
         humanTakeover: session.humanTakeover,
         updatedAt: new Date(),
       },
@@ -331,19 +331,31 @@ export class ChatbotService {
 
       case "suggest_doctor": {
         if (isYes(text)) {
+          data.confusedCount = 0;
           response = `Отлично! Подтверждаете запись к ${data.suggestedDoctorName ?? "врачу"}? (Да / Нет)`;
           session.state = "confirm_appointment";
         } else if (isNo(text)) {
-          response = "Понял. Опишите снова, к какому специалисту вы хотите записаться?";
+          data.confusedCount = 0;
+          response = "Понял. Опишите снова, что вас беспокоит, и я помогу подобрать специалиста?";
           session.state = "collect_problem";
         } else {
-          response = `Пожалуйста, ответьте «Да» для записи или «Нет» для отмены.`;
+          const count = (Number(data.confusedCount) || 0) + 1;
+          data.confusedCount = count;
+          if (count >= 2) {
+            session.state = "human_takeover";
+            session.humanTakeover = true;
+            await this.notifyHumanTakeover(clinicId, phone, data.patientName);
+            response = "Похоже, я не могу вам помочь. Соединяю с администратором — ожидайте ответа.";
+          } else {
+            response = `Пожалуйста, ответьте «Да» для записи к врачу или «Нет» для отмены.`;
+          }
         }
         break;
       }
 
       case "confirm_appointment": {
         if (isYes(text)) {
+          data.confusedCount = 0;
           if (data.suggestedDoctorId && data.patientName) {
             try {
               const patient = await createPatient(clinicId, phone, data.patientName, data.suggestedDoctorId);
@@ -358,13 +370,23 @@ export class ChatbotService {
           response = `✅ Запись подтверждена! Администратор свяжется с вами для уточнения времени визита.\n\nЕсли возникнут вопросы — пишите сюда. Мы на связи!`;
           session.state = "done";
         } else if (isNo(text)) {
+          data.confusedCount = 0;
           data.suggestedDoctorId = undefined;
           data.suggestedDoctorName = undefined;
           session.data = { patientName: data.patientName };
           response = `Хорошо, отменяем. Опишите снова, что вас беспокоит, и я помогу подобрать специалиста.`;
           session.state = "collect_problem";
         } else {
-          response = `Пожалуйста, ответьте «Да» для подтверждения или «Нет» для отмены.`;
+          const count = (Number(data.confusedCount) || 0) + 1;
+          data.confusedCount = count;
+          if (count >= 2) {
+            session.state = "human_takeover";
+            session.humanTakeover = true;
+            await this.notifyHumanTakeover(clinicId, phone, data.patientName);
+            response = "Похоже, я не могу вам помочь. Соединяю с администратором — ожидайте ответа.";
+          } else {
+            response = `Пожалуйста, ответьте «Да» для подтверждения записи или «Нет» для отмены.`;
+          }
         }
         break;
       }

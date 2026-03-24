@@ -39,7 +39,7 @@ export const chatbotSessionsTable = pgTable(
       .references(() => clinicsTable.id, { onDelete: "cascade" }),
     phone: text("phone").notNull(),
     state: text("state").notNull().default("greeting"),
-    data: jsonb("data").$type<Record<string, string | null>>().notNull().default({}),
+    data: jsonb("data").$type<Record<string, unknown>>().notNull().default({}),
     humanTakeover: boolean("human_takeover").default(false).notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
