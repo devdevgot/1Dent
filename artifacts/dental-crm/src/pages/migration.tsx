@@ -95,8 +95,11 @@ function JobCard({ job: initialJob }: { job: MigrationJob }) {
       ? Math.min(100, Math.round(((job.processedRows ?? 0) / (job.totalRows ?? 1)) * 100))
       : job.status === "done" ? 100 : 0;
 
+  type ReportError = { row: number; message: string };
   const report = job.report as Record<string, unknown> | null;
-  const errors = Array.isArray(report?.["errors"]) ? (report!["errors"] as string[]) : [];
+  const errors: ReportError[] = Array.isArray(report?.["errors"])
+    ? (report!["errors"] as ReportError[])
+    : [];
 
   return (
     <div className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
@@ -147,7 +150,10 @@ function JobCard({ job: initialJob }: { job: MigrationJob }) {
           <summary className="text-xs text-red-600 cursor-pointer">Показать ошибки</summary>
           <ul className="mt-1 space-y-0.5 text-xs text-gray-500 max-h-32 overflow-y-auto">
             {errors.slice(0, 10).map((e, i) => (
-              <li key={i} className="truncate">{e}</li>
+              <li key={i} className="truncate">
+                <span className="text-gray-400 mr-1">Стр.{e.row}:</span>
+                {e.message}
+              </li>
             ))}
           </ul>
         </details>
