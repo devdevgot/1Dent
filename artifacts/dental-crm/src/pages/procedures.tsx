@@ -502,12 +502,26 @@ function ProcedureRow({
 }) {
   const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState<ProcedureStatus | null>(null);
+  const [modalNotes, setModalNotes] = useState("");
   const statusMutation  = useUpdateProcedureStatus();
   const deleteMutation  = useDeleteProcedure();
 
-  const handleStatus = async (status: ProcedureStatus) => {
-    await statusMutation.mutateAsync({ id: proc.id, data: { status } });
+  const handleStatusClick = (status: ProcedureStatus) => {
+    setSelectedStatus(status);
+    setModalNotes("");
+    setStatusModalOpen(true);
     setMenuOpen(false);
+  };
+
+  const handleStatusSubmit = async () => {
+    if (!selectedStatus) return;
+    await statusMutation.mutateAsync({ 
+      id: proc.id, 
+      data: { status: selectedStatus, notes: modalNotes || undefined } 
+    });
+    setStatusModalOpen(false);
     onRefetch();
   };
 
@@ -524,6 +538,7 @@ function ProcedureRow({
   })();
 
   return (
+    <>
     <motion.tr
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -568,7 +583,7 @@ function ProcedureRow({
                   {canEdit && nextStatuses.map((s) => (
                     <button
                       key={s}
-                      onClick={() => handleStatus(s)}
+                      onClick={() => handleStatusClick(s)}
                       className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 transition-colors flex items-center gap-2"
                     >
                       {React.createElement(STATUS_ICONS[s], { className: "w-4 h-4 text-muted-foreground" })}
@@ -591,6 +606,58 @@ function ProcedureRow({
         )}
       </td>
     </motion.tr>
+    {statusModalOpen && selectedStatus && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setStatusModalOpen(false)}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          className="bg-white rounded-2xl shadow-2xl w-full max-w-sm"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="p-6 border-b border-border/50">
+            <h2 className="text-lg font-bold text-foreground">
+              {t(`procedure.markAs.${selectedStatus}`)}
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">{proc.name}</p>
+          </div>
+
+          <div className="p-6 space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-muted-foreground mb-2">
+                {t("procedure.comments")}
+              </label>
+              <textarea
+                value={modalNotes}
+                onChange={(e) => setModalNotes(e.target.value)}
+                rows={3}
+                placeholder={t("procedure.commentsPlaceholder")}
+                className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-none"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setStatusModalOpen(false)}
+                className="flex-1 py-2.5 border border-border rounded-xl text-sm font-semibold text-muted-foreground hover:bg-slate-50 transition-colors"
+              >
+                {t("common.cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={handleStatusSubmit}
+                disabled={statusMutation.isPending}
+                className="flex-1 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 transition-colors"
+              >
+                {statusMutation.isPending ? t("common.saving") : t("common.save")}
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    )}
+  </>
   );
 }
 

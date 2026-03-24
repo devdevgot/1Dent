@@ -461,7 +461,9 @@
       "status":    "Status",
       "price":     "Price",
       "scheduled": "Date"
-    }
+    },
+    "comments": "Notes",
+    "commentsPlaceholder": "Add notes about this status change..."
   },
   "logs": {
     "title": "Action Log",

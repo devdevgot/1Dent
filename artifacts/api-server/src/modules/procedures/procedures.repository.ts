@@ -116,11 +116,15 @@ export class ProceduresRepository {
     id: string,
     clinicId: string,
     status: ProcedureStatus,
+    notes?: string,
   ): Promise<ProcedureWithDoctor | undefined> {
     const completedAt = status === "completed" ? new Date() : null;
+    const updateData: Record<string, unknown> = { status, completedAt };
+    if (notes) updateData.notes = notes;
+
     const [procedure] = await db
       .update(proceduresTable)
-      .set({ status, completedAt })
+      .set(updateData)
       .where(and(eq(proceduresTable.id, id), eq(proceduresTable.clinicId, clinicId)))
       .returning();
 

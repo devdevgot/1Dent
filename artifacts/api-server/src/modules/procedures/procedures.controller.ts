@@ -51,6 +51,7 @@ const updateProcedureSchema = z.object({
 
 const updateStatusSchema = z.object({
   status: z.enum(procedureStatusValues),
+  notes: z.string().optional(),
 });
 
 const createTemplateSchema = z.object({
@@ -213,8 +214,9 @@ router.patch(
     const authorized = await assertDoctorOwnership(id, clinicId, userId, role, next);
     if (!authorized) return;
 
+    const statusUpdate = parsed.data.status as ProcedureStatus;
     const procedure = await repo
-      .updateStatus(id, clinicId, parsed.data.status as ProcedureStatus)
+      .updateStatus(id, clinicId, statusUpdate, parsed.data.notes)
       .catch(next);
     if (!procedure) return next(new NotFoundError("Procedure not found"));
 
