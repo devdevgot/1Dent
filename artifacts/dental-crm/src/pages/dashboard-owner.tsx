@@ -272,7 +272,17 @@ export default function OwnerDashboard() {
       </div>
 
       {/* ─── KPI Tiles ─── */}
-      <div className="mx-4 mt-4 grid grid-cols-2 gap-3">
+      <div className="mx-4 mt-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-bold text-gray-900">{t("dashboard.kpiTitle")}</h3>
+          <button
+            onClick={() => navigate("/analytics")}
+            className="text-xs text-primary font-semibold flex items-center gap-0.5"
+          >
+            {t("dashboard.viewAll")} <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
         {[
           {
             icon: TrendingUp,
@@ -322,6 +332,7 @@ export default function OwnerDashboard() {
             <p className="text-[11px] text-gray-300 mt-0.5">{item.sub}</p>
           </motion.div>
         ))}
+        </div>
       </div>
 
       {/* ─── Doctor KPIs ─── */}
