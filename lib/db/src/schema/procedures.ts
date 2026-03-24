@@ -76,10 +76,12 @@ export const doctorKpisTable = pgTable("doctor_kpis", {
   doctorId: text("doctor_id")
     .notNull()
     .references(() => usersTable.id, { onDelete: "cascade" }),
-  period: text("period").notNull(),
+  month: text("month").notNull(),
   patientsCount: integer("patients_count").notNull().default(0),
   proceduresCount: integer("procedures_count").notNull().default(0),
   revenueTotal: real("revenue_total").notNull().default(0),
+  averageCheck: real("average_check").notNull().default(0),
+  nps: real("nps").notNull().default(0),
   computedAt: timestamp("computed_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

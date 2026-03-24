@@ -115,7 +115,7 @@ function NewProcedureModal({
           name:        form.name,
           price:       Number(form.price) || 0,
           notes:       form.notes || undefined,
-          scheduledAt: form.scheduledAt || undefined,
+          scheduledAt: form.scheduledAt ? new Date(form.scheduledAt).toISOString() : undefined,
           materials:   materials.length > 0 ? materials : undefined,
         },
       });
