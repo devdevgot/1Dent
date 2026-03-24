@@ -124,7 +124,7 @@ export default function DoctorAnalyticsPage() {
               <h3 className="text-sm font-semibold text-foreground mb-4">{t("doctorAnalytics.revenueTrend")}</h3>
               {revenueByMonth.length === 0 ? (
                 <div className="h-[300px] flex items-center justify-center text-sm text-muted-foreground">
-                  {t("financials.empty")}
+                  {t("common.noData")}
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height={300}>
@@ -149,7 +149,7 @@ export default function DoctorAnalyticsPage() {
               <h3 className="text-sm font-semibold text-foreground mb-4">{t("doctorAnalytics.procedureTypes")}</h3>
               {proceduresByName.length === 0 ? (
                 <div className="h-[300px] flex items-center justify-center text-sm text-muted-foreground">
-                  —
+                  {t("common.noData")}
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height={300}>
@@ -168,7 +168,7 @@ export default function DoctorAnalyticsPage() {
               <h3 className="text-sm font-semibold text-foreground mb-4">{t("doctorAnalytics.patientStatus")}</h3>
               {patientStatusData.length === 0 ? (
                 <div className="h-[300px] flex items-center justify-center text-sm text-muted-foreground">
-                  —
+                  {t("common.noData")}
                 </div>
               ) : (
                 <>
@@ -205,7 +205,7 @@ export default function DoctorAnalyticsPage() {
               <h3 className="text-sm font-semibold text-foreground mb-4">{t("doctorAnalytics.dailyActivity")}</h3>
               {revenueByMonth.length === 0 ? (
                 <div className="h-[300px] flex items-center justify-center text-sm text-muted-foreground">
-                  —
+                  {t("common.noData")}
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height={300}>

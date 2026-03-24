@@ -77,6 +77,7 @@
   },
   "common": {
     "loading": "Loading...",
+    "noData": "No data",
     "save": "Save",
     "saving": "Saving...",
     "saved": "Saved",
@@ -577,6 +578,7 @@
     "patientActivity": "Patient Activity",
     "patientStatus": "Patient Distribution",
     "procedureCount": "Procedures by Type",
+    "proceduresByStatus": "Procedures by Status",
     "performance": "Performance Metrics",
     "efficiency": "Efficiency",
     "satisfaction": "Satisfaction",

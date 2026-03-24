@@ -185,7 +185,7 @@ export default function StaffDetailPage() {
                 <div className="bg-white rounded-xl border border-border/50 p-6 shadow-sm">
                   <h3 className="text-sm font-semibold text-foreground mb-4">{t("staff.revenueTrend")}</h3>
                   {revenueByMonth.length === 0 ? (
-                    <div className="h-[260px] flex items-center justify-center text-sm text-muted-foreground">—</div>
+                    <div className="h-[260px] flex items-center justify-center text-sm text-muted-foreground">{t("common.noData")}</div>
                   ) : (
                     <ResponsiveContainer width="100%" height={260}>
                       <LineChart data={revenueByMonth}>
@@ -209,7 +209,7 @@ export default function StaffDetailPage() {
                 <div className="bg-white rounded-xl border border-border/50 p-6 shadow-sm">
                   <h3 className="text-sm font-semibold text-foreground mb-4">{t("staff.procedureCount")}</h3>
                   {proceduresByName.length === 0 ? (
-                    <div className="h-[260px] flex items-center justify-center text-sm text-muted-foreground">—</div>
+                    <div className="h-[260px] flex items-center justify-center text-sm text-muted-foreground">{t("common.noData")}</div>
                   ) : (
                     <ResponsiveContainer width="100%" height={260}>
                       <BarChart data={proceduresByName} layout="vertical">
@@ -227,7 +227,7 @@ export default function StaffDetailPage() {
               <div className="bg-white rounded-xl border border-border/50 p-6 shadow-sm">
                 <h3 className="text-sm font-semibold text-foreground mb-6">{t("staff.patientStatus")}</h3>
                 {patientStatusData.length === 0 ? (
-                  <div className="h-[200px] flex items-center justify-center text-sm text-muted-foreground">—</div>
+                  <div className="h-[200px] flex items-center justify-center text-sm text-muted-foreground">{t("common.noData")}</div>
                 ) : (
                   <div className="flex flex-col lg:flex-row items-center gap-6">
                     <ResponsiveContainer width="100%" height={240}>
@@ -266,10 +266,28 @@ export default function StaffDetailPage() {
                 )}
               </div>
 
-              {nps > 0 && (
-                <div className="bg-white rounded-xl border border-border/50 p-6 shadow-sm">
-                  <h3 className="text-sm font-semibold text-foreground mb-6">{t("staff.performance")}</h3>
-                  <div>
+              <div className="bg-white rounded-xl border border-border/50 p-6 shadow-sm">
+                <h3 className="text-sm font-semibold text-foreground mb-4">{t("staff.proceduresByStatus")}</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {(
+                    [
+                      { key: "completed",   label: t("procedure.status.completed"),   bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700" },
+                      { key: "in_progress", label: t("procedure.status.in_progress"), bg: "bg-blue-50",    border: "border-blue-200",    text: "text-blue-700" },
+                      { key: "scheduled",   label: t("procedure.status.scheduled"),   bg: "bg-amber-50",   border: "border-amber-200",   text: "text-amber-700" },
+                      { key: "cancelled",   label: t("procedure.status.cancelled"),   bg: "bg-red-50",     border: "border-red-200",     text: "text-red-700" },
+                    ] as const
+                  ).map(({ key, label, bg, border, text }) => (
+                    <div key={key} className={`rounded-xl border ${border} ${bg} p-4 text-center`}>
+                      <p className={`text-2xl font-bold ${text}`}>
+                        {Number(analytics?.proceduresByStatus?.[key] ?? 0)}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">{label}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {nps > 0 && (
+                  <div className="mt-6 pt-5 border-t border-border/30">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs font-medium text-muted-foreground">{t("staff.nps")}</span>
                       <span className={`text-sm font-bold px-2 py-0.5 rounded-full ${
@@ -287,8 +305,8 @@ export default function StaffDetailPage() {
                       />
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </>
           )}
 

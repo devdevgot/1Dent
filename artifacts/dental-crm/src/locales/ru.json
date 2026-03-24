@@ -77,6 +77,7 @@
   },
   "common": {
     "loading": "Загрузка...",
+    "noData": "Нет данных",
     "save": "Сохранить",
     "saving": "Сохранение...",
     "saved": "Сохранено",
@@ -577,6 +578,7 @@
     "patientActivity": "Активность пациентов",
     "patientStatus": "Распределение пациентов",
     "procedureCount": "Процедуры по типам",
+    "proceduresByStatus": "Статусы процедур",
     "performance": "Показатели производительности",
     "efficiency": "Эффективность",
     "satisfaction": "Удовлетворённость",
