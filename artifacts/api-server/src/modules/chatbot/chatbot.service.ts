@@ -1,35 +1,156 @@
 import { randomUUID } from "crypto";
-import { db, chatbotSettingsTable, chatbotSessionsTable, usersTable, patientsTable } from "@workspace/db";
-import { eq, and, count, sql } from "drizzle-orm";
-import { sendWhatsAppMessage } from "../../shared/whatsapp";
+import IORedis from "ioredis";
+import {
+  db,
+  chatbotSettingsTable,
+  chatbotSessionsTable,
+  patientsTable,
+  notificationsTable,
+  usersTable,
+} from "@workspace/db";
+import { eq, and, inArray } from "drizzle-orm";
+import { sendWhatsAppMessage, isRedAlert } from "../../shared/whatsapp";
+import { getAlertQueue } from "../../shared/alert-queue";
 import { logger } from "../../lib/logger";
+import { AnalyticsRepository } from "../analytics/analytics.repository";
 import type { ChatbotState, ChatbotSessionData } from "./chatbot.types";
 
 const WHATSAPP_ENABLED = !!(
   process.env["WHATSAPP_TOKEN"] && process.env["WHATSAPP_PHONE_ID"]
 );
 
-const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+const SESSION_TTL_SECONDS = 24 * 60 * 60;
+const REDIS_KEY_PREFIX = "chatbot:session:";
 
-const OPERATOR_KEYWORDS = ["оператор", "operator", "человек", "admin", "человека"];
-
+const OPERATOR_KEYWORDS = ["оператор", "operator", "человек", "admin", "администратор"];
 const CONFIRM_YES = ["да", "yes", "ок", "ok", "конечно", "подтверждаю", "согласен", "согласна", "👍", "+"];
-const CONFIRM_NO = ["нет", "no", "отмена", "отменить", "cancel", "не надо", "нe", "не"];
+const CONFIRM_NO = ["нет", "no", "отмена", "отменить", "cancel", "не надо"];
 
 function isOperatorRequest(text: string): boolean {
   const lower = text.toLowerCase().trim();
   return OPERATOR_KEYWORDS.some((kw) => lower.includes(kw));
 }
-
 function isYes(text: string): boolean {
   const lower = text.toLowerCase().trim();
   return CONFIRM_YES.some((kw) => lower.includes(kw));
 }
-
 function isNo(text: string): boolean {
   const lower = text.toLowerCase().trim();
   return CONFIRM_NO.some((kw) => lower === kw || lower.startsWith(kw + " "));
 }
+
+interface SessionRecord {
+  id: string;
+  clinicId: string;
+  phone: string;
+  state: ChatbotState;
+  data: ChatbotSessionData;
+  humanTakeover: boolean;
+}
+
+// ─── Redis-backed session store (falls back to PostgreSQL) ───────────────────
+
+let redis: IORedis | null = null;
+if (process.env["REDIS_URL"]) {
+  redis = new IORedis(process.env["REDIS_URL"], { lazyConnect: true, enableReadyCheck: false });
+  redis.on("error", (err: Error) => logger.warn({ err }, "[ChatbotSession] Redis error"));
+  logger.info("[ChatbotSession] Redis session store enabled");
+} else {
+  logger.info("[ChatbotSession] REDIS_URL not set — using PostgreSQL session store");
+}
+
+async function loadSession(clinicId: string, phone: string): Promise<SessionRecord | null> {
+  if (redis) {
+    try {
+      const raw = await redis.get(`${REDIS_KEY_PREFIX}${clinicId}:${phone}`);
+      if (raw) return JSON.parse(raw) as SessionRecord;
+      return null;
+    } catch (err) {
+      logger.warn({ err }, "[ChatbotSession] Redis load failed, falling back to DB");
+    }
+  }
+
+  const [row] = await db
+    .select()
+    .from(chatbotSessionsTable)
+    .where(and(eq(chatbotSessionsTable.clinicId, clinicId), eq(chatbotSessionsTable.phone, phone)))
+    .limit(1);
+
+  if (!row) return null;
+
+  const age = Date.now() - new Date(row.updatedAt).getTime();
+  if (age > SESSION_TTL_SECONDS * 1000) return null;
+
+  return {
+    id: row.id,
+    clinicId: row.clinicId,
+    phone: row.phone,
+    state: row.state as ChatbotState,
+    data: (row.data ?? {}) as ChatbotSessionData,
+    humanTakeover: row.humanTakeover,
+  };
+}
+
+async function saveSession(session: SessionRecord): Promise<void> {
+  if (redis) {
+    try {
+      await redis.setex(
+        `${REDIS_KEY_PREFIX}${session.clinicId}:${session.phone}`,
+        SESSION_TTL_SECONDS,
+        JSON.stringify(session),
+      );
+      return;
+    } catch (err) {
+      logger.warn({ err }, "[ChatbotSession] Redis save failed, falling back to DB");
+    }
+  }
+
+  await db
+    .insert(chatbotSessionsTable)
+    .values({
+      id: session.id,
+      clinicId: session.clinicId,
+      phone: session.phone,
+      state: session.state,
+      data: session.data as Record<string, string | null>,
+      humanTakeover: session.humanTakeover,
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: [chatbotSessionsTable.clinicId, chatbotSessionsTable.phone],
+      set: {
+        state: session.state,
+        data: session.data as Record<string, string | null>,
+        humanTakeover: session.humanTakeover,
+        updatedAt: new Date(),
+      },
+    });
+}
+
+async function deleteRedisSession(clinicId: string, phone: string): Promise<void> {
+  if (redis) {
+    try {
+      await redis.del(`${REDIS_KEY_PREFIX}${clinicId}:${phone}`);
+    } catch (_) { /* ignore */ }
+  }
+}
+
+// ─── Analytics-based doctor routing ─────────────────────────────────────────
+
+const analyticsRepo = new AnalyticsRepository();
+
+async function pickBestDoctorViaKpi(
+  clinicId: string,
+): Promise<{ id: string; name: string } | null> {
+  const kpis = await analyticsRepo.getDoctorKpis(clinicId);
+  if (kpis.length === 0) return null;
+
+  const sorted = [...kpis].sort((a, b) => a.patientsCount - b.patientsCount);
+  const best = sorted[0]!;
+  return { id: best.doctorId, name: best.doctorName };
+}
+
+// ─── Settings helpers ────────────────────────────────────────────────────────
 
 async function getSettings(clinicId: string) {
   const [settings] = await db
@@ -58,87 +179,68 @@ async function getSettings(clinicId: string) {
   return fetched!;
 }
 
-async function getOrCreateSession(clinicId: string, phone: string) {
-  const [existing] = await db
-    .select()
-    .from(chatbotSessionsTable)
-    .where(and(eq(chatbotSessionsTable.clinicId, clinicId), eq(chatbotSessionsTable.phone, phone)))
-    .limit(1);
+// ─── Red alert escalation ────────────────────────────────────────────────────
 
-  if (existing) {
-    const age = Date.now() - new Date(existing.updatedAt).getTime();
-    if (age > SESSION_TTL_MS) {
-      await db
-        .update(chatbotSessionsTable)
-        .set({ state: "greeting", data: {}, humanTakeover: false, updatedAt: new Date() })
-        .where(eq(chatbotSessionsTable.id, existing.id));
-      return { ...existing, state: "greeting" as ChatbotState, data: {}, humanTakeover: false };
-    }
-    return existing;
+async function triggerRedAlert(
+  clinicId: string,
+  phone: string,
+  text: string,
+  patientId?: string,
+): Promise<void> {
+  const alertQueue = getAlertQueue();
+  const payload = {
+    clinicId,
+    patientId: patientId ?? null,
+    messageId: null,
+    content: text,
+    patientName: phone,
+  };
+
+  if (alertQueue && patientId) {
+    alertQueue.add("red-alert", { ...payload, patientId }).catch(() => {
+      logger.warn("[ChatbotService] Red alert queue add failed");
+    });
+  } else {
+    const recipients = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(and(eq(usersTable.clinicId, clinicId), inArray(usersTable.role, ["owner", "admin", "doctor"])));
+
+    if (recipients.length === 0) return;
+
+    const msg = `🚨 Red Alert (чатбот) от ${phone}: "${text.slice(0, 80)}${text.length > 80 ? "…" : ""}"`;
+    await db.insert(notificationsTable).values(
+      recipients.map((r) => ({
+        id: randomUUID(),
+        clinicId,
+        userId: r.id,
+        type: "red_alert" as const,
+        message: msg,
+        read: false,
+        patientId: patientId ?? null,
+        messageId: null,
+      })),
+    );
   }
-
-  const id = randomUUID();
-  const [created] = await db
-    .insert(chatbotSessionsTable)
-    .values({ id, clinicId, phone, state: "greeting", data: {}, humanTakeover: false })
-    .returning();
-
-  return created!;
 }
 
-async function saveSession(
-  sessionId: string,
-  state: ChatbotState,
-  data: ChatbotSessionData,
-  humanTakeover = false,
+// ─── Patient creation ────────────────────────────────────────────────────────
+
+async function createPatient(
+  clinicId: string,
+  phone: string,
+  name: string,
+  doctorId: string,
 ) {
-  await db
-    .update(chatbotSessionsTable)
-    .set({ state, data: data as Record<string, string | null>, humanTakeover, updatedAt: new Date() })
-    .where(eq(chatbotSessionsTable.id, sessionId));
-}
-
-async function pickBestDoctor(clinicId: string): Promise<{ id: string; name: string } | null> {
-  const doctors = await db
-    .select({
-      id: usersTable.id,
-      name: usersTable.name,
-      activePatients: count(patientsTable.id),
-    })
-    .from(usersTable)
-    .leftJoin(
-      patientsTable,
-      and(
-        eq(patientsTable.doctorId, usersTable.id),
-        sql`${patientsTable.status} NOT IN ('completed', 'cancelled')`,
-      ),
-    )
-    .where(and(eq(usersTable.clinicId, clinicId), eq(usersTable.role, "doctor")))
-    .groupBy(usersTable.id, usersTable.name)
-    .orderBy(count(patientsTable.id))
-    .limit(5);
-
-  if (doctors.length === 0) return null;
-  const best = doctors[0]!;
-  return { id: best.id, name: best.name };
-}
-
-async function createPatient(clinicId: string, phone: string, name: string, doctorId: string) {
   const id = randomUUID();
   const [patient] = await db
     .insert(patientsTable)
-    .values({
-      id,
-      clinicId,
-      name,
-      phone,
-      source: "whatsapp",
-      status: "new_request",
-      doctorId,
-    })
+    .values({ id, clinicId, name, phone, source: "whatsapp", status: "new_request", doctorId })
     .returning();
   return patient!;
 }
+
+// ─── ChatbotService (main export) ───────────────────────────────────────────
 
 export class ChatbotService {
   async processMessage(
@@ -156,57 +258,84 @@ export class ChatbotService {
 
     if (!settings.enabled) return null;
 
-    const session = await getOrCreateSession(clinicId, phone);
+    let session = await loadSession(clinicId, phone);
+
+    if (!session) {
+      session = {
+        id: randomUUID(),
+        clinicId,
+        phone,
+        state: "greeting",
+        data: {},
+        humanTakeover: false,
+      };
+    }
+
     if (session.humanTakeover) return null;
 
-    const state = session.state as ChatbotState;
-    const data = (session.data ?? {}) as ChatbotSessionData;
+    const state = session.state;
+    const data = { ...session.data };
 
     if (isOperatorRequest(text)) {
-      await saveSession(session.id, "human_takeover", data, true);
+      session.state = "human_takeover";
+      session.data = data;
+      session.humanTakeover = true;
+      await saveSession(session);
       await this.notifyHumanTakeover(clinicId, phone, data.patientName);
       return "Соединяю вас с администратором. Пожалуйста, ожидайте — вам ответят в ближайшее время.";
     }
 
+    if (state === "done") {
+      if (isRedAlert(text)) {
+        await triggerRedAlert(clinicId, phone, text, data.createdPatientId);
+        const response = "🚨 Мы видим вашу проблему и передаём её администратору. Ожидайте, пожалуйста.";
+        if (WHATSAPP_ENABLED) sendWhatsAppMessage(phone, response).catch(() => {});
+        return response;
+      }
+      const response = "Рады вашему обращению! Если возникнут вопросы — пишите. Или напишите «оператор» для связи с администратором.";
+      if (WHATSAPP_ENABLED) sendWhatsAppMessage(phone, response).catch(() => {});
+      return response;
+    }
+
     let response: string | null = null;
-    let nextState = state;
-    let nextData = { ...data };
 
     switch (state) {
       case "greeting": {
         response = settings.greetingTemplate;
-        nextState = "collect_name";
+        session.state = "collect_name";
         break;
       }
 
       case "collect_name": {
-        nextData.patientName = text.trim().slice(0, 60);
-        response = `Приятно познакомиться, ${nextData.patientName}! 😊\nОпишите вашу проблему или какую процедуру вы хотели бы записаться (например: болит зуб, профилактика, брекеты и т.д.)`;
-        nextState = "collect_problem";
+        data.patientName = text.trim().slice(0, 60);
+        response = `Приятно познакомиться, ${data.patientName}! 😊\nОпишите вашу проблему или какую процедуру вы хотели бы пройти (например: болит зуб, профилактика, брекеты и т.д.)`;
+        session.state = "collect_problem";
+        session.data = data;
         break;
       }
 
       case "collect_problem": {
-        nextData.problemDescription = text.trim().slice(0, 200);
-        const doctor = await pickBestDoctor(clinicId);
+        data.problemDescription = text.trim().slice(0, 200);
+        const doctor = await pickBestDoctorViaKpi(clinicId);
         if (doctor) {
-          nextData.suggestedDoctorId = doctor.id;
-          nextData.suggestedDoctorName = doctor.name;
-          response = `Понял! Исходя из вашего запроса, рекомендую вас к врачу *${doctor.name}*.\n\nЗаписать вас? (Ответьте «Да» или «Нет»)`;
+          data.suggestedDoctorId = doctor.id;
+          data.suggestedDoctorName = doctor.name;
+          response = `Понял! Исходя из вашего запроса, рекомендую врача *${doctor.name}*.\n\nЗаписать вас к нему? (Ответьте «Да» или «Нет»)`;
+          session.state = "suggest_doctor";
         } else {
-          response = `Понял! К сожалению, на данный момент нет доступных врачей. Отвечу «Оператор», чтобы связаться с администратором.`;
+          response = `Понял! К сожалению, сейчас нет доступных врачей. Напишите «оператор», чтобы связаться с администратором.`;
         }
-        nextState = "suggest_doctor";
+        session.data = data;
         break;
       }
 
       case "suggest_doctor": {
         if (isYes(text)) {
-          nextState = "confirm_appointment";
-          response = `Отлично! Подтверждаете запись к ${nextData.suggestedDoctorName ?? "врачу"}? (Да / Нет)`;
+          response = `Отлично! Подтверждаете запись к ${data.suggestedDoctorName ?? "врачу"}? (Да / Нет)`;
+          session.state = "confirm_appointment";
         } else if (isNo(text)) {
-          nextState = "collect_problem";
           response = "Понял. Опишите снова, к какому специалисту вы хотите записаться?";
+          session.state = "collect_problem";
         } else {
           response = `Пожалуйста, ответьте «Да» для записи или «Нет» для отмены.`;
         }
@@ -215,33 +344,28 @@ export class ChatbotService {
 
       case "confirm_appointment": {
         if (isYes(text)) {
-          if (nextData.suggestedDoctorId && nextData.patientName) {
+          if (data.suggestedDoctorId && data.patientName) {
             try {
-              const patient = await createPatient(
-                clinicId,
-                phone,
-                nextData.patientName,
-                nextData.suggestedDoctorId,
-              );
-              nextData.createdPatientId = patient.id;
+              const patient = await createPatient(clinicId, phone, data.patientName, data.suggestedDoctorId);
+              data.createdPatientId = patient.id;
+              session.data = data;
+              // Post-op BullMQ followup jobs (24h/72h/168h) are scheduled automatically
+              // via followup.queue.ts when the doctor marks the procedure as "completed".
             } catch (err) {
               logger.error({ err }, "ChatbotService: failed to create patient");
             }
           }
-          nextState = "done";
-          response = `✅ Запись подтверждена! Администратор свяжется с вами для уточнения времени визита.\n\nЕсли возникнут вопросы — пишите сюда. До встречи!`;
+          response = `✅ Запись подтверждена! Администратор свяжется с вами для уточнения времени визита.\n\nЕсли возникнут вопросы — пишите сюда. Мы на связи!`;
+          session.state = "done";
         } else if (isNo(text)) {
-          nextState = "collect_problem";
-          nextData = { patientName: nextData.patientName };
+          data.suggestedDoctorId = undefined;
+          data.suggestedDoctorName = undefined;
+          session.data = { patientName: data.patientName };
           response = `Хорошо, отменяем. Опишите снова, что вас беспокоит, и я помогу подобрать специалиста.`;
+          session.state = "collect_problem";
         } else {
           response = `Пожалуйста, ответьте «Да» для подтверждения или «Нет» для отмены.`;
         }
-        break;
-      }
-
-      case "done": {
-        response = `Если у вас есть ещё вопросы — пишите! Или напишите «оператор», чтобы связаться с администратором.`;
         break;
       }
 
@@ -249,34 +373,32 @@ export class ChatbotService {
         response = null;
     }
 
-    await saveSession(session.id, nextState, nextData, false);
+    session.data = data;
+    await saveSession(session);
 
     if (response && WHATSAPP_ENABLED) {
       sendWhatsAppMessage(phone, response).catch((err) =>
         logger.error({ err }, "ChatbotService: failed to send WhatsApp reply"),
       );
     } else if (response) {
-      logger.info({ phone, response }, "ChatbotService: WhatsApp disabled — response not sent");
+      logger.info({ phone, response }, "ChatbotService: WhatsApp disabled — would have sent reply");
     }
 
     return response;
   }
 
   private async notifyHumanTakeover(clinicId: string, phone: string, patientName?: string) {
-    const { db: _db, notificationsTable, usersTable: _ut } = await import("@workspace/db");
-    const { eq: _eq, and: _and, inArray } = await import("drizzle-orm");
-
-    const recipients = await _db
-      .select({ id: _ut.id })
-      .from(_ut)
-      .where(_and(_eq(_ut.clinicId, clinicId), inArray(_ut.role, ["owner", "admin"])));
+    const recipients = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(and(eq(usersTable.clinicId, clinicId), inArray(usersTable.role, ["owner", "admin"])));
 
     if (recipients.length === 0) return;
 
     const name = patientName ?? phone;
     const msg = `👤 Пациент ${name} (${phone}) запросил переключение на оператора в чат-боте.`;
 
-    await _db.insert(notificationsTable).values(
+    await db.insert(notificationsTable).values(
       recipients.map((r) => ({
         id: randomUUID(),
         clinicId,
@@ -322,11 +444,10 @@ export class ChatbotService {
   }
 
   async clearSession(clinicId: string, phone: string) {
+    await deleteRedisSession(clinicId, phone);
     await db
       .update(chatbotSessionsTable)
       .set({ state: "greeting", data: {}, humanTakeover: false, updatedAt: new Date() })
-      .where(
-        and(eq(chatbotSessionsTable.clinicId, clinicId), eq(chatbotSessionsTable.phone, phone)),
-      );
+      .where(and(eq(chatbotSessionsTable.clinicId, clinicId), eq(chatbotSessionsTable.phone, phone)));
   }
 }

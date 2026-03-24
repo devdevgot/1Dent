@@ -1,4 +1,4 @@
-import { pgTable, text, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, boolean, timestamp, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
 import { clinicsTable } from "./clinics";
 
 export const chatbotSettingsTable = pgTable("chatbot_settings", {
@@ -30,17 +30,23 @@ export const chatbotSettingsTable = pgTable("chatbot_settings", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const chatbotSessionsTable = pgTable("chatbot_sessions", {
-  id: text("id").primaryKey(),
-  clinicId: text("clinic_id")
-    .notNull()
-    .references(() => clinicsTable.id, { onDelete: "cascade" }),
-  phone: text("phone").notNull(),
-  state: text("state").notNull().default("greeting"),
-  data: jsonb("data").$type<Record<string, string | null>>().notNull().default({}),
-  humanTakeover: boolean("human_takeover").default(false).notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
+export const chatbotSessionsTable = pgTable(
+  "chatbot_sessions",
+  {
+    id: text("id").primaryKey(),
+    clinicId: text("clinic_id")
+      .notNull()
+      .references(() => clinicsTable.id, { onDelete: "cascade" }),
+    phone: text("phone").notNull(),
+    state: text("state").notNull().default("greeting"),
+    data: jsonb("data").$type<Record<string, string | null>>().notNull().default({}),
+    humanTakeover: boolean("human_takeover").default(false).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => ({
+    clinicPhoneUniqueIdx: uniqueIndex("chatbot_sessions_clinic_phone_idx").on(t.clinicId, t.phone),
+  }),
+);
 
 export type ChatbotSettings = typeof chatbotSettingsTable.$inferSelect;
 export type InsertChatbotSettings = typeof chatbotSettingsTable.$inferInsert;
