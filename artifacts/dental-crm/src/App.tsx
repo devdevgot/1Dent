@@ -19,6 +19,7 @@ import AccountantDashboard from "@/pages/dashboard-accountant";
 import WarehouseDashboard from "@/pages/dashboard-warehouse";
 import KanbanPage from "@/pages/kanban";
 import PatientsPage from "@/pages/patients";
+import ToothDetailPage from "@/pages/tooth-detail";
 import ChatPage from "@/pages/chat";
 import InventoryPage from "@/pages/inventory";
 import ProceduresPage from "@/pages/procedures";
@@ -122,6 +123,9 @@ function Router() {
       {/* Feature Routes */}
       <Route path="/patients">
         <ProtectedRoute component={PatientsPage} allowedRoles={['owner', 'admin', 'doctor']} />
+      </Route>
+      <Route path="/patients/:patientId/teeth/:fdi">
+        <ProtectedRoute component={ToothDetailPage} allowedRoles={['owner', 'admin', 'doctor']} />
       </Route>
       <Route path="/chat">
         <ProtectedRoute component={ChatPage} allowedRoles={['owner', 'admin', 'doctor']} />

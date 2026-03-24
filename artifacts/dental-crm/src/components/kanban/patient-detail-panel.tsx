@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import {
   useGetPatient,
   useListTeeth,
@@ -23,7 +24,6 @@ import {
 } from "@/lib/patient-utils";
 import type { PatientStatus, InteractionType } from "@workspace/api-client-react";
 import { FdiChart } from "@/components/dental-chart/fdi-chart";
-import { ToothDetailPanel } from "@/components/dental-chart/tooth-detail-panel";
 import { useTranslation } from "react-i18next";
 
 const INTERACTION_TYPE_KEYS = [
@@ -35,6 +35,7 @@ const INTERACTION_TYPE_KEYS = [
 
 export function PatientDetailPanel() {
   const { t } = useTranslation();
+  const [, setLocation] = useLocation();
   const selectedPatientId = useKanbanStore((s) => s.selectedPatientId);
   const setSelectedPatientId = useKanbanStore((s) => s.setSelectedPatientId);
   const { user } = useAuthStore();
@@ -164,7 +165,7 @@ export function PatientDetailPanel() {
           <>
             {/* Dental Chart Tab */}
             {activeTab === "dental" && (
-              <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
+              <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                 <div className="flex-1 overflow-y-auto custom-scrollbar">
                   <div className="p-3">
                     <p className="text-[11px] text-muted-foreground mb-2">
@@ -173,41 +174,10 @@ export function PatientDetailPanel() {
                     <FdiChart
                       teethData={teethMap}
                       selectedFdi={selectedToothFdi}
-                      onToothClick={(fdi) =>
-                        setSelectedToothFdi((cur) => (cur === fdi ? null : fdi))
-                      }
+                      onToothClick={(fdi) => {
+                        setLocation(`/patients/${patient.id}/teeth/${fdi}`);
+                      }}
                     />
-                  </div>
-                </div>
-
-                {/* Bottom-sheet backdrop */}
-                <div
-                  className={`absolute inset-0 bg-black/20 transition-opacity duration-300 ${
-                    selectedToothFdi ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-                  }`}
-                  onClick={() => setSelectedToothFdi(null)}
-                />
-
-                {/* Bottom sheet */}
-                <div
-                  className={`absolute bottom-0 left-0 right-0 flex flex-col bg-background rounded-t-2xl shadow-2xl border-t border-border transition-transform duration-300 ease-out overflow-hidden ${
-                    selectedToothFdi ? "translate-y-0" : "translate-y-full"
-                  }`}
-                  style={{ maxHeight: "95vh" }}
-                >
-                  <div className="flex items-center justify-center pt-3 pb-1 shrink-0">
-                    <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
-                  </div>
-                  <div className="flex-1 min-h-0 overflow-hidden">
-                    {selectedToothFdi && (
-                      <ToothDetailPanel
-                        patientId={patient.id}
-                        toothFdi={selectedToothFdi}
-                        onClose={() => setSelectedToothFdi(null)}
-                        patient={patient}
-                        teeth={teethRecords}
-                      />
-                    )}
                   </div>
                 </div>
               </div>
