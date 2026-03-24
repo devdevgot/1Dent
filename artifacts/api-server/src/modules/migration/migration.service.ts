@@ -5,7 +5,7 @@ import { eq, and } from "drizzle-orm";
 import { logger } from "../../lib/logger";
 import type {
   ColumnMapping,
-  ExcelPreviewRow,
+  ExcelConfirmRow,
   ExcelPreviewResponse,
   TrelloBoard,
   TrelloConnectResponse,
@@ -91,26 +91,29 @@ export class MigrationService {
     const headers = (rawRows[0] as string[]).map((h) => String(h ?? "").trim()).filter(Boolean);
     if (headers.length === 0) throw new Error("Excel file has no headers in the first row");
 
-    const dataRows = rawRows.slice(1, PREVIEW_ROWS + 1);
-    const rows: ExcelPreviewRow[] = dataRows.map((rawRow, idx) => {
+    const allDataRows = rawRows.slice(1);
+    const totalRows = allDataRows.length;
+    const previewData = allDataRows.slice(0, PREVIEW_ROWS);
+    const rows: Record<string, string>[] = previewData.map((rawRow) => {
       const arr = rawRow as string[];
       const cells: Record<string, string> = {};
       headers.forEach((h, i) => {
         cells[h] = String(arr[i] ?? "").trim();
       });
-      return { index: idx + 1, cells };
+      return cells;
     });
 
     return {
       headers,
       rows,
-      detectedMapping: detectMapping(headers),
+      suggestedMapping: detectMapping(headers),
+      totalRows,
     };
   }
 
   async startExcelImport(
     clinicId: string,
-    rows: ExcelPreviewRow[],
+    rows: ExcelConfirmRow[],
     mapping: ColumnMapping,
   ): Promise<MigrationJobStatusResponse> {
     if (!mapping.name || !mapping.phone) {
@@ -124,7 +127,7 @@ export class MigrationService {
     await db.insert(migrationJobsTable).values({
       id: jobId,
       clinicId,
-      type: "excel",
+      type: "excel-import",
       status: "pending",
       totalRows: rows.length,
       processedRows: 0,
@@ -133,7 +136,7 @@ export class MigrationService {
       duplicateCount: 0,
     });
 
-    const payload: ExcelJobPayload = { jobId, clinicId, rows, mapping };
+    const payload: ExcelJobPayload = { jobId, clinicId, rows: rows as ExcelConfirmRow[], mapping };
 
     const migrationQueue = getMigrationQueue();
     if (migrationQueue) {
@@ -152,7 +155,7 @@ export class MigrationService {
 
     await db
       .update(migrationJobsTable)
-      .set({ status: "running", updatedAt: new Date() })
+      .set({ status: "processing", updatedAt: new Date() })
       .where(eq(migrationJobsTable.id, jobId));
 
     let successCount = 0;
@@ -267,7 +270,7 @@ export class MigrationService {
     await db.insert(migrationJobsTable).values({
       id: jobId,
       clinicId,
-      type: "trello",
+      type: "trello-import",
       status: "pending",
       totalRows: 0,
       processedRows: 0,
@@ -295,7 +298,7 @@ export class MigrationService {
 
     await db
       .update(migrationJobsTable)
-      .set({ status: "running", updatedAt: new Date() })
+      .set({ status: "processing", updatedAt: new Date() })
       .where(eq(migrationJobsTable.id, jobId));
 
     try {
@@ -414,14 +417,15 @@ export class MigrationService {
 
     return {
       id: job.id,
-      type: job.type as "excel" | "trello",
-      status: job.status as "pending" | "running" | "done" | "failed",
-      totalRows: job.totalRows ?? 0,
+      clinicId: job.clinicId,
+      type: job.type as "excel-import" | "trello-import",
+      status: job.status as "pending" | "processing" | "done" | "failed",
+      totalRows: job.totalRows ?? null,
       processedRows: job.processedRows ?? 0,
       successCount: job.successCount ?? 0,
       errorCount: job.errorCount ?? 0,
       duplicateCount: job.duplicateCount ?? 0,
-      report: job.report ?? undefined,
+      report: (job.report ?? null) as Record<string, unknown> | null,
       createdAt: job.createdAt.toISOString(),
       updatedAt: job.updatedAt.toISOString(),
     };
@@ -436,14 +440,15 @@ export class MigrationService {
 
     return jobs.map((job) => ({
       id: job.id,
-      type: job.type as "excel" | "trello",
-      status: job.status as "pending" | "running" | "done" | "failed",
-      totalRows: job.totalRows ?? 0,
+      clinicId: job.clinicId,
+      type: job.type as "excel-import" | "trello-import",
+      status: job.status as "pending" | "processing" | "done" | "failed",
+      totalRows: job.totalRows ?? null,
       processedRows: job.processedRows ?? 0,
       successCount: job.successCount ?? 0,
       errorCount: job.errorCount ?? 0,
       duplicateCount: job.duplicateCount ?? 0,
-      report: job.report ?? undefined,
+      report: (job.report ?? null) as Record<string, unknown> | null,
       createdAt: job.createdAt.toISOString(),
       updatedAt: job.updatedAt.toISOString(),
     }));

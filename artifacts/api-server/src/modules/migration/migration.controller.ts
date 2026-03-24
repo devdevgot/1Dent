@@ -3,6 +3,7 @@ import { z } from "zod";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 import { migrationService } from "./migration.service";
+import type { ExcelConfirmRow } from "./migration.types";
 
 const router: IRouter = Router();
 
@@ -56,7 +57,7 @@ router.post(
       return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
     }
     const job = await migrationService
-      .startExcelImport(req.user!.clinicId, parsed.data.rows, parsed.data.mapping)
+      .startExcelImport(req.user!.clinicId, parsed.data.rows as ExcelConfirmRow[], parsed.data.mapping)
       .catch(next);
     if (!job) return;
     res.json({ success: true, data: { job } });

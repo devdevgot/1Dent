@@ -1,5 +1,5 @@
-export type MigrationJobType = "excel" | "trello";
-export type MigrationJobStatus = "pending" | "running" | "done" | "failed";
+export type MigrationJobType = "excel-import" | "trello-import";
+export type MigrationJobStatus = "pending" | "processing" | "done" | "failed";
 
 export interface ColumnMapping {
   name?: string;
@@ -9,15 +9,16 @@ export interface ColumnMapping {
   status?: string;
 }
 
-export interface ExcelPreviewRow {
-  index: number;
-  cells: Record<string, string>;
-}
-
 export interface ExcelPreviewResponse {
   headers: string[];
-  rows: ExcelPreviewRow[];
-  detectedMapping: ColumnMapping;
+  rows: Record<string, string>[];
+  suggestedMapping: ColumnMapping;
+  totalRows: number;
+}
+
+export interface ExcelConfirmRow {
+  index: number;
+  cells: Record<string, string>;
 }
 
 export interface TrelloBoard {
@@ -33,17 +34,15 @@ export interface TrelloConnectResponse {
 
 export interface MigrationJobStatusResponse {
   id: string;
+  clinicId: string;
   type: MigrationJobType;
   status: MigrationJobStatus;
-  totalRows: number;
+  totalRows: number | null;
   processedRows: number;
   successCount: number;
   errorCount: number;
   duplicateCount: number;
-  report?: {
-    errors: Array<{ row: number; message: string }>;
-    duplicates: Array<{ phone: string; name?: string }>;
-  };
+  report?: Record<string, unknown> | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -51,7 +50,7 @@ export interface MigrationJobStatusResponse {
 export interface ExcelJobPayload {
   jobId: string;
   clinicId: string;
-  rows: ExcelPreviewRow[];
+  rows: ExcelConfirmRow[];
   mapping: ColumnMapping;
 }
 
