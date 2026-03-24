@@ -6,15 +6,45 @@ import {
   usersTable,
   inventoryItemsTable,
 } from "@workspace/db";
-import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
+import { eq, and, gte, lte, desc, sql, inArray } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import type { Procedure, ProcedureTemplate, ProcedureStatus } from "@workspace/db";
 
+export interface ProcedureMaterialItem {
+  itemId: string;
+  itemName: string;
+  unit: string | null;
+  quantity: number;
+}
+
 export type ProcedureWithDoctor = Procedure & {
   doctorName?: string | null;
+  materials?: ProcedureMaterialItem[];
 };
 
 export class ProceduresRepository {
+  private async fetchMaterials(procedureIds: string[]): Promise<Map<string, ProcedureMaterialItem[]>> {
+    if (procedureIds.length === 0) return new Map();
+    const rows = await db
+      .select({
+        procedureId: procedureMaterialsTable.procedureId,
+        itemId: procedureMaterialsTable.inventoryItemId,
+        itemName: inventoryItemsTable.name,
+        unit: inventoryItemsTable.unit,
+        quantity: procedureMaterialsTable.quantity,
+      })
+      .from(procedureMaterialsTable)
+      .innerJoin(inventoryItemsTable, eq(procedureMaterialsTable.inventoryItemId, inventoryItemsTable.id))
+      .where(inArray(procedureMaterialsTable.procedureId, procedureIds));
+
+    const map = new Map<string, ProcedureMaterialItem[]>();
+    for (const r of rows) {
+      if (!map.has(r.procedureId)) map.set(r.procedureId, []);
+      map.get(r.procedureId)!.push({ itemId: r.itemId, itemName: r.itemName, unit: r.unit, quantity: r.quantity });
+    }
+    return map;
+  }
+
   async list(clinicId: string, doctorId?: string): Promise<ProcedureWithDoctor[]> {
     const rows = await db
       .select({
@@ -33,7 +63,10 @@ export class ProceduresRepository {
       )
       .orderBy(desc(proceduresTable.createdAt));
 
-    return rows.map((r) => ({ ...r.procedure, doctorName: r.doctorName }));
+    const procedures = rows.map((r) => ({ ...r.procedure, doctorName: r.doctorName }));
+    const ids = procedures.map((p) => p.id);
+    const materialsMap = await this.fetchMaterials(ids);
+    return procedures.map((p) => ({ ...p, materials: materialsMap.get(p.id) ?? [] }));
   }
 
   async findById(id: string, clinicId: string): Promise<ProcedureWithDoctor | undefined> {

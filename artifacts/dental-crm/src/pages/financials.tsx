@@ -218,6 +218,18 @@ export default function FinancialsPage() {
                       {" · "}
                       {p.completedAt ? formatDate(p.completedAt) : formatDate(p.scheduledAt)}
                     </p>
+                    {p.materials && p.materials.length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {p.materials.map((m) => (
+                          <span
+                            key={m.itemId}
+                            className="inline-flex items-center text-[10px] bg-amber-50 text-amber-700 border border-amber-100 rounded-full px-1.5 py-0.5"
+                          >
+                            {m.itemName} ×{m.quantity}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-sm font-semibold text-foreground">

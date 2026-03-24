@@ -5,6 +5,7 @@
  * Dental CRM API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ProcedureMaterialLineItem } from "./procedureMaterialLineItem";
 import type { ProcedureStatus } from "./procedureStatus";
 
 export interface Procedure {
@@ -20,4 +21,5 @@ export interface Procedure {
   scheduledAt?: Date | null;
   completedAt?: Date | null;
   createdAt: Date;
+  materials?: ProcedureMaterialLineItem[];
 }

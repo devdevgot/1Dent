@@ -82,6 +82,7 @@ export * from "./procedure";
 export * from "./procedureListResponse";
 export * from "./procedureListResponseData";
 export * from "./procedureMaterial";
+export * from "./procedureMaterialLineItem";
 export * from "./procedureResponse";
 export * from "./procedureResponseData";
 export * from "./procedureStatus";

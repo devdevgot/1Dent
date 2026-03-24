@@ -914,6 +914,16 @@ export const ListProceduresResponse = zod.object({
         scheduledAt: zod.date().nullish(),
         completedAt: zod.date().nullish(),
         createdAt: zod.date(),
+        materials: zod
+          .array(
+            zod.object({
+              itemId: zod.string(),
+              itemName: zod.string(),
+              unit: zod.string().nullish(),
+              quantity: zod.number(),
+            }),
+          )
+          .optional(),
       }),
     ),
   }),
@@ -971,6 +981,16 @@ export const UpdateProcedureResponse = zod.object({
       scheduledAt: zod.date().nullish(),
       completedAt: zod.date().nullish(),
       createdAt: zod.date(),
+      materials: zod
+        .array(
+          zod.object({
+            itemId: zod.string(),
+            itemName: zod.string(),
+            unit: zod.string().nullish(),
+            quantity: zod.number(),
+          }),
+        )
+        .optional(),
     }),
   }),
 });
@@ -1014,6 +1034,16 @@ export const UpdateProcedureStatusResponse = zod.object({
       scheduledAt: zod.date().nullish(),
       completedAt: zod.date().nullish(),
       createdAt: zod.date(),
+      materials: zod
+        .array(
+          zod.object({
+            itemId: zod.string(),
+            itemName: zod.string(),
+            unit: zod.string().nullish(),
+            quantity: zod.number(),
+          }),
+        )
+        .optional(),
     }),
   }),
 });

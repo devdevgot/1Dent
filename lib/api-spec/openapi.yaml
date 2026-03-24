@@ -2272,6 +2272,23 @@ components:
       type: string
       enum: [scheduled, in_progress, completed, cancelled]
 
+    ProcedureMaterialLineItem:
+      type: object
+      properties:
+        itemId:
+          type: string
+        itemName:
+          type: string
+        unit:
+          type: string
+          nullable: true
+        quantity:
+          type: number
+      required:
+        - itemId
+        - itemName
+        - quantity
+
     Procedure:
       type: object
       properties:
@@ -2307,6 +2324,10 @@ components:
         createdAt:
           type: string
           format: date-time
+        materials:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProcedureMaterialLineItem"
       required:
         - id
         - clinicId

@@ -554,6 +554,13 @@ export const ProcedureStatus = {
   cancelled: "cancelled",
 } as const;
 
+export interface ProcedureMaterialLineItem {
+  itemId: string;
+  itemName: string;
+  unit?: string | null;
+  quantity: number;
+}
+
 export interface Procedure {
   id: string;
   clinicId: string;
@@ -567,6 +574,7 @@ export interface Procedure {
   scheduledAt?: string | null;
   completedAt?: string | null;
   createdAt: string;
+  materials?: ProcedureMaterialLineItem[];
 }
 
 export interface ProcedureMaterial {

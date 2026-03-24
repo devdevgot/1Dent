@@ -1,10 +1,10 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { z } from "zod";
-import { randomUUID } from "crypto";
 import { db, postopFollowupsTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
+import { scheduleFollowups } from "./followup.queue";
 
 const router: IRouter = Router();
 router.use(authMiddleware);
@@ -14,14 +14,6 @@ const createFollowupsSchema = z.object({
   procedureId: z.string().min(1),
   patientName: z.string().optional(),
 });
-
-const FOLLOWUP_DELAYS_HOURS = [24, 72, 168] as const;
-
-const TEMPLATES = [
-  "Дорогой пациент! Прошло 24 часа после вашей процедуры. Как вы себя чувствуете? Если есть вопросы — обращайтесь.",
-  "Прошло 3 дня после процедуры. Надеемся, вы чувствуете себя хорошо. Помните о рекомендациях врача.",
-  "Прошла неделя после вашей процедуры. Не забудьте о плановом осмотре. Ждём вас в клинике!",
-] as const;
 
 router.post(
   "/",
@@ -34,19 +26,19 @@ router.post(
 
     const { patientId, procedureId } = parsed.data;
     const clinicId = req.user!.clinicId;
-    const now = new Date();
 
-    const followups = FOLLOWUP_DELAYS_HOURS.map((hours, idx) => ({
-      id: randomUUID(),
-      clinicId,
-      patientId,
-      procedureId,
-      sendAt: new Date(now.getTime() + hours * 60 * 60 * 1000),
-      status: "pending" as const,
-      messageTemplate: TEMPLATES[idx]!,
-    }));
+    await scheduleFollowups({ clinicId, patientId, procedureId }).catch(next);
 
-    await db.insert(postopFollowupsTable).values(followups).catch(next);
+    const followups = await db
+      .select()
+      .from(postopFollowupsTable)
+      .where(
+        and(
+          eq(postopFollowupsTable.clinicId, clinicId),
+          eq(postopFollowupsTable.procedureId, procedureId),
+        ),
+      )
+      .orderBy(desc(postopFollowupsTable.sendAt));
 
     res.status(201).json({ success: true, data: { followups } });
   },
