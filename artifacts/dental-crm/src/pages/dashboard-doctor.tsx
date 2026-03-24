@@ -137,170 +137,40 @@ export default function DoctorDashboard() {
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {isLoading
-          ? [0, 1, 2, 3].map((i) => <SkeletonCard key={i} />)
-          : cards.map((c, i) => (
-              <StatCard key={i} titleKey={c.titleKey} value={c.value} icon={c.icon} delay={c.delay} />
-            ))}
-      </div>
-
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Today's Procedures */}
-        <div className="lg:col-span-2 bg-card rounded-2xl border border-border/50 p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="text-lg font-bold font-display flex items-center gap-2">
-              <Clock className="w-5 h-5 text-primary" />
-              {t("doctorDashboard.todayProcedures")}
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary ml-1">
-                {todayProcedures.length}
-              </span>
-            </h3>
-            <button
-              onClick={() => navigate("/procedures")}
-              className="text-sm text-primary font-semibold flex items-center gap-1 hover:underline"
-            >
-              {t("dashboard.viewAll")} <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          {todayProcedures.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <Calendar className="w-10 h-10 text-muted-foreground/30 mb-3" />
-              <p className="text-muted-foreground font-medium">{t("doctorDashboard.noToday")}</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-border/40">
-              {todayProcedures.slice(0, 6).map((proc, i) => {
-                const patient = patients.find((p) => p.id === proc.patientId);
-                const timeStr = proc.scheduledAt
-                  ? new Date(proc.scheduledAt).toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit" })
-                  : "—";
-                return (
-                  <motion.div
-                    key={proc.id}
-                    initial={{ opacity: 0, y: 4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.04 }}
-                    className="flex items-center gap-4 py-3"
-                  >
-                    <div className="w-12 text-center flex-none">
-                      <span className="text-sm font-bold text-primary">{timeStr}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">{proc.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {patient?.name ?? proc.patientId}
-                      </p>
-                    </div>
-                    {proc.price > 0 && (
-                      <span className="text-xs font-semibold text-muted-foreground flex-none">
-                        ₸ {proc.price.toLocaleString("ru-KZ")}
-                      </span>
-                    )}
-                  </motion.div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* My Patients + Quick Actions */}
-        <div className="space-y-4">
-          {/* My Patients Panel */}
-          <div className="bg-card rounded-2xl border border-border/50 p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold font-display flex items-center gap-2">
-                <Users className="w-4 h-4 text-primary" />
-                {t("dashboard.myPatients")}
-              </h3>
+      {/* Quick Actions */}
+      <div className="max-w-sm">
+        <div className="bg-card rounded-2xl border border-border/50 p-5 shadow-sm">
+          <h3 className="text-base font-bold font-display mb-4">{t("dashboard.quickActions")}</h3>
+          <div className="space-y-2">
+            {[
+              { label: t("nav.myAnalytics"), icon: BarChart3,   path: "/doctor-analytics", highlight: true },
+              { label: t("nav.patients"),    icon: Users,       path: "/patients" },
+              { label: t("nav.procedures"),  icon: Stethoscope, path: "/procedures" },
+              { label: t("nav.chat"),        icon: Activity,    path: "/chat" },
+            ].map((item) => (
               <button
-                onClick={() => navigate("/patients")}
-                className="text-sm text-primary font-semibold hover:underline"
+                key={item.path}
+                onClick={() => navigate(item.path)}
+                className={`w-full flex items-center gap-3 p-2.5 rounded-xl border transition-all text-left group ${
+                  item.highlight
+                    ? "bg-primary/5 border-primary/20 hover:bg-primary/10"
+                    : "hover:bg-slate-50 border-transparent hover:border-border"
+                }`}
               >
-                {t("dashboard.viewAll")}
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center group-hover:text-white transition-colors ${
+                  item.highlight
+                    ? "bg-primary text-white"
+                    : "bg-primary/10 text-primary group-hover:bg-primary"
+                }`}>
+                  <item.icon className="w-3.5 h-3.5" />
+                </div>
+                <span className={`font-medium text-sm ${item.highlight ? "text-primary font-semibold" : "text-foreground"}`}>
+                  {item.label}
+                </span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
               </button>
-            </div>
-            {patients.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("doctorDashboard.noPatients")}</p>
-            ) : (
-              <div className="space-y-2">
-                {patients.slice(0, 5).map((patient) => (
-                  <div key={patient.id} className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold flex-none">
-                      {patient.name.charAt(0)}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-foreground truncate">{patient.name}</p>
-                      <p className="text-xs text-muted-foreground">{t(`status.${patient.status}`)}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            ))}
           </div>
-
-          {/* Quick Actions */}
-          <div className="bg-card rounded-2xl border border-border/50 p-5 shadow-sm">
-            <h3 className="text-base font-bold font-display mb-4">{t("dashboard.quickActions")}</h3>
-            <div className="space-y-2">
-              {[
-                { label: t("nav.myAnalytics"), icon: BarChart3,   path: "/doctor-analytics", highlight: true },
-                { label: t("nav.patients"),    icon: Users,       path: "/patients" },
-                { label: t("nav.procedures"),  icon: Stethoscope, path: "/procedures" },
-                { label: t("nav.chat"),        icon: Activity,    path: "/chat" },
-              ].map((item) => (
-                <button
-                  key={item.path}
-                  onClick={() => navigate(item.path)}
-                  className={`w-full flex items-center gap-3 p-2.5 rounded-xl border transition-all text-left group ${
-                    item.highlight
-                      ? "bg-primary/5 border-primary/20 hover:bg-primary/10"
-                      : "hover:bg-slate-50 border-transparent hover:border-border"
-                  }`}
-                >
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center group-hover:text-white transition-colors ${
-                    item.highlight
-                      ? "bg-primary text-white"
-                      : "bg-primary/10 text-primary group-hover:bg-primary"
-                  }`}>
-                    <item.icon className="w-3.5 h-3.5" />
-                  </div>
-                  <span className={`font-medium text-sm ${item.highlight ? "text-primary font-semibold" : "text-foreground"}`}>
-                    {item.label}
-                  </span>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Monthly KPI */}
-          {!isLoading && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="bg-card rounded-2xl border border-border/50 p-5 shadow-sm"
-            >
-              <h3 className="text-base font-bold font-display mb-3 flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-primary" />
-                {t("doctorDashboard.myKpiTitle")}
-              </h3>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">{t("doctorDashboard.thisMonth")}</span>
-                  <span className="text-sm font-bold text-foreground">{fmt(analytics.myProceduresThisMonth)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">{t("doctorDashboard.myRevenue")}</span>
-                  <span className="text-sm font-bold text-foreground">{fmtMoney(analytics.myRevenueThisMonth)}</span>
-                </div>
-              </div>
-            </motion.div>
-          )}
         </div>
       </div>
     </div>
