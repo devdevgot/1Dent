@@ -142,7 +142,7 @@ export function ToothDetailPanel({
   const canWrite = !readOnly && ["owner", "admin", "doctor"].includes(user?.role ?? "");
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-white shrink-0">
         <div>
@@ -159,7 +159,7 @@ export function ToothDetailPanel({
         </button>
       </div>
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0 overflow-hidden">
         <div className="p-4 space-y-5">
           {/* Condition selector */}
           {canWrite && (
