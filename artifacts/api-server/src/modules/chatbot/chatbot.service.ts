@@ -60,16 +60,17 @@ if (process.env["REDIS_URL"]) {
 }
 
 async function loadSession(clinicId: string, phone: string): Promise<SessionRecord | null> {
+  // Try Redis first (fast path)
   if (redis) {
     try {
       const raw = await redis.get(`${REDIS_KEY_PREFIX}${clinicId}:${phone}`);
       if (raw) return JSON.parse(raw) as SessionRecord;
-      return null;
     } catch (err) {
-      logger.warn({ err }, "[ChatbotSession] Redis load failed, falling back to DB");
+      logger.warn({ err }, "[ChatbotSession] Redis get failed, falling back to DB");
     }
   }
 
+  // Always check DB (source of truth for session listing UI)
   const [row] = await db
     .select()
     .from(chatbotSessionsTable)
@@ -81,7 +82,7 @@ async function loadSession(clinicId: string, phone: string): Promise<SessionReco
   const age = Date.now() - new Date(row.updatedAt).getTime();
   if (age > SESSION_TTL_SECONDS * 1000) return null;
 
-  return {
+  const session: SessionRecord = {
     id: row.id,
     clinicId: row.clinicId,
     phone: row.phone,
@@ -89,22 +90,19 @@ async function loadSession(clinicId: string, phone: string): Promise<SessionReco
     data: (row.data ?? {}) as ChatbotSessionData,
     humanTakeover: row.humanTakeover,
   };
+
+  // Re-populate Redis cache from DB if miss
+  if (redis) {
+    redis
+      .setex(`${REDIS_KEY_PREFIX}${clinicId}:${phone}`, SESSION_TTL_SECONDS, JSON.stringify(session))
+      .catch(() => {});
+  }
+
+  return session;
 }
 
 async function saveSession(session: SessionRecord): Promise<void> {
-  if (redis) {
-    try {
-      await redis.setex(
-        `${REDIS_KEY_PREFIX}${session.clinicId}:${session.phone}`,
-        SESSION_TTL_SECONDS,
-        JSON.stringify(session),
-      );
-      return;
-    } catch (err) {
-      logger.warn({ err }, "[ChatbotSession] Redis save failed, falling back to DB");
-    }
-  }
-
+  // Write-through: always persist to DB so listSessions() UI always works
   await db
     .insert(chatbotSessionsTable)
     .values({
@@ -125,6 +123,17 @@ async function saveSession(session: SessionRecord): Promise<void> {
         updatedAt: new Date(),
       },
     });
+
+  // Also update Redis cache (non-blocking — DB is authoritative)
+  if (redis) {
+    redis
+      .setex(
+        `${REDIS_KEY_PREFIX}${session.clinicId}:${session.phone}`,
+        SESSION_TTL_SECONDS,
+        JSON.stringify(session),
+      )
+      .catch((err: Error) => logger.warn({ err }, "[ChatbotSession] Redis setex failed after DB write"));
+  }
 }
 
 async function deleteRedisSession(clinicId: string, phone: string): Promise<void> {
