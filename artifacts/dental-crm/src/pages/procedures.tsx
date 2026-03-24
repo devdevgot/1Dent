@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useListProcedures,
   useCreateProcedure,
@@ -11,12 +12,18 @@ import {
   useListProcedureTemplates,
   useCreateProcedureTemplate,
   useListInventory,
+  useUpdateTooth,
+  useAddToothTreatment,
+  useListTeeth,
+  getListTeethQueryKey,
 } from "@workspace/api-client-react";
-import type { Procedure, ProcedureStatus } from "@workspace/api-client-react";
+import type { Procedure, ProcedureStatus, ToothCondition } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
+import { ToothMiniGrid } from "@/components/dental-chart/tooth-mini-grid";
 import {
   Plus, Search, Filter, MoreVertical, CheckCircle2,
   Clock, XCircle, PlayCircle, Trash2, ClipboardList, X, ChevronDown, Minus,
+  Activity,
 } from "lucide-react";
 
 const STATUS_COLORS: Record<ProcedureStatus, string> = {
@@ -44,6 +51,16 @@ function StatusBadge({ status }: { status: ProcedureStatus }) {
   );
 }
 
+const MANIPULATION_OPTIONS: { value: ToothCondition; labelKey: string }[] = [
+  { value: "cavity",            labelKey: "condition.cavity" },
+  { value: "treated",           labelKey: "condition.treated" },
+  { value: "crown",             labelKey: "condition.crown" },
+  { value: "root_canal",        labelKey: "condition.root_canal" },
+  { value: "implant",           labelKey: "condition.implant" },
+  { value: "missing",           labelKey: "condition.missing" },
+  { value: "extraction_needed", labelKey: "condition.extraction_needed" },
+];
+
 function NewProcedureModal({
   onClose,
   onSuccess,
@@ -53,6 +70,7 @@ function NewProcedureModal({
 }) {
   const { t } = useTranslation();
   const { user } = useAuthStore();
+  const qc = useQueryClient();
 
   const { data: patientsData } = useListPatients();
   const { data: usersData } = useListUsers();
@@ -65,6 +83,8 @@ function NewProcedureModal({
   const inventoryItems = inventoryData?.data?.items ?? [];
 
   const createMutation = useCreateProcedure();
+  const updateToothMutation = useUpdateTooth();
+  const addTreatmentMutation = useAddToothTreatment();
 
   const [form, setForm] = useState({
     patientId:   "",
@@ -77,6 +97,21 @@ function NewProcedureModal({
   });
 
   const [materials, setMaterials] = useState<{ itemId: string; quantity: number }[]>([]);
+
+  const [selectedFdis, setSelectedFdis] = useState<number[]>([]);
+  const [manipulation, setManipulation] = useState<ToothCondition>("treated");
+  const [showToothPicker, setShowToothPicker] = useState(false);
+
+  const { data: teethData } = useListTeeth(form.patientId, {
+    query: { enabled: !!form.patientId, queryKey: getListTeethQueryKey(form.patientId) },
+  });
+  const patientTeeth = teethData?.data?.teeth ?? [];
+
+  const toggleTooth = (fdi: number) => {
+    setSelectedFdis((prev) =>
+      prev.includes(fdi) ? prev.filter((f) => f !== fdi) : [...prev, fdi],
+    );
+  };
 
   const handleTemplate = (templateId: string) => {
     setForm((f) => ({ ...f, templateId }));
@@ -134,6 +169,27 @@ function NewProcedureModal({
           materials:   materials.length > 0 ? materials : undefined,
         },
       });
+
+      if (selectedFdis.length > 0 && form.patientId) {
+        await Promise.allSettled(
+          selectedFdis.map(async (fdi) => {
+            await updateToothMutation.mutateAsync({
+              id: form.patientId,
+              toothFdi: fdi,
+              data: { condition: manipulation },
+            });
+            await addTreatmentMutation.mutateAsync({
+              id: form.patientId,
+              toothFdi: fdi,
+              data: {
+                description: form.name || t("procedure.toothTreatmentDefault"),
+              },
+            });
+          }),
+        );
+        qc.invalidateQueries({ queryKey: getListTeethQueryKey(form.patientId) });
+      }
+
       onSuccess();
       onClose();
     } catch {
@@ -191,7 +247,11 @@ function NewProcedureModal({
               <select
                 required
                 value={form.patientId}
-                onChange={(e) => setForm({ ...form, patientId: e.target.value })}
+                onChange={(e) => {
+                  setForm({ ...form, patientId: e.target.value });
+                  setSelectedFdis([]);
+                  setShowToothPicker(false);
+                }}
                 className="w-full border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none appearance-none pr-10 bg-white"
               >
                 <option value="">{t("procedure.selectPatient")}</option>
@@ -202,6 +262,84 @@ function NewProcedureModal({
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             </div>
           </div>
+
+          {/* Tooth Picker */}
+          {form.patientId && (
+            <div className="border border-border rounded-xl overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowToothPicker((v) => !v)}
+                className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold hover:bg-slate-50 transition-colors"
+              >
+                <span className="flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-primary" />
+                  {t("procedure.toothSelection")}
+                  {selectedFdis.length > 0 && (
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold">
+                      {selectedFdis.length}
+                    </span>
+                  )}
+                </span>
+                <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${showToothPicker ? "rotate-180" : ""}`} />
+              </button>
+
+              {showToothPicker && (
+                <div className="px-4 pb-4 border-t border-border/50 bg-slate-50/50">
+                  <p className="text-xs text-muted-foreground mt-3 mb-2">
+                    {t("procedure.toothSelectionHint")}
+                  </p>
+
+                  <div className="overflow-x-auto pb-1">
+                    <ToothMiniGrid
+                      teeth={patientTeeth}
+                      selectedFdis={selectedFdis}
+                      onToggle={toggleTooth}
+                    />
+                  </div>
+
+                  {selectedFdis.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      <label className="block text-xs font-semibold text-muted-foreground">
+                        {t("procedure.manipulationType")}
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={manipulation}
+                          onChange={(e) => setManipulation(e.target.value as ToothCondition)}
+                          className="w-full border border-border rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none appearance-none pr-8 bg-white"
+                        >
+                          {MANIPULATION_OPTIONS.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {t(opt.labelKey)}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+                      </div>
+
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {selectedFdis.sort((a, b) => a - b).map((fdi) => (
+                          <span
+                            key={fdi}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-semibold"
+                          >
+                            {t("procedure.toothFdi", { fdi })}
+                            <button
+                              type="button"
+                              onClick={() => toggleTooth(fdi)}
+                              className="hover:text-red-500 transition-colors ml-0.5"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Doctor */}
           {user?.role !== "doctor" && (
