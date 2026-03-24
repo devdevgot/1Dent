@@ -344,7 +344,7 @@ export default function OwnerDashboard() {
               {t("dashboard.doctorKpi")}
             </h3>
             <button
-              onClick={() => navigate("/analytics")}
+              onClick={() => navigate("/staff")}
               className="text-xs text-primary font-semibold flex items-center gap-0.5"
             >
               {t("dashboard.viewAll")} <ChevronRight className="w-3.5 h-3.5" />

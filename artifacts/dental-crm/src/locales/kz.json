@@ -83,7 +83,8 @@
     "refresh": "Жаңарту",
     "cancel": "Болдырмау",
     "delete": "Жою",
-    "edit": "Өңдеу"
+    "edit": "Өңдеу",
+    "back": "Артқа"
   },
   "account": {
     "title": "Аккаунт",
@@ -530,6 +531,24 @@
     "consumptionEmpty": "Шығыс деректері жоқ",
     "consumptionByItem": "Позиция бойынша шығыс",
     "procedures": "проц."
+  },
+  "staff": {
+    "title": "Команда",
+    "subtitle": "Барлық дәрігер және қызметкерлерді көру",
+    "noStaff": "Қызметкер жоқ",
+    "notFound": "Қызметкер табылмады",
+    "doctor": "Дәрігер",
+    "patients": "Пациенттер",
+    "procedures": "Процедуралар",
+    "revenue": "Табыс",
+    "avgCheck": "Орташа чек",
+    "nps": "NPS",
+    "revenueTrend": "Табыс тренді",
+    "patientStatus": "Пациенттердің бөлінісі",
+    "procedureCount": "Процедуралар бойынша түрлері",
+    "performance": "Өнімділік көрсеткіштері",
+    "efficiency": "Тиімділік",
+    "satisfaction": "Қанағаттану"
   },
   "analytics": {
     "title": "Аналитика",

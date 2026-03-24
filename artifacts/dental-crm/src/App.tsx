@@ -30,6 +30,8 @@ import WarehousePage from "@/pages/warehouse";
 import UsersPage from "@/pages/users";
 import ChatbotPage from "@/pages/chatbot";
 import MigrationPage from "@/pages/migration";
+import StaffPage from "@/pages/staff";
+import StaffDetailPage from "@/pages/staff-detail";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -163,6 +165,14 @@ function Router() {
       {/* Data migration */}
       <Route path="/migration">
         <ProtectedRoute component={MigrationPage} allowedRoles={['owner', 'admin']} />
+      </Route>
+
+      {/* Staff management */}
+      <Route path="/staff">
+        <ProtectedRoute component={StaffPage} allowedRoles={['owner', 'admin']} />
+      </Route>
+      <Route path="/staff/:doctorId">
+        <ProtectedRoute component={StaffDetailPage} allowedRoles={['owner', 'admin']} />
       </Route>
 
       {/* 404 */}

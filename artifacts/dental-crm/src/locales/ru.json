@@ -83,7 +83,8 @@
     "refresh": "Обновить",
     "cancel": "Отмена",
     "delete": "Удалить",
-    "edit": "Редактировать"
+    "edit": "Редактировать",
+    "back": "Назад"
   },
   "account": {
     "title": "Аккаунт",
@@ -530,6 +531,24 @@
     "consumptionEmpty": "Данных о расходе нет",
     "consumptionByItem": "Расход по позициям",
     "procedures": "проц."
+  },
+  "staff": {
+    "title": "Команда",
+    "subtitle": "Просмотр всех врачей и сотрудников клиники",
+    "noStaff": "Нет сотрудников",
+    "notFound": "Сотрудник не найден",
+    "doctor": "Врач",
+    "patients": "Пациентов",
+    "procedures": "Процедур",
+    "revenue": "Доход",
+    "avgCheck": "Средний чек",
+    "nps": "NPS",
+    "revenueTrend": "Тренд выручки",
+    "patientStatus": "Распределение пациентов",
+    "procedureCount": "Процедуры по типам",
+    "performance": "Показатели производительности",
+    "efficiency": "Эффективность",
+    "satisfaction": "Удовлетворённость"
   },
   "analytics": {
     "title": "Аналитика",

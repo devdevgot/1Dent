@@ -83,7 +83,8 @@
     "refresh": "Refresh",
     "cancel": "Cancel",
     "delete": "Delete",
-    "edit": "Edit"
+    "edit": "Edit",
+    "back": "Back"
   },
   "account": {
     "title": "Account",
@@ -530,6 +531,24 @@
     "consumptionEmpty": "No consumption data",
     "consumptionByItem": "Consumption by Item",
     "procedures": "proc."
+  },
+  "staff": {
+    "title": "Team",
+    "subtitle": "View all doctors and staff members",
+    "noStaff": "No staff members",
+    "notFound": "Staff member not found",
+    "doctor": "Doctor",
+    "patients": "Patients",
+    "procedures": "Procedures",
+    "revenue": "Revenue",
+    "avgCheck": "Average Check",
+    "nps": "NPS",
+    "revenueTrend": "Revenue Trend",
+    "patientStatus": "Patient Distribution",
+    "procedureCount": "Procedures by Type",
+    "performance": "Performance Metrics",
+    "efficiency": "Efficiency",
+    "satisfaction": "Satisfaction"
   },
   "analytics": {
     "title": "Analytics",
