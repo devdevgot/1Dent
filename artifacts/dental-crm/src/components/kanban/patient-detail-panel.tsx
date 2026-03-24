@@ -193,7 +193,7 @@ export function PatientDetailPanel() {
                   className={`absolute bottom-0 left-0 right-0 flex flex-col bg-background rounded-t-2xl shadow-2xl border-t border-border transition-transform duration-300 ease-out ${
                     selectedToothFdi ? "translate-y-0" : "translate-y-full"
                   }`}
-                  style={{ maxHeight: "75%" }}
+                  style={{ maxHeight: "95vh" }}
                 >
                   <div className="flex items-center justify-center pt-3 pb-1 shrink-0">
                     <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
@@ -204,6 +204,8 @@ export function PatientDetailPanel() {
                         patientId={patient.id}
                         toothFdi={selectedToothFdi}
                         onClose={() => setSelectedToothFdi(null)}
+                        patient={patient}
+                        teeth={teethRecords}
                       />
                     )}
                   </div>

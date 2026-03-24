@@ -237,6 +237,13 @@
     "errorDesc": "Failed to add patient"
   },
   "tooth": {
+    "patientCard": "Personal patient card",
+    "patientInfo": "Patient information",
+    "patientName": "Name",
+    "patientPhone": "Phone",
+    "patientAge": "Age",
+    "allTeeth": "All teeth",
+    "statusLegend": "Status legend",
     "title": "Tooth {{fdi}}",
     "condition": "Condition",
     "doctorNotes": "Doctor's notes",

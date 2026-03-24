@@ -237,6 +237,13 @@
     "errorDesc": "Пациентті қосу мүмкін болмады"
   },
   "tooth": {
+    "patientCard": "Пациенттің жеке карточкасы",
+    "patientInfo": "Пациенттің ақпараты",
+    "patientName": "Аты",
+    "patientPhone": "Телефон",
+    "patientAge": "Жасы",
+    "allTeeth": "Барлық тістер",
+    "statusLegend": "Күйі легендасы",
     "title": "Тіс {{fdi}}",
     "condition": "Күйі",
     "doctorNotes": "Дәрігер ескертпелері",

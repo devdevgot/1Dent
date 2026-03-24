@@ -237,6 +237,13 @@
     "errorDesc": "Не удалось добавить пациента"
   },
   "tooth": {
+    "patientCard": "Персональная карточка пациента",
+    "patientInfo": "Информация о пациенте",
+    "patientName": "Имя",
+    "patientPhone": "Телефон",
+    "patientAge": "Возраст",
+    "allTeeth": "Все зубы",
+    "statusLegend": "Легенда статусов",
     "title": "Зуб {{fdi}}",
     "condition": "Состояние",
     "doctorNotes": "Заметки врача",
