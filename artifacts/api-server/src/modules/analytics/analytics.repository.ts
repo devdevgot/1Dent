@@ -5,7 +5,7 @@ import {
   usersTable,
   notificationsTable,
 } from "@workspace/db";
-import { eq, and, gte, lte, count, sum, sql } from "drizzle-orm";
+import { eq, and, gte, lte, count, sum, sql, isNotNull } from "drizzle-orm";
 import { analyticsCache } from "../../shared/analytics-cache";
 
 export interface OwnerAnalytics {
@@ -22,6 +22,26 @@ export interface DoctorAnalytics {
   myPatientsCount: number;
   myProceduresThisMonth: number;
   myRevenueThisMonth: number;
+  scheduledToday: number;
+}
+
+export interface MonthlyRevenue {
+  month: string;
+  revenue: number;
+  procedures: number;
+}
+
+export interface DoctorDetailedAnalytics {
+  doctorId: string;
+  doctorName: string;
+  patientsByStatus: Record<string, number>;
+  proceduresByStatus: { completed: number; scheduled: number; in_progress: number; cancelled: number };
+  proceduresByName: Array<{ name: string; count: number; revenue: number }>;
+  revenueByMonth: MonthlyRevenue[];
+  totalRevenue: number;
+  totalPatients: number;
+  totalProcedures: number;
+  averageCheck: number;
   scheduledToday: number;
 }
 
@@ -282,6 +302,122 @@ export class AnalyticsRepository {
       redAlertCount: redAlerts.length,
     };
     await analyticsCache.set(cacheKey, result);
+    return result;
+  }
+
+  async getDoctorDetailedAnalytics(clinicId: string, doctorId: string): Promise<DoctorDetailedAnalytics> {
+    const cacheKey = analyticsCache.key("doctor-detail", clinicId, doctorId);
+    const cached = await analyticsCache.get<DoctorDetailedAnalytics>(cacheKey);
+    if (cached) return cached;
+
+    const dayStart = startOfDay();
+    const dayEnd = endOfDay();
+
+    const [doctor, patients, allProcedures, todayScheduled] = await Promise.all([
+      db
+        .select({ id: usersTable.id, name: usersTable.name })
+        .from(usersTable)
+        .where(and(eq(usersTable.clinicId, clinicId), eq(usersTable.id, doctorId)))
+        .then((rows) => rows[0] ?? null),
+      db
+        .select({ id: patientsTable.id, status: patientsTable.status })
+        .from(patientsTable)
+        .where(and(eq(patientsTable.clinicId, clinicId), eq(patientsTable.doctorId, doctorId))),
+      db
+        .select({
+          id: proceduresTable.id,
+          name: proceduresTable.name,
+          status: proceduresTable.status,
+          price: proceduresTable.price,
+          completedAt: proceduresTable.completedAt,
+        })
+        .from(proceduresTable)
+        .where(and(eq(proceduresTable.clinicId, clinicId), eq(proceduresTable.doctorId, doctorId))),
+      db
+        .select({ id: proceduresTable.id })
+        .from(proceduresTable)
+        .where(
+          and(
+            eq(proceduresTable.clinicId, clinicId),
+            eq(proceduresTable.doctorId, doctorId),
+            eq(proceduresTable.status, "scheduled"),
+            gte(proceduresTable.scheduledAt, dayStart),
+            lte(proceduresTable.scheduledAt, dayEnd),
+          ),
+        ),
+    ]);
+
+    // Patient status breakdown
+    const patientsByStatus: Record<string, number> = {};
+    for (const p of patients) {
+      patientsByStatus[p.status] = (patientsByStatus[p.status] ?? 0) + 1;
+    }
+
+    // Procedure counts by status
+    const proceduresByStatus = { completed: 0, scheduled: 0, in_progress: 0, cancelled: 0 };
+    for (const p of allProcedures) {
+      if (p.status === "completed") proceduresByStatus.completed++;
+      else if (p.status === "scheduled") proceduresByStatus.scheduled++;
+      else if (p.status === "in_progress") proceduresByStatus.in_progress++;
+      else if (p.status === "cancelled") proceduresByStatus.cancelled++;
+    }
+
+    // Procedure breakdown by name with revenue
+    const nameMap = new Map<string, { count: number; revenue: number }>();
+    for (const p of allProcedures) {
+      if (p.status !== "completed") continue;
+      const entry = nameMap.get(p.name) ?? { count: 0, revenue: 0 };
+      entry.count++;
+      entry.revenue += p.price ?? 0;
+      nameMap.set(p.name, entry);
+    }
+    const proceduresByName = Array.from(nameMap.entries())
+      .map(([name, { count, revenue }]) => ({ name, count, revenue }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6);
+
+    // Monthly revenue for last 6 months
+    const now = new Date();
+    const revenueByMonth: MonthlyRevenue[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const mStart = new Date(d.getFullYear(), d.getMonth(), 1);
+      const mEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
+      const monthLabel = d.toLocaleDateString("ru", { month: "short", year: "numeric" });
+
+      const monthProcs = allProcedures.filter(
+        (p) =>
+          p.status === "completed" &&
+          p.completedAt != null &&
+          p.completedAt >= mStart &&
+          p.completedAt <= mEnd,
+      );
+      revenueByMonth.push({
+        month: monthLabel,
+        revenue: monthProcs.reduce((acc, p) => acc + (p.price ?? 0), 0),
+        procedures: monthProcs.length,
+      });
+    }
+
+    const completedProcs = allProcedures.filter((p) => p.status === "completed");
+    const totalRevenue = completedProcs.reduce((acc, p) => acc + (p.price ?? 0), 0);
+    const averageCheck = completedProcs.length > 0 ? totalRevenue / completedProcs.length : 0;
+
+    const result: DoctorDetailedAnalytics = {
+      doctorId,
+      doctorName: doctor?.name ?? "",
+      patientsByStatus,
+      proceduresByStatus,
+      proceduresByName,
+      revenueByMonth,
+      totalRevenue,
+      totalPatients: patients.length,
+      totalProcedures: completedProcs.length,
+      averageCheck,
+      scheduledToday: todayScheduled.length,
+    };
+
+    await analyticsCache.set(cacheKey, result, 60);
     return result;
   }
 
