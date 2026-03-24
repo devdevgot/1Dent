@@ -558,7 +558,8 @@
     "avgConsultationTime": "Avg Consultation Time",
     "patientSatisfaction": "Patient Satisfaction",
     "completedProcedures": "Completed Procedures",
-    "noShowRate": "No-Show Rate"
+    "noShowRate": "No-Show Rate",
+    "proceduresByStatus": "Procedures by Status"
   },
   "staff": {
     "title": "Team",

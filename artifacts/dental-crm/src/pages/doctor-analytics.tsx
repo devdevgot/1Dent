@@ -48,6 +48,7 @@ export default function DoctorAnalyticsPage() {
   const revenueByMonth: DoctorDetailedAnalyticsRevenueByMonthItem[] = analytics?.revenueByMonth ?? [];
   const proceduresByName: DoctorDetailedAnalyticsProceduresByNameItem[] = analytics?.proceduresByName ?? [];
   const patientsByStatus = analytics?.patientsByStatus ?? {};
+  const rawProceduresByStatus = analytics?.proceduresByStatus ?? {};
 
   const patientStatusData = Object.entries(patientsByStatus)
     .map(([key, value]) => ({
@@ -55,6 +56,13 @@ export default function DoctorAnalyticsPage() {
       value: Number(value),
     }))
     .filter((e) => e.value > 0);
+
+  const procedureStatusChartData = [
+    { name: t("procedure.status.completed"),   count: Number(rawProceduresByStatus.completed   ?? 0) },
+    { name: t("procedure.status.in_progress"), count: Number(rawProceduresByStatus.in_progress ?? 0) },
+    { name: t("procedure.status.scheduled"),   count: Number(rawProceduresByStatus.scheduled   ?? 0) },
+    { name: t("procedure.status.cancelled"),   count: Number(rawProceduresByStatus.cancelled   ?? 0) },
+  ].filter((e) => e.count > 0);
 
   const kpiCards = [
     {
@@ -202,19 +210,19 @@ export default function DoctorAnalyticsPage() {
             </div>
 
             <div className="bg-white rounded-xl border border-border/50 p-6 shadow-sm">
-              <h3 className="text-sm font-semibold text-foreground mb-4">{t("doctorAnalytics.dailyActivity")}</h3>
-              {revenueByMonth.length === 0 ? (
+              <h3 className="text-sm font-semibold text-foreground mb-4">{t("doctorAnalytics.proceduresByStatus")}</h3>
+              {procedureStatusChartData.length === 0 ? (
                 <div className="h-[300px] flex items-center justify-center text-sm text-muted-foreground">
                   {t("common.noData")}
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={revenueByMonth}>
+                  <BarChart data={procedureStatusChartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                    <YAxis tickFormatter={(v: number) => `₸${Math.floor(v / 1000)}K`} tick={{ fontSize: 11 }} />
-                    <Tooltip formatter={(v: number) => [`₸${v.toLocaleString()}`, t("doctorAnalytics.revenue")]} />
-                    <Bar dataKey="revenue" fill="#3b82f6" radius={[6, 6, 0, 0]} name={t("doctorAnalytics.revenue")} />
+                    <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                    <Tooltip />
+                    <Bar dataKey="count" fill="#3b82f6" radius={[6, 6, 0, 0]} name={t("doctorAnalytics.completedProcedures")} />
                   </BarChart>
                 </ResponsiveContainer>
               )}

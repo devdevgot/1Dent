@@ -91,7 +91,7 @@ router.get(
 // GET /analytics/doctor/me/detailed — doctor's own detailed analytics (charts)
 router.get(
   "/analytics/doctor/me/detailed",
-  roleGuard("owner", "admin", "doctor"),
+  roleGuard("doctor"),
   async (req: Request, res: Response, next: NextFunction) => {
     const { clinicId, userId } = req.user!;
     const analytics = await repo.getDoctorDetailedAnalytics(clinicId, userId).catch(next);
