@@ -1,9 +1,16 @@
 import { useParams, useLocation } from "wouter";
 import {
   ArrowLeft, Users, TrendingUp, DollarSign, Activity,
-  Wallet, CalendarDays, UserCheck,
+  CalendarDays, UserCheck,
 } from "lucide-react";
-import { useGetDoctorKpis, useGetDoctorDetailedAnalytics } from "@workspace/api-client-react";
+import {
+  useGetDoctorKpis,
+  useGetDoctorDetailedAnalytics,
+  type DoctorKpi,
+  type DoctorDetailedAnalytics,
+  type DoctorDetailedAnalyticsRevenueByMonthItem,
+  type DoctorDetailedAnalyticsProceduresByNameItem,
+} from "@workspace/api-client-react";
 import { useTranslation } from "react-i18next";
 import {
   BarChart, Bar, PieChart, Pie, Cell,
@@ -31,9 +38,9 @@ export default function StaffDetailPage() {
   const { data: kpiData, isLoading: kpiLoading } = useGetDoctorKpis();
   const { data: analyticsData, isLoading: analyticsLoading } = useGetDoctorDetailedAnalytics(doctorId ?? "");
 
-  const doctors = kpiData?.data?.kpis ?? [];
-  const doctor = doctors.find((d: any) => d.doctorId === doctorId);
-  const analytics = (analyticsData as any)?.data?.analytics;
+  const doctors: DoctorKpi[] = kpiData?.data?.kpis ?? [];
+  const doctor = doctors.find((d) => d.doctorId === doctorId);
+  const analytics: DoctorDetailedAnalytics | undefined = analyticsData?.data?.analytics;
 
   const getInitials = (name: string) =>
     name.split(" ").map((w: string) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
@@ -60,9 +67,9 @@ export default function StaffDetailPage() {
   const avgChk = Number(doctor.averageCheck) || 0;
   const nps = Number(doctor.nps) || 0;
 
-  const revenueByMonth: { month: string; revenue: number }[] = analytics?.revenueByMonth ?? [];
-  const proceduresByName: { name: string; count: number }[] = analytics?.proceduresByName ?? [];
-  const patientsByStatus: Record<string, number> = analytics?.patientsByStatus ?? {};
+  const revenueByMonth: DoctorDetailedAnalyticsRevenueByMonthItem[] = analytics?.revenueByMonth ?? [];
+  const proceduresByName: DoctorDetailedAnalyticsProceduresByNameItem[] = analytics?.proceduresByName ?? [];
+  const patientsByStatus = analytics?.patientsByStatus ?? {};
   const totalProcedures = Number(analytics?.totalProcedures ?? proc);
 
   const patientStatusData = Object.entries(patientsByStatus)

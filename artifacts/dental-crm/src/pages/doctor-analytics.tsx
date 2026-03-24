@@ -5,7 +5,12 @@ import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
-import { useGetDoctorDetailedAnalyticsMe } from "@workspace/api-client-react";
+import {
+  useGetDoctorDetailedAnalyticsMe,
+  type DoctorDetailedAnalytics,
+  type DoctorDetailedAnalyticsRevenueByMonthItem,
+  type DoctorDetailedAnalyticsProceduresByNameItem,
+} from "@workspace/api-client-react";
 
 const COLORS = ["#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#ef4444", "#06b6d4"];
 
@@ -24,7 +29,7 @@ export default function DoctorAnalyticsPage() {
   const [, setLocation] = useLocation();
 
   const { data, isLoading } = useGetDoctorDetailedAnalyticsMe();
-  const analytics = (data as any)?.data?.analytics;
+  const analytics: DoctorDetailedAnalytics | undefined = data?.data?.analytics;
 
   if (isLoading) {
     return (
@@ -40,9 +45,9 @@ export default function DoctorAnalyticsPage() {
   const averageCheck = Number(analytics?.averageCheck ?? 0);
   const scheduledToday = Number(analytics?.scheduledToday ?? 0);
 
-  const revenueByMonth: { month: string; revenue: number }[] = analytics?.revenueByMonth ?? [];
-  const proceduresByName: { name: string; count: number }[] = analytics?.proceduresByName ?? [];
-  const patientsByStatus: Record<string, number> = analytics?.patientsByStatus ?? {};
+  const revenueByMonth: DoctorDetailedAnalyticsRevenueByMonthItem[] = analytics?.revenueByMonth ?? [];
+  const proceduresByName: DoctorDetailedAnalyticsProceduresByNameItem[] = analytics?.proceduresByName ?? [];
+  const patientsByStatus = analytics?.patientsByStatus ?? {};
 
   const patientStatusData = Object.entries(patientsByStatus)
     .map(([key, value]) => ({
@@ -119,7 +124,7 @@ export default function DoctorAnalyticsPage() {
               <h3 className="text-sm font-semibold text-foreground mb-4">{t("doctorAnalytics.revenueTrend")}</h3>
               {revenueByMonth.length === 0 ? (
                 <div className="h-[300px] flex items-center justify-center text-sm text-muted-foreground">
-                  {t("common.loading")}...
+                  {t("financials.empty")}
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height={300}>
