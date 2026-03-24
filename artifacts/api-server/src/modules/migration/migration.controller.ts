@@ -3,8 +3,6 @@ import { z } from "zod";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 import { migrationService } from "./migration.service";
-import type { ExcelConfirmRow } from "./migration.types";
-
 const router: IRouter = Router();
 
 router.use(authMiddleware);
@@ -33,13 +31,9 @@ router.post(
 );
 
 // POST /migration/excel/confirm
+// Accepts full base64 file + mapping — server parses all rows (up to 5000)
 const excelConfirmSchema = z.object({
-  rows: z.array(
-    z.object({
-      index: z.number(),
-      cells: z.record(z.string()),
-    }),
-  ).min(1).max(5000),
+  fileBase64: z.string().min(10, "fileBase64 is required"),
   mapping: z.object({
     name: z.string().optional(),
     phone: z.string().optional(),
@@ -57,7 +51,7 @@ router.post(
       return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
     }
     const job = await migrationService
-      .startExcelImport(req.user!.clinicId, parsed.data.rows as ExcelConfirmRow[], parsed.data.mapping)
+      .startExcelImport(req.user!.clinicId, parsed.data.fileBase64, parsed.data.mapping)
       .catch(next);
     if (!job) return;
     res.json({ success: true, data: { job } });

@@ -37,8 +37,6 @@ export * from "./doctorKpiListResponseData";
 export * from "./errorResponse";
 export * from "./excelConfirmRequest";
 export * from "./excelConfirmRequestMapping";
-export * from "./excelConfirmRequestRowsItem";
-export * from "./excelConfirmRequestRowsItemCells";
 export * from "./excelPreviewRequest";
 export * from "./excelPreviewResponse";
 export * from "./excelPreviewResponseData";

@@ -6,9 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ExcelConfirmRequestMapping } from "./excelConfirmRequestMapping";
-import type { ExcelConfirmRequestRowsItem } from "./excelConfirmRequestRowsItem";
 
 export interface ExcelConfirmRequest {
-  rows: ExcelConfirmRequestRowsItem[];
+  /** Full base64-encoded Excel/CSV file — server parses all rows (up to 5000) */
+  fileBase64: string;
   mapping: ExcelConfirmRequestMapping;
 }

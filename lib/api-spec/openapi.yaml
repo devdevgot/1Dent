@@ -2986,20 +2986,9 @@ components:
     ExcelConfirmRequest:
       type: object
       properties:
-        rows:
-          type: array
-          items:
-            type: object
-            properties:
-              index:
-                type: number
-              cells:
-                type: object
-                additionalProperties:
-                  type: string
-            required:
-              - index
-              - cells
+        fileBase64:
+          type: string
+          description: Full base64-encoded Excel/CSV file — server parses all rows (up to 5000)
         mapping:
           type: object
           properties:
@@ -3014,7 +3003,7 @@ components:
             status:
               type: string
       required:
-        - rows
+        - fileBase64
         - mapping
 
     TrelloConnectRequest:

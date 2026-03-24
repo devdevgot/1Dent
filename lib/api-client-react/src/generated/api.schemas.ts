@@ -777,13 +777,6 @@ export interface ExcelPreviewResponse {
   data: ExcelPreviewResponseData;
 }
 
-export type ExcelConfirmRequestRowsItemCells = { [key: string]: string };
-
-export type ExcelConfirmRequestRowsItem = {
-  index: number;
-  cells: ExcelConfirmRequestRowsItemCells;
-};
-
 export type ExcelConfirmRequestMapping = {
   name?: string;
   phone?: string;
@@ -793,7 +786,8 @@ export type ExcelConfirmRequestMapping = {
 };
 
 export interface ExcelConfirmRequest {
-  rows: ExcelConfirmRequestRowsItem[];
+  /** Full base64-encoded Excel/CSV file — server parses all rows (up to 5000) */
+  fileBase64: string;
   mapping: ExcelConfirmRequestMapping;
 }
 

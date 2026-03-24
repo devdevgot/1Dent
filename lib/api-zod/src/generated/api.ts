@@ -1395,12 +1395,11 @@ export const PreviewExcelImportResponse = zod.object({
  * @summary Start Excel import job with column mapping
  */
 export const ConfirmExcelImportBody = zod.object({
-  rows: zod.array(
-    zod.object({
-      index: zod.number(),
-      cells: zod.record(zod.string(), zod.string()),
-    }),
-  ),
+  fileBase64: zod
+    .string()
+    .describe(
+      "Full base64-encoded Excel\/CSV file — server parses all rows (up to 5000)",
+    ),
   mapping: zod.object({
     name: zod.string().optional(),
     phone: zod.string().optional(),

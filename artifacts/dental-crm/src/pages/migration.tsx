@@ -217,13 +217,9 @@ function ExcelTab() {
     setError(null);
     try {
       const base64 = await fileToBase64(file);
-      const previewRes = await previewMutation.mutateAsync({ data: { fileBase64: base64 } });
-      const rows = (previewRes.data.rows as Record<string, string>[])
-        .slice(0, 5000)
-        .map((cells, i) => ({ index: i, cells }));
       const res = await confirmMutation.mutateAsync({
         data: {
-          rows,
+          fileBase64: base64,
           mapping: mapping as { name?: string; phone?: string; age?: string; notes?: string; status?: string },
         },
       });

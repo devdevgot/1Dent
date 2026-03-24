@@ -71,8 +71,14 @@ const TRELLO_STATUS_MAP: Record<string, string> = {
   done: "completed",
 };
 
-function trelloListToStatus(listName: string): string {
-  const lower = listName.toLowerCase().trim();
+const VALID_PATIENT_STATUSES = new Set([
+  "new_request", "initial_consultation", "diagnostics",
+  "treatment_in_progress", "post_op_monitoring", "completed",
+]);
+
+function mapToPatientStatus(raw: string): string {
+  const lower = raw.toLowerCase().trim();
+  if (VALID_PATIENT_STATUSES.has(lower)) return lower;
   return TRELLO_STATUS_MAP[lower] ?? "new_request";
 }
 
@@ -113,15 +119,29 @@ export class MigrationService {
 
   async startExcelImport(
     clinicId: string,
-    rows: ExcelConfirmRow[],
+    fileBase64: string,
     mapping: ColumnMapping,
   ): Promise<MigrationJobStatusResponse> {
     if (!mapping.name || !mapping.phone) {
       throw new Error("Column mapping must include at least 'name' and 'phone' fields");
     }
-    if (rows.length > MAX_IMPORT_ROWS) {
-      throw new Error(`Too many rows: max ${MAX_IMPORT_ROWS}`);
-    }
+
+    const buffer = Buffer.from(fileBase64, "base64");
+    const workbook = XLSX.read(buffer, { type: "buffer" });
+    const sheetName = workbook.SheetNames[0];
+    if (!sheetName) throw new Error("Excel file has no sheets");
+    const sheet = workbook.Sheets[sheetName]!;
+    const rawRows = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1, defval: "" });
+    const headers = (rawRows[0] as string[]).map((h) => String(h ?? "").trim()).filter(Boolean);
+    const allDataRows = rawRows.slice(1).slice(0, MAX_IMPORT_ROWS);
+    const rows: ExcelConfirmRow[] = allDataRows.map((rawRow, idx) => {
+      const arr = rawRow as string[];
+      const cells: Record<string, string> = {};
+      headers.forEach((h, i) => { cells[h] = String(arr[i] ?? "").trim(); });
+      return { index: idx + 1, cells };
+    });
+
+    if (rows.length === 0) throw new Error("No data rows found in Excel file");
 
     const jobId = randomUUID();
     await db.insert(migrationJobsTable).values({
@@ -136,7 +156,7 @@ export class MigrationService {
       duplicateCount: 0,
     });
 
-    const payload: ExcelJobPayload = { jobId, clinicId, rows: rows as ExcelConfirmRow[], mapping };
+    const payload: ExcelJobPayload = { jobId, clinicId, rows, mapping };
 
     const migrationQueue = getMigrationQueue();
     if (migrationQueue) {
@@ -199,6 +219,8 @@ export class MigrationService {
         }
 
         const age = rawAge ? parseInt(rawAge, 10) : undefined;
+        const rawStatus = mapping.status ? row.cells[mapping.status] ?? "" : "";
+        const patientStatus = rawStatus ? mapToPatientStatus(rawStatus) : "new_request";
 
         try {
           await db.insert(patientsTable).values({
@@ -208,7 +230,7 @@ export class MigrationService {
             phone,
             age: isNaN(age!) ? undefined : age,
             notes: rawNotes.slice(0, 500) || undefined,
-            status: "new_request",
+            status: patientStatus as "new_request",
             source: "other",
           });
           successCount++;
@@ -354,7 +376,7 @@ export class MigrationService {
           }
 
           const listName = listMap[card.idList] ?? "";
-          const status = trelloListToStatus(listName) as Parameters<typeof db.insert>[0] extends unknown ? string : never;
+          const patientStatus = mapToPatientStatus(listName);
 
           try {
             await db.insert(patientsTable).values({
@@ -363,7 +385,7 @@ export class MigrationService {
               name,
               phone,
               notes: card.desc.slice(0, 500) || undefined,
-              status: status as "new_request",
+              status: patientStatus as "new_request",
               source: "other",
             });
             successCount++;
