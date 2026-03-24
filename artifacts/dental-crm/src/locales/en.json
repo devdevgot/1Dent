@@ -146,6 +146,23 @@
     "newPatient": "New Patient",
     "loadError": "Failed to load patients"
   },
+  "patients": {
+    "searchPlaceholder": "Search by name or phone...",
+    "allStatuses": "All statuses",
+    "allSources": "All sources",
+    "noResults": "No patients found",
+    "showing": "Showing {{count}} of {{total}}",
+    "colName": "Name",
+    "colPhone": "Phone",
+    "colAge": "Age",
+    "colStatus": "Status",
+    "colSource": "Source",
+    "colCreated": "Date",
+    "delete": "Delete patient",
+    "confirmDelete": "Yes, delete",
+    "cancelDelete": "Cancel",
+    "deleted": "Patient deleted"
+  },
   "chat": {
     "title": "WhatsApp Chat",
     "searchPlaceholder": "Search patient...",

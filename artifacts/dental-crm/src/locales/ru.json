@@ -146,6 +146,23 @@
     "newPatient": "Новый пациент",
     "loadError": "Ошибка загрузки пациентов"
   },
+  "patients": {
+    "searchPlaceholder": "Поиск по имени или телефону...",
+    "allStatuses": "Все статусы",
+    "allSources": "Все источники",
+    "noResults": "Пациенты не найдены",
+    "showing": "Показано {{count}} из {{total}}",
+    "colName": "Имя",
+    "colPhone": "Телефон",
+    "colAge": "Возраст",
+    "colStatus": "Статус",
+    "colSource": "Источник",
+    "colCreated": "Дата",
+    "delete": "Удалить пациента",
+    "confirmDelete": "Да, удалить",
+    "cancelDelete": "Отмена",
+    "deleted": "Пациент удалён"
+  },
   "chat": {
     "title": "WhatsApp Чат",
     "searchPlaceholder": "Поиск пациента...",

@@ -146,6 +146,23 @@
     "newPatient": "Жаңа пациент",
     "loadError": "Пациенттерді жүктеу қатесі"
   },
+  "patients": {
+    "searchPlaceholder": "Аты немесе телефоны бойынша іздеу...",
+    "allStatuses": "Барлық мәртебелер",
+    "allSources": "Барлық көздер",
+    "noResults": "Пациенттер табылмады",
+    "showing": "{{count}} / {{total}} көрсетілуде",
+    "colName": "Аты",
+    "colPhone": "Телефон",
+    "colAge": "Жасы",
+    "colStatus": "Мәртебе",
+    "colSource": "Көзі",
+    "colCreated": "Күні",
+    "delete": "Пациентті жою",
+    "confirmDelete": "Иә, жою",
+    "cancelDelete": "Болдырмау",
+    "deleted": "Пациент жойылды"
+  },
   "chat": {
     "title": "WhatsApp Чат",
     "searchPlaceholder": "Пациентті іздеу...",
