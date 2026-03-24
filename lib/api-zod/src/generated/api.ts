@@ -1075,6 +1075,39 @@ export const GetAnalyticsResponse = zod.object({
 });
 
 /**
+ * @summary Get owner analytics (owner role only)
+ */
+export const GetOwnerAnalyticsResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    role: zod.string(),
+    analytics: zod.record(zod.string(), zod.unknown()),
+  }),
+});
+
+/**
+ * @summary Get admin analytics (admin/warehouse role)
+ */
+export const GetAdminAnalyticsResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    role: zod.string(),
+    analytics: zod.record(zod.string(), zod.unknown()),
+  }),
+});
+
+/**
+ * @summary Get doctor analytics (doctor role)
+ */
+export const GetDoctorAnalyticsResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    role: zod.string(),
+    analytics: zod.record(zod.string(), zod.unknown()),
+  }),
+});
+
+/**
  * @summary Get doctor KPI rankings
  */
 export const GetDoctorKpisResponse = zod.object({

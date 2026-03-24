@@ -88,6 +88,21 @@ function NewProcedureModal({
         name:  tpl.name,
         price: String(tpl.defaultPrice ?? ""),
       }));
+
+      // Auto-fill materials from template by matching names against loaded inventory items
+      let rawMaterials: { name: string; quantity: number }[] = [];
+      try {
+        rawMaterials = JSON.parse(String(tpl.materials)) as { name: string; quantity: number }[];
+      } catch {
+        rawMaterials = [];
+      }
+      if (rawMaterials.length > 0 && inventoryItems.length > 0) {
+        const nameToId = new Map(inventoryItems.map((item) => [item.name.toLowerCase(), item.id]));
+        const prefilled = rawMaterials
+          .map((m) => ({ itemId: nameToId.get(m.name.toLowerCase()) ?? "", quantity: m.quantity }))
+          .filter((m) => m.itemId !== "");
+        if (prefilled.length > 0) setMaterials(prefilled);
+      }
     }
   };
 

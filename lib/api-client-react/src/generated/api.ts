@@ -3691,6 +3691,231 @@ export function useGetAnalytics<
 }
 
 /**
+ * @summary Get owner analytics (owner role only)
+ */
+export const getGetOwnerAnalyticsUrl = () => {
+  return `/api/analytics/owner`;
+};
+
+export const getOwnerAnalytics = async (
+  options?: RequestInit,
+): Promise<AnalyticsResponse> => {
+  return customFetch<AnalyticsResponse>(getGetOwnerAnalyticsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetOwnerAnalyticsQueryKey = () => {
+  return [`/api/analytics/owner`] as const;
+};
+
+export const getGetOwnerAnalyticsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getOwnerAnalytics>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getOwnerAnalytics>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetOwnerAnalyticsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getOwnerAnalytics>>
+  > = ({ signal }) => getOwnerAnalytics({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getOwnerAnalytics>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetOwnerAnalyticsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getOwnerAnalytics>>
+>;
+export type GetOwnerAnalyticsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get owner analytics (owner role only)
+ */
+
+export function useGetOwnerAnalytics<
+  TData = Awaited<ReturnType<typeof getOwnerAnalytics>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getOwnerAnalytics>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetOwnerAnalyticsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get admin analytics (admin/warehouse role)
+ */
+export const getGetAdminAnalyticsUrl = () => {
+  return `/api/analytics/admin`;
+};
+
+export const getAdminAnalytics = async (
+  options?: RequestInit,
+): Promise<AnalyticsResponse> => {
+  return customFetch<AnalyticsResponse>(getGetAdminAnalyticsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAdminAnalyticsQueryKey = () => {
+  return [`/api/analytics/admin`] as const;
+};
+
+export const getGetAdminAnalyticsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAdminAnalytics>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminAnalytics>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAdminAnalyticsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAdminAnalytics>>
+  > = ({ signal }) => getAdminAnalytics({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminAnalytics>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAdminAnalyticsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAdminAnalytics>>
+>;
+export type GetAdminAnalyticsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get admin analytics (admin/warehouse role)
+ */
+
+export function useGetAdminAnalytics<
+  TData = Awaited<ReturnType<typeof getAdminAnalytics>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminAnalytics>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAdminAnalyticsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get doctor analytics (doctor role)
+ */
+export const getGetDoctorAnalyticsUrl = () => {
+  return `/api/analytics/doctor`;
+};
+
+export const getDoctorAnalytics = async (
+  options?: RequestInit,
+): Promise<AnalyticsResponse> => {
+  return customFetch<AnalyticsResponse>(getGetDoctorAnalyticsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetDoctorAnalyticsQueryKey = () => {
+  return [`/api/analytics/doctor`] as const;
+};
+
+export const getGetDoctorAnalyticsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDoctorAnalytics>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDoctorAnalytics>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetDoctorAnalyticsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getDoctorAnalytics>>
+  > = ({ signal }) => getDoctorAnalytics({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getDoctorAnalytics>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetDoctorAnalyticsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getDoctorAnalytics>>
+>;
+export type GetDoctorAnalyticsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get doctor analytics (doctor role)
+ */
+
+export function useGetDoctorAnalytics<
+  TData = Awaited<ReturnType<typeof getDoctorAnalytics>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDoctorAnalytics>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetDoctorAnalyticsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
  * @summary Get doctor KPI rankings
  */
 export const getGetDoctorKpisUrl = () => {

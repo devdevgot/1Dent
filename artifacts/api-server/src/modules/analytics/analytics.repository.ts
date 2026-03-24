@@ -5,7 +5,7 @@ import {
   usersTable,
   notificationsTable,
 } from "@workspace/db";
-import { eq, and, gte, count, sum, sql } from "drizzle-orm";
+import { eq, and, gte, lte, count, sum, sql } from "drizzle-orm";
 import { analyticsCache } from "../../shared/analytics-cache";
 
 export interface OwnerAnalytics {
@@ -53,6 +53,12 @@ function startOfMonth(): Date {
 function startOfDay(): Date {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function endOfDay(): Date {
+  const d = new Date();
+  d.setHours(23, 59, 59, 999);
   return d;
 }
 
@@ -205,6 +211,7 @@ export class AnalyticsRepository {
             eq(proceduresTable.doctorId, doctorId),
             eq(proceduresTable.status, "scheduled"),
             gte(proceduresTable.scheduledAt, dayStart),
+            lte(proceduresTable.scheduledAt, endOfDay()),
           ),
         ),
     ]);
@@ -247,6 +254,7 @@ export class AnalyticsRepository {
             eq(proceduresTable.clinicId, clinicId),
             eq(proceduresTable.status, "scheduled"),
             gte(proceduresTable.scheduledAt, dayStart),
+            lte(proceduresTable.scheduledAt, endOfDay()),
           ),
         ),
       db
