@@ -38,11 +38,11 @@ export function PatientDetailPanel() {
   const [, setLocation] = useLocation();
   const selectedPatientId = useKanbanStore((s) => s.selectedPatientId);
   const setSelectedPatientId = useKanbanStore((s) => s.setSelectedPatientId);
+  const activeTab = useKanbanStore((s) => s.activeTab);
+  const setActiveTab = useKanbanStore((s) => s.setActiveTab);
   const { user } = useAuthStore();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  const [activeTab, setActiveTab] = useState<"history" | "dental">("history");
   const [selectedToothFdi, setSelectedToothFdi] = useState<number | null>(null);
   const [interactionType, setInteractionType] = useState<InteractionType>("note");
   const [interactionContent, setInteractionContent] = useState("");

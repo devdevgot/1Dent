@@ -8,6 +8,7 @@ export default function ToothDetailPage() {
   const { patientId, fdi } = useParams<{ patientId: string; fdi: string }>();
   const [, setLocation] = useLocation();
   const setSelectedPatientId = useKanbanStore((s) => s.setSelectedPatientId);
+  const setActiveTab = useKanbanStore((s) => s.setActiveTab);
 
   const { data: patientRes } = useGetPatient(patientId ?? "");
   const { data: teethRes } = useListTeeth(patientId ?? "");
@@ -26,6 +27,7 @@ export default function ToothDetailPage() {
 
   const handleClose = () => {
     setSelectedPatientId(patientId!);
+    setActiveTab("dental");
     setLocation("/patients");
   };
 
