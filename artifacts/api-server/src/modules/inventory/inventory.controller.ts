@@ -10,6 +10,8 @@ import { randomUUID } from "crypto";
 import { InventoryRepository } from "./inventory.repository";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
+import { db, procedureMaterialsTable, inventoryItemsTable, proceduresTable } from "@workspace/db";
+import { eq, and, gte, lte, sql } from "drizzle-orm";
 
 const router: IRouter = Router();
 const repo = new InventoryRepository();
@@ -117,6 +119,47 @@ router.patch("/:id/stock", writeRoles, async (req: Request, res: Response, next:
   const item = await repo.updateStock(id, req.user!.clinicId, parsed.data.quantity).catch(next);
   if (!item) return next(new NotFoundError("Inventory item not found"));
   res.json({ success: true, data: { item } });
+});
+
+// GET /inventory/consumption — material consumption by procedures over a date range
+router.get("/consumption", readRoles, async (req: Request, res: Response, next: NextFunction) => {
+  const { dateFrom, dateTo } = req.query as Record<string, string | undefined>;
+  const clinicId = req.user!.clinicId;
+
+  const conditions = [eq(proceduresTable.clinicId, clinicId)];
+  if (dateFrom) conditions.push(gte(proceduresTable.completedAt, new Date(dateFrom)));
+  if (dateTo) conditions.push(lte(proceduresTable.completedAt, new Date(dateTo)));
+
+  const rows = await db
+    .select({
+      itemId: procedureMaterialsTable.inventoryItemId,
+      itemName: inventoryItemsTable.name,
+      unit: inventoryItemsTable.unit,
+      unitPrice: inventoryItemsTable.unitPrice,
+      totalQuantity: sql<number>`SUM(${procedureMaterialsTable.quantity})`.as("total_quantity"),
+      procedureCount: sql<number>`COUNT(DISTINCT ${procedureMaterialsTable.procedureId})`.as("procedure_count"),
+    })
+    .from(procedureMaterialsTable)
+    .innerJoin(proceduresTable, eq(procedureMaterialsTable.procedureId, proceduresTable.id))
+    .innerJoin(inventoryItemsTable, eq(procedureMaterialsTable.inventoryItemId, inventoryItemsTable.id))
+    .where(and(...conditions))
+    .groupBy(
+      procedureMaterialsTable.inventoryItemId,
+      inventoryItemsTable.name,
+      inventoryItemsTable.unit,
+      inventoryItemsTable.unitPrice,
+    )
+    .orderBy(sql`SUM(${procedureMaterialsTable.quantity}) DESC`)
+    .catch(next);
+
+  if (!rows) return;
+
+  const consumption = rows.map((r) => ({
+    ...r,
+    totalCost: (r.totalQuantity ?? 0) * (r.unitPrice ?? 0),
+  }));
+
+  res.json({ success: true, data: { consumption } });
 });
 
 export default router;

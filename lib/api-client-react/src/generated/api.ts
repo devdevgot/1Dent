@@ -35,9 +35,11 @@ import type {
   FollowupsResponse,
   GetActionLogsParams,
   GetFollowupsParams,
+  GetInventoryConsumptionParams,
   HealthStatus,
   InboundWhatsappWebhook200,
   InteractionResponse,
+  InventoryConsumptionResponse,
   InventoryItemResponse,
   InventoryListResponse,
   LoginRequest,
@@ -2671,6 +2673,109 @@ export const useUpdateInventoryStock = <
 > => {
   return useMutation(getUpdateInventoryStockMutationOptions(options));
 };
+
+/**
+ * @summary Material consumption aggregated by procedure completions
+ */
+export const getGetInventoryConsumptionUrl = (
+  params?: GetInventoryConsumptionParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/inventory/consumption?${stringifiedParams}`
+    : `/api/inventory/consumption`;
+};
+
+export const getInventoryConsumption = async (
+  params?: GetInventoryConsumptionParams,
+  options?: RequestInit,
+): Promise<InventoryConsumptionResponse> => {
+  return customFetch<InventoryConsumptionResponse>(
+    getGetInventoryConsumptionUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetInventoryConsumptionQueryKey = (
+  params?: GetInventoryConsumptionParams,
+) => {
+  return [`/api/inventory/consumption`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetInventoryConsumptionQueryOptions = <
+  TData = Awaited<ReturnType<typeof getInventoryConsumption>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetInventoryConsumptionParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getInventoryConsumption>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetInventoryConsumptionQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getInventoryConsumption>>
+  > = ({ signal }) =>
+    getInventoryConsumption(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getInventoryConsumption>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetInventoryConsumptionQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getInventoryConsumption>>
+>;
+export type GetInventoryConsumptionQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Material consumption aggregated by procedure completions
+ */
+
+export function useGetInventoryConsumption<
+  TData = Awaited<ReturnType<typeof getInventoryConsumption>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetInventoryConsumptionParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getInventoryConsumption>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetInventoryConsumptionQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Verify WhatsApp webhook (Meta challenge)

@@ -511,6 +511,25 @@ export interface InventoryListResponse {
   data: InventoryListResponseData;
 }
 
+export interface InventoryConsumptionItem {
+  itemId: string;
+  itemName: string;
+  unit?: string;
+  unitPrice?: number;
+  totalQuantity: number;
+  procedureCount: number;
+  totalCost: number;
+}
+
+export type InventoryConsumptionResponseData = {
+  consumption: InventoryConsumptionItem[];
+};
+
+export interface InventoryConsumptionResponse {
+  success: boolean;
+  data: InventoryConsumptionResponseData;
+}
+
 export type UnreadCountResponseData = {
   count: number;
 };
@@ -691,6 +710,11 @@ export interface CreateFollowupsRequest {
   procedureId: string;
   patientName?: string;
 }
+
+export type GetInventoryConsumptionParams = {
+  dateFrom?: string;
+  dateTo?: string;
+};
 
 export type VerifyWhatsappWebhookParams = {
   "hub.mode"?: string;

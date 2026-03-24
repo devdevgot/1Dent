@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
-import { logsService } from "../modules/logs/logs.service";
+import { enqueueActionLog } from "../modules/logs/action-log.queue";
 
 const LOGGABLE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
@@ -30,19 +30,17 @@ export function actionLogMiddleware(req: Request, res: Response, next: NextFunct
     const statusCode = res.statusCode;
     if (statusCode >= 200 && statusCode < 300 && req.user) {
       const { entityType, entityId } = entityTypeFromUrl(req.url ?? "");
-      logsService
-        .create({
-          clinicId: req.user.clinicId,
-          userId: req.user.userId,
-          actionType: actionTypeFromMethod(req.method),
-          entityType,
-          entityId,
-          details: { method: req.method, url: req.url, status: statusCode },
-          ipAddress:
-            (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() ??
-            req.socket?.remoteAddress,
-        })
-        .catch(() => {});
+      enqueueActionLog({
+        clinicId: req.user.clinicId,
+        userId: req.user.userId,
+        actionType: actionTypeFromMethod(req.method),
+        entityType,
+        entityId,
+        details: { method: req.method, url: req.url, status: statusCode },
+        ipAddress:
+          (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() ??
+          req.socket?.remoteAddress,
+      }).catch(() => {});
     }
     return originalJson(body);
   };

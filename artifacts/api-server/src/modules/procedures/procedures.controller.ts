@@ -13,6 +13,7 @@ import { analyticsRepo } from "../analytics/analytics.controller";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError, ForbiddenError } from "../../shared/errors";
 import type { ProcedureStatus } from "@workspace/db";
+import { db, postopFollowupsTable } from "@workspace/db";
 
 const router: IRouter = Router();
 const repo = new ProceduresRepository();
@@ -216,6 +217,27 @@ router.patch(
     if (!procedure) return next(new NotFoundError("Procedure not found"));
 
     analyticsRepo.invalidateClinicCache(clinicId).catch(() => {});
+
+    if (parsed.data.status === "completed" && procedure.patientId) {
+      const now = new Date();
+      const FOLLOWUP_DELAYS_HOURS = [24, 72, 168] as const;
+      const TEMPLATES = [
+        "Дорогой пациент! Прошло 24 часа после вашей процедуры. Как вы себя чувствуете? Если есть вопросы — обращайтесь.",
+        "Прошло 3 дня после процедуры. Надеемся, вы чувствуете себя хорошо. Помните о рекомендациях врача.",
+        "Прошла неделя после вашей процедуры. Не забудьте о плановом осмотре. Ждём вас в клинике!",
+      ] as const;
+      const followups = FOLLOWUP_DELAYS_HOURS.map((hours, idx) => ({
+        id: randomUUID(),
+        clinicId,
+        patientId: procedure.patientId,
+        procedureId: procedure.id,
+        sendAt: new Date(now.getTime() + hours * 60 * 60 * 1000),
+        status: "pending" as const,
+        messageTemplate: TEMPLATES[idx]!,
+      }));
+      db.insert(postopFollowupsTable).values(followups).catch(() => {});
+    }
+
     res.json({ success: true, data: { procedure } });
   },
 );

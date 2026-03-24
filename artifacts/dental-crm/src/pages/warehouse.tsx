@@ -1,15 +1,29 @@
-import { useListInventory } from "@workspace/api-client-react";
+import { useState } from "react";
+import { useListInventory, useGetInventoryConsumption } from "@workspace/api-client-react";
 import { useTranslation } from "react-i18next";
-import { Package, AlertTriangle, TrendingDown } from "lucide-react";
+import { Package, AlertTriangle, TrendingDown, BarChart3 } from "lucide-react";
+
+type Tab = "stock" | "consumption";
 
 export default function WarehousePage() {
   const { t } = useTranslation();
+  const [tab, setTab] = useState<Tab>("stock");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
   const { data, isLoading } = useListInventory();
+  const { data: consumptionData, isLoading: consumptionLoading } = useGetInventoryConsumption({
+    dateFrom: dateFrom || undefined,
+    dateTo: dateTo || undefined,
+  });
 
   const items = data?.data?.items ?? [];
+  const consumption = consumptionData?.data?.consumption ?? [];
 
   const lowStock = items.filter((i) => (i.quantity ?? 0) <= (i.minQuantity ?? 0) && (i.minQuantity ?? 0) > 0);
   const normalStock = items.filter((i) => (i.quantity ?? 0) > (i.minQuantity ?? 0) || (i.minQuantity ?? 0) === 0);
+
+  const totalConsumptionCost = consumption.reduce((a, r) => a + (r.totalCost ?? 0), 0);
 
   const categoryColors: Record<string, string> = {
     materials:   "bg-blue-50 text-blue-700",
@@ -23,8 +37,7 @@ export default function WarehousePage() {
 
   function stockBarWidth(qty: number, min: number): string {
     if (min === 0) return "100%";
-    const pct = Math.min(100, Math.round((qty / (min * 2)) * 100));
-    return `${pct}%`;
+    return `${Math.min(100, Math.round((qty / (min * 2)) * 100))}%`;
   }
 
   function stockBarColor(qty: number, min: number): string {
@@ -82,53 +95,137 @@ export default function WarehousePage() {
         </div>
       </div>
 
-      {/* Summary stats */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-white rounded-2xl border border-border/50 p-3 text-center">
-          <p className="text-xl font-bold text-foreground">{items.length}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">{t("warehouse.totalItems")}</p>
-        </div>
-        <div className="bg-white rounded-2xl border border-border/50 p-3 text-center">
-          <p className="text-xl font-bold text-emerald-600">{normalStock.length}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">{t("warehouse.inStock")}</p>
-        </div>
-        <div className="bg-white rounded-2xl border border-border/50 p-3 text-center">
-          <p className="text-xl font-bold text-red-600">{lowStock.length}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">{t("warehouse.lowStock")}</p>
-        </div>
+      {/* Tabs */}
+      <div className="flex bg-slate-100 rounded-xl p-1 gap-1">
+        {(["stock", "consumption"] as Tab[]).map((t_) => (
+          <button
+            key={t_}
+            onClick={() => setTab(t_)}
+            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${
+              tab === t_ ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {t(`warehouse.tab.${t_}`)}
+          </button>
+        ))}
       </div>
 
-      {isLoading ? (
-        <div className="bg-white rounded-2xl border border-border/50 p-8 text-center text-muted-foreground text-sm">
-          {t("common.loading")}
-        </div>
-      ) : items.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-border/50 p-8 text-center text-muted-foreground text-sm">
-          {t("warehouse.empty")}
-        </div>
-      ) : (
+      {tab === "stock" && (
         <>
-          {/* Low stock alert section */}
-          {lowStock.length > 0 && (
-            <div className="bg-white rounded-2xl border border-red-200 overflow-hidden">
-              <div className="px-4 py-3 border-b border-red-100 flex items-center gap-2 bg-red-50">
-                <TrendingDown className="w-4 h-4 text-red-600" />
-                <span className="text-sm font-semibold text-red-700">{t("warehouse.lowStockAlert")} ({lowStock.length})</span>
-              </div>
-              <div className="divide-y divide-border/50">
-                {lowStock.map((item) => <InventoryRow key={item.id} item={item} />)}
-              </div>
+          {/* Summary stats */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-white rounded-2xl border border-border/50 p-3 text-center">
+              <p className="text-xl font-bold text-foreground">{items.length}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{t("warehouse.totalItems")}</p>
             </div>
-          )}
+            <div className="bg-white rounded-2xl border border-border/50 p-3 text-center">
+              <p className="text-xl font-bold text-emerald-600">{normalStock.length}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{t("warehouse.inStock")}</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-border/50 p-3 text-center">
+              <p className="text-xl font-bold text-red-600">{lowStock.length}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{t("warehouse.lowStock")}</p>
+            </div>
+          </div>
 
-          {/* Normal stock */}
-          {normalStock.length > 0 && (
+          {isLoading ? (
+            <div className="bg-white rounded-2xl border border-border/50 p-8 text-center text-muted-foreground text-sm">
+              {t("common.loading")}
+            </div>
+          ) : items.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-border/50 p-8 text-center text-muted-foreground text-sm">
+              {t("warehouse.empty")}
+            </div>
+          ) : (
+            <>
+              {lowStock.length > 0 && (
+                <div className="bg-white rounded-2xl border border-red-200 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-red-100 flex items-center gap-2 bg-red-50">
+                    <TrendingDown className="w-4 h-4 text-red-600" />
+                    <span className="text-sm font-semibold text-red-700">{t("warehouse.lowStockAlert")} ({lowStock.length})</span>
+                  </div>
+                  <div className="divide-y divide-border/50">
+                    {lowStock.map((item) => <InventoryRow key={item.id} item={item} />)}
+                  </div>
+                </div>
+              )}
+              {normalStock.length > 0 && (
+                <div className="bg-white rounded-2xl border border-border/50 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-border/50">
+                    <span className="text-sm font-semibold text-foreground">{t("warehouse.allItems")} ({normalStock.length})</span>
+                  </div>
+                  <div className="divide-y divide-border/50">
+                    {normalStock.map((item) => <InventoryRow key={item.id} item={item} />)}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </>
+      )}
+
+      {tab === "consumption" && (
+        <>
+          {/* Date filters */}
+          <div className="flex gap-2">
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="flex-1 text-sm px-3 py-2 rounded-xl border border-border/50 bg-slate-50 focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="flex-1 text-sm px-3 py-2 rounded-xl border border-border/50 bg-slate-50 focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+
+          {/* Summary */}
+          <div className="bg-white rounded-2xl border border-border/50 p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <BarChart3 className="w-4 h-4 text-amber-600" />
+              <span className="text-xs font-semibold text-muted-foreground">{t("warehouse.totalConsumptionCost")}</span>
+            </div>
+            <p className="text-xl font-bold text-foreground">{totalConsumptionCost.toLocaleString("ru-RU")} ₸</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{consumption.length} {t("warehouse.itemsUsed")}</p>
+          </div>
+
+          {consumptionLoading ? (
+            <div className="bg-white rounded-2xl border border-border/50 p-8 text-center text-muted-foreground text-sm">
+              {t("common.loading")}
+            </div>
+          ) : consumption.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-border/50 p-8 text-center text-muted-foreground text-sm">
+              {t("warehouse.consumptionEmpty")}
+            </div>
+          ) : (
             <div className="bg-white rounded-2xl border border-border/50 overflow-hidden">
               <div className="px-4 py-3 border-b border-border/50">
-                <span className="text-sm font-semibold text-foreground">{t("warehouse.allItems")} ({normalStock.length})</span>
+                <span className="text-sm font-semibold text-foreground">{t("warehouse.consumptionByItem")}</span>
               </div>
               <div className="divide-y divide-border/50">
-                {normalStock.map((item) => <InventoryRow key={item.id} item={item} />)}
+                {consumption.map((row) => (
+                  <div key={row.itemId} className="px-4 py-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{row.itemName}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {row.totalQuantity} {row.unit ?? "ед."} · {row.procedureCount} {t("warehouse.procedures")}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-sm font-semibold text-foreground">
+                          {(row.totalCost ?? 0).toLocaleString("ru-RU")} ₸
+                        </p>
+                        {row.unitPrice && (
+                          <p className="text-xs text-muted-foreground">{row.unitPrice.toLocaleString("ru-RU")} ₸/{row.unit ?? "ед."}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}

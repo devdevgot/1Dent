@@ -342,6 +342,12 @@
     "avgCheck": "Орташа чек",
     "perProcedure": "процедура үшін",
     "procedures": "процедура",
+    "materialCost": "Материал шығыны",
+    "materials": "материал",
+    "grossMargin": "Жалпы пайда",
+    "materialsBreakdown": "Материал шығысы",
+    "proceduresPcs": "проц.",
+    "moreItems": "тағы позиция",
     "byDoctor": "Дәрігер бойынша",
     "pcs": "дана",
     "allDoctors": "Барлық дәрігерлер",
@@ -363,6 +369,15 @@
     "lowStockAlert": "Критикалық қалдық",
     "allItems": "Барлық позициялар",
     "empty": "Қойма бос",
-    "min": "мин"
+    "min": "мин",
+    "tab": {
+      "stock": "Қалдықтар",
+      "consumption": "Шығыс"
+    },
+    "totalConsumptionCost": "Жалпы шығыс (₸)",
+    "itemsUsed": "позиция пайдаланылды",
+    "consumptionEmpty": "Шығыс деректері жоқ",
+    "consumptionByItem": "Позиция бойынша шығыс",
+    "procedures": "проц."
   }
 }

@@ -342,6 +342,12 @@
     "avgCheck": "Average Check",
     "perProcedure": "per procedure",
     "procedures": "procedures",
+    "materialCost": "Material Cost",
+    "materials": "materials",
+    "grossMargin": "Gross Margin",
+    "materialsBreakdown": "Material Consumption",
+    "proceduresPcs": "proc.",
+    "moreItems": "more items",
     "byDoctor": "By Doctor",
     "pcs": "pcs.",
     "allDoctors": "All doctors",
@@ -363,6 +369,15 @@
     "lowStockAlert": "Critical Stock",
     "allItems": "All Items",
     "empty": "Warehouse is empty",
-    "min": "min"
+    "min": "min",
+    "tab": {
+      "stock": "Stock Levels",
+      "consumption": "Consumption"
+    },
+    "totalConsumptionCost": "Total Consumption (₸)",
+    "itemsUsed": "items used",
+    "consumptionEmpty": "No consumption data",
+    "consumptionByItem": "Consumption by Item",
+    "procedures": "proc."
   }
 }

@@ -789,6 +789,31 @@ export const UpdateInventoryStockResponse = zod.object({
 });
 
 /**
+ * @summary Material consumption aggregated by procedure completions
+ */
+export const GetInventoryConsumptionQueryParams = zod.object({
+  dateFrom: zod.date().optional(),
+  dateTo: zod.date().optional(),
+});
+
+export const GetInventoryConsumptionResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    consumption: zod.array(
+      zod.object({
+        itemId: zod.string(),
+        itemName: zod.string(),
+        unit: zod.string().optional(),
+        unitPrice: zod.number().optional(),
+        totalQuantity: zod.number(),
+        procedureCount: zod.number(),
+        totalCost: zod.number(),
+      }),
+    ),
+  }),
+});
+
+/**
  * @summary Verify WhatsApp webhook (Meta challenge)
  */
 export const VerifyWhatsappWebhookQueryParams = zod.object({

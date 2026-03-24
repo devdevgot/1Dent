@@ -1,28 +1,43 @@
 import { useState } from "react";
-import { useListProcedures, useListUsers } from "@workspace/api-client-react";
+import { useListProcedures, useListUsers, useGetInventoryConsumption } from "@workspace/api-client-react";
 import { useTranslation } from "react-i18next";
-import { Wallet, TrendingUp } from "lucide-react";
-import { format } from "date-fns";
+import { Wallet, TrendingUp, TrendingDown, Package } from "lucide-react";
+import { format, startOfMonth, endOfMonth } from "date-fns";
 
 export default function FinancialsPage() {
   const { t } = useTranslation();
   const [filterDoctor, setFilterDoctor] = useState("");
   const [filterStatus, setFilterStatus] = useState("completed");
 
+  const today = new Date();
+  const [dateFrom, setDateFrom] = useState(format(startOfMonth(today), "yyyy-MM-dd"));
+  const [dateTo, setDateTo] = useState(format(endOfMonth(today), "yyyy-MM-dd"));
+
   const { data: proceduresData, isLoading } = useListProcedures();
   const { data: usersData } = useListUsers();
+  const { data: consumptionData } = useGetInventoryConsumption({
+    dateFrom: dateFrom || undefined,
+    dateTo: dateTo || undefined,
+  });
 
   const allProcedures = proceduresData?.data?.procedures ?? [];
   const users = usersData?.data?.users ?? [];
   const userMap = new Map(users.map((u) => [u.id, u.name]));
+  const consumption = consumptionData?.data?.consumption ?? [];
 
   const filtered = allProcedures.filter((p) => {
     if (filterStatus && p.status !== filterStatus) return false;
     if (filterDoctor && p.doctorId !== filterDoctor) return false;
+    const pDate = p.completedAt ?? p.scheduledAt;
+    if (dateFrom && pDate && pDate < dateFrom) return false;
+    if (dateTo && pDate && pDate > dateTo + "T23:59:59") return false;
     return true;
   });
 
   const totalRevenue = filtered.reduce((acc, p) => acc + (p.price ?? 0), 0);
+  const totalMaterialCost = consumption.reduce((a, r) => a + (r.totalCost ?? 0), 0);
+  const grossMargin = totalRevenue - totalMaterialCost;
+  const marginPct = totalRevenue > 0 ? Math.round((grossMargin / totalRevenue) * 100) : 0;
 
   const revenueByDoctor: Record<string, { name: string; total: number; count: number }> = {};
   for (const p of filtered) {
@@ -54,16 +69,30 @@ export default function FinancialsPage() {
         </div>
       </div>
 
-      {/* Summary cards */}
+      {/* Date range */}
+      <div className="flex gap-2">
+        <input
+          type="date"
+          value={dateFrom}
+          onChange={(e) => setDateFrom(e.target.value)}
+          className="flex-1 text-sm px-3 py-2 rounded-xl border border-border/50 bg-slate-50 focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+        <input
+          type="date"
+          value={dateTo}
+          onChange={(e) => setDateTo(e.target.value)}
+          className="flex-1 text-sm px-3 py-2 rounded-xl border border-border/50 bg-slate-50 focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+      </div>
+
+      {/* KPI cards */}
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-white rounded-2xl border border-border/50 p-4">
           <div className="flex items-center gap-2 mb-1">
             <TrendingUp className="w-4 h-4 text-emerald-600" />
             <span className="text-xs font-semibold text-muted-foreground">{t("financials.totalRevenue")}</span>
           </div>
-          <p className="text-xl font-bold text-foreground">
-            {totalRevenue.toLocaleString("ru-RU")} ₸
-          </p>
+          <p className="text-xl font-bold text-foreground">{totalRevenue.toLocaleString("ru-RU")} ₸</p>
           <p className="text-xs text-muted-foreground mt-0.5">{filtered.length} {t("financials.procedures")}</p>
         </div>
         <div className="bg-white rounded-2xl border border-border/50 p-4">
@@ -72,13 +101,56 @@ export default function FinancialsPage() {
             <span className="text-xs font-semibold text-muted-foreground">{t("financials.avgCheck")}</span>
           </div>
           <p className="text-xl font-bold text-foreground">
-            {filtered.length > 0
-              ? Math.round(totalRevenue / filtered.length).toLocaleString("ru-RU")
-              : 0} ₸
+            {filtered.length > 0 ? Math.round(totalRevenue / filtered.length).toLocaleString("ru-RU") : 0} ₸
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">{t("financials.perProcedure")}</p>
         </div>
+        <div className="bg-white rounded-2xl border border-border/50 p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <Package className="w-4 h-4 text-amber-600" />
+            <span className="text-xs font-semibold text-muted-foreground">{t("financials.materialCost")}</span>
+          </div>
+          <p className="text-xl font-bold text-foreground">{totalMaterialCost.toLocaleString("ru-RU")} ₸</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{consumption.length} {t("financials.materials")}</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-border/50 p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <TrendingDown className={`w-4 h-4 ${grossMargin >= 0 ? "text-emerald-600" : "text-red-500"}`} />
+            <span className="text-xs font-semibold text-muted-foreground">{t("financials.grossMargin")}</span>
+          </div>
+          <p className={`text-xl font-bold ${grossMargin >= 0 ? "text-emerald-700" : "text-red-600"}`}>
+            {grossMargin.toLocaleString("ru-RU")} ₸
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">{marginPct}%</p>
+        </div>
       </div>
+
+      {/* Material consumption breakdown */}
+      {consumption.length > 0 && (
+        <div className="bg-white rounded-2xl border border-border/50 overflow-hidden">
+          <div className="px-4 py-3 border-b border-border/50">
+            <span className="text-sm font-semibold text-foreground">{t("financials.materialsBreakdown")}</span>
+          </div>
+          <div className="divide-y divide-border/50">
+            {consumption.slice(0, 5).map((row) => (
+              <div key={row.itemId} className="px-4 py-3 flex items-center justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{row.itemName}</p>
+                  <p className="text-xs text-muted-foreground">{row.totalQuantity} {row.unit ?? "ед."} · {row.procedureCount} {t("financials.proceduresPcs")}</p>
+                </div>
+                <p className="text-sm font-semibold text-amber-700 shrink-0">
+                  {(row.totalCost ?? 0).toLocaleString("ru-RU")} ₸
+                </p>
+              </div>
+            ))}
+            {consumption.length > 5 && (
+              <div className="px-4 py-2 text-xs text-center text-muted-foreground">
+                +{consumption.length - 5} {t("financials.moreItems")}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Revenue by doctor */}
       {Object.values(revenueByDoctor).length > 0 && (
@@ -102,7 +174,7 @@ export default function FinancialsPage() {
         </div>
       )}
 
-      {/* Filters */}
+      {/* Filters for procedure list */}
       <div className="flex gap-2">
         <select
           value={filterDoctor}
@@ -110,9 +182,7 @@ export default function FinancialsPage() {
           className="flex-1 text-sm px-3 py-2 rounded-xl border border-border/50 bg-slate-50 focus:outline-none focus:ring-1 focus:ring-primary"
         >
           <option value="">{t("financials.allDoctors")}</option>
-          {doctors.map((d) => (
-            <option key={d.id} value={d.id}>{d.name}</option>
-          ))}
+          {doctors.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
         </select>
         <select
           value={filterStatus}
@@ -156,8 +226,7 @@ export default function FinancialsPage() {
                     <p className={`text-xs mt-0.5 ${
                       p.status === "completed" ? "text-emerald-600" :
                       p.status === "cancelled" ? "text-destructive" :
-                      p.status === "in_progress" ? "text-blue-600" :
-                      "text-amber-600"
+                      p.status === "in_progress" ? "text-blue-600" : "text-amber-600"
                     }`}>
                       {t(`procedures.status.${p.status}`)}
                     </p>

@@ -342,6 +342,12 @@
     "avgCheck": "Средний чек",
     "perProcedure": "за процедуру",
     "procedures": "процедур",
+    "materialCost": "Затраты на материалы",
+    "materials": "материалов",
+    "grossMargin": "Валовая прибыль",
+    "materialsBreakdown": "Расход материалов",
+    "proceduresPcs": "проц.",
+    "moreItems": "ещё позиций",
     "byDoctor": "По врачам",
     "pcs": "шт.",
     "allDoctors": "Все врачи",
@@ -363,6 +369,15 @@
     "lowStockAlert": "Критический остаток",
     "allItems": "Все позиции",
     "empty": "Склад пуст",
-    "min": "мин"
+    "min": "мин",
+    "tab": {
+      "stock": "Остатки",
+      "consumption": "Расход"
+    },
+    "totalConsumptionCost": "Общий расход (₸)",
+    "itemsUsed": "позиций использовано",
+    "consumptionEmpty": "Данных о расходе нет",
+    "consumptionByItem": "Расход по позициям",
+    "procedures": "проц."
   }
 }
