@@ -481,4 +481,25 @@ export class ChatbotService {
       .set({ state: "greeting", data: {}, humanTakeover: false, updatedAt: new Date() })
       .where(and(eq(chatbotSessionsTable.clinicId, clinicId), eq(chatbotSessionsTable.phone, phone)));
   }
+
+  /** Returns true if there is a non-expired chatbot session for this phone (any state). */
+  async hasActiveSession(clinicId: string, phone: string): Promise<boolean> {
+    // Check Redis first
+    if (redis) {
+      try {
+        const exists = await redis.exists(`${REDIS_KEY_PREFIX}${clinicId}:${phone}`);
+        if (exists) return true;
+      } catch (_) { /* fall through */ }
+    }
+    // Fall back to DB
+    const [row] = await db
+      .select({ updatedAt: chatbotSessionsTable.updatedAt })
+      .from(chatbotSessionsTable)
+      .where(and(eq(chatbotSessionsTable.clinicId, clinicId), eq(chatbotSessionsTable.phone, phone)))
+      .limit(1);
+
+    if (!row) return false;
+    const age = Date.now() - new Date(row.updatedAt).getTime();
+    return age <= SESSION_TTL_SECONDS * 1000;
+  }
 }

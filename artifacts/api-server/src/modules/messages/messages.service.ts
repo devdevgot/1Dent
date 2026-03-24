@@ -136,13 +136,23 @@ export class MessagesService {
     content: string,
     whatsappMessageId: string,
   ): Promise<Message | null> {
-    // Resolve phone → patient (may be null for new contacts)
+    // Resolve phone → patient (may be null for new/unknown contacts)
     const patient = await this.repo.findPatientByPhone(senderPhone, clinicId);
 
-    // Run chatbot FSM for every inbound message (handles unknown phones too)
-    this.chatbot.processMessage(clinicId, senderPhone, content).catch((err) =>
-      logger.error({ err }, "ChatbotService.processMessage failed"),
-    );
+    // Invoke chatbot FSM only for:
+    //  (a) unknown phone numbers — start an onboarding conversation, OR
+    //  (b) known patients who already have an active chatbot session
+    //      (e.g., mid-booking flow or human_takeover state)
+    // This avoids injecting automated replies into ongoing clinical chats.
+    const hasChatbotSession = patient
+      ? await this.chatbot.hasActiveSession(clinicId, senderPhone)
+      : true; // unknown phone always gets the chatbot
+
+    if (hasChatbotSession) {
+      this.chatbot.processMessage(clinicId, senderPhone, content).catch((err) =>
+        logger.error({ err }, "ChatbotService.processMessage failed"),
+      );
+    }
 
     if (!patient) {
       logger.info(
@@ -152,6 +162,8 @@ export class MessagesService {
       return null;
     }
 
+    // Red-alert detection runs for ALL inbound messages from known patients,
+    // including replies to post-op BullMQ followup messages.
     const alertFlag = isRedAlert(content);
 
     const message = await this.repo.create({
