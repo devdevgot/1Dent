@@ -637,6 +637,45 @@ export interface DoctorKpi {
   nps: number;
 }
 
+export type DoctorDetailedAnalyticsPatientsByStatus = { [key: string]: number };
+
+export type DoctorDetailedAnalyticsProceduresByStatus = {
+  [key: string]: number;
+};
+
+export type DoctorDetailedAnalyticsProceduresByNameItem = {
+  name: string;
+  count: number;
+};
+
+export type DoctorDetailedAnalyticsRevenueByMonthItem = {
+  month: string;
+  revenue: number;
+};
+
+export interface DoctorDetailedAnalytics {
+  doctorId: string;
+  doctorName: string;
+  patientsByStatus: DoctorDetailedAnalyticsPatientsByStatus;
+  proceduresByStatus: DoctorDetailedAnalyticsProceduresByStatus;
+  proceduresByName: DoctorDetailedAnalyticsProceduresByNameItem[];
+  revenueByMonth: DoctorDetailedAnalyticsRevenueByMonthItem[];
+  totalRevenue: number;
+  totalPatients: number;
+  totalProcedures: number;
+  averageCheck: number;
+  scheduledToday: number;
+}
+
+export type DoctorDetailedAnalyticsResponseData = {
+  analytics: DoctorDetailedAnalytics;
+};
+
+export interface DoctorDetailedAnalyticsResponse {
+  success: boolean;
+  data: DoctorDetailedAnalyticsResponseData;
+}
+
 export type AnalyticsDataAnalytics = { [key: string]: unknown };
 
 export interface AnalyticsData {

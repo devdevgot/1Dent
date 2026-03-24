@@ -1345,6 +1345,74 @@ export const GetDoctorAnalyticsResponse = zod.object({
 });
 
 /**
+ * @summary Get current doctor's detailed analytics (charts)
+ */
+export const GetDoctorDetailedAnalyticsMeResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    analytics: zod.object({
+      doctorId: zod.string(),
+      doctorName: zod.string(),
+      patientsByStatus: zod.record(zod.string(), zod.number()),
+      proceduresByStatus: zod.record(zod.string(), zod.number()),
+      proceduresByName: zod.array(
+        zod.object({
+          name: zod.string(),
+          count: zod.number(),
+        }),
+      ),
+      revenueByMonth: zod.array(
+        zod.object({
+          month: zod.string(),
+          revenue: zod.number(),
+        }),
+      ),
+      totalRevenue: zod.number(),
+      totalPatients: zod.number(),
+      totalProcedures: zod.number(),
+      averageCheck: zod.number(),
+      scheduledToday: zod.number(),
+    }),
+  }),
+});
+
+/**
+ * @summary Get detailed analytics for a specific doctor (owner/admin)
+ */
+export const GetDoctorDetailedAnalyticsParams = zod.object({
+  doctorId: zod.coerce.string(),
+});
+
+export const GetDoctorDetailedAnalyticsResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    analytics: zod.object({
+      doctorId: zod.string(),
+      doctorName: zod.string(),
+      patientsByStatus: zod.record(zod.string(), zod.number()),
+      proceduresByStatus: zod.record(zod.string(), zod.number()),
+      proceduresByName: zod.array(
+        zod.object({
+          name: zod.string(),
+          count: zod.number(),
+        }),
+      ),
+      revenueByMonth: zod.array(
+        zod.object({
+          month: zod.string(),
+          revenue: zod.number(),
+        }),
+      ),
+      totalRevenue: zod.number(),
+      totalPatients: zod.number(),
+      totalProcedures: zod.number(),
+      averageCheck: zod.number(),
+      scheduledToday: zod.number(),
+    }),
+  }),
+});
+
+/**
  * @summary Get doctor KPI rankings
  */
 export const GetDoctorKpisResponse = zod.object({

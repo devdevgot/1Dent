@@ -1328,6 +1328,42 @@ paths:
               schema:
                 $ref: "#/components/schemas/AnalyticsResponse"
 
+  /analytics/doctor/me/detailed:
+    get:
+      operationId: getDoctorDetailedAnalyticsMe
+      tags: [analytics]
+      summary: Get current doctor's detailed analytics (charts)
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Doctor detailed analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DoctorDetailedAnalyticsResponse"
+
+  /analytics/doctor/{doctorId}:
+    get:
+      operationId: getDoctorDetailedAnalytics
+      tags: [analytics]
+      summary: Get detailed analytics for a specific doctor (owner/admin)
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: doctorId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Doctor detailed analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DoctorDetailedAnalyticsResponse"
+
   /kpi/doctors:
     get:
       operationId: getDoctorKpis
@@ -2700,6 +2736,85 @@ components:
         - revenueTotal
         - averageCheck
         - nps
+
+    DoctorDetailedAnalytics:
+      type: object
+      properties:
+        doctorId:
+          type: string
+        doctorName:
+          type: string
+        patientsByStatus:
+          type: object
+          additionalProperties:
+            type: number
+        proceduresByStatus:
+          type: object
+          additionalProperties:
+            type: number
+        proceduresByName:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              count:
+                type: number
+            required:
+              - name
+              - count
+        revenueByMonth:
+          type: array
+          items:
+            type: object
+            properties:
+              month:
+                type: string
+              revenue:
+                type: number
+            required:
+              - month
+              - revenue
+        totalRevenue:
+          type: number
+        totalPatients:
+          type: number
+        totalProcedures:
+          type: number
+        averageCheck:
+          type: number
+        scheduledToday:
+          type: number
+      required:
+        - doctorId
+        - doctorName
+        - patientsByStatus
+        - proceduresByStatus
+        - proceduresByName
+        - revenueByMonth
+        - totalRevenue
+        - totalPatients
+        - totalProcedures
+        - averageCheck
+        - scheduledToday
+
+    DoctorDetailedAnalyticsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            analytics:
+              $ref: "#/components/schemas/DoctorDetailedAnalytics"
+          required:
+            - analytics
+      required:
+        - success
+        - data
 
     AnalyticsData:
       type: object

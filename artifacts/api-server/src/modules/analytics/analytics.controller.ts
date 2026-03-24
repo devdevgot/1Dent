@@ -88,6 +88,31 @@ router.get(
   },
 );
 
+// GET /analytics/doctor/me/detailed — doctor's own detailed analytics (charts)
+router.get(
+  "/analytics/doctor/me/detailed",
+  roleGuard("owner", "admin", "doctor"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { clinicId, userId } = req.user!;
+    const analytics = await repo.getDoctorDetailedAnalytics(clinicId, userId).catch(next);
+    if (analytics === undefined) return;
+    res.json({ success: true, data: { analytics } });
+  },
+);
+
+// GET /analytics/doctor/:doctorId — detailed analytics for a specific doctor (owner/admin)
+router.get(
+  "/analytics/doctor/:doctorId",
+  ownerAdminRoles,
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { clinicId } = req.user!;
+    const { doctorId } = req.params;
+    const analytics = await repo.getDoctorDetailedAnalytics(clinicId, doctorId!).catch(next);
+    if (analytics === undefined) return;
+    res.json({ success: true, data: { analytics } });
+  },
+);
+
 // GET /kpi/doctors — owner/admin only
 router.get(
   "/kpi/doctors",
