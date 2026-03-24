@@ -32,6 +32,7 @@ import ChatbotPage from "@/pages/chatbot";
 import MigrationPage from "@/pages/migration";
 import StaffPage from "@/pages/staff";
 import StaffDetailPage from "@/pages/staff-detail";
+import DoctorAnalyticsPage from "@/pages/doctor-analytics";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -173,6 +174,11 @@ function Router() {
       </Route>
       <Route path="/staff/:doctorId">
         <ProtectedRoute component={StaffDetailPage} allowedRoles={['owner', 'admin']} />
+      </Route>
+
+      {/* Doctor analytics */}
+      <Route path="/doctor-analytics">
+        <ProtectedRoute component={DoctorAnalyticsPage} allowedRoles={['owner', 'admin', 'doctor']} />
       </Route>
 
       {/* 404 */}
