@@ -133,7 +133,9 @@
     "openDentalChart": "Карта зубов",
     "openInventory": "Склад",
     "openProcedures": "Процедуры",
-    "goToProcedures": "Перейти к процедурам"
+    "goToProcedures": "Перейти к процедурам",
+    "monthly": "За этот месяц",
+    "allTime": "Всего за всё время"
   },
   "notFound": {
     "title": "Страница не найдена",

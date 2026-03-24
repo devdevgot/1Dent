@@ -133,7 +133,9 @@
     "openDentalChart": "Тіс картасы",
     "openInventory": "Қойма",
     "openProcedures": "Процедуралар",
-    "goToProcedures": "Процедураларға өту"
+    "goToProcedures": "Процедураларға өту",
+    "monthly": "Осы ай",
+    "allTime": "Барлық уақыт"
   },
   "notFound": {
     "title": "Бет табылмады",

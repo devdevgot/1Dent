@@ -133,7 +133,9 @@
     "openDentalChart": "Dental Chart",
     "openInventory": "Inventory",
     "openProcedures": "Procedures",
-    "goToProcedures": "Go to Procedures"
+    "goToProcedures": "Go to Procedures",
+    "monthly": "This month",
+    "allTime": "All time total"
   },
   "notFound": {
     "title": "Page Not Found",
