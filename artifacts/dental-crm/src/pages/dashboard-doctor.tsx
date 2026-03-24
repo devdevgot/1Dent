@@ -7,7 +7,7 @@ import {
 } from "@workspace/api-client-react";
 import {
   Users, Calendar, Activity, TrendingUp, RefreshCw,
-  Stethoscope, ChevronRight, Clock,
+  Stethoscope, ChevronRight, Clock, BarChart3,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
@@ -247,19 +247,30 @@ export default function DoctorDashboard() {
             <h3 className="text-base font-bold font-display mb-4">{t("dashboard.quickActions")}</h3>
             <div className="space-y-2">
               {[
-                { label: t("nav.patients"),   icon: Users,       path: "/patients" },
-                { label: t("nav.procedures"), icon: Stethoscope, path: "/procedures" },
-                { label: t("nav.chat"),       icon: Activity,    path: "/chat" },
+                { label: t("nav.myAnalytics"), icon: BarChart3,   path: "/doctor-analytics", highlight: true },
+                { label: t("nav.patients"),    icon: Users,       path: "/patients" },
+                { label: t("nav.procedures"),  icon: Stethoscope, path: "/procedures" },
+                { label: t("nav.chat"),        icon: Activity,    path: "/chat" },
               ].map((item) => (
                 <button
                   key={item.path}
                   onClick={() => navigate(item.path)}
-                  className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 border border-transparent hover:border-border transition-all text-left group"
+                  className={`w-full flex items-center gap-3 p-2.5 rounded-xl border transition-all text-left group ${
+                    item.highlight
+                      ? "bg-primary/5 border-primary/20 hover:bg-primary/10"
+                      : "hover:bg-slate-50 border-transparent hover:border-border"
+                  }`}
                 >
-                  <div className="w-8 h-8 bg-primary/10 text-primary rounded-lg flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center group-hover:text-white transition-colors ${
+                    item.highlight
+                      ? "bg-primary text-white"
+                      : "bg-primary/10 text-primary group-hover:bg-primary"
+                  }`}>
                     <item.icon className="w-3.5 h-3.5" />
                   </div>
-                  <span className="font-medium text-sm text-foreground">{item.label}</span>
+                  <span className={`font-medium text-sm ${item.highlight ? "text-primary font-semibold" : "text-foreground"}`}>
+                    {item.label}
+                  </span>
                   <ChevronRight className="w-4 h-4 text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
                 </button>
               ))}
