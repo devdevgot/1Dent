@@ -12,7 +12,11 @@ import { getRoleDashboardPath } from "@/lib/role-redirect";
 // Pages
 import Login from "@/pages/login";
 import Register from "@/pages/register";
-import Dashboard from "@/pages/dashboard";
+import OwnerDashboard from "@/pages/dashboard-owner";
+import AdminDashboard from "@/pages/dashboard-admin";
+import DoctorDashboard from "@/pages/dashboard-doctor";
+import AccountantDashboard from "@/pages/dashboard-accountant";
+import WarehouseDashboard from "@/pages/dashboard-warehouse";
 import KanbanPage from "@/pages/kanban";
 import ChatPage from "@/pages/chat";
 import InventoryPage from "@/pages/inventory";
@@ -20,6 +24,7 @@ import ProceduresPage from "@/pages/procedures";
 import LogsPage from "@/pages/logs";
 import FinancialsPage from "@/pages/financials";
 import WarehousePage from "@/pages/warehouse";
+import UsersPage from "@/pages/users";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -64,14 +69,12 @@ function Router() {
 
   const roleDashboard = user ? getRoleDashboardPath(user.role) : "/dashboard";
 
-  // Redirect authenticated users away from public routes to their role-specific dashboard
   useEffect(() => {
     if (isAuthenticated && (location === "/login" || location === "/register")) {
       setLocation(roleDashboard);
     }
   }, [isAuthenticated, location, setLocation, roleDashboard]);
 
-  // Root redirect: authenticated → role dashboard, unauthenticated → login
   useEffect(() => {
     if (location === "/") {
       setLocation(isAuthenticated ? roleDashboard : "/login");
@@ -83,21 +86,32 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
 
-      {/* Protected Routes — each role maps to its own dashboard path */}
+      {/* Owner dashboard */}
       <Route path="/dashboard">
-        <ProtectedRoute component={Dashboard} allowedRoles={['owner', 'admin']} />
-      </Route>
-      <Route path="/dashboard/doctor">
-        <ProtectedRoute component={Dashboard} allowedRoles={['doctor']} />
-      </Route>
-      <Route path="/dashboard/accountant">
-        <ProtectedRoute component={Dashboard} allowedRoles={['accountant']} />
-      </Route>
-      <Route path="/dashboard/warehouse">
-        <ProtectedRoute component={Dashboard} allowedRoles={['warehouse']} />
+        <ProtectedRoute component={OwnerDashboard} allowedRoles={['owner']} />
       </Route>
 
-      {/* Kanban board — full implementation */}
+      {/* Admin dashboard */}
+      <Route path="/dashboard/admin">
+        <ProtectedRoute component={AdminDashboard} allowedRoles={['admin']} />
+      </Route>
+
+      {/* Doctor dashboard */}
+      <Route path="/dashboard/doctor">
+        <ProtectedRoute component={DoctorDashboard} allowedRoles={['doctor']} />
+      </Route>
+
+      {/* Accountant dashboard */}
+      <Route path="/dashboard/accountant">
+        <ProtectedRoute component={AccountantDashboard} allowedRoles={['accountant']} />
+      </Route>
+
+      {/* Warehouse dashboard */}
+      <Route path="/dashboard/warehouse">
+        <ProtectedRoute component={WarehouseDashboard} allowedRoles={['warehouse']} />
+      </Route>
+
+      {/* Kanban board */}
       <Route path="/kanban">
         <ProtectedRoute component={KanbanPage} allowedRoles={['owner', 'admin', 'doctor']} />
       </Route>
@@ -123,6 +137,11 @@ function Router() {
       </Route>
       <Route path="/warehouse">
         <ProtectedRoute component={WarehousePage} allowedRoles={['owner', 'admin', 'warehouse']} />
+      </Route>
+
+      {/* Users management */}
+      <Route path="/users">
+        <ProtectedRoute component={UsersPage} allowedRoles={['owner', 'admin']} />
       </Route>
 
       {/* 404 */}

@@ -28,7 +28,7 @@ import i18n from "@/lib/i18n";
 
 const ROLE_DASHBOARD_HREF: Record<string, string> = {
   owner:      "/dashboard",
-  admin:      "/dashboard",
+  admin:      "/dashboard/admin",
   doctor:     "/dashboard/doctor",
   accountant: "/dashboard/accountant",
   warehouse:  "/dashboard/warehouse",
@@ -36,6 +36,7 @@ const ROLE_DASHBOARD_HREF: Record<string, string> = {
 
 const PAGE_HREF_TITLE_KEY: Record<string, string> = {
   "/dashboard":            "page.dashboard",
+  "/dashboard/admin":      "page.adminDashboard",
   "/dashboard/doctor":     "page.doctorDashboard",
   "/dashboard/accountant": "page.accountantDashboard",
   "/dashboard/warehouse":  "page.warehouseDashboard",
@@ -75,9 +76,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
     { nameKey: "nav.schedule",  href: "/schedule",   icon: Calendar,      roles: ["admin"] },
     { nameKey: "nav.analytics", href: "/analytics",  icon: BarChart3,     roles: ["owner"] },
     { nameKey: "nav.financials",href: "/financials", icon: Wallet,        roles: ["owner", "accountant"] },
-    { nameKey: "nav.inventory", href: "/inventory",  icon: Package,       roles: ["owner", "admin"] },
-    { nameKey: "nav.warehouse", href: "/warehouse",  icon: Package,       roles: ["warehouse"] },
-    { nameKey: "nav.users",     href: "/users",      icon: Settings,      roles: ["owner"] },
+    { nameKey: "nav.inventory", href: "/inventory",  icon: Package,       roles: ["owner", "admin", "warehouse"] },
+    { nameKey: "nav.users",     href: "/users",      icon: Settings,      roles: ["owner", "admin"] },
     { nameKey: "nav.logs",      href: "/logs",       icon: Activity,      roles: ["owner"] },
   ];
 
