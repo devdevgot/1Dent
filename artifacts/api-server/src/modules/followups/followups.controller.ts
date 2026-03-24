@@ -1,9 +1,9 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { z } from "zod";
-import { db, postopFollowupsTable } from "@workspace/db";
+import { db, postopFollowupsTable, proceduresTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
-import { ValidationError, NotFoundError } from "../../shared/errors";
+import { ValidationError, NotFoundError, ForbiddenError } from "../../shared/errors";
 import { scheduleFollowups } from "./followup.queue";
 
 const router: IRouter = Router();
@@ -27,7 +27,20 @@ router.post(
     const { patientId, procedureId } = parsed.data;
     const clinicId = req.user!.clinicId;
 
-    await scheduleFollowups({ clinicId, patientId, procedureId }).catch(next);
+    const [procedure] = await db
+      .select({ id: proceduresTable.id, clinicId: proceduresTable.clinicId, patientId: proceduresTable.patientId })
+      .from(proceduresTable)
+      .where(and(eq(proceduresTable.id, procedureId), eq(proceduresTable.clinicId, clinicId)))
+      .limit(1);
+
+    if (!procedure) return next(new NotFoundError("Procedure not found"));
+    if (procedure.patientId !== patientId) return next(new ForbiddenError("Patient does not match procedure"));
+
+    try {
+      await scheduleFollowups({ clinicId, patientId, procedureId });
+    } catch (err) {
+      return next(err);
+    }
 
     const followups = await db
       .select()

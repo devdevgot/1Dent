@@ -14,6 +14,8 @@ import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError, ForbiddenError } from "../../shared/errors";
 import type { ProcedureStatus } from "@workspace/db";
 import { scheduleFollowups } from "../followups/followup.queue";
+import { db, postopFollowupsTable } from "@workspace/db";
+import { eq, and } from "drizzle-orm";
 
 const router: IRouter = Router();
 const repo = new ProceduresRepository();
@@ -219,11 +221,24 @@ router.patch(
     analyticsRepo.invalidateClinicCache(clinicId).catch(() => {});
 
     if (parsed.data.status === "completed" && procedure.patientId) {
-      scheduleFollowups({
-        clinicId,
-        patientId: procedure.patientId,
-        procedureId: procedure.id,
-      }).catch(() => {});
+      const [existing] = await db
+        .select({ id: postopFollowupsTable.id })
+        .from(postopFollowupsTable)
+        .where(
+          and(
+            eq(postopFollowupsTable.procedureId, procedure.id),
+            eq(postopFollowupsTable.clinicId, clinicId),
+          ),
+        )
+        .limit(1);
+
+      if (!existing) {
+        scheduleFollowups({
+          clinicId,
+          patientId: procedure.patientId,
+          procedureId: procedure.id,
+        }).catch(() => {});
+      }
     }
 
     res.json({ success: true, data: { procedure } });
