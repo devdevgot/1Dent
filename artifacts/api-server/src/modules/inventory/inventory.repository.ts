@@ -194,6 +194,36 @@ export class InventoryRepository {
       );
   }
 
+  async restoreStock(
+    clinicId: string,
+    materials: { itemId: string; quantity: number }[],
+  ): Promise<void> {
+    for (const m of materials) {
+      const [stock] = await db
+        .select()
+        .from(inventoryStockTable)
+        .where(
+          and(
+            eq(inventoryStockTable.itemId, m.itemId),
+            eq(inventoryStockTable.clinicId, clinicId),
+          ),
+        )
+        .limit(1);
+
+      if (!stock) continue;
+
+      await db
+        .update(inventoryStockTable)
+        .set({ quantity: stock.quantity + m.quantity, updatedAt: new Date() })
+        .where(
+          and(
+            eq(inventoryStockTable.itemId, m.itemId),
+            eq(inventoryStockTable.clinicId, clinicId),
+          ),
+        );
+    }
+  }
+
   async validateMaterials(
     clinicId: string,
     materials: { itemId: string; quantity: number }[],

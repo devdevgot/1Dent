@@ -116,7 +116,12 @@ router.post("/", writeRoles, async (req: Request, res: Response, next: NextFunct
   }
 
   const { materials, scheduledAt, templateId, ...rest } = parsed.data;
-  const { clinicId } = req.user!;
+  const { clinicId, role, userId } = req.user!;
+
+  // Doctors can only create procedures assigned to themselves
+  if (role === "doctor") {
+    rest.doctorId = userId;
+  }
 
   // If templateId given, load template defaults (name/price override explicit fields if not provided)
   let resolvedName = rest.name;
@@ -172,7 +177,14 @@ router.post("/", writeRoles, async (req: Request, res: Response, next: NextFunct
   if (effectiveMaterials.length > 0) {
     try {
       await inventoryRepo.deductMaterials(clinicId, effectiveMaterials);
-      await repo.saveProcedureMaterials(procedure.id, effectiveMaterials);
+      try {
+        await repo.saveProcedureMaterials(procedure.id, effectiveMaterials);
+      } catch (saveErr) {
+        // Compensate: restore stock since deduction already occurred
+        await inventoryRepo.restoreStock(clinicId, effectiveMaterials).catch(() => {});
+        await repo.delete(procedure.id, clinicId).catch(() => {});
+        return next(new ValidationError(`Failed to save procedure materials: ${(saveErr as Error).message}`));
+      }
     } catch (err) {
       await repo.delete(procedure.id, clinicId).catch(() => {});
       return next(new ValidationError(`Stock deduction failed: ${(err as Error).message}`));
