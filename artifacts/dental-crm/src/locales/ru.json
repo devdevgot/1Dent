@@ -342,6 +342,7 @@
   },
   "doctorDashboard": {
     "subtitle": "Ваши пациенты и процедуры сегодня, {{clinic}}.",
+    "myAnalytics": "Моя аналитика",
     "myProcedures": "Мои процедуры",
     "myKpiTitle": "Мой KPI за месяц",
     "thisMonth": "Процедур за месяц",

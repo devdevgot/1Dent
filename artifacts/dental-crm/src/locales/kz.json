@@ -342,6 +342,7 @@
   },
   "doctorDashboard": {
     "subtitle": "{{clinic}} клиникасындағы бүгінгі пациенттер мен процедуралар.",
+    "myAnalytics": "Менің аналитикам",
     "myProcedures": "Менің процедураларым",
     "myKpiTitle": "Айдағы менің KPI",
     "thisMonth": "Айдағы процедуралар",

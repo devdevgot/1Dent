@@ -69,13 +69,15 @@ export function PatientDetailPanel() {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetPatientQueryKey(selectedPatientId ?? "") });
-        // Refresh all doctor analytics dashboards when patient status changes
+        // Refresh all analytics dashboards when patient status changes
         queryClient.invalidateQueries({ 
           predicate: (query) => {
             const key = query.queryKey[0];
             return typeof key === 'string' && (
               key.includes('DoctorDetailedAnalyticsMe') || 
-              key.includes('DoctorDetailedAnalytics')
+              key.includes('DoctorDetailedAnalytics') ||
+              key.includes('GetDoctorAnalytics') ||
+              key.includes('GetAnalytics')
             );
           }
         });

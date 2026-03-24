@@ -123,6 +123,12 @@ export default function DoctorDashboard() {
             <RefreshCw className="w-5 h-5" />
           </button>
           <button
+            onClick={() => navigate("/doctor-analytics")}
+            className="px-5 py-2.5 bg-slate-100 text-foreground font-semibold rounded-xl hover:bg-slate-200 transition-colors"
+          >
+            {t("doctorDashboard.myAnalytics")}
+          </button>
+          <button
             onClick={() => navigate("/procedures")}
             className="px-5 py-2.5 bg-primary text-white font-semibold rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all"
           >

@@ -342,6 +342,7 @@
   },
   "doctorDashboard": {
     "subtitle": "Your patients and procedures today at {{clinic}}.",
+    "myAnalytics": "My Analytics",
     "myProcedures": "My Procedures",
     "myKpiTitle": "My Monthly KPI",
     "thisMonth": "Procedures this month",
