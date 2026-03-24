@@ -149,6 +149,14 @@ router.post("/", writeRoles, async (req: Request, res: Response, next: NextFunct
   // Materials from request take precedence over template materials
   const effectiveMaterials = (materials && materials.length > 0) ? materials : templateMaterials;
 
+  // Pre-validate ALL materials before any DB writes — prevents partial stock deduction
+  if (effectiveMaterials.length > 0) {
+    const validationError = await inventoryRepo.validateMaterials(clinicId, effectiveMaterials).then(() => null).catch((e) => e);
+    if (validationError) {
+      return next(new ValidationError(`Material validation failed: ${(validationError as Error).message}`));
+    }
+  }
+
   const procedure = await repo
     .create({
       id: randomUUID(),
@@ -162,12 +170,13 @@ router.post("/", writeRoles, async (req: Request, res: Response, next: NextFunct
   if (!procedure) return;
 
   if (effectiveMaterials.length > 0) {
-    const deductError = await inventoryRepo.deductMaterials(clinicId, effectiveMaterials).then(() => null).catch((e) => e);
-    if (deductError) {
+    try {
+      await inventoryRepo.deductMaterials(clinicId, effectiveMaterials);
+      await repo.saveProcedureMaterials(procedure.id, effectiveMaterials);
+    } catch (err) {
       await repo.delete(procedure.id, clinicId).catch(() => {});
-      return next(new ValidationError(`Stock deduction failed: ${(deductError as Error).message}`));
+      return next(new ValidationError(`Stock deduction failed: ${(err as Error).message}`));
     }
-    await repo.saveProcedureMaterials(procedure.id, effectiveMaterials).catch(() => {});
   }
 
   analyticsRepo.invalidateClinicCache(clinicId).catch(() => {});
