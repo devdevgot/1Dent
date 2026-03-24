@@ -51,6 +51,7 @@
     "inventory": "Inventory",
     "users": "Users",
     "chatbot": "Chatbot",
+    "migration": "Migration",
     "logs": "Audit Log",
     "more": "More"
   },
@@ -71,6 +72,7 @@
     "warehouse": "Warehouse",
     "users": "Users",
     "chatbot": "AI Chatbot",
+    "migration": "Data Migration",
     "logs": "Audit Log"
   },
   "common": {

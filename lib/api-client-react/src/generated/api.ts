@@ -33,6 +33,9 @@ import type {
   DeleteChatbotSession200,
   DoctorKpiListResponse,
   ErrorResponse,
+  ExcelConfirmRequest,
+  ExcelPreviewRequest,
+  ExcelPreviewResponse,
   FollowupResponse,
   FollowupsResponse,
   GetActionLogsParams,
@@ -50,6 +53,9 @@ import type {
   MeResponse,
   MessageResponse,
   MessagesResponse,
+  MigrationJobResponse,
+  MigrationJobStatusResponse,
+  MigrationJobsResponse,
   NotificationResponse,
   NotificationsResponse,
   PatientDetailResponse,
@@ -66,6 +72,9 @@ import type {
   ToothResponse,
   ToothTreatmentResponse,
   ToothTreatmentsResponse,
+  TrelloConnectRequest,
+  TrelloConnectResponse,
+  TrelloImportRequest,
   UnreadCountResponse,
   UpdateChatbotSettings200,
   UpdateInventoryItemRequest,
@@ -4779,6 +4788,517 @@ export function useGetDoctorKpis<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetDoctorKpisQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Parse Excel file and return column preview
+ */
+export const getPreviewExcelImportUrl = () => {
+  return `/api/migration/excel/preview`;
+};
+
+export const previewExcelImport = async (
+  excelPreviewRequest: ExcelPreviewRequest,
+  options?: RequestInit,
+): Promise<ExcelPreviewResponse> => {
+  return customFetch<ExcelPreviewResponse>(getPreviewExcelImportUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(excelPreviewRequest),
+  });
+};
+
+export const getPreviewExcelImportMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof previewExcelImport>>,
+    TError,
+    { data: BodyType<ExcelPreviewRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof previewExcelImport>>,
+  TError,
+  { data: BodyType<ExcelPreviewRequest> },
+  TContext
+> => {
+  const mutationKey = ["previewExcelImport"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof previewExcelImport>>,
+    { data: BodyType<ExcelPreviewRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return previewExcelImport(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PreviewExcelImportMutationResult = NonNullable<
+  Awaited<ReturnType<typeof previewExcelImport>>
+>;
+export type PreviewExcelImportMutationBody = BodyType<ExcelPreviewRequest>;
+export type PreviewExcelImportMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Parse Excel file and return column preview
+ */
+export const usePreviewExcelImport = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof previewExcelImport>>,
+    TError,
+    { data: BodyType<ExcelPreviewRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof previewExcelImport>>,
+  TError,
+  { data: BodyType<ExcelPreviewRequest> },
+  TContext
+> => {
+  return useMutation(getPreviewExcelImportMutationOptions(options));
+};
+
+/**
+ * @summary Start Excel import job with column mapping
+ */
+export const getConfirmExcelImportUrl = () => {
+  return `/api/migration/excel/confirm`;
+};
+
+export const confirmExcelImport = async (
+  excelConfirmRequest: ExcelConfirmRequest,
+  options?: RequestInit,
+): Promise<MigrationJobResponse> => {
+  return customFetch<MigrationJobResponse>(getConfirmExcelImportUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(excelConfirmRequest),
+  });
+};
+
+export const getConfirmExcelImportMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof confirmExcelImport>>,
+    TError,
+    { data: BodyType<ExcelConfirmRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof confirmExcelImport>>,
+  TError,
+  { data: BodyType<ExcelConfirmRequest> },
+  TContext
+> => {
+  const mutationKey = ["confirmExcelImport"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof confirmExcelImport>>,
+    { data: BodyType<ExcelConfirmRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return confirmExcelImport(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ConfirmExcelImportMutationResult = NonNullable<
+  Awaited<ReturnType<typeof confirmExcelImport>>
+>;
+export type ConfirmExcelImportMutationBody = BodyType<ExcelConfirmRequest>;
+export type ConfirmExcelImportMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Start Excel import job with column mapping
+ */
+export const useConfirmExcelImport = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof confirmExcelImport>>,
+    TError,
+    { data: BodyType<ExcelConfirmRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof confirmExcelImport>>,
+  TError,
+  { data: BodyType<ExcelConfirmRequest> },
+  TContext
+> => {
+  return useMutation(getConfirmExcelImportMutationOptions(options));
+};
+
+/**
+ * @summary Validate Trello credentials and return board list
+ */
+export const getConnectTrelloUrl = () => {
+  return `/api/migration/trello/connect`;
+};
+
+export const connectTrello = async (
+  trelloConnectRequest: TrelloConnectRequest,
+  options?: RequestInit,
+): Promise<TrelloConnectResponse> => {
+  return customFetch<TrelloConnectResponse>(getConnectTrelloUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(trelloConnectRequest),
+  });
+};
+
+export const getConnectTrelloMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof connectTrello>>,
+    TError,
+    { data: BodyType<TrelloConnectRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof connectTrello>>,
+  TError,
+  { data: BodyType<TrelloConnectRequest> },
+  TContext
+> => {
+  const mutationKey = ["connectTrello"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof connectTrello>>,
+    { data: BodyType<TrelloConnectRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return connectTrello(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ConnectTrelloMutationResult = NonNullable<
+  Awaited<ReturnType<typeof connectTrello>>
+>;
+export type ConnectTrelloMutationBody = BodyType<TrelloConnectRequest>;
+export type ConnectTrelloMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Validate Trello credentials and return board list
+ */
+export const useConnectTrello = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof connectTrello>>,
+    TError,
+    { data: BodyType<TrelloConnectRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof connectTrello>>,
+  TError,
+  { data: BodyType<TrelloConnectRequest> },
+  TContext
+> => {
+  return useMutation(getConnectTrelloMutationOptions(options));
+};
+
+/**
+ * @summary Start Trello board import job
+ */
+export const getStartTrelloImportUrl = () => {
+  return `/api/migration/trello/import`;
+};
+
+export const startTrelloImport = async (
+  trelloImportRequest: TrelloImportRequest,
+  options?: RequestInit,
+): Promise<MigrationJobResponse> => {
+  return customFetch<MigrationJobResponse>(getStartTrelloImportUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(trelloImportRequest),
+  });
+};
+
+export const getStartTrelloImportMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof startTrelloImport>>,
+    TError,
+    { data: BodyType<TrelloImportRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof startTrelloImport>>,
+  TError,
+  { data: BodyType<TrelloImportRequest> },
+  TContext
+> => {
+  const mutationKey = ["startTrelloImport"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof startTrelloImport>>,
+    { data: BodyType<TrelloImportRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return startTrelloImport(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type StartTrelloImportMutationResult = NonNullable<
+  Awaited<ReturnType<typeof startTrelloImport>>
+>;
+export type StartTrelloImportMutationBody = BodyType<TrelloImportRequest>;
+export type StartTrelloImportMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Start Trello board import job
+ */
+export const useStartTrelloImport = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof startTrelloImport>>,
+    TError,
+    { data: BodyType<TrelloImportRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof startTrelloImport>>,
+  TError,
+  { data: BodyType<TrelloImportRequest> },
+  TContext
+> => {
+  return useMutation(getStartTrelloImportMutationOptions(options));
+};
+
+/**
+ * @summary List all migration jobs for the clinic
+ */
+export const getListMigrationJobsUrl = () => {
+  return `/api/migration/jobs`;
+};
+
+export const listMigrationJobs = async (
+  options?: RequestInit,
+): Promise<MigrationJobsResponse> => {
+  return customFetch<MigrationJobsResponse>(getListMigrationJobsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListMigrationJobsQueryKey = () => {
+  return [`/api/migration/jobs`] as const;
+};
+
+export const getListMigrationJobsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listMigrationJobs>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listMigrationJobs>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListMigrationJobsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listMigrationJobs>>
+  > = ({ signal }) => listMigrationJobs({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listMigrationJobs>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListMigrationJobsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listMigrationJobs>>
+>;
+export type ListMigrationJobsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all migration jobs for the clinic
+ */
+
+export function useListMigrationJobs<
+  TData = Awaited<ReturnType<typeof listMigrationJobs>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listMigrationJobs>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListMigrationJobsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get migration job status and progress
+ */
+export const getGetMigrationJobStatusUrl = (jobId: string) => {
+  return `/api/migration/${jobId}/status`;
+};
+
+export const getMigrationJobStatus = async (
+  jobId: string,
+  options?: RequestInit,
+): Promise<MigrationJobStatusResponse> => {
+  return customFetch<MigrationJobStatusResponse>(
+    getGetMigrationJobStatusUrl(jobId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetMigrationJobStatusQueryKey = (jobId: string) => {
+  return [`/api/migration/${jobId}/status`] as const;
+};
+
+export const getGetMigrationJobStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMigrationJobStatus>>,
+  TError = ErrorType<void>,
+>(
+  jobId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getMigrationJobStatus>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetMigrationJobStatusQueryKey(jobId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getMigrationJobStatus>>
+  > = ({ signal }) =>
+    getMigrationJobStatus(jobId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!jobId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getMigrationJobStatus>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetMigrationJobStatusQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMigrationJobStatus>>
+>;
+export type GetMigrationJobStatusQueryError = ErrorType<void>;
+
+/**
+ * @summary Get migration job status and progress
+ */
+
+export function useGetMigrationJobStatus<
+  TData = Awaited<ReturnType<typeof getMigrationJobStatus>>,
+  TError = ErrorType<void>,
+>(
+  jobId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getMigrationJobStatus>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetMigrationJobStatusQueryOptions(jobId, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

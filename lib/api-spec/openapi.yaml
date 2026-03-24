@@ -1343,6 +1343,128 @@ paths:
               schema:
                 $ref: "#/components/schemas/DoctorKpiListResponse"
 
+  /migration/excel/preview:
+    post:
+      operationId: previewExcelImport
+      tags: [migration]
+      summary: Parse Excel file and return column preview
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExcelPreviewRequest"
+      responses:
+        "200":
+          description: Preview rows and detected columns
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExcelPreviewResponse"
+
+  /migration/excel/confirm:
+    post:
+      operationId: confirmExcelImport
+      tags: [migration]
+      summary: Start Excel import job with column mapping
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExcelConfirmRequest"
+      responses:
+        "200":
+          description: Migration job created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MigrationJobResponse"
+
+  /migration/trello/connect:
+    post:
+      operationId: connectTrello
+      tags: [migration]
+      summary: Validate Trello credentials and return board list
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrelloConnectRequest"
+      responses:
+        "200":
+          description: Trello boards list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrelloConnectResponse"
+
+  /migration/trello/import:
+    post:
+      operationId: startTrelloImport
+      tags: [migration]
+      summary: Start Trello board import job
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrelloImportRequest"
+      responses:
+        "200":
+          description: Migration job created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MigrationJobResponse"
+
+  /migration/jobs:
+    get:
+      operationId: listMigrationJobs
+      tags: [migration]
+      summary: List all migration jobs for the clinic
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: List of migration jobs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MigrationJobsResponse"
+
+  /migration/{jobId}/status:
+    get:
+      operationId: getMigrationJobStatus
+      tags: [migration]
+      summary: Get migration job status and progress
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Job status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MigrationJobStatusResponse"
+        "404":
+          description: Job not found
+
 components:
   securitySchemes:
     cookieAuth:
@@ -2809,3 +2931,237 @@ components:
       required:
         - patientId
         - procedureId
+
+    ExcelPreviewRequest:
+      type: object
+      properties:
+        fileBase64:
+          type: string
+      required:
+        - fileBase64
+
+    ExcelPreviewResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            headers:
+              type: array
+              items:
+                type: string
+            rows:
+              type: array
+              items:
+                type: object
+                additionalProperties:
+                  type: string
+            suggestedMapping:
+              type: object
+              properties:
+                name:
+                  type: string
+                phone:
+                  type: string
+                age:
+                  type: string
+                notes:
+                  type: string
+                status:
+                  type: string
+            totalRows:
+              type: number
+          required:
+            - headers
+            - rows
+            - suggestedMapping
+            - totalRows
+      required:
+        - success
+        - data
+
+    ExcelConfirmRequest:
+      type: object
+      properties:
+        rows:
+          type: array
+          items:
+            type: object
+            properties:
+              index:
+                type: number
+              cells:
+                type: object
+                additionalProperties:
+                  type: string
+            required:
+              - index
+              - cells
+        mapping:
+          type: object
+          properties:
+            name:
+              type: string
+            phone:
+              type: string
+            age:
+              type: string
+            notes:
+              type: string
+            status:
+              type: string
+      required:
+        - rows
+        - mapping
+
+    TrelloConnectRequest:
+      type: object
+      properties:
+        apiKey:
+          type: string
+        token:
+          type: string
+      required:
+        - apiKey
+        - token
+
+    TrelloConnectResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            boards:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                required:
+                  - id
+                  - name
+          required:
+            - boards
+      required:
+        - success
+        - data
+
+    TrelloImportRequest:
+      type: object
+      properties:
+        apiKey:
+          type: string
+        token:
+          type: string
+        boardId:
+          type: string
+      required:
+        - apiKey
+        - token
+        - boardId
+
+    MigrationJob:
+      type: object
+      properties:
+        id:
+          type: string
+        clinicId:
+          type: string
+        type:
+          type: string
+          enum: [excel-import, trello-import]
+        status:
+          type: string
+          enum: [pending, processing, done, failed]
+        totalRows:
+          type: number
+          nullable: true
+        processedRows:
+          type: number
+        successCount:
+          type: number
+        errorCount:
+          type: number
+        duplicateCount:
+          type: number
+        report:
+          type: object
+          nullable: true
+          additionalProperties: true
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - clinicId
+        - type
+        - status
+        - processedRows
+        - successCount
+        - errorCount
+        - duplicateCount
+        - createdAt
+        - updatedAt
+
+    MigrationJobResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            job:
+              $ref: "#/components/schemas/MigrationJob"
+          required:
+            - job
+      required:
+        - success
+        - data
+
+    MigrationJobStatusResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            job:
+              $ref: "#/components/schemas/MigrationJob"
+          required:
+            - job
+      required:
+        - success
+        - data
+
+    MigrationJobsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            jobs:
+              type: array
+              items:
+                $ref: "#/components/schemas/MigrationJob"
+          required:
+            - jobs
+      required:
+        - success
+        - data

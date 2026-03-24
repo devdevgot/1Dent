@@ -26,6 +26,7 @@ import FinancialsPage from "@/pages/financials";
 import WarehousePage from "@/pages/warehouse";
 import UsersPage from "@/pages/users";
 import ChatbotPage from "@/pages/chatbot";
+import MigrationPage from "@/pages/migration";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -148,6 +149,11 @@ function Router() {
       {/* Chatbot management */}
       <Route path="/chatbot">
         <ProtectedRoute component={ChatbotPage} allowedRoles={['owner', 'admin']} />
+      </Route>
+
+      {/* Data migration */}
+      <Route path="/migration">
+        <ProtectedRoute component={MigrationPage} allowedRoles={['owner', 'admin']} />
       </Route>
 
       {/* 404 */}

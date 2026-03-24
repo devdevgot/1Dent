@@ -1367,3 +1367,166 @@ export const GetDoctorKpisResponse = zod.object({
     ),
   }),
 });
+
+/**
+ * @summary Parse Excel file and return column preview
+ */
+export const PreviewExcelImportBody = zod.object({
+  fileBase64: zod.string(),
+});
+
+export const PreviewExcelImportResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    headers: zod.array(zod.string()),
+    rows: zod.array(zod.record(zod.string(), zod.string())),
+    suggestedMapping: zod.object({
+      name: zod.string().optional(),
+      phone: zod.string().optional(),
+      age: zod.string().optional(),
+      notes: zod.string().optional(),
+      status: zod.string().optional(),
+    }),
+    totalRows: zod.number(),
+  }),
+});
+
+/**
+ * @summary Start Excel import job with column mapping
+ */
+export const ConfirmExcelImportBody = zod.object({
+  rows: zod.array(
+    zod.object({
+      index: zod.number(),
+      cells: zod.record(zod.string(), zod.string()),
+    }),
+  ),
+  mapping: zod.object({
+    name: zod.string().optional(),
+    phone: zod.string().optional(),
+    age: zod.string().optional(),
+    notes: zod.string().optional(),
+    status: zod.string().optional(),
+  }),
+});
+
+export const ConfirmExcelImportResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    job: zod.object({
+      id: zod.string(),
+      clinicId: zod.string(),
+      type: zod.enum(["excel-import", "trello-import"]),
+      status: zod.enum(["pending", "processing", "done", "failed"]),
+      totalRows: zod.number().nullish(),
+      processedRows: zod.number(),
+      successCount: zod.number(),
+      errorCount: zod.number(),
+      duplicateCount: zod.number(),
+      report: zod.record(zod.string(), zod.unknown()).nullish(),
+      createdAt: zod.string(),
+      updatedAt: zod.string(),
+    }),
+  }),
+});
+
+/**
+ * @summary Validate Trello credentials and return board list
+ */
+export const ConnectTrelloBody = zod.object({
+  apiKey: zod.string(),
+  token: zod.string(),
+});
+
+export const ConnectTrelloResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    boards: zod.array(
+      zod.object({
+        id: zod.string(),
+        name: zod.string(),
+      }),
+    ),
+  }),
+});
+
+/**
+ * @summary Start Trello board import job
+ */
+export const StartTrelloImportBody = zod.object({
+  apiKey: zod.string(),
+  token: zod.string(),
+  boardId: zod.string(),
+});
+
+export const StartTrelloImportResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    job: zod.object({
+      id: zod.string(),
+      clinicId: zod.string(),
+      type: zod.enum(["excel-import", "trello-import"]),
+      status: zod.enum(["pending", "processing", "done", "failed"]),
+      totalRows: zod.number().nullish(),
+      processedRows: zod.number(),
+      successCount: zod.number(),
+      errorCount: zod.number(),
+      duplicateCount: zod.number(),
+      report: zod.record(zod.string(), zod.unknown()).nullish(),
+      createdAt: zod.string(),
+      updatedAt: zod.string(),
+    }),
+  }),
+});
+
+/**
+ * @summary List all migration jobs for the clinic
+ */
+export const ListMigrationJobsResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    jobs: zod.array(
+      zod.object({
+        id: zod.string(),
+        clinicId: zod.string(),
+        type: zod.enum(["excel-import", "trello-import"]),
+        status: zod.enum(["pending", "processing", "done", "failed"]),
+        totalRows: zod.number().nullish(),
+        processedRows: zod.number(),
+        successCount: zod.number(),
+        errorCount: zod.number(),
+        duplicateCount: zod.number(),
+        report: zod.record(zod.string(), zod.unknown()).nullish(),
+        createdAt: zod.string(),
+        updatedAt: zod.string(),
+      }),
+    ),
+  }),
+});
+
+/**
+ * @summary Get migration job status and progress
+ */
+export const GetMigrationJobStatusParams = zod.object({
+  jobId: zod.coerce.string(),
+});
+
+export const GetMigrationJobStatusResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    job: zod.object({
+      id: zod.string(),
+      clinicId: zod.string(),
+      type: zod.enum(["excel-import", "trello-import"]),
+      status: zod.enum(["pending", "processing", "done", "failed"]),
+      totalRows: zod.number().nullish(),
+      processedRows: zod.number(),
+      successCount: zod.number(),
+      errorCount: zod.number(),
+      duplicateCount: zod.number(),
+      report: zod.record(zod.string(), zod.unknown()).nullish(),
+      createdAt: zod.string(),
+      updatedAt: zod.string(),
+    }),
+  }),
+});

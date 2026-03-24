@@ -11,6 +11,7 @@ import analyticsRouter from "../modules/analytics/analytics.controller";
 import logsRouter from "../modules/logs/logs.controller";
 import followupsRouter from "../modules/followups/followups.controller";
 import chatbotRouter from "../modules/chatbot/chatbot.controller";
+import migrationRouter from "../modules/migration/migration.controller";
 import { actionLogMiddleware } from "../middlewares/action-log.middleware";
 import { authRateLimit } from "../middlewares/rate-limit.middleware";
 import { authMiddleware } from "../middlewares/auth.middleware";
@@ -30,6 +31,7 @@ router.use("/procedures", proceduresRouter);
 router.use("/logs", logsRouter);
 router.use("/followups", followupsRouter);
 router.use("/chatbot", chatbotRouter);
+router.use("/migration", migrationRouter);
 router.use("/", analyticsRouter);
 router.use(messagesRouter);
 

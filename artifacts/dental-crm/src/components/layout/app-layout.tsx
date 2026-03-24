@@ -20,6 +20,7 @@ import {
   MoreHorizontal,
   ChevronRight,
   Bot,
+  FileSpreadsheet,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -52,6 +53,7 @@ const PAGE_HREF_TITLE_KEY: Record<string, string> = {
   "/warehouse":            "page.warehouse",
   "/users":                "page.users",
   "/chatbot":              "page.chatbot",
+  "/migration":            "page.migration",
   "/logs":                 "page.logs",
 };
 
@@ -80,8 +82,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
     { nameKey: "nav.financials",href: "/financials", icon: Wallet,        roles: ["owner", "accountant"] },
     { nameKey: "nav.inventory", href: "/inventory",  icon: Package,       roles: ["owner", "admin", "warehouse"] },
     { nameKey: "nav.users",     href: "/users",      icon: Settings,      roles: ["owner", "admin"] },
-    { nameKey: "nav.chatbot",   href: "/chatbot",    icon: Bot,           roles: ["owner", "admin"] },
-    { nameKey: "nav.logs",      href: "/logs",       icon: Activity,      roles: ["owner"] },
+    { nameKey: "nav.chatbot",   href: "/chatbot",    icon: Bot,              roles: ["owner", "admin"] },
+    { nameKey: "nav.migration", href: "/migration",  icon: FileSpreadsheet, roles: ["owner", "admin"] },
+    { nameKey: "nav.logs",      href: "/logs",       icon: Activity,        roles: ["owner"] },
   ];
 
   const logoutMutation = useLogout({

@@ -751,6 +751,139 @@ export interface CreateFollowupsRequest {
   patientName?: string;
 }
 
+export interface ExcelPreviewRequest {
+  fileBase64: string;
+}
+
+export type ExcelPreviewResponseDataRowsItem = { [key: string]: string };
+
+export type ExcelPreviewResponseDataSuggestedMapping = {
+  name?: string;
+  phone?: string;
+  age?: string;
+  notes?: string;
+  status?: string;
+};
+
+export type ExcelPreviewResponseData = {
+  headers: string[];
+  rows: ExcelPreviewResponseDataRowsItem[];
+  suggestedMapping: ExcelPreviewResponseDataSuggestedMapping;
+  totalRows: number;
+};
+
+export interface ExcelPreviewResponse {
+  success: boolean;
+  data: ExcelPreviewResponseData;
+}
+
+export type ExcelConfirmRequestRowsItemCells = { [key: string]: string };
+
+export type ExcelConfirmRequestRowsItem = {
+  index: number;
+  cells: ExcelConfirmRequestRowsItemCells;
+};
+
+export type ExcelConfirmRequestMapping = {
+  name?: string;
+  phone?: string;
+  age?: string;
+  notes?: string;
+  status?: string;
+};
+
+export interface ExcelConfirmRequest {
+  rows: ExcelConfirmRequestRowsItem[];
+  mapping: ExcelConfirmRequestMapping;
+}
+
+export interface TrelloConnectRequest {
+  apiKey: string;
+  token: string;
+}
+
+export type TrelloConnectResponseDataBoardsItem = {
+  id: string;
+  name: string;
+};
+
+export type TrelloConnectResponseData = {
+  boards: TrelloConnectResponseDataBoardsItem[];
+};
+
+export interface TrelloConnectResponse {
+  success: boolean;
+  data: TrelloConnectResponseData;
+}
+
+export interface TrelloImportRequest {
+  apiKey: string;
+  token: string;
+  boardId: string;
+}
+
+export type MigrationJobType =
+  (typeof MigrationJobType)[keyof typeof MigrationJobType];
+
+export const MigrationJobType = {
+  "excel-import": "excel-import",
+  "trello-import": "trello-import",
+} as const;
+
+export type MigrationJobStatus =
+  (typeof MigrationJobStatus)[keyof typeof MigrationJobStatus];
+
+export const MigrationJobStatus = {
+  pending: "pending",
+  processing: "processing",
+  done: "done",
+  failed: "failed",
+} as const;
+
+export type MigrationJobReport = { [key: string]: unknown } | null;
+
+export interface MigrationJob {
+  id: string;
+  clinicId: string;
+  type: MigrationJobType;
+  status: MigrationJobStatus;
+  totalRows?: number | null;
+  processedRows: number;
+  successCount: number;
+  errorCount: number;
+  duplicateCount: number;
+  report?: MigrationJobReport;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type MigrationJobResponseData = {
+  job: MigrationJob;
+};
+
+export interface MigrationJobResponse {
+  success: boolean;
+  data: MigrationJobResponseData;
+}
+
+export type MigrationJobStatusResponseData = {
+  job: MigrationJob;
+};
+
+export interface MigrationJobStatusResponse {
+  success: boolean;
+  data: MigrationJobStatusResponseData;
+}
+
+export type MigrationJobsResponseData = {
+  jobs: MigrationJob[];
+};
+
+export interface MigrationJobsResponse {
+  success: boolean;
+  data: MigrationJobsResponseData;
+}
+
 export type GetInventoryConsumptionParams = {
   dateFrom?: string;
   dateTo?: string;
