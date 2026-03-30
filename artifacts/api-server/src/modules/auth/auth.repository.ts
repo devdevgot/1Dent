@@ -74,4 +74,11 @@ export class AuthRepository {
       .delete(usersTable)
       .where(and(eq(usersTable.id, id), eq(usersTable.clinicId, clinicId)));
   }
+
+  async updateUserPassword(id: string, passwordHash: string): Promise<void> {
+    await db
+      .update(usersTable)
+      .set({ passwordHash })
+      .where(eq(usersTable.id, id));
+  }
 }

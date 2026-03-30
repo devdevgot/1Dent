@@ -10,6 +10,10 @@ import {
 } from "../../shared/errors";
 import type { UserRole, User, Clinic } from "@workspace/db";
 
+// In-memory password reset token store: token → { email, expiresAt }
+const resetTokens = new Map<string, { email: string; expiresAt: number }>();
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
+
 function getJwtSecret(): string {
   const secret = process.env["JWT_SECRET"];
   if (!secret) {
@@ -93,6 +97,46 @@ export class AuthService {
 
     const { passwordHash: _, ...safeUser } = user;
     return { user: safeUser, clinic };
+  }
+
+  async requestPasswordReset(email: string): Promise<{ token: string }> {
+    const user = await this.repo.findUserByEmail(email);
+    // Always return success to avoid email enumeration (but only generate token if user exists)
+    if (!user) {
+      // Return a fake token so the response is always the same shape
+      return { token: "" };
+    }
+
+    // Clean up expired tokens for this email
+    for (const [t, data] of resetTokens.entries()) {
+      if (data.email === email || data.expiresAt < Date.now()) {
+        resetTokens.delete(t);
+      }
+    }
+
+    const token = randomUUID();
+    resetTokens.set(token, { email, expiresAt: Date.now() + RESET_TOKEN_TTL_MS });
+
+    // In production, send via email. For now, log it.
+    console.log(`[PasswordReset] Token for ${email}: ${token}`);
+
+    return { token };
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    const entry = resetTokens.get(token);
+    if (!entry || entry.expiresAt < Date.now()) {
+      throw new UnauthorizedError("Invalid or expired reset token");
+    }
+
+    const user = await this.repo.findUserByEmail(entry.email);
+    if (!user) throw new NotFoundError("User not found");
+
+    const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    await this.repo.updateUserPassword(user.id, passwordHash);
+
+    // Invalidate the token after use
+    resetTokens.delete(token);
   }
 
   async createUser(data: {

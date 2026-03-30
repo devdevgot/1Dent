@@ -137,9 +137,9 @@ export default function Login() {
 
           {/* Forgot password */}
           <div className="text-right">
-            <a href="#" className="text-sm font-medium text-destructive hover:opacity-80 transition-opacity">
+            <Link href="/forgot-password" className="text-sm font-medium text-destructive hover:opacity-80 transition-opacity">
               {t("auth.forgotPassword")}
-            </a>
+            </Link>
           </div>
 
           {/* Sign in button */}

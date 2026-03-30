@@ -63,6 +63,42 @@ router.post("/logout", (_req: Request, res: Response) => {
   res.json({ success: true, message: "Logged out successfully" });
 });
 
+const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1),
+  newPassword: z.string().min(6),
+});
+
+router.post("/forgot-password", async (req: Request, res: Response, next: NextFunction) => {
+  const parsed = forgotPasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+  }
+
+  const result = await authService.requestPasswordReset(parsed.data.email).catch(next);
+  if (!result) return;
+
+  const response: Record<string, unknown> = { success: true, message: "If this email is registered, a reset link has been sent." };
+  // In development, include the token so the UI can show a direct link
+  if (process.env["NODE_ENV"] !== "production" && result.token) {
+    response["devToken"] = result.token;
+  }
+  res.json(response);
+});
+
+router.post("/reset-password", async (req: Request, res: Response, next: NextFunction) => {
+  const parsed = resetPasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+  }
+
+  await authService.resetPassword(parsed.data.token, parsed.data.newPassword).catch(next);
+  res.json({ success: true, message: "Password has been reset successfully." });
+});
+
 router.get("/me", authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
   const result = await authService.getMe(req.user!.userId, req.user!.clinicId).catch(next);
   if (!result) return;
