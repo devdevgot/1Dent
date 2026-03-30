@@ -8,7 +8,7 @@ import {
 } from "@workspace/api-client-react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import {
-  ChevronRight, UserCog, Users,
+  ChevronRight, UserCog, Users, Bell,
   Activity, Stethoscope, Send, Banknote, QrCode, CreditCard,
   Clock, Wallet, CalendarDays, SlidersHorizontal, UserPlus, Layers,
   TrendingUp,
@@ -46,30 +46,70 @@ function todayLabel() {
   });
 }
 
+// ─── DEMO MODE ──────────────────────────────────────────────────────────────
+// Чтобы убрать фейковые данные — поменяй на false
+const USE_MOCK_DATA = true;
+
+const MOCK_ANALYTICS = {
+  revenueThisMonth: 4_850_000,
+  newPatientsThisMonth: 38,
+  completedProceduresThisMonth: 127,
+  totalPatients: 1_240,
+  redAlertCount: 2,
+  revenueByPaymentMethod: [
+    { method: "kaspi_transfer", label: "Kaspi перевод", amount: 1_940_000, percent: 40, color: "#4B7BEC" },
+    { method: "cash",           label: "Наличка",        amount:   970_000, percent: 20, color: "#26de81" },
+    { method: "kaspi_qr",       label: "Kaspi QR",       amount:   727_500, percent: 15, color: "#fd9644" },
+    { method: "terminal",       label: "Терминал",        amount:   485_000, percent: 10, color: "#2d3436" },
+    { method: "kaspi_red",      label: "Kaspi RED",       amount:   484_500, percent: 10, color: "#fc5c65" },
+    { method: "debt",           label: "В долг",          amount:   243_000, percent:  5, color: "#a29bfe" },
+  ],
+};
+
+const MOCK_KPIS = [
+  { doctorId: "d1", doctorName: "Асель Нурланова",   completedProcedures: 42, revenue: 1_820_000, patients: 31 },
+  { doctorId: "d2", doctorName: "Берик Сейтов",      completedProcedures: 35, revenue: 1_540_000, patients: 28 },
+  { doctorId: "d3", doctorName: "Гульнар Ахметова",  completedProcedures: 28, revenue: 1_020_000, patients: 22 },
+  { doctorId: "d4", doctorName: "Данияр Касымов",    completedProcedures: 22, revenue:   470_000, patients: 17 },
+];
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function OwnerDashboard() {
   const { t } = useTranslation();
   const { user, clinic } = useAuthStore();
   const [, navigate] = useLocation();
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
 
-  const { data: analyticsData, isLoading, refetch } = useGetOwnerAnalytics({
+  const { data: analyticsData, isLoading: apiLoading } = useGetOwnerAnalytics({
     query: { queryKey: getGetOwnerAnalyticsQueryKey() },
   });
+  const isLoading = USE_MOCK_DATA ? false : apiLoading;
   const { data: kpiData } = useGetDoctorKpis({
     query: { queryKey: getGetDoctorKpisQueryKey() },
   });
 
-  const analytics = (analyticsData?.data?.analytics ?? {}) as Record<string, unknown>;
-  const kpis = kpiData?.data?.kpis ?? [];
+  const rawAnalytics = (analyticsData?.data?.analytics ?? {}) as Record<string, unknown>;
+  const rawKpis = kpiData?.data?.kpis ?? [];
 
-  const revenueThisMonth  = Number(analytics.revenueThisMonth ?? 0);
-  const newPatientsThisMonth = Number(analytics.newPatientsThisMonth ?? 0);
-  const completedProcedures  = Number(analytics.completedProceduresThisMonth ?? 0);
-  const totalPatients        = Number(analytics.totalPatients ?? 0);
-  const redAlertCount        = Number(analytics.redAlertCount ?? 0);
+  const analytics = USE_MOCK_DATA ? MOCK_ANALYTICS : {
+    revenueThisMonth:               Number(rawAnalytics.revenueThisMonth ?? 0),
+    newPatientsThisMonth:           Number(rawAnalytics.newPatientsThisMonth ?? 0),
+    completedProceduresThisMonth:   Number(rawAnalytics.completedProceduresThisMonth ?? 0),
+    totalPatients:                  Number(rawAnalytics.totalPatients ?? 0),
+    redAlertCount:                  Number(rawAnalytics.redAlertCount ?? 0),
+    revenueByPaymentMethod:         (rawAnalytics.revenueByPaymentMethod ?? []) as typeof MOCK_ANALYTICS.revenueByPaymentMethod,
+  };
+
+  const kpis = USE_MOCK_DATA ? MOCK_KPIS : rawKpis;
+
+  const revenueThisMonth       = analytics.revenueThisMonth;
+  const newPatientsThisMonth   = analytics.newPatientsThisMonth;
+  const completedProcedures    = analytics.completedProceduresThisMonth;
+  const totalPatients          = analytics.totalPatients;
+  const redAlertCount          = analytics.redAlertCount;
 
   type PaymentStat = { method: string; label: string; amount: number; percent: number; color: string };
-  const revenueByPayment = ((analytics.revenueByPaymentMethod ?? []) as PaymentStat[]);
+  const revenueByPayment = analytics.revenueByPaymentMethod as PaymentStat[];
 
   const donutData = revenueByPayment.length > 0
     ? revenueByPayment
