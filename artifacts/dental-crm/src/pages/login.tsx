@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useLocation } from "wouter";
@@ -7,7 +7,7 @@ import { useLogin } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Mail, ArrowRight } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
 import { useTranslation } from "react-i18next";
 
@@ -16,6 +16,7 @@ export default function Login() {
   const [, setLocation] = useLocation();
   const { setAuth } = useAuthStore();
   const { toast } = useToast();
+  const [showPassword, setShowPassword] = useState(false);
 
   const loginSchema = useMemo(() => createLoginSchema(), [t]);
 
@@ -50,112 +51,118 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen w-full flex bg-background">
-      {/* Left branding panel */}
-      <div className="hidden lg:flex w-1/2 relative overflow-hidden bg-slate-900 items-center justify-center">
-        <div className="absolute inset-0 z-0">
-          <img
-            src={`${import.meta.env.BASE_URL}images/auth-bg.png`}
-            alt="Dental CRM"
-            className="w-full h-full object-cover opacity-80"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-        </div>
-        <div className="relative z-10 p-12 max-w-lg text-white">
-          <img
-            src={`${import.meta.env.BASE_URL}images/logo.png`}
-            alt="Dental CRM"
-            className="w-16 h-16 object-contain mb-8 bg-white/10 p-2 rounded-2xl backdrop-blur-md"
-          />
-          <h1 className="font-display font-bold text-5xl mb-6 leading-tight">
-            {t("auth.heroTitle")}
-          </h1>
-          <p className="text-xl text-white/80 font-light">{t("auth.heroSubtitle")}</p>
-        </div>
-      </div>
-
-      {/* Right form panel */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 relative">
-        <div className="absolute top-8 right-8">
-          <span className="text-sm text-muted-foreground mr-2">{t("auth.newClinic")}</span>
-          <Link href="/register" className="text-sm font-semibold text-primary hover:underline">
-            {t("auth.createAccount")}
-          </Link>
+    <div className="min-h-screen w-full bg-white flex flex-col items-center justify-center px-6 py-12">
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+        className="w-full max-w-sm"
+      >
+        {/* Logo */}
+        <div className="flex flex-col items-center mb-10">
+          <div
+            className="w-20 h-20 rounded-[22px] flex items-center justify-center mb-4 shadow-lg"
+            style={{ backgroundColor: "#98cc1c" }}
+          >
+            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+              <path
+                d="M20 6C16.5 6 14 8 13 10.5C12 9 10 8 8 8.5C5 9.5 4 13 5 16C6 19 9 20.5 9 22C9 24 8 28 9 31C10 34 13 35 15 33C16.5 31.5 17 28 18 26H22C23 28 23.5 31.5 25 33C27 35 30 34 31 31C32 28 31 24 31 22C31 20.5 34 19 35 16C36 13 35 9.5 32 8.5C30 8 28 9 27 10.5C26 8 23.5 6 20 6Z"
+                fill="white"
+                fillOpacity="0.95"
+              />
+            </svg>
+          </div>
+          <h1 className="text-xl font-display font-bold text-gray-900">Dental CRM</h1>
+          <p className="text-sm text-gray-400 mt-0.5">Управление клиникой</p>
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="w-full max-w-md"
-        >
-          <div className="mb-10">
-            <h2 className="text-3xl font-display font-bold text-foreground mb-2">{t("auth.welcome")}</h2>
-            <p className="text-muted-foreground">{t("auth.subtitle")}</p>
+        {/* Title */}
+        <h2 className="text-2xl font-display font-bold text-gray-900 text-center mb-7">
+          {t("auth.welcome")}
+        </h2>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+          {/* Email field */}
+          <div>
+            <div className={`
+              w-full px-4 py-3.5 rounded-2xl border-2 bg-gray-50 transition-all
+              ${errors.email ? "border-destructive bg-red-50" : "border-gray-200 focus-within:border-primary focus-within:bg-white"}
+            `}>
+              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">
+                {t("auth.email")}
+              </p>
+              <input
+                {...register("email")}
+                type="email"
+                placeholder="doctor@clinic.com"
+                autoComplete="email"
+                className="w-full bg-transparent text-base text-gray-900 placeholder:text-gray-300 outline-none"
+              />
+            </div>
+            {errors.email && (
+              <p className="text-xs text-destructive font-medium mt-1.5 px-1">{errors.email.message}</p>
+            )}
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-            <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-foreground">{t("auth.email")}</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <input
-                  {...register("email")}
-                  type="email"
-                  placeholder="doctor@clinic.com"
-                  className={`
-                    w-full pl-11 pr-4 py-3 rounded-xl bg-slate-50 border-2 outline-none transition-all
-                    ${errors.email ? "border-destructive focus:ring-destructive/20" : "border-transparent focus:border-primary focus:bg-white focus:shadow-[0_0_0_4px_rgba(37,99,235,0.1)]"}
-                  `}
-                />
-              </div>
-              {errors.email && (
-                <p className="text-sm text-destructive font-medium mt-1">{errors.email.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center">
-                <label className="text-sm font-semibold text-foreground">{t("auth.password")}</label>
-                <a href="#" className="text-sm font-medium text-primary hover:underline">
-                  {t("auth.forgotPassword")}
-                </a>
-              </div>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-muted-foreground" />
-                </div>
+          {/* Password field */}
+          <div>
+            <div className={`
+              w-full px-4 py-3.5 rounded-2xl border-2 bg-gray-50 transition-all relative
+              ${errors.password ? "border-destructive bg-red-50" : "border-gray-200 focus-within:border-primary focus-within:bg-white"}
+            `}>
+              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">
+                {t("auth.password")}
+              </p>
+              <div className="flex items-center">
                 <input
                   {...register("password")}
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   autoComplete="current-password"
-                  className={`
-                    w-full pl-11 pr-4 py-3 rounded-xl bg-slate-50 border-2 outline-none transition-all
-                    ${errors.password ? "border-destructive focus:ring-destructive/20" : "border-transparent focus:border-primary focus:bg-white focus:shadow-[0_0_0_4px_rgba(37,99,235,0.1)]"}
-                  `}
+                  className="flex-1 bg-transparent text-base text-gray-900 placeholder:text-gray-300 outline-none"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors ml-2"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
               </div>
-              {errors.password && (
-                <p className="text-sm text-destructive font-medium mt-1">{errors.password.message}</p>
-              )}
             </div>
+            {errors.password && (
+              <p className="text-xs text-destructive font-medium mt-1.5 px-1">{errors.password.message}</p>
+            )}
+          </div>
 
+          {/* Forgot password */}
+          <div className="text-right">
+            <a href="#" className="text-sm font-medium text-destructive hover:opacity-80 transition-opacity">
+              {t("auth.forgotPassword")}
+            </a>
+          </div>
+
+          {/* Sign in button */}
+          <button
+            type="submit"
+            disabled={loginMutation.isPending}
+            className="w-full py-4 rounded-2xl text-base font-bold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.98] mt-2"
+            style={{ backgroundColor: "#98cc1c", color: "#1a2204" }}
+          >
+            {loginMutation.isPending ? t("auth.signingIn") : t("auth.signIn")}
+          </button>
+
+          {/* Register link */}
+          <Link href="/register">
             <button
-              type="submit"
-              disabled={loginMutation.isPending}
-              className="w-full mt-8 group flex items-center justify-center px-6 py-3.5 text-base font-semibold text-white bg-primary hover:bg-primary/90 rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
+              type="button"
+              className="w-full py-4 rounded-2xl text-base font-semibold text-gray-500 bg-gray-100 hover:bg-gray-200 transition-all duration-200 active:scale-[0.98]"
             >
-              {loginMutation.isPending ? t("auth.signingIn") : t("auth.signIn")}
-              {!loginMutation.isPending && (
-                <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              )}
+              {t("auth.createAccount")}
             </button>
-          </form>
-        </motion.div>
-      </div>
+          </Link>
+        </form>
+      </motion.div>
     </div>
   );
 }
