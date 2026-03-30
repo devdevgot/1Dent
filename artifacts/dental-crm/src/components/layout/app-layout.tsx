@@ -166,16 +166,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <ChevronDown className="w-3.5 h-3.5 text-gray-400 shrink-0" />
         </button>
 
-        {/* Right: lang + bell + avatar */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        {/* Right: bell */}
+        <div className="flex items-center shrink-0">
           <NotificationBell />
-
-          <button
-            onClick={() => setProfileOpen(true)}
-            className="w-9 h-9 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold text-sm shrink-0"
-          >
-            {user?.name.charAt(0).toUpperCase()}
-          </button>
         </div>
       </header>
 
