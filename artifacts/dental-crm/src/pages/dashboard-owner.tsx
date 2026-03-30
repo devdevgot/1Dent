@@ -86,38 +86,53 @@ export default function OwnerDashboard() {
   return (
     <div className="min-h-full bg-[#f7f8fc] pb-8">
 
-      {/* ─── Doctor circles ─── */}
-      {kpis.length > 0 && (
-        <div className="bg-white border-b border-gray-100 px-4 py-3">
-          <div className="flex gap-4 overflow-x-auto custom-scrollbar pb-1">
-            {kpis.map((kpi, i) => {
-              const initials = kpi.doctorName
-                .split(" ").map((w: string) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
-              const bg = DOCTOR_BG[i % DOCTOR_BG.length];
-              return (
-                <motion.button
-                  key={kpi.doctorId}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: i * 0.05 }}
-                  onClick={() => navigate(`/staff/${kpi.doctorId}`)}
-                  className="flex flex-col items-center gap-1.5 shrink-0"
-                >
-                  <div
-                    className="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-base shadow-sm"
-                    style={{ backgroundColor: bg }}
+      {/* ─── White top strip: doctor circles + date row ─── */}
+      <div className="bg-white border-b border-gray-100">
+        {/* Doctor circles */}
+        {kpis.length > 0 && (
+          <div className="px-4 pt-3 pb-2">
+            <div className="flex gap-4 overflow-x-auto custom-scrollbar pb-1">
+              {kpis.map((kpi, i) => {
+                const initials = kpi.doctorName
+                  .split(" ").map((w: string) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
+                const bg = DOCTOR_BG[i % DOCTOR_BG.length];
+                return (
+                  <motion.button
+                    key={kpi.doctorId}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: i * 0.05 }}
+                    onClick={() => navigate(`/staff/${kpi.doctorId}`)}
+                    className="flex flex-col items-center gap-1.5 shrink-0"
                   >
-                    {initials}
-                  </div>
-                  <span className="text-[11px] font-medium text-gray-600 max-w-[56px] truncate text-center leading-tight">
-                    {kpi.doctorName.split(" ")[0]}
-                  </span>
-                </motion.button>
-              );
-            })}
+                    <div
+                      className="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-base shadow-sm"
+                      style={{ backgroundColor: bg }}
+                    >
+                      {initials}
+                    </div>
+                    <span className="text-[11px] font-medium text-gray-600 max-w-[56px] truncate text-center leading-tight">
+                      {kpi.doctorName.split(" ")[0]}
+                    </span>
+                  </motion.button>
+                );
+              })}
+            </div>
           </div>
+        )}
+
+        {/* Date row */}
+        <div className="mx-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-1.5 text-sm font-semibold text-gray-700">
+          <CalendarDays className="w-4 h-4 text-primary" />
+          <span className="capitalize">{todayLabel()}</span>
         </div>
-      )}
+        <button className="flex items-center gap-1 bg-white border border-gray-200 rounded-xl px-3 py-1.5 text-xs font-semibold text-gray-600 shadow-sm">
+          <SlidersHorizontal className="w-3.5 h-3.5 text-gray-400" />
+          Сегодня
+        </button>
+        </div>
+      </div>{/* end white top strip */}
 
       {/* ─── Red Alert Banner ─── */}
       <AnimatePresence>
@@ -146,18 +161,6 @@ export default function OwnerDashboard() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* ─── Date row ─── */}
-      <div className="mx-4 mt-4 flex items-center justify-between">
-        <div className="flex items-center gap-1.5 text-sm font-semibold text-gray-700">
-          <CalendarDays className="w-4 h-4 text-primary" />
-          <span className="capitalize">{todayLabel()}</span>
-        </div>
-        <button className="flex items-center gap-1 bg-white border border-gray-200 rounded-xl px-3 py-1.5 text-xs font-semibold text-gray-600 shadow-sm">
-          <SlidersHorizontal className="w-3.5 h-3.5 text-gray-400" />
-          Сегодня
-        </button>
-      </div>
 
       {/* ─── Revenue Donut Card ─── */}
       <div className="mx-4 mt-3 bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
