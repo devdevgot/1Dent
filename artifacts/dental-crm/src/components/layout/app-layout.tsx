@@ -142,10 +142,17 @@ export function AppLayout({ children }: { children: ReactNode }) {
     (item) => location === item.href || location.startsWith(`${item.href}/`),
   );
 
+  // Pages that render their own built-in header — hide the global one
+  const PAGES_WITH_OWN_HEADER = ["/dashboard"];
+  const hideGlobalHeader = PAGES_WITH_OWN_HEADER.includes(location);
+
   return (
     <div className="flex flex-col h-[100dvh] bg-background overflow-hidden">
-      {/* Top header */}
-      <header className="flex-none flex items-center h-14 px-4 bg-white border-b border-border/50 z-20 safe-area-top">
+      {/* Top header — hidden for pages that have their own header */}
+      <header className={cn(
+        "flex-none flex items-center h-14 px-4 bg-white border-b border-border/50 z-20 safe-area-top",
+        hideGlobalHeader && "hidden",
+      )}>
         <div className="flex items-center gap-2.5 flex-1 min-w-0">
           <img
             src={`${import.meta.env.BASE_URL}images/logo.png`}
