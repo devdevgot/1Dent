@@ -15,6 +15,14 @@ export interface DoctorAnalyticsFilters {
   minRevenue?: number;
 }
 
+export interface PaymentMethodStat {
+  method: string;
+  label: string;
+  amount: number;
+  percent: number;
+  color: string;
+}
+
 export interface OwnerAnalytics {
   totalPatients: number;
   newPatientsThisMonth: number;
@@ -23,6 +31,7 @@ export interface OwnerAnalytics {
   completedProceduresThisMonth: number;
   redAlertCount: number;
   doctorKpis: DoctorKpi[];
+  revenueByPaymentMethod: PaymentMethodStat[];
 }
 
 export interface DoctorAnalytics {
@@ -148,6 +157,32 @@ export class AnalyticsRepository {
     const revenueThisMonth = monthlyProcedures.reduce((acc, p) => acc + (p.price ?? 0), 0);
     const completedProceduresThisMonth = monthlyProcedures.length;
 
+    const PAYMENT_META: Record<string, { label: string; color: string }> = {
+      kaspi_transfer: { label: "Kaspi перевод", color: "#4B7BEC" },
+      cash:           { label: "Наличка",       color: "#26de81" },
+      kaspi_qr:       { label: "Kaspi QR",      color: "#fd9644" },
+      terminal:       { label: "Терминал",      color: "#2d3436" },
+      kaspi_red:      { label: "Kaspi RED",     color: "#fc5c65" },
+      debt:           { label: "В долг",        color: "#a29bfe" },
+    };
+
+    const paymentTotals: Record<string, number> = {};
+    for (const proc of monthlyProcedures) {
+      const m = proc.paymentMethod ?? "cash";
+      paymentTotals[m] = (paymentTotals[m] ?? 0) + (proc.price ?? 0);
+    }
+    const revenueByPaymentMethod: PaymentMethodStat[] = Object.entries(PAYMENT_META)
+      .map(([method, meta]) => ({
+        method,
+        label:   meta.label,
+        color:   meta.color,
+        amount:  paymentTotals[method] ?? 0,
+        percent: revenueThisMonth > 0
+          ? Math.round(((paymentTotals[method] ?? 0) / revenueThisMonth) * 100)
+          : 0,
+      }))
+      .filter((s) => s.amount > 0);
+
     const doctorKpis: DoctorKpi[] = await Promise.all(
       doctors.map(async (doc) => {
         const [doctorPatients, doctorProcedures] = await Promise.all([
@@ -195,6 +230,7 @@ export class AnalyticsRepository {
       completedProceduresThisMonth,
       redAlertCount: redAlerts.length,
       doctorKpis,
+      revenueByPaymentMethod,
     };
     await analyticsCache.set(cacheKey, result);
     return result;

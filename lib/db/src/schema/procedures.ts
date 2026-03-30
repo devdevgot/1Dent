@@ -18,6 +18,15 @@ export const procedureStatusEnum = pgEnum("procedure_status", [
   "cancelled",
 ]);
 
+export const paymentMethodEnum = pgEnum("payment_method", [
+  "kaspi_transfer",
+  "cash",
+  "kaspi_qr",
+  "terminal",
+  "kaspi_red",
+  "debt",
+]);
+
 export const proceduresTable = pgTable("procedures", {
   id: text("id").primaryKey(),
   clinicId: text("clinic_id")
@@ -33,6 +42,7 @@ export const proceduresTable = pgTable("procedures", {
   status: procedureStatusEnum("status").default("scheduled").notNull(),
   price: real("price").notNull().default(0),
   notes: text("notes"),
+  paymentMethod: paymentMethodEnum("payment_method").default("cash"),
   scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
   completedAt: timestamp("completed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
@@ -90,6 +100,7 @@ export const doctorKpisTable = pgTable("doctor_kpis", {
 export type Procedure = typeof proceduresTable.$inferSelect;
 export type InsertProcedure = typeof proceduresTable.$inferInsert;
 export type ProcedureStatus = (typeof procedureStatusEnum.enumValues)[number];
+export type PaymentMethod = (typeof paymentMethodEnum.enumValues)[number];
 export type ProcedureTemplate = typeof procedureTemplatesTable.$inferSelect;
 export type InsertProcedureTemplate =
   typeof procedureTemplatesTable.$inferInsert;
