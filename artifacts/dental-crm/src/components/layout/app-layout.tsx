@@ -168,23 +168,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
         {/* Right: lang + bell + avatar */}
         <div className="flex items-center gap-1.5 shrink-0">
-          <div className="flex items-center bg-gray-100 rounded-lg p-0.5 gap-0.5">
-            {SUPPORTED_LANGS.map((lang) => (
-              <button
-                key={lang}
-                onClick={() => handleLangChange(lang)}
-                className={cn(
-                  "text-[10px] font-bold px-2 py-1 rounded-md transition-colors",
-                  currentLang === lang
-                    ? "bg-white text-primary shadow-sm"
-                    : "text-gray-400 hover:text-gray-700",
-                )}
-              >
-                {t(`lang.${lang}`)}
-              </button>
-            ))}
-          </div>
-
           <NotificationBell />
 
           <button
