@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useAuthStore } from "@/hooks/use-auth";
 import {
   useGetOwnerAnalytics,
@@ -8,7 +8,7 @@ import {
 } from "@workspace/api-client-react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import {
-  ChevronRight, UserCog, Users, Bell,
+  ChevronRight, UserCog, Users, Bell, X, ChevronLeft,
   Activity, Stethoscope, Send, Banknote, QrCode, CreditCard,
   Clock, Wallet, CalendarDays, SlidersHorizontal, UserPlus, Layers,
   TrendingUp,
@@ -16,6 +16,8 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
 
 const PAYMENT_ICONS: Record<string, React.ElementType> = {
   kaspi_transfer: Send,
@@ -45,6 +47,47 @@ function todayLabel() {
     day: "numeric", month: "long", weekday: "short",
   });
 }
+
+// ─── DATE FILTER ────────────────────────────────────────────────────────────
+type FilterPreset = "today" | "week" | "month" | "6months" | "year" | "custom";
+
+const FILTER_PRESETS: { key: FilterPreset; label: string }[] = [
+  { key: "today",   label: "Сегодня" },
+  { key: "week",    label: "За неделю" },
+  { key: "month",   label: "Текущий месяц" },
+  { key: "6months", label: "За полгода" },
+  { key: "year",    label: "За год" },
+  { key: "custom",  label: "Выбрать период" },
+];
+
+function getPresetRange(preset: FilterPreset): { from: Date; to: Date } {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  switch (preset) {
+    case "today":   return { from: today, to: today };
+    case "week":    return { from: new Date(today.getTime() - 6 * 86400000), to: today };
+    case "month":   return { from: new Date(today.getFullYear(), today.getMonth(), 1), to: today };
+    case "6months": return { from: new Date(today.getFullYear(), today.getMonth() - 6, today.getDate()), to: today };
+    case "year":    return { from: new Date(today.getFullYear() - 1, today.getMonth(), today.getDate()), to: today };
+    default:        return { from: today, to: today };
+  }
+}
+
+function fmtDate(d: Date): string {
+  return d.toLocaleDateString("ru", { day: "2-digit", month: "2-digit" });
+}
+
+function fmtDateRange(from: Date, to: Date): string {
+  if (from.toDateString() === to.toDateString()) {
+    return from.toLocaleDateString("ru", { day: "numeric", month: "long", weekday: "short" });
+  }
+  return `${fmtDate(from)} – ${fmtDate(to)}`;
+}
+
+function toInputValue(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 // ─── DEMO MODE ──────────────────────────────────────────────────────────────
 // Чтобы убрать фейковые данные — поменяй на false
@@ -79,6 +122,25 @@ export default function OwnerDashboard() {
   const { user, clinic } = useAuthStore();
   const [, navigate] = useLocation();
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
+
+  // ── Date filter state ──
+  const [filterOpen, setFilterOpen]     = useState(false);
+  const [showCustom, setShowCustom]     = useState(false);
+  const [filterPreset, setFilterPreset] = useState<FilterPreset>("month");
+  const [pendingPreset, setPendingPreset] = useState<FilterPreset>("month");
+  const today = new Date();
+  const [customFrom, setCustomFrom] = useState(toInputValue(new Date(today.getFullYear(), today.getMonth(), 1)));
+  const [customTo,   setCustomTo]   = useState(toInputValue(today));
+
+  const dateRange = useMemo(() => {
+    if (filterPreset === "custom") {
+      return { from: new Date(customFrom), to: new Date(customTo) };
+    }
+    return getPresetRange(filterPreset);
+  }, [filterPreset, customFrom, customTo]);
+
+  const filterLabel = FILTER_PRESETS.find(p => p.key === filterPreset)?.label ?? "Месяц";
+  const dateRangeLabel = fmtDateRange(dateRange.from, dateRange.to);
 
   const { data: analyticsData, isLoading: apiLoading } = useGetOwnerAnalytics({
     query: { queryKey: getGetOwnerAnalyticsQueryKey() },
@@ -163,14 +225,17 @@ export default function OwnerDashboard() {
 
         {/* Date row */}
         <div className="mx-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-1.5 text-sm font-semibold text-gray-700">
-          <CalendarDays className="w-4 h-4 text-primary" />
-          <span className="capitalize">{todayLabel()}</span>
-        </div>
-        <button className="flex items-center gap-1 bg-white border border-gray-200 rounded-xl px-3 py-1.5 text-xs font-semibold text-gray-600 shadow-sm">
-          <SlidersHorizontal className="w-3.5 h-3.5 text-gray-400" />
-          Сегодня
-        </button>
+          <div className="flex items-center gap-1.5 text-sm font-semibold text-gray-700">
+            <CalendarDays className="w-4 h-4 text-primary" />
+            <span className="capitalize">{dateRangeLabel}</span>
+          </div>
+          <button
+            onClick={() => { setPendingPreset(filterPreset); setShowCustom(false); setFilterOpen(true); }}
+            className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-xl px-3 py-1.5 text-xs font-semibold text-gray-600 shadow-sm"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5 text-gray-400" />
+            {filterLabel}
+          </button>
         </div>
       </div>{/* end white top strip */}
 
@@ -386,6 +451,177 @@ export default function OwnerDashboard() {
           ))}
         </div>
       </div>
+
+      {/* ─── Date Filter Sheet ─── */}
+      <Sheet open={filterOpen} onOpenChange={(v) => { setFilterOpen(v); if (!v) setShowCustom(false); }}>
+        <SheetContent side="bottom" className="rounded-t-3xl px-0 pb-8 max-h-[85dvh] overflow-y-auto">
+          <AnimatePresence mode="wait" initial={false}>
+            {!showCustom ? (
+              <motion.div
+                key="presets"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.18 }}
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 pt-4 pb-2">
+                  <h2 className="text-base font-bold text-gray-900">Фильтр по дате</h2>
+                  <button
+                    onClick={() => setFilterOpen(false)}
+                    className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Preset list */}
+                <div className="mt-2">
+                  {FILTER_PRESETS.map((p) => (
+                    <button
+                      key={p.key}
+                      onClick={() => {
+                        if (p.key === "custom") {
+                          setPendingPreset("custom");
+                          setShowCustom(true);
+                        } else {
+                          setPendingPreset(p.key);
+                        }
+                      }}
+                      className="w-full flex items-center justify-between px-5 py-4 border-b border-gray-50 last:border-0"
+                    >
+                      <span className={cn(
+                        "text-sm font-medium",
+                        pendingPreset === p.key ? "text-gray-900 font-semibold" : "text-gray-600",
+                      )}>
+                        {p.label}
+                      </span>
+                      <span className={cn(
+                        "w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
+                        pendingPreset === p.key
+                          ? "border-primary bg-primary"
+                          : "border-gray-300",
+                      )}>
+                        {pendingPreset === p.key && (
+                          <span className="w-2 h-2 rounded-full bg-white" />
+                        )}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Actions */}
+                <div className="px-5 mt-4 flex flex-col gap-2.5">
+                  <button
+                    onClick={() => {
+                      setFilterPreset(pendingPreset);
+                      setFilterOpen(false);
+                      setShowCustom(false);
+                    }}
+                    className="w-full py-3.5 rounded-2xl text-sm font-bold text-white"
+                    style={{ backgroundColor: "#98cc1c" }}
+                  >
+                    Применить
+                  </button>
+                  <button
+                    onClick={() => {
+                      setPendingPreset("month");
+                      setFilterPreset("month");
+                      setFilterOpen(false);
+                      setShowCustom(false);
+                    }}
+                    className="w-full py-3.5 rounded-2xl text-sm font-bold text-gray-500 bg-gray-100"
+                  >
+                    Сбросить
+                  </button>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="custom"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.18 }}
+              >
+                {/* Header */}
+                <div className="flex items-center gap-3 px-5 pt-4 pb-4">
+                  <button
+                    onClick={() => setShowCustom(false)}
+                    className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <h2 className="text-base font-bold text-gray-900 flex-1">Выбрать период</h2>
+                  <button
+                    onClick={() => { setFilterOpen(false); setShowCustom(false); }}
+                    className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Date inputs */}
+                <div className="px-5 space-y-3">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Начало</p>
+                    <div className="relative">
+                      <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      <input
+                        type="date"
+                        value={customFrom}
+                        max={customTo}
+                        onChange={e => setCustomFrom(e.target.value)}
+                        className="w-full pl-9 pr-4 py-3 rounded-2xl border-2 border-gray-100 text-sm font-semibold text-gray-800 focus:border-primary focus:outline-none bg-gray-50"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Конец</p>
+                    <div className="relative">
+                      <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      <input
+                        type="date"
+                        value={customTo}
+                        min={customFrom}
+                        max={toInputValue(new Date())}
+                        onChange={e => setCustomTo(e.target.value)}
+                        className="w-full pl-9 pr-4 py-3 rounded-2xl border-2 border-gray-100 text-sm font-semibold text-gray-800 focus:border-primary focus:outline-none bg-gray-50"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Range preview */}
+                  <div className="bg-primary/8 rounded-2xl px-4 py-3 flex items-center gap-2">
+                    <CalendarDays className="w-4 h-4 text-primary shrink-0" />
+                    <span className="text-sm font-semibold text-primary">
+                      {customFrom && customTo
+                        ? fmtDateRange(new Date(customFrom), new Date(customTo))
+                        : "Выберите даты"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="px-5 mt-5 flex flex-col gap-2.5">
+                  <button
+                    disabled={!customFrom || !customTo}
+                    onClick={() => {
+                      setFilterPreset("custom");
+                      setPendingPreset("custom");
+                      setFilterOpen(false);
+                      setShowCustom(false);
+                    }}
+                    className="w-full py-3.5 rounded-2xl text-sm font-bold text-white disabled:opacity-50"
+                    style={{ backgroundColor: "#98cc1c" }}
+                  >
+                    Применить
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
