@@ -8,7 +8,7 @@ import {
 } from "@workspace/api-client-react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import {
-  RefreshCw, ChevronRight, Bell, Settings, UserCog, Users,
+  ChevronRight, UserCog, Users,
   Activity, Stethoscope, Send, Banknote, QrCode, CreditCard,
   Clock, Wallet, CalendarDays, SlidersHorizontal, UserPlus, Layers,
   TrendingUp,
@@ -85,25 +85,6 @@ export default function OwnerDashboard() {
 
   return (
     <div className="min-h-full bg-[#f7f8fc] pb-8">
-
-      {/* ─── Header ─── */}
-      <div className="bg-white px-5 pt-5 pb-4 border-b border-gray-100">
-        <div className="flex items-center justify-between">
-          <button className="flex items-center gap-1.5" onClick={() => navigate("/settings")}>
-            <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
-              <Stethoscope className="w-3.5 h-3.5 text-white" />
-            </div>
-            <span className="text-sm font-bold text-gray-900">{clinic?.name ?? "Клиника"}</span>
-            <ChevronRight className="w-3.5 h-3.5 text-gray-400 rotate-90" />
-          </button>
-          <button
-            onClick={() => refetch()}
-            className="w-9 h-9 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400 hover:text-primary transition-colors"
-          >
-            <Bell className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
 
       {/* ─── Doctor circles ─── */}
       {kpis.length > 0 && (

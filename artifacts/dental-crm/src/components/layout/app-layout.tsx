@@ -21,6 +21,7 @@ import {
   ChevronRight,
   Bot,
   FileSpreadsheet,
+  ChevronDown,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -142,36 +143,32 @@ export function AppLayout({ children }: { children: ReactNode }) {
     (item) => location === item.href || location.startsWith(`${item.href}/`),
   );
 
-  // Pages that render their own built-in header — hide the global one
-  const PAGES_WITH_OWN_HEADER = ["/dashboard"];
-  const hideGlobalHeader = PAGES_WITH_OWN_HEADER.includes(location);
-
   return (
     <div className="flex flex-col h-[100dvh] bg-background overflow-hidden">
-      {/* Top header — hidden for pages that have their own header */}
-      <header className={cn(
-        "flex-none flex items-center h-14 px-4 bg-white border-b border-border/50 z-20 safe-area-top",
-        hideGlobalHeader && "hidden",
-      )}>
-        <div className="flex items-center gap-2.5 flex-1 min-w-0">
-          <img
-            src={`${import.meta.env.BASE_URL}images/logo.png`}
-            alt="Logo"
-            className="w-8 h-8 object-contain flex-none"
-          />
-          <div className="flex flex-col leading-none min-w-0">
-            <span className="font-display font-bold text-sm text-foreground truncate">
+      {/* Global header — new design */}
+      <header className="flex-none flex items-center justify-between px-5 pt-4 pb-3 bg-white border-b border-gray-100 z-20 safe-area-top">
+        {/* Left: clinic + page title */}
+        <button
+          className="flex items-center gap-2 min-w-0"
+          onClick={() => setLocation(roleDashboardHref)}
+        >
+          <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center shrink-0 shadow-sm shadow-primary/30">
+            <Stethoscope className="w-4 h-4 text-white" />
+          </div>
+          <div className="flex flex-col leading-none min-w-0 text-left">
+            <span className="font-bold text-sm text-gray-900 truncate">
               {clinic?.name || "Dental CRM"}
             </span>
-            <span className="text-[10px] font-semibold text-primary uppercase tracking-wider">
+            <span className="text-[10px] font-semibold text-primary uppercase tracking-wider truncate">
               {pageTitle}
             </span>
           </div>
-        </div>
+          <ChevronDown className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+        </button>
 
-        <div className="flex items-center gap-1.5">
-          {/* Language switcher */}
-          <div className="flex items-center bg-slate-100 rounded-lg p-0.5 gap-0.5">
+        {/* Right: lang + bell + avatar */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center bg-gray-100 rounded-lg p-0.5 gap-0.5">
             {SUPPORTED_LANGS.map((lang) => (
               <button
                 key={lang}
@@ -180,7 +177,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   "text-[10px] font-bold px-2 py-1 rounded-md transition-colors",
                   currentLang === lang
                     ? "bg-white text-primary shadow-sm"
-                    : "text-muted-foreground hover:text-foreground",
+                    : "text-gray-400 hover:text-gray-700",
                 )}
               >
                 {t(`lang.${lang}`)}
@@ -192,7 +189,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
           <button
             onClick={() => setProfileOpen(true)}
-            className="w-9 h-9 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold text-sm flex-none"
+            className="w-9 h-9 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold text-sm shrink-0"
           >
             {user?.name.charAt(0).toUpperCase()}
           </button>
