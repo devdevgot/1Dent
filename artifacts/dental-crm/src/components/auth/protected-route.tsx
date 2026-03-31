@@ -3,6 +3,8 @@ import { useLocation } from "wouter";
 import { useAuthStore } from "@/hooks/use-auth";
 import { AppLayout } from "@/components/layout/app-layout";
 
+const DEV_BYPASS = import.meta.env.VITE_DEV_BYPASS_AUTH === "true";
+
 interface ProtectedRouteProps {
   component: React.ComponentType<Record<string, never>>;
   allowedRoles?: string[];
@@ -13,12 +15,13 @@ export function ProtectedRoute({ component: Component, allowedRoles = [] }: Prot
   const [, setLocation] = useLocation();
 
   useEffect(() => {
+    if (DEV_BYPASS) return;
     if (!isLoading && !isAuthenticated) {
       setLocation("/login");
     }
   }, [isLoading, isAuthenticated, setLocation]);
 
-  if (isLoading) {
+  if (!DEV_BYPASS && isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center">
@@ -29,11 +32,11 @@ export function ProtectedRoute({ component: Component, allowedRoles = [] }: Prot
     );
   }
 
-  if (!isAuthenticated || !user) {
+  if (!DEV_BYPASS && (!isAuthenticated || !user)) {
     return null;
   }
 
-  if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+  if (!DEV_BYPASS && allowedRoles.length > 0 && user && !allowedRoles.includes(user.role)) {
     return (
       <AppLayout>
         <div className="flex flex-col items-center justify-center h-full text-center">

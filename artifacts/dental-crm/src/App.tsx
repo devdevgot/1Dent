@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 import { useGetMe, getGetMeQueryKey, setUnauthorizedHandler } from "@workspace/api-client-react";
+import type { User, Clinic } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
@@ -40,6 +41,26 @@ import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
 
+// ---------------------------------------------------------------------------
+// Dev auth bypass — set VITE_DEV_BYPASS_AUTH=true in .env.local to skip login
+// ---------------------------------------------------------------------------
+const DEV_BYPASS = import.meta.env.VITE_DEV_BYPASS_AUTH === "true";
+
+const DEV_MOCK_USER: User = {
+  id: "dev-bypass-user",
+  clinicId: "dev-bypass-clinic",
+  name: "Dev Owner",
+  email: "dev@clinic.com",
+  role: "owner",
+  createdAt: new Date().toISOString(),
+};
+
+const DEV_MOCK_CLINIC: Clinic = {
+  id: "dev-bypass-clinic",
+  name: "Dev Clinic",
+  createdAt: new Date().toISOString(),
+};
+
 function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setAuth, clearAuth, setLoading } = useAuthStore();
   const [, setLocation] = useLocation();
@@ -49,10 +70,16 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       queryKey: getGetMeQueryKey(),
       retry: false,
       refetchOnWindowFocus: false,
+      enabled: !DEV_BYPASS,
     }
   });
 
   useEffect(() => {
+    if (DEV_BYPASS) {
+      setAuth(DEV_MOCK_USER, DEV_MOCK_CLINIC);
+      return;
+    }
+
     if (isLoading) {
       setLoading(true);
     } else if (data?.success && data.data) {
@@ -63,6 +90,8 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [data, isLoading, error, setAuth, clearAuth, setLoading]);
 
   useEffect(() => {
+    if (DEV_BYPASS) return;
+
     setUnauthorizedHandler(() => {
       queryClient.clear();
       clearAuth();
@@ -74,7 +103,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [clearAuth, setLocation]);
 
-  if (isLoading) {
+  if (!DEV_BYPASS && isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center">
