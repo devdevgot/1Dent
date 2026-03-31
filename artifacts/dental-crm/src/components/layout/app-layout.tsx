@@ -6,7 +6,6 @@ import { NotificationBell } from "./notification-bell";
 import {
   LayoutDashboard,
   KanbanSquare,
-  MessageSquare,
   Users,
   Stethoscope,
   BarChart3,
@@ -20,6 +19,7 @@ import {
   FileSpreadsheet,
   Search,
 } from "lucide-react";
+import { FaWhatsapp } from "react-icons/fa";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 
@@ -36,7 +36,7 @@ const MAX_BOTTOM_TABS = 3;
 const ALL_NAV_ITEMS = [
   { nameKey: "nav.dashboard",   href: "__role_dashboard__",  icon: LayoutDashboard, roles: ["owner","admin","doctor","accountant","warehouse"], menuOnly: false },
   { nameKey: "nav.kanban",      href: "/kanban",             icon: KanbanSquare,    roles: ["owner","admin"],                                    menuOnly: false },
-  { nameKey: "nav.chat",        href: "/chat",               icon: MessageSquare,   roles: ["owner","admin","doctor"],                           menuOnly: false },
+  { nameKey: "nav.chat",        href: "/chat",               icon: FaWhatsapp,      roles: ["owner","admin","doctor"],                           menuOnly: false },
   { nameKey: "nav.patients",    href: "/patients",           icon: Users,           roles: ["owner","admin","doctor"],                           menuOnly: true  },
   { nameKey: "nav.procedures",  href: "/procedures",         icon: Stethoscope,     roles: ["owner","admin","doctor","accountant"],              menuOnly: true  },
   { nameKey: "nav.schedule",    href: "/schedule",           icon: Calendar,        roles: ["admin"],                                            menuOnly: false },

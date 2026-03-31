@@ -217,7 +217,7 @@ export class AuthService {
         email: user.email,
       },
       getJwtSecret(),
-      { expiresIn: "7d" },
+      { expiresIn: "30d" },
     );
   }
 }
