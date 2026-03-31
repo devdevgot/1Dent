@@ -7,9 +7,12 @@ export type ErrorType<T = unknown> = ApiError<T>;
 export type BodyType<T> = T;
 
 export type AuthTokenGetter = () => Promise<string | null> | string | null;
+export type UnauthorizedHandler = () => void;
 
 const NO_BODY_STATUS = new Set([204, 205, 304]);
 const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
+
+const SKIP_UNAUTHORIZED_PATHS = ["/api/auth/login", "/api/auth/me", "/api/auth/register"];
 
 // ---------------------------------------------------------------------------
 // Module-level configuration
@@ -17,6 +20,18 @@ const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 
 let _baseUrl: string | null = null;
 let _authTokenGetter: AuthTokenGetter | null = null;
+let _unauthorizedHandler: UnauthorizedHandler | null = null;
+let _unauthorizedFired = false;
+
+/**
+ * Register a handler that is called once when any API response returns 401.
+ * Typical use: clear auth state and redirect to /login.
+ * Pass `null` to clear the handler.
+ */
+export function setUnauthorizedHandler(handler: UnauthorizedHandler | null): void {
+  _unauthorizedHandler = handler;
+  _unauthorizedFired = false;
+}
 
 /**
  * Set a base URL that is prepended to every relative request URL
@@ -361,7 +376,21 @@ export async function customFetch<T = unknown>(
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);
-    throw new ApiError(response, errorData, requestInfo);
+    const apiError = new ApiError(response, errorData, requestInfo);
+
+    if (
+      response.status === 401 &&
+      _unauthorizedHandler &&
+      !_unauthorizedFired &&
+      !SKIP_UNAUTHORIZED_PATHS.some((p) => requestInfo.url.includes(p))
+    ) {
+      _unauthorizedFired = true;
+      setTimeout(() => {
+        _unauthorizedHandler?.();
+      }, 0);
+    }
+
+    throw apiError;
   }
 
   return (await parseSuccessBody(response, responseType, requestInfo)) as T;

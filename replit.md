@@ -166,6 +166,8 @@ Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Used b
 
 Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHealthCheck`, `healthCheck`).
 
+**Global 401 interceptor**: `custom-fetch.ts` exports `setUnauthorizedHandler(fn)`. When any API request returns 401 (except `/api/auth/me`, `/api/auth/login`, `/api/auth/register`), the handler fires **once** (deduplicated). In `App.tsx`, `AuthProvider` registers a handler that calls `queryClient.clear()` + `clearAuth()` + redirects to `/login`. This ensures that when a JWT token expires mid-session, the user is automatically logged out instead of seeing silent errors.
+
 ### `scripts` (`@workspace/scripts`)
 
 Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.

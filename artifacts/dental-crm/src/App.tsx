@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-import { useGetMe, getGetMeQueryKey } from "@workspace/api-client-react";
+import { useGetMe, getGetMeQueryKey, setUnauthorizedHandler } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
@@ -42,6 +42,7 @@ const queryClient = new QueryClient();
 
 function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setAuth, clearAuth, setLoading } = useAuthStore();
+  const [, setLocation] = useLocation();
 
   const { data, isLoading, error } = useGetMe({
     query: {
@@ -60,6 +61,18 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       clearAuth();
     }
   }, [data, isLoading, error, setAuth, clearAuth, setLoading]);
+
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      queryClient.clear();
+      clearAuth();
+      setLocation("/login");
+    });
+
+    return () => {
+      setUnauthorizedHandler(null);
+    };
+  }, [clearAuth, setLocation]);
 
   if (isLoading) {
     return (
