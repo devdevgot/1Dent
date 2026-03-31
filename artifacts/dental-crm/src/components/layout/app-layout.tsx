@@ -54,7 +54,7 @@ const PAGE_HREF_TITLE_KEY: Record<string, string> = {
   "/menu":                 "page.menu",
 };
 
-const MAX_BOTTOM_TABS = 4;
+const MAX_BOTTOM_TABS = 3;
 
 const ALL_NAV_ITEMS = [
   { nameKey: "nav.dashboard",   href: "__role_dashboard__",  icon: LayoutDashboard, roles: ["owner","admin","doctor","accountant","warehouse"], menuOnly: false },
