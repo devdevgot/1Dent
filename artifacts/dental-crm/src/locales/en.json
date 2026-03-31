@@ -75,7 +75,8 @@
     "users": "Users",
     "chatbot": "AI Chatbot",
     "migration": "Data Migration",
-    "logs": "Audit Log"
+    "logs": "Audit Log",
+    "menu": "Menu"
   },
   "common": {
     "loading": "Loading...",

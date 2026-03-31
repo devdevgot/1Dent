@@ -35,6 +35,7 @@ import MigrationPage from "@/pages/migration";
 import StaffPage from "@/pages/staff";
 import StaffDetailPage from "@/pages/staff-detail";
 import DoctorAnalyticsPage from "@/pages/doctor-analytics";
+import MenuPage from "@/pages/menu";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -183,6 +184,11 @@ function Router() {
       {/* Doctor analytics */}
       <Route path="/doctor-analytics">
         <ProtectedRoute component={DoctorAnalyticsPage} allowedRoles={['owner', 'admin', 'doctor']} />
+      </Route>
+
+      {/* Menu page */}
+      <Route path="/menu">
+        <ProtectedRoute component={MenuPage} allowedRoles={['owner', 'admin', 'doctor', 'accountant', 'warehouse']} />
       </Route>
 
       {/* 404 */}
