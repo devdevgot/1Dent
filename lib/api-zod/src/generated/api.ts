@@ -89,6 +89,22 @@ export const GetMeResponse = zod.object({
 });
 
 /**
+ * @summary Change current user password
+ */
+
+export const changePasswordBodyNewPasswordMin = 6;
+
+export const ChangePasswordBody = zod.object({
+  currentPassword: zod.string().min(1),
+  newPassword: zod.string().min(changePasswordBodyNewPasswordMin),
+});
+
+export const ChangePasswordResponse = zod.object({
+  success: zod.literal(true),
+  message: zod.string().optional(),
+});
+
+/**
  * @summary List users in clinic
  */
 export const ListUsersResponse = zod.object({

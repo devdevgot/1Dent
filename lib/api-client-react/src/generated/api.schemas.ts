@@ -95,6 +95,13 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface ChangePasswordRequest {
+  /** @minLength 1 */
+  currentPassword: string;
+  /** @minLength 6 */
+  newPassword: string;
+}
+
 export interface CreateUserRequest {
   /** @minLength 2 */
   name: string;

@@ -16,6 +16,7 @@ export * from "./analyticsDataAnalytics";
 export * from "./analyticsResponse";
 export * from "./authResponse";
 export * from "./authResponseData";
+export * from "./changePasswordRequest";
 export * from "./chatbotSession";
 export * from "./chatbotSessionData";
 export * from "./chatbotSettings";

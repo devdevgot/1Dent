@@ -48,6 +48,7 @@ const ALL_NAV_ITEMS = [
   { nameKey: "nav.chatbot",     href: "/chatbot",            icon: Bot,             roles: ["owner","admin"],                                    menuOnly: false },
   { nameKey: "nav.migration",   href: "/migration",          icon: FileSpreadsheet, roles: ["owner","admin"],                                    menuOnly: false },
   { nameKey: "nav.logs",        href: "/logs",               icon: Activity,        roles: ["owner"],                                            menuOnly: false },
+  { nameKey: "nav.settings",    href: "/settings",           icon: Settings,        roles: ["owner","admin","doctor","accountant","warehouse"],  menuOnly: true  },
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {

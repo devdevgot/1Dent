@@ -7,6 +7,7 @@ import {
   UnauthorizedError,
   NotFoundError,
   ForbiddenError,
+  ValidationError,
 } from "../../shared/errors";
 import type { UserRole, User, Clinic } from "@workspace/db";
 
@@ -206,6 +207,19 @@ export class AuthService {
       throw new ForbiddenError("Only owners can delete other owners");
     }
     await this.repo.deleteUser(id, clinicId);
+  }
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
+    const user = await this.repo.findUserById(userId);
+    if (!user) throw new NotFoundError("User not found");
+
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) {
+      throw new ValidationError("Current password is incorrect");
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    await this.repo.updateUserPassword(userId, passwordHash);
   }
 
   private generateToken(user: User, clinicId: string): string {

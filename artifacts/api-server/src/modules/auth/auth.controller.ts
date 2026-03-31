@@ -106,4 +106,23 @@ router.get("/me", authMiddleware, async (req: Request, res: Response, next: Next
   res.json({ success: true, data: result });
 });
 
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(6),
+});
+
+router.put("/change-password", authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
+  const parsed = changePasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+  }
+
+  try {
+    await authService.changePassword(req.user!.userId, parsed.data.currentPassword, parsed.data.newPassword);
+    res.json({ success: true, message: "Password changed successfully." });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;

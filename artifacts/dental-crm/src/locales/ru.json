@@ -54,7 +54,8 @@
     "chatbot": "Чатбот",
     "migration": "Миграция",
     "logs": "Журнал",
-    "more": "Ещё"
+    "more": "Ещё",
+    "settings": "Настройки"
   },
   "page": {
     "dashboard": "Главная",
@@ -647,5 +648,22 @@
     "revenue": "Доход (₸)",
     "avgCheck": "Средний чек",
     "nps": "NPS"
+  },
+  "settingsPage": {
+    "title": "Настройки",
+    "profile": "Профиль",
+    "security": "Безопасность",
+    "appearance": "Внешний вид",
+    "language": "Язык",
+    "currentPassword": "Текущий пароль",
+    "newPassword": "Новый пароль",
+    "confirmPassword": "Подтвердить пароль",
+    "changePassword": "Изменить пароль",
+    "passwordChanged": "Пароль успешно изменён",
+    "passwordMismatch": "Пароли не совпадают",
+    "wrongPassword": "Неверный текущий пароль",
+    "themeLight": "Светлая",
+    "themeDark": "Тёмная",
+    "themeSystem": "Системная"
   }
 }

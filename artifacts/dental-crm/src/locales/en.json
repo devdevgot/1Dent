@@ -54,7 +54,8 @@
     "chatbot": "Chatbot",
     "migration": "Migration",
     "logs": "Audit Log",
-    "more": "More"
+    "more": "More",
+    "settings": "Settings"
   },
   "page": {
     "dashboard": "Dashboard",
@@ -647,5 +648,22 @@
     "revenue": "Revenue (₸)",
     "avgCheck": "Average Check",
     "nps": "NPS"
+  },
+  "settingsPage": {
+    "title": "Settings",
+    "profile": "Profile",
+    "security": "Security",
+    "appearance": "Appearance",
+    "language": "Language",
+    "currentPassword": "Current Password",
+    "newPassword": "New Password",
+    "confirmPassword": "Confirm Password",
+    "changePassword": "Change Password",
+    "passwordChanged": "Password changed successfully",
+    "passwordMismatch": "Passwords do not match",
+    "wrongPassword": "Current password is incorrect",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System"
   }
 }

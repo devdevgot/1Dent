@@ -54,7 +54,8 @@
     "chatbot": "Чатбот",
     "migration": "Миграция",
     "logs": "Журнал",
-    "more": "Көбірек"
+    "more": "Көбірек",
+    "settings": "Баптаулар"
   },
   "page": {
     "dashboard": "Басты бет",
@@ -647,5 +648,22 @@
     "revenue": "Табыс (₸)",
     "avgCheck": "Орташа чек",
     "nps": "NPS"
+  },
+  "settingsPage": {
+    "title": "Баптаулар",
+    "profile": "Профиль",
+    "security": "Қауіпсіздік",
+    "appearance": "Сыртқы түр",
+    "language": "Тіл",
+    "currentPassword": "Ағымдағы құпиясөз",
+    "newPassword": "Жаңа құпиясөз",
+    "confirmPassword": "Құпиясөзді растау",
+    "changePassword": "Құпиясөзді өзгерту",
+    "passwordChanged": "Құпиясөз сәтті өзгертілді",
+    "passwordMismatch": "Құпиясөздер сәйкес келмейді",
+    "wrongPassword": "Ағымдағы құпиясөз қате",
+    "themeLight": "Жарық",
+    "themeDark": "Қараңғы",
+    "themeSystem": "Жүйелік"
   }
 }
