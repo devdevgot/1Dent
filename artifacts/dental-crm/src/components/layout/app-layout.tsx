@@ -18,7 +18,7 @@ import {
   MoreHorizontal,
   Bot,
   FileSpreadsheet,
-  ChevronDown,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
@@ -29,29 +29,6 @@ const ROLE_DASHBOARD_HREF: Record<string, string> = {
   doctor:     "/dashboard/doctor",
   accountant: "/dashboard/accountant",
   warehouse:  "/dashboard/warehouse",
-};
-
-const PAGE_HREF_TITLE_KEY: Record<string, string> = {
-  "/dashboard":            "page.dashboard",
-  "/dashboard/admin":      "page.adminDashboard",
-  "/dashboard/doctor":     "page.doctorDashboard",
-  "/dashboard/accountant": "page.accountantDashboard",
-  "/dashboard/warehouse":  "page.warehouseDashboard",
-  "/kanban":               "page.kanban",
-  "/chat":                 "page.chat",
-  "/patients":             "page.patients",
-  "/procedures":           "page.procedures",
-  "/schedule":             "page.schedule",
-  "/analytics":            "page.analytics",
-  "/doctor-analytics":     "page.doctorAnalytics",
-  "/financials":           "page.financials",
-  "/inventory":            "page.inventory",
-  "/warehouse":            "page.warehouse",
-  "/users":                "page.users",
-  "/chatbot":              "page.chatbot",
-  "/migration":            "page.migration",
-  "/logs":                 "page.logs",
-  "/menu":                 "page.menu",
 };
 
 const MAX_BOTTOM_TABS = 3;
@@ -75,8 +52,8 @@ const ALL_NAV_ITEMS = [
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
-  const { user, clinic } = useAuthStore();
-  const [location, setLocation] = useLocation();
+  const { user } = useAuthStore();
+  const [location] = useLocation();
 
   const roleDashboardHref = user
     ? (ROLE_DASHBOARD_HREF[user.role] ?? getRoleDashboardPath(user.role))
@@ -99,36 +76,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
     (item) => location === item.href || location.startsWith(`${item.href}/`),
   );
 
-  const pageTitle =
-    PAGE_HREF_TITLE_KEY[location]
-      ? t(PAGE_HREF_TITLE_KEY[location])
-      : (Object.entries(PAGE_HREF_TITLE_KEY).find(([k]) => location.startsWith(k + "/"))?.[1]
-          ? t(Object.entries(PAGE_HREF_TITLE_KEY).find(([k]) => location.startsWith(k + "/"))![1])
-          : location.split("/")[1]?.replace(/-/g, " ") || t("page.dashboard"));
-
   return (
     <div className="flex flex-col h-[100dvh] bg-background overflow-hidden">
-      {/* Global header */}
-      <header className="flex-none flex items-center justify-between px-5 py-2.5 bg-white border-b border-gray-100 z-20 safe-area-top">
-        <button
-          className="flex items-center gap-2 min-w-0"
-          onClick={() => setLocation(roleDashboardHref)}
-        >
-          <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center shrink-0 shadow-sm shadow-primary/30">
-            <Stethoscope className="w-4 h-4 text-white" />
-          </div>
-          <div className="flex flex-col leading-none min-w-0 text-left">
-            <span className="font-bold text-sm text-gray-900 truncate">
-              {clinic?.name || "Dental CRM"}
-            </span>
-            <span className="text-[10px] font-semibold text-primary uppercase tracking-wider truncate">
-              {pageTitle}
-            </span>
-          </div>
-          <ChevronDown className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-        </button>
-
-        <div className="flex items-center shrink-0">
+      {/* Global header — search + bell */}
+      <header className="flex-none flex items-center gap-3 px-4 py-2.5 bg-white border-b border-gray-100 z-20 safe-area-top">
+        <div className="flex-1 flex items-center gap-2 bg-gray-100 rounded-xl px-3 py-2">
+          <Search className="w-4 h-4 text-gray-400 shrink-0" />
+          <span className="text-sm text-gray-400 select-none">Поиск...</span>
+        </div>
+        <div className="shrink-0">
           <NotificationBell />
         </div>
       </header>
