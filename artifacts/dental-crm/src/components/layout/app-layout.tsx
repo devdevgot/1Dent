@@ -57,20 +57,20 @@ const PAGE_HREF_TITLE_KEY: Record<string, string> = {
 const MAX_BOTTOM_TABS = 4;
 
 const ALL_NAV_ITEMS = [
-  { nameKey: "nav.dashboard",   href: "__role_dashboard__",  icon: LayoutDashboard, roles: ["owner","admin","doctor","accountant","warehouse"] },
-  { nameKey: "nav.kanban",      href: "/kanban",             icon: KanbanSquare,    roles: ["owner","admin"] },
-  { nameKey: "nav.chat",        href: "/chat",               icon: MessageSquare,   roles: ["owner","admin","doctor"] },
-  { nameKey: "nav.patients",    href: "/patients",           icon: Users,           roles: ["owner","admin","doctor"] },
-  { nameKey: "nav.procedures",  href: "/procedures",         icon: Stethoscope,     roles: ["owner","admin","doctor","accountant"] },
-  { nameKey: "nav.schedule",    href: "/schedule",           icon: Calendar,        roles: ["admin"] },
-  { nameKey: "nav.analytics",   href: "/analytics",          icon: BarChart3,       roles: ["owner"] },
-  { nameKey: "nav.myAnalytics", href: "/doctor-analytics",   icon: BarChart3,       roles: ["doctor"] },
-  { nameKey: "nav.financials",  href: "/financials",         icon: Wallet,          roles: ["owner","accountant"] },
-  { nameKey: "nav.inventory",   href: "/inventory",          icon: Package,         roles: ["owner","admin","warehouse"] },
-  { nameKey: "nav.users",       href: "/users",              icon: Settings,        roles: ["owner","admin"] },
-  { nameKey: "nav.chatbot",     href: "/chatbot",            icon: Bot,             roles: ["owner","admin"] },
-  { nameKey: "nav.migration",   href: "/migration",          icon: FileSpreadsheet, roles: ["owner","admin"] },
-  { nameKey: "nav.logs",        href: "/logs",               icon: Activity,        roles: ["owner"] },
+  { nameKey: "nav.dashboard",   href: "__role_dashboard__",  icon: LayoutDashboard, roles: ["owner","admin","doctor","accountant","warehouse"], menuOnly: false },
+  { nameKey: "nav.kanban",      href: "/kanban",             icon: KanbanSquare,    roles: ["owner","admin"],                                    menuOnly: false },
+  { nameKey: "nav.chat",        href: "/chat",               icon: MessageSquare,   roles: ["owner","admin","doctor"],                           menuOnly: false },
+  { nameKey: "nav.patients",    href: "/patients",           icon: Users,           roles: ["owner","admin","doctor"],                           menuOnly: true  },
+  { nameKey: "nav.procedures",  href: "/procedures",         icon: Stethoscope,     roles: ["owner","admin","doctor","accountant"],              menuOnly: false },
+  { nameKey: "nav.schedule",    href: "/schedule",           icon: Calendar,        roles: ["admin"],                                            menuOnly: false },
+  { nameKey: "nav.analytics",   href: "/analytics",          icon: BarChart3,       roles: ["owner"],                                            menuOnly: false },
+  { nameKey: "nav.myAnalytics", href: "/doctor-analytics",   icon: BarChart3,       roles: ["doctor"],                                           menuOnly: false },
+  { nameKey: "nav.financials",  href: "/financials",         icon: Wallet,          roles: ["owner","accountant"],                               menuOnly: false },
+  { nameKey: "nav.inventory",   href: "/inventory",          icon: Package,         roles: ["owner","admin","warehouse"],                        menuOnly: false },
+  { nameKey: "nav.users",       href: "/users",              icon: Settings,        roles: ["owner","admin"],                                    menuOnly: false },
+  { nameKey: "nav.chatbot",     href: "/chatbot",            icon: Bot,             roles: ["owner","admin"],                                    menuOnly: false },
+  { nameKey: "nav.migration",   href: "/migration",          icon: FileSpreadsheet, roles: ["owner","admin"],                                    menuOnly: false },
+  { nameKey: "nav.logs",        href: "/logs",               icon: Activity,        roles: ["owner"],                                            menuOnly: false },
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {
@@ -90,9 +90,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
     href: item.href === "__role_dashboard__" ? roleDashboardHref : item.href,
   }));
 
-  const bottomItems = navItems.slice(0, MAX_BOTTOM_TABS);
-  const overflowItems = navItems.slice(MAX_BOTTOM_TABS);
-  const isMenuActive = location === "/menu" || overflowItems.some(
+  const bottomNavItems = navItems.filter((item) => !item.menuOnly);
+  const bottomItems = bottomNavItems.slice(0, MAX_BOTTOM_TABS);
+  const overflowItems = bottomNavItems.slice(MAX_BOTTOM_TABS);
+  const isMenuActive = location === "/menu" || navItems.filter((item) => item.menuOnly).some(
+    (item) => location === item.href || location.startsWith(`${item.href}/`),
+  ) || overflowItems.some(
     (item) => location === item.href || location.startsWith(`${item.href}/`),
   );
 
