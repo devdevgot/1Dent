@@ -61,7 +61,7 @@ const ALL_NAV_ITEMS = [
   { nameKey: "nav.kanban",      href: "/kanban",             icon: KanbanSquare,    roles: ["owner","admin"],                                    menuOnly: false },
   { nameKey: "nav.chat",        href: "/chat",               icon: MessageSquare,   roles: ["owner","admin","doctor"],                           menuOnly: false },
   { nameKey: "nav.patients",    href: "/patients",           icon: Users,           roles: ["owner","admin","doctor"],                           menuOnly: true  },
-  { nameKey: "nav.procedures",  href: "/procedures",         icon: Stethoscope,     roles: ["owner","admin","doctor","accountant"],              menuOnly: false },
+  { nameKey: "nav.procedures",  href: "/procedures",         icon: Stethoscope,     roles: ["owner","admin","doctor","accountant"],              menuOnly: true  },
   { nameKey: "nav.schedule",    href: "/schedule",           icon: Calendar,        roles: ["admin"],                                            menuOnly: false },
   { nameKey: "nav.analytics",   href: "/analytics",          icon: BarChart3,       roles: ["owner"],                                            menuOnly: false },
   { nameKey: "nav.myAnalytics", href: "/doctor-analytics",   icon: BarChart3,       roles: ["doctor"],                                           menuOnly: false },
