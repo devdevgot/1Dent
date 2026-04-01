@@ -204,7 +204,7 @@ export default function DoctorAnalyticsPage() {
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="shrink-0 border-b border-border/50 bg-white px-6 py-4">
         <button
-          onClick={() => setLocation("/dashboard")}
+          onClick={() => window.history.back()}
           className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors mb-3"
         >
           <ArrowLeft className="w-4 h-4" />
