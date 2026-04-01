@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 import { useGetMe, getGetMeQueryKey, setUnauthorizedHandler } from "@workspace/api-client-react";
-import { clearAuthToken, restoreAuthToken, saveAuthToken } from "@/lib/auth-token";
+import { clearAuthToken, restoreAuthToken } from "@/lib/auth-token";
 import type { User, Clinic } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/components/auth/protected-route";
@@ -50,9 +50,9 @@ import NotFound from "@/pages/not-found";
 const queryClient = new QueryClient();
 
 // ---------------------------------------------------------------------------
-// Auth bypass — skip login, open site directly as the mock user below
+// Dev auth bypass — set VITE_DEV_BYPASS_AUTH=true in .env.local to skip login
 // ---------------------------------------------------------------------------
-const DEV_BYPASS = true;
+const DEV_BYPASS = import.meta.env.VITE_DEV_BYPASS_AUTH === "true";
 
 const DEV_MOCK_USER: User = {
   id: "dev-bypass-user",
@@ -75,7 +75,6 @@ restoreAuthToken();
 function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setAuth, clearAuth, setLoading } = useAuthStore();
   const [, setLocation] = useLocation();
-  const [bypassReady, setBypassReady] = useState(false);
 
   const { data, isLoading, error } = useGetMe({
     query: {
@@ -86,34 +85,11 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   });
 
-  // Auto-login with real owner credentials when bypass is enabled
   useEffect(() => {
-    if (!DEV_BYPASS) return;
-
-    const base = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
-    fetch(`${base}/api/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: "owner@dental.com", password: "password" }),
-    })
-      .then(r => r.json())
-      .then(json => {
-        if (json?.success && json.data?.token) {
-          saveAuthToken(json.data.token);
-          setAuth(json.data.user, json.data.clinic);
-        } else {
-          // fallback to mock if API not reachable
-          setAuth(DEV_MOCK_USER, DEV_MOCK_CLINIC);
-        }
-      })
-      .catch(() => {
-        setAuth(DEV_MOCK_USER, DEV_MOCK_CLINIC);
-      })
-      .finally(() => setBypassReady(true));
-  }, [setAuth]);
-
-  useEffect(() => {
-    if (DEV_BYPASS) return;
+    if (DEV_BYPASS) {
+      setAuth(DEV_MOCK_USER, DEV_MOCK_CLINIC);
+      return;
+    }
 
     if (isLoading) {
       setLoading(true);
@@ -138,15 +114,6 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       setUnauthorizedHandler(null);
     };
   }, [clearAuth, setLocation]);
-
-  // Show spinner while auto-login is in progress
-  if (DEV_BYPASS && !bypassReady) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-      </div>
-    );
-  }
 
   if (!DEV_BYPASS && isLoading) {
     return (
