@@ -3,7 +3,9 @@ import { useAuthStore } from "@/hooks/use-auth";
 import {
   useGetDoctorAnalytics,
   getGetDoctorAnalyticsQueryKey,
+  useListProcedures,
 } from "@workspace/api-client-react";
+import type { Procedure } from "@workspace/api-client-react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import {
   ChevronRight, Bell, X, ChevronLeft,
@@ -77,8 +79,38 @@ function getPresetRange(preset: FilterPreset): { from: Date; to: Date } {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+const DOW_SHORT = ["Вс","Пн","Вт","Ср","Чт","Пт","Сб"];
+const MONTHS_RU = ["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"];
+
+function toDateKey(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+
 // ─── MOCK DATA ────────────────────────────────────────────────────────────────
 const USE_MOCK_DATA = false;
+
+// Mock upcoming appointments (relative to "today" so always fresh)
+function buildMockSchedule() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const d1 = new Date(today); d1.setDate(today.getDate() + 0);
+  const d2 = new Date(today); d2.setDate(today.getDate() + 1);
+  const d3 = new Date(today); d3.setDate(today.getDate() + 2);
+  function mk(date: Date, h: number, name: string): Procedure {
+    const at = new Date(date); at.setHours(h, 0, 0, 0);
+    return { id: String(Math.random()), patientId: "mock", doctorId: "mock",
+      name, scheduledAt: at.toISOString(), status: "scheduled" } as unknown as Procedure;
+  }
+  return [
+    mk(d1, 9,  "Ахметов Д. — Чистка"),
+    mk(d1, 11, "Иванова С. — Пломба"),
+    mk(d1, 14, "Сейтов К. — Консультация"),
+    mk(d2, 10, "Нурмагамбет А. — Брекеты"),
+    mk(d2, 12, "Ли Ю. — Отбеливание"),
+    mk(d3, 9,  "Попова М. — Удаление"),
+    mk(d3, 15, "Смирнов Т. — Пломба"),
+  ];
+}
 
 const MOCK_ANALYTICS = {
   myRevenueThisMonth: 1_820_000,
@@ -153,6 +185,29 @@ export default function DoctorDashboard() {
 
   type PaymentStat = { method: string; label: string; amount: number; percent: number; color: string };
   const revenueByPayment = analytics.revenueByPaymentMethod as PaymentStat[];
+
+  // ── Schedule widget data ──
+  const { data: proceduresData } = useListProcedures();
+  const upcomingAppointments = useMemo(() => {
+    const allProcs = (proceduresData?.data?.procedures ?? []) as Procedure[];
+    const mine = user?.id ? allProcs.filter(p => p.doctorId === user.id) : allProcs;
+    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    const upcoming = mine
+      .filter(p => p.scheduledAt && p.status === "scheduled" && new Date(p.scheduledAt) >= todayStart)
+      .sort((a, b) => new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime());
+    return upcoming.length > 0 ? upcoming : buildMockSchedule();
+  }, [proceduresData, user?.id]);
+
+  // Group by date key, max 3 days
+  const scheduleByDay = useMemo(() => {
+    const map = new Map<string, Procedure[]>();
+    upcomingAppointments.forEach(p => {
+      if (!p.scheduledAt) return;
+      const key = toDateKey(new Date(p.scheduledAt));
+      map.set(key, [...(map.get(key) ?? []), p]);
+    });
+    return Array.from(map.entries()).slice(0, 3);
+  }, [upcomingAppointments]);
 
   const donutData = revenueByPayment.length > 0
     ? revenueByPayment
@@ -243,6 +298,100 @@ export default function DoctorDashboard() {
           )}
         </div>
 
+      </div>
+
+      {/* ─── Schedule Widget ─── */}
+      <div className="mx-4 mt-4 bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-gray-50">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-xl flex items-center justify-center" style={{ backgroundColor: "#98cc1c22" }}>
+              <Calendar className="w-4 h-4" style={{ color: "#98cc1c" }} />
+            </div>
+            <span className="text-sm font-bold text-gray-800">Предстоящие записи</span>
+          </div>
+          <button
+            onClick={() => navigate("/schedule")}
+            className="flex items-center gap-0.5 text-xs font-semibold"
+            style={{ color: "#98cc1c" }}
+          >
+            Все <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {/* Day columns */}
+        <div className="p-4 space-y-3">
+          {scheduleByDay.map(([dateKey, procs], dayIdx) => {
+            const d = new Date(dateKey + "T00:00:00");
+            const isToday = toDateKey(new Date()) === dateKey;
+            return (
+              <motion.div
+                key={dateKey}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: dayIdx * 0.06 }}
+                className="flex gap-3"
+              >
+                {/* Date block */}
+                <div className={cn(
+                  "w-14 shrink-0 rounded-2xl flex flex-col items-center justify-center py-2.5 gap-0.5",
+                  isToday ? "text-white" : "bg-gray-50 text-gray-400",
+                )} style={isToday ? { backgroundColor: "#98cc1c" } : undefined}>
+                  <span className="text-[10px] font-semibold uppercase tracking-wide leading-none">
+                    {isToday ? "Сегодня" : DOW_SHORT[d.getDay()]}
+                  </span>
+                  <span className={cn(
+                    "text-2xl font-bold leading-none",
+                    isToday ? "text-white" : "text-gray-700",
+                  )}>
+                    {d.getDate()}
+                  </span>
+                  <span className="text-[10px] leading-none opacity-80">
+                    {MONTHS_RU[d.getMonth()]}
+                  </span>
+                </div>
+
+                {/* Appointments */}
+                <div className="flex-1 flex flex-col gap-1.5">
+                  {procs.slice(0, 3).map((proc, i) => {
+                    const time = proc.scheduledAt
+                      ? new Date(proc.scheduledAt).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })
+                      : "";
+                    const colors = [
+                      { bg: "#f0fdf4", dot: "#16a34a" },
+                      { bg: "#eff6ff", dot: "#2563eb" },
+                      { bg: "#fef9c3", dot: "#ca8a04" },
+                    ];
+                    const c = colors[i % colors.length]!;
+                    return (
+                      <div
+                        key={proc.id}
+                        className="flex items-center gap-2 rounded-xl px-3 py-2"
+                        style={{ backgroundColor: c.bg }}
+                      >
+                        <span
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{ backgroundColor: c.dot }}
+                        />
+                        <span className="text-xs font-semibold text-gray-700 flex-1 truncate">
+                          {proc.name}
+                        </span>
+                        {time && (
+                          <span className="text-[10px] font-medium shrink-0" style={{ color: c.dot }}>
+                            {time}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {procs.length > 3 && (
+                    <p className="text-[10px] text-gray-400 pl-2">+{procs.length - 3} ещё</p>
+                  )}
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
       </div>
 
       {/* ─── Quick Actions ─── */}
