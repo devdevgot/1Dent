@@ -38,7 +38,7 @@ router.post("/register", async (req: Request, res: Response, next: NextFunction)
   res.cookie("auth_token", result.token, COOKIE_OPTIONS);
   res.status(201).json({
     success: true,
-    data: { user: result.user, clinic: result.clinic },
+    data: { user: result.user, clinic: result.clinic, token: result.token },
   });
 });
 
@@ -54,7 +54,7 @@ router.post("/login", async (req: Request, res: Response, next: NextFunction) =>
   res.cookie("auth_token", result.token, COOKIE_OPTIONS);
   res.json({
     success: true,
-    data: { user: result.user, clinic: result.clinic },
+    data: { user: result.user, clinic: result.clinic, token: result.token },
   });
 });
 

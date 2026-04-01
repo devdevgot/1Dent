@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useLogout } from "@workspace/api-client-react";
+import { clearAuthToken } from "@/lib/auth-token";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
@@ -77,6 +78,7 @@ export default function MenuPage() {
   const logoutMutation = useLogout({
     mutation: {
       onSuccess: () => {
+        clearAuthToken();
         clearAuth();
         setLocation("/login");
       },

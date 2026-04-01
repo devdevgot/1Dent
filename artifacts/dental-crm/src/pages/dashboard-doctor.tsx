@@ -78,7 +78,7 @@ function getPresetRange(preset: FilterPreset): { from: Date; to: Date } {
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ─── MOCK DATA ────────────────────────────────────────────────────────────────
-const USE_MOCK_DATA = true;
+const USE_MOCK_DATA = false;
 
 const MOCK_ANALYTICS = {
   myRevenueThisMonth: 1_820_000,

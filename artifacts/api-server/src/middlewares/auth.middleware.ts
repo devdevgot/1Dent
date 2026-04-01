@@ -30,7 +30,10 @@ declare global {
 
 export function authMiddleware(req: Request, _res: Response, next: NextFunction): void {
   try {
-    const token = req.cookies?.["auth_token"];
+    const cookieToken = req.cookies?.["auth_token"];
+    const authHeader = req.headers.authorization;
+    const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    const token = cookieToken || bearerToken;
 
     if (!token) {
       throw new UnauthorizedError("Authentication required");

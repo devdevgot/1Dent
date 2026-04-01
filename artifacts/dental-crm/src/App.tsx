@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 import { useGetMe, getGetMeQueryKey, setUnauthorizedHandler } from "@workspace/api-client-react";
+import { clearAuthToken, restoreAuthToken } from "@/lib/auth-token";
 import type { User, Clinic } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/components/auth/protected-route";
@@ -62,6 +63,9 @@ const DEV_MOCK_CLINIC: Clinic = {
   createdAt: new Date().toISOString(),
 };
 
+// Restore auth token from localStorage on page load
+restoreAuthToken();
+
 function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setAuth, clearAuth, setLoading } = useAuthStore();
   const [, setLocation] = useLocation();
@@ -96,6 +100,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     setUnauthorizedHandler(() => {
       queryClient.clear();
       clearAuth();
+      clearAuthToken();
       setLocation("/login");
     });
 

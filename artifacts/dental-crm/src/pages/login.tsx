@@ -5,6 +5,7 @@ import { Link, useLocation } from "wouter";
 import { createLoginSchema, type LoginFormValues } from "@/lib/schemas";
 import { useLogin } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
+import { saveAuthToken } from "@/lib/auth-token";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff } from "lucide-react";
@@ -28,6 +29,8 @@ export default function Login() {
     mutation: {
       onSuccess: (response) => {
         if (response.success) {
+          const token = (response.data as typeof response.data & { token?: string }).token;
+          if (token) saveAuthToken(token);
           setAuth(response.data.user, response.data.clinic);
           toast({
             title: t("auth.loginSuccessTitle"),

@@ -5,6 +5,7 @@ import { Link, useLocation } from "wouter";
 import { createRegisterSchema, type RegisterFormValues } from "@/lib/schemas";
 import { useRegister } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
+import { saveAuthToken } from "@/lib/auth-token";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft } from "lucide-react";
@@ -54,6 +55,8 @@ export default function Register() {
     mutation: {
       onSuccess: (response) => {
         if (response.success) {
+          const token = (response.data as typeof response.data & { token?: string }).token;
+          if (token) saveAuthToken(token);
           setAuth(response.data.user, response.data.clinic);
           toast({
             title: t("register.successTitle"),
