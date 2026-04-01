@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useAuthStore } from "@/hooks/use-auth";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
 import { NotificationBell } from "./notification-bell";
+import { GlobalSearch } from "./global-search";
 import {
   LayoutDashboard,
   KanbanSquare,
@@ -17,7 +18,6 @@ import {
   MoreHorizontal,
   Bot,
   FileSpreadsheet,
-  Search,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { cn } from "@/lib/utils";
@@ -84,10 +84,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       {/* Global header — only on home/dashboard page */}
       {isHomePage && (
         <header className="flex-none flex items-center gap-3 px-4 py-2.5 bg-white border-b border-gray-100 z-20 safe-area-top">
-          <div className="flex-1 flex items-center gap-2 bg-gray-100 rounded-xl px-3 py-2">
-            <Search className="w-4 h-4 text-gray-400 shrink-0" />
-            <span className="text-sm text-gray-400 select-none">Поиск...</span>
-          </div>
+          <GlobalSearch />
           <div className="shrink-0">
             <NotificationBell />
           </div>
