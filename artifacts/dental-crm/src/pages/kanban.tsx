@@ -25,9 +25,12 @@ import { useKanbanStore } from "@/hooks/use-kanban";
 import { KANBAN_COLUMNS } from "@/lib/patient-utils";
 import type { Patient, PatientStatus } from "@workspace/api-client-react";
 import { useTranslation } from "react-i18next";
+import { useAuthStore } from "@/hooks/use-auth";
 
 export default function KanbanPage() {
   const { t } = useTranslation();
+  const { user } = useAuthStore();
+  const canCreate = user?.role === "owner" || user?.role === "admin";
   const queryClient = useQueryClient();
   const { isCreateOpen, setIsCreateOpen } = useKanbanStore();
   const [activeDragPatient, setActiveDragPatient] = useState<Patient | null>(null);
@@ -120,10 +123,12 @@ export default function KanbanPage() {
             <RefreshCw className="w-4 h-4" />
           </Button>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
-          <Plus className="w-4 h-4" />
-          {t("kanban.newPatient")}
-        </Button>
+        {canCreate && (
+          <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
+            <Plus className="w-4 h-4" />
+            {t("kanban.newPatient")}
+          </Button>
+        )}
       </div>
 
       {isLoading ? (

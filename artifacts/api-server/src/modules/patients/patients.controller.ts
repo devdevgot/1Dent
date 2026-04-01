@@ -71,7 +71,7 @@ const addInteractionSchema = z.object({
 router.use(authMiddleware);
 
 const patientReadRoles = roleGuard("owner", "admin", "doctor");
-const patientWriteRoles = roleGuard("owner", "admin", "doctor");
+const patientWriteRoles = roleGuard("owner", "admin");
 const patientDeleteRoles = roleGuard("owner", "admin");
 
 // GET /patients — owner/admin see all, doctor sees own only (service layer)

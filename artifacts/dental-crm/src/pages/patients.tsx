@@ -104,6 +104,7 @@ export default function PatientsPage() {
   }, [allPatients, search, statusFilter, sourceFilter, sortKey, sortDir]);
 
   const canDelete = user?.role === "owner" || user?.role === "admin";
+  const canCreate = user?.role === "owner" || user?.role === "admin";
 
   const SortIcon = ({ col }: { col: SortKey }) => {
     if (sortKey !== col) return <ChevronsUpDown className="w-3 h-3 text-gray-300" />;
@@ -148,10 +149,12 @@ export default function PatientsPage() {
               <RefreshCw className="w-4 h-4" />
             </button>
           </div>
-          <Button onClick={() => setIsCreateOpen(true)} className="gap-2 self-start sm:self-auto">
-            <Plus className="w-4 h-4" />
-            {t("kanban.newPatient")}
-          </Button>
+          {canCreate && (
+            <Button onClick={() => setIsCreateOpen(true)} className="gap-2 self-start sm:self-auto">
+              <Plus className="w-4 h-4" />
+              {t("kanban.newPatient")}
+            </Button>
+          )}
         </div>
 
         {/* Filters */}
