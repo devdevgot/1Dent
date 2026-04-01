@@ -143,3 +143,74 @@
   from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* ─── Print / Full-page screenshot mode ────────────────────────────────────── */
+@media print {
+  html, body, #root {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    position: static !important;
+  }
+
+  * {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    position: static !important;
+    box-shadow: none !important;
+    animation: none !important;
+    transition: none !important;
+  }
+
+  /* Hide non-content elements */
+  .no-print,
+  [data-radix-popper-content-wrapper],
+  [role="dialog"],
+  [role="tooltip"] {
+    display: none !important;
+  }
+
+  /* Fixed / sticky → static */
+  [style*="position: fixed"],
+  [style*="position:fixed"],
+  [style*="position: sticky"],
+  [style*="position:sticky"] {
+    position: static !important;
+  }
+
+  /* Remove lazy loading */
+  img[loading="lazy"] {
+    content-visibility: visible !important;
+  }
+
+  /* Ensure page renders as one long column */
+  body {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  /* Remove inner scrollable containers */
+  .overflow-auto,
+  .overflow-y-auto,
+  .overflow-x-auto,
+  .overflow-scroll,
+  .overflow-y-scroll,
+  .overflow-hidden {
+    overflow: visible !important;
+  }
+
+  /* Remove fixed viewport heights */
+  .h-screen,
+  .h-full,
+  .min-h-screen,
+  .min-h-full {
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
+  /* Unfix flex containers so they wrap naturally */
+  .flex-1 {
+    flex: none !important;
+  }
+}
