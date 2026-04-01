@@ -39,6 +39,7 @@ import StaffDetailPage from "@/pages/staff-detail";
 import DoctorAnalyticsPage from "@/pages/doctor-analytics";
 import MenuPage from "@/pages/menu";
 import SettingsPage from "@/pages/settings";
+import AccountSettingsPage from "@/pages/account-settings";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -242,6 +243,11 @@ function Router() {
       {/* Settings page */}
       <Route path="/settings">
         <ProtectedRoute component={SettingsPage} allowedRoles={['owner', 'admin', 'doctor', 'accountant', 'warehouse']} />
+      </Route>
+
+      {/* Account settings page */}
+      <Route path="/account-settings">
+        <ProtectedRoute component={AccountSettingsPage} allowedRoles={['owner', 'admin', 'doctor', 'accountant', 'warehouse']} />
       </Route>
 
       {/* 404 */}

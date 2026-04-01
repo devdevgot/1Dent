@@ -81,4 +81,16 @@ export class AuthRepository {
       .set({ passwordHash })
       .where(eq(usersTable.id, id));
   }
+
+  async updateUserProfile(
+    id: string,
+    data: Partial<Pick<User, "name" | "email" | "photoUrl">>,
+  ): Promise<User | undefined> {
+    const [user] = await db
+      .update(usersTable)
+      .set(data)
+      .where(eq(usersTable.id, id))
+      .returning();
+    return user;
+  }
 }

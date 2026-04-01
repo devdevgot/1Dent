@@ -222,6 +222,24 @@ export class AuthService {
     await this.repo.updateUserPassword(userId, passwordHash);
   }
 
+  async updateProfile(
+    userId: string,
+    data: { name?: string; email?: string; photoUrl?: string | null },
+  ): Promise<Omit<User, "passwordHash">> {
+    if (data.email) {
+      const existing = await this.repo.findUserByEmail(data.email);
+      if (existing && existing.id !== userId) {
+        throw new ConflictError("Email already in use");
+      }
+    }
+
+    const updated = await this.repo.updateUserProfile(userId, data);
+    if (!updated) throw new NotFoundError("User not found");
+
+    const { passwordHash: _, ...safeUser } = updated;
+    return safeUser;
+  }
+
   private generateToken(user: User, clinicId: string): string {
     return jwt.sign(
       {

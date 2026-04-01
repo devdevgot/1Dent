@@ -102,10 +102,18 @@ export default function MenuPage() {
   return (
     <div className="min-h-full bg-[#f2f2f7] pb-6">
       {/* Profile card */}
-      <div className="bg-white px-4 pt-5 pb-3 mb-5">
+      <Link href="/account-settings" className="block bg-white px-4 pt-5 pb-3 mb-5 active:bg-gray-50 transition-colors">
         <div className="flex items-center gap-3 py-1">
-          <div className="w-11 h-11 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold text-base shrink-0">
-            {user?.name.charAt(0).toUpperCase()}
+          <div className="w-11 h-11 rounded-full overflow-hidden bg-primary/15 text-primary flex items-center justify-center font-bold text-base shrink-0">
+            {(user as typeof user & { photoUrl?: string | null })?.photoUrl ? (
+              <img
+                src={(user as typeof user & { photoUrl?: string | null })?.photoUrl!}
+                alt="avatar"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              user?.name.charAt(0).toUpperCase()
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-gray-900 text-[15px] leading-tight truncate">{user?.name}</p>
@@ -118,7 +126,7 @@ export default function MenuPage() {
             <ChevronRight className="w-4 h-4 text-gray-300" />
           </div>
         </div>
-      </div>
+      </Link>
 
       {/* Services grid */}
       <div className="px-4 mb-5">

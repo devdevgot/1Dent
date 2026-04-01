@@ -106,6 +106,26 @@ router.get("/me", authMiddleware, async (req: Request, res: Response, next: Next
   res.json({ success: true, data: result });
 });
 
+const updateProfileSchema = z.object({
+  name: z.string().min(2).optional(),
+  email: z.string().email().optional(),
+  photoUrl: z.string().nullable().optional(),
+});
+
+router.patch("/me", authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
+  const parsed = updateProfileSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+  }
+
+  try {
+    const user = await authService.updateProfile(req.user!.userId, parsed.data);
+    res.json({ success: true, data: { user } });
+  } catch (err) {
+    next(err);
+  }
+});
+
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1),
   newPassword: z.string().min(6),
