@@ -702,7 +702,7 @@ export function PatientDetailPanel() {
                       className="w-full"
                       disabled={interactionMutation.isPending || !interactionContent.trim()}
                     >
-                      {interactionMutation.isPending ? t("tooth.saving") : t("patient.addRecord")}
+                      {interactionMutation.isPending ? t("tooth.saving") : isDoctor ? "+ Добавить заключение" : t("patient.addRecord")}
                     </Button>
                   </form>
                 </div>
