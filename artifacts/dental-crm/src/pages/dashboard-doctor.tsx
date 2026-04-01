@@ -352,18 +352,11 @@ export default function DoctorDashboard() {
               {activeDayProcs.length === 0 ? (
                 <p className="py-4 text-center text-sm text-gray-400">Нет записей на этот день</p>
               ) : (
-                activeDayProcs.map((proc, i) => {
+                activeDayProcs.map((proc) => {
                   const time = proc.scheduledAt
                     ? new Date(proc.scheduledAt).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })
                     : "";
-                  const APPT_COLORS = [
-                    { bg: "#f0fdf4", border: "#bbf7d0", dot: "#16a34a" },
-                    { bg: "#eff6ff", border: "#bfdbfe", dot: "#2563eb" },
-                    { bg: "#fef9c3", border: "#fde68a", dot: "#ca8a04" },
-                    { bg: "#fdf4ff", border: "#f5d0fe", dot: "#9333ea" },
-                    { bg: "#fff7ed", border: "#fed7aa", dot: "#ea580c" },
-                  ];
-                  const c = APPT_COLORS[i % APPT_COLORS.length]!;
+                  const c = { bg: "#eff6ff", border: "#bfdbfe", dot: "#2563eb" };
                   return (
                     <motion.div
                       key={proc.id}
