@@ -1,4 +1,4 @@
-import { Bell, AlertTriangle, CheckCheck } from "lucide-react";
+import { Bell, AlertTriangle, CheckCheck, ChevronRight } from "lucide-react";
 import { useUnreadCount, useNotifications, useMarkRead, useMarkAllRead } from "@/hooks/use-notifications";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { Notification } from "@workspace/api-client-react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 
 function NotificationItem({
   notification,
@@ -59,6 +60,7 @@ function NotificationItem({
 
 export function NotificationBell() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { data: countData } = useUnreadCount();
   const { data: notificationsData } = useNotifications();
   const markReadMutation = useMarkRead();
@@ -108,6 +110,24 @@ export function NotificationBell() {
             </Button>
           )}
         </div>
+
+        {unreadRedAlerts > 0 && (
+          <button
+            onClick={() => navigate("/kanban")}
+            className="w-full bg-red-50 border-b border-red-100 p-3.5 flex items-center gap-3 text-left hover:bg-red-100 transition-colors"
+          >
+            <div className="w-9 h-9 bg-red-500 rounded-xl flex items-center justify-center shrink-0">
+              <Bell className="w-4 h-4 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-red-700">
+                {t("dashboard.redAlertTitle", { count: unreadRedAlerts })}
+              </p>
+              <p className="text-xs text-red-500">{t("dashboard.redAlertDesc")}</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-red-400 shrink-0" />
+          </button>
+        )}
 
         <ScrollArea className="max-h-96">
           {notifications.length === 0 && (
