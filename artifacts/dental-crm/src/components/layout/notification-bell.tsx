@@ -85,7 +85,7 @@ export function NotificationBell() {
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-96 p-0 shadow-xl" align="end">
+      <PopoverContent className="w-96 p-0 shadow-xl bg-white" align="end">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
           <div className="flex items-center gap-2">
             <h3 className="font-semibold text-sm">{t("notifications.title")}</h3>
