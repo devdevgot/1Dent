@@ -232,8 +232,8 @@ export function GlobalSearch() {
       {/* Overlay */}
       {isOpen && (
         <div className="fixed inset-0 z-50 flex flex-col bg-[#f2f2f7]">
-          {/* Search header */}
-          <div className="bg-white px-4 pt-12 pb-2 border-b border-gray-100 flex items-center gap-3">
+          {/* Search header — same height/position as the regular header */}
+          <div className="bg-white px-4 py-2.5 border-b border-gray-100 flex items-center gap-3 safe-area-top">
             <div className="flex-1 flex items-center gap-2 bg-gray-100 rounded-xl px-3 py-2">
               <Search className="w-4 h-4 text-gray-400 shrink-0" />
               <input
