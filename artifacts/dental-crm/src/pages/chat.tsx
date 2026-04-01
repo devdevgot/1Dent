@@ -9,7 +9,17 @@ import {
 } from "@workspace/api-client-react";
 import type { Patient, Message } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
-import { AlertTriangle, Send, MessageSquare, Search, Check, CheckCheck, Clock, XCircle, ChevronLeft } from "lucide-react";
+import {
+  AlertTriangle,
+  Send,
+  MessageSquare,
+  Search,
+  Check,
+  CheckCheck,
+  Clock,
+  XCircle,
+  ChevronLeft,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
@@ -64,18 +74,21 @@ function Avatar({ name, size = 40 }: { name: string; size?: number }) {
   );
 }
 
-function formatTime(dateStr: string) {
-  return new Date(dateStr).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+function useChatDateLabel() {
+  const { t } = useTranslation();
+  return (dateStr: string): string => {
+    const d         = new Date(dateStr);
+    const today     = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (d.toDateString() === today.toDateString())     return t("chat.today");
+    if (d.toDateString() === yesterday.toDateString()) return t("chat.yesterday");
+    return d.toLocaleDateString(undefined, { day: "2-digit", month: "long", year: "numeric" });
+  };
 }
 
-function formatGroupDate(dateStr: string) {
-  const d = new Date(dateStr);
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  if (d.toDateString() === today.toDateString()) return "Сегодня";
-  if (d.toDateString() === yesterday.toDateString()) return "Вчера";
-  return d.toLocaleDateString("ru", { day: "2-digit", month: "long", year: "numeric" });
+function formatTime(dateStr: string) {
+  return new Date(dateStr).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 }
 
 type DeliveryStatus = "pending" | "sent" | "delivered" | "failed";
@@ -95,27 +108,62 @@ function getDeliveryStatus(message: Message): DeliveryStatus {
   return "delivered";
 }
 
+function BubbleTailOut() {
+  return (
+    <span
+      style={{
+        position: "absolute",
+        top: 0,
+        right: -6,
+        width: 0,
+        height: 0,
+        borderTop: `8px solid ${BRAND}`,
+        borderLeft: "6px solid transparent",
+      }}
+    />
+  );
+}
+
+function BubbleTailIn({ alert }: { alert?: boolean }) {
+  const color = alert ? "#fef2f2" : "#ffffff";
+  return (
+    <span
+      style={{
+        position: "absolute",
+        top: 0,
+        left: -6,
+        width: 0,
+        height: 0,
+        borderTop: `8px solid ${color}`,
+        borderRight: "6px solid transparent",
+      }}
+    />
+  );
+}
+
 function MessageBubble({ message, isOutbound }: { message: Message; isOutbound: boolean }) {
-  const { t } = useTranslation();
-  const deliveryStatus = getDeliveryStatus(message);
+  const { t }            = useTranslation();
+  const deliveryStatus   = getDeliveryStatus(message);
+  const isAlert          = message.isRedAlert;
 
   return (
     <div className={cn("flex mb-1 px-3", isOutbound ? "justify-end" : "justify-start")}>
       <div
         className={cn(
           "relative max-w-[76%] px-3.5 py-2 shadow-sm",
-          isOutbound ? "rounded-2xl rounded-tr-sm" : "rounded-2xl rounded-tl-sm",
-          message.isRedAlert && !isOutbound && "border border-red-300",
+          isOutbound ? "rounded-2xl rounded-tr-none" : "rounded-2xl rounded-tl-none",
+          isAlert && !isOutbound && "border border-red-300",
         )}
         style={
           isOutbound
             ? { backgroundColor: BRAND, color: BRAND_DARK }
-            : message.isRedAlert
+            : isAlert
             ? { backgroundColor: "#fef2f2", color: "#1f2937" }
             : { backgroundColor: "#ffffff", color: "#1f2937" }
         }
       >
-        {message.isRedAlert && (
+        {isOutbound ? <BubbleTailOut /> : <BubbleTailIn alert={isAlert} />}
+        {isAlert && (
           <div className="flex items-center gap-1 text-red-600 mb-1 text-xs font-semibold">
             <AlertTriangle className="w-3 h-3" />
             <span>{t("chat.redAlert")}</span>
@@ -129,7 +177,7 @@ function MessageBubble({ message, isOutbound }: { message: Message; isOutbound: 
           )}
         >
           <span>{formatTime(message.createdAt)}</span>
-          {message.isRedAlert && isOutbound && <span>🚨</span>}
+          {isAlert && isOutbound && <span>🚨</span>}
           {isOutbound && <DeliveryIcon status={deliveryStatus} />}
         </div>
       </div>
@@ -138,12 +186,13 @@ function MessageBubble({ message, isOutbound }: { message: Message; isOutbound: 
 }
 
 function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void }) {
-  const { t } = useTranslation();
-  const { user } = useAuthStore();
+  const { t }           = useTranslation();
+  const { user }        = useAuthStore();
   const [text, setText] = useState("");
-  const bottomRef    = useRef<HTMLDivElement>(null);
-  const textareaRef  = useRef<HTMLTextAreaElement>(null);
-  const qc = useQueryClient();
+  const bottomRef       = useRef<HTMLDivElement>(null);
+  const textareaRef     = useRef<HTMLTextAreaElement>(null);
+  const qc              = useQueryClient();
+  const formatDate      = useChatDateLabel();
 
   const { data, isLoading } = useListMessages(patient.id, {
     query: {
@@ -156,7 +205,7 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
     mutation: {
       onMutate: async (vars) => {
         const optimistic: Message = {
-          id: `optimistic-${Date.now()}`,
+          id:               `optimistic-${Date.now()}`,
           clinicId:         user!.clinicId,
           patientId:        patient.id,
           direction:        "outbound",
@@ -188,9 +237,7 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
     const trimmed = text.trim();
     if (!trimmed || sendMutation.isPending) return;
     setText("");
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-    }
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
     sendMutation.mutate({ patientId: patient.id, data: { content: trimmed } });
   };
 
@@ -209,7 +256,7 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
 
   const grouped: { date: string; messages: Message[] }[] = [];
   for (const msg of messages) {
-    const d    = formatGroupDate(msg.createdAt);
+    const d    = formatDate(msg.createdAt);
     const last = grouped[grouped.length - 1];
     if (last && last.date === d) last.messages.push(msg);
     else grouped.push({ date: d, messages: [msg] });
@@ -219,7 +266,6 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
 
   return (
     <div className="flex flex-col h-full">
-      {/* ── Header ── */}
       <div
         className="flex items-center gap-3 px-4 py-3 border-b border-border/30 shrink-0"
         style={{ background: "linear-gradient(135deg,#ffffff 0%,#f8fdf0 100%)" }}
@@ -252,7 +298,6 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
         )}
       </div>
 
-      {/* ── Messages ── */}
       <div
         className="flex-1 overflow-y-auto py-3"
         style={{ backgroundColor: CHAT_BG, backgroundImage: DOT_PATTERN }}
@@ -275,7 +320,7 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
             </div>
             <div>
               <p className="text-sm font-semibold text-gray-600">{t("chat.noMessages")}</p>
-              <p className="text-xs text-gray-400 mt-0.5">Отправьте первое сообщение</p>
+              <p className="text-xs text-gray-400 mt-0.5">{t("chat.startConversation")}</p>
             </div>
           </div>
         )}
@@ -300,7 +345,6 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
         <div ref={bottomRef} className="h-2" />
       </div>
 
-      {/* ── Input ── */}
       <div className="flex items-end gap-2.5 px-3 py-2.5 border-t border-border/30 shrink-0 bg-[#f0f2f5]">
         <div className="flex-1 bg-white rounded-2xl px-3.5 py-2 shadow-sm border border-border/20 flex items-end min-h-[44px]">
           <textarea
@@ -328,26 +372,24 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
 }
 
 export default function ChatPage() {
-  const { t } = useTranslation();
+  const { t }                                   = useTranslation();
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
+  const [search, setSearch]                     = useState("");
 
   const { data } = useListPatients({
     query: { queryKey: getListPatientsQueryKey() },
   });
 
-  const patients      = data?.data?.patients ?? [];
-  const filtered      = patients.filter((p) =>
+  const patients        = data?.data?.patients ?? [];
+  const filtered        = patients.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase()),
   );
   const selectedPatient = patients.find((p) => p.id === selectedPatientId);
-
-  const handleBack = () => setSelectedPatientId(null);
-  const H = "h-[calc(100dvh-7.5rem)]";
+  const handleBack      = () => setSelectedPatientId(null);
+  const H               = "h-[calc(100dvh-7.5rem)]";
 
   return (
     <div className={cn("flex overflow-hidden", H)}>
-      {/* ── Sidebar ── */}
       <aside
         className={cn(
           "flex flex-col border-r border-border/40",
@@ -390,7 +432,6 @@ export default function ChatPage() {
         </div>
       </aside>
 
-      {/* ── Main ── */}
       <main
         className={cn(
           "flex-1 flex flex-col",
@@ -412,7 +453,7 @@ export default function ChatPage() {
             </div>
             <div>
               <p className="font-semibold text-gray-700 text-base">{t("chat.selectPatient")}</p>
-              <p className="text-sm text-gray-400 mt-1">Выберите пациента из списка</p>
+              <p className="text-sm text-gray-400 mt-1">{t("chat.selectPatientHint")}</p>
             </div>
           </div>
         )}

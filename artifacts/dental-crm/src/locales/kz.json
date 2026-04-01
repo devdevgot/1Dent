@@ -183,6 +183,10 @@
     "loadingMessages": "Хабарлар жүктелуде...",
     "redAlert": "Қызыл алерт",
     "selectPatient": "Чат үшін пациентті таңдаңыз",
+    "selectPatientHint": "Тізімнен пациентті таңдаңыз",
+    "startConversation": "Бірінші хабарды жіберіңіз",
+    "today": "Бүгін",
+    "yesterday": "Кеше",
     "messagePlaceholder": "Хабар..."
   },
   "inventory": {

@@ -183,6 +183,10 @@
     "loadingMessages": "Загрузка сообщений...",
     "redAlert": "Красный алерт",
     "selectPatient": "Выберите пациента для переписки",
+    "selectPatientHint": "Выберите пациента из списка",
+    "startConversation": "Отправьте первое сообщение",
+    "today": "Сегодня",
+    "yesterday": "Вчера",
     "messagePlaceholder": "Сообщение..."
   },
   "inventory": {

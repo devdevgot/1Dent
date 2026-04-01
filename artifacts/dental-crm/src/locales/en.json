@@ -183,6 +183,10 @@
     "loadingMessages": "Loading messages...",
     "redAlert": "Red Alert",
     "selectPatient": "Select a patient to chat",
+    "selectPatientHint": "Select a patient from the list",
+    "startConversation": "Send the first message",
+    "today": "Today",
+    "yesterday": "Yesterday",
     "messagePlaceholder": "Message..."
   },
   "inventory": {
