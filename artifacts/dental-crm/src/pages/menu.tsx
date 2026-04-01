@@ -53,7 +53,6 @@ const ALL_NAV_ITEMS = [
   { nameKey: "nav.chatbot",      href: "/chatbot",            icon: Bot,             roles: ["owner","admin"] },
   { nameKey: "nav.migration",    href: "/migration",          icon: FileSpreadsheet, roles: ["owner","admin"] },
   { nameKey: "nav.logs",         href: "/logs",               icon: Activity,        roles: ["owner"] },
-  { nameKey: "nav.settings",     href: "/settings",           icon: Settings,        roles: ["owner","admin","doctor","accountant","warehouse"] },
 ];
 
 export default function MenuPage() {
