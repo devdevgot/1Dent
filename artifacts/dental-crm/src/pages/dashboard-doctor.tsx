@@ -352,7 +352,7 @@ export default function DoctorDashboard() {
               {activeDayProcs.length === 0 ? (
                 <p className="py-4 text-center text-sm text-gray-400">Нет записей на этот день</p>
               ) : (
-                activeDayProcs.map((proc) => {
+                activeDayProcs.map((proc, i) => {
                   const time = proc.scheduledAt
                     ? new Date(proc.scheduledAt).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })
                     : "";
