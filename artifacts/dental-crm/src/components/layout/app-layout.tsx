@@ -68,6 +68,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
     href: item.href === "__role_dashboard__" ? roleDashboardHref : item.href,
   }));
 
+  const isHomePage = location === roleDashboardHref;
+
   const bottomNavItems = navItems.filter((item) => !item.menuOnly);
   const bottomItems = bottomNavItems.slice(0, MAX_BOTTOM_TABS);
   const overflowItems = bottomNavItems.slice(MAX_BOTTOM_TABS);
@@ -79,16 +81,18 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background overflow-hidden">
-      {/* Global header — search + bell */}
-      <header className="flex-none flex items-center gap-3 px-4 py-2.5 bg-white border-b border-gray-100 z-20 safe-area-top">
-        <div className="flex-1 flex items-center gap-2 bg-gray-100 rounded-xl px-3 py-2">
-          <Search className="w-4 h-4 text-gray-400 shrink-0" />
-          <span className="text-sm text-gray-400 select-none">Поиск...</span>
-        </div>
-        <div className="shrink-0">
-          <NotificationBell />
-        </div>
-      </header>
+      {/* Global header — only on home/dashboard page */}
+      {isHomePage && (
+        <header className="flex-none flex items-center gap-3 px-4 py-2.5 bg-white border-b border-gray-100 z-20 safe-area-top">
+          <div className="flex-1 flex items-center gap-2 bg-gray-100 rounded-xl px-3 py-2">
+            <Search className="w-4 h-4 text-gray-400 shrink-0" />
+            <span className="text-sm text-gray-400 select-none">Поиск...</span>
+          </div>
+          <div className="shrink-0">
+            <NotificationBell />
+          </div>
+        </header>
+      )}
 
       {/* Main content */}
       <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">{children}</main>
