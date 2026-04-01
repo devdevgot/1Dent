@@ -218,11 +218,12 @@ export function GlobalSearch() {
   const isEmpty    = query.trim().length > 0 && !hasResults;
 
   return (
-    <>
+    <div className="flex-1 flex min-w-0">
       {/* Search bar trigger */}
       <button
+        type="button"
         onClick={() => setIsOpen(true)}
-        className="flex-1 flex items-center gap-2 bg-gray-100 rounded-xl px-3 py-2 text-left"
+        className="flex-1 flex items-center gap-2 bg-gray-100 rounded-xl px-3 py-2 text-left cursor-pointer"
       >
         <Search className="w-4 h-4 text-gray-400 shrink-0" />
         <span className="text-sm text-gray-400 select-none">Поиск...</span>
@@ -308,6 +309,6 @@ export function GlobalSearch() {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }

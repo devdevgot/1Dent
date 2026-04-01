@@ -83,7 +83,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     <div className="flex flex-col h-[100dvh] bg-background overflow-hidden">
       {/* Global header — only on home/dashboard page */}
       {isHomePage && (
-        <header className="flex-none flex items-center gap-3 px-4 py-2.5 bg-white border-b border-gray-100 z-20 safe-area-top">
+        <header className="flex-none relative flex items-center gap-3 px-4 py-2.5 bg-white border-b border-gray-100 z-20 safe-area-top">
           <GlobalSearch />
           <div className="shrink-0">
             <NotificationBell />
