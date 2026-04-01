@@ -243,41 +243,6 @@ export default function DoctorDashboard() {
           )}
         </div>
 
-        {/* ─── Payment method list ─── */}
-        {!isLoading && revenueByPayment.length > 0 && (
-          <div className="px-5 pb-5 space-y-0 divide-y divide-gray-50">
-            {revenueByPayment.map((stat, idx) => {
-              const Icon = PAYMENT_ICONS[stat.method] ?? Wallet;
-              return (
-                <motion.div
-                  key={stat.method}
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.05 }}
-                  className="flex items-center gap-3 py-3"
-                >
-                  <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ backgroundColor: stat.color + "22" }}
-                  >
-                    <Icon className="w-5 h-5" style={{ color: stat.color }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-800">{stat.label}</p>
-                    <p className="text-xs text-gray-400">{stat.percent}%</p>
-                  </div>
-                  <span className="text-sm font-bold text-gray-900 shrink-0">
-                    {fmtRevenue(stat.amount)}
-                  </span>
-                </motion.div>
-              );
-            })}
-          </div>
-        )}
-
-        {!isLoading && revenueByPayment.length === 0 && revenueThisMonth === 0 && (
-          <p className="py-6 text-center text-sm text-gray-400">Нет выручки в этом месяце</p>
-        )}
       </div>
 
       {/* ─── Quick Actions ─── */}
