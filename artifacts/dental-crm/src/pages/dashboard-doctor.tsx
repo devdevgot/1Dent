@@ -317,7 +317,7 @@ export default function DoctorDashboard() {
             <span className="text-sm font-bold text-gray-800">Предстоящие записи</span>
           </div>
           <button
-            onClick={() => navigate("/schedule")}
+            onClick={() => navigate(`/schedule/${activeDayKey}`)}
             className="flex items-center gap-0.5 text-xs font-semibold"
             style={{ color: "#98cc1c" }}
           >
@@ -391,7 +391,8 @@ export default function DoctorDashboard() {
                       initial={{ opacity: 0, x: -6 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: i * 0.04 }}
-                      className="flex items-center gap-3 rounded-2xl px-3.5 py-2.5 border"
+                      onClick={() => navigate(`/schedule/${activeDayKey}`)}
+                      className="flex items-center gap-3 rounded-2xl px-3.5 py-2.5 border cursor-pointer active:scale-[0.98] transition-transform"
                       style={{ backgroundColor: c.bg, borderColor: c.border }}
                     >
                       <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: c.dot + "22" }}>
