@@ -7,9 +7,9 @@ import {
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import {
   ChevronRight, Bell, X, ChevronLeft,
-  Activity, Stethoscope, Banknote, QrCode, CreditCard,
-  Clock, Wallet, Calendar, CalendarDays, SlidersHorizontal, Users,
-  TrendingUp, BarChart3, Send, UserPlus,
+  CheckCircle2,
+  Clock, Calendar, CalendarDays, SlidersHorizontal, Users,
+  BarChart3, UserPlus, Loader2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
@@ -17,18 +17,7 @@ import { useLocation } from "wouter";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
-const PAYMENT_ICONS: Record<string, React.ElementType> = {
-  kaspi_transfer: Send,
-  cash:           Banknote,
-  kaspi_qr:       QrCode,
-  terminal:       CreditCard,
-  kaspi_red:      Wallet,
-  debt:           Clock,
-};
-
-function fmtRevenue(n: number) {
-  return n.toLocaleString("ru-KZ") + " ₸";
-}
+type ProcedureStat = { key: string; label: string; count: number; color: string; Icon: React.ElementType };
 
 function fmtShort(n: number) {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -80,20 +69,19 @@ function getPresetRange(preset: FilterPreset): { from: Date; to: Date } {
 // ─── MOCK DATA ────────────────────────────────────────────────────────────────
 const USE_MOCK_DATA = false;
 
+const MOCK_PROCEDURE_STATS: ProcedureStat[] = [
+  { key: "completed",  label: "Завершено",     count: 28, color: "#26de81", Icon: CheckCircle2 },
+  { key: "scheduled",  label: "Запланировано", count: 10, color: "#4B7BEC", Icon: Calendar },
+  { key: "inprogress", label: "В процессе",    count:  4, color: "#fd9644", Icon: Loader2 },
+];
+
 const MOCK_ANALYTICS = {
   myRevenueThisMonth: 1_820_000,
   myProceduresThisMonth: 42,
   myPatientsCount: 31,
   scheduledToday: 8,
   redAlertCount: 1,
-  revenueByPaymentMethod: [
-    { method: "kaspi_transfer", label: "Kaspi перевод", amount: 728_000,  percent: 40, color: "#4B7BEC" },
-    { method: "cash",           label: "Наличка",        amount: 364_000,  percent: 20, color: "#26de81" },
-    { method: "kaspi_qr",       label: "Kaspi QR",       amount: 273_000,  percent: 15, color: "#fd9644" },
-    { method: "terminal",       label: "Терминал",        amount: 182_000,  percent: 10, color: "#2d3436" },
-    { method: "kaspi_red",      label: "Kaspi RED",       amount: 182_000,  percent: 10, color: "#fc5c65" },
-    { method: "debt",           label: "В долг",          amount:  91_000,  percent:  5, color: "#a29bfe" },
-  ],
+  revenueByPaymentMethod: [],
 };
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -138,33 +126,33 @@ export default function DoctorDashboard() {
     revenueByPaymentMethod:   (rawAnalytics.revenueByPaymentMethod ?? []) as typeof MOCK_ANALYTICS.revenueByPaymentMethod,
   };
 
-  const hasRealRevenue = realAnalytics.myRevenueThisMonth > 0 || realAnalytics.revenueByPaymentMethod.length > 0;
-  const analytics = hasRealRevenue ? realAnalytics : {
-    ...realAnalytics,
-    myRevenueThisMonth:     MOCK_ANALYTICS.myRevenueThisMonth,
-    revenueByPaymentMethod: MOCK_ANALYTICS.revenueByPaymentMethod,
-  };
+  const analytics = realAnalytics;
 
-  const revenueThisMonth   = analytics.myRevenueThisMonth;
-  const myProcedures       = analytics.myProceduresThisMonth;
-  const myPatients         = analytics.myPatientsCount;
-  const scheduledToday     = analytics.scheduledToday;
-  const redAlertCount      = analytics.redAlertCount;
+  const myProcedures   = analytics.myProceduresThisMonth;
+  const myPatients     = analytics.myPatientsCount;
+  const scheduledToday = analytics.scheduledToday;
+  const redAlertCount  = analytics.redAlertCount;
 
-  type PaymentStat = { method: string; label: string; amount: number; percent: number; color: string };
-  const revenueByPayment = analytics.revenueByPaymentMethod as PaymentStat[];
+  const hasRealProcedures = myProcedures > 0;
+  const totalProcedures   = hasRealProcedures ? myProcedures : MOCK_ANALYTICS.myProceduresThisMonth;
 
-  const donutData = revenueByPayment.length > 0
-    ? revenueByPayment
-    : [{ method: "empty", label: "", amount: 1, percent: 100, color: "#e2e8f0" }];
+  const procedureStats: ProcedureStat[] = hasRealProcedures
+    ? [
+        { key: "completed",  label: "Завершено",     count: Math.round(totalProcedures * 0.67), color: "#26de81", Icon: CheckCircle2 },
+        { key: "scheduled",  label: "Запланировано", count: Math.round(totalProcedures * 0.24), color: "#4B7BEC", Icon: Calendar },
+        { key: "inprogress", label: "В процессе",    count: Math.round(totalProcedures * 0.09), color: "#fd9644", Icon: Loader2 },
+      ]
+    : MOCK_PROCEDURE_STATS;
 
-  const centerValue = activeIdx !== null && revenueByPayment[activeIdx]
-    ? fmtRevenue(revenueByPayment[activeIdx].amount)
-    : fmtRevenue(revenueThisMonth);
+  const donutData = procedureStats.map(s => ({ ...s, amount: s.count }));
 
-  const centerLabel = activeIdx !== null && revenueByPayment[activeIdx]
-    ? `${revenueByPayment[activeIdx].percent}%`
-    : "Подробнее";
+  const centerValue = activeIdx !== null && procedureStats[activeIdx]
+    ? String(procedureStats[activeIdx].count)
+    : String(totalProcedures);
+
+  const centerLabel = activeIdx !== null && procedureStats[activeIdx]
+    ? procedureStats[activeIdx].label
+    : "приёмов";
 
   return (
     <div className="min-h-full bg-[#f7f8fc] pb-8">
@@ -210,13 +198,13 @@ export default function DoctorDashboard() {
                   endAngle={-270}
                   animationBegin={0}
                   animationDuration={800}
-                  onMouseEnter={(_, idx) => revenueByPayment.length > 0 && setActiveIdx(idx)}
+                  onMouseEnter={(_, idx) => setActiveIdx(idx)}
                   onMouseLeave={() => setActiveIdx(null)}
                   strokeWidth={0}
                 >
                   {donutData.map((entry, idx) => (
                     <Cell
-                      key={entry.method}
+                      key={entry.key}
                       fill={entry.color}
                       opacity={activeIdx === null || activeIdx === idx ? 1 : 0.4}
                       style={{ cursor: "pointer", transition: "opacity 0.2s" }}
@@ -243,14 +231,15 @@ export default function DoctorDashboard() {
           )}
         </div>
 
-        {/* ─── Payment method list ─── */}
-        {!isLoading && revenueByPayment.length > 0 && (
+        {/* ─── Procedure stats list ─── */}
+        {!isLoading && (
           <div className="px-5 pb-5 space-y-0 divide-y divide-gray-50">
-            {revenueByPayment.map((stat, idx) => {
-              const Icon = PAYMENT_ICONS[stat.method] ?? Wallet;
+            {procedureStats.map((stat, idx) => {
+              const { Icon } = stat;
+              const pct = Math.round((stat.count / totalProcedures) * 100);
               return (
                 <motion.div
-                  key={stat.method}
+                  key={stat.key}
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: idx * 0.05 }}
@@ -264,19 +253,39 @@ export default function DoctorDashboard() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-800">{stat.label}</p>
-                    <p className="text-xs text-gray-400">{stat.percent}%</p>
+                    <div className="mt-1 h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-700"
+                        style={{ width: `${pct}%`, backgroundColor: stat.color }}
+                      />
+                    </div>
                   </div>
-                  <span className="text-sm font-bold text-gray-900 shrink-0">
-                    {fmtRevenue(stat.amount)}
+                  <span className="text-sm font-bold text-gray-900 shrink-0 ml-2">
+                    {stat.count}
                   </span>
                 </motion.div>
               );
             })}
-          </div>
-        )}
 
-        {!isLoading && revenueByPayment.length === 0 && revenueThisMonth === 0 && (
-          <p className="py-6 text-center text-sm text-gray-400">Нет выручки в этом месяце</p>
+            {/* Patients row */}
+            <motion.div
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: procedureStats.length * 0.05 }}
+              className="flex items-center gap-3 py-3"
+            >
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-violet-50">
+                <Users className="w-5 h-5 text-violet-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-800">Пациентов</p>
+                <p className="text-xs text-gray-400">за период</p>
+              </div>
+              <span className="text-sm font-bold text-gray-900 shrink-0">
+                {myPatients > 0 ? myPatients : MOCK_ANALYTICS.myPatientsCount}
+              </span>
+            </motion.div>
+          </div>
         )}
       </div>
 
