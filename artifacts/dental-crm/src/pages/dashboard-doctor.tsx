@@ -1,293 +1,530 @@
+import { useState, useMemo } from "react";
 import { useAuthStore } from "@/hooks/use-auth";
 import {
   useGetDoctorAnalytics,
   getGetDoctorAnalyticsQueryKey,
-  useListPatients,
-  useListProcedures,
 } from "@workspace/api-client-react";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import {
-  Users, Calendar, Activity, TrendingUp, RefreshCw,
-  Stethoscope, ChevronRight, Clock, BarChart3, ArrowUpRight,
+  ChevronRight, Bell, X, ChevronLeft,
+  Activity, Stethoscope, Banknote, QrCode, CreditCard,
+  Clock, Wallet, CalendarDays, SlidersHorizontal, Users,
+  TrendingUp, BarChart3, Send, UserPlus,
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
-import {
-  LineChart, Line, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-} from "recharts";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
 
-const COLORS = ["#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#ef4444", "#06b6d4"];
-
-const STATUS_LABEL_KEYS: Record<string, string> = {
-  new_request: "status.new_request",
-  initial_consultation: "status.initial_consultation",
-  diagnostics: "status.diagnostics",
-  treatment_assigned: "status.treatment_assigned",
-  treatment_in_progress: "status.treatment_in_progress",
-  post_op_monitoring: "status.post_op_monitoring",
-  completed: "status.completed",
+const PAYMENT_ICONS: Record<string, React.ElementType> = {
+  kaspi_transfer: Send,
+  cash:           Banknote,
+  kaspi_qr:       QrCode,
+  terminal:       CreditCard,
+  kaspi_red:      Wallet,
+  debt:           Clock,
 };
 
-function StatCard({
-  titleKey,
-  value,
-  icon: Icon,
-  delay = 0,
-}: {
-  titleKey: string;
-  value: string | number;
-  icon: React.ElementType;
-  delay?: number;
-}) {
-  const { t } = useTranslation();
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay }}
-      className="bg-card p-6 rounded-2xl border border-border/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-shadow group relative overflow-hidden"
-    >
-      <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors" />
-      <div className="flex justify-between items-start mb-4">
-        <div className="p-3 bg-slate-50 text-primary rounded-xl ring-1 ring-border/50">
-          <Icon className="w-6 h-6" />
-        </div>
-      </div>
-      <h3 className="text-muted-foreground font-medium text-sm mb-1">{t(titleKey)}</h3>
-      <div className="text-3xl font-display font-bold text-foreground">{value}</div>
-    </motion.div>
-  );
+function fmtRevenue(n: number) {
+  return n.toLocaleString("ru-KZ") + " ₸";
 }
 
-function SkeletonCard() {
-  return (
-    <div className="bg-card p-6 rounded-2xl border border-border/50 animate-pulse">
-      <div className="w-12 h-12 bg-slate-200 rounded-xl mb-4" />
-      <div className="w-24 h-4 bg-slate-200 rounded mb-2" />
-      <div className="w-20 h-8 bg-slate-200 rounded" />
-    </div>
-  );
+function fmtShort(n: number) {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
+  return String(n);
 }
+
+function fmtDate(d: Date): string {
+  return d.toLocaleDateString("ru", { day: "2-digit", month: "2-digit" });
+}
+
+function fmtDateRange(from: Date, to: Date): string {
+  if (from.toDateString() === to.toDateString()) {
+    return from.toLocaleDateString("ru", { day: "numeric", month: "long", weekday: "short" });
+  }
+  return `${fmtDate(from)} – ${fmtDate(to)}`;
+}
+
+function toInputValue(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+// ─── DATE FILTER ─────────────────────────────────────────────────────────────
+type FilterPreset = "today" | "week" | "month" | "6months" | "year" | "custom";
+
+const FILTER_PRESETS: { key: FilterPreset; label: string }[] = [
+  { key: "today",   label: "Сегодня" },
+  { key: "week",    label: "За неделю" },
+  { key: "month",   label: "Текущий месяц" },
+  { key: "6months", label: "За полгода" },
+  { key: "year",    label: "За год" },
+  { key: "custom",  label: "Выбрать период" },
+];
+
+function getPresetRange(preset: FilterPreset): { from: Date; to: Date } {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  switch (preset) {
+    case "today":   return { from: today, to: today };
+    case "week":    return { from: new Date(today.getTime() - 6 * 86400000), to: today };
+    case "month":   return { from: new Date(today.getFullYear(), today.getMonth(), 1), to: today };
+    case "6months": return { from: new Date(today.getFullYear(), today.getMonth() - 6, today.getDate()), to: today };
+    case "year":    return { from: new Date(today.getFullYear() - 1, today.getMonth(), today.getDate()), to: today };
+    default:        return { from: today, to: today };
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─── MOCK DATA ────────────────────────────────────────────────────────────────
+const USE_MOCK_DATA = true;
+
+const MOCK_ANALYTICS = {
+  myRevenueThisMonth: 1_820_000,
+  myProceduresThisMonth: 42,
+  myPatientsCount: 31,
+  scheduledToday: 8,
+  redAlertCount: 1,
+  revenueByPaymentMethod: [
+    { method: "kaspi_transfer", label: "Kaspi перевод", amount: 728_000,  percent: 40, color: "#4B7BEC" },
+    { method: "cash",           label: "Наличка",        amount: 364_000,  percent: 20, color: "#26de81" },
+    { method: "kaspi_qr",       label: "Kaspi QR",       amount: 273_000,  percent: 15, color: "#fd9644" },
+    { method: "terminal",       label: "Терминал",        amount: 182_000,  percent: 10, color: "#2d3436" },
+    { method: "kaspi_red",      label: "Kaspi RED",       amount: 182_000,  percent: 10, color: "#fc5c65" },
+    { method: "debt",           label: "В долг",          amount:  91_000,  percent:  5, color: "#a29bfe" },
+  ],
+};
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function DoctorDashboard() {
   const { t } = useTranslation();
-  const { user, clinic } = useAuthStore();
+  const { user } = useAuthStore();
   const [, navigate] = useLocation();
+  const [activeIdx, setActiveIdx] = useState<number | null>(null);
 
-  const { data: analyticsData, isLoading, refetch } = useGetDoctorAnalytics({
+  // ── Date filter state ──
+  const [filterOpen, setFilterOpen]       = useState(false);
+  const [showCustom, setShowCustom]       = useState(false);
+  const [filterPreset, setFilterPreset]   = useState<FilterPreset>("month");
+  const [pendingPreset, setPendingPreset] = useState<FilterPreset>("month");
+  const today = new Date();
+  const [customFrom, setCustomFrom] = useState(toInputValue(new Date(today.getFullYear(), today.getMonth(), 1)));
+  const [customTo,   setCustomTo]   = useState(toInputValue(today));
+
+  const dateRange = useMemo(() => {
+    if (filterPreset === "custom") {
+      return { from: new Date(customFrom), to: new Date(customTo) };
+    }
+    return getPresetRange(filterPreset);
+  }, [filterPreset, customFrom, customTo]);
+
+  const filterLabel    = FILTER_PRESETS.find(p => p.key === filterPreset)?.label ?? "Месяц";
+  const dateRangeLabel = fmtDateRange(dateRange.from, dateRange.to);
+
+  const { data: analyticsData, isLoading: apiLoading } = useGetDoctorAnalytics({
     query: { queryKey: getGetDoctorAnalyticsQueryKey() },
   });
-  const { data: patientsData } = useListPatients();
-  const { data: proceduresData } = useListProcedures();
+  const isLoading = USE_MOCK_DATA ? false : apiLoading;
 
-  const analytics = (analyticsData?.data?.analytics ?? {}) as Record<string, unknown>;
-  const patients = patientsData?.data?.patients ?? [];
-  const procedures = proceduresData?.data?.procedures ?? [];
+  const rawAnalytics = (analyticsData?.data?.analytics ?? {}) as Record<string, unknown>;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayEnd = new Date();
-  todayEnd.setHours(23, 59, 59, 999);
-
-  const todayProcedures = procedures.filter((p) => {
-    if (p.status === "scheduled" && p.scheduledAt) {
-      const d = new Date(p.scheduledAt);
-      return d >= today && d <= todayEnd;
-    }
-    return false;
-  }).sort((a, b) => {
-    const da = a.scheduledAt ? new Date(a.scheduledAt).getTime() : 0;
-    const db = b.scheduledAt ? new Date(b.scheduledAt).getTime() : 0;
-    return da - db;
-  });
-
-  const fmt = (n: unknown) => {
-    const num = Number(n ?? 0);
-    return num >= 1000 ? `${(num / 1000).toFixed(1)}k` : String(num);
+  const analytics = USE_MOCK_DATA ? MOCK_ANALYTICS : {
+    myRevenueThisMonth:       Number(rawAnalytics.myRevenueThisMonth ?? 0),
+    myProceduresThisMonth:    Number(rawAnalytics.myProceduresThisMonth ?? 0),
+    myPatientsCount:          Number(rawAnalytics.myPatientsCount ?? 0),
+    scheduledToday:           Number(rawAnalytics.scheduledToday ?? 0),
+    redAlertCount:            Number(rawAnalytics.redAlertCount ?? 0),
+    revenueByPaymentMethod:   (rawAnalytics.revenueByPaymentMethod ?? []) as typeof MOCK_ANALYTICS.revenueByPaymentMethod,
   };
 
-  const fmtMoney = (n: unknown) => {
-    const num = Number(n ?? 0);
-    return `₸ ${num.toLocaleString("ru-KZ")}`;
-  };
+  const revenueThisMonth   = analytics.myRevenueThisMonth;
+  const myProcedures       = analytics.myProceduresThisMonth;
+  const myPatients         = analytics.myPatientsCount;
+  const scheduledToday     = analytics.scheduledToday;
+  const redAlertCount      = analytics.redAlertCount;
 
-  const cards = [
-    { titleKey: "dashboard.myPatients",    value: fmt(analytics.myPatientsCount),        icon: Users,      delay: 0 },
-    { titleKey: "dashboard.scheduledToday",value: fmt(analytics.scheduledToday),          icon: Calendar,   delay: 0.05 },
-    { titleKey: "dashboard.monthlyProcs",  value: fmt(analytics.myProceduresThisMonth),   icon: Activity,   delay: 0.1 },
-    { titleKey: "dashboard.revenue",       value: fmtMoney(analytics.myRevenueThisMonth), icon: TrendingUp, delay: 0.15 },
-  ];
+  type PaymentStat = { method: string; label: string; amount: number; percent: number; color: string };
+  const revenueByPayment = analytics.revenueByPaymentMethod as PaymentStat[];
 
-  const patientsByStatus = (analytics.patientsByStatus ?? {}) as Record<string, number>;
-  const patientStatusData = Object.entries(patientsByStatus)
-    .map(([key, value]) => ({
-      name: t(STATUS_LABEL_KEYS[key] ?? key),
-      value: Number(value),
-    }))
-    .filter((e) => e.value > 0);
+  const donutData = revenueByPayment.length > 0
+    ? revenueByPayment
+    : [{ method: "empty", label: "", amount: 1, percent: 100, color: "#e2e8f0" }];
+
+  const centerValue = activeIdx !== null && revenueByPayment[activeIdx]
+    ? fmtRevenue(revenueByPayment[activeIdx].amount)
+    : fmtRevenue(revenueThisMonth);
+
+  const centerLabel = activeIdx !== null && revenueByPayment[activeIdx]
+    ? `${revenueByPayment[activeIdx].percent}%`
+    : "Подробнее";
 
   return (
-    <div className="space-y-4 p-4 pb-8">
-      {/* Header */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-white to-blue-50/50 p-8 rounded-3xl border border-primary/10 shadow-lg">
-        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 bg-primary/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-48 h-48 bg-blue-200/5 rounded-full blur-3xl" />
-        
-        <div className="relative z-10 flex flex-col gap-6">
-          {/* Top row with content */}
-          <div className="flex items-start justify-between gap-6">
-            {/* Left side - text content */}
-            <div className="flex-1 min-w-0">
-              <h2 className="text-4xl font-display font-bold text-foreground leading-tight">
-                {t("dashboard.welcomeBack", { name: user?.name.split(" ")[0] })}
-              </h2>
-              <p className="text-muted-foreground mt-2 text-lg leading-relaxed">
-                {t("doctorDashboard.subtitle", { clinic: clinic?.name })}
-              </p>
-            </div>
-            
-            {/* Right side - refresh button */}
-            <button
-              onClick={() => refetch()}
-              className="flex-shrink-0 p-3 bg-white border border-border/50 rounded-xl text-muted-foreground hover:bg-slate-50 hover:text-primary transition-all hover:shadow-md"
-              title="Обновить"
-            >
-              <RefreshCw className="w-5 h-5" />
-            </button>
-          </div>
+    <div className="min-h-full bg-[#f7f8fc] pb-8">
 
-          {/* Bottom row with action buttons */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <button
-              onClick={() => navigate("/doctor-analytics")}
-              className="flex items-center justify-center gap-3 px-6 py-3 bg-white border border-border/50 text-foreground font-semibold rounded-2xl hover:bg-slate-50 hover:shadow-md transition-all group"
-            >
-              <BarChart3 className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
-              <span>{t("doctorDashboard.myAnalytics")}</span>
-            </button>
-            <button
-              onClick={() => navigate("/procedures")}
-              className="flex items-center justify-center gap-3 px-8 py-3 bg-gradient-to-r from-primary to-blue-600 text-white font-semibold rounded-2xl shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover:scale-105 transition-all group"
-            >
-              <Stethoscope className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-              <span>{t("doctorDashboard.myProcedures")}</span>
-              <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-            </button>
+      {/* ─── White top strip: date row ─── */}
+      <div className="bg-white border-b border-gray-100">
+        <div className="mx-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-1.5 text-sm font-semibold text-gray-700">
+            <CalendarDays className="w-4 h-4 text-primary" />
+            <span className="capitalize">{dateRangeLabel}</span>
           </div>
+          <button
+            onClick={() => { setPendingPreset(filterPreset); setShowCustom(false); setFilterOpen(true); }}
+            className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-xl px-3 py-1.5 text-xs font-semibold text-gray-600 shadow-sm"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5 text-gray-400" />
+            {filterLabel}
+          </button>
         </div>
       </div>
 
-      {/* Salary Chart */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="bg-card rounded-2xl border border-border/50 p-6 shadow-sm"
-      >
-        <div className="flex items-center justify-between mb-5">
-          <div>
-            <h3 className="text-lg font-bold font-display flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-primary" />
-              {t("doctorDashboard.salary")}
-            </h3>
-            <p className="text-xs text-muted-foreground mt-1">{t("doctorDashboard.salaryDescription")}</p>
-          </div>
-        </div>
+      {/* ─── Red Alert Banner ─── */}
+      <AnimatePresence>
+        {redAlertCount > 0 && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mx-4 mt-4"
+          >
+            <button
+              onClick={() => navigate("/kanban")}
+              className="w-full bg-red-50 border border-red-200 rounded-2xl p-3.5 flex items-center gap-3 text-left"
+            >
+              <div className="w-9 h-9 bg-red-500 rounded-xl flex items-center justify-center shrink-0">
+                <Bell className="w-4 h-4 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-red-700">
+                  {t("dashboard.redAlertTitle", { count: redAlertCount })}
+                </p>
+                <p className="text-xs text-red-500">{t("dashboard.redAlertDesc")}</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-red-400 shrink-0" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        <div className="h-[300px] flex items-center justify-center text-sm text-muted-foreground">
-          {t("common.noData")}
-        </div>
-      </motion.div>
+      {/* ─── Revenue Donut Card ─── */}
+      <div className="mx-4 mt-3 bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
 
-      {/* Patient Status Chart */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15 }}
-        className="bg-card rounded-2xl border border-border/50 p-6 shadow-sm"
-      >
-        <div className="flex items-center justify-between mb-5">
-          <div>
-            <h3 className="text-lg font-bold font-display flex items-center gap-2">
-              <Users className="w-5 h-5 text-primary" />
-              {t("doctorAnalytics.patientStatus")}
-            </h3>
-            <p className="text-xs text-muted-foreground mt-1">{t("doctorDashboard.subtitle", { clinic: clinic?.name })}</p>
-          </div>
-        </div>
-
-        {patientStatusData.length === 0 ? (
-          <div className="h-[300px] flex items-center justify-center text-sm text-muted-foreground">
-            {t("common.noData")}
-          </div>
-        ) : (
-          <>
-            <ResponsiveContainer width="100%" height={240}>
+        {/* Ring chart */}
+        <div className="relative pt-4 pb-2">
+          {isLoading ? (
+            <div className="h-56 flex items-center justify-center">
+              <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={220}>
               <PieChart>
                 <Pie
-                  data={patientStatusData}
-                  cx="50%" cy="50%"
-                  innerRadius={60} outerRadius={100}
-                  paddingAngle={2}
-                  dataKey="value"
+                  data={donutData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={80}
+                  outerRadius={activeIdx !== null ? 108 : 104}
+                  paddingAngle={donutData.length > 1 ? 2 : 0}
+                  dataKey="amount"
+                  startAngle={90}
+                  endAngle={-270}
+                  animationBegin={0}
+                  animationDuration={800}
+                  onMouseEnter={(_, idx) => revenueByPayment.length > 0 && setActiveIdx(idx)}
+                  onMouseLeave={() => setActiveIdx(null)}
+                  strokeWidth={0}
                 >
-                  {patientStatusData.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  {donutData.map((entry, idx) => (
+                    <Cell
+                      key={entry.method}
+                      fill={entry.color}
+                      opacity={activeIdx === null || activeIdx === idx ? 1 : 0.4}
+                      style={{ cursor: "pointer", transition: "opacity 0.2s" }}
+                    />
                   ))}
                 </Pie>
-                <Tooltip />
               </PieChart>
             </ResponsiveContainer>
-            <div className="mt-4 space-y-2">
-              {patientStatusData.map((item, index) => (
-                <div key={item.name} className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                  <span className="text-xs text-muted-foreground flex-1 truncate">{item.name}</span>
-                  <span className="text-xs font-semibold text-foreground">{item.value}</span>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-      </motion.div>
+          )}
 
-      {/* Quick Actions */}
-      <div className="max-w-sm">
-        <div className="bg-card rounded-2xl border border-border/50 p-5 shadow-sm">
-          <h3 className="text-base font-bold font-display mb-4">{t("dashboard.quickActions")}</h3>
-          <div className="space-y-2">
-            {[
-              { label: t("nav.myAnalytics"), icon: BarChart3,   path: "/doctor-analytics", highlight: true },
-              { label: t("nav.patients"),    icon: Users,       path: "/patients" },
-              { label: t("nav.procedures"),  icon: Stethoscope, path: "/procedures" },
-              { label: t("nav.chat"),        icon: Activity,    path: "/chat" },
-            ].map((item) => (
+          {/* Center overlay */}
+          {!isLoading && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-2xl font-bold text-gray-900 leading-none tracking-tight">
+                {centerValue}
+              </span>
               <button
-                key={item.path}
-                onClick={() => navigate(item.path)}
-                className={`w-full flex items-center gap-3 p-2.5 rounded-xl border transition-all text-left group ${
-                  item.highlight
-                    ? "bg-primary/5 border-primary/20 hover:bg-primary/10"
-                    : "hover:bg-slate-50 border-transparent hover:border-border"
-                }`}
+                className="text-xs text-gray-400 mt-1.5 flex items-center gap-0.5 pointer-events-auto"
+                onClick={() => navigate("/doctor-analytics")}
               >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center group-hover:text-white transition-colors ${
-                  item.highlight
-                    ? "bg-primary text-white"
-                    : "bg-primary/10 text-primary group-hover:bg-primary"
-                }`}>
-                  <item.icon className="w-3.5 h-3.5" />
-                </div>
-                <span className={`font-medium text-sm ${item.highlight ? "text-primary font-semibold" : "text-foreground"}`}>
-                  {item.label}
-                </span>
-                <ChevronRight className="w-4 h-4 text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+                {centerLabel} <ChevronRight className="w-3 h-3" />
               </button>
-            ))}
+            </div>
+          )}
+        </div>
+
+        {/* ─── Payment method list ─── */}
+        {!isLoading && revenueByPayment.length > 0 && (
+          <div className="px-5 pb-5 space-y-0 divide-y divide-gray-50">
+            {revenueByPayment.map((stat, idx) => {
+              const Icon = PAYMENT_ICONS[stat.method] ?? Wallet;
+              return (
+                <motion.div
+                  key={stat.method}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.05 }}
+                  className="flex items-center gap-3 py-3"
+                >
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: stat.color + "22" }}
+                  >
+                    <Icon className="w-5 h-5" style={{ color: stat.color }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-800">{stat.label}</p>
+                    <p className="text-xs text-gray-400">{stat.percent}%</p>
+                  </div>
+                  <span className="text-sm font-bold text-gray-900 shrink-0">
+                    {fmtRevenue(stat.amount)}
+                  </span>
+                </motion.div>
+              );
+            })}
           </div>
+        )}
+
+        {!isLoading && revenueByPayment.length === 0 && revenueThisMonth === 0 && (
+          <p className="py-6 text-center text-sm text-gray-400">Нет выручки в этом месяце</p>
+        )}
+      </div>
+
+      {/* ─── KPI Tiles ─── */}
+      <div className="mx-4 mt-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-bold text-gray-900">{t("dashboard.kpiTitle")}</h3>
+          <button
+            onClick={() => navigate("/doctor-analytics")}
+            className="text-xs text-primary font-semibold flex items-center gap-0.5"
+          >
+            {t("dashboard.viewAll")} <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            {
+              icon: TrendingUp,
+              label: t("dashboard.revenue"),
+              value: isLoading ? "—" : fmtShort(revenueThisMonth) + " ₸",
+              sub: t("dashboard.monthly"),
+              color: "bg-emerald-50 text-emerald-600",
+            },
+            {
+              icon: Activity,
+              label: t("dashboard.monthlyProcedures"),
+              value: isLoading ? "—" : String(myProcedures),
+              sub: t("dashboard.monthly"),
+              color: "bg-violet-50 text-violet-600",
+            },
+            {
+              icon: Users,
+              label: t("dashboard.myPatients"),
+              value: isLoading ? "—" : String(myPatients),
+              sub: t("dashboard.allTime"),
+              color: "bg-blue-50 text-blue-600",
+            },
+            {
+              icon: CalendarDays,
+              label: t("dashboard.scheduledToday"),
+              value: isLoading ? "—" : String(scheduledToday),
+              sub: t("dashboard.today"),
+              color: "bg-orange-50 text-orange-600",
+            },
+          ].map((item, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.06 }}
+              className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm"
+            >
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-3 ${item.color}`}>
+                <item.icon className="w-4 h-4" />
+              </div>
+              <p className="text-2xl font-bold text-gray-900 leading-none">{item.value}</p>
+              <p className="text-xs text-gray-500 mt-1.5 font-medium">{item.label}</p>
+              <p className="text-[11px] text-gray-300 mt-0.5">{item.sub}</p>
+            </motion.div>
+          ))}
         </div>
       </div>
+
+      {/* ─── Quick Actions ─── */}
+      <div className="mx-4 mt-4 bg-white rounded-3xl border border-gray-100 shadow-sm p-4">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+          {t("dashboard.quickActions")}
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            { label: t("nav.patients"),    icon: Users,       path: "/patients",         color: "bg-blue-50 text-blue-600" },
+            { label: t("nav.procedures"),  icon: Stethoscope, path: "/procedures",       color: "bg-violet-50 text-violet-600" },
+            { label: t("nav.myAnalytics"), icon: BarChart3,   path: "/doctor-analytics", color: "bg-emerald-50 text-emerald-600" },
+            { label: t("nav.chat"),        icon: UserPlus,    path: "/chat",             color: "bg-amber-50 text-amber-600" },
+          ].map((item) => (
+            <button
+              key={item.path}
+              onClick={() => navigate(item.path)}
+              className="flex items-center gap-2.5 p-3 rounded-2xl border border-gray-100 hover:border-primary/20 hover:bg-primary/5 transition-all text-left group"
+            >
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${item.color} group-hover:bg-primary group-hover:text-white transition-colors`}>
+                <item.icon className="w-4 h-4" />
+              </div>
+              <span className="text-xs font-semibold text-gray-700">{item.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ─── Date Filter Sheet ─── */}
+      <Sheet open={filterOpen} onOpenChange={(v) => { setFilterOpen(v); if (!v) setShowCustom(false); }}>
+        <SheetContent side="bottom" className="rounded-t-3xl px-0 pb-8 max-h-[85dvh] overflow-y-auto">
+          <AnimatePresence mode="wait" initial={false}>
+            {!showCustom ? (
+              <motion.div
+                key="presets"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.18 }}
+              >
+                <div className="flex items-center justify-between px-5 pt-4 pb-2">
+                  <h2 className="text-base font-bold text-gray-900">Фильтр по дате</h2>
+                  <button
+                    onClick={() => setFilterOpen(false)}
+                    className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="mt-2">
+                  {FILTER_PRESETS.map((p) => (
+                    <button
+                      key={p.key}
+                      onClick={() => {
+                        if (p.key === "custom") {
+                          setPendingPreset("custom");
+                          setShowCustom(true);
+                        } else {
+                          setPendingPreset(p.key);
+                        }
+                      }}
+                      className="w-full flex items-center justify-between px-5 py-4 border-b border-gray-50 last:border-0"
+                    >
+                      <span className={cn(
+                        "text-sm font-medium",
+                        pendingPreset === p.key ? "text-gray-900 font-semibold" : "text-gray-600",
+                      )}>
+                        {p.label}
+                      </span>
+                      <span className={cn(
+                        "w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
+                        pendingPreset === p.key ? "border-primary bg-primary" : "border-gray-300",
+                      )}>
+                        {pendingPreset === p.key && (
+                          <span className="w-2 h-2 rounded-full bg-white" />
+                        )}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="px-5 mt-4 flex flex-col gap-2.5">
+                  <button
+                    onClick={() => {
+                      setFilterPreset(pendingPreset);
+                      setFilterOpen(false);
+                      setShowCustom(false);
+                    }}
+                    className="w-full py-3.5 rounded-2xl text-sm font-bold text-white"
+                    style={{ backgroundColor: "#98cc1c" }}
+                  >
+                    Применить
+                  </button>
+                  <button
+                    onClick={() => { setFilterOpen(false); setShowCustom(false); }}
+                    className="w-full py-3.5 rounded-2xl text-sm font-semibold text-gray-600 bg-gray-100"
+                  >
+                    Отмена
+                  </button>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="custom"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.18 }}
+                className="px-5"
+              >
+                <div className="flex items-center gap-3 pt-4 pb-2">
+                  <button
+                    onClick={() => setShowCustom(false)}
+                    className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <h2 className="text-base font-bold text-gray-900">Выбрать период</h2>
+                </div>
+
+                <div className="mt-4 space-y-4">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">С</label>
+                    <input
+                      type="date"
+                      value={customFrom}
+                      onChange={e => setCustomFrom(e.target.value)}
+                      className="mt-1.5 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">По</label>
+                    <input
+                      type="date"
+                      value={customTo}
+                      onChange={e => setCustomTo(e.target.value)}
+                      className="mt-1.5 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-6 flex flex-col gap-2.5">
+                  <button
+                    onClick={() => {
+                      setFilterPreset("custom");
+                      setFilterOpen(false);
+                      setShowCustom(false);
+                    }}
+                    className="w-full py-3.5 rounded-2xl text-sm font-bold text-white"
+                    style={{ backgroundColor: "#98cc1c" }}
+                  >
+                    Применить
+                  </button>
+                  <button
+                    onClick={() => setShowCustom(false)}
+                    className="w-full py-3.5 rounded-2xl text-sm font-semibold text-gray-600 bg-gray-100"
+                  >
+                    Назад
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
