@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { Notification } from "@workspace/api-client-react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useLocation } from "wouter";
 
 function NotificationItem({
   notification,
@@ -60,7 +60,7 @@ function NotificationItem({
 
 export function NotificationBell() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const [, navigate] = useLocation();
   const { data: countData } = useUnreadCount();
   const { data: notificationsData } = useNotifications();
   const markReadMutation = useMarkRead();
