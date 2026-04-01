@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/hooks/use-theme";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useChangePassword } from "@workspace/api-client-react";
