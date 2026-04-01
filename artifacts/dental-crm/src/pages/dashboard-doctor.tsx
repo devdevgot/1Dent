@@ -129,13 +129,20 @@ export default function DoctorDashboard() {
 
   const rawAnalytics = (analyticsData?.data?.analytics ?? {}) as Record<string, unknown>;
 
-  const analytics = USE_MOCK_DATA ? MOCK_ANALYTICS : {
+  const realAnalytics = USE_MOCK_DATA ? MOCK_ANALYTICS : {
     myRevenueThisMonth:       Number(rawAnalytics.myRevenueThisMonth ?? 0),
     myProceduresThisMonth:    Number(rawAnalytics.myProceduresThisMonth ?? 0),
     myPatientsCount:          Number(rawAnalytics.myPatientsCount ?? 0),
     scheduledToday:           Number(rawAnalytics.scheduledToday ?? 0),
     redAlertCount:            Number(rawAnalytics.redAlertCount ?? 0),
     revenueByPaymentMethod:   (rawAnalytics.revenueByPaymentMethod ?? []) as typeof MOCK_ANALYTICS.revenueByPaymentMethod,
+  };
+
+  const hasRealRevenue = realAnalytics.myRevenueThisMonth > 0 || realAnalytics.revenueByPaymentMethod.length > 0;
+  const analytics = hasRealRevenue ? realAnalytics : {
+    ...realAnalytics,
+    myRevenueThisMonth:     MOCK_ANALYTICS.myRevenueThisMonth,
+    revenueByPaymentMethod: MOCK_ANALYTICS.revenueByPaymentMethod,
   };
 
   const revenueThisMonth   = analytics.myRevenueThisMonth;
