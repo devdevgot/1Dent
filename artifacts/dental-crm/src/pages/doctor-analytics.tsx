@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useLocation } from "wouter";
-import { ArrowLeft, SlidersHorizontal, X, ChevronDown, Filter } from "lucide-react";
+import {
+  ArrowLeft, SlidersHorizontal, X, ChevronDown, Filter,
+  Calendar, Users, TrendingUp, Wallet, CheckCircle2,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   Dialog,
@@ -157,33 +160,50 @@ export default function DoctorAnalyticsPage() {
       label: t("doctorAnalytics.patientsScheduled"),
       value: scheduledToday,
       sub: t("doctorAnalytics.thisMonth"),
-      subColor: "text-blue-600",
+      icon: Calendar,
+      bg: "bg-blue-500",
+      light: "bg-blue-50",
+      text: "text-blue-600",
     },
     {
       label: t("doctorAnalytics.patientsRemaining"),
       value: totalPatients,
-      sub: `${totalProcedures} ${t("doctorAnalytics.completedProcedures")}`,
-      subColor: "text-emerald-600",
+      sub: t("doctorAnalytics.thisMonth"),
+      icon: Users,
+      bg: "bg-violet-500",
+      light: "bg-violet-50",
+      text: "text-violet-600",
     },
     {
       label: t("doctorAnalytics.revenue"),
       value: totalRevenue >= 1_000_000
         ? `₸${(totalRevenue / 1_000_000).toFixed(1)}M`
         : `₸${Math.floor(totalRevenue / 1000)}K`,
-      sub: `${totalProcedures} ${t("doctorAnalytics.completedProcedures")}`,
-      subColor: "text-emerald-600",
+      sub: t("doctorAnalytics.thisMonth"),
+      icon: TrendingUp,
+      bg: "bg-emerald-500",
+      light: "bg-emerald-50",
+      text: "text-emerald-600",
     },
     {
       label: t("doctorAnalytics.averageCheck"),
-      value: `₸${Math.floor(averageCheck).toLocaleString()}`,
+      value: averageCheck >= 1_000_000
+        ? `₸${(averageCheck / 1_000_000).toFixed(1)}M`
+        : `₸${Math.floor(averageCheck / 1000)}K`,
       sub: t("doctorAnalytics.thisMonth"),
-      subColor: "text-emerald-600",
+      icon: Wallet,
+      bg: "bg-amber-500",
+      light: "bg-amber-50",
+      text: "text-amber-600",
     },
     {
       label: t("doctorAnalytics.completedProcedures"),
       value: totalProcedures,
       sub: t("doctorAnalytics.thisMonth"),
-      subColor: "text-muted-foreground",
+      icon: CheckCircle2,
+      bg: "bg-rose-500",
+      light: "bg-rose-50",
+      text: "text-rose-600",
     },
   ];
 
@@ -246,14 +266,19 @@ export default function DoctorAnalyticsPage() {
         ) : (
           <div className="p-6 space-y-6">
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              {kpiCards.map((card) => (
-                <div key={card.label} className="bg-white rounded-xl border border-border/50 p-4 shadow-sm">
-                  <p className="text-xs text-muted-foreground font-medium mb-2">{card.label}</p>
-                  <p className="text-3xl font-bold text-foreground">{card.value}</p>
-                  <p className={`text-xs mt-2 ${card.subColor}`}>{card.sub}</p>
-                </div>
-              ))}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              {kpiCards.map((card) => {
+                const Icon = card.icon;
+                return (
+                  <div key={card.label} className={`${card.light} rounded-2xl p-3.5 flex flex-col gap-2`}>
+                    <div className={`w-9 h-9 rounded-xl ${card.bg} flex items-center justify-center shadow-sm`}>
+                      <Icon className="w-4.5 h-4.5 text-white" size={18} />
+                    </div>
+                    <p className={`text-xl font-bold leading-none ${card.text}`}>{card.value}</p>
+                    <p className="text-xs font-medium text-gray-500 leading-tight">{card.label}</p>
+                  </div>
+                );
+              })}
             </div>
 
             {/* Charts */}
