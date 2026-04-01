@@ -14,11 +14,16 @@ import chatbotRouter from "../modules/chatbot/chatbot.controller";
 import migrationRouter from "../modules/migration/migration.controller";
 import { actionLogMiddleware } from "../middlewares/action-log.middleware";
 import { authRateLimit } from "../middlewares/rate-limit.middleware";
-import { authMiddleware } from "../middlewares/auth.middleware";
+import { authMiddleware, roleGuard } from "../middlewares/auth.middleware";
 import { ProceduresRepository } from "../modules/procedures/procedures.repository";
+import { DentalRepository } from "../modules/dental/dental.repository";
+import { PatientsRepository } from "../modules/patients/patients.repository";
+import { NotFoundError } from "../shared/errors";
 
 const router: IRouter = Router();
 const _templatesRepo = new ProceduresRepository();
+const _dentalRepo = new DentalRepository();
+const _patientsRepo = new PatientsRepository();
 
 router.use(healthRouter);
 router.use("/auth", authRateLimit, authRouter);
@@ -26,6 +31,24 @@ router.use(actionLogMiddleware);
 router.use("/users", usersRouter);
 router.use("/patients", patientsRouter);
 router.use("/patients/:id/teeth", dentalRouter);
+
+const dentalReadRoles = roleGuard("owner", "admin", "doctor");
+
+// GET /patients/:id/treatments - list all treatment tasks for a patient
+router.get(
+  "/patients/:id/treatments",
+  authMiddleware,
+  dentalReadRoles,
+  async (req: Request, res: Response, next: NextFunction) => {
+    const patientId = String(req.params["id"]);
+    const patient = await _patientsRepo.findById(patientId, req.user!.clinicId).catch(next);
+    if (patient === undefined) return;
+    if (!patient) return next(new NotFoundError("Patient not found"));
+    const treatments = await _dentalRepo.listAllTreatments(patientId, req.user!.clinicId).catch(next);
+    if (!treatments) return;
+    res.json({ success: true, data: { treatments } });
+  },
+);
 router.use("/inventory", inventoryRouter);
 router.use("/procedures", proceduresRouter);
 router.use("/logs", logsRouter);

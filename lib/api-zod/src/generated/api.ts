@@ -610,6 +610,34 @@ export const UpdateToothResponse = zod.object({
 });
 
 /**
+ * @summary Get all treatment tasks for a patient
+ */
+export const ListPatientTreatmentsParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const ListPatientTreatmentsResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    treatments: zod.array(
+      zod.object({
+        id: zod.string(),
+        clinicId: zod.string(),
+        patientId: zod.string(),
+        toothFdi: zod.number(),
+        itemId: zod.string().nullish(),
+        description: zod.string(),
+        type: zod.enum(["treatment", "extraction"]),
+        status: zod.enum(["in_progress", "done"]),
+        quantityUsed: zod.number().nullish(),
+        performedBy: zod.string().nullish(),
+        performedAt: zod.date(),
+      }),
+    ),
+  }),
+});
+
+/**
  * @summary Get treatment history for a specific tooth
  */
 export const ListToothTreatmentsParams = zod.object({
@@ -628,6 +656,8 @@ export const ListToothTreatmentsResponse = zod.object({
         toothFdi: zod.number(),
         itemId: zod.string().nullish(),
         description: zod.string(),
+        type: zod.enum(["treatment", "extraction"]),
+        status: zod.enum(["in_progress", "done"]),
         quantityUsed: zod.number().nullish(),
         performedBy: zod.string().nullish(),
         performedAt: zod.date(),
@@ -637,7 +667,7 @@ export const ListToothTreatmentsResponse = zod.object({
 });
 
 /**
- * @summary Record a treatment on a specific tooth
+ * @summary Record a treatment task on a specific tooth
  */
 export const AddToothTreatmentParams = zod.object({
   id: zod.coerce.string(),
@@ -646,8 +676,37 @@ export const AddToothTreatmentParams = zod.object({
 
 export const AddToothTreatmentBody = zod.object({
   description: zod.string().min(1),
+  type: zod.enum(["treatment", "extraction"]),
   itemId: zod.string().optional(),
   quantityUsed: zod.number().optional(),
+});
+
+/**
+ * @summary Mark a tooth treatment task as done
+ */
+export const CompleteToothTreatmentParams = zod.object({
+  id: zod.coerce.string(),
+  toothFdi: zod.coerce.number(),
+  treatmentId: zod.coerce.string(),
+});
+
+export const CompleteToothTreatmentResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    treatment: zod.object({
+      id: zod.string(),
+      clinicId: zod.string(),
+      patientId: zod.string(),
+      toothFdi: zod.number(),
+      itemId: zod.string().nullish(),
+      description: zod.string(),
+      type: zod.enum(["treatment", "extraction"]),
+      status: zod.enum(["in_progress", "done"]),
+      quantityUsed: zod.number().nullish(),
+      performedBy: zod.string().nullish(),
+      performedAt: zod.date(),
+    }),
+  }),
 });
 
 /**

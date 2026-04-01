@@ -183,6 +183,7 @@ function NewProcedureModal({
               toothFdi: fdi,
               data: {
                 description: form.name || t("procedure.toothTreatmentDefault"),
+                type: "treatment",
               },
             });
           }),

@@ -3,7 +3,8 @@ import {
   toothRecordsTable,
   toothTreatmentsTable,
 } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
+import { randomUUID } from "crypto";
 import type {
   ToothRecord,
   InsertToothRecord,
@@ -68,6 +69,22 @@ export class DentalRepository {
     return created!;
   }
 
+  async listAllTreatments(
+    patientId: string,
+    clinicId: string,
+  ): Promise<ToothTreatment[]> {
+    return db
+      .select()
+      .from(toothTreatmentsTable)
+      .where(
+        and(
+          eq(toothTreatmentsTable.patientId, patientId),
+          eq(toothTreatmentsTable.clinicId, clinicId),
+        ),
+      )
+      .orderBy(desc(toothTreatmentsTable.performedAt));
+  }
+
   async listTreatments(
     patientId: string,
     clinicId: string,
@@ -91,5 +108,85 @@ export class DentalRepository {
       .values(data)
       .returning();
     return treatment!;
+  }
+
+  async findTreatment(
+    id: string,
+    clinicId: string,
+  ): Promise<ToothTreatment | null> {
+    const [record] = await db
+      .select()
+      .from(toothTreatmentsTable)
+      .where(
+        and(
+          eq(toothTreatmentsTable.id, id),
+          eq(toothTreatmentsTable.clinicId, clinicId),
+        ),
+      )
+      .limit(1);
+    return record ?? null;
+  }
+
+  async completeTreatment(id: string): Promise<ToothTreatment> {
+    const [updated] = await db
+      .update(toothTreatmentsTable)
+      .set({ status: "done" })
+      .where(eq(toothTreatmentsTable.id, id))
+      .returning();
+    return updated!;
+  }
+
+  async completeTreatmentAndUpdateTooth(
+    treatment: ToothTreatment,
+    clinicId: string,
+    updatedBy: string,
+  ): Promise<{ completed: ToothTreatment; tooth: ToothRecord }> {
+    const newCondition: ToothCondition = treatment.type === "extraction" ? "missing" : "treated";
+    return db.transaction(async (tx) => {
+      const [completed] = await tx
+        .update(toothTreatmentsTable)
+        .set({ status: "done" })
+        .where(eq(toothTreatmentsTable.id, treatment.id))
+        .returning();
+
+      const [existingTooth] = await tx
+        .select()
+        .from(toothRecordsTable)
+        .where(
+          and(
+            eq(toothRecordsTable.patientId, treatment.patientId),
+            eq(toothRecordsTable.clinicId, clinicId),
+            eq(toothRecordsTable.toothFdi, treatment.toothFdi),
+          ),
+        )
+        .limit(1);
+
+      let tooth: ToothRecord;
+      if (existingTooth) {
+        const [updated] = await tx
+          .update(toothRecordsTable)
+          .set({ condition: newCondition, updatedBy, updatedAt: new Date() })
+          .where(eq(toothRecordsTable.id, existingTooth.id))
+          .returning();
+        tooth = updated!;
+      } else {
+        const [created] = await tx
+          .insert(toothRecordsTable)
+          .values({
+            id: randomUUID(),
+            clinicId,
+            patientId: treatment.patientId,
+            toothFdi: treatment.toothFdi,
+            condition: newCondition,
+            notes: null,
+            updatedBy,
+            updatedAt: new Date(),
+          })
+          .returning();
+        tooth = created!;
+      }
+
+      return { completed: completed!, tooth };
+    });
   }
 }

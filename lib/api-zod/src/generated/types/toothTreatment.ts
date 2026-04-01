@@ -5,6 +5,8 @@
  * Dental CRM API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ToothTaskStatus } from "./toothTaskStatus";
+import type { ToothTaskType } from "./toothTaskType";
 
 export interface ToothTreatment {
   id: string;
@@ -13,6 +15,8 @@ export interface ToothTreatment {
   toothFdi: number;
   itemId?: string | null;
   description: string;
+  type: ToothTaskType;
+  status: ToothTaskStatus;
   quantityUsed?: number | null;
   performedBy?: string | null;
   performedAt: Date;

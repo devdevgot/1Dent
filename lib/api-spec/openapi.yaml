@@ -587,6 +587,33 @@ paths:
               schema:
                 $ref: "#/components/schemas/ToothResponse"
 
+  /patients/{id}/treatments:
+    get:
+      operationId: listPatientTreatments
+      tags: [dental]
+      summary: Get all treatment tasks for a patient
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Treatment tasks
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ToothTreatmentsResponse"
+        "404":
+          description: Patient not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /patients/{id}/teeth/{toothFdi}/treatments:
     get:
       operationId: listToothTreatments
@@ -615,7 +642,7 @@ paths:
     post:
       operationId: addToothTreatment
       tags: [dental]
-      summary: Record a treatment on a specific tooth
+      summary: Record a treatment task on a specific tooth
       security:
         - cookieAuth: []
       parameters:
@@ -637,11 +664,48 @@ paths:
               $ref: "#/components/schemas/AddToothTreatmentRequest"
       responses:
         "201":
-          description: Treatment recorded
+          description: Treatment task created
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ToothTreatmentResponse"
+
+  /patients/{id}/teeth/{toothFdi}/treatments/{treatmentId}:
+    patch:
+      operationId: completeToothTreatment
+      tags: [dental]
+      summary: Mark a tooth treatment task as done
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: toothFdi
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: treatmentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Treatment completed and tooth condition updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ToothTreatmentResponse"
+        "404":
+          description: Treatment not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   # ─── Inventory ───────────────────────────────────────────────────────────────
 
@@ -2344,6 +2408,18 @@ components:
         - success
         - data
 
+    ToothTaskType:
+      type: string
+      enum:
+        - treatment
+        - extraction
+
+    ToothTaskStatus:
+      type: string
+      enum:
+        - in_progress
+        - done
+
     ToothTreatment:
       type: object
       properties:
@@ -2360,6 +2436,10 @@ components:
           nullable: true
         description:
           type: string
+        type:
+          $ref: "#/components/schemas/ToothTaskType"
+        status:
+          $ref: "#/components/schemas/ToothTaskStatus"
         quantityUsed:
           type: number
           nullable: true
@@ -2375,6 +2455,8 @@ components:
         - patientId
         - toothFdi
         - description
+        - type
+        - status
         - performedAt
 
     AddToothTreatmentRequest:
@@ -2383,12 +2465,15 @@ components:
         description:
           type: string
           minLength: 1
+        type:
+          $ref: "#/components/schemas/ToothTaskType"
         itemId:
           type: string
         quantityUsed:
           type: number
       required:
         - description
+        - type
 
     ToothTreatmentResponse:
       type: object

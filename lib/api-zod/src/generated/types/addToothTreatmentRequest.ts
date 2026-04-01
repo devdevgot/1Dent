@@ -5,10 +5,12 @@
  * Dental CRM API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ToothTaskType } from "./toothTaskType";
 
 export interface AddToothTreatmentRequest {
   /** @minLength 1 */
   description: string;
+  type: ToothTaskType;
   itemId?: string;
   quantityUsed?: number;
 }

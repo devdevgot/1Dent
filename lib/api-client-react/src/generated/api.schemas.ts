@@ -415,6 +415,21 @@ export interface TeethResponse {
   data: TeethResponseData;
 }
 
+export type ToothTaskType = (typeof ToothTaskType)[keyof typeof ToothTaskType];
+
+export const ToothTaskType = {
+  treatment: "treatment",
+  extraction: "extraction",
+} as const;
+
+export type ToothTaskStatus =
+  (typeof ToothTaskStatus)[keyof typeof ToothTaskStatus];
+
+export const ToothTaskStatus = {
+  in_progress: "in_progress",
+  done: "done",
+} as const;
+
 export interface ToothTreatment {
   id: string;
   clinicId: string;
@@ -422,6 +437,8 @@ export interface ToothTreatment {
   toothFdi: number;
   itemId?: string | null;
   description: string;
+  type: ToothTaskType;
+  status: ToothTaskStatus;
   quantityUsed?: number | null;
   performedBy?: string | null;
   performedAt: string;
@@ -430,6 +447,7 @@ export interface ToothTreatment {
 export interface AddToothTreatmentRequest {
   /** @minLength 1 */
   description: string;
+  type: ToothTaskType;
   itemId?: string;
   quantityUsed?: number;
 }

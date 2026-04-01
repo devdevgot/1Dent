@@ -135,6 +135,8 @@ export * from "./toothCondition";
 export * from "./toothRecord";
 export * from "./toothResponse";
 export * from "./toothResponseData";
+export * from "./toothTaskStatus";
+export * from "./toothTaskType";
 export * from "./toothTreatment";
 export * from "./toothTreatmentResponse";
 export * from "./toothTreatmentResponseData";

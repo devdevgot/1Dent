@@ -73,6 +73,16 @@ export const inventoryStockTable = pgTable("inventory_stock", {
     .notNull(),
 });
 
+export const toothTaskTypeEnum = pgEnum("tooth_task_type", [
+  "treatment",
+  "extraction",
+]);
+
+export const toothTaskStatusEnum = pgEnum("tooth_task_status", [
+  "in_progress",
+  "done",
+]);
+
 export const toothTreatmentsTable = pgTable("tooth_treatments", {
   id: text("id").primaryKey(),
   clinicId: text("clinic_id")
@@ -86,6 +96,8 @@ export const toothTreatmentsTable = pgTable("tooth_treatments", {
     onDelete: "set null",
   }),
   description: text("description").notNull(),
+  type: toothTaskTypeEnum("type").default("treatment").notNull(),
+  status: toothTaskStatusEnum("status").default("in_progress").notNull(),
   quantityUsed: real("quantity_used").default(1),
   performedBy: text("performed_by").references(() => usersTable.id, {
     onDelete: "set null",
@@ -104,3 +116,5 @@ export type InventoryCategory = (typeof inventoryCategoryEnum.enumValues)[number
 export type InventoryStock = typeof inventoryStockTable.$inferSelect;
 export type ToothTreatment = typeof toothTreatmentsTable.$inferSelect;
 export type InsertToothTreatment = typeof toothTreatmentsTable.$inferInsert;
+export type ToothTaskType = (typeof toothTaskTypeEnum.enumValues)[number];
+export type ToothTaskStatus = (typeof toothTaskStatusEnum.enumValues)[number];

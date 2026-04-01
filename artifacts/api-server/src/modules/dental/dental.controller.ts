@@ -34,6 +34,7 @@ const updateToothSchema = z.object({
 
 const addTreatmentSchema = z.object({
   description: z.string().min(1),
+  type: z.enum(["treatment", "extraction"]),
   itemId: z.string().optional(),
   quantityUsed: z.number().positive().optional(),
 });
@@ -120,6 +121,8 @@ router.post("/:toothFdi/treatments", writeRoles, async (req: Request, res: Respo
       patientId,
       toothFdi,
       description: parsed.data.description,
+      type: parsed.data.type,
+      status: "in_progress",
       itemId: parsed.data.itemId ?? null,
       quantityUsed: parsed.data.quantityUsed ?? null,
       performedBy: req.user!.userId,
@@ -128,6 +131,37 @@ router.post("/:toothFdi/treatments", writeRoles, async (req: Request, res: Respo
     .catch(next);
   if (!treatment) return;
   res.status(201).json({ success: true, data: { treatment } });
+});
+
+// PATCH /patients/:id/teeth/:toothFdi/treatments/:treatmentId
+router.patch("/:toothFdi/treatments/:treatmentId", writeRoles, async (req: Request, res: Response, next: NextFunction) => {
+  const patientId = String(req.params["id"]);
+  const toothFdi = parseInt(String(req.params["toothFdi"]), 10);
+  const treatmentId = String(req.params["treatmentId"]);
+
+  const ok = await assertPatientAccess(patientId, req.user!.clinicId, next).catch(next);
+  if (!ok) return;
+
+  const existing = await repo.findTreatment(treatmentId, req.user!.clinicId).catch(next);
+  if (existing === undefined) return;
+  if (existing === null) {
+    return next(new NotFoundError("Treatment not found"));
+  }
+
+  if (existing.patientId !== patientId || existing.toothFdi !== toothFdi) {
+    return next(new NotFoundError("Treatment not found"));
+  }
+
+  if (existing.status === "done") {
+    return res.json({ success: true, data: { treatment: existing } });
+  }
+
+  const result = await repo
+    .completeTreatmentAndUpdateTooth(existing, req.user!.clinicId, req.user!.userId)
+    .catch(next);
+  if (!result) return;
+
+  res.json({ success: true, data: { treatment: result.completed } });
 });
 
 export default router;

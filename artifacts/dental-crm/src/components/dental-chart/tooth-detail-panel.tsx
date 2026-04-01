@@ -127,6 +127,7 @@ export function ToothDetailPanel({
       toothFdi,
       data: {
         description: treatmentDesc.trim(),
+        type: "treatment",
         itemId: treatmentItemId,
         quantityUsed: parseFloat(treatmentQty) || 1,
       },
@@ -357,90 +358,6 @@ export function ToothDetailPanel({
             )}
           </div>
 
-          {/* Patient Info Section */}
-          {patient && (
-            <div className="border-t border-border/50 pt-5 mt-5">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-4">
-                {t("tooth.patientInfo")}
-              </p>
-
-              <div className="space-y-3">
-                {/* Basic info */}
-                <div className="bg-slate-50 rounded-lg p-3 border border-border/30">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-muted-foreground font-medium">
-                      {t("tooth.patientName")}
-                    </span>
-                    <span className="text-sm font-semibold text-foreground">{patient.name}</span>
-                  </div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-muted-foreground font-medium">
-                      {t("tooth.patientPhone")}
-                    </span>
-                    <span className="text-sm font-mono text-foreground">{patient.phone}</span>
-                  </div>
-                  {patient.age && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground font-medium">
-                        {t("tooth.patientAge")}
-                      </span>
-                      <span className="text-sm font-semibold text-foreground">{patient.age} лет</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Teeth summary */}
-                {propsTeeth && propsTeeth.length > 0 && (
-                  <div className="bg-slate-50 rounded-lg p-3 border border-border/30">
-                    <p className="text-xs font-semibold text-muted-foreground mb-2">
-                      {t("tooth.allTeeth")}
-                    </p>
-                    <div className="grid grid-cols-4 gap-2">
-                      {propsTeeth.map((tooth) => {
-                        const cfg = CONDITION_CONFIG[tooth.condition];
-                        return (
-                          <div
-                            key={tooth.toothFdi}
-                            className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center text-xs font-bold cursor-pointer transition-opacity ${
-                              tooth.toothFdi === toothFdi ? "ring-2 ring-primary ring-offset-1" : ""
-                            }`}
-                            style={{
-                              background: cfg.crownFill,
-                              borderColor: cfg.stroke,
-                              color: cfg.textColor,
-                            }}
-                            title={t(`condition.${tooth.condition}`)}
-                          >
-                            {tooth.toothFdi}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Status legend */}
-                <div className="bg-slate-50 rounded-lg p-3 border border-border/30">
-                  <p className="text-xs font-semibold text-muted-foreground mb-2">
-                    {t("tooth.statusLegend")}
-                  </p>
-                  <div className="space-y-1.5">
-                    {(
-                      Object.entries(CONDITION_CONFIG) as [ToothCondition, (typeof CONDITION_CONFIG)[ToothCondition]][]
-                    ).map(([cond, cfg]) => (
-                      <div key={cond} className="flex items-center gap-2 text-xs">
-                        <div
-                          className="w-3 h-3 rounded-sm border"
-                          style={{ background: cfg.crownFill, borderColor: cfg.stroke }}
-                        />
-                        <span className="text-muted-foreground">{t(`condition.${cond}`)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </ScrollArea>
     </div>

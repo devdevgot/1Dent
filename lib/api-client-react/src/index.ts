@@ -34,7 +34,11 @@ export const updateProfile = (
   });
 
 export const useUpdateProfile = <TError = unknown>(options?: {
-  mutation?: UseMutationOptions<UpdateProfileResponse, TError, UpdateProfileRequest>;
+  mutation?: UseMutationOptions<
+    UpdateProfileResponse,
+    TError,
+    UpdateProfileRequest
+  >;
 }) =>
   useMutation<UpdateProfileResponse, TError, UpdateProfileRequest>({
     mutationFn: (data) => updateProfile(data),

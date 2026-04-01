@@ -1,17 +1,22 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useLocation } from "wouter";
 import {
   useGetPatient,
   useListTeeth,
   useUpdatePatientStatus,
   useAddPatientInteraction,
+  useAddToothTreatment,
+  useListPatientTreatments,
+  useCompleteToothTreatment,
+  useUpdateTooth,
   getListPatientsQueryKey,
   getGetPatientQueryKey,
   getListTeethQueryKey,
+  getListPatientTreatmentsQueryKey,
 } from "@workspace/api-client-react";
-import type { ToothRecord } from "@workspace/api-client-react";
+import type { ToothRecord, ToothTreatment } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { X, ChevronDown } from "lucide-react";
+import { X, ChevronDown, CheckCircle2, Clock, ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useKanbanStore } from "@/hooks/use-kanban";
 import { useAuthStore } from "@/hooks/use-auth";
@@ -22,8 +27,8 @@ import {
   SOURCE_LABELS,
   SOURCE_COLORS,
 } from "@/lib/patient-utils";
-import type { PatientStatus, InteractionType } from "@workspace/api-client-react";
-import { FdiChart } from "@/components/dental-chart/fdi-chart";
+import type { PatientStatus, InteractionType, ToothCondition } from "@workspace/api-client-react";
+import { FdiChart, CONDITION_CONFIG } from "@/components/dental-chart/fdi-chart";
 import { useTranslation } from "react-i18next";
 
 const INTERACTION_TYPE_KEYS = [
@@ -32,6 +37,165 @@ const INTERACTION_TYPE_KEYS = [
   { value: "whatsapp"   as const },
   { value: "appointment" as const },
 ];
+
+type DiagnosisMap = Map<number, ToothCondition>;
+type DiagnosisNotesMap = Map<number, string>;
+
+function ToothActionModal({
+  fdi,
+  patientId,
+  onClose,
+  onNavigate,
+}: {
+  fdi: number;
+  patientId: string;
+  onClose: () => void;
+  onNavigate: () => void;
+}) {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const qc = useQueryClient();
+
+  const addMutation = useAddToothTreatment({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getListPatientTreatmentsQueryKey(patientId) });
+        qc.invalidateQueries({ queryKey: getListTeethQueryKey(patientId) });
+        toast({ title: t("tooth.taskCreated") });
+        onClose();
+      },
+      onError: () => toast({ title: t("account.errorTitle"), variant: "destructive" }),
+    },
+  });
+
+  const handleAction = (type: "treatment" | "extraction") => {
+    addMutation.mutate({
+      id: patientId,
+      toothFdi: fdi,
+      data: {
+        description: type === "treatment"
+          ? t("tooth.startTreatment")
+          : t("tooth.extractTooth"),
+        type,
+      },
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center" onClick={onClose}>
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-72 p-5 border border-border/50"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold text-base">{t("tooth.actionModalTitle", { fdi })}</h3>
+          <button
+            onClick={onClose}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="space-y-2">
+          <Button
+            className="w-full justify-start gap-2"
+            variant="outline"
+            disabled={addMutation.isPending}
+            onClick={() => handleAction("treatment")}
+          >
+            <CheckCircle2 className="w-4 h-4 text-blue-500" />
+            {t("tooth.startTreatment")}
+          </Button>
+          <Button
+            className="w-full justify-start gap-2"
+            variant="outline"
+            disabled={addMutation.isPending}
+            onClick={() => handleAction("extraction")}
+          >
+            <X className="w-4 h-4 text-red-500" />
+            {t("tooth.extractTooth")}
+          </Button>
+          <Button
+            className="w-full justify-start gap-2"
+            variant="ghost"
+            onClick={onNavigate}
+          >
+            <ArrowUpRight className="w-4 h-4 text-muted-foreground" />
+            {t("tooth.viewDetails")}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TreatmentTaskItem({
+  task,
+  patientId,
+}: {
+  task: ToothTreatment;
+  patientId: string;
+}) {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const qc = useQueryClient();
+
+  const completeMutation = useCompleteToothTreatment({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getListPatientTreatmentsQueryKey(patientId) });
+        qc.invalidateQueries({ queryKey: getListTeethQueryKey(patientId) });
+        toast({ title: t("tooth.taskCompleted") });
+      },
+      onError: () => toast({ title: t("account.errorTitle"), variant: "destructive" }),
+    },
+  });
+
+  const typeLabel = task.type === "treatment"
+    ? t("tooth.taskType_treatment")
+    : t("tooth.taskType_extraction");
+
+  const typeColor = task.type === "treatment"
+    ? "bg-blue-50 text-blue-700 border-blue-200"
+    : "bg-red-50 text-red-700 border-red-200";
+
+  return (
+    <div className="flex items-center justify-between gap-2 bg-slate-50 rounded-xl p-3 border border-border/30">
+      <div className="flex items-center gap-2 min-w-0">
+        <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+        <div className="min-w-0">
+          <p className="text-xs font-semibold text-foreground">
+            {t("tooth.title", { fdi: task.toothFdi })}
+          </p>
+          <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${typeColor}`}>
+            {typeLabel}
+          </span>
+        </div>
+      </div>
+      {task.status === "in_progress" && (
+        <Button
+          size="sm"
+          variant="outline"
+          className="text-xs h-7 shrink-0"
+          disabled={completeMutation.isPending}
+          onClick={() =>
+            completeMutation.mutate({
+              id: patientId,
+              toothFdi: task.toothFdi,
+              treatmentId: task.id,
+            })
+          }
+        >
+          {t("tooth.completeTask")}
+        </Button>
+      )}
+      {task.status === "done" && (
+        <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+      )}
+    </div>
+  );
+}
 
 export function PatientDetailPanel() {
   const { t } = useTranslation();
@@ -48,6 +212,13 @@ export function PatientDetailPanel() {
   const [interactionContent, setInteractionContent] = useState("");
   const [isStatusOpen, setIsStatusOpen] = useState(false);
 
+  const [isDiagnosisMode, setIsDiagnosisMode] = useState(false);
+  const [diagnosisMap, setDiagnosisMap] = useState<DiagnosisMap>(new Map());
+  const [diagnosisNotesMap, setDiagnosisNotesMap] = useState<DiagnosisNotesMap>(new Map());
+  const [diagnosisToothFdi, setDiagnosisToothFdi] = useState<number | null>(null);
+
+  const [modalToothFdi, setModalToothFdi] = useState<number | null>(null);
+
   const { data, isLoading } = useGetPatient(selectedPatientId ?? "", {
     query: {
       queryKey: getGetPatientQueryKey(selectedPatientId ?? ""),
@@ -55,26 +226,43 @@ export function PatientDetailPanel() {
     },
   });
 
-  const { data: teethData } = useListTeeth(selectedPatientId ?? "", {
+  const { data: teethData, refetch: refetchTeeth } = useListTeeth(selectedPatientId ?? "", {
     query: {
       queryKey: getListTeethQueryKey(selectedPatientId ?? ""),
       enabled: !!selectedPatientId && activeTab === "dental",
     },
   });
   const teethRecords: ToothRecord[] = teethData?.data?.teeth ?? [];
+  const hasDiagnosis = teethRecords.length > 0;
   const teethMap = new Map(teethRecords.map((t) => [t.toothFdi, t]));
+
+  const { data: tasksData } = useListPatientTreatments(selectedPatientId ?? "", {
+    query: {
+      queryKey: getListPatientTreatmentsQueryKey(selectedPatientId ?? ""),
+      enabled: !!selectedPatientId && activeTab === "dental" && hasDiagnosis,
+    },
+  });
+  const allTasks: ToothTreatment[] = tasksData?.data?.treatments ?? [];
+  const activeTasks = allTasks.filter((t) => t.status === "in_progress");
+
+  const updateToothMutation = useUpdateTooth({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListTeethQueryKey(selectedPatientId ?? "") });
+      },
+    },
+  });
 
   const statusMutation = useUpdatePatientStatus({
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetPatientQueryKey(selectedPatientId ?? "") });
-        // Refresh all analytics dashboards when patient status changes
-        queryClient.invalidateQueries({ 
+        queryClient.invalidateQueries({
           predicate: (query) => {
             const key = query.queryKey[0];
             return typeof key === 'string' && (
-              key.includes('DoctorDetailedAnalyticsMe') || 
+              key.includes('DoctorDetailedAnalyticsMe') ||
               key.includes('DoctorDetailedAnalytics') ||
               key.includes('GetDoctorAnalytics') ||
               key.includes('GetAnalytics')
@@ -98,6 +286,31 @@ export function PatientDetailPanel() {
       onError: () => toast({ title: t("account.errorTitle"), variant: "destructive" }),
     },
   });
+
+  const handleFinishDiagnosis = useCallback(async () => {
+    if (!selectedPatientId) return;
+    const allFdis = new Set([...diagnosisMap.keys(), ...diagnosisNotesMap.keys()]);
+    await Promise.all(
+      Array.from(allFdis).map((fdi) => {
+        const condition = diagnosisMap.get(fdi) ?? teethMap.get(fdi)?.condition ?? "healthy";
+        const notes = diagnosisNotesMap.get(fdi) ?? undefined;
+        return updateToothMutation.mutateAsync({
+          id: selectedPatientId,
+          toothFdi: fdi,
+          data: {
+            condition,
+            ...(notes !== undefined ? { notes } : {}),
+          },
+        });
+      }),
+    );
+    await refetchTeeth();
+    setDiagnosisMap(new Map());
+    setDiagnosisNotesMap(new Map());
+    setDiagnosisToothFdi(null);
+    setIsDiagnosisMode(false);
+    toast({ title: t("patient.diagnosisSaved") });
+  }, [selectedPatientId, diagnosisMap, diagnosisNotesMap, teethMap, updateToothMutation, refetchTeeth, toast, t]);
 
   if (!selectedPatientId) return null;
 
@@ -130,6 +343,25 @@ export function PatientDetailPanel() {
     { id: "dental"  as const, label: t("patient.tabDental") },
   ];
 
+  const diagnosisDisplayMap: Map<number, ToothRecord> = new Map(teethMap);
+  for (const [fdi, condition] of diagnosisMap.entries()) {
+    const existing = teethMap.get(fdi);
+    if (existing) {
+      diagnosisDisplayMap.set(fdi, { ...existing, condition });
+    } else {
+      diagnosisDisplayMap.set(fdi, {
+        id: `temp-${fdi}`,
+        clinicId: "",
+        patientId: selectedPatientId,
+        toothFdi: fdi,
+        condition,
+        notes: null,
+        updatedAt: new Date().toISOString(),
+        updatedBy: null,
+      });
+    }
+  }
+
   return (
     <>
       <div
@@ -145,6 +377,9 @@ export function PatientDetailPanel() {
               setSelectedPatientId(null);
               setSelectedToothFdi(null);
               setActiveTab("history");
+              setIsDiagnosisMode(false);
+              setDiagnosisMap(new Map());
+              setDiagnosisNotesMap(new Map());
             }}
             className="text-muted-foreground hover:text-foreground transition-colors"
           >
@@ -180,16 +415,158 @@ export function PatientDetailPanel() {
               <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                 <div className="flex-1 overflow-y-auto custom-scrollbar">
                   <div className="p-3">
-                    <p className="text-[11px] text-muted-foreground mb-2">
-                      {t("patient.clickTooth")}
-                    </p>
-                    <FdiChart
-                      teethData={teethMap}
-                      selectedFdi={selectedToothFdi}
-                      onToothClick={(fdi) => {
-                        setLocation(`/patients/${patient.id}/teeth/${fdi}`);
-                      }}
-                    />
+                    {/* No diagnosis yet */}
+                    {!hasDiagnosis && !isDiagnosisMode && (
+                      <div className="flex flex-col items-center justify-center py-12 gap-4">
+                        <p className="text-sm text-muted-foreground text-center px-4">
+                          {t("patient.noTeethData")}
+                        </p>
+                        <Button
+                          onClick={() => setIsDiagnosisMode(true)}
+                          className="gap-2"
+                        >
+                          {t("patient.startDiagnosis")}
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Diagnosis mode */}
+                    {isDiagnosisMode && (
+                      <div className="space-y-3">
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                          <p className="text-xs text-amber-800 font-medium">
+                            {t("patient.diagnosisMode")}
+                          </p>
+                        </div>
+
+                        <FdiChart
+                          teethData={diagnosisDisplayMap}
+                          selectedFdi={diagnosisToothFdi}
+                          onToothClick={(fdi) => {
+                            setDiagnosisToothFdi(fdi === diagnosisToothFdi ? null : fdi);
+                          }}
+                        />
+
+                        {diagnosisToothFdi !== null && (
+                          <div className="bg-slate-50 rounded-xl p-3 border border-border/30 space-y-3">
+                            <p className="text-xs font-semibold text-muted-foreground">
+                              {t("tooth.title", { fdi: diagnosisToothFdi })} — {t("tooth.conditionLabel")}
+                            </p>
+                            <div className="grid grid-cols-2 gap-1.5">
+                              {(Object.entries(CONDITION_CONFIG) as [ToothCondition, typeof CONDITION_CONFIG[ToothCondition]][]).map(([cond, cfg]) => {
+                                const current = diagnosisMap.get(diagnosisToothFdi) ?? teethMap.get(diagnosisToothFdi)?.condition ?? "healthy";
+                                return (
+                                  <button
+                                    key={cond}
+                                    onClick={() => {
+                                      const next = new Map(diagnosisMap);
+                                      next.set(diagnosisToothFdi, cond);
+                                      setDiagnosisMap(next);
+                                    }}
+                                    className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg border text-left text-xs transition-all ${
+                                      current === cond ? "ring-2 ring-primary ring-offset-1 border-transparent" : "border-border"
+                                    }`}
+                                    style={{
+                                      background: current === cond ? cfg.crownFill : undefined,
+                                      borderColor: current === cond ? cfg.stroke : undefined,
+                                    }}
+                                  >
+                                    <span
+                                      className="w-3 h-3 rounded-sm shrink-0 border"
+                                      style={{ background: cfg.crownFill, borderColor: cfg.stroke }}
+                                    />
+                                    <span style={{ color: current === cond ? cfg.textColor : undefined }}>
+                                      {t(`condition.${cond}`)}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium text-muted-foreground block mb-1">
+                                {t("tooth.notesLabel")}
+                              </label>
+                              <textarea
+                                rows={2}
+                                className="w-full text-xs rounded-lg border border-border bg-white px-2.5 py-1.5 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                placeholder={t("tooth.notesPlaceholder")}
+                                value={diagnosisNotesMap.get(diagnosisToothFdi) ?? teethMap.get(diagnosisToothFdi)?.notes ?? ""}
+                                onChange={(e) => {
+                                  const next = new Map(diagnosisNotesMap);
+                                  next.set(diagnosisToothFdi, e.target.value);
+                                  setDiagnosisNotesMap(next);
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => {
+                              setIsDiagnosisMode(false);
+                              setDiagnosisMap(new Map());
+                              setDiagnosisNotesMap(new Map());
+                              setDiagnosisToothFdi(null);
+                            }}
+                          >
+                            {t("tooth.cancel")}
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="flex-1"
+                            disabled={updateToothMutation.isPending || (diagnosisMap.size === 0 && diagnosisNotesMap.size === 0)}
+                            onClick={handleFinishDiagnosis}
+                          >
+                            {updateToothMutation.isPending ? t("tooth.saving") : t("patient.finishDiagnosis")}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Normal mode — has diagnosis */}
+                    {hasDiagnosis && !isDiagnosisMode && (
+                      <div className="space-y-3">
+                        <p className="text-[11px] text-muted-foreground">
+                          {t("patient.clickTooth")}
+                        </p>
+                        <FdiChart
+                          teethData={teethMap}
+                          selectedFdi={selectedToothFdi}
+                          onToothClick={(fdi) => {
+                            setSelectedToothFdi(fdi);
+                            setModalToothFdi(fdi);
+                          }}
+                        />
+
+                        {/* Active treatment tasks */}
+                        {activeTasks.length > 0 && (
+                          <div>
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                              {t("patient.activeTasks")}
+                            </p>
+                            <div className="space-y-2">
+                              {activeTasks.map((task) => (
+                                <TreatmentTaskItem
+                                  key={task.id}
+                                  task={task}
+                                  patientId={selectedPatientId}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {activeTasks.length === 0 && (
+                          <p className="text-xs text-muted-foreground italic">
+                            {t("patient.noActiveTasks")}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -335,6 +712,22 @@ export function PatientDetailPanel() {
           </div>
         )}
       </div>
+
+      {/* Tooth action modal */}
+      {modalToothFdi !== null && patient && (
+        <ToothActionModal
+          fdi={modalToothFdi}
+          patientId={selectedPatientId}
+          onClose={() => {
+            setModalToothFdi(null);
+            setSelectedToothFdi(null);
+          }}
+          onNavigate={() => {
+            setModalToothFdi(null);
+            setLocation(`/patients/${patient.id}/teeth/${modalToothFdi}`);
+          }}
+        />
+      )}
     </>
   );
 }

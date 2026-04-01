@@ -2165,6 +2165,94 @@ export const useUpdateTooth = <
 };
 
 /**
+ * @summary Get all treatment tasks for a patient
+ */
+export const getListPatientTreatmentsUrl = (id: string) => {
+  return `/api/patients/${id}/treatments`;
+};
+
+export const listPatientTreatments = async (
+  id: string,
+  options?: RequestInit,
+): Promise<ToothTreatmentsResponse> => {
+  return customFetch<ToothTreatmentsResponse>(getListPatientTreatmentsUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListPatientTreatmentsQueryKey = (id: string) => {
+  return [`/api/patients/${id}/treatments`] as const;
+};
+
+export const getListPatientTreatmentsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPatientTreatments>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listPatientTreatments>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListPatientTreatmentsQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listPatientTreatments>>
+  > = ({ signal }) => listPatientTreatments(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPatientTreatments>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListPatientTreatmentsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPatientTreatments>>
+>;
+export type ListPatientTreatmentsQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get all treatment tasks for a patient
+ */
+
+export function useListPatientTreatments<
+  TData = Awaited<ReturnType<typeof listPatientTreatments>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listPatientTreatments>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListPatientTreatmentsQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
  * @summary Get treatment history for a specific tooth
  */
 export const getListToothTreatmentsUrl = (id: string, toothFdi: number) => {
@@ -2267,7 +2355,7 @@ export function useListToothTreatments<
 }
 
 /**
- * @summary Record a treatment on a specific tooth
+ * @summary Record a treatment task on a specific tooth
  */
 export const getAddToothTreatmentUrl = (id: string, toothFdi: number) => {
   return `/api/patients/${id}/teeth/${toothFdi}/treatments`;
@@ -2335,7 +2423,7 @@ export type AddToothTreatmentMutationBody = BodyType<AddToothTreatmentRequest>;
 export type AddToothTreatmentMutationError = ErrorType<unknown>;
 
 /**
- * @summary Record a treatment on a specific tooth
+ * @summary Record a treatment task on a specific tooth
  */
 export const useAddToothTreatment = <
   TError = ErrorType<unknown>,
@@ -2355,6 +2443,99 @@ export const useAddToothTreatment = <
   TContext
 > => {
   return useMutation(getAddToothTreatmentMutationOptions(options));
+};
+
+/**
+ * @summary Mark a tooth treatment task as done
+ */
+export const getCompleteToothTreatmentUrl = (
+  id: string,
+  toothFdi: number,
+  treatmentId: string,
+) => {
+  return `/api/patients/${id}/teeth/${toothFdi}/treatments/${treatmentId}`;
+};
+
+export const completeToothTreatment = async (
+  id: string,
+  toothFdi: number,
+  treatmentId: string,
+  options?: RequestInit,
+): Promise<ToothTreatmentResponse> => {
+  return customFetch<ToothTreatmentResponse>(
+    getCompleteToothTreatmentUrl(id, toothFdi, treatmentId),
+    {
+      ...options,
+      method: "PATCH",
+    },
+  );
+};
+
+export const getCompleteToothTreatmentMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof completeToothTreatment>>,
+    TError,
+    { id: string; toothFdi: number; treatmentId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof completeToothTreatment>>,
+  TError,
+  { id: string; toothFdi: number; treatmentId: string },
+  TContext
+> => {
+  const mutationKey = ["completeToothTreatment"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof completeToothTreatment>>,
+    { id: string; toothFdi: number; treatmentId: string }
+  > = (props) => {
+    const { id, toothFdi, treatmentId } = props ?? {};
+
+    return completeToothTreatment(id, toothFdi, treatmentId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CompleteToothTreatmentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof completeToothTreatment>>
+>;
+
+export type CompleteToothTreatmentMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Mark a tooth treatment task as done
+ */
+export const useCompleteToothTreatment = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof completeToothTreatment>>,
+    TError,
+    { id: string; toothFdi: number; treatmentId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof completeToothTreatment>>,
+  TError,
+  { id: string; toothFdi: number; treatmentId: string },
+  TContext
+> => {
+  return useMutation(getCompleteToothTreatmentMutationOptions(options));
 };
 
 /**
