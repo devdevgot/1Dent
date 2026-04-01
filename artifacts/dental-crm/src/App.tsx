@@ -50,9 +50,9 @@ import NotFound from "@/pages/not-found";
 const queryClient = new QueryClient();
 
 // ---------------------------------------------------------------------------
-// Dev auth bypass — set VITE_DEV_BYPASS_AUTH=true in .env.local to skip login
+// Auth bypass — skip login, open site directly as the mock user below
 // ---------------------------------------------------------------------------
-const DEV_BYPASS = import.meta.env.VITE_DEV_BYPASS_AUTH === "true";
+const DEV_BYPASS = true;
 
 const DEV_MOCK_USER: User = {
   id: "dev-bypass-user",
