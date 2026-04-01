@@ -332,7 +332,7 @@ export function PatientDetailPanel() {
   };
 
   const canChangeStatus =
-    user?.role === "owner" || user?.role === "admin" || user?.role === "doctor";
+    user?.role === "owner" || user?.role === "admin";
 
   const currentColumn = patient ? KANBAN_COLUMNS.find((c) => c.id === patient.status) : null;
   const sourceLabel = patient ? (SOURCE_LABELS[patient.source] ?? patient.source) : "";
