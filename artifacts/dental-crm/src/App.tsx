@@ -124,7 +124,7 @@ function Router() {
   const roleDashboard = user ? getRoleDashboardPath(user.role) : "/dashboard";
 
   useEffect(() => {
-    if (isAuthenticated && (location === "/login" || location === "/register")) {
+    if (!DEV_BYPASS && isAuthenticated && (location === "/login" || location === "/register")) {
       setLocation(roleDashboard);
     }
   }, [isAuthenticated, location, setLocation, roleDashboard]);
