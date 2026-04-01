@@ -37,6 +37,8 @@ import MigrationPage from "@/pages/migration";
 import StaffPage from "@/pages/staff";
 import StaffDetailPage from "@/pages/staff-detail";
 import DoctorAnalyticsPage from "@/pages/doctor-analytics";
+import DoctorSchedulePage from "@/pages/doctor-schedule";
+import DoctorScheduleDayPage from "@/pages/doctor-schedule-day";
 import MenuPage from "@/pages/menu";
 import SettingsPage from "@/pages/settings";
 import AccountSettingsPage from "@/pages/account-settings";
@@ -126,6 +128,23 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function ProceduresOrScheduleRoute() {
+  const { user } = useAuthStore();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (user?.role === "doctor") {
+      setLocation("/schedule");
+    }
+  }, [user?.role, setLocation]);
+
+  if (user?.role === "doctor") {
+    return null;
+  }
+
+  return <ProtectedRoute component={ProceduresPage} allowedRoles={['owner', 'admin', 'accountant']} />;
+}
+
 function Router() {
   const { isAuthenticated, user } = useAuthStore();
   const [location, setLocation] = useLocation();
@@ -198,7 +217,15 @@ function Router() {
         <ProtectedRoute component={InventoryPage} allowedRoles={['owner', 'admin', 'warehouse', 'doctor', 'accountant']} />
       </Route>
       <Route path="/procedures">
-        <ProtectedRoute component={ProceduresPage} allowedRoles={['owner', 'admin', 'doctor', 'accountant']} />
+        <ProceduresOrScheduleRoute />
+      </Route>
+
+      {/* Doctor schedule (read-only calendar) */}
+      <Route path="/schedule">
+        <ProtectedRoute component={DoctorSchedulePage} allowedRoles={['doctor']} />
+      </Route>
+      <Route path="/schedule/:date">
+        <ProtectedRoute component={DoctorScheduleDayPage} allowedRoles={['doctor']} />
       </Route>
       <Route path="/logs">
         <ProtectedRoute component={LogsPage} allowedRoles={['owner']} />

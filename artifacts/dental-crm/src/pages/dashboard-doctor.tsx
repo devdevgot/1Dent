@@ -8,7 +8,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import {
   ChevronRight, Bell, X, ChevronLeft,
   Activity, Stethoscope, Banknote, QrCode, CreditCard,
-  Clock, Wallet, CalendarDays, SlidersHorizontal, Users,
+  Clock, Wallet, Calendar, CalendarDays, SlidersHorizontal, Users,
   TrendingUp, BarChart3, Send, UserPlus,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -341,7 +341,7 @@ export default function DoctorDashboard() {
         <div className="grid grid-cols-2 gap-2">
           {[
             { label: t("nav.patients"),    icon: Users,       path: "/patients",         color: "bg-blue-50 text-blue-600" },
-            { label: t("nav.procedures"),  icon: Stethoscope, path: "/procedures",       color: "bg-violet-50 text-violet-600" },
+            { label: t("nav.schedule"),    icon: Calendar,    path: "/schedule",         color: "bg-violet-50 text-violet-600" },
             { label: t("nav.myAnalytics"), icon: BarChart3,   path: "/doctor-analytics", color: "bg-emerald-50 text-emerald-600" },
             { label: t("nav.chat"),        icon: UserPlus,    path: "/chat",             color: "bg-amber-50 text-amber-600" },
           ].map((item) => (
