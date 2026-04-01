@@ -40,6 +40,9 @@ import DoctorAnalyticsPage from "@/pages/doctor-analytics";
 import MenuPage from "@/pages/menu";
 import SettingsPage from "@/pages/settings";
 import AccountSettingsPage from "@/pages/account-settings";
+import AccountEditProfilePage from "@/pages/account-edit-profile";
+import AccountChangeEmailPage from "@/pages/account-change-email";
+import AccountChangePasswordPage from "@/pages/account-change-password";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -245,9 +248,18 @@ function Router() {
         <ProtectedRoute component={SettingsPage} allowedRoles={['owner', 'admin', 'doctor', 'accountant', 'warehouse']} />
       </Route>
 
-      {/* Account settings page */}
+      {/* Account settings pages */}
       <Route path="/account-settings">
         <ProtectedRoute component={AccountSettingsPage} allowedRoles={['owner', 'admin', 'doctor', 'accountant', 'warehouse']} />
+      </Route>
+      <Route path="/account/edit-profile">
+        <ProtectedRoute component={AccountEditProfilePage} allowedRoles={['owner', 'admin', 'doctor', 'accountant', 'warehouse']} />
+      </Route>
+      <Route path="/account/change-email">
+        <ProtectedRoute component={AccountChangeEmailPage} allowedRoles={['owner', 'admin', 'doctor', 'accountant', 'warehouse']} />
+      </Route>
+      <Route path="/account/change-password">
+        <ProtectedRoute component={AccountChangePasswordPage} allowedRoles={['owner', 'admin', 'doctor', 'accountant', 'warehouse']} />
       </Route>
 
       {/* 404 */}
