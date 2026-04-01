@@ -47,11 +47,12 @@ export default function DoctorSchedulePage() {
 
   const { data, isLoading } = useListProcedures();
 
-  /* Group procedures by local date */
+  /* Group procedures by local date — completed hidden from calendar */
   const byDate = useMemo(() => {
     const all = (data?.data?.procedures ?? []) as Procedure[];
     const mine = user?.id ? all.filter(p => p.doctorId === user.id) : all;
-    const source = mine.length > 0 ? mine : buildMockSchedule(user?.id ?? "mock");
+    const active = mine.filter(p => p.status !== "completed");
+    const source = active.length > 0 ? active : buildMockSchedule(user?.id ?? "mock");
     const map = new Map<string, Procedure[]>();
     source.forEach(p => {
       if (!p.scheduledAt) return;

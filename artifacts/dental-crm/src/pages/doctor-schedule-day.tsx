@@ -25,16 +25,6 @@ const STATUS_COLORS: Record<ProcedureStatus, {
   cancelled:   { bar: "bg-slate-300",   bg: "bg-slate-50",   text: "text-slate-600",   badge: "bg-slate-100 text-slate-500 border-slate-200",   icon: "text-slate-400"   },
 };
 
-/* ─── Index-based palette (for variety when status = scheduled) ─────────────── */
-const EVENT_PALETTE = [
-  { bar: "#16a34a", bg: "#f0fdf4", text: "#14532d", badgeBg: "#dcfce7", badgeText: "#15803d", badgeBorder: "#bbf7d0" },
-  { bar: "#2563eb", bg: "#eff6ff", text: "#1e3a8a", badgeBg: "#dbeafe", badgeText: "#1d4ed8", badgeBorder: "#bfdbfe" },
-  { bar: "#ca8a04", bg: "#fefce8", text: "#713f12", badgeBg: "#fef9c3", badgeText: "#a16207", badgeBorder: "#fde68a" },
-  { bar: "#9333ea", bg: "#fdf4ff", text: "#581c87", badgeBg: "#f3e8ff", badgeText: "#7e22ce", badgeBorder: "#e9d5ff" },
-  { bar: "#ea580c", bg: "#fff7ed", text: "#7c2d12", badgeBg: "#ffedd5", badgeText: "#c2410c", badgeBorder: "#fed7aa" },
-  { bar: "#0891b2", bg: "#ecfeff", text: "#164e63", badgeBg: "#cffafe", badgeText: "#0e7490", badgeBorder: "#a5f3fc" },
-  { bar: "#be185d", bg: "#fdf2f8", text: "#831843", badgeBg: "#fce7f3", badgeText: "#9d174d", badgeBorder: "#fbcfe8" },
-];
 
 const STATUS_ICONS: Record<ProcedureStatus, React.ElementType> = {
   scheduled: Clock, in_progress: PlayCircle, completed: CheckCircle2, cancelled: XCircle,
@@ -121,7 +111,8 @@ export default function DoctorScheduleDayPage() {
   const dayProcs = useMemo(() => {
     const all = (pData?.data?.procedures ?? []) as Procedure[];
     const mine = user?.id ? all.filter(p => p.doctorId === user.id) : all;
-    const source = mine.length > 0 ? mine : buildMockSchedule(user?.id ?? "mock");
+    const active = mine.filter(p => p.status !== "completed");
+    const source = active.length > 0 ? active : buildMockSchedule(user?.id ?? "mock");
     return source
       .filter(p => p.scheduledAt && toStr(new Date(p.scheduledAt)) === dateStr)
       .sort((a, b) => new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime());
@@ -243,63 +234,38 @@ export default function DoctorScheduleDayPage() {
             </div>
           )}
 
-          {/* Events */}
-          {dayProcs.map((proc, idx) => {
+          {/* Events — completed procedures are hidden from calendar */}
+          {dayProcs.filter(p => p.status !== "completed").map(proc => {
             if (!proc.scheduledAt) return null;
             const startMin = timeMins(proc.scheduledAt);
             if (startMin < START_H * 60 || startMin >= END_H * 60) return null;
             const top    = minToPx(startMin - START_H * 60);
             const height = Math.max(minToPx(60), 44);
+            const sc     = STATUS_COLORS[proc.status as ProcedureStatus];
             const Icon   = STATUS_ICONS[proc.status as ProcedureStatus];
             const patient = patients.get(proc.patientId);
-
-            // Use index-based palette for "scheduled" to add color variety;
-            // keep status-based colors for in_progress / completed / cancelled
-            const isScheduled = proc.status === "scheduled";
-            const pal = EVENT_PALETTE[idx % EVENT_PALETTE.length]!;
-            const sc  = STATUS_COLORS[proc.status as ProcedureStatus];
 
             return (
               <div
                 key={proc.id}
-                className="absolute left-14 right-3 rounded-xl overflow-hidden flex"
-                style={{
-                  top: top + 2,
-                  height: height - 4,
-                  backgroundColor: isScheduled ? pal.bg : undefined,
-                }}
+                className={`absolute left-14 right-3 rounded-xl overflow-hidden flex ${sc.bg}`}
+                style={{ top: top + 2, height: height - 4 }}
               >
                 {/* Left accent bar */}
-                {isScheduled
-                  ? <div className="w-1 shrink-0 rounded-l-xl" style={{ backgroundColor: pal.bar }} />
-                  : <div className={`w-1 shrink-0 rounded-l-xl ${sc.bar}`} />
-                }
+                <div className={`w-1 shrink-0 ${sc.bar}`} />
 
-                <div className="flex-1 px-2.5 py-1.5 min-w-0" style={{ backgroundColor: isScheduled ? pal.bg : undefined }}>
+                <div className="flex-1 px-2.5 py-1.5 min-w-0">
                   <div className="flex items-start justify-between gap-1">
-                    <p
-                      className="text-[12px] font-bold leading-snug truncate flex-1"
-                      style={{ color: isScheduled ? pal.text : undefined }}
-                    >
+                    <p className={`text-[12px] font-bold leading-snug ${sc.text} truncate flex-1`}>
                       {proc.name}
                     </p>
-                    <span
-                      className={`inline-flex items-center gap-0.5 shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${!isScheduled ? sc.badge : ""}`}
-                      style={isScheduled ? {
-                        backgroundColor: pal.badgeBg,
-                        color: pal.badgeText,
-                        borderColor: pal.badgeBorder,
-                      } : undefined}
-                    >
+                    <span className={`inline-flex items-center gap-0.5 shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${sc.badge}`}>
                       <Icon className="w-2.5 h-2.5" />
                       {t(`procedure.status.${proc.status}`)}
                     </span>
                   </div>
 
-                  <div
-                    className="flex items-center gap-2 mt-0.5 text-[11px] opacity-80"
-                    style={{ color: isScheduled ? pal.text : undefined }}
-                  >
+                  <div className={`flex items-center gap-2 mt-0.5 text-[11px] ${sc.text} opacity-80`}>
                     <span className="flex items-center gap-0.5">
                       <Clock className="w-3 h-3" />
                       {fmtTime(proc.scheduledAt)}
@@ -312,10 +278,7 @@ export default function DoctorScheduleDayPage() {
                   </div>
 
                   {proc.notes && height > 60 && (
-                    <p
-                      className="text-[10px] opacity-60 mt-0.5 truncate"
-                      style={{ color: isScheduled ? pal.text : undefined }}
-                    >
+                    <p className={`text-[10px] ${sc.text} opacity-60 mt-0.5 truncate`}>
                       {proc.notes}
                     </p>
                   )}
