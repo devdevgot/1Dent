@@ -673,7 +673,7 @@ export function PatientDetailPanel() {
 
                 <div className="px-6 py-5 border-t border-border/50 bg-slate-50/50">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                    {t("patient.addRecord")}
+                    {isDoctor ? "+ Добавить заключение" : t("patient.addRecord")}
                   </p>
                   <form onSubmit={handleAddInteraction} className="space-y-3">
                     {!isDoctor && (
