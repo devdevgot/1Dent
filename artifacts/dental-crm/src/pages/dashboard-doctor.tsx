@@ -7,6 +7,7 @@ import {
 } from "@workspace/api-client-react";
 import type { Procedure } from "@workspace/api-client-react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+import { buildMockSchedule } from "@/lib/mock-schedule";
 import {
   ChevronRight, Bell, X, ChevronLeft,
   Activity, Stethoscope, Banknote, QrCode, CreditCard,
@@ -89,28 +90,6 @@ function toDateKey(d: Date) {
 
 // ─── MOCK DATA ────────────────────────────────────────────────────────────────
 const USE_MOCK_DATA = false;
-
-// Mock upcoming appointments (relative to "today" so always fresh)
-function buildMockSchedule() {
-  const today = new Date(); today.setHours(0,0,0,0);
-  const d1 = new Date(today); d1.setDate(today.getDate() + 0);
-  const d2 = new Date(today); d2.setDate(today.getDate() + 1);
-  const d3 = new Date(today); d3.setDate(today.getDate() + 2);
-  function mk(date: Date, h: number, name: string): Procedure {
-    const at = new Date(date); at.setHours(h, 0, 0, 0);
-    return { id: String(Math.random()), patientId: "mock", doctorId: "mock",
-      name, scheduledAt: at.toISOString(), status: "scheduled" } as unknown as Procedure;
-  }
-  return [
-    mk(d1, 9,  "Ахметов Д. — Чистка"),
-    mk(d1, 11, "Иванова С. — Пломба"),
-    mk(d1, 14, "Сейтов К. — Консультация"),
-    mk(d2, 10, "Нурмагамбет А. — Брекеты"),
-    mk(d2, 12, "Ли Ю. — Отбеливание"),
-    mk(d3, 9,  "Попова М. — Удаление"),
-    mk(d3, 15, "Смирнов Т. — Пломба"),
-  ];
-}
 
 const MOCK_ANALYTICS = {
   myRevenueThisMonth: 1_820_000,

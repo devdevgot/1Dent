@@ -5,6 +5,7 @@ import type { Procedure, ProcedureStatus } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
+import { buildMockSchedule } from "@/lib/mock-schedule";
 
 /* ─── Status colours ────────────────────────────────────────────────────────── */
 const STATUS_PILL: Record<ProcedureStatus, string> = {
@@ -50,8 +51,9 @@ export default function DoctorSchedulePage() {
   const byDate = useMemo(() => {
     const all = (data?.data?.procedures ?? []) as Procedure[];
     const mine = user?.id ? all.filter(p => p.doctorId === user.id) : all;
+    const source = mine.length > 0 ? mine : buildMockSchedule(user?.id ?? "mock");
     const map = new Map<string, Procedure[]>();
-    mine.forEach(p => {
+    source.forEach(p => {
       if (!p.scheduledAt) return;
       const k = toStr(new Date(p.scheduledAt));
       map.set(k, [...(map.get(k) ?? []), p]);
