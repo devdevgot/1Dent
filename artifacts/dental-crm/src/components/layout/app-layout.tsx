@@ -83,17 +83,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
     <div className="flex flex-col h-[100dvh] bg-background overflow-hidden">
       {/* Global header — only on home/dashboard page */}
       {isHomePage && (
-        <header className="flex-none relative flex items-center gap-3 px-4 py-2.5 bg-white border-b border-gray-100 z-20 safe-area-top">
+        <header className="flex-none relative flex items-center gap-3 px-4 py-2.5 bg-white border-b border-gray-100 z-20 safe-area-top border-t-[1px]">
           <GlobalSearch />
           <div className="shrink-0">
             <NotificationBell />
           </div>
         </header>
       )}
-
       {/* Main content */}
       <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">{children}</main>
-
       {/* Bottom navigation */}
       <nav className="flex-none h-16 bg-white border-t border-border/50 flex items-stretch z-20 safe-area-bottom">
         {bottomItems.map((item) => {
