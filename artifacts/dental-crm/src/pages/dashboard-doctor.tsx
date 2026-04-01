@@ -179,34 +179,6 @@ export default function DoctorDashboard() {
         </div>
       </div>
 
-      {/* ─── Red Alert Banner ─── */}
-      <AnimatePresence>
-        {redAlertCount > 0 && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mx-4 mt-4"
-          >
-            <button
-              onClick={() => navigate("/kanban")}
-              className="w-full bg-red-50 border border-red-200 rounded-2xl p-3.5 flex items-center gap-3 text-left"
-            >
-              <div className="w-9 h-9 bg-red-500 rounded-xl flex items-center justify-center shrink-0">
-                <Bell className="w-4 h-4 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-red-700">
-                  {t("dashboard.redAlertTitle", { count: redAlertCount })}
-                </p>
-                <p className="text-xs text-red-500">{t("dashboard.redAlertDesc")}</p>
-              </div>
-              <ChevronRight className="w-4 h-4 text-red-400 shrink-0" />
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* ─── Revenue Donut Card ─── */}
       <div className="mx-4 mt-3 bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
 

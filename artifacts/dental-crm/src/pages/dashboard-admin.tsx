@@ -124,31 +124,6 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Red Alert Banner */}
-      {redAlertCount > 0 && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="bg-destructive/10 border-2 border-destructive/20 rounded-2xl p-5 flex items-start sm:items-center gap-4"
-        >
-          <div className="bg-destructive text-white p-2.5 rounded-xl shrink-0 shadow-lg shadow-destructive/20">
-            <AlertTriangle className="w-6 h-6" />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-destructive">
-              {t("dashboard.redAlertTitle", { count: redAlertCount })}
-            </h3>
-            <p className="text-destructive/80 font-medium mt-0.5">{t("dashboard.redAlertDesc")}</p>
-          </div>
-          <button
-            onClick={() => navigate("/kanban")}
-            className="mt-3 sm:mt-0 sm:ml-auto px-4 py-2 bg-white text-destructive font-bold rounded-lg border border-destructive/20 hover:bg-destructive hover:text-white transition-colors"
-          >
-            {t("dashboard.redAlertReview")}
-          </button>
-        </motion.div>
-      )}
-
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {isLoading
