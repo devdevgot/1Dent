@@ -136,6 +136,7 @@ export default function DoctorDashboard() {
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
 
   // ── Date filter state ──
+  const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
   const [filterOpen, setFilterOpen]       = useState(false);
   const [showCustom, setShowCustom]       = useState(false);
   const [filterPreset, setFilterPreset]   = useState<FilterPreset>("month");
@@ -208,6 +209,11 @@ export default function DoctorDashboard() {
     });
     return Array.from(map.entries()).slice(0, 3);
   }, [upcomingAppointments]);
+
+  const activeDayKey = selectedDayKey && scheduleByDay.some(([k]) => k === selectedDayKey)
+    ? selectedDayKey
+    : scheduleByDay[0]?.[0] ?? toDateKey(new Date());
+  const activeDayProcs = scheduleByDay.find(([k]) => k === activeDayKey)?.[1] ?? [];
 
   const donutData = revenueByPayment.length > 0
     ? revenueByPayment
@@ -303,7 +309,7 @@ export default function DoctorDashboard() {
       {/* ─── Schedule Widget ─── */}
       <div className="mx-4 mt-4 bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-gray-50">
+        <div className="flex items-center justify-between px-5 pt-4 pb-3">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-xl flex items-center justify-center" style={{ backgroundColor: "#98cc1c22" }}>
               <Calendar className="w-4 h-4" style={{ color: "#98cc1c" }} />
@@ -319,78 +325,94 @@ export default function DoctorDashboard() {
           </button>
         </div>
 
-        {/* Day columns */}
-        <div className="p-4 space-y-3">
-          {scheduleByDay.map(([dateKey, procs], dayIdx) => {
+        {/* Day tabs */}
+        <div className="flex gap-2 px-4 pb-3">
+          {scheduleByDay.map(([dateKey]) => {
             const d = new Date(dateKey + "T00:00:00");
             const isToday = toDateKey(new Date()) === dateKey;
+            const isActive = dateKey === activeDayKey;
             return (
-              <motion.div
+              <button
                 key={dateKey}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: dayIdx * 0.06 }}
-                className="flex gap-3"
+                onClick={() => setSelectedDayKey(dateKey)}
+                className={cn(
+                  "flex-1 flex flex-col items-center py-2 rounded-2xl transition-all",
+                  isActive ? "text-white shadow-sm" : "bg-gray-50 text-gray-500",
+                )}
+                style={isActive ? { backgroundColor: "#98cc1c" } : undefined}
               >
-                {/* Date block */}
-                <div className={cn(
-                  "w-14 shrink-0 rounded-2xl flex flex-col items-center justify-center py-2.5 gap-0.5",
-                  isToday ? "text-white" : "bg-gray-50 text-gray-400",
-                )} style={isToday ? { backgroundColor: "#98cc1c" } : undefined}>
-                  <span className="text-[10px] font-semibold uppercase tracking-wide leading-none">
-                    {isToday ? "Сегодня" : DOW_SHORT[d.getDay()]}
-                  </span>
+                <span className="text-[10px] font-semibold uppercase tracking-wide leading-none">
+                  {isToday ? "Сегодня" : DOW_SHORT[d.getDay()]}
+                </span>
+                <span className="text-xl font-bold leading-tight">{d.getDate()}</span>
+                <span className="text-[10px] leading-none opacity-75">{MONTHS_RU[d.getMonth()]}</span>
+                {scheduleByDay.find(([k]) => k === dateKey)?.[1].length ? (
                   <span className={cn(
-                    "text-2xl font-bold leading-none",
-                    isToday ? "text-white" : "text-gray-700",
+                    "mt-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full",
+                    isActive ? "bg-white/30 text-white" : "bg-primary/10 text-primary",
                   )}>
-                    {d.getDate()}
+                    {scheduleByDay.find(([k]) => k === dateKey)![1].length} зап.
                   </span>
-                  <span className="text-[10px] leading-none opacity-80">
-                    {MONTHS_RU[d.getMonth()]}
-                  </span>
-                </div>
-
-                {/* Appointments */}
-                <div className="flex-1 flex flex-col gap-1.5">
-                  {procs.slice(0, 3).map((proc, i) => {
-                    const time = proc.scheduledAt
-                      ? new Date(proc.scheduledAt).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })
-                      : "";
-                    const colors = [
-                      { bg: "#f0fdf4", dot: "#16a34a" },
-                      { bg: "#eff6ff", dot: "#2563eb" },
-                      { bg: "#fef9c3", dot: "#ca8a04" },
-                    ];
-                    const c = colors[i % colors.length]!;
-                    return (
-                      <div
-                        key={proc.id}
-                        className="flex items-center gap-2 rounded-xl px-3 py-2"
-                        style={{ backgroundColor: c.bg }}
-                      >
-                        <span
-                          className="w-2 h-2 rounded-full shrink-0"
-                          style={{ backgroundColor: c.dot }}
-                        />
-                        <span className="text-xs font-semibold text-gray-700 flex-1 truncate">
-                          {proc.name}
-                        </span>
-                        {time && (
-                          <span className="text-[10px] font-medium shrink-0" style={{ color: c.dot }}>
-                            {time}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                  {procs.length > 3 && (
-                    <p className="text-[10px] text-gray-400 pl-2">+{procs.length - 3} ещё</p>
-                  )}
-                </div>
-              </motion.div>
+                ) : null}
+              </button>
             );
           })}
+        </div>
+
+        {/* Appointments for selected day */}
+        <div className="px-4 pb-4 space-y-2">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeDayKey}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
+              className="space-y-2"
+            >
+              {activeDayProcs.length === 0 ? (
+                <p className="py-4 text-center text-sm text-gray-400">Нет записей на этот день</p>
+              ) : (
+                activeDayProcs.map((proc, i) => {
+                  const time = proc.scheduledAt
+                    ? new Date(proc.scheduledAt).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })
+                    : "";
+                  const APPT_COLORS = [
+                    { bg: "#f0fdf4", border: "#bbf7d0", dot: "#16a34a" },
+                    { bg: "#eff6ff", border: "#bfdbfe", dot: "#2563eb" },
+                    { bg: "#fef9c3", border: "#fde68a", dot: "#ca8a04" },
+                    { bg: "#fdf4ff", border: "#f5d0fe", dot: "#9333ea" },
+                    { bg: "#fff7ed", border: "#fed7aa", dot: "#ea580c" },
+                  ];
+                  const c = APPT_COLORS[i % APPT_COLORS.length]!;
+                  return (
+                    <motion.div
+                      key={proc.id}
+                      initial={{ opacity: 0, x: -6 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.04 }}
+                      className="flex items-center gap-3 rounded-2xl px-3.5 py-2.5 border"
+                      style={{ backgroundColor: c.bg, borderColor: c.border }}
+                    >
+                      <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: c.dot + "22" }}>
+                        <Clock className="w-3.5 h-3.5" style={{ color: c.dot }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-gray-800 truncate">{proc.name}</p>
+                        {time && <p className="text-[10px] font-medium mt-0.5" style={{ color: c.dot }}>{time}</p>}
+                      </div>
+                      <span
+                        className="text-[10px] font-semibold px-2 py-1 rounded-xl shrink-0"
+                        style={{ backgroundColor: c.dot + "18", color: c.dot }}
+                      >
+                        {time}
+                      </span>
+                    </motion.div>
+                  );
+                })
+              )}
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
 
