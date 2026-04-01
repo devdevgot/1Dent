@@ -333,6 +333,7 @@ export function PatientDetailPanel() {
 
   const canChangeStatus =
     user?.role === "owner" || user?.role === "admin";
+  const isDoctor = user?.role === "doctor";
 
   const currentColumn = patient ? KANBAN_COLUMNS.find((c) => c.id === patient.status) : null;
   const sourceLabel = patient ? (SOURCE_LABELS[patient.source] ?? patient.source) : "";
@@ -675,17 +676,19 @@ export function PatientDetailPanel() {
                     {t("patient.addRecord")}
                   </p>
                   <form onSubmit={handleAddInteraction} className="space-y-3">
-                    <select
-                      value={interactionType}
-                      onChange={(e) => setInteractionType(e.target.value as InteractionType)}
-                      className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
-                    >
-                      {INTERACTION_TYPE_KEYS.map((item) => (
-                        <option key={item.value} value={item.value}>
-                          {t(`interaction.${item.value}`)}
-                        </option>
-                      ))}
-                    </select>
+                    {!isDoctor && (
+                      <select
+                        value={interactionType}
+                        onChange={(e) => setInteractionType(e.target.value as InteractionType)}
+                        className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
+                      >
+                        {INTERACTION_TYPE_KEYS.map((item) => (
+                          <option key={item.value} value={item.value}>
+                            {t(`interaction.${item.value}`)}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                     <textarea
                       value={interactionContent}
                       onChange={(e) => setInteractionContent(e.target.value)}
