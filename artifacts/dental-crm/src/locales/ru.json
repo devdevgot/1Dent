@@ -183,7 +183,7 @@
     "loadingMessages": "Загрузка сообщений...",
     "redAlert": "Красный алерт",
     "selectPatient": "Выберите пациента для переписки",
-    "messagePlaceholder": "Введите сообщение... (Enter для отправки)"
+    "messagePlaceholder": "Сообщение..."
   },
   "inventory": {
     "title": "Склад",

@@ -183,7 +183,7 @@
     "loadingMessages": "Loading messages...",
     "redAlert": "Red Alert",
     "selectPatient": "Select a patient to chat",
-    "messagePlaceholder": "Type a message... (Enter to send)"
+    "messagePlaceholder": "Message..."
   },
   "inventory": {
     "title": "Inventory",
