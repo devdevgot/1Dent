@@ -16,6 +16,7 @@ import {
   Wallet,
   Package,
   Bot,
+  MoreHorizontal,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { cn } from "@/lib/utils";
@@ -29,7 +30,7 @@ const ROLE_DASHBOARD_HREF: Record<string, string> = {
   warehouse:  "/dashboard/warehouse",
 };
 
-const MAX_BOTTOM_TABS = 5;
+const MAX_BOTTOM_TABS = 3;
 
 const ALL_NAV_ITEMS = [
   { nameKey: "nav.dashboard",   href: "__role_dashboard__",  icon: LayoutDashboard, roles: ["owner","admin","doctor","accountant","warehouse"] },
@@ -107,6 +108,23 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </Link>
           );
         })}
+        {/* More / Menu tab */}
+        <Link
+          href="/menu"
+          className={cn(
+            "flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors select-none relative",
+            location === "/menu" ? "text-primary" : "text-muted-foreground",
+          )}
+        >
+          <MoreHorizontal
+            className={cn("w-5 h-5", location === "/menu" ? "text-primary" : "text-muted-foreground")}
+            strokeWidth={location === "/menu" ? 2.5 : 1.8}
+          />
+          <span>{t("nav.more")}</span>
+          {location === "/menu" && (
+            <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-primary" />
+          )}
+        </Link>
       </nav>
     </div>
   );
