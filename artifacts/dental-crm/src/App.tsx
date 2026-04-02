@@ -43,6 +43,7 @@ import AccountSettingsPage from "@/pages/account-settings";
 import AccountEditProfilePage from "@/pages/account-edit-profile";
 import AccountChangeEmailPage from "@/pages/account-change-email";
 import AccountChangePasswordPage from "@/pages/account-change-password";
+import MenuPage from "@/pages/menu";
 import NotFound from "@/pages/not-found";
 
 // Admin-specific pages
@@ -131,14 +132,6 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function MenuRedirect() {
-  const { user } = useAuthStore();
-  const [, setLocation] = useLocation();
-  useEffect(() => {
-    setLocation(user ? getRoleDashboardPath(user.role) : "/dashboard", { replace: true });
-  }, [user, setLocation]);
-  return null;
-}
 
 function Router() {
   const { isAuthenticated, user } = useAuthStore();
@@ -272,9 +265,9 @@ function Router() {
         <ProtectedRoute component={DoctorAnalyticsPage} allowedRoles={['owner', 'admin', 'doctor']} />
       </Route>
 
-      {/* Menu page — redirect to role dashboard */}
+      {/* Menu page */}
       <Route path="/menu">
-        <MenuRedirect />
+        <ProtectedRoute component={MenuPage} allowedRoles={['owner', 'admin', 'doctor', 'accountant', 'warehouse']} />
       </Route>
 
       {/* Settings page */}
