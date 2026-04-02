@@ -330,6 +330,21 @@ export function PatientDetailPanel() {
     toast({ title: t("patient.diagnosisSaved") });
   }, [selectedPatientId, diagnosisMap, diagnosisNotesMap, teethMap, updateToothMutation, refetchTeeth, toast, t]);
 
+  const financials = useMemo(() => {
+    const total = patientProcedures.reduce((s, p) => s + (p.price ?? 0), 0);
+    const paid  = patientProcedures
+      .filter((p) => p.status === "completed")
+      .reduce((s, p) => s + (p.price ?? 0), 0);
+    const methodCounts: Record<string, { count: number; sum: number }> = {};
+    for (const p of patientProcedures) {
+      const m = (p as any).paymentMethod ?? "unknown";
+      if (!methodCounts[m]) methodCounts[m] = { count: 0, sum: 0 };
+      methodCounts[m]!.count++;
+      methodCounts[m]!.sum += p.price ?? 0;
+    }
+    return { total, paid, methodCounts };
+  }, [patientProcedures]);
+
   if (!selectedPatientId) return null;
 
   const patient = data?.data?.patient;
@@ -364,21 +379,6 @@ export function PatientDetailPanel() {
   ];
 
   const doctorUser = patient?.doctorId ? allUsers.find((u) => u.id === patient.doctorId) : null;
-
-  const financials = useMemo(() => {
-    const total = patientProcedures.reduce((s, p) => s + (p.price ?? 0), 0);
-    const paid  = patientProcedures
-      .filter((p) => p.status === "completed")
-      .reduce((s, p) => s + (p.price ?? 0), 0);
-    const methodCounts: Record<string, { count: number; sum: number }> = {};
-    for (const p of patientProcedures) {
-      const m = (p as any).paymentMethod ?? "unknown";
-      if (!methodCounts[m]) methodCounts[m] = { count: 0, sum: 0 };
-      methodCounts[m]!.count++;
-      methodCounts[m]!.sum += p.price ?? 0;
-    }
-    return { total, paid, methodCounts };
-  }, [patientProcedures]);
 
   const PAYMENT_LABELS: Record<string, string> = {
     cash: "Наличные", kaspi_qr: "Kaspi QR",

@@ -156,7 +156,7 @@ export default function PatientsPage() {
   }, [allPatients]);
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-7.5rem)] bg-gray-50">
+    <div className="flex flex-col h-full bg-gray-50">
       {/* Top bar */}
       <div className="bg-white border-b border-gray-100 px-6 py-4 shrink-0">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
