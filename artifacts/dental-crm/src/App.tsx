@@ -27,25 +27,28 @@ import ToothDetailPage from "@/pages/tooth-detail";
 import ChatPage from "@/pages/chat";
 import AnalyticsPage from "@/pages/analytics";
 import InventoryPage from "@/pages/inventory";
-import ProceduresPage from "@/pages/procedures";
+import ServicesPage from "@/pages/services";
 import LogsPage from "@/pages/logs";
 import FinancialsPage from "@/pages/financials";
 import WarehousePage from "@/pages/warehouse";
 import UsersPage from "@/pages/users";
 import ChatbotPage from "@/pages/chatbot";
-import MigrationPage from "@/pages/migration";
 import StaffPage from "@/pages/staff";
 import StaffDetailPage from "@/pages/staff-detail";
 import DoctorAnalyticsPage from "@/pages/doctor-analytics";
 import DoctorSchedulePage from "@/pages/doctor-schedule";
 import DoctorScheduleDayPage from "@/pages/doctor-schedule-day";
-import MenuPage from "@/pages/menu";
 import SettingsPage from "@/pages/settings";
 import AccountSettingsPage from "@/pages/account-settings";
 import AccountEditProfilePage from "@/pages/account-edit-profile";
 import AccountChangeEmailPage from "@/pages/account-change-email";
 import AccountChangePasswordPage from "@/pages/account-change-password";
 import NotFound from "@/pages/not-found";
+
+// Admin-specific pages
+import AdminCalendarPage from "@/pages/admin-calendar";
+import AdminAppointmentNewPage from "@/pages/admin-appointment-new";
+import AdminFinancePage from "@/pages/admin-finance";
 
 const queryClient = new QueryClient();
 
@@ -128,21 +131,13 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function ProceduresOrScheduleRoute() {
+function MenuRedirect() {
   const { user } = useAuthStore();
   const [, setLocation] = useLocation();
-
   useEffect(() => {
-    if (user?.role === "doctor") {
-      setLocation("/schedule");
-    }
-  }, [user?.role, setLocation]);
-
-  if (user?.role === "doctor") {
-    return null;
-  }
-
-  return <ProtectedRoute component={ProceduresPage} allowedRoles={['owner', 'admin', 'accountant']} />;
+    setLocation(user ? getRoleDashboardPath(user.role) : "/dashboard", { replace: true });
+  }, [user, setLocation]);
+  return null;
 }
 
 function Router() {
@@ -200,6 +195,22 @@ function Router() {
         <ProtectedRoute component={KanbanPage} allowedRoles={['owner', 'admin', 'doctor']} />
       </Route>
 
+      {/* Admin-specific routes */}
+      <Route path="/admin/calendar">
+        <ProtectedRoute component={AdminCalendarPage} allowedRoles={['admin']} />
+      </Route>
+
+      {/* Shared calendar — owner sees all appointments in AppLayout */}
+      <Route path="/calendar">
+        <ProtectedRoute component={AdminCalendarPage} allowedRoles={['owner', 'admin']} />
+      </Route>
+      <Route path="/admin/appointments/new">
+        <ProtectedRoute component={AdminAppointmentNewPage} allowedRoles={['admin']} />
+      </Route>
+      <Route path="/admin/finance">
+        <ProtectedRoute component={AdminFinancePage} allowedRoles={['admin']} />
+      </Route>
+
       {/* Feature Routes */}
       <Route path="/patients">
         <ProtectedRoute component={PatientsPage} allowedRoles={['owner', 'admin', 'doctor']} />
@@ -216,8 +227,8 @@ function Router() {
       <Route path="/inventory">
         <ProtectedRoute component={InventoryPage} allowedRoles={['owner', 'admin', 'warehouse', 'doctor', 'accountant']} />
       </Route>
-      <Route path="/procedures">
-        <ProceduresOrScheduleRoute />
+      <Route path="/services">
+        <ProtectedRoute component={ServicesPage} allowedRoles={['owner', 'admin']} />
       </Route>
 
       {/* Doctor schedule (read-only calendar) */}
@@ -247,10 +258,6 @@ function Router() {
         <ProtectedRoute component={ChatbotPage} allowedRoles={['owner', 'admin']} />
       </Route>
 
-      {/* Data migration */}
-      <Route path="/migration">
-        <ProtectedRoute component={MigrationPage} allowedRoles={['owner', 'admin']} />
-      </Route>
 
       {/* Staff management */}
       <Route path="/staff">
@@ -265,9 +272,9 @@ function Router() {
         <ProtectedRoute component={DoctorAnalyticsPage} allowedRoles={['owner', 'admin', 'doctor']} />
       </Route>
 
-      {/* Menu page */}
+      {/* Menu page — redirect to role dashboard */}
       <Route path="/menu">
-        <ProtectedRoute component={MenuPage} allowedRoles={['owner', 'admin', 'doctor', 'accountant', 'warehouse']} />
+        <MenuRedirect />
       </Route>
 
       {/* Settings page */}

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useListInventory,
+  useListUsers,
   useCreateInventoryItem,
   useUpdateInventoryStock,
   useDeleteInventoryItem,
@@ -9,6 +10,8 @@ import {
 } from "@workspace/api-client-react";
 import type { InventoryItem } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
+import { useMyInventoryAccess, useInventoryAccessManager } from "@/hooks/use-inventory-access";
+import type { InventoryAccessLevel } from "@/hooks/use-inventory-access";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,17 +22,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { Plus, Package, AlertTriangle, Trash2, Check, X } from "lucide-react";
+import {
+  Plus, Package, AlertTriangle, Trash2, Check, X,
+  ShieldCheck, ShieldX, Eye, Shield, Users,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 const CATEGORY_KEYS = [
-  "materials",
-  "instruments",
-  "medications",
-  "consumables",
-  "prosthetics",
-  "implants",
-  "other",
+  "materials", "instruments", "medications",
+  "consumables", "prosthetics", "implants", "other",
 ] as const;
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -43,18 +44,13 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 interface CreateForm {
-  name: string;
-  category: string;
-  unit: string;
-  unitPrice: string;
-  quantity: string;
-  minQuantity: string;
+  name: string; category: string; unit: string;
+  unitPrice: string; quantity: string; minQuantity: string;
 }
 
+/* ─── Stock editor ─── */
 function StockEditor({
-  item,
-  onSave,
-  onCancel,
+  item, onSave, onCancel,
 }: {
   item: InventoryItem & { quantity: number; minQuantity: number };
   onSave: (qty: number) => void;
@@ -64,10 +60,7 @@ function StockEditor({
   return (
     <div className="flex items-center gap-1.5">
       <input
-        type="number"
-        min={0}
-        step={0.1}
-        value={value}
+        type="number" min={0} step={0.1} value={value}
         onChange={(e) => setValue(e.target.value)}
         className="w-20 text-sm px-2 py-1 rounded border border-input focus:outline-none focus:ring-1 focus:ring-primary"
         autoFocus
@@ -82,6 +75,90 @@ function StockEditor({
   );
 }
 
+/* ─── Access Level Badge ─── */
+const ACCESS_CONFIG: Record<InventoryAccessLevel, { label: string; icon: React.ElementType; color: string }> = {
+  full_access: { label: "Полный доступ", icon: ShieldCheck, color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+  read_only:   { label: "Только чтение", icon: Eye,         color: "bg-blue-100 text-blue-700 border-blue-200"       },
+  denied:      { label: "Нет доступа",   icon: ShieldX,     color: "bg-red-100 text-red-600 border-red-200"          },
+};
+
+function AccessBadge({ level }: { level: InventoryAccessLevel }) {
+  const cfg = ACCESS_CONFIG[level];
+  return (
+    <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border", cfg.color)}>
+      <cfg.icon className="w-3 h-3" />
+      {cfg.label}
+    </span>
+  );
+}
+
+/* ─── Owner Access Manager ─── */
+function OwnerAccessManager() {
+  const { data: usersData } = useListUsers();
+  const { getAccess, setUserAccess } = useInventoryAccessManager();
+  const managedRoles = ["admin", "doctor"];
+  const users = (usersData?.data?.users ?? []).filter((u) => managedRoles.includes(u.role));
+
+  if (users.length === 0) return null;
+
+  const ACCESS_LEVELS: InventoryAccessLevel[] = ["full_access", "read_only", "denied"];
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
+        <Shield className="w-4 h-4 text-primary" />
+        <h2 className="text-sm font-bold text-gray-900">Управление доступом к складу</h2>
+        <span className="ml-auto text-xs text-gray-400">Только вы видите этот раздел</span>
+      </div>
+      <div className="divide-y divide-gray-50">
+        {users.map((u) => {
+          const current = getAccess(u.id, u.role);
+          return (
+            <div key={u.id} className="px-5 py-3.5 flex items-center gap-4">
+              {/* Avatar */}
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-xs font-bold text-primary">
+                {u.name[0]?.toUpperCase()}
+              </div>
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">{u.name}</p>
+                <p className="text-xs text-gray-400 capitalize">{u.role === "admin" ? "Администратор" : "Врач"}</p>
+              </div>
+              {/* 3-way toggle */}
+              <div className="flex rounded-xl border border-gray-200 overflow-hidden text-xs shrink-0">
+                {ACCESS_LEVELS.map((level) => {
+                  const cfg = ACCESS_CONFIG[level];
+                  const isActive = current === level;
+                  return (
+                    <button
+                      key={level}
+                      type="button"
+                      onClick={() => setUserAccess(u.id, level)}
+                      title={cfg.label}
+                      className={cn(
+                        "flex items-center gap-1 px-3 py-1.5 font-medium transition-colors whitespace-nowrap",
+                        isActive
+                          ? level === "full_access" ? "bg-emerald-500 text-white"
+                          : level === "read_only"   ? "bg-blue-500 text-white"
+                          : "bg-red-500 text-white"
+                          : "bg-white text-gray-500 hover:bg-gray-50",
+                      )}
+                    >
+                      <cfg.icon className="w-3 h-3" />
+                      {cfg.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Main Page ─── */
 export default function InventoryPage() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
@@ -91,27 +168,30 @@ export default function InventoryPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [editingStockId, setEditingStockId] = useState<string | null>(null);
   const [form, setForm] = useState<CreateForm>({
-    name: "",
-    category: "materials",
-    unit: t("inventory.unit").split(" ")[0] || "шт",
-    unitPrice: "0",
-    quantity: "0",
-    minQuantity: "0",
+    name: "", category: "materials", unit: "шт",
+    unitPrice: "0", quantity: "0", minQuantity: "0",
   });
+
+  const myAccess = useMyInventoryAccess(user?.id, user?.role);
+  const isOwner = user?.role === "owner";
 
   const { data, isLoading } = useListInventory({
     query: { queryKey: getListInventoryQueryKey() },
   });
 
   const items = (data?.data?.items ?? []) as (InventoryItem & { quantity: number; minQuantity: number })[];
-
   const filtered = items.filter((item) => {
     const matchSearch = item.name.toLowerCase().includes(search.toLowerCase());
     const matchCat = filterCategory === "all" || item.category === filterCategory;
     return matchSearch && matchCat;
   });
-
   const lowStock = items.filter((i) => i.minQuantity > 0 && i.quantity < i.minQuantity);
+
+  const baseCanWrite = ["owner", "admin", "warehouse"].includes(user?.role ?? "");
+  const baseCanDelete = ["owner", "admin"].includes(user?.role ?? "");
+
+  const canWrite  = baseCanWrite  && myAccess === "full_access";
+  const canDelete = baseCanDelete && myAccess === "full_access";
 
   const createMutation = useCreateInventoryItem({
     mutation: {
@@ -122,24 +202,12 @@ export default function InventoryPage() {
       },
     },
   });
-
   const stockMutation = useUpdateInventoryStock({
-    mutation: {
-      onSuccess: () => {
-        void qc.invalidateQueries({ queryKey: getListInventoryQueryKey() });
-        setEditingStockId(null);
-      },
-    },
+    mutation: { onSuccess: () => { void qc.invalidateQueries({ queryKey: getListInventoryQueryKey() }); setEditingStockId(null); } },
   });
-
   const deleteMutation = useDeleteInventoryItem({
-    mutation: {
-      onSuccess: () => void qc.invalidateQueries({ queryKey: getListInventoryQueryKey() }),
-    },
+    mutation: { onSuccess: () => void qc.invalidateQueries({ queryKey: getListInventoryQueryKey() }) },
   });
-
-  const canWrite = ["owner", "admin", "warehouse"].includes(user?.role ?? "");
-  const canDelete = ["owner", "admin"].includes(user?.role ?? "");
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -156,18 +224,38 @@ export default function InventoryPage() {
     });
   };
 
+  /* ── Access denied screen ── */
+  if (myAccess === "denied" && !isOwner) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center">
+        <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mb-4">
+          <ShieldX className="w-8 h-8 text-red-500" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Нет доступа</h2>
+        <p className="text-sm text-gray-500 max-w-xs">
+          Владелец клиники закрыл вам доступ к складу. Обратитесь к нему для получения прав.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 pb-8 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-display font-bold text-foreground">{t("inventory.title")}</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {t("inventory.items", { count: items.length })}
-            {lowStock.length > 0 && (
-              <> · <span className="text-destructive font-semibold">{t("inventory.lowStock", { count: lowStock.length })}</span></>
-            )}
-          </p>
+          <h1 className="text-2xl font-display font-bold text-foreground">
+            {t("inventory.title")}
+          </h1>
+          <div className="flex items-center gap-2 mt-0.5">
+            <p className="text-sm text-muted-foreground">
+              {t("inventory.items", { count: items.length })}
+              {lowStock.length > 0 && (
+                <> · <span className="text-destructive font-semibold">{t("inventory.lowStock", { count: lowStock.length })}</span></>
+              )}
+            </p>
+            {!isOwner && <AccessBadge level={myAccess} />}
+          </div>
         </div>
         {canWrite && (
           <Button onClick={() => setShowCreate((v) => !v)} size="sm" className="gap-1.5">
@@ -176,6 +264,14 @@ export default function InventoryPage() {
           </Button>
         )}
       </div>
+
+      {/* Read-only notice */}
+      {myAccess === "read_only" && !isOwner && (
+        <div className="flex items-center gap-2 px-3 py-2.5 bg-blue-50 border border-blue-200 rounded-xl text-blue-700 text-sm">
+          <Eye className="w-4 h-4 shrink-0" />
+          Вы просматриваете склад в режиме «только чтение». Изменения недоступны.
+        </div>
+      )}
 
       {/* Low stock alert */}
       {lowStock.length > 0 && (
@@ -190,23 +286,17 @@ export default function InventoryPage() {
 
       {/* Create form */}
       {showCreate && canWrite && (
-        <form
-          onSubmit={handleCreate}
-          className="bg-white rounded-xl border border-border/50 p-4 space-y-3 shadow-sm"
-        >
+        <form onSubmit={handleCreate} className="bg-white rounded-xl border border-border/50 p-4 space-y-3 shadow-sm">
           <p className="font-semibold text-sm mb-1">{t("inventory.newItem")}</p>
           <Input
             placeholder={t("inventory.name")}
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            required
-            className="text-sm"
+            required className="text-sm"
           />
           <div className="grid grid-cols-2 gap-2">
             <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
-              <SelectTrigger className="text-sm">
-                <SelectValue />
-              </SelectTrigger>
+              <SelectTrigger className="text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {CATEGORY_KEYS.map((c) => (
                   <SelectItem key={c} value={c}>{t(`category.${c}`)}</SelectItem>
@@ -221,27 +311,9 @@ export default function InventoryPage() {
             />
           </div>
           <div className="grid grid-cols-3 gap-2">
-            <Input
-              type="number"
-              placeholder={t("inventory.price")}
-              value={form.unitPrice}
-              onChange={(e) => setForm({ ...form, unitPrice: e.target.value })}
-              className="text-sm"
-            />
-            <Input
-              type="number"
-              placeholder={t("inventory.qty")}
-              value={form.quantity}
-              onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-              className="text-sm"
-            />
-            <Input
-              type="number"
-              placeholder={t("inventory.minQty")}
-              value={form.minQuantity}
-              onChange={(e) => setForm({ ...form, minQuantity: e.target.value })}
-              className="text-sm"
-            />
+            <Input type="number" placeholder={t("inventory.price")}  value={form.unitPrice}  onChange={(e) => setForm({ ...form, unitPrice: e.target.value })}  className="text-sm" />
+            <Input type="number" placeholder={t("inventory.qty")}    value={form.quantity}   onChange={(e) => setForm({ ...form, quantity: e.target.value })}   className="text-sm" />
+            <Input type="number" placeholder={t("inventory.minQty")} value={form.minQuantity} onChange={(e) => setForm({ ...form, minQuantity: e.target.value })} className="text-sm" />
           </div>
           <div className="flex gap-2">
             <Button type="submit" size="sm" disabled={createMutation.isPending} className="flex-1">
@@ -260,9 +332,7 @@ export default function InventoryPage() {
           onClick={() => setFilterCategory("all")}
           className={cn(
             "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap shrink-0 transition-colors",
-            filterCategory === "all"
-              ? "bg-primary text-white"
-              : "bg-slate-100 text-slate-600 hover:bg-slate-200",
+            filterCategory === "all" ? "bg-primary text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200",
           )}
         >
           {t("inventory.allFilter", { count: items.length })}
@@ -276,9 +346,7 @@ export default function InventoryPage() {
               onClick={() => setFilterCategory(cat)}
               className={cn(
                 "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap shrink-0 transition-colors",
-                filterCategory === cat
-                  ? "bg-primary text-white"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200",
+                filterCategory === cat ? "bg-primary text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200",
               )}
             >
               {t(`category.${cat}`)} ({count})
@@ -322,12 +390,7 @@ export default function InventoryPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-medium text-sm text-foreground truncate">{item.name}</p>
-                    <span
-                      className={cn(
-                        "text-[10px] px-1.5 py-0.5 rounded-full font-medium",
-                        CATEGORY_COLORS[item.category],
-                      )}
-                    >
+                    <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium", CATEGORY_COLORS[item.category])}>
                       {t(`category.${item.category}`)}
                     </span>
                     {isLow && (
@@ -356,6 +419,7 @@ export default function InventoryPage() {
                         "text-sm font-bold px-2.5 py-1 rounded-lg transition-colors",
                         isLow ? "text-destructive bg-destructive/10" : "text-foreground bg-slate-100",
                         canWrite && "hover:bg-primary/10 hover:text-primary cursor-pointer",
+                        !canWrite && "cursor-default",
                       )}
                     >
                       {item.quantity} {item.unit}
@@ -374,6 +438,17 @@ export default function InventoryPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Owner-only: access management */}
+      {isOwner && (
+        <div className="mt-6 space-y-3">
+          <div className="flex items-center gap-2 text-xs text-gray-400 font-medium uppercase tracking-wide">
+            <Users className="w-3.5 h-3.5" />
+            Права доступа к складу
+          </div>
+          <OwnerAccessManager />
         </div>
       )}
     </div>

@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
 import {
   useListPatients,
+  useListUsers,
+  useListProcedures,
   useDeletePatient,
   getListPatientsQueryKey,
 } from "@workspace/api-client-react";
@@ -23,7 +25,7 @@ import {
 } from "@/lib/patient-utils";
 import { useTranslation } from "react-i18next";
 
-type SortKey = "name" | "phone" | "age" | "status" | "source" | "createdAt";
+type SortKey = "name" | "phone" | "age" | "status" | "source" | "createdAt" | "doctor";
 type SortDir = "asc" | "desc";
 
 const STATUS_ORDER: Record<PatientStatus, number> = {
@@ -57,6 +59,27 @@ export default function PatientsPage() {
   const { data, isLoading, error } = useListPatients({
     query: { queryKey: getListPatientsQueryKey() },
   });
+  const { data: usersData } = useListUsers();
+  const { data: proceduresData } = useListProcedures();
+
+  const doctorMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const u of usersData?.data?.users ?? []) {
+      if (u.role === "doctor") m[u.id] = u.name;
+    }
+    return m;
+  }, [usersData]);
+
+  const patientTotals = useMemo(() => {
+    const totals: Record<string, { paid: number; count: number }> = {};
+    for (const p of proceduresData?.data?.procedures ?? []) {
+      if (!p.patientId) continue;
+      if (!totals[p.patientId]) totals[p.patientId] = { paid: 0, count: 0 };
+      totals[p.patientId]!.count++;
+      if (p.status === "completed") totals[p.patientId]!.paid += p.price ?? 0;
+    }
+    return totals;
+  }, [proceduresData]);
 
   const deleteMutation = useDeletePatient({
     mutation: {
@@ -98,6 +121,7 @@ export default function PatientsPage() {
           case "status":  cmp = STATUS_ORDER[a.status] - STATUS_ORDER[b.status]; break;
           case "source":  cmp = a.source.localeCompare(b.source); break;
           case "createdAt": cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(); break;
+          case "doctor":  cmp = (a.doctorId ? (doctorMap[a.doctorId] ?? "") : "").localeCompare(b.doctorId ? (doctorMap[b.doctorId] ?? "") : ""); break;
         }
         return sortDir === "asc" ? cmp : -cmp;
       });
@@ -237,10 +261,12 @@ export default function PatientsPage() {
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-10">#</th>
                 <Th col="name"      label={t("patients.colName")} />
-                <Th col="phone"     label={t("patients.colPhone")} />
-                <Th col="age"       label={t("patients.colAge")} className="hidden md:table-cell" />
+                <Th col="phone"     label={t("patients.colPhone")} className="hidden sm:table-cell" />
+                <Th col="doctor"    label="Врач" className="hidden md:table-cell" />
                 <Th col="status"    label={t("patients.colStatus")} />
-                <Th col="source"    label={t("patients.colSource")} className="hidden lg:table-cell" />
+                <Th col="age"       label={t("patients.colAge")} className="hidden lg:table-cell" />
+                <Th col="source"    label={t("patients.colSource")} className="hidden xl:table-cell" />
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell whitespace-nowrap">Оплачено</th>
                 <Th col="createdAt" label={t("patients.colCreated")} className="hidden xl:table-cell" />
                 {canDelete && (
                   <th className="px-4 py-3 w-12" />
@@ -285,13 +311,17 @@ export default function PatientsPage() {
                     </td>
 
                     {/* Phone */}
-                    <td className="px-4 py-3">
-                      <span className="font-mono text-gray-600">{patient.phone}</span>
+                    <td className="px-4 py-3 hidden sm:table-cell">
+                      <span className="font-mono text-gray-600 text-xs">{patient.phone}</span>
                     </td>
 
-                    {/* Age */}
-                    <td className="px-4 py-3 hidden md:table-cell text-gray-600">
-                      {patient.age ? t("patient.age", { age: patient.age }) : <span className="text-gray-300">—</span>}
+                    {/* Doctor */}
+                    <td className="px-4 py-3 hidden md:table-cell">
+                      {patient.doctorId && doctorMap[patient.doctorId] ? (
+                        <span className="text-xs font-medium text-gray-700">{doctorMap[patient.doctorId]}</span>
+                      ) : (
+                        <span className="text-gray-300 text-xs">—</span>
+                      )}
                     </td>
 
                     {/* Status */}
@@ -301,11 +331,30 @@ export default function PatientsPage() {
                       </span>
                     </td>
 
+                    {/* Age */}
+                    <td className="px-4 py-3 hidden lg:table-cell text-gray-600 text-xs">
+                      {patient.age ? t("patient.age", { age: patient.age }) : <span className="text-gray-300">—</span>}
+                    </td>
+
                     {/* Source */}
-                    <td className="px-4 py-3 hidden lg:table-cell">
+                    <td className="px-4 py-3 hidden xl:table-cell">
                       <span className={`inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-full ${SOURCE_COLORS[patient.source] ?? "bg-gray-100 text-gray-600"}`}>
                         {SOURCE_LABELS[patient.source] ?? patient.source}
                       </span>
+                    </td>
+
+                    {/* Paid */}
+                    <td className="px-4 py-3 hidden lg:table-cell whitespace-nowrap">
+                      {patientTotals[patient.id] ? (
+                        <div>
+                          <p className="text-xs font-semibold text-gray-800">
+                            {patientTotals[patient.id]!.paid.toLocaleString("ru-RU")} ₸
+                          </p>
+                          <p className="text-[10px] text-gray-400">{patientTotals[patient.id]!.count} проц.</p>
+                        </div>
+                      ) : (
+                        <span className="text-gray-300 text-xs">—</span>
+                      )}
                     </td>
 
                     {/* Created */}

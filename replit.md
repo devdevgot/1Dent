@@ -101,6 +101,18 @@ Every package extends `tsconfig.base.json` which sets `composite: true`. The roo
 - AppLayout: bottom navigation with Sheet "More" drawer for overflow items, safe-area CSS, viewport-fit=cover
 - Role isolation: doctors redirected to /dashboard/doctor, accountants to /dashboard/accountant, etc.
 
+### Task #20 — Admin Desktop Redesign (Sidebar Layout, Calendar, Finance)
+- AdminLayout: fixed dark sidebar (`#1a2204`) with collapsible icon-only mode at `lg`, hamburger on mobile, logo, notification bell, user badge, logout
+- Admin role auto-detection in `ProtectedRoute` — if `user.role === "admin"`, renders `AdminLayout` instead of `AppLayout`
+- New admin pages:
+  - `/admin/calendar` — week/day view calendar, click-to-create, edit/delete appointment modals (uses procedures API)
+  - `/admin/appointments/new` — full appointment form with patient search, doctor selection, date/time picker
+  - `/admin/finance` — KPI cards, monthly revenue bar chart, payment method pie chart, top procedures table (Recharts)
+- Admin dashboard updated: new quick actions link to calendar/finance/new appointment
+- Chat page height adapted for admin layout (`lg:h-full`)
+- Kanban height adapted for admin layout (`lg:h-full`)
+- i18n: `adminNav`, `adminCalendar`, `adminFinance`, `adminAppointment`, `roles` keys added to ru/en/kz
+
 ### Task #5 — Dashboards, Doctor KPI & Procedure Management
 - DB: `procedures` + `procedure_templates` tables (Drizzle, pushed)
 - API: full CRUD for procedures (`GET/POST /procedures`, `PUT/PATCH/DELETE /procedures/:id`, `PATCH /procedures/:id/status`)

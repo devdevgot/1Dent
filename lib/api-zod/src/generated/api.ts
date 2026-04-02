@@ -985,6 +985,16 @@ export const ListProceduresResponse = zod.object({
           "cancelled",
         ]),
         price: zod.number(),
+        paymentMethod: zod
+          .enum([
+            "kaspi_transfer",
+            "cash",
+            "kaspi_qr",
+            "terminal",
+            "kaspi_red",
+            "debt",
+          ])
+          .nullish(),
         notes: zod.string().nullish(),
         scheduledAt: zod.date().nullish(),
         completedAt: zod.date().nullish(),
@@ -1038,6 +1048,16 @@ export const UpdateProcedureBody = zod.object({
   notes: zod.string().optional(),
   doctorId: zod.string().nullish(),
   scheduledAt: zod.date().nullish(),
+  paymentMethod: zod
+    .enum([
+      "kaspi_transfer",
+      "cash",
+      "kaspi_qr",
+      "terminal",
+      "kaspi_red",
+      "debt",
+    ])
+    .nullish(),
 });
 
 export const UpdateProcedureResponse = zod.object({
@@ -1052,6 +1072,16 @@ export const UpdateProcedureResponse = zod.object({
       name: zod.string(),
       status: zod.enum(["scheduled", "in_progress", "completed", "cancelled"]),
       price: zod.number(),
+      paymentMethod: zod
+        .enum([
+          "kaspi_transfer",
+          "cash",
+          "kaspi_qr",
+          "terminal",
+          "kaspi_red",
+          "debt",
+        ])
+        .nullish(),
       notes: zod.string().nullish(),
       scheduledAt: zod.date().nullish(),
       completedAt: zod.date().nullish(),
@@ -1105,6 +1135,16 @@ export const UpdateProcedureStatusResponse = zod.object({
       name: zod.string(),
       status: zod.enum(["scheduled", "in_progress", "completed", "cancelled"]),
       price: zod.number(),
+      paymentMethod: zod
+        .enum([
+          "kaspi_transfer",
+          "cash",
+          "kaspi_qr",
+          "terminal",
+          "kaspi_red",
+          "debt",
+        ])
+        .nullish(),
       notes: zod.string().nullish(),
       scheduledAt: zod.date().nullish(),
       completedAt: zod.date().nullish(),

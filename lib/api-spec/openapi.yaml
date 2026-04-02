@@ -1007,6 +1007,9 @@ paths:
                   type: string
                   format: date-time
                   nullable: true
+                paymentMethod:
+                  $ref: "#/components/schemas/PaymentMethod"
+                  nullable: true
       responses:
         "200":
           description: Procedure updated
@@ -2805,6 +2808,16 @@ components:
         - humanTakeover
         - updatedAt
 
+    PaymentMethod:
+      type: string
+      enum:
+        - kaspi_transfer
+        - cash
+        - kaspi_qr
+        - terminal
+        - kaspi_red
+        - debt
+
     Procedure:
       type: object
       properties:
@@ -2826,6 +2839,9 @@ components:
           $ref: "#/components/schemas/ProcedureStatus"
         price:
           type: number
+        paymentMethod:
+          $ref: "#/components/schemas/PaymentMethod"
+          nullable: true
         notes:
           type: string
           nullable: true

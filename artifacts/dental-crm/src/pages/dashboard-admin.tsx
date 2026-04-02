@@ -1,152 +1,98 @@
 import { useAuthStore } from "@/hooks/use-auth";
 import {
-  useGetAdminAnalytics,
-  getGetAdminAnalyticsQueryKey,
   useListProcedures,
   useListPatients,
+  useGetDoctorKpis,
+  getGetDoctorKpisQueryKey,
 } from "@workspace/api-client-react";
 import {
-  Users, Calendar, AlertTriangle, Star,
-  KanbanSquare, Stethoscope, ChevronRight, RefreshCw,
-  Clock, Package,
+  Users, Calendar,
+  KanbanSquare, Stethoscope, ChevronRight,
+  Clock, Package, Wallet, PlusCircle,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
+import { format, parseISO, startOfDay, endOfDay } from "date-fns";
 
-function StatCard({
-  titleKey,
-  value,
-  icon: Icon,
-  delay = 0,
-}: {
-  titleKey: string;
-  value: string | number;
-  icon: React.ElementType;
-  delay?: number;
-}) {
-  const { t } = useTranslation();
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay }}
-      className="bg-card p-6 rounded-2xl border border-border/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-shadow group relative overflow-hidden"
-    >
-      <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors" />
-      <div className="flex justify-between items-start mb-4">
-        <div className="p-3 bg-slate-50 text-primary rounded-xl ring-1 ring-border/50">
-          <Icon className="w-6 h-6" />
-        </div>
-      </div>
-      <h3 className="text-muted-foreground font-medium text-sm mb-1">{t(titleKey)}</h3>
-      <div className="text-3xl font-display font-bold text-foreground">{value}</div>
-    </motion.div>
-  );
-}
-
-function SkeletonCard() {
-  return (
-    <div className="bg-card p-6 rounded-2xl border border-border/50 animate-pulse">
-      <div className="w-12 h-12 bg-slate-200 rounded-xl mb-4" />
-      <div className="w-24 h-4 bg-slate-200 rounded mb-2" />
-      <div className="w-20 h-8 bg-slate-200 rounded" />
-    </div>
-  );
-}
+const BRAND_GREEN = "#98cc1c";
 
 export default function AdminDashboard() {
   const { t } = useTranslation();
   const { user, clinic } = useAuthStore();
   const [, navigate] = useLocation();
 
-  const { data: analyticsData, isLoading, refetch } = useGetAdminAnalytics({
-    query: { queryKey: getGetAdminAnalyticsQueryKey() },
-  });
   const { data: proceduresData } = useListProcedures();
   const { data: patientsData } = useListPatients();
+  const { data: kpiData } = useGetDoctorKpis({
+    query: { queryKey: getGetDoctorKpisQueryKey() },
+  });
 
-  const analytics = (analyticsData?.data?.analytics ?? {}) as Record<string, unknown>;
   const procedures = proceduresData?.data?.procedures ?? [];
   const patients = patientsData?.data?.patients ?? [];
+  const doctorKpis = kpiData?.data?.kpis ?? [];
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayEnd = new Date();
-  todayEnd.setHours(23, 59, 59, 999);
+  const now = new Date();
+  const todayStart = startOfDay(now);
+  const todayEnd = endOfDay(now);
 
   const todayProcedures = procedures.filter((p) => {
-    if (p.status === "scheduled" && p.scheduledAt) {
-      const d = new Date(p.scheduledAt);
-      return d >= today && d <= todayEnd;
+    if (p.scheduledAt) {
+      const d = parseISO(p.scheduledAt);
+      return d >= todayStart && d <= todayEnd && p.status === "scheduled";
     }
     return false;
   }).sort((a, b) => {
-    const da = a.scheduledAt ? new Date(a.scheduledAt).getTime() : 0;
-    const db = b.scheduledAt ? new Date(b.scheduledAt).getTime() : 0;
+    const da = a.scheduledAt ? parseISO(a.scheduledAt).getTime() : 0;
+    const db = b.scheduledAt ? parseISO(b.scheduledAt).getTime() : 0;
     return da - db;
   });
 
-  const redAlertCount = Number(analytics.redAlertCount ?? 0);
+  const activeTasks = procedures.filter((p) => p.status === "in_progress");
 
-  const cards = [
-    { titleKey: "dashboard.totalPatients",  value: String(analytics.totalPatients ?? 0),    icon: Users,         delay: 0 },
-    { titleKey: "dashboard.scheduledToday", value: String(analytics.scheduledToday ?? 0),   icon: Calendar,      delay: 0.05 },
-    { titleKey: "dashboard.newToday",       value: String(analytics.newPatientsToday ?? 0), icon: Star,          delay: 0.1 },
-    { titleKey: "dashboard.redAlerts",      value: String(analytics.redAlertCount ?? 0),    icon: AlertTriangle, delay: 0.15 },
-  ];
+  const formatMoney = (v: number) => v.toLocaleString("ru-RU") + " ₸";
+
+  const topDoctors = [...doctorKpis]
+    .sort((a, b) => b.revenueTotal - a.revenueTotal)
+    .slice(0, 5);
+
+  const maxRevenue = topDoctors[0]?.revenueTotal ?? 1;
+
 
   return (
-    <div className="space-y-4 p-4 pb-8">
+    <div className="space-y-6 p-6 pb-12 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-white p-6 rounded-2xl border border-border shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
         <div>
-          <h2 className="text-3xl font-display font-bold text-foreground">
+          <h2 className="text-2xl font-bold text-gray-900">
             {t("dashboard.welcomeBack", { name: user?.name.split(" ")[0] })}
           </h2>
-          <p className="text-muted-foreground mt-1 text-lg">
+          <p className="text-gray-500 mt-1">
             {t("adminDashboard.subtitle", { clinic: clinic?.name })}
           </p>
         </div>
-        <div className="flex gap-3">
-          <button
-            onClick={() => refetch()}
-            className="p-2.5 border border-border rounded-xl text-muted-foreground hover:bg-slate-50 transition-colors"
-          >
-            <RefreshCw className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => navigate("/kanban")}
-            className="px-5 py-2.5 bg-primary text-white font-semibold rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all"
-          >
-            {t("dashboard.newPatient")}
-          </button>
-        </div>
-      </div>
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {isLoading
-          ? [0, 1, 2, 3].map((i) => <SkeletonCard key={i} />)
-          : cards.map((c, i) => (
-              <StatCard key={i} titleKey={c.titleKey} value={c.value} icon={c.icon} delay={c.delay} />
-            ))}
+        <button
+          onClick={() => navigate("/admin/appointments/new")}
+          className="px-5 py-2.5 bg-primary text-white font-semibold rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all"
+        >
+          {t("adminNav.newAppointment")}
+        </button>
       </div>
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Today's Schedule */}
-        <div className="lg:col-span-2 bg-card rounded-2xl border border-border/50 p-6 shadow-sm">
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
           <div className="flex items-center justify-between mb-5">
-            <h3 className="text-lg font-bold font-display flex items-center gap-2">
-              <Clock className="w-5 h-5 text-primary" />
+            <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+              <Clock className="w-4 h-4 text-primary" />
               {t("adminDashboard.todaySchedule")}
               <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary ml-1">
                 {todayProcedures.length}
               </span>
             </h3>
             <button
-              onClick={() => navigate("/procedures")}
+              onClick={() => navigate("/admin/calendar")}
               className="text-sm text-primary font-semibold flex items-center gap-1 hover:underline"
             >
               {t("dashboard.viewAll")} <ChevronRight className="w-4 h-4" />
@@ -155,15 +101,15 @@ export default function AdminDashboard() {
 
           {todayProcedures.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
-              <Calendar className="w-10 h-10 text-muted-foreground/30 mb-3" />
-              <p className="text-muted-foreground font-medium">{t("adminDashboard.noSchedule")}</p>
+              <Calendar className="w-10 h-10 text-gray-200 mb-3" />
+              <p className="text-gray-500 font-medium">{t("adminDashboard.noSchedule")}</p>
             </div>
           ) : (
-            <div className="divide-y divide-border/40">
+            <div className="divide-y divide-gray-50">
               {todayProcedures.slice(0, 8).map((proc, i) => {
                 const patient = patients.find((p) => p.id === proc.patientId);
                 const timeStr = proc.scheduledAt
-                  ? new Date(proc.scheduledAt).toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit" })
+                  ? format(parseISO(proc.scheduledAt), "HH:mm")
                   : "—";
                 return (
                   <motion.div
@@ -177,9 +123,9 @@ export default function AdminDashboard() {
                       <span className="text-sm font-bold text-primary">{timeStr}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">{proc.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {patient?.name ?? proc.patientId}
+                      <p className="text-sm font-semibold text-gray-900 truncate">{proc.name}</p>
+                      <p className="text-xs text-gray-500">
+                        {patient?.name ?? "—"}
                         {proc.doctorName && ` · ${proc.doctorName}`}
                       </p>
                     </div>
@@ -193,30 +139,111 @@ export default function AdminDashboard() {
           )}
         </div>
 
-        {/* Quick Links */}
-        <div className="bg-card rounded-2xl border border-border/50 p-6 shadow-sm">
-          <h3 className="text-lg font-bold font-display mb-5">{t("dashboard.quickActions")}</h3>
-          <div className="space-y-3">
-            {[
-              { label: t("nav.kanban"),     icon: KanbanSquare, path: "/kanban",     desc: t("adminDashboard.kanbanDesc") },
-              { label: t("nav.procedures"), icon: Stethoscope,  path: "/procedures", desc: t("adminDashboard.proceduresDesc") },
-              { label: t("nav.patients"),   icon: Users,        path: "/patients",   desc: t("adminDashboard.patientsDesc") },
-              { label: t("nav.inventory"),  icon: Package,      path: "/inventory",  desc: t("adminDashboard.inventoryDesc") },
-              { label: t("nav.users"),      icon: Users,        path: "/users",      desc: t("adminDashboard.usersDesc") },
-            ].map((item) => (
-              <button
-                key={item.path}
-                onClick={() => navigate(item.path)}
-                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-border transition-all text-left group"
-              >
-                <div className="w-9 h-9 bg-primary/10 text-primary rounded-lg flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors flex-none">
-                  <item.icon className="w-4 h-4" />
-                </div>
-                <span className="font-medium text-sm text-foreground">{item.label}</span>
-                <ChevronRight className="w-4 h-4 text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
-              </button>
-            ))}
+        {/* Right column: Active Tasks + Top Doctors */}
+        <div className="space-y-4">
+          {/* Active Tasks (in_progress procedures) */}
+          <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+            <h3 className="text-base font-bold text-gray-900 flex items-center gap-2 mb-4">
+              <Clock className="w-4 h-4 text-amber-500" />
+              {t("adminDashboard.activeTasks")}
+              {activeTasks.length > 0 && (
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 ml-1">
+                  {activeTasks.length}
+                </span>
+              )}
+            </h3>
+            {activeTasks.length === 0 ? (
+              <p className="text-sm text-gray-400 py-2">{t("adminDashboard.noActiveTasks")}</p>
+            ) : (
+              <div className="space-y-2">
+                {activeTasks.slice(0, 4).map((proc) => {
+                  const patient = patients.find((p) => p.id === proc.patientId);
+                  return (
+                    <div key={proc.id} className="flex items-center gap-2 p-2 rounded-xl bg-amber-50 border border-amber-100">
+                      <div className="w-2 h-2 rounded-full bg-amber-400 shrink-0 animate-pulse" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-gray-900 truncate">{proc.name}</p>
+                        <p className="text-[10px] text-gray-500 truncate">
+                          {patient?.name ?? "—"}
+                          {proc.doctorName && ` · ${proc.doctorName}`}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
+
+          {/* Top Doctors */}
+          <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                <Stethoscope className="w-4 h-4 text-primary" />
+                {t("adminDashboard.topDoctors")}
+              </h3>
+            </div>
+            {topDoctors.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-4 text-center">
+                <Stethoscope className="w-8 h-8 text-gray-200 mb-2" />
+                <p className="text-gray-500 text-sm">{t("adminDashboard.noDoctor")}</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {topDoctors.map((doc, i) => {
+                  const pct = Math.round((doc.revenueTotal / maxRevenue) * 100);
+                  return (
+                    <div key={doc.doctorId}>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-xs font-bold text-gray-400 w-4 shrink-0">{i + 1}</span>
+                          <span className="text-sm font-medium text-gray-900 truncate">{doc.doctorName}</span>
+                        </div>
+                        <span className="text-xs font-bold text-emerald-700 shrink-0 ml-2">
+                          {formatMoney(doc.revenueTotal)}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-1.5">
+                        <div
+                          className="h-1.5 rounded-full transition-all"
+                          style={{ width: `${pct}%`, backgroundColor: BRAND_GREEN }}
+                        />
+                      </div>
+                      <p className="text-[10px] text-gray-400 mt-0.5">
+                        {doc.proceduresCount} {t("adminDashboard.procedures")} · {doc.patientsCount} {t("adminDashboard.patients")}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Links row */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+        <h3 className="text-base font-bold text-gray-900 mb-4">{t("dashboard.quickActions")}</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {[
+            { label: t("adminNav.newAppointment"), icon: PlusCircle, path: "/admin/appointments/new" },
+            { label: t("adminNav.calendar"),       icon: Calendar,   path: "/admin/calendar" },
+            { label: t("adminNav.finance"),        icon: Wallet,     path: "/admin/finance" },
+            { label: t("nav.kanban"),              icon: KanbanSquare, path: "/kanban" },
+            { label: t("nav.patients"),            icon: Users,      path: "/patients" },
+            { label: t("nav.inventory"),           icon: Package,    path: "/inventory" },
+          ].map((item) => (
+            <button
+              key={item.path}
+              onClick={() => navigate(item.path)}
+              className="flex flex-col items-center gap-2 p-4 rounded-xl hover:bg-gray-50 border border-gray-100 hover:border-primary/20 transition-all group text-center"
+            >
+              <div className="w-10 h-10 bg-primary/10 text-primary rounded-xl flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                <item.icon className="w-5 h-5" />
+              </div>
+              <span className="text-xs font-medium text-gray-700 group-hover:text-primary transition-colors leading-tight">{item.label}</span>
+            </button>
+          ))}
         </div>
       </div>
     </div>

@@ -101,7 +101,7 @@ export default function MenuPage() {
   return (
     <div className="min-h-full bg-[#f2f2f7] pb-6">
       {/* Profile card */}
-      <Link href="/account-settings" className="block bg-white px-4 pt-5 pb-3 mb-5 active:bg-gray-50 transition-colors">
+      <Link replace href="/account-settings" className="block bg-white px-4 pt-5 pb-3 mb-5 active:bg-gray-50 transition-colors">
         <div className="flex items-center gap-3 py-1">
           <div className="w-11 h-11 rounded-full overflow-hidden bg-primary/15 text-primary flex items-center justify-center font-bold text-base shrink-0">
             {(user as typeof user & { photoUrl?: string | null })?.photoUrl ? (
@@ -141,6 +141,7 @@ export default function MenuPage() {
 
               return (
                 <Link
+                  replace
                   key={item.href}
                   href={item.href}
                   className={cn(

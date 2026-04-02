@@ -5,6 +5,7 @@
  * Dental CRM API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { PaymentMethod } from "./paymentMethod";
 
 export type UpdateProcedureBody = {
   name?: string;
@@ -12,4 +13,5 @@ export type UpdateProcedureBody = {
   notes?: string;
   doctorId?: string | null;
   scheduledAt?: Date | null;
+  paymentMethod?: PaymentMethod | null;
 };

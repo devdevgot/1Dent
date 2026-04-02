@@ -618,6 +618,17 @@ export interface ChatbotSession {
   updatedAt: string;
 }
 
+export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod];
+
+export const PaymentMethod = {
+  kaspi_transfer: "kaspi_transfer",
+  cash: "cash",
+  kaspi_qr: "kaspi_qr",
+  terminal: "terminal",
+  kaspi_red: "kaspi_red",
+  debt: "debt",
+} as const;
+
 export interface Procedure {
   id: string;
   clinicId: string;
@@ -627,6 +638,7 @@ export interface Procedure {
   name: string;
   status: ProcedureStatus;
   price: number;
+  paymentMethod?: PaymentMethod | null;
   notes?: string | null;
   scheduledAt?: string | null;
   completedAt?: string | null;
@@ -979,6 +991,7 @@ export type UpdateProcedureBody = {
   notes?: string;
   doctorId?: string | null;
   scheduledAt?: string | null;
+  paymentMethod?: PaymentMethod | null;
 };
 
 export type UpdateProcedureStatusBody = {

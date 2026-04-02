@@ -5,6 +5,7 @@
  * Dental CRM API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { PaymentMethod } from "./paymentMethod";
 import type { ProcedureMaterialLineItem } from "./procedureMaterialLineItem";
 import type { ProcedureStatus } from "./procedureStatus";
 
@@ -17,6 +18,7 @@ export interface Procedure {
   name: string;
   status: ProcedureStatus;
   price: number;
+  paymentMethod?: PaymentMethod | null;
   notes?: string | null;
   scheduledAt?: Date | null;
   completedAt?: Date | null;

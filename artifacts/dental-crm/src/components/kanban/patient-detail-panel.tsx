@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import {
   useGetPatient,
@@ -9,6 +9,8 @@ import {
   useListPatientTreatments,
   useCompleteToothTreatment,
   useUpdateTooth,
+  useListProcedures,
+  useListUsers,
   getListPatientsQueryKey,
   getGetPatientQueryKey,
   getListTeethQueryKey,
@@ -16,7 +18,10 @@ import {
 } from "@workspace/api-client-react";
 import type { ToothRecord, ToothTreatment } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { X, ChevronDown, CheckCircle2, Clock, ArrowUpRight } from "lucide-react";
+import {
+  X, ChevronDown, CheckCircle2, Clock, ArrowUpRight,
+  Phone, User, Calendar, CreditCard, Stethoscope, TrendingUp,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useKanbanStore } from "@/hooks/use-kanban";
 import { useAuthStore } from "@/hooks/use-auth";
@@ -226,6 +231,19 @@ export function PatientDetailPanel() {
     },
   });
 
+  const { data: proceduresData } = useListProcedures();
+  const { data: usersData } = useListUsers();
+
+  const allProcedures = useMemo(
+    () => (proceduresData?.data?.procedures ?? []),
+    [proceduresData],
+  );
+  const patientProcedures = useMemo(
+    () => allProcedures.filter((p) => p.patientId === selectedPatientId),
+    [allProcedures, selectedPatientId],
+  );
+  const allUsers = usersData?.data?.users ?? [];
+
   const { data: teethData, refetch: refetchTeeth } = useListTeeth(selectedPatientId ?? "", {
     query: {
       queryKey: getListTeethQueryKey(selectedPatientId ?? ""),
@@ -340,9 +358,43 @@ export function PatientDetailPanel() {
   const sourceColor = patient ? (SOURCE_COLORS[patient.source] ?? "bg-slate-100 text-slate-600") : "";
 
   const tabs = [
+    { id: "info"    as const, label: "Информация" },
     { id: "history" as const, label: t("patient.tabHistory") },
     { id: "dental"  as const, label: t("patient.tabDental") },
   ];
+
+  const doctorUser = patient?.doctorId ? allUsers.find((u) => u.id === patient.doctorId) : null;
+
+  const financials = useMemo(() => {
+    const total = patientProcedures.reduce((s, p) => s + (p.price ?? 0), 0);
+    const paid  = patientProcedures
+      .filter((p) => p.status === "completed")
+      .reduce((s, p) => s + (p.price ?? 0), 0);
+    const methodCounts: Record<string, { count: number; sum: number }> = {};
+    for (const p of patientProcedures) {
+      const m = (p as any).paymentMethod ?? "unknown";
+      if (!methodCounts[m]) methodCounts[m] = { count: 0, sum: 0 };
+      methodCounts[m]!.count++;
+      methodCounts[m]!.sum += p.price ?? 0;
+    }
+    return { total, paid, methodCounts };
+  }, [patientProcedures]);
+
+  const PAYMENT_LABELS: Record<string, string> = {
+    cash: "Наличные", kaspi_qr: "Kaspi QR",
+    kaspi_transfer: "Kaspi перевод", kaspi_red: "Kaspi Рассрочка",
+    terminal: "Терминал", debt: "Долг", unknown: "Не указан",
+  };
+  const STATUS_LABELS: Record<string, string> = {
+    scheduled: "Запланирована", in_progress: "В процессе",
+    completed: "Завершена", cancelled: "Отменена",
+  };
+  const STATUS_COLORS: Record<string, string> = {
+    scheduled: "bg-blue-50 text-blue-700 border-blue-200",
+    in_progress: "bg-amber-50 text-amber-700 border-amber-200",
+    completed: "bg-green-50 text-green-700 border-green-200",
+    cancelled: "bg-gray-50 text-gray-500 border-gray-200",
+  };
 
   const diagnosisDisplayMap: Map<number, ToothRecord> = new Map(teethMap);
   for (const [fdi, condition] of diagnosisMap.entries()) {
@@ -411,6 +463,198 @@ export function PatientDetailPanel() {
           </div>
         ) : patient ? (
           <>
+            {/* Info Tab */}
+            {activeTab === "info" && (
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
+                <div className="px-6 py-5 space-y-5">
+                  {/* Header */}
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">{patient.name}</h3>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Зарегистрирован: {new Date(patient.createdAt).toLocaleDateString("ru", { day: "2-digit", month: "long", year: "numeric" })}
+                    </p>
+                  </div>
+
+                  {/* Contact info */}
+                  <div className="bg-gray-50 rounded-2xl p-4 space-y-3">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Контакты</p>
+                    <a
+                      href={`tel:${patient.phone}`}
+                      className="flex items-center gap-3 group"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Phone className="w-4 h-4 text-primary" />
+                      </div>
+                      <span className="font-mono text-sm font-semibold text-gray-800 group-hover:text-primary transition-colors">
+                        {patient.phone}
+                      </span>
+                    </a>
+                    {patient.age && (
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                          <User className="w-4 h-4 text-gray-400" />
+                        </div>
+                        <span className="text-sm text-gray-700">{patient.age} лет</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                        <Calendar className="w-4 h-4 text-gray-400" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Источник</p>
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${sourceColor}`}>
+                          {sourceLabel}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Doctor */}
+                  <div className="bg-gray-50 rounded-2xl p-4">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Лечащий врач</p>
+                    {doctorUser ? (
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary text-sm font-bold shrink-0">
+                          {doctorUser.name[0]?.toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-800">{doctorUser.name}</p>
+                          <p className="text-xs text-gray-400">{doctorUser.email}</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center">
+                          <Stethoscope className="w-4 h-4 text-gray-300" />
+                        </div>
+                        <p className="text-sm text-gray-400 italic">Врач не назначен</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Status */}
+                  {canChangeStatus && (
+                    <div className="bg-gray-50 rounded-2xl p-4">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Статус лечения</p>
+                      <div className="relative">
+                        <button
+                          onClick={() => setIsStatusOpen(!isStatusOpen)}
+                          className="w-full flex items-center justify-between px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm font-medium hover:bg-white transition-colors bg-white"
+                        >
+                          <span>{currentColumn?.label ?? patient.status}</span>
+                          <ChevronDown className={`w-4 h-4 transition-transform ${isStatusOpen ? "rotate-180" : ""}`} />
+                        </button>
+                        {isStatusOpen && (
+                          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-10 overflow-hidden">
+                            {KANBAN_COLUMNS.map((col) => (
+                              <button
+                                key={col.id}
+                                onClick={() => handleStatusChange(col.id)}
+                                disabled={statusMutation.isPending}
+                                className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors ${patient.status === col.id ? "font-semibold text-primary bg-primary/5" : ""}`}
+                              >
+                                {col.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Notes */}
+                  {patient.notes && (
+                    <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4">
+                      <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-2">Примечания</p>
+                      <p className="text-sm text-amber-900 leading-relaxed">{patient.notes}</p>
+                    </div>
+                  )}
+
+                  {/* Financial summary */}
+                  <div className="space-y-3">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+                      <TrendingUp className="w-3.5 h-3.5" />
+                      Финансы
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-primary/5 rounded-2xl p-3.5 text-center">
+                        <p className="text-xl font-bold text-primary">
+                          {financials.paid.toLocaleString("ru-RU")} ₸
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5">Оплачено</p>
+                      </div>
+                      <div className="bg-gray-50 rounded-2xl p-3.5 text-center">
+                        <p className="text-xl font-bold text-gray-700">
+                          {patientProcedures.length}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5">Процедур</p>
+                      </div>
+                    </div>
+
+                    {Object.keys(financials.methodCounts).length > 0 && (
+                      <div className="bg-gray-50 rounded-2xl p-4 space-y-2">
+                        <p className="text-xs font-semibold text-gray-500 mb-1">Способы оплаты</p>
+                        {Object.entries(financials.methodCounts).map(([method, data]) => (
+                          <div key={method} className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-2">
+                              <CreditCard className="w-3.5 h-3.5 text-gray-400" />
+                              <span className="text-gray-600">{PAYMENT_LABELS[method] ?? method}</span>
+                              <span className="text-xs text-gray-400">×{data.count}</span>
+                            </div>
+                            <span className="font-semibold text-gray-800">
+                              {data.sum.toLocaleString("ru-RU")} ₸
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Procedures list */}
+                  {patientProcedures.length > 0 && (
+                    <div className="space-y-3">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                        История процедур ({patientProcedures.length})
+                      </p>
+                      <div className="space-y-2">
+                        {[...patientProcedures]
+                          .sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime())
+                          .slice(0, 10)
+                          .map((proc) => {
+                            const docName = proc.doctorId
+                              ? (allUsers.find((u) => u.id === proc.doctorId)?.name ?? "—")
+                              : "—";
+                            const payLabel = PAYMENT_LABELS[(proc as any).paymentMethod ?? ""] ?? "—";
+                            return (
+                              <div key={proc.id} className="bg-white rounded-xl border border-gray-100 p-3 space-y-1.5">
+                                <div className="flex items-start justify-between gap-2">
+                                  <p className="text-sm font-medium text-gray-800 flex-1 leading-tight">{proc.name}</p>
+                                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0 ${STATUS_COLORS[proc.status ?? "scheduled"]}`}>
+                                    {STATUS_LABELS[proc.status ?? "scheduled"]}
+                                  </span>
+                                </div>
+                                <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-gray-500">
+                                  {proc.scheduledAt && (
+                                    <span>{new Date(proc.scheduledAt).toLocaleDateString("ru", { day: "2-digit", month: "short", year: "numeric" })}</span>
+                                  )}
+                                  {proc.doctorId && <span>👨‍⚕️ {docName}</span>}
+                                  {(proc as any).paymentMethod && <span>💳 {payLabel}</span>}
+                                  {proc.price != null && proc.price > 0 && (
+                                    <span className="font-semibold text-gray-700">{proc.price.toLocaleString("ru-RU")} ₸</span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Dental Chart Tab */}
             {activeTab === "dental" && (
               <div className="flex-1 flex flex-col min-h-0 overflow-hidden">

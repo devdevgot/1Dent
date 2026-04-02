@@ -386,7 +386,7 @@ export default function ChatPage() {
   );
   const selectedPatient = patients.find((p) => p.id === selectedPatientId);
   const handleBack      = () => setSelectedPatientId(null);
-  const H               = "h-[calc(100dvh-7.5rem)]";
+  const H               = "h-[calc(100dvh-7.5rem)] lg:h-full";
 
   return (
     <div className={cn("flex overflow-hidden", H)}>

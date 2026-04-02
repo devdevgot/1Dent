@@ -2,15 +2,33 @@ import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuthStore } from "@/hooks/use-auth";
 import { AppLayout } from "@/components/layout/app-layout";
+import { AdminLayout } from "@/components/layout/admin-layout";
 
 const DEV_BYPASS = import.meta.env.VITE_DEV_BYPASS_AUTH === "true";
 
 interface ProtectedRouteProps {
   component: React.ComponentType<Record<string, never>>;
   allowedRoles?: string[];
+  useAdminLayout?: boolean;
 }
 
-export function ProtectedRoute({ component: Component, allowedRoles = [] }: ProtectedRouteProps) {
+function LayoutWrapper({
+  user,
+  useAdminLayout,
+  children,
+}: {
+  user: { role: string } | null;
+  useAdminLayout?: boolean;
+  children: React.ReactNode;
+}) {
+  const isAdmin = user?.role === "admin";
+  if (isAdmin || useAdminLayout) {
+    return <AdminLayout>{children}</AdminLayout>;
+  }
+  return <AppLayout>{children}</AppLayout>;
+}
+
+export function ProtectedRoute({ component: Component, allowedRoles = [], useAdminLayout }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, user } = useAuthStore();
   const [, setLocation] = useLocation();
 
@@ -38,7 +56,7 @@ export function ProtectedRoute({ component: Component, allowedRoles = [] }: Prot
 
   if (!DEV_BYPASS && allowedRoles.length > 0 && user && !allowedRoles.includes(user.role)) {
     return (
-      <AppLayout>
+      <LayoutWrapper user={user} useAdminLayout={useAdminLayout}>
         <div className="flex flex-col items-center justify-center h-full text-center">
           <div className="w-20 h-20 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mb-6">
             <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -50,13 +68,13 @@ export function ProtectedRoute({ component: Component, allowedRoles = [] }: Prot
             You do not have the required permissions to view this page. Please contact your clinic administrator.
           </p>
         </div>
-      </AppLayout>
+      </LayoutWrapper>
     );
   }
 
   return (
-    <AppLayout>
+    <LayoutWrapper user={user} useAdminLayout={useAdminLayout}>
       <Component />
-    </AppLayout>
+    </LayoutWrapper>
   );
 }

@@ -112,6 +112,7 @@ export * from "./patientsListResponse";
 export * from "./patientsListResponseData";
 export * from "./patientSource";
 export * from "./patientStatus";
+export * from "./paymentMethod";
 export * from "./postopFollowup";
 export * from "./postopFollowupStatus";
 export * from "./procedure";
