@@ -1,4 +1,4 @@
-import { Bell, AlertTriangle, CheckCheck, ChevronRight } from "lucide-react";
+import { Bell, AlertTriangle, CheckCheck, ChevronRight, Calendar } from "lucide-react";
 import { useUnreadCount, useNotifications, useMarkRead, useMarkAllRead } from "@/hooks/use-notifications";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +21,7 @@ function NotificationItem({
   onRead: (id: string) => void;
 }) {
   const isRedAlert = notification.type === "red_alert";
+  const isAppointmentReminder = notification.type === "appointment_reminder";
 
   return (
     <button
@@ -29,15 +30,16 @@ function NotificationItem({
         "w-full text-left px-4 py-3 border-b border-border/30 flex items-start gap-3 transition-colors",
         notification.read ? "opacity-60" : "bg-white hover:bg-slate-50",
         isRedAlert && !notification.read && "bg-red-50 hover:bg-red-100",
+        isAppointmentReminder && !notification.read && "bg-blue-50 hover:bg-blue-100",
       )}
     >
       <div
         className={cn(
           "mt-0.5 w-8 h-8 rounded-full flex items-center justify-center shrink-0",
-          isRedAlert ? "bg-red-100 text-red-600" : "bg-blue-100 text-blue-600",
+          isRedAlert ? "bg-red-100 text-red-600" : isAppointmentReminder ? "bg-primary/10 text-primary" : "bg-blue-100 text-blue-600",
         )}
       >
-        {isRedAlert ? <AlertTriangle className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
+        {isRedAlert ? <AlertTriangle className="w-4 h-4" /> : isAppointmentReminder ? <Calendar className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-xs text-foreground leading-relaxed">{notification.message}</p>

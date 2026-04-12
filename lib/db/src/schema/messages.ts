@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, pgEnum, jsonb } from "drizzle-orm/pg-core";
 import { clinicsTable } from "./clinics";
 import { usersTable } from "./users";
 import { patientsTable } from "./patients";
@@ -13,6 +13,7 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "new_message",
   "appointment",
   "system",
+  "appointment_reminder",
 ]);
 
 export const messagesTable = pgTable("messages", {
@@ -52,6 +53,7 @@ export const notificationsTable = pgTable("notifications", {
   messageId: text("message_id").references(() => messagesTable.id, {
     onDelete: "set null",
   }),
+  payload: jsonb("payload").$type<Record<string, unknown>>(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

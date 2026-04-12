@@ -4,6 +4,7 @@ import { useAuthStore } from "@/hooks/use-auth";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
 import { NotificationBell } from "./notification-bell";
 import { GlobalSearch } from "./global-search";
+import { AppointmentReminderModal } from "./appointment-reminder-modal";
 import {
   LayoutDashboard,
   KanbanSquare,
@@ -73,6 +74,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background overflow-hidden">
+      <AppointmentReminderModal />
       {/* Global header — only on home/dashboard page */}
       {isHomePage && (
         <header className="flex-none relative flex items-center gap-3 px-4 py-2.5 bg-white border-b border-gray-100 z-20 safe-area-top border-t-[1px]">

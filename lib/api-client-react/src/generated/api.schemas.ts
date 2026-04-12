@@ -335,6 +335,7 @@ export const NotificationType = {
   new_message: "new_message",
   appointment: "appointment",
   system: "system",
+  appointment_reminder: "appointment_reminder",
 } as const;
 
 export interface Notification {
@@ -346,6 +347,7 @@ export interface Notification {
   read: boolean;
   patientId: string | null;
   messageId: string | null;
+  payload?: Record<string, unknown> | null;
   createdAt: string;
 }
 

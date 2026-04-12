@@ -52,5 +52,25 @@ export const postopFollowupsTable = pgTable("postop_followups", {
     .defaultNow(),
 });
 
+export const appointmentRemindersTable = pgTable("appointment_reminders", {
+  id: text("id").primaryKey(),
+  clinicId: text("clinic_id")
+    .notNull()
+    .references(() => clinicsTable.id, { onDelete: "cascade" }),
+  patientId: text("patient_id")
+    .notNull()
+    .references(() => patientsTable.id, { onDelete: "cascade" }),
+  procedureId: text("procedure_id")
+    .notNull()
+    .references(() => proceduresTable.id, { onDelete: "cascade" }),
+  sendAt: timestamp("send_at", { withTimezone: true }).notNull(),
+  status: followupStatusEnum("status").notNull().default("pending"),
+  reminderType: text("reminder_type").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export type ActionLog = typeof actionLogsTable.$inferSelect;
 export type PostopFollowup = typeof postopFollowupsTable.$inferSelect;
+export type AppointmentReminder = typeof appointmentRemindersTable.$inferSelect;

@@ -14,7 +14,8 @@ import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError, ForbiddenError } from "../../shared/errors";
 import type { ProcedureStatus } from "@workspace/db";
 import { scheduleFollowups } from "../followups/followup.queue";
-import { db, postopFollowupsTable } from "@workspace/db";
+import { scheduleAppointmentReminders, cancelAppointmentReminders } from "../followups/appointment-reminders.queue";
+import { db, postopFollowupsTable, patientsTable, usersTable, clinicsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 
 const router: IRouter = Router();
@@ -196,6 +197,32 @@ router.post("/", writeRoles, async (req: Request, res: Response, next: NextFunct
   }
 
   analyticsRepo.invalidateClinicCache(clinicId).catch(() => {});
+
+  if (scheduledAt && procedure.patientId) {
+    const scheduledDate = new Date(scheduledAt);
+    Promise.all([
+      db.select({ name: patientsTable.name }).from(patientsTable).where(eq(patientsTable.id, procedure.patientId)).limit(1),
+      procedure.doctorId
+        ? db.select({ name: usersTable.name }).from(usersTable).where(eq(usersTable.id, procedure.doctorId)).limit(1)
+        : Promise.resolve([]),
+      db.select({ name: clinicsTable.name }).from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1),
+    ]).then(([patients, doctors, clinics]) => {
+      const patientName = patients[0]?.name ?? "Пациент";
+      const doctorName = (doctors as Array<{ name: string }>)[0]?.name ?? "";
+      const clinicName = clinics[0]?.name ?? "";
+      return scheduleAppointmentReminders({
+        clinicId,
+        patientId: procedure.patientId,
+        procedureId: procedure.id,
+        scheduledAt: scheduledDate,
+        patientName,
+        procedureName: procedure.name,
+        doctorName,
+        clinicName,
+      });
+    }).catch(() => {});
+  }
+
   res.status(201).json({ success: true, data: { procedure } });
 });
 
@@ -273,6 +300,36 @@ router.put(
     if (!procedure) return next(new NotFoundError("Procedure not found"));
 
     analyticsRepo.invalidateClinicCache(clinicId).catch(() => {});
+
+    if (scheduledAt !== undefined && procedure.patientId) {
+      cancelAppointmentReminders(procedure.id, clinicId).catch(() => {});
+
+      if (scheduledAt) {
+        const scheduledDate = new Date(scheduledAt);
+        Promise.all([
+          db.select({ name: patientsTable.name }).from(patientsTable).where(eq(patientsTable.id, procedure.patientId)).limit(1),
+          procedure.doctorId
+            ? db.select({ name: usersTable.name }).from(usersTable).where(eq(usersTable.id, procedure.doctorId)).limit(1)
+            : Promise.resolve([]),
+          db.select({ name: clinicsTable.name }).from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1),
+        ]).then(([patients, doctors, clinics]) => {
+          const patientName = patients[0]?.name ?? "Пациент";
+          const doctorName = (doctors as Array<{ name: string }>)[0]?.name ?? "";
+          const clinicName = clinics[0]?.name ?? "";
+          return scheduleAppointmentReminders({
+            clinicId,
+            patientId: procedure.patientId,
+            procedureId: procedure.id,
+            scheduledAt: scheduledDate,
+            patientName,
+            procedureName: procedure.name,
+            doctorName,
+            clinicName,
+          });
+        }).catch(() => {});
+      }
+    }
+
     res.json({ success: true, data: { procedure } });
   },
 );
