@@ -11,6 +11,7 @@ import {
   useUpdateTooth,
   useListProcedures,
   useListUsers,
+  useGetConditionPrices,
   getListPatientsQueryKey,
   getGetPatientQueryKey,
   getListTeethQueryKey,
@@ -20,7 +21,7 @@ import type { ToothRecord, ToothTreatment } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   X, ChevronDown, CheckCircle2, Clock, ArrowUpRight,
-  Phone, User, Calendar, CreditCard, Stethoscope, TrendingUp,
+  Phone, User, Calendar, CreditCard, Stethoscope, TrendingUp, Copy, Save,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useKanbanStore } from "@/hooks/use-kanban";
@@ -35,6 +36,17 @@ import {
 import type { PatientStatus, InteractionType, ToothCondition } from "@workspace/api-client-react";
 import { FdiChart, CONDITION_CONFIG } from "@/components/dental-chart/fdi-chart";
 import { useTranslation } from "react-i18next";
+
+const CONDITION_MKB10: Record<ToothCondition, string> = {
+  healthy: "Z01.2",
+  cavity: "K02.1",
+  treated: "Z98.8",
+  crown: "Z96.6",
+  root_canal: "K04.0",
+  implant: "Z96.5",
+  missing: "K08.1",
+  extraction_needed: "K08.1",
+};
 
 const INTERACTION_TYPE_KEYS = [
   { value: "note"        as const },
@@ -202,6 +214,121 @@ function TreatmentTaskItem({
   );
 }
 
+type DiagnosisSummaryEntry = {
+  fdi: number;
+  condition: ToothCondition;
+  price: number;
+  mkb10: string;
+};
+
+function DiagnosisSummaryModal({
+  entries,
+  patientName,
+  onSave,
+  onClose,
+  isSaving,
+}: {
+  entries: DiagnosisSummaryEntry[];
+  patientName: string;
+  onSave: () => void;
+  onClose: () => void;
+  isSaving: boolean;
+}) {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+
+  const nonHealthy = entries.filter((e) => e.condition !== "healthy" && e.condition !== "missing");
+  const total = nonHealthy.reduce((s, e) => s + e.price, 0);
+
+  const handleCopy = () => {
+    const lines: string[] = [
+      `Заключение диагностики — ${patientName}`,
+      `Дата: ${new Date().toLocaleDateString("ru")}`,
+      "",
+    ];
+    for (const e of nonHealthy) {
+      const label = CONDITION_CONFIG[e.condition]?.label ?? e.condition;
+      lines.push(`Зуб ${e.fdi} — ${label} (${e.mkb10}) — ${e.price.toLocaleString("ru-RU")} ₸`);
+    }
+    lines.push("");
+    lines.push(`Итого: ${total.toLocaleString("ru-RU")} ₸`);
+    navigator.clipboard.writeText(lines.join("\n")).then(() => {
+      toast({ title: "Заключение скопировано в буфер обмена" });
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center" onClick={onClose}>
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-[360px] max-h-[80vh] flex flex-col border border-border/50"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border/40">
+          <h3 className="font-bold text-base">Заключение диагностики</h3>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 px-5 py-4 space-y-2">
+          {nonHealthy.length === 0 ? (
+            <p className="text-sm text-muted-foreground italic text-center py-4">
+              Все зубы здоровы
+            </p>
+          ) : (
+            nonHealthy.map((e) => {
+              const label = CONDITION_CONFIG[e.condition]?.label ?? e.condition;
+              return (
+                <div key={e.fdi} className="flex items-center justify-between gap-2 py-1.5 border-b border-border/20 last:border-0">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground">
+                      {t("tooth.title", { fdi: e.fdi })} — {label}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{e.mkb10}</p>
+                  </div>
+                  {e.price > 0 && (
+                    <span className="text-sm font-semibold text-gray-800 shrink-0">
+                      {e.price.toLocaleString("ru-RU")} ₸
+                    </span>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {total > 0 && (
+          <div className="px-5 py-3 bg-primary/5 border-t border-border/40 flex items-center justify-between">
+            <span className="text-sm font-semibold text-muted-foreground">Итого:</span>
+            <span className="text-lg font-bold text-primary">{total.toLocaleString("ru-RU")} ₸</span>
+          </div>
+        )}
+
+        <div className="flex gap-2 px-5 py-4 border-t border-border/40">
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 gap-1.5"
+            onClick={handleCopy}
+          >
+            <Copy className="w-3.5 h-3.5" />
+            Скопировать
+          </Button>
+          <Button
+            size="sm"
+            className="flex-1 gap-1.5"
+            onClick={onSave}
+            disabled={isSaving}
+          >
+            <Save className="w-3.5 h-3.5" />
+            {isSaving ? t("tooth.saving") : "Сохранить"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function PatientDetailPanel() {
   const { t } = useTranslation();
   const [, setLocation] = useLocation();
@@ -221,6 +348,7 @@ export function PatientDetailPanel() {
   const [diagnosisMap, setDiagnosisMap] = useState<DiagnosisMap>(new Map());
   const [diagnosisNotesMap, setDiagnosisNotesMap] = useState<DiagnosisNotesMap>(new Map());
   const [diagnosisToothFdi, setDiagnosisToothFdi] = useState<number | null>(null);
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
 
   const [modalToothFdi, setModalToothFdi] = useState<number | null>(null);
 
@@ -253,6 +381,11 @@ export function PatientDetailPanel() {
   const teethRecords: ToothRecord[] = teethData?.data?.teeth ?? [];
   const hasDiagnosis = teethRecords.length > 0;
   const teethMap = new Map(teethRecords.map((t) => [t.toothFdi, t]));
+
+  const { data: conditionPricesData } = useGetConditionPrices({
+    query: { enabled: isDiagnosisMode },
+  });
+  const conditionPricesMap = conditionPricesData?.data?.prices ?? {};
 
   const { data: tasksData } = useListPatientTreatments(selectedPatientId ?? "", {
     query: {
@@ -305,7 +438,12 @@ export function PatientDetailPanel() {
     },
   });
 
-  const handleFinishDiagnosis = useCallback(async () => {
+  const handleFinishDiagnosis = useCallback(() => {
+    if (!selectedPatientId) return;
+    setShowSummaryModal(true);
+  }, [selectedPatientId]);
+
+  const handleSaveDiagnosis = useCallback(async () => {
     if (!selectedPatientId) return;
     const allFdis = new Set([...diagnosisMap.keys(), ...diagnosisNotesMap.keys()]);
     await Promise.all(
@@ -327,8 +465,29 @@ export function PatientDetailPanel() {
     setDiagnosisNotesMap(new Map());
     setDiagnosisToothFdi(null);
     setIsDiagnosisMode(false);
+    setShowSummaryModal(false);
     toast({ title: t("patient.diagnosisSaved") });
   }, [selectedPatientId, diagnosisMap, diagnosisNotesMap, teethMap, updateToothMutation, refetchTeeth, toast, t]);
+
+  const diagnosisSummaryEntries = useMemo((): DiagnosisSummaryEntry[] => {
+    const allFdis = new Set([...diagnosisMap.keys(), ...teethMap.keys()]);
+    const entries: DiagnosisSummaryEntry[] = [];
+    for (const fdi of allFdis) {
+      const condition = diagnosisMap.get(fdi) ?? teethMap.get(fdi)?.condition ?? "healthy";
+      const priceEntry = conditionPricesMap[condition];
+      const price = priceEntry?.price ?? 0;
+      const mkb10 = priceEntry?.mkb10 ?? CONDITION_MKB10[condition] ?? "";
+      entries.push({ fdi, condition, price, mkb10 });
+    }
+    return entries.sort((a, b) => a.fdi - b.fdi);
+  }, [diagnosisMap, teethMap, conditionPricesMap]);
+
+  const diagnosisTotalCost = useMemo(() => {
+    return diagnosisMap.size === 0 ? 0 : diagnosisSummaryEntries
+      .filter((e) => diagnosisMap.has(e.fdi))
+      .filter((e) => e.condition !== "healthy" && e.condition !== "missing")
+      .reduce((s, e) => s + e.price, 0);
+  }, [diagnosisSummaryEntries, diagnosisMap]);
 
   const financials = useMemo(() => {
     const total = patientProcedures.reduce((s, p) => s + (p.price ?? 0), 0);
@@ -700,6 +859,8 @@ export function PatientDetailPanel() {
                             <div className="grid grid-cols-2 gap-1.5">
                               {(Object.entries(CONDITION_CONFIG) as [ToothCondition, typeof CONDITION_CONFIG[ToothCondition]][]).map(([cond, cfg]) => {
                                 const current = diagnosisMap.get(diagnosisToothFdi) ?? teethMap.get(diagnosisToothFdi)?.condition ?? "healthy";
+                                const priceEntry = conditionPricesMap[cond];
+                                const condPrice = priceEntry?.price ?? 0;
                                 return (
                                   <button
                                     key={cond}
@@ -708,7 +869,7 @@ export function PatientDetailPanel() {
                                       next.set(diagnosisToothFdi, cond);
                                       setDiagnosisMap(next);
                                     }}
-                                    className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg border text-left text-xs transition-all ${
+                                    className={`flex flex-col items-start gap-0.5 px-2 py-1.5 rounded-lg border text-left text-xs transition-all ${
                                       current === cond ? "ring-2 ring-primary ring-offset-1 border-transparent" : "border-border"
                                     }`}
                                     style={{
@@ -716,13 +877,20 @@ export function PatientDetailPanel() {
                                       borderColor: current === cond ? cfg.stroke : undefined,
                                     }}
                                   >
-                                    <span
-                                      className="w-3 h-3 rounded-sm shrink-0 border"
-                                      style={{ background: cfg.crownFill, borderColor: cfg.stroke }}
-                                    />
-                                    <span style={{ color: current === cond ? cfg.textColor : undefined }}>
-                                      {t(`condition.${cond}`)}
-                                    </span>
+                                    <div className="flex items-center gap-1.5">
+                                      <span
+                                        className="w-3 h-3 rounded-sm shrink-0 border"
+                                        style={{ background: cfg.crownFill, borderColor: cfg.stroke }}
+                                      />
+                                      <span style={{ color: current === cond ? cfg.textColor : undefined }}>
+                                        {t(`condition.${cond}`)}
+                                      </span>
+                                    </div>
+                                    {condPrice > 0 && (
+                                      <span className="text-[10px] text-muted-foreground pl-[18px]">
+                                        {condPrice.toLocaleString("ru-RU")} ₸
+                                      </span>
+                                    )}
                                   </button>
                                 );
                               })}
@@ -746,6 +914,15 @@ export function PatientDetailPanel() {
                           </div>
                         )}
 
+                        {diagnosisMap.size > 0 && (
+                          <div className="bg-primary/8 border border-primary/20 rounded-xl px-3 py-2.5 flex items-center justify-between">
+                            <span className="text-xs font-medium text-primary">Предварительная стоимость:</span>
+                            <span className="text-sm font-bold text-primary">
+                              {diagnosisTotalCost.toLocaleString("ru-RU")} ₸
+                            </span>
+                          </div>
+                        )}
+
                         <div className="flex gap-2">
                           <Button
                             variant="outline"
@@ -766,7 +943,7 @@ export function PatientDetailPanel() {
                             disabled={updateToothMutation.isPending || (diagnosisMap.size === 0 && diagnosisNotesMap.size === 0)}
                             onClick={handleFinishDiagnosis}
                           >
-                            {updateToothMutation.isPending ? t("tooth.saving") : t("patient.finishDiagnosis")}
+                            {t("patient.finishDiagnosis")}
                           </Button>
                         </div>
                       </div>
@@ -973,6 +1150,17 @@ export function PatientDetailPanel() {
             setModalToothFdi(null);
             setLocation(`/patients/${patient.id}/teeth/${modalToothFdi}`);
           }}
+        />
+      )}
+
+      {/* Diagnosis summary modal */}
+      {showSummaryModal && patient && (
+        <DiagnosisSummaryModal
+          entries={diagnosisSummaryEntries}
+          patientName={patient.name}
+          onSave={handleSaveDiagnosis}
+          onClose={() => setShowSummaryModal(false)}
+          isSaving={updateToothMutation.isPending}
         />
       )}
     </>

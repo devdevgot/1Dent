@@ -417,6 +417,37 @@ export interface TeethResponse {
   data: TeethResponseData;
 }
 
+export interface ConditionPriceEntry {
+  price: number;
+  mkb10: string;
+}
+
+/**
+ * Map of condition name to price and ICD-10 code
+ */
+export interface ConditionPricesMap {
+  [key: string]: ConditionPriceEntry;
+}
+
+export type ConditionPricesResponseData = {
+  prices: ConditionPricesMap;
+};
+
+export interface ConditionPricesResponse {
+  success: boolean;
+  data: ConditionPricesResponseData;
+}
+
+/**
+ * Map of condition name to price
+ */
+export type UpdateConditionPricesRequestPrices = { [key: string]: number };
+
+export interface UpdateConditionPricesRequest {
+  /** Map of condition name to price */
+  prices: UpdateConditionPricesRequestPrices;
+}
+
 export type ToothTaskType = (typeof ToothTaskType)[keyof typeof ToothTaskType];
 
 export const ToothTaskType = {

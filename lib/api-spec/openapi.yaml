@@ -528,6 +528,52 @@ paths:
 
   # ─── Dental Chart ───────────────────────────────────────────────────────────
 
+  /clinic/condition-prices:
+    get:
+      operationId: getConditionPrices
+      tags: [dental]
+      summary: Get clinic condition prices and ICD-10 codes
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Condition prices map
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConditionPricesResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateConditionPrices
+      tags: [dental]
+      summary: Update clinic condition prices (owner/admin only)
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateConditionPricesRequest"
+      responses:
+        "200":
+          description: Condition prices updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConditionPricesResponse"
+        "403":
+          description: Forbidden - requires owner or admin role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /patients/{id}/teeth:
     get:
       operationId: listTeeth
@@ -2410,6 +2456,51 @@ components:
       required:
         - success
         - data
+
+    ConditionPriceEntry:
+      type: object
+      properties:
+        price:
+          type: number
+        mkb10:
+          type: string
+      required:
+        - price
+        - mkb10
+
+    ConditionPricesMap:
+      type: object
+      additionalProperties:
+        $ref: "#/components/schemas/ConditionPriceEntry"
+      description: Map of condition name to price and ICD-10 code
+
+    ConditionPricesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            prices:
+              $ref: "#/components/schemas/ConditionPricesMap"
+          required:
+            - prices
+      required:
+        - success
+        - data
+
+    UpdateConditionPricesRequest:
+      type: object
+      properties:
+        prices:
+          type: object
+          additionalProperties:
+            type: number
+          description: Map of condition name to price
+      required:
+        - prices
 
     ToothTaskType:
       type: string

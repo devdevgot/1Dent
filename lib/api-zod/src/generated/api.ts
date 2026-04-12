@@ -529,6 +529,48 @@ export const MarkNotificationReadResponse = zod.object({
 });
 
 /**
+ * @summary Get clinic condition prices and ICD-10 codes
+ */
+export const GetConditionPricesResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    prices: zod
+      .record(
+        zod.string(),
+        zod.object({
+          price: zod.number(),
+          mkb10: zod.string(),
+        }),
+      )
+      .describe("Map of condition name to price and ICD-10 code"),
+  }),
+});
+
+/**
+ * @summary Update clinic condition prices (owner/admin only)
+ */
+export const UpdateConditionPricesBody = zod.object({
+  prices: zod
+    .record(zod.string(), zod.number())
+    .describe("Map of condition name to price"),
+});
+
+export const UpdateConditionPricesResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    prices: zod
+      .record(
+        zod.string(),
+        zod.object({
+          price: zod.number(),
+          mkb10: zod.string(),
+        }),
+      )
+      .describe("Map of condition name to price and ICD-10 code"),
+  }),
+});
+
+/**
  * @summary Get all tooth records for a patient
  */
 export const ListTeethParams = zod.object({

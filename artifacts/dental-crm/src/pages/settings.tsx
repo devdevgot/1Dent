@@ -1,11 +1,42 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTheme } from "@/hooks/use-theme";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/hooks/use-auth";
-import { useChangePassword } from "@workspace/api-client-react";
+import {
+  useChangePassword,
+  useGetConditionPrices,
+  useUpdateConditionPrices,
+} from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
-import { User, Shield, Palette, Globe, Eye, EyeOff } from "lucide-react";
+import { User, Shield, Palette, Globe, Eye, EyeOff, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const CONDITION_LABELS: Record<string, string> = {
+  healthy: "Здоров",
+  cavity: "Кариес",
+  treated: "Пролечен",
+  crown: "Коронка",
+  root_canal: "Канал",
+  implant: "Имплант",
+  missing: "Отсутствует",
+  extraction_needed: "Удаление",
+};
+
+const CONDITION_MKB10_STATIC: Record<string, string> = {
+  healthy: "Z01.2",
+  cavity: "K02.1",
+  treated: "Z98.8",
+  crown: "Z96.6",
+  root_canal: "K04.0",
+  implant: "Z96.5",
+  missing: "K08.1",
+  extraction_needed: "K08.1",
+};
+
+const ALL_CONDITIONS = [
+  "healthy", "cavity", "treated", "crown",
+  "root_canal", "implant", "missing", "extraction_needed",
+];
 
 function RoleBadge({ role }: { role: string }) {
   const { t } = useTranslation();
@@ -31,6 +62,95 @@ function Section({ icon, title, children }: { icon: React.ReactNode; title: stri
         <h2 className="font-semibold text-base text-foreground">{title}</h2>
       </div>
       <div className="p-5">{children}</div>
+    </div>
+  );
+}
+
+function ConditionPricesSection() {
+  const { toast } = useToast();
+  const { data: pricesData, isLoading } = useGetConditionPrices();
+  const updateMutation = useUpdateConditionPrices();
+
+  const [localPrices, setLocalPrices] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (pricesData?.data?.prices) {
+      const map: Record<string, string> = {};
+      for (const cond of ALL_CONDITIONS) {
+        const entry = pricesData.data.prices[cond];
+        map[cond] = String(entry?.price ?? 0);
+      }
+      setLocalPrices(map);
+    }
+  }, [pricesData]);
+
+  const handleSave = () => {
+    const prices: Record<string, number> = {};
+    for (const [cond, val] of Object.entries(localPrices)) {
+      const num = parseFloat(val);
+      prices[cond] = isNaN(num) ? 0 : num;
+    }
+    updateMutation.mutate(
+      { data: { prices } },
+      {
+        onSuccess: () => toast({ title: "Цены сохранены" }),
+        onError: () => toast({ title: "Ошибка сохранения", variant: "destructive" }),
+      },
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="w-6 h-6 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-xs text-muted-foreground">
+              <th className="text-left pb-2 font-medium">Состояние</th>
+              <th className="text-left pb-2 font-medium pl-3">МКБ-10</th>
+              <th className="text-right pb-2 font-medium">Цена (₸)</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border/30">
+            {ALL_CONDITIONS.map((cond) => (
+              <tr key={cond}>
+                <td className="py-2 text-sm font-medium text-foreground">
+                  {CONDITION_LABELS[cond] ?? cond}
+                </td>
+                <td className="py-2 pl-3 text-xs text-muted-foreground font-mono">
+                  {CONDITION_MKB10_STATIC[cond]}
+                </td>
+                <td className="py-2 text-right">
+                  <input
+                    type="number"
+                    min={0}
+                    step={500}
+                    value={localPrices[cond] ?? "0"}
+                    onChange={(e) =>
+                      setLocalPrices((prev) => ({ ...prev, [cond]: e.target.value }))
+                    }
+                    className="w-28 h-8 rounded-lg border border-border bg-background px-2 text-sm text-right focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <button
+        onClick={handleSave}
+        disabled={updateMutation.isPending}
+        className="w-full h-10 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-60"
+      >
+        {updateMutation.isPending ? "Сохранение..." : "Сохранить цены"}
+      </button>
     </div>
   );
 }
@@ -220,6 +340,13 @@ export default function SettingsPage() {
           ))}
         </div>
       </Section>
+
+      {/* Condition prices — owner/admin only */}
+      {(user?.role === "owner" || user?.role === "admin") && (
+        <Section icon={<DollarSign className="w-5 h-5" />} title="Цены по состоянию зуба">
+          <ConditionPricesSection />
+        </Section>
+      )}
     </div>
   );
 }

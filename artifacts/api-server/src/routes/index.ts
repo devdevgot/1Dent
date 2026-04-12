@@ -12,6 +12,7 @@ import logsRouter from "../modules/logs/logs.controller";
 import followupsRouter from "../modules/followups/followups.controller";
 import chatbotRouter from "../modules/chatbot/chatbot.controller";
 import migrationRouter from "../modules/migration/migration.controller";
+import clinicPricesRouter from "../modules/clinic/clinic-prices.controller";
 import { actionLogMiddleware } from "../middlewares/action-log.middleware";
 import { authRateLimit } from "../middlewares/rate-limit.middleware";
 import { authMiddleware, roleGuard } from "../middlewares/auth.middleware";
@@ -31,6 +32,7 @@ router.use(actionLogMiddleware);
 router.use("/users", usersRouter);
 router.use("/patients", patientsRouter);
 router.use("/patients/:id/teeth", dentalRouter);
+router.use("/clinic/condition-prices", clinicPricesRouter);
 
 const dentalReadRoles = roleGuard("owner", "admin", "doctor");
 

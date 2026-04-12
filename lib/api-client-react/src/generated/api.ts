@@ -24,6 +24,7 @@ import type {
   AuthResponse,
   ChangePasswordRequest,
   ChatbotSettingsUpdate,
+  ConditionPricesResponse,
   CreateFollowupsRequest,
   CreateInventoryItemRequest,
   CreatePatientRequest,
@@ -81,6 +82,7 @@ import type {
   TrelloImportRequest,
   UnreadCountResponse,
   UpdateChatbotSettings200,
+  UpdateConditionPricesRequest,
   UpdateInventoryItemRequest,
   UpdatePatientRequest,
   UpdatePatientStatusRequest,
@@ -1989,6 +1991,168 @@ export const useMarkNotificationRead = <
   TContext
 > => {
   return useMutation(getMarkNotificationReadMutationOptions(options));
+};
+
+/**
+ * @summary Get clinic condition prices and ICD-10 codes
+ */
+export const getGetConditionPricesUrl = () => {
+  return `/api/clinic/condition-prices`;
+};
+
+export const getConditionPrices = async (
+  options?: RequestInit,
+): Promise<ConditionPricesResponse> => {
+  return customFetch<ConditionPricesResponse>(getGetConditionPricesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetConditionPricesQueryKey = () => {
+  return [`/api/clinic/condition-prices`] as const;
+};
+
+export const getGetConditionPricesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getConditionPrices>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getConditionPrices>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetConditionPricesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getConditionPrices>>
+  > = ({ signal }) => getConditionPrices({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getConditionPrices>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetConditionPricesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getConditionPrices>>
+>;
+export type GetConditionPricesQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get clinic condition prices and ICD-10 codes
+ */
+
+export function useGetConditionPrices<
+  TData = Awaited<ReturnType<typeof getConditionPrices>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getConditionPrices>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetConditionPricesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update clinic condition prices (owner/admin only)
+ */
+export const getUpdateConditionPricesUrl = () => {
+  return `/api/clinic/condition-prices`;
+};
+
+export const updateConditionPrices = async (
+  updateConditionPricesRequest: UpdateConditionPricesRequest,
+  options?: RequestInit,
+): Promise<ConditionPricesResponse> => {
+  return customFetch<ConditionPricesResponse>(getUpdateConditionPricesUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateConditionPricesRequest),
+  });
+};
+
+export const getUpdateConditionPricesMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateConditionPrices>>,
+    TError,
+    { data: BodyType<UpdateConditionPricesRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateConditionPrices>>,
+  TError,
+  { data: BodyType<UpdateConditionPricesRequest> },
+  TContext
+> => {
+  const mutationKey = ["updateConditionPrices"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateConditionPrices>>,
+    { data: BodyType<UpdateConditionPricesRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateConditionPrices(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateConditionPricesMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateConditionPrices>>
+>;
+export type UpdateConditionPricesMutationBody =
+  BodyType<UpdateConditionPricesRequest>;
+export type UpdateConditionPricesMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Update clinic condition prices (owner/admin only)
+ */
+export const useUpdateConditionPrices = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateConditionPrices>>,
+    TError,
+    { data: BodyType<UpdateConditionPricesRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateConditionPrices>>,
+  TError,
+  { data: BodyType<UpdateConditionPricesRequest> },
+  TContext
+> => {
+  return useMutation(getUpdateConditionPricesMutationOptions(options));
 };
 
 /**
