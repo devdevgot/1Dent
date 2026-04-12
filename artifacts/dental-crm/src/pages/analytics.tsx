@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { TrendingUp, Users, DollarSign, Zap, AlertCircle, CheckCircle } from "lucide-react";
-import { useGetAnalytics } from "@workspace/api-client-react";
+import { TrendingUp, Users, DollarSign, Zap, AlertCircle, CheckCircle, Radio } from "lucide-react";
+import { useGetAnalytics, useGetChannelStats, getGetChannelStatsQueryKey, type ChannelStat } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 
 const COLORS = ["#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#06b6d4", "#6366f1"];
@@ -16,11 +17,39 @@ const PATIENT_STATUS_LABELS: Record<string, string> = {
   completed: "Завершено",
 };
 
+type Period = "week" | "month" | "quarter";
+
+function getPeriodDates(period: Period): { dateFrom: string; dateTo: string } {
+  const now = new Date();
+  const dateTo = now.toISOString().split("T")[0]!;
+  const from = new Date(now);
+  if (period === "week") from.setDate(from.getDate() - 7);
+  else if (period === "month") from.setMonth(from.getMonth() - 1);
+  else from.setMonth(from.getMonth() - 3);
+  return { dateFrom: from.toISOString().split("T")[0]!, dateTo };
+}
+
 export default function AnalyticsPage() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const { data: analyticsRes } = useGetAnalytics();
   const analytics = analyticsRes?.data?.analytics as any;
+
+  const [channelPeriod, setChannelPeriod] = useState<Period>("month");
+  const periodDates = getPeriodDates(channelPeriod);
+
+  const isOwnerOrAdmin = user?.role === "owner" || user?.role === "admin";
+
+  const { data: channelStatsRes } = useGetChannelStats(
+    { dateFrom: periodDates.dateFrom, dateTo: periodDates.dateTo },
+    {
+      query: {
+        queryKey: getGetChannelStatsQueryKey({ dateFrom: periodDates.dateFrom, dateTo: periodDates.dateTo }),
+        enabled: isOwnerOrAdmin,
+      },
+    }
+  );
+  const channelStats: ChannelStat[] = channelStatsRes?.data?.stats ?? [];
 
   const statusData = analytics && "patientsByStatus" in analytics && analytics.patientsByStatus
     ? Object.entries(analytics.patientsByStatus).map(([status, count]: [string, unknown]) => ({
@@ -244,6 +273,102 @@ export default function AnalyticsPage() {
                   </tbody>
                 </table>
               </div>
+            </div>
+          )}
+
+          {/* Channel Analytics — owner/admin only */}
+          {isOwnerOrAdmin && (
+            <div className="bg-white rounded-xl border border-border/50 p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Radio className="h-4 w-4 text-primary" />
+                  <h3 className="text-sm font-semibold text-foreground">{t("channelAnalytics.title")}</h3>
+                </div>
+                <div className="flex items-center gap-1">
+                  {(["week", "month", "quarter"] as Period[]).map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setChannelPeriod(p)}
+                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                        channelPeriod === p
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {t(`channelAnalytics.${p}`)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {channelStats.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">{t("channelAnalytics.noData")}</p>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Pie chart */}
+                  <div>
+                    <ResponsiveContainer width="100%" height={240}>
+                      <PieChart>
+                        <Pie
+                          data={channelStats.map((s) => ({ name: s.channelName, value: s.patientCount }))}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={50}
+                          outerRadius={90}
+                          paddingAngle={2}
+                          dataKey="value"
+                        >
+                          {channelStats.map((_, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="mt-2 space-y-1">
+                      {channelStats.map((s, i) => (
+                        <div key={s.channelId} className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                          <span className="text-xs text-muted-foreground truncate">{s.channelName}</span>
+                          <span className="text-xs font-semibold text-foreground ml-auto">{s.patientCount}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-border/30">
+                          <th className="text-left text-xs font-semibold text-muted-foreground py-2 px-3">{t("channelAnalytics.channel")}</th>
+                          <th className="text-right text-xs font-semibold text-muted-foreground py-2 px-3">{t("channelAnalytics.patients")}</th>
+                          <th className="text-right text-xs font-semibold text-muted-foreground py-2 px-3">{t("channelAnalytics.conversion")}</th>
+                          <th className="text-right text-xs font-semibold text-muted-foreground py-2 px-3">{t("channelAnalytics.revenue")}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {channelStats.map((s) => (
+                          <tr key={s.channelId} className="border-b border-border/30 hover:bg-muted/50 transition-colors">
+                            <td className="text-xs text-foreground py-2 px-3 font-medium">{s.channelName}</td>
+                            <td className="text-xs text-foreground py-2 px-3 text-right">{s.patientCount}</td>
+                            <td className="text-xs py-2 px-3 text-right">
+                              <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                                s.conversionRate >= 50 ? "bg-emerald-100 text-emerald-700" :
+                                s.conversionRate >= 25 ? "bg-amber-100 text-amber-700" :
+                                "bg-red-100 text-red-700"
+                              }`}>
+                                {s.conversionRate}%
+                              </span>
+                            </td>
+                            <td className="text-xs text-foreground py-2 px-3 text-right">₸{s.totalRevenue.toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -12,14 +12,16 @@ export const patientStatusEnum = pgEnum("patient_status", [
   "completed",
 ]);
 
-export const patientSourceEnum = pgEnum("patient_source", [
+export const defaultPatientSources = [
   "instagram",
   "referral",
   "walk_in",
   "website",
   "whatsapp",
   "other",
-]);
+] as const;
+
+export type DefaultPatientSource = (typeof defaultPatientSources)[number];
 
 export const interactionTypeEnum = pgEnum("interaction_type", [
   "note",
@@ -48,7 +50,7 @@ export const patientsTable = pgTable("patients", {
   iin: varchar("iin", { length: 12 }),
   dateOfBirth: date("date_of_birth"),
   gender: patientGenderEnum("gender"),
-  source: patientSourceEnum("source").default("other").notNull(),
+  source: text("source").default("other").notNull(),
   status: patientStatusEnum("status").default("new_request").notNull(),
   notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true })
@@ -80,7 +82,7 @@ export const patientInteractionsTable = pgTable("patient_interactions", {
 export type Patient = typeof patientsTable.$inferSelect;
 export type InsertPatient = typeof patientsTable.$inferInsert;
 export type PatientStatus = (typeof patientStatusEnum.enumValues)[number];
-export type PatientSource = (typeof patientSourceEnum.enumValues)[number];
+export type PatientSource = string;
 export type PatientGender = (typeof patientGenderEnum.enumValues)[number];
 export type PatientInteraction = typeof patientInteractionsTable.$inferSelect;
 export type InsertPatientInteraction =

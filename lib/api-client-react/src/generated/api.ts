@@ -23,8 +23,12 @@ import type {
   AnalyticsResponse,
   AuthResponse,
   ChangePasswordRequest,
+  ChannelResponse,
+  ChannelStatsResponse,
+  ChannelsListResponse,
   ChatbotSettingsUpdate,
   ConditionPricesResponse,
+  CreateChannelRequest,
   CreateFollowupsRequest,
   CreateInventoryItemRequest,
   CreatePatientRequest,
@@ -42,6 +46,7 @@ import type {
   FollowupResponse,
   FollowupsResponse,
   GetActionLogsParams,
+  GetChannelStatsParams,
   GetChatbotSettings200,
   GetDoctorDetailedAnalyticsMeParams,
   GetDoctorDetailedAnalyticsParams,
@@ -83,6 +88,7 @@ import type {
   UnreadCountResponse,
   UpdateChatbotSettings200,
   UpdateConditionPricesRequest,
+  UpdateClinicWhatsappPhoneBody,
   UpdateInventoryItemRequest,
   UpdatePatientRequest,
   UpdatePatientStatusRequest,
@@ -5971,3 +5977,429 @@ export function useGetMigrationJobStatus<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary List channels for the clinic
+ */
+export const getListChannelsUrl = () => {
+  return `/api/channels`;
+};
+
+export const listChannels = async (
+  options?: RequestInit,
+): Promise<ChannelsListResponse> => {
+  return customFetch<ChannelsListResponse>(getListChannelsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListChannelsQueryKey = () => {
+  return [`/api/channels`] as const;
+};
+
+export const getListChannelsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listChannels>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listChannels>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListChannelsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listChannels>>> = ({
+    signal,
+  }) => listChannels({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listChannels>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListChannelsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listChannels>>
+>;
+export type ListChannelsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List channels for the clinic
+ */
+
+export function useListChannels<
+  TData = Awaited<ReturnType<typeof listChannels>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listChannels>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListChannelsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a new channel
+ */
+export const getCreateChannelUrl = () => {
+  return `/api/channels`;
+};
+
+export const createChannel = async (
+  createChannelRequest: CreateChannelRequest,
+  options?: RequestInit,
+): Promise<ChannelResponse> => {
+  return customFetch<ChannelResponse>(getCreateChannelUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createChannelRequest),
+  });
+};
+
+export const getCreateChannelMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createChannel>>,
+    TError,
+    { data: BodyType<CreateChannelRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createChannel>>,
+  TError,
+  { data: BodyType<CreateChannelRequest> },
+  TContext
+> => {
+  const mutationKey = ["createChannel"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createChannel>>,
+    { data: BodyType<CreateChannelRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createChannel(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateChannelMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createChannel>>
+>;
+export type CreateChannelMutationBody = BodyType<CreateChannelRequest>;
+export type CreateChannelMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a new channel
+ */
+export const useCreateChannel = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createChannel>>,
+    TError,
+    { data: BodyType<CreateChannelRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createChannel>>,
+  TError,
+  { data: BodyType<CreateChannelRequest> },
+  TContext
+> => {
+  return useMutation(getCreateChannelMutationOptions(options));
+};
+
+/**
+ * @summary Get analytics stats per channel
+ */
+export const getGetChannelStatsUrl = (params?: GetChannelStatsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/channels/stats?${stringifiedParams}`
+    : `/api/channels/stats`;
+};
+
+export const getChannelStats = async (
+  params?: GetChannelStatsParams,
+  options?: RequestInit,
+): Promise<ChannelStatsResponse> => {
+  return customFetch<ChannelStatsResponse>(getGetChannelStatsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetChannelStatsQueryKey = (params?: GetChannelStatsParams) => {
+  return [`/api/channels/stats`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetChannelStatsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getChannelStats>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetChannelStatsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getChannelStats>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetChannelStatsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getChannelStats>>> = ({
+    signal,
+  }) => getChannelStats(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getChannelStats>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetChannelStatsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getChannelStats>>
+>;
+export type GetChannelStatsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get analytics stats per channel
+ */
+
+export function useGetChannelStats<
+  TData = Awaited<ReturnType<typeof getChannelStats>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetChannelStatsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getChannelStats>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetChannelStatsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Delete a channel
+ */
+export const getDeleteChannelUrl = (id: string) => {
+  return `/api/channels/${id}`;
+};
+
+export const deleteChannel = async (
+  id: string,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getDeleteChannelUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteChannelMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteChannel>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteChannel>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["deleteChannel"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteChannel>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteChannel(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteChannelMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteChannel>>
+>;
+
+export type DeleteChannelMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a channel
+ */
+export const useDeleteChannel = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteChannel>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteChannel>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getDeleteChannelMutationOptions(options));
+};
+
+/**
+ * @summary Update clinic WhatsApp phone number (owner only)
+ */
+export const getUpdateClinicWhatsappPhoneUrl = () => {
+  return `/api/clinic/whatsapp-phone`;
+};
+
+export const updateClinicWhatsappPhone = async (
+  updateClinicWhatsappPhoneBody: UpdateClinicWhatsappPhoneBody,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getUpdateClinicWhatsappPhoneUrl(), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateClinicWhatsappPhoneBody),
+  });
+};
+
+export const getUpdateClinicWhatsappPhoneMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateClinicWhatsappPhone>>,
+    TError,
+    { data: BodyType<UpdateClinicWhatsappPhoneBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateClinicWhatsappPhone>>,
+  TError,
+  { data: BodyType<UpdateClinicWhatsappPhoneBody> },
+  TContext
+> => {
+  const mutationKey = ["updateClinicWhatsappPhone"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateClinicWhatsappPhone>>,
+    { data: BodyType<UpdateClinicWhatsappPhoneBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateClinicWhatsappPhone(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateClinicWhatsappPhoneMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateClinicWhatsappPhone>>
+>;
+export type UpdateClinicWhatsappPhoneMutationBody =
+  BodyType<UpdateClinicWhatsappPhoneBody>;
+export type UpdateClinicWhatsappPhoneMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update clinic WhatsApp phone number (owner only)
+ */
+export const useUpdateClinicWhatsappPhone = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateClinicWhatsappPhone>>,
+    TError,
+    { data: BodyType<UpdateClinicWhatsappPhoneBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateClinicWhatsappPhone>>,
+  TError,
+  { data: BodyType<UpdateClinicWhatsappPhoneBody> },
+  TContext
+> => {
+  return useMutation(getUpdateClinicWhatsappPhoneMutationOptions(options));
+};

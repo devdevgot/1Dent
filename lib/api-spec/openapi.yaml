@@ -22,6 +22,8 @@ tags:
     description: Procedure management
   - name: analytics
     description: Analytics and KPI
+  - name: channels
+    description: Channel tracking and UTM analytics
 
 paths:
   /healthz:
@@ -1700,6 +1702,113 @@ paths:
         "404":
           description: Job not found
 
+  /channels:
+    get:
+      operationId: listChannels
+      tags: [channels]
+      summary: List channels for the clinic
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Channels list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChannelsListResponse"
+    post:
+      operationId: createChannel
+      tags: [channels]
+      summary: Create a new channel
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateChannelRequest"
+      responses:
+        "201":
+          description: Channel created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChannelResponse"
+
+  /channels/stats:
+    get:
+      operationId: getChannelStats
+      tags: [channels]
+      summary: Get analytics stats per channel
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Channel stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChannelStatsResponse"
+
+  /channels/{id}:
+    delete:
+      operationId: deleteChannel
+      tags: [channels]
+      summary: Delete a channel
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Channel deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /clinic/whatsapp-phone:
+    patch:
+      operationId: updateClinicWhatsappPhone
+      tags: [channels]
+      summary: Update clinic WhatsApp phone number (owner only)
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                whatsappPhone:
+                  type: string
+              required:
+                - whatsappPhone
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
 components:
   securitySchemes:
     cookieAuth:
@@ -1778,6 +1887,127 @@ components:
           type: string
       required:
         - success
+
+    ClinicChannel:
+      type: object
+      properties:
+        id:
+          type: string
+        clinicId:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [instagram, telegram, 2gis, website, whatsapp, referral, other]
+        refCode:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - clinicId
+        - name
+        - type
+        - refCode
+        - createdAt
+
+    CreateChannelRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [instagram, telegram, 2gis, website, whatsapp, referral, other]
+      required:
+        - name
+        - type
+
+    ChannelsListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            channels:
+              type: array
+              items:
+                $ref: "#/components/schemas/ClinicChannel"
+          required:
+            - channels
+      required:
+        - success
+        - data
+
+    ChannelResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            channel:
+              $ref: "#/components/schemas/ClinicChannel"
+          required:
+            - channel
+      required:
+        - success
+        - data
+
+    ChannelStat:
+      type: object
+      properties:
+        channelId:
+          type: string
+        channelName:
+          type: string
+        channelType:
+          type: string
+        refCode:
+          type: string
+        patientCount:
+          type: integer
+        consultationCount:
+          type: integer
+        conversionRate:
+          type: number
+        totalRevenue:
+          type: number
+      required:
+        - channelId
+        - channelName
+        - channelType
+        - refCode
+        - patientCount
+        - consultationCount
+        - conversionRate
+        - totalRevenue
+
+    ChannelStatsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            stats:
+              type: array
+              items:
+                $ref: "#/components/schemas/ChannelStat"
+          required:
+            - stats
+      required:
+        - success
+        - data
 
     UserRole:
       type: string
@@ -1985,13 +2215,7 @@ components:
 
     PatientSource:
       type: string
-      enum:
-        - instagram
-        - referral
-        - walk_in
-        - website
-        - whatsapp
-        - other
+      description: Patient acquisition source. Can be a standard value (instagram, referral, walk_in, website, whatsapp, other) or a custom channel ref code (e.g. ref:abc12345) or a channel ID.
 
     InteractionType:
       type: string

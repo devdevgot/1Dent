@@ -13,6 +13,8 @@ import followupsRouter from "../modules/followups/followups.controller";
 import chatbotRouter from "../modules/chatbot/chatbot.controller";
 import migrationRouter from "../modules/migration/migration.controller";
 import clinicPricesRouter from "../modules/clinic/clinic-prices.controller";
+import channelsRouter from "../modules/channels/channels.controller";
+import refRouter from "./ref";
 import { actionLogMiddleware } from "../middlewares/action-log.middleware";
 import { authRateLimit } from "../middlewares/rate-limit.middleware";
 import { authMiddleware, roleGuard } from "../middlewares/auth.middleware";
@@ -57,6 +59,7 @@ router.use("/logs", logsRouter);
 router.use("/followups", followupsRouter);
 router.use("/chatbot", chatbotRouter);
 router.use("/migration", migrationRouter);
+router.use("/", channelsRouter);
 router.use("/", analyticsRouter);
 router.use(messagesRouter);
 

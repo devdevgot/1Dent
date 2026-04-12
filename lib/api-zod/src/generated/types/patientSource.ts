@@ -6,13 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type PatientSource = (typeof PatientSource)[keyof typeof PatientSource];
-
-export const PatientSource = {
-  instagram: "instagram",
-  referral: "referral",
-  walk_in: "walk_in",
-  website: "website",
-  whatsapp: "whatsapp",
-  other: "other",
-} as const;
+/**
+ * Patient acquisition source. Can be a standard value (instagram, referral, walk_in, website, whatsapp, other) or a custom channel ref code (e.g. ref:abc12345) or a channel ID.
+ */
+export type PatientSource = string;

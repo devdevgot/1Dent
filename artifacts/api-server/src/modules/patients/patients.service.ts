@@ -70,7 +70,7 @@ export class PatientsService {
       iin?: string;
       dateOfBirth?: string;
       gender?: PatientGender;
-      source?: PatientSource;
+      source?: string;
       doctorId?: string;
       notes?: string;
     },
@@ -126,7 +126,7 @@ export class PatientsService {
       iin: string;
       dateOfBirth: string;
       gender: PatientGender;
-      source: PatientSource;
+      source: string;
       doctorId: string;
       notes: string;
     }>,

@@ -13,6 +13,7 @@ import { sendWhatsAppMessage, isRedAlert } from "../../shared/whatsapp";
 import { getAlertQueue } from "../../shared/alert-queue";
 import { logger } from "../../lib/logger";
 import { AnalyticsRepository } from "../analytics/analytics.repository";
+import { ChannelsRepository } from "../channels/channels.repository";
 import type { ChatbotState, ChatbotSessionData } from "./chatbot.types";
 
 const WHATSAPP_ENABLED = !!(
@@ -147,6 +148,12 @@ async function deleteRedisSession(clinicId: string, phone: string): Promise<void
 // ─── Analytics-based doctor routing ─────────────────────────────────────────
 
 const analyticsRepo = new AnalyticsRepository();
+const channelsRepo = new ChannelsRepository();
+
+function extractRefCode(text: string): string | null {
+  const match = text.match(/ref:([a-f0-9]{8})/i);
+  return match ? match[1]!.toLowerCase() : null;
+}
 
 async function pickBestDoctorViaKpi(
   clinicId: string,
@@ -240,11 +247,12 @@ async function createPatient(
   phone: string,
   name: string,
   doctorId: string,
+  source?: string,
 ) {
   const id = randomUUID();
   const [patient] = await db
     .insert(patientsTable)
-    .values({ id, clinicId, name, phone, source: "whatsapp", status: "new_request", doctorId })
+    .values({ id, clinicId, name, phone, source: source ?? "whatsapp", status: "new_request", doctorId })
     .returning();
   return patient!;
 }
@@ -285,6 +293,20 @@ export class ChatbotService {
 
     const state = session.state;
     const data = { ...session.data };
+
+    // Parse ref code from any incoming message and persist in session
+    const refCode = extractRefCode(text);
+    if (refCode && !data.refCode) {
+      try {
+        const channel = await channelsRepo.findByRefCode(refCode);
+        if (channel && channel.clinicId === clinicId) {
+          data.refCode = refCode;
+          data.channelId = channel.id;
+        }
+      } catch (err) {
+        logger.warn({ err }, "ChatbotService: failed to resolve ref code");
+      }
+    }
 
     if (isOperatorRequest(text)) {
       session.state = "human_takeover";
@@ -371,7 +393,8 @@ export class ChatbotService {
           data.confusedCount = 0;
           if (data.suggestedDoctorId && data.patientName) {
             try {
-              const patient = await createPatient(clinicId, phone, data.patientName, data.suggestedDoctorId);
+              const patientSource = data.refCode ? `ref:${data.refCode}` : "whatsapp";
+              const patient = await createPatient(clinicId, phone, data.patientName, data.suggestedDoctorId, patientSource);
               data.createdPatientId = patient.id;
               session.data = data;
               // Post-op BullMQ followup jobs (24h/72h/168h) are scheduled automatically

@@ -14,4 +14,6 @@ export interface ChatbotSessionData {
   suggestedDoctorName?: string;
   createdPatientId?: string;
   confusedCount?: number;
+  refCode?: string;
+  channelId?: string;
 }

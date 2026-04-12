@@ -2,8 +2,10 @@ import { useState } from "react";
 import {
   useCreatePatient,
   useListUsers,
+  useListChannels,
   getListPatientsQueryKey,
   getListUsersQueryKey,
+  getListChannelsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
@@ -42,6 +44,14 @@ export function CreatePatientDialog({ onClose }: CreatePatientDialogProps) {
     },
   });
   const doctors = usersData?.data?.users?.filter((u) => u.role === "doctor") ?? [];
+
+  const { data: channelsData } = useListChannels({
+    query: {
+      queryKey: getListChannelsQueryKey(),
+      enabled: user?.role === "owner" || user?.role === "admin",
+    },
+  });
+  const channels = channelsData?.data?.channels ?? [];
 
   const mutation = useCreatePatient({
     mutation: {
@@ -213,6 +223,13 @@ export function CreatePatientDialog({ onClose }: CreatePatientDialogProps) {
               {SOURCE_KEYS.map((s) => (
                 <option key={s} value={s}>{t(`source.${s}`)}</option>
               ))}
+              {channels.length > 0 && (
+                <optgroup label={t("channels.sectionTitle")}>
+                  {channels.map((c) => (
+                    <option key={c.id} value={`ref:${c.refCode}`}>{c.name}</option>
+                  ))}
+                </optgroup>
+              )}
             </select>
           </div>
 

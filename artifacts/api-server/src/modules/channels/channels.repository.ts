@@ -1,0 +1,121 @@
+import { randomBytes, randomUUID } from "crypto";
+import { db, clinicChannelsTable, patientsTable, proceduresTable } from "@workspace/db";
+import { eq, and, gte, lte } from "drizzle-orm";
+
+function generateRefCode(): string {
+  return randomBytes(4).toString("hex");
+}
+
+export interface ChannelStat {
+  channelId: string;
+  channelName: string;
+  channelType: string;
+  refCode: string;
+  patientCount: number;
+  consultationCount: number;
+  conversionRate: number;
+  totalRevenue: number;
+}
+
+export class ChannelsRepository {
+  async list(clinicId: string) {
+    return db
+      .select()
+      .from(clinicChannelsTable)
+      .where(eq(clinicChannelsTable.clinicId, clinicId))
+      .orderBy(clinicChannelsTable.createdAt);
+  }
+
+  async findByRefCode(refCode: string) {
+    const [row] = await db
+      .select()
+      .from(clinicChannelsTable)
+      .where(eq(clinicChannelsTable.refCode, refCode))
+      .limit(1);
+    return row ?? null;
+  }
+
+  async create(clinicId: string, name: string, type: string) {
+    const id = randomUUID();
+    const refCode = generateRefCode();
+    const [channel] = await db
+      .insert(clinicChannelsTable)
+      .values({ id, clinicId, name, type: type as any, refCode })
+      .returning();
+    return channel!;
+  }
+
+  async delete(id: string, clinicId: string): Promise<boolean> {
+    const result = await db
+      .delete(clinicChannelsTable)
+      .where(and(eq(clinicChannelsTable.id, id), eq(clinicChannelsTable.clinicId, clinicId)));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async getChannelStats(clinicId: string, dateFrom?: Date, dateTo?: Date): Promise<ChannelStat[]> {
+    const channels = await this.list(clinicId);
+    if (channels.length === 0) return [];
+
+    const patientConditions = [eq(patientsTable.clinicId, clinicId)];
+    if (dateFrom) patientConditions.push(gte(patientsTable.createdAt, dateFrom));
+    if (dateTo) patientConditions.push(lte(patientsTable.createdAt, dateTo));
+
+    const allPatients = await db
+      .select({
+        id: patientsTable.id,
+        source: patientsTable.source,
+        status: patientsTable.status,
+      })
+      .from(patientsTable)
+      .where(and(...patientConditions));
+
+    const completedProcs = await db
+      .select({
+        patientId: proceduresTable.patientId,
+        price: proceduresTable.price,
+      })
+      .from(proceduresTable)
+      .where(
+        and(
+          eq(proceduresTable.clinicId, clinicId),
+          eq(proceduresTable.status, "completed"),
+        ),
+      );
+
+    const procByPatient = new Map<string, number>();
+    for (const proc of completedProcs) {
+      procByPatient.set(
+        proc.patientId,
+        (procByPatient.get(proc.patientId) ?? 0) + (proc.price ?? 0),
+      );
+    }
+
+    return channels.map((ch) => {
+      const tag = `ref:${ch.refCode}`;
+      const channelPatients = allPatients.filter(
+        (p) => p.source === tag || p.source === ch.id,
+      );
+      const consultationCount = channelPatients.filter(
+        (p) => p.status !== "new_request",
+      ).length;
+      const totalRevenue = channelPatients.reduce(
+        (acc, p) => acc + (procByPatient.get(p.id) ?? 0),
+        0,
+      );
+      const patientCount = channelPatients.length;
+      const conversionRate =
+        patientCount > 0 ? Math.round((consultationCount / patientCount) * 100) : 0;
+
+      return {
+        channelId: ch.id,
+        channelName: ch.name,
+        channelType: ch.type,
+        refCode: ch.refCode,
+        patientCount,
+        consultationCount,
+        conversionRate,
+        totalRevenue,
+      };
+    });
+  }
+}

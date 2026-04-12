@@ -191,14 +191,11 @@ export const ListPatientsResponse = zod.object({
         name: zod.string(),
         phone: zod.string(),
         age: zod.number().nullish(),
-        source: zod.enum([
-          "instagram",
-          "referral",
-          "walk_in",
-          "website",
-          "whatsapp",
-          "other",
-        ]),
+        source: zod
+          .string()
+          .describe(
+            "Patient acquisition source. Can be a standard value (instagram, referral, walk_in, website, whatsapp, other) or a custom channel ref code (e.g. ref:abc12345) or a channel ID.",
+          ),
         status: zod.enum([
           "new_request",
           "initial_consultation",
@@ -228,8 +225,11 @@ export const CreatePatientBody = zod.object({
   phone: zod.string().min(createPatientBodyPhoneMin),
   age: zod.number().optional(),
   source: zod
-    .enum(["instagram", "referral", "walk_in", "website", "whatsapp", "other"])
-    .optional(),
+    .string()
+    .optional()
+    .describe(
+      "Patient acquisition source. Can be a standard value (instagram, referral, walk_in, website, whatsapp, other) or a custom channel ref code (e.g. ref:abc12345) or a channel ID.",
+    ),
   doctorId: zod.string().optional(),
   notes: zod.string().optional(),
 });
@@ -251,14 +251,11 @@ export const GetPatientResponse = zod.object({
       name: zod.string(),
       phone: zod.string(),
       age: zod.number().nullish(),
-      source: zod.enum([
-        "instagram",
-        "referral",
-        "walk_in",
-        "website",
-        "whatsapp",
-        "other",
-      ]),
+      source: zod
+        .string()
+        .describe(
+          "Patient acquisition source. Can be a standard value (instagram, referral, walk_in, website, whatsapp, other) or a custom channel ref code (e.g. ref:abc12345) or a channel ID.",
+        ),
       status: zod.enum([
         "new_request",
         "initial_consultation",
@@ -308,8 +305,11 @@ export const UpdatePatientBody = zod.object({
   phone: zod.string().min(updatePatientBodyPhoneMin).optional(),
   age: zod.number().optional(),
   source: zod
-    .enum(["instagram", "referral", "walk_in", "website", "whatsapp", "other"])
-    .optional(),
+    .string()
+    .optional()
+    .describe(
+      "Patient acquisition source. Can be a standard value (instagram, referral, walk_in, website, whatsapp, other) or a custom channel ref code (e.g. ref:abc12345) or a channel ID.",
+    ),
   doctorId: zod.string().optional(),
   notes: zod.string().optional(),
 });
@@ -324,14 +324,11 @@ export const UpdatePatientResponse = zod.object({
       name: zod.string(),
       phone: zod.string(),
       age: zod.number().nullish(),
-      source: zod.enum([
-        "instagram",
-        "referral",
-        "walk_in",
-        "website",
-        "whatsapp",
-        "other",
-      ]),
+      source: zod
+        .string()
+        .describe(
+          "Patient acquisition source. Can be a standard value (instagram, referral, walk_in, website, whatsapp, other) or a custom channel ref code (e.g. ref:abc12345) or a channel ID.",
+        ),
       status: zod.enum([
         "new_request",
         "initial_consultation",
@@ -389,14 +386,11 @@ export const UpdatePatientStatusResponse = zod.object({
       name: zod.string(),
       phone: zod.string(),
       age: zod.number().nullish(),
-      source: zod.enum([
-        "instagram",
-        "referral",
-        "walk_in",
-        "website",
-        "whatsapp",
-        "other",
-      ]),
+      source: zod
+        .string()
+        .describe(
+          "Patient acquisition source. Can be a standard value (instagram, referral, walk_in, website, whatsapp, other) or a custom channel ref code (e.g. ref:abc12345) or a channel ID.",
+        ),
       status: zod.enum([
         "new_request",
         "initial_consultation",
@@ -1795,4 +1789,97 @@ export const GetMigrationJobStatusResponse = zod.object({
       updatedAt: zod.string(),
     }),
   }),
+});
+
+/**
+ * @summary List channels for the clinic
+ */
+export const ListChannelsResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    channels: zod.array(
+      zod.object({
+        id: zod.string(),
+        clinicId: zod.string(),
+        name: zod.string(),
+        type: zod.enum([
+          "instagram",
+          "telegram",
+          "2gis",
+          "website",
+          "whatsapp",
+          "referral",
+          "other",
+        ]),
+        refCode: zod.string(),
+        createdAt: zod.date(),
+      }),
+    ),
+  }),
+});
+
+/**
+ * @summary Create a new channel
+ */
+export const CreateChannelBody = zod.object({
+  name: zod.string(),
+  type: zod.enum([
+    "instagram",
+    "telegram",
+    "2gis",
+    "website",
+    "whatsapp",
+    "referral",
+    "other",
+  ]),
+});
+
+/**
+ * @summary Get analytics stats per channel
+ */
+export const GetChannelStatsQueryParams = zod.object({
+  dateFrom: zod.date().optional(),
+  dateTo: zod.date().optional(),
+});
+
+export const GetChannelStatsResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    stats: zod.array(
+      zod.object({
+        channelId: zod.string(),
+        channelName: zod.string(),
+        channelType: zod.string(),
+        refCode: zod.string(),
+        patientCount: zod.number(),
+        consultationCount: zod.number(),
+        conversionRate: zod.number(),
+        totalRevenue: zod.number(),
+      }),
+    ),
+  }),
+});
+
+/**
+ * @summary Delete a channel
+ */
+export const DeleteChannelParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const DeleteChannelResponse = zod.object({
+  success: zod.literal(true),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Update clinic WhatsApp phone number (owner only)
+ */
+export const UpdateClinicWhatsappPhoneBody = zod.object({
+  whatsappPhone: zod.string(),
+});
+
+export const UpdateClinicWhatsappPhoneResponse = zod.object({
+  success: zod.literal(true),
+  message: zod.string().optional(),
 });

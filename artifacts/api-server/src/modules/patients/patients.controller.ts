@@ -57,7 +57,7 @@ const createPatientSchema = z.object({
   iin: iinSchema,
   dateOfBirth: z.string().optional(),
   gender: z.enum(["male", "female", "other"]).optional(),
-  source: z.enum(patientSourceValues).optional(),
+  source: z.string().optional(),
   doctorId: z.string().optional(),
   notes: z.string().optional(),
 });
@@ -68,7 +68,7 @@ const updatePatientSchema = z.object({
   iin: iinSchema,
   dateOfBirth: z.string().optional(),
   gender: z.enum(["male", "female", "other"]).optional(),
-  source: z.enum(patientSourceValues).optional(),
+  source: z.string().optional(),
   doctorId: z.string().optional(),
   notes: z.string().optional(),
 });

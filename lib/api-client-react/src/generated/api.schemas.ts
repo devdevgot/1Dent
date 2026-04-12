@@ -55,6 +55,84 @@ export interface SuccessResponse {
   message?: string;
 }
 
+export type ClinicChannelType =
+  (typeof ClinicChannelType)[keyof typeof ClinicChannelType];
+
+export const ClinicChannelType = {
+  instagram: "instagram",
+  telegram: "telegram",
+  "2gis": "2gis",
+  website: "website",
+  whatsapp: "whatsapp",
+  referral: "referral",
+  other: "other",
+} as const;
+
+export interface ClinicChannel {
+  id: string;
+  clinicId: string;
+  name: string;
+  type: ClinicChannelType;
+  refCode: string;
+  createdAt: string;
+}
+
+export type CreateChannelRequestType =
+  (typeof CreateChannelRequestType)[keyof typeof CreateChannelRequestType];
+
+export const CreateChannelRequestType = {
+  instagram: "instagram",
+  telegram: "telegram",
+  "2gis": "2gis",
+  website: "website",
+  whatsapp: "whatsapp",
+  referral: "referral",
+  other: "other",
+} as const;
+
+export interface CreateChannelRequest {
+  name: string;
+  type: CreateChannelRequestType;
+}
+
+export type ChannelsListResponseData = {
+  channels: ClinicChannel[];
+};
+
+export interface ChannelsListResponse {
+  success: boolean;
+  data: ChannelsListResponseData;
+}
+
+export type ChannelResponseData = {
+  channel: ClinicChannel;
+};
+
+export interface ChannelResponse {
+  success: boolean;
+  data: ChannelResponseData;
+}
+
+export interface ChannelStat {
+  channelId: string;
+  channelName: string;
+  channelType: string;
+  refCode: string;
+  patientCount: number;
+  consultationCount: number;
+  conversionRate: number;
+  totalRevenue: number;
+}
+
+export type ChannelStatsResponseData = {
+  stats: ChannelStat[];
+};
+
+export interface ChannelStatsResponse {
+  success: boolean;
+  data: ChannelStatsResponseData;
+}
+
 export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 
 export const UserRole = {
@@ -166,16 +244,10 @@ export const PatientStatus = {
   completed: "completed",
 } as const;
 
-export type PatientSource = (typeof PatientSource)[keyof typeof PatientSource];
-
-export const PatientSource = {
-  instagram: "instagram",
-  referral: "referral",
-  walk_in: "walk_in",
-  website: "website",
-  whatsapp: "whatsapp",
-  other: "other",
-} as const;
+/**
+ * Patient acquisition source. Can be a standard value (instagram, referral, walk_in, website, whatsapp, other) or a custom channel ref code (e.g. ref:abc12345) or a channel ID.
+ */
+export type PatientSource = string;
 
 export type InteractionType =
   (typeof InteractionType)[keyof typeof InteractionType];
@@ -1137,4 +1209,13 @@ export type GetDoctorDetailedAnalyticsParams = {
    * Filter procedures with price >= minRevenue
    */
   minRevenue?: number;
+};
+
+export type GetChannelStatsParams = {
+  dateFrom?: string;
+  dateTo?: string;
+};
+
+export type UpdateClinicWhatsappPhoneBody = {
+  whatsappPhone: string;
 };

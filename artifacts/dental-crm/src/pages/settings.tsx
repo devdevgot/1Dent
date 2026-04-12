@@ -8,8 +8,9 @@ import {
   useUpdateConditionPrices,
 } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
-import { User, Shield, Palette, Globe, Eye, EyeOff, DollarSign } from "lucide-react";
+import { User, Shield, Palette, Globe, Eye, EyeOff, DollarSign, Radio } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ChannelsSettings } from "@/components/channels/channels-settings";
 
 const CONDITION_LABELS: Record<string, string> = {
   healthy: "Здоров",
@@ -345,6 +346,14 @@ export default function SettingsPage() {
       {(user?.role === "owner" || user?.role === "admin") && (
         <Section icon={<DollarSign className="w-5 h-5" />} title="Цены по состоянию зуба">
           <ConditionPricesSection />
+        </Section>
+      )}
+
+      {/* Channels — visible to owner/admin only */}
+      {(user?.role === "owner" || user?.role === "admin") && (
+        <Section icon={<Radio className="w-5 h-5" />} title={t("channels.sectionTitle")}>
+          <p className="text-xs text-muted-foreground mb-4">{t("channels.sectionDesc")}</p>
+          <ChannelsSettings />
         </Section>
       )}
     </div>

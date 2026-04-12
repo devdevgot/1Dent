@@ -814,5 +814,42 @@
     "themeLight": "Light",
     "themeDark": "Dark",
     "themeSystem": "System"
+  },
+  "channels": {
+    "sectionTitle": "Acquisition Channels",
+    "sectionDesc": "Unique tracking links for patient source attribution",
+    "addChannel": "Add Channel",
+    "channelName": "Channel Name",
+    "channelNamePlaceholder": "e.g. Instagram Business Profile",
+    "channelType": "Channel Type",
+    "copyLink": "Copy Link",
+    "linkCopied": "Link copied",
+    "downloadQr": "Download QR",
+    "deleteChannel": "Delete",
+    "noChannels": "No channels yet. Add your first channel to start tracking patient sources.",
+    "cancel": "Cancel",
+    "create": "Create",
+    "creating": "Creating...",
+    "deleteConfirm": "Delete this channel?",
+    "deleteSuccess": "Channel deleted",
+    "createSuccess": "Channel created",
+    "whatsappPhone": "Clinic WhatsApp Number",
+    "whatsappPhonePlaceholder": "77001234567",
+    "whatsappPhoneSave": "Save",
+    "whatsappPhoneSaved": "WhatsApp number saved",
+    "whatsappPhoneDesc": "International format without '+', e.g. 77001234567"
+  },
+  "channelAnalytics": {
+    "title": "Patient Sources",
+    "channel": "Channel",
+    "patients": "Patients",
+    "consultations": "Consultations",
+    "conversion": "Conversion",
+    "revenue": "Revenue",
+    "noData": "No channel data available",
+    "period": "Period",
+    "week": "Week",
+    "month": "Month",
+    "quarter": "Quarter"
   }
 }

@@ -320,11 +320,13 @@
   },
   "source": {
     "instagram": "Instagram",
-    "referral": "Направление",
+    "referral": "Рекомендация",
     "walk_in": "Сам пришёл",
     "website": "Сайт",
     "whatsapp": "WhatsApp",
-    "other": "Другое"
+    "other": "Другое",
+    "telegram": "Telegram",
+    "2gis": "2GIS"
   },
   "interaction": {
     "note": "Заметка",
@@ -815,5 +817,42 @@
     "themeLight": "Светлая",
     "themeDark": "Тёмная",
     "themeSystem": "Системная"
+  },
+  "channels": {
+    "sectionTitle": "Каналы привлечения",
+    "sectionDesc": "Уникальные ссылки для отслеживания источников пациентов",
+    "addChannel": "Добавить канал",
+    "channelName": "Название канала",
+    "channelNamePlaceholder": "Напр. Instagram бизнес-профиль",
+    "channelType": "Тип канала",
+    "copyLink": "Копировать ссылку",
+    "linkCopied": "Ссылка скопирована",
+    "downloadQr": "Скачать QR",
+    "deleteChannel": "Удалить",
+    "noChannels": "Каналов пока нет. Добавьте первый канал для отслеживания источников пациентов.",
+    "cancel": "Отмена",
+    "create": "Создать",
+    "creating": "Создание...",
+    "deleteConfirm": "Удалить канал?",
+    "deleteSuccess": "Канал удалён",
+    "createSuccess": "Канал создан",
+    "whatsappPhone": "Номер WhatsApp клиники",
+    "whatsappPhonePlaceholder": "77001234567",
+    "whatsappPhoneSave": "Сохранить",
+    "whatsappPhoneSaved": "Номер WhatsApp сохранён",
+    "whatsappPhoneDesc": "Международный формат без «+», напр. 77001234567"
+  },
+  "channelAnalytics": {
+    "title": "Источники пациентов",
+    "channel": "Канал",
+    "patients": "Пациентов",
+    "consultations": "Консультации",
+    "conversion": "Конверсия",
+    "revenue": "Выручка",
+    "noData": "Нет данных по каналам",
+    "period": "Период",
+    "week": "Неделя",
+    "month": "Месяц",
+    "quarter": "Квартал"
   }
 }

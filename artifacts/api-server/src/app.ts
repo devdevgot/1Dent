@@ -3,6 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
 import router from "./routes";
+import refRouter from "./routes/ref";
 import { logger } from "./lib/logger";
 import { errorHandler } from "./middlewares/error.middleware";
 
@@ -43,6 +44,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 app.use("/api", router);
+app.use(refRouter);
 
 app.use(errorHandler);
 

@@ -814,5 +814,42 @@
     "themeLight": "Жарық",
     "themeDark": "Қараңғы",
     "themeSystem": "Жүйелік"
+  },
+  "channels": {
+    "sectionTitle": "Тарту арналары",
+    "sectionDesc": "Науқас көздерін бақылауға арналған бірегей сілтемелер",
+    "addChannel": "Арна қосу",
+    "channelName": "Арна атауы",
+    "channelNamePlaceholder": "Мыс. Instagram бизнес-профилі",
+    "channelType": "Арна түрі",
+    "copyLink": "Сілтемені көшіру",
+    "linkCopied": "Сілтеме көшірілді",
+    "downloadQr": "QR жүктеу",
+    "deleteChannel": "Жою",
+    "noChannels": "Арналар жоқ. Науқас көздерін бақылау үшін бірінші арнаны қосыңыз.",
+    "cancel": "Болдырмау",
+    "create": "Жасау",
+    "creating": "Жасалуда...",
+    "deleteConfirm": "Арнаны жою керек пе?",
+    "deleteSuccess": "Арна жойылды",
+    "createSuccess": "Арна жасалды",
+    "whatsappPhone": "Клиника WhatsApp нөмірі",
+    "whatsappPhonePlaceholder": "77001234567",
+    "whatsappPhoneSave": "Сақтау",
+    "whatsappPhoneSaved": "WhatsApp нөмірі сақталды",
+    "whatsappPhoneDesc": "«+» белгісінсіз халықаралық формат, мыс. 77001234567"
+  },
+  "channelAnalytics": {
+    "title": "Науқас көздері",
+    "channel": "Арна",
+    "patients": "Науқастар",
+    "consultations": "Консультациялар",
+    "conversion": "Конверсия",
+    "revenue": "Табыс",
+    "noData": "Арна деректері жоқ",
+    "period": "Кезең",
+    "week": "Апта",
+    "month": "Ай",
+    "quarter": "Тоқсан"
   }
 }
