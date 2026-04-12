@@ -6,6 +6,8 @@ import type {
   PatientInteraction,
   InsertPatientInteraction,
   PatientStatus,
+  PatientGender,
+  PatientSource,
 } from "@workspace/db";
 
 export class PatientsRepository {
@@ -47,7 +49,7 @@ export class PatientsRepository {
     id: string,
     clinicId: string,
     data: Partial<
-      Pick<Patient, "name" | "phone" | "age" | "source" | "doctorId" | "notes">
+      Pick<Patient, "name" | "phone" | "iin" | "dateOfBirth" | "gender" | "source" | "doctorId" | "notes">
     >,
   ): Promise<Patient | undefined> {
     const [patient] = await db

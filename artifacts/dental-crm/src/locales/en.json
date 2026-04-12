@@ -246,7 +246,11 @@
     "fullNamePlaceholder": "John Smith",
     "phone": "Phone *",
     "phonePlaceholder": "+1 900 000 0000",
-    "age": "Age",
+    "iin": "IIN (12 digits)",
+    "iinPlaceholder": "920315XXXXXX",
+    "iinHint": "Optional. Auto-fills date of birth and gender.",
+    "dateOfBirth": "Date of Birth",
+    "gender": "Gender",
     "source": "Source",
     "doctor": "Doctor",
     "noDoctor": "Not assigned",
@@ -258,6 +262,12 @@
     "successTitle": "Patient added",
     "errorTitle": "Error",
     "errorDesc": "Failed to add patient"
+  },
+  "gender": {
+    "male": "Male",
+    "female": "Female",
+    "other": "Other",
+    "notSpecified": "Not specified"
   },
   "tooth": {
     "patientCard": "Personal patient card",

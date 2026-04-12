@@ -1,18 +1,19 @@
 import { randomUUID } from "crypto";
 import { PatientsRepository } from "./patients.repository";
 import { NotFoundError, ForbiddenError } from "../../shared/errors";
+import { parseIIN, isIINError } from "@workspace/api-zod";
 import type {
   Patient,
   PatientInteraction,
   PatientStatus,
   PatientSource,
+  PatientGender,
   InteractionType,
   UserRole,
 } from "@workspace/db";
 
 function maskPhone(phone: string, role: UserRole): string {
   if (role === "doctor") {
-    // Show only last 2 digits: +7 *** *** **XX
     const cleaned = phone.replace(/\D/g, "");
     const last2 = cleaned.slice(-2);
     return `+7 *** *** **${last2}`;
@@ -66,7 +67,9 @@ export class PatientsService {
     data: {
       name: string;
       phone: string;
-      age?: number;
+      iin?: string;
+      dateOfBirth?: string;
+      gender?: PatientGender;
       source?: PatientSource;
       doctorId?: string;
       notes?: string;
@@ -78,16 +81,33 @@ export class PatientsService {
       throw new ForbiddenError("Insufficient permissions");
     }
 
-    // Doctors always own the patients they create; ignore client-provided doctorId
     const resolvedDoctorId =
       requestingRole === "doctor" ? requestingUserId : (data.doctorId ?? null);
+
+    let resolvedIIN = data.iin ?? null;
+    let resolvedDateOfBirth = data.dateOfBirth ?? null;
+    let resolvedGender = data.gender ?? null;
+
+    if (resolvedIIN) {
+      const iinResult = parseIIN(resolvedIIN);
+      if (!isIINError(iinResult)) {
+        if (!resolvedDateOfBirth) {
+          resolvedDateOfBirth = iinResult.dateOfBirth.toISOString().slice(0, 10);
+        }
+        if (!resolvedGender) {
+          resolvedGender = iinResult.gender;
+        }
+      }
+    }
 
     const patient = await this.repo.create({
       id: randomUUID(),
       clinicId,
       name: data.name,
       phone: data.phone,
-      age: data.age ?? null,
+      iin: resolvedIIN,
+      dateOfBirth: resolvedDateOfBirth,
+      gender: resolvedGender,
       source: data.source ?? "other",
       doctorId: resolvedDoctorId,
       notes: data.notes ?? null,
@@ -103,7 +123,9 @@ export class PatientsService {
     data: Partial<{
       name: string;
       phone: string;
-      age: number;
+      iin: string;
+      dateOfBirth: string;
+      gender: PatientGender;
       source: PatientSource;
       doctorId: string;
       notes: string;
@@ -118,10 +140,21 @@ export class PatientsService {
       throw new ForbiddenError("Access denied");
     }
 
-    // Doctors cannot reassign patients to other doctors
     const sanitizedData = { ...data };
     if (requestingRole === "doctor") {
       delete sanitizedData.doctorId;
+    }
+
+    if (sanitizedData.iin) {
+      const iinResult = parseIIN(sanitizedData.iin);
+      if (!isIINError(iinResult)) {
+        if (!sanitizedData.dateOfBirth) {
+          sanitizedData.dateOfBirth = iinResult.dateOfBirth.toISOString().slice(0, 10);
+        }
+        if (!sanitizedData.gender) {
+          sanitizedData.gender = iinResult.gender;
+        }
+      }
     }
 
     const updated = await this.repo.update(id, clinicId, sanitizedData);
@@ -147,7 +180,6 @@ export class PatientsService {
     const updated = await this.repo.updateStatus(id, clinicId, status);
     if (!updated) throw new NotFoundError("Patient not found");
 
-    // Auto-record a status_change interaction for audit trail
     if (existing.status !== status) {
       await this.repo.createInteraction({
         id: randomUUID(),

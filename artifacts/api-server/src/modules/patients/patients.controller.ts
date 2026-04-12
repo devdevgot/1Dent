@@ -10,6 +10,7 @@ import { PatientsService } from "./patients.service";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError } from "../../shared/errors";
 import { analyticsRepo } from "../analytics/analytics.controller";
+import { parseIIN, isIINError } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 const service = new PatientsService();
@@ -41,10 +42,21 @@ const interactionTypeValues = [
   "appointment",
 ] as const;
 
+const iinSchema = z
+  .string()
+  .regex(/^\d{12}$/, "ИИН должен содержать ровно 12 цифр")
+  .refine((iin) => {
+    const result = parseIIN(iin);
+    return !isIINError(result);
+  }, "ИИН не прошёл проверку контрольной суммы")
+  .optional();
+
 const createPatientSchema = z.object({
   name: z.string().min(2),
   phone: z.string().min(5),
-  age: z.number().int().min(0).max(150).optional(),
+  iin: iinSchema,
+  dateOfBirth: z.string().optional(),
+  gender: z.enum(["male", "female", "other"]).optional(),
   source: z.enum(patientSourceValues).optional(),
   doctorId: z.string().optional(),
   notes: z.string().optional(),
@@ -53,7 +65,9 @@ const createPatientSchema = z.object({
 const updatePatientSchema = z.object({
   name: z.string().min(2).optional(),
   phone: z.string().min(5).optional(),
-  age: z.number().int().min(0).max(150).optional(),
+  iin: iinSchema,
+  dateOfBirth: z.string().optional(),
+  gender: z.enum(["male", "female", "other"]).optional(),
   source: z.enum(patientSourceValues).optional(),
   doctorId: z.string().optional(),
   notes: z.string().optional(),

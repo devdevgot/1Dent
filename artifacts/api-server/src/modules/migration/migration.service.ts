@@ -190,7 +190,6 @@ export class MigrationService {
         processedRows++;
         const rawName = row.cells[mapping.name!] ?? "";
         const rawPhone = row.cells[mapping.phone!] ?? "";
-        const rawAge = mapping.age ? row.cells[mapping.age] ?? "" : "";
         const rawNotes = mapping.notes ? row.cells[mapping.notes] ?? "" : "";
 
         if (!rawName || !rawPhone) {
@@ -218,7 +217,6 @@ export class MigrationService {
           continue;
         }
 
-        const age = rawAge ? parseInt(rawAge, 10) : undefined;
         const rawStatus = mapping.status ? row.cells[mapping.status] ?? "" : "";
         const patientStatus = rawStatus ? mapToPatientStatus(rawStatus) : "new_request";
 
@@ -228,7 +226,6 @@ export class MigrationService {
             clinicId,
             name: rawName.slice(0, 100),
             phone,
-            age: isNaN(age!) ? undefined : age,
             notes: rawNotes.slice(0, 500) || undefined,
             status: patientStatus as "new_request",
             source: "other",

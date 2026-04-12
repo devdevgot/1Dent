@@ -21,8 +21,9 @@ import type { ToothRecord, ToothTreatment } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   X, ChevronDown, CheckCircle2, Clock, ArrowUpRight,
-  Phone, User, Calendar, CreditCard, Stethoscope, TrendingUp, Copy, Save,
+  Phone, User, Calendar, CreditCard, Stethoscope, TrendingUp, Copy, Save, IdCard,
 } from "lucide-react";
+import { calculateAge, formatDateOfBirth, maskIIN } from "@workspace/api-zod";
 import { Button } from "@/components/ui/button";
 import { useKanbanStore } from "@/hooks/use-kanban";
 import { useAuthStore } from "@/hooks/use-auth";
@@ -648,12 +649,42 @@ export function PatientDetailPanel() {
                         {patient.phone}
                       </span>
                     </a>
-                    {patient.age && (
+                    {patient.dateOfBirth && (
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
                           <User className="w-4 h-4 text-gray-400" />
                         </div>
-                        <span className="text-sm text-gray-700">{patient.age} лет</span>
+                        <div>
+                          <p className="text-sm text-gray-700">
+                            {calculateAge(patient.dateOfBirth)} лет · {formatDateOfBirth(patient.dateOfBirth)}
+                            {patient.gender && (
+                              <span className="ml-1 text-xs text-gray-500">
+                                ({patient.gender === "male" ? "муж." : patient.gender === "female" ? "жен." : "другой"})
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    {!patient.dateOfBirth && patient.gender && (
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                          <User className="w-4 h-4 text-gray-400" />
+                        </div>
+                        <span className="text-sm text-gray-700">
+                          {patient.gender === "male" ? "Мужской" : patient.gender === "female" ? "Женский" : "Другой"}
+                        </span>
+                      </div>
+                    )}
+                    {patient.iin && (
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                          <IdCard className="w-4 h-4 text-gray-400" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">ИИН</p>
+                          <p className="text-sm font-mono text-gray-700">{maskIIN(patient.iin)}</p>
+                        </div>
                       </div>
                     )}
                     <div className="flex items-center gap-3">
@@ -1004,9 +1035,9 @@ export function PatientDetailPanel() {
                   </div>
 
                   <div className="flex flex-wrap gap-2">
-                    {patient.age && (
+                    {patient.dateOfBirth && (
                       <span className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">
-                        {t("patient.age", { age: patient.age })}
+                        {calculateAge(patient.dateOfBirth)} лет · {formatDateOfBirth(patient.dateOfBirth)}
                       </span>
                     )}
                     <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${sourceColor}`}>

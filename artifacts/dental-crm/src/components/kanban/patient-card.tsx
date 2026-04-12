@@ -5,6 +5,7 @@ import type { Patient } from "@workspace/api-client-react";
 import { SOURCE_LABELS, SOURCE_COLORS, KANBAN_COLUMNS, COLUMN_HEADER_COLOR } from "@/lib/patient-utils";
 import { useKanbanStore } from "@/hooks/use-kanban";
 import { useNotifications } from "@/hooks/use-notifications";
+import { calculateAge, formatDateOfBirth, maskIIN } from "@workspace/api-zod";
 
 interface PatientCardProps {
   patient: Patient;
@@ -40,6 +41,12 @@ export function PatientCard({ patient }: PatientCardProps) {
     day: "2-digit",
     month: "short",
   });
+
+  const ageDisplay = patient.dateOfBirth
+    ? `${calculateAge(patient.dateOfBirth)} лет · ${formatDateOfBirth(patient.dateOfBirth)}`
+    : null;
+
+  const maskedIIN = patient.iin ? maskIIN(patient.iin) : null;
 
   return (
     <div
@@ -81,10 +88,14 @@ export function PatientCard({ patient }: PatientCardProps) {
           <Calendar className="w-3 h-3" />
           <span>{formattedDate}</span>
         </div>
-        {patient.age && (
+        {(ageDisplay || maskedIIN) && (
           <div className="flex items-center gap-1">
             <User className="w-3 h-3" />
-            <span>{patient.age} лет</span>
+            <span>
+              {ageDisplay}
+              {ageDisplay && maskedIIN && " · "}
+              {maskedIIN && <span className="font-mono">{maskedIIN}</span>}
+            </span>
           </div>
         )}
       </div>

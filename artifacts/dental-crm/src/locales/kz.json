@@ -246,7 +246,11 @@
     "fullNamePlaceholder": "Иванов Иван Иванович",
     "phone": "Телефон *",
     "phonePlaceholder": "+7 900 000 00 00",
-    "age": "Жасы",
+    "iin": "ЖСН (12 сан)",
+    "iinPlaceholder": "920315XXXXXX",
+    "iinHint": "Міндетті емес. Туған күн мен жынысты автоматты толтырады.",
+    "dateOfBirth": "Туған күні",
+    "gender": "Жынысы",
     "source": "Қайдан келді",
     "doctor": "Дәрігер",
     "noDoctor": "Тағайындалмаған",
@@ -258,6 +262,12 @@
     "successTitle": "Пациент қосылды",
     "errorTitle": "Қате",
     "errorDesc": "Пациентті қосу мүмкін болмады"
+  },
+  "gender": {
+    "male": "Еркек",
+    "female": "Әйел",
+    "other": "Басқа",
+    "notSpecified": "Көрсетілмеген"
   },
   "tooth": {
     "patientCard": "Пациенттің жеке карточкасы",

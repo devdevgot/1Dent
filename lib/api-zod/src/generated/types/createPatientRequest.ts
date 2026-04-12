@@ -12,7 +12,10 @@ export interface CreatePatientRequest {
   name: string;
   /** @minLength 5 */
   phone: string;
-  age?: number;
+  /** @pattern ^\d{12}$ */
+  iin?: string;
+  dateOfBirth?: string;
+  gender?: "male" | "female" | "other";
   source?: PatientSource;
   doctorId?: string;
   notes?: string;

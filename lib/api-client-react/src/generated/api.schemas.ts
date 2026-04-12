@@ -194,7 +194,9 @@ export interface Patient {
   doctorId?: string | null;
   name: string;
   phone: string;
-  age?: number | null;
+  iin?: string | null;
+  dateOfBirth?: string | null;
+  gender?: "male" | "female" | "other" | null;
   source: PatientSource;
   status: PatientStatus;
   notes?: string | null;
@@ -217,7 +219,10 @@ export interface CreatePatientRequest {
   name: string;
   /** @minLength 5 */
   phone: string;
-  age?: number;
+  /** @pattern ^\d{12}$ */
+  iin?: string;
+  dateOfBirth?: string;
+  gender?: "male" | "female" | "other";
   source?: PatientSource;
   doctorId?: string;
   notes?: string;
@@ -228,7 +233,10 @@ export interface UpdatePatientRequest {
   name?: string;
   /** @minLength 5 */
   phone?: string;
-  age?: number;
+  /** @pattern ^\d{12}$ */
+  iin?: string;
+  dateOfBirth?: string;
+  gender?: "male" | "female" | "other";
   source?: PatientSource;
   doctorId?: string;
   notes?: string;

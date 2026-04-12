@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, integer, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, varchar, date, pgEnum } from "drizzle-orm/pg-core";
 import { clinicsTable } from "./clinics";
 import { usersTable } from "./users";
 
@@ -29,6 +29,12 @@ export const interactionTypeEnum = pgEnum("interaction_type", [
   "appointment",
 ]);
 
+export const patientGenderEnum = pgEnum("patient_gender", [
+  "male",
+  "female",
+  "other",
+]);
+
 export const patientsTable = pgTable("patients", {
   id: text("id").primaryKey(),
   clinicId: text("clinic_id")
@@ -39,7 +45,9 @@ export const patientsTable = pgTable("patients", {
   }),
   name: text("name").notNull(),
   phone: text("phone").notNull(),
-  age: integer("age"),
+  iin: varchar("iin", { length: 12 }),
+  dateOfBirth: date("date_of_birth"),
+  gender: patientGenderEnum("gender"),
   source: patientSourceEnum("source").default("other").notNull(),
   status: patientStatusEnum("status").default("new_request").notNull(),
   notes: text("notes"),
@@ -73,6 +81,7 @@ export type Patient = typeof patientsTable.$inferSelect;
 export type InsertPatient = typeof patientsTable.$inferInsert;
 export type PatientStatus = (typeof patientStatusEnum.enumValues)[number];
 export type PatientSource = (typeof patientSourceEnum.enumValues)[number];
+export type PatientGender = (typeof patientGenderEnum.enumValues)[number];
 export type PatientInteraction = typeof patientInteractionsTable.$inferSelect;
 export type InsertPatientInteraction =
   typeof patientInteractionsTable.$inferInsert;

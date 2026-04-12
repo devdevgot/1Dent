@@ -7,6 +7,7 @@ import {
   getListPatientsQueryKey,
 } from "@workspace/api-client-react";
 import type { Patient, PatientStatus, PatientSource } from "@workspace/api-client-react";
+import { calculateAge, formatDateOfBirth, maskIIN } from "@workspace/api-zod";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Plus, RefreshCw, Search, Trash2, ChevronUp, ChevronDown, ChevronsUpDown,
@@ -25,7 +26,7 @@ import {
 } from "@/lib/patient-utils";
 import { useTranslation } from "react-i18next";
 
-type SortKey = "name" | "phone" | "age" | "status" | "source" | "createdAt" | "doctor";
+type SortKey = "name" | "phone" | "dateOfBirth" | "status" | "source" | "createdAt" | "doctor";
 type SortDir = "asc" | "desc";
 
 const STATUS_ORDER: Record<PatientStatus, number> = {
@@ -117,7 +118,7 @@ export default function PatientsPage() {
         switch (sortKey) {
           case "name":    cmp = a.name.localeCompare(b.name); break;
           case "phone":   cmp = a.phone.localeCompare(b.phone); break;
-          case "age":     cmp = (a.age ?? 0) - (b.age ?? 0); break;
+          case "dateOfBirth": cmp = (a.dateOfBirth ? new Date(a.dateOfBirth).getTime() : 0) - (b.dateOfBirth ? new Date(b.dateOfBirth).getTime() : 0); break;
           case "status":  cmp = STATUS_ORDER[a.status] - STATUS_ORDER[b.status]; break;
           case "source":  cmp = a.source.localeCompare(b.source); break;
           case "createdAt": cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(); break;
@@ -264,7 +265,7 @@ export default function PatientsPage() {
                 <Th col="phone"     label={t("patients.colPhone")} className="hidden sm:table-cell" />
                 <Th col="doctor"    label="Врач" className="hidden md:table-cell" />
                 <Th col="status"    label={t("patients.colStatus")} />
-                <Th col="age"       label={t("patients.colAge")} className="hidden lg:table-cell" />
+                <Th col="dateOfBirth" label={t("patients.colAge")} className="hidden lg:table-cell" />
                 <Th col="source"    label={t("patients.colSource")} className="hidden xl:table-cell" />
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell whitespace-nowrap">Оплачено</th>
                 <Th col="createdAt" label={t("patients.colCreated")} className="hidden xl:table-cell" />
@@ -331,9 +332,17 @@ export default function PatientsPage() {
                       </span>
                     </td>
 
-                    {/* Age */}
-                    <td className="px-4 py-3 hidden lg:table-cell text-gray-600 text-xs">
-                      {patient.age ? t("patient.age", { age: patient.age }) : <span className="text-gray-300">—</span>}
+                    {/* Age / DOB */}
+                    <td className="px-4 py-3 hidden lg:table-cell text-gray-600 text-xs whitespace-nowrap">
+                      {patient.dateOfBirth ? (
+                        <span>
+                          {calculateAge(patient.dateOfBirth)} лет
+                          <span className="text-gray-400 ml-1">· {formatDateOfBirth(patient.dateOfBirth)}</span>
+                          {patient.iin && <span className="text-gray-400 ml-1 font-mono">· {maskIIN(patient.iin)}</span>}
+                        </span>
+                      ) : (
+                        <span className="text-gray-300">—</span>
+                      )}
                     </td>
 
                     {/* Source */}
