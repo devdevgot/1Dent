@@ -1,0 +1,21 @@
+kind = "web"
+previewPath = "/"
+title = "Dental CRM"
+version = "1.0.0"
+id = "artifacts/dental-crm"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+
+[services.development]
+run = "pnpm --filter @workspace/dental-crm run dev"
+
+[services.env]
+PORT = "23816"
+BASE_PATH = "/"
