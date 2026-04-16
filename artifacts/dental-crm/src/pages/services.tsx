@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import {
   Plus, Search, Pencil, Trash2, Check, X, Stethoscope, DollarSign,
-  AlertTriangle,
+  AlertTriangle, ChevronLeft,
 } from "lucide-react";
 
 interface EditState {
@@ -100,28 +100,32 @@ export default function ServicesPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto p-6 pb-12 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Stethoscope className="w-6 h-6 text-primary" />
-            Услуги клиники
-          </h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            {templates.length} услуг в каталоге
-          </p>
+    <div className="min-h-full bg-[#f2f2f7]">
+      <div className="bg-white px-4 pt-5 pb-4 flex items-center gap-3 border-b border-gray-100">
+        <button
+          onClick={() => window.history.back()}
+          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-500 shrink-0"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <Stethoscope className="w-5 h-5 text-primary shrink-0" strokeWidth={1.8} />
+            <h1 className="text-[17px] font-semibold text-gray-900">Услуги клиники</h1>
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">{templates.length} услуг в каталоге</p>
         </div>
         {canManage && (
           <button
             onClick={() => { setShowAdd(true); setTimeout(() => document.getElementById("add-service-name")?.focus(), 50); }}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors shrink-0"
           >
             <Plus className="w-4 h-4" />
-            Добавить услугу
+            Добавить
           </button>
         )}
       </div>
+      <div className="max-w-3xl mx-auto p-6 pb-12 space-y-6">
 
       {/* Add form */}
       {showAdd && canManage && (
@@ -322,6 +326,7 @@ export default function ServicesPage() {
         onConfirm={() => { handleDelete(confirmDeleteId!); setConfirmDeleteId(null); }}
         onCancel={() => setConfirmDeleteId(null)}
       />
+      </div>
     </div>
   );
 }

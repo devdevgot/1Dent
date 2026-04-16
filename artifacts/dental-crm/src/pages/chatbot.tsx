@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Bot, Settings, MessageSquare, Trash2, RefreshCw, Power, Save } from "lucide-react";
+import { Bot, Settings, MessageSquare, Trash2, RefreshCw, Power, Save, ChevronLeft } from "lucide-react";
 import {
   useGetChatbotSettings,
   useUpdateChatbotSettings,
@@ -83,8 +83,14 @@ export default function ChatbotPage() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <div className="shrink-0 px-4 pt-4 pb-3 border-b border-border/50 bg-background">
+      <div className="shrink-0 px-4 pt-5 pb-3 border-b border-gray-100 bg-background">
         <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => window.history.back()}
+            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-500 shrink-0"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
           <div className="h-8 w-8 rounded-lg bg-violet-100 flex items-center justify-center">
             <Bot className="h-4 w-4 text-violet-600" />
           </div>

@@ -24,7 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 import {
   Plus, Package, AlertTriangle, Trash2, Check, X,
-  ShieldCheck, ShieldX, Eye, Shield, Users,
+  ShieldCheck, ShieldX, Eye, Shield, Users, ChevronLeft,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
@@ -240,30 +240,36 @@ export default function InventoryPage() {
   }
 
   return (
-    <div className="p-4 pb-8 space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-display font-bold text-foreground">
-            {t("inventory.title")}
-          </h1>
-          <div className="flex items-center gap-2 mt-0.5">
-            <p className="text-sm text-muted-foreground">
-              {t("inventory.items", { count: items.length })}
-              {lowStock.length > 0 && (
-                <> · <span className="text-destructive font-semibold">{t("inventory.lowStock", { count: lowStock.length })}</span></>
-              )}
-            </p>
-            {!isOwner && <AccessBadge level={myAccess} />}
+    <div className="min-h-full bg-[#f2f2f7]">
+      {/* Page Header */}
+      <div className="bg-white px-4 pt-5 pb-4 flex items-center gap-3 border-b border-gray-100">
+        <button
+          onClick={() => window.history.back()}
+          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-500 shrink-0"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <Package className="w-5 h-5 text-primary shrink-0" strokeWidth={1.8} />
+            <h1 className="text-[17px] font-semibold text-gray-900">{t("inventory.title")}</h1>
           </div>
+          <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5 flex-wrap">
+            {t("inventory.items", { count: items.length })}
+            {lowStock.length > 0 && (
+              <> · <span className="text-destructive font-semibold">{t("inventory.lowStock", { count: lowStock.length })}</span></>
+            )}
+            {!isOwner && <span className="ml-0.5"><AccessBadge level={myAccess} /></span>}
+          </p>
         </div>
         {canWrite && (
-          <Button onClick={() => setShowCreate((v) => !v)} size="sm" className="gap-1.5">
+          <Button onClick={() => setShowCreate((v) => !v)} size="sm" className="gap-1.5 shrink-0">
             <Plus className="w-4 h-4" />
             {t("inventory.add")}
           </Button>
         )}
       </div>
+      <div className="p-4 pb-8 space-y-4">
 
       {/* Read-only notice */}
       {myAccess === "read_only" && !isOwner && (
@@ -456,6 +462,7 @@ export default function InventoryPage() {
         onConfirm={() => { deleteMutation.mutate({ id: confirmDeleteId! }); setConfirmDeleteId(null); }}
         onCancel={() => setConfirmDeleteId(null)}
       />
+      </div>
     </div>
   );
 }

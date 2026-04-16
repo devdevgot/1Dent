@@ -18,7 +18,6 @@ import {
   Package,
   Bot,
   MoreHorizontal,
-  ArrowLeft,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { cn } from "@/lib/utils";
@@ -52,51 +51,6 @@ const ALL_NAV_ITEMS = [
   { nameKey: "nav.settings",    href: "/settings",           icon: Settings,        roles: ["owner","admin","doctor","accountant","warehouse"]  },
 ];
 
-/* Page titles for secondary pages (by route prefix) */
-const PAGE_TITLE_KEYS: Array<{ prefix: string; key: string }> = [
-  { prefix: "/kanban",          key: "nav.kanban"      },
-  { prefix: "/analytics",       key: "nav.analytics"   },
-  { prefix: "/inventory",       key: "nav.inventory"   },
-  { prefix: "/services",        key: "nav.services"    },
-  { prefix: "/financials",      key: "nav.financials"  },
-  { prefix: "/users",           key: "nav.users"       },
-  { prefix: "/chatbot",         key: "nav.chatbot"     },
-  { prefix: "/channels",        key: "nav.channels"    },
-  { prefix: "/settings",        key: "nav.settings"    },
-  { prefix: "/patients",        key: "nav.patients"    },
-  { prefix: "/schedule",        key: "nav.schedule"    },
-  { prefix: "/doctor-analytics",key: "nav.myAnalytics" },
-  { prefix: "/logs",            key: "nav.logs"        },
-  { prefix: "/warehouse",       key: "nav.inventory"   },
-  { prefix: "/menu",            key: "nav.more"        },
-];
-
-/*
- * Pages that manage their own page-level back button / header.
- * The AppLayout back-header is suppressed for these.
- */
-const SELF_MANAGED_PREFIXES = [
-  "/chat",
-  "/calendar",
-  "/admin/",
-  "/patients/",      // /patients/:id/teeth/:fdi
-  "/staff",
-  "/account",
-  "/channels",       // has own header with back button
-  "/login",
-  "/register",
-  "/forgot-password",
-  "/reset-password",
-];
-
-function isSelfManaged(location: string): boolean {
-  return SELF_MANAGED_PREFIXES.some((p) => location.startsWith(p));
-}
-
-function getPageTitleKey(location: string): string | null {
-  const match = PAGE_TITLE_KEYS.find((p) => location === p.prefix || location.startsWith(p.prefix + "/") || location.startsWith(p.prefix + "?"));
-  return match ? match.key : null;
-}
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
@@ -116,18 +70,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
   }));
 
   const isHomePage = location === roleDashboardHref;
-  const showBackHeader = !isHomePage && !isSelfManaged(location);
-  const pageTitleKey = getPageTitleKey(location);
 
   const bottomItems = navItems.slice(0, MAX_BOTTOM_TABS);
-
-  const handleBack = () => {
-    if (window.history.length > 1) {
-      window.history.back();
-    } else {
-      window.location.href = roleDashboardHref;
-    }
-  };
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background overflow-hidden">
@@ -138,27 +82,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
         <header className="flex-none relative flex items-center gap-3 px-4 py-2.5 bg-white border-b border-gray-100 z-20 safe-area-top border-t-[1px]">
           <GlobalSearch />
           <div className="shrink-0">
-            <NotificationBell />
-          </div>
-        </header>
-      )}
-
-      {/* Secondary page header with back button */}
-      {showBackHeader && (
-        <header className="flex-none flex items-center gap-2 px-2 py-2 bg-white border-b border-gray-100 z-20 safe-area-top">
-          <button
-            onClick={handleBack}
-            className="flex items-center justify-center w-9 h-9 rounded-xl text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition-colors shrink-0"
-            aria-label="Назад"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          {pageTitleKey && (
-            <h1 className="text-base font-semibold text-gray-900 truncate">
-              {t(pageTitleKey)}
-            </h1>
-          )}
-          <div className="ml-auto shrink-0">
             <NotificationBell />
           </div>
         </header>

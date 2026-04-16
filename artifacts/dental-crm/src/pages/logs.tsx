@@ -48,16 +48,20 @@ export default function LogsPage() {
   }
 
   return (
-    <div className="p-4 pb-24 space-y-4 max-w-full">
-      <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center">
-          <Activity className="w-5 h-5 text-white" />
-        </div>
-        <div>
-          <h1 className="text-lg font-bold text-foreground">{t("logs.title")}</h1>
-          <p className="text-xs text-muted-foreground">{t("logs.subtitle")}</p>
+    <div className="min-h-full bg-[#f2f2f7]">
+      <div className="bg-white px-4 pt-5 pb-4 flex items-center gap-3 border-b border-gray-100">
+        <button
+          onClick={() => window.history.back()}
+          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-500 shrink-0"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <div className="flex items-center gap-2">
+          <Activity className="w-5 h-5 text-primary shrink-0" strokeWidth={1.8} />
+          <h1 className="text-[17px] font-semibold text-gray-900">{t("logs.title")}</h1>
         </div>
       </div>
+      <div className="p-4 pb-24 space-y-4 max-w-full">
 
       {/* Filters */}
       <div className="bg-white rounded-2xl border border-border/50 p-4 space-y-3">
@@ -180,6 +184,7 @@ export default function LogsPage() {
             ))}
           </div>
         )}
+      </div>
       </div>
     </div>
   );

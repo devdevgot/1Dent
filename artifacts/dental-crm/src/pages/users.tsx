@@ -9,7 +9,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import {
   UserPlus, Trash2, RefreshCw, Shield, User2,
-  Mail, Lock, ChevronDown,
+  Mail, Lock, ChevronDown, ChevronLeft, Users,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
@@ -92,29 +92,38 @@ export default function UsersPage() {
   const canDelete = currentUser?.role === "owner";
 
   return (
-    <div className="space-y-4 p-4 pb-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-white p-6 rounded-2xl border border-border shadow-sm">
-        <div>
-          <h2 className="text-3xl font-display font-bold text-foreground">{t("users.title")}</h2>
-          <p className="text-muted-foreground mt-1">{t("users.subtitle")}</p>
+    <div className="min-h-full bg-[#f2f2f7]">
+      <div className="bg-white px-4 pt-5 pb-4 flex items-center gap-3 border-b border-gray-100">
+        <button
+          onClick={() => window.history.back()}
+          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-500 shrink-0"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <Users className="w-5 h-5 text-primary shrink-0" strokeWidth={1.8} />
+            <h1 className="text-[17px] font-semibold text-gray-900">{t("users.title")}</h1>
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">{t("users.subtitle")}</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => refetch()}
-            className="p-2.5 border border-border rounded-xl text-muted-foreground hover:bg-slate-50 transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-full border border-border text-muted-foreground hover:bg-slate-50 transition-colors"
           >
-            <RefreshCw className="w-5 h-5" />
+            <RefreshCw className="w-4 h-4" />
           </button>
           <button
             onClick={() => setShowForm((s) => !s)}
-            className="px-5 py-2.5 bg-primary text-white font-semibold rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2"
+            className="px-3 py-1.5 bg-primary text-white text-sm font-semibold rounded-xl flex items-center gap-1.5 hover:bg-primary/90 transition-colors"
           >
             <UserPlus className="w-4 h-4" />
             {t("users.addStaff")}
           </button>
         </div>
       </div>
+      <div className="space-y-4 p-4 pb-8">
 
       {/* Add Staff Form */}
       <AnimatePresence>
@@ -314,6 +323,7 @@ export default function UsersPage() {
         onConfirm={() => { handleDelete(deleteConfirmId!); setDeleteConfirmId(null); }}
         onCancel={() => setDeleteConfirmId(null)}
       />
+      </div>
     </div>
   );
 }

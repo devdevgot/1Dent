@@ -15,7 +15,7 @@ import {
   getListPatientsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus, RefreshCw } from "lucide-react";
+import { Plus, RefreshCw, KanbanSquare, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { KanbanColumn } from "@/components/kanban/kanban-column";
 import { PatientCard } from "@/components/kanban/patient-card";
@@ -107,29 +107,36 @@ export default function KanbanPage() {
   const totalPatients = patients.length;
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-7.5rem)] lg:h-full gap-4 p-4">
-      <div className="flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-3">
-          <p className="text-sm text-muted-foreground">
-            {t("kanban.totalPatients", { count: totalPatients })}
-          </p>
+    <div className="flex flex-col h-full bg-[#f2f2f7]">
+      <div className="bg-white px-4 pt-5 pb-4 flex items-center gap-3 border-b border-gray-100 shrink-0">
+        <button
+          onClick={() => window.history.back()}
+          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-500 shrink-0"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <KanbanSquare className="w-5 h-5 text-primary shrink-0" strokeWidth={1.8} />
+          <h1 className="text-[17px] font-semibold text-gray-900 flex-1 truncate">{t("nav.kanban")}</h1>
+          <span className="text-xs text-muted-foreground shrink-0">{t("kanban.totalPatients", { count: totalPatients })}</span>
           <Button
             variant="ghost"
             size="icon"
             onClick={() => queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() })}
-            className="w-8 h-8"
+            className="w-8 h-8 text-gray-500 shrink-0"
             title={t("kanban.refresh")}
           >
             <RefreshCw className="w-4 h-4" />
           </Button>
         </div>
         {canCreate && (
-          <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
+          <Button onClick={() => setIsCreateOpen(true)} className="gap-2 shrink-0">
             <Plus className="w-4 h-4" />
             {t("kanban.newPatient")}
           </Button>
         )}
       </div>
+      <div className="flex flex-col flex-1 overflow-hidden gap-4 p-4">
 
       {isLoading ? (
         <div className="flex-1 flex items-center justify-center">
@@ -171,6 +178,7 @@ export default function KanbanPage() {
       <PatientDetailPanel />
 
       {isCreateOpen && <CreatePatientDialog onClose={() => setIsCreateOpen(false)} />}
+      </div>
     </div>
   );
 }

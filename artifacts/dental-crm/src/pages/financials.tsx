@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useListProcedures, useListUsers, useGetInventoryConsumption } from "@workspace/api-client-react";
 import { useTranslation } from "react-i18next";
-import { Wallet, TrendingUp, TrendingDown, Package } from "lucide-react";
+import { Wallet, TrendingUp, TrendingDown, Package, ChevronLeft } from "lucide-react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 
 export default function FinancialsPage() {
@@ -58,16 +58,20 @@ export default function FinancialsPage() {
   }
 
   return (
-    <div className="p-4 pb-24 space-y-4 max-w-full">
-      <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center">
-          <Wallet className="w-5 h-5 text-white" />
-        </div>
-        <div>
-          <h1 className="text-lg font-bold text-foreground">{t("financials.title")}</h1>
-          <p className="text-xs text-muted-foreground">{t("financials.subtitle")}</p>
+    <div className="min-h-full bg-[#f2f2f7]">
+      <div className="bg-white px-4 pt-5 pb-4 flex items-center gap-3 border-b border-gray-100">
+        <button
+          onClick={() => window.history.back()}
+          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-500 shrink-0"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <div className="flex items-center gap-2">
+          <Wallet className="w-5 h-5 text-primary shrink-0" strokeWidth={1.8} />
+          <h1 className="text-[17px] font-semibold text-gray-900">{t("financials.title")}</h1>
         </div>
       </div>
+      <div className="p-4 pb-24 space-y-4 max-w-full">
 
       {/* Date range */}
       <div className="flex gap-2">
@@ -248,6 +252,7 @@ export default function FinancialsPage() {
             ))}
           </div>
         )}
+      </div>
       </div>
     </div>
   );
