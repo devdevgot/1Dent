@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useLocation } from "wouter";
 import {
-  ArrowLeft, SlidersHorizontal, X, ChevronDown, Filter,
+  SlidersHorizontal, X, ChevronDown, Filter,
   Calendar, Users, TrendingUp, Wallet, CheckCircle2,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -224,13 +224,6 @@ export default function DoctorAnalyticsPage() {
     <div className="h-full flex flex-col overflow-hidden bg-background">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="shrink-0 border-b border-border/50 bg-white px-6 py-4">
-        <button
-          onClick={() => window.history.back()}
-          className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors mb-3"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          {t("common.back")}
-        </button>
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground">{t("doctorAnalytics.title")}</h1>
