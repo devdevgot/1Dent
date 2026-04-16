@@ -198,22 +198,36 @@ export function ChannelsSettings() {
           ) : (
             <>
               <p className="text-xs text-gray-500 mb-3">{t("channels.whatsappPhoneDesc")}</p>
-              <form onSubmit={handleSavePhone} className="flex gap-2">
+              <form onSubmit={handleSavePhone} className="space-y-2">
                 <input
                   type="text"
                   value={whatsappPhone}
                   onChange={(e) => setWhatsappPhone(e.target.value)}
                   placeholder={t("channels.whatsappPhonePlaceholder")}
-                  className="flex-1 h-9 rounded-lg border border-border bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#98cc1c]/30"
+                  className="w-full h-9 rounded-lg border border-border bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#98cc1c]/30"
                   autoFocus={showPhoneEdit && !!savedPhone}
                 />
-                <button
-                  type="submit"
-                  disabled={saveDisabled}
-                  className="h-9 px-4 rounded-lg bg-[#98cc1c] text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {t("channels.whatsappPhoneSave")}
-                </button>
+                <div className="flex gap-2">
+                  {savedPhone && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setWhatsappPhone(savedPhone);
+                        setShowPhoneEdit(false);
+                      }}
+                      className="flex-1 h-9 rounded-lg border border-border text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                    >
+                      {t("channels.cancel")}
+                    </button>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={saveDisabled}
+                    className="flex-1 h-9 rounded-lg bg-[#98cc1c] text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {t("channels.whatsappPhoneSave")}
+                  </button>
+                </div>
               </form>
             </>
           )}
