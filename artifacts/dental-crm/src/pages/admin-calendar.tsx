@@ -987,7 +987,7 @@ export default function AdminCalendar() {
                             STATUS_DOT[p.status ?? "scheduled"],
                           )}
                         />
-                        <span className="truncate">{patientName ?? p.name}</span>
+                        <span className="truncate">{patientName ? `${patientName} · ${p.name}` : p.name}</span>
                         {p.scheduledAt && (
                           <span className="opacity-60 shrink-0">
                             {format(parseISO(p.scheduledAt), "HH:mm")}

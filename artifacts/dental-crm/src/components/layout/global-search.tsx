@@ -50,9 +50,9 @@ const PAGE_ITEMS: {
   iconColor: string;
 }[] = [
   { label: "Дашборд",    href: "dashboard",       roles: ["owner","admin","doctor","accountant","warehouse"], Icon: LayoutDashboard, iconBg: "bg-blue-100",   iconColor: "text-blue-600" },
-  { label: "Канбан",     href: "/kanban",          roles: ["owner","admin"],                                  Icon: KanbanSquare,    iconBg: "bg-violet-100", iconColor: "text-violet-600" },
-  { label: "Пациенты",   href: "/patients",        roles: ["owner","admin","doctor"],                         Icon: Users,           iconBg: "bg-sky-100",    iconColor: "text-sky-600" },
-  { label: "Процедуры",  href: "/procedures",      roles: ["owner","admin","accountant"],                     Icon: Stethoscope,     iconBg: "bg-green-100",  iconColor: "text-green-600" },
+  { label: "Канбан",     href: "/patients?view=kanban",      roles: ["owner","admin"],                             Icon: KanbanSquare,    iconBg: "bg-violet-100", iconColor: "text-violet-600" },
+  { label: "Пациенты",   href: "/patients",                  roles: ["owner","admin","doctor","accountant"],        Icon: Users,           iconBg: "bg-sky-100",    iconColor: "text-sky-600" },
+  { label: "Процедуры",  href: "/patients?view=procedures",  roles: ["owner","admin","accountant"],                 Icon: Stethoscope,     iconBg: "bg-green-100",  iconColor: "text-green-600" },
   { label: "Расписание", href: "/schedule",        roles: ["doctor"],                                         Icon: Calendar,        iconBg: "bg-orange-100", iconColor: "text-orange-600" },
   { label: "Аналитика",  href: "/analytics",       roles: ["owner"],                                          Icon: BarChart3,       iconBg: "bg-pink-100",   iconColor: "text-pink-600" },
   { label: "Аналитика врача", href: "/doctor-analytics", roles: ["doctor"],                                   Icon: BarChart3,       iconBg: "bg-pink-100",   iconColor: "text-pink-600" },

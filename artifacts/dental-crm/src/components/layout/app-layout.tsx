@@ -36,7 +36,7 @@ const ALL_NAV_ITEMS = [
   { nameKey: "nav.dashboard",   href: "__role_dashboard__",  icon: LayoutDashboard, roles: ["owner","admin","doctor","accountant","warehouse"] },
   { nameKey: "nav.calendar",    href: "/calendar",           icon: Calendar,        roles: ["owner"]                                           },
   { nameKey: "nav.chat",        href: "/chat",               icon: FaWhatsapp,      roles: ["owner","admin","doctor"]                          },
-  { nameKey: "nav.patients",    href: "/patients",           icon: Users,           roles: ["owner","admin","doctor"]                          },
+  { nameKey: "nav.patients",    href: "/patients",           icon: Users,           roles: ["owner","admin","doctor","accountant"]             },
   { nameKey: "nav.schedule",    href: "/schedule",           icon: Calendar,        roles: ["doctor"]                                          },
   { nameKey: "nav.services",    href: "/services",           icon: Stethoscope,     roles: ["owner","admin"]                                   },
   { nameKey: "nav.analytics",   href: "/analytics",          icon: BarChart3,       roles: ["owner"]                                           },

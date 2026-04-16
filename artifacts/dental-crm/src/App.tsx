@@ -218,7 +218,7 @@ function Router() {
 
       {/* Feature Routes */}
       <Route path="/patients">
-        <ProtectedRoute component={PatientsPage} allowedRoles={['owner', 'admin', 'doctor']} />
+        <ProtectedRoute component={PatientsPage} allowedRoles={['owner', 'admin', 'doctor', 'accountant']} />
       </Route>
       <Route path="/patients/:patientId/teeth/:fdi">
         <ProtectedRoute component={ToothDetailPage} allowedRoles={['owner', 'admin', 'doctor']} />
