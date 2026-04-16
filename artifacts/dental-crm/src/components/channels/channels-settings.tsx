@@ -61,6 +61,7 @@ export function ChannelsSettings() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState("");
   const [newType, setNewType] = useState<CreateChannelRequest["type"]>("instagram");
+  const [customTypeName, setCustomTypeName] = useState("");
   const [whatsappPhone, setWhatsappPhone] = useState("");
   const [savedPhone, setSavedPhone] = useState<string | null>(null);
   const [showPhoneEdit, setShowPhoneEdit] = useState(false);
@@ -94,6 +95,7 @@ export function ChannelsSettings() {
         setShowAddForm(false);
         setNewName("");
         setNewType("instagram");
+        setCustomTypeName("");
       },
       onError: () => {
         toast({ title: t("common.error", { defaultValue: "Ошибка" }), variant: "destructive" });
@@ -301,7 +303,10 @@ export function ChannelsSettings() {
                       <button
                         key={type}
                         type="button"
-                        onClick={() => setNewType(type)}
+                        onClick={() => {
+                          setNewType(type);
+                          if (type !== "other") setCustomTypeName("");
+                        }}
                         className={`flex flex-col items-center gap-1 py-2 rounded-lg border text-[10px] font-medium transition-colors ${
                           active
                             ? "border-[#98cc1c] bg-[#f7fce8] text-[#4a6b0a]"
@@ -316,11 +321,24 @@ export function ChannelsSettings() {
                     );
                   })}
                 </div>
+                {newType === "other" && (
+                  <input
+                    type="text"
+                    value={customTypeName}
+                    onChange={(e) => {
+                      setCustomTypeName(e.target.value);
+                      setNewName(e.target.value);
+                    }}
+                    placeholder="Например: TikTok, YouTube, Баннер..."
+                    autoFocus
+                    className="mt-2 w-full h-9 rounded-lg border border-[#98cc1c]/50 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#98cc1c]/30"
+                  />
+                )}
               </div>
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => { setShowAddForm(false); setNewName(""); }}
+                  onClick={() => { setShowAddForm(false); setNewName(""); setCustomTypeName(""); setNewType("instagram"); }}
                   className="flex-1 h-9 rounded-lg border border-border text-sm font-medium hover:bg-muted transition-colors"
                 >
                   {t("channels.cancel")}
