@@ -14,9 +14,7 @@ export interface Patient {
   doctorId?: string | null;
   name: string;
   phone: string;
-  iin?: string | null;
-  dateOfBirth?: string | null;
-  gender?: "male" | "female" | "other" | null;
+  age?: number | null;
   source: PatientSource;
   status: PatientStatus;
   notes?: string | null;

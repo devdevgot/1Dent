@@ -118,6 +118,7 @@ export * from "./notificationResponseData";
 export * from "./notificationsResponse";
 export * from "./notificationsResponseData";
 export * from "./notificationType";
+export * from "./patchUserCapacityRequest";
 export * from "./patient";
 export * from "./patientDetailResponse";
 export * from "./patientDetailResponseData";

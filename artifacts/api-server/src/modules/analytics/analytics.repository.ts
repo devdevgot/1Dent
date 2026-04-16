@@ -607,13 +607,13 @@ export class AnalyticsRepository {
             ),
           db
             .select()
-            .from(proceduresTable)
+            .from(patientsTable)
             .where(
               and(
-                eq(proceduresTable.clinicId, clinicId),
-                eq(proceduresTable.doctorId, doc.id),
-                gte(proceduresTable.createdAt, todayStart),
-                lte(proceduresTable.createdAt, todayEnd),
+                eq(patientsTable.clinicId, clinicId),
+                eq(patientsTable.doctorId, doc.id),
+                gte(patientsTable.createdAt, todayStart),
+                lte(patientsTable.createdAt, todayEnd),
               ),
             ),
         ]);

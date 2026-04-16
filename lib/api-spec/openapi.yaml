@@ -251,6 +251,33 @@ paths:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
 
+  /users/{id}/capacity:
+    patch:
+      operationId: patchUserCapacity
+      tags: [auth]
+      summary: Update doctor capacity (max patients per day)
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchUserCapacityRequest"
+      responses:
+        "200":
+          description: Capacity updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
   /patients:
     get:
       operationId: listPatients
@@ -2126,6 +2153,17 @@ components:
         role:
           $ref: "#/components/schemas/UserRole"
 
+    PatchUserCapacityRequest:
+      type: object
+      required:
+        - maxPatientsPerDay
+      properties:
+        maxPatientsPerDay:
+          type: integer
+          minimum: 1
+          maximum: 50
+          description: Maximum number of patients per day for this doctor
+
     AuthResponse:
       type: object
       properties:
@@ -3243,6 +3281,17 @@ components:
         nps:
           type: number
           description: Net Promoter Score (0 if not yet tracked)
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: "Weighted performance score 0-100 (revenue 35%, procedures 30%, avg check 20%, conversion 15%)"
+        slotsUsedToday:
+          type: integer
+          description: Number of patients assigned to this doctor today
+        maxSlotsPerDay:
+          type: integer
+          description: Maximum patients per day limit (default 20)
       required:
         - doctorId
         - doctorName
@@ -3251,6 +3300,9 @@ components:
         - revenueTotal
         - averageCheck
         - nps
+        - score
+        - slotsUsedToday
+        - maxSlotsPerDay
 
     DoctorDetailedAnalytics:
       type: object

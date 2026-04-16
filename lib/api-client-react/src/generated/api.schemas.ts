@@ -156,7 +156,6 @@ export interface Clinic {
   id: string;
   name: string;
   createdAt: string;
-  whatsappPhone?: string | null;
 }
 
 export interface RegisterRequest {
@@ -193,6 +192,15 @@ export interface CreateUserRequest {
 export interface UpdateUserRequest {
   name?: string;
   role?: UserRole;
+}
+
+export interface PatchUserCapacityRequest {
+  /**
+   * Maximum number of patients per day for this doctor
+   * @minimum 1
+   * @maximum 50
+   */
+  maxPatientsPerDay: number;
 }
 
 export type AuthResponseData = {
@@ -267,9 +275,7 @@ export interface Patient {
   doctorId?: string | null;
   name: string;
   phone: string;
-  iin?: string | null;
-  dateOfBirth?: string | null;
-  gender?: "male" | "female" | "other" | null;
+  age?: number | null;
   source: PatientSource;
   status: PatientStatus;
   notes?: string | null;
@@ -292,10 +298,7 @@ export interface CreatePatientRequest {
   name: string;
   /** @minLength 5 */
   phone: string;
-  /** @pattern ^\d{12}$ */
-  iin?: string;
-  dateOfBirth?: string;
-  gender?: "male" | "female" | "other";
+  age?: number;
   source?: PatientSource;
   doctorId?: string;
   notes?: string;
@@ -306,10 +309,7 @@ export interface UpdatePatientRequest {
   name?: string;
   /** @minLength 5 */
   phone?: string;
-  /** @pattern ^\d{12}$ */
-  iin?: string;
-  dateOfBirth?: string;
-  gender?: "male" | "female" | "other";
+  age?: number;
   source?: PatientSource;
   doctorId?: string;
   notes?: string;
@@ -416,7 +416,6 @@ export const NotificationType = {
   new_message: "new_message",
   appointment: "appointment",
   system: "system",
-  appointment_reminder: "appointment_reminder",
 } as const;
 
 export interface Notification {
@@ -428,7 +427,6 @@ export interface Notification {
   read: boolean;
   patientId: string | null;
   messageId: string | null;
-  payload?: Record<string, unknown> | null;
   createdAt: string;
 }
 
@@ -786,9 +784,13 @@ export interface DoctorKpi {
   averageCheck: number;
   /** Net Promoter Score (0 if not yet tracked) */
   nps: number;
-  /** Weighted performance score 0-100 (revenue 35%, procedures 30%, avg check 20%, conversion 15%) */
+  /**
+   * Weighted performance score 0-100 (revenue 35%, procedures 30%, avg check 20%, conversion 15%)
+   * @minimum 0
+   * @maximum 100
+   */
   score: number;
-  /** Number of procedures scheduled or completed today */
+  /** Number of patients assigned to this doctor today */
   slotsUsedToday: number;
   /** Maximum patients per day limit (default 20) */
   maxSlotsPerDay: number;

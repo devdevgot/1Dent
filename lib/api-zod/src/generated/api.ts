@@ -178,6 +178,28 @@ export const DeleteUserResponse = zod.object({
 });
 
 /**
+ * @summary Update doctor capacity (max patients per day)
+ */
+export const PatchUserCapacityParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const patchUserCapacityBodyMaxPatientsPerDayMax = 50;
+
+export const PatchUserCapacityBody = zod.object({
+  maxPatientsPerDay: zod
+    .number()
+    .min(1)
+    .max(patchUserCapacityBodyMaxPatientsPerDayMax)
+    .describe("Maximum number of patients per day for this doctor"),
+});
+
+export const PatchUserCapacityResponse = zod.object({
+  success: zod.literal(true),
+  message: zod.string().optional(),
+});
+
+/**
  * @summary List patients (doctor sees only own patients)
  */
 export const ListPatientsResponse = zod.object({
@@ -1608,6 +1630,9 @@ export const GetDoctorDetailedAnalyticsResponse = zod.object({
 /**
  * @summary Get doctor KPI rankings
  */
+export const getDoctorKpisResponseDataKpisItemScoreMin = 0;
+export const getDoctorKpisResponseDataKpisItemScoreMax = 100;
+
 export const GetDoctorKpisResponse = zod.object({
   success: zod.literal(true),
   data: zod.object({
@@ -1624,6 +1649,19 @@ export const GetDoctorKpisResponse = zod.object({
             "Average revenue per procedure (revenueTotal \/ proceduresCount)",
           ),
         nps: zod.number().describe("Net Promoter Score (0 if not yet tracked)"),
+        score: zod
+          .number()
+          .min(getDoctorKpisResponseDataKpisItemScoreMin)
+          .max(getDoctorKpisResponseDataKpisItemScoreMax)
+          .describe(
+            "Weighted performance score 0-100 (revenue 35%, procedures 30%, avg check 20%, conversion 15%)",
+          ),
+        slotsUsedToday: zod
+          .number()
+          .describe("Number of patients assigned to this doctor today"),
+        maxSlotsPerDay: zod
+          .number()
+          .describe("Maximum patients per day limit (default 20)"),
       }),
     ),
   }),

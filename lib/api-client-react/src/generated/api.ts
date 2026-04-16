@@ -68,6 +68,7 @@ import type {
   MigrationJobsResponse,
   NotificationResponse,
   NotificationsResponse,
+  PatchUserCapacityRequest,
   PatientDetailResponse,
   PatientResponse,
   PatientsListResponse,
@@ -87,8 +88,8 @@ import type {
   TrelloImportRequest,
   UnreadCountResponse,
   UpdateChatbotSettings200,
-  UpdateConditionPricesRequest,
   UpdateClinicWhatsappPhoneBody,
+  UpdateConditionPricesRequest,
   UpdateInventoryItemRequest,
   UpdatePatientRequest,
   UpdatePatientStatusRequest,
@@ -923,14 +924,14 @@ export const getPatchUserCapacityUrl = (id: string) => {
 
 export const patchUserCapacity = async (
   id: string,
-  data: { maxPatientsPerDay: number },
+  patchUserCapacityRequest: PatchUserCapacityRequest,
   options?: RequestInit,
 ): Promise<SuccessResponse> => {
   return customFetch<SuccessResponse>(getPatchUserCapacityUrl(id), {
     ...options,
     method: "PATCH",
-    headers: { "Content-Type": "application/json", ...(options?.headers ?? {}) },
-    body: JSON.stringify(data),
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(patchUserCapacityRequest),
   });
 };
 
@@ -941,14 +942,14 @@ export const getPatchUserCapacityMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof patchUserCapacity>>,
     TError,
-    { id: string; data: { maxPatientsPerDay: number } },
+    { id: string; data: BodyType<PatchUserCapacityRequest> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof patchUserCapacity>>,
   TError,
-  { id: string; data: { maxPatientsPerDay: number } },
+  { id: string; data: BodyType<PatchUserCapacityRequest> },
   TContext
 > => {
   const mutationKey = ["patchUserCapacity"];
@@ -962,9 +963,10 @@ export const getPatchUserCapacityMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof patchUserCapacity>>,
-    { id: string; data: { maxPatientsPerDay: number } }
+    { id: string; data: BodyType<PatchUserCapacityRequest> }
   > = (props) => {
     const { id, data } = props ?? {};
+
     return patchUserCapacity(id, data, requestOptions);
   };
 
@@ -974,7 +976,7 @@ export const getPatchUserCapacityMutationOptions = <
 export type PatchUserCapacityMutationResult = NonNullable<
   Awaited<ReturnType<typeof patchUserCapacity>>
 >;
-
+export type PatchUserCapacityMutationBody = BodyType<PatchUserCapacityRequest>;
 export type PatchUserCapacityMutationError = ErrorType<unknown>;
 
 /**
@@ -987,14 +989,14 @@ export const usePatchUserCapacity = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof patchUserCapacity>>,
     TError,
-    { id: string; data: { maxPatientsPerDay: number } },
+    { id: string; data: BodyType<PatchUserCapacityRequest> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof patchUserCapacity>>,
   TError,
-  { id: string; data: { maxPatientsPerDay: number } },
+  { id: string; data: BodyType<PatchUserCapacityRequest> },
   TContext
 > => {
   return useMutation(getPatchUserCapacityMutationOptions(options));

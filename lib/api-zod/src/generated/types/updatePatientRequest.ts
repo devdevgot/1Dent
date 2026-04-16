@@ -12,10 +12,7 @@ export interface UpdatePatientRequest {
   name?: string;
   /** @minLength 5 */
   phone?: string;
-  /** @pattern ^\d{12}$ */
-  iin?: string;
-  dateOfBirth?: string;
-  gender?: "male" | "female" | "other";
+  age?: number;
   source?: PatientSource;
   doctorId?: string;
   notes?: string;

@@ -16,4 +16,14 @@ export interface DoctorKpi {
   averageCheck: number;
   /** Net Promoter Score (0 if not yet tracked) */
   nps: number;
+  /**
+   * Weighted performance score 0-100 (revenue 35%, procedures 30%, avg check 20%, conversion 15%)
+   * @minimum 0
+   * @maximum 100
+   */
+  score: number;
+  /** Number of patients assigned to this doctor today */
+  slotsUsedToday: number;
+  /** Maximum patients per day limit (default 20) */
+  maxSlotsPerDay: number;
 }
