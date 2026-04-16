@@ -13,9 +13,25 @@ import {
 } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/hooks/use-auth";
-import { Copy, Download, Trash2, Plus, Smartphone, Pencil } from "lucide-react";
+import { Copy, Download, Trash2, Plus, Smartphone, Pencil, Globe, Handshake, Megaphone, MapPin } from "lucide-react";
+import { FaInstagram, FaTelegram, FaWhatsapp } from "react-icons/fa";
 
-const CHANNEL_TYPE_ICONS: Record<string, string> = {
+const BRAND = "#98cc1c";
+
+function ChannelIcon({ type, size = 20 }: { type: string; size?: number }) {
+  const props = { size, color: BRAND, style: { flexShrink: 0 } };
+  switch (type) {
+    case "instagram": return <FaInstagram {...props} />;
+    case "telegram":  return <FaTelegram {...props} />;
+    case "whatsapp":  return <FaWhatsapp {...props} />;
+    case "2gis":      return <MapPin size={size} color={BRAND} style={{ flexShrink: 0 }} />;
+    case "website":   return <Globe size={size} color={BRAND} style={{ flexShrink: 0 }} />;
+    case "referral":  return <Handshake size={size} color={BRAND} style={{ flexShrink: 0 }} />;
+    default:          return <Megaphone size={size} color={BRAND} style={{ flexShrink: 0 }} />;
+  }
+}
+
+const CHANNEL_TYPE_EMOJIS: Record<string, string> = {
   instagram: "📸",
   telegram: "✈️",
   "2gis": "📍",
@@ -226,7 +242,7 @@ export function ChannelsSettings() {
             const refUrl = getRefUrl(ch.refCode, savedPhone);
             return (
               <div key={ch.id} className="flex items-center gap-3 p-3 border border-border/60 rounded-xl bg-white">
-                <span className="text-xl">{CHANNEL_TYPE_ICONS[ch.type] ?? "📢"}</span>
+                <ChannelIcon type={ch.type} size={20} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-foreground truncate">{ch.name}</p>
                   <p className="text-xs text-muted-foreground font-mono truncate">{refUrl}</p>
@@ -288,7 +304,7 @@ export function ChannelsSettings() {
             >
               {(["instagram", "telegram", "2gis", "website", "whatsapp", "referral", "other"] as const).map((type) => (
                 <option key={type} value={type}>
-                  {CHANNEL_TYPE_ICONS[type]} {t(`source.${type}`, { defaultValue: type })}
+                  {CHANNEL_TYPE_EMOJIS[type]} {t(`source.${type}`, { defaultValue: type })}
                 </option>
               ))}
             </select>
