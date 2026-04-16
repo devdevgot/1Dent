@@ -393,14 +393,14 @@ export function PatientDetailPanel() {
   const teethMap = new Map(teethRecords.map((t) => [t.toothFdi, t]));
 
   const { data: conditionPricesData } = useGetConditionPrices({
-    query: { enabled: isDiagnosisMode || activeTab === "plan" },
+    query: { enabled: isDiagnosisMode || activeTab === "dental" },
   });
   const conditionPricesMap = conditionPricesData?.data?.prices ?? {};
 
   const { data: planData } = useGetActiveTreatmentPlan(selectedPatientId ?? "", {
     query: {
       queryKey: getGetActiveTreatmentPlanQueryKey(selectedPatientId ?? ""),
-      enabled: !!selectedPatientId && activeTab === "plan",
+      enabled: !!selectedPatientId && activeTab === "dental",
     },
   });
   const activePlan = planData?.data?.plan ?? null;
@@ -408,7 +408,7 @@ export function PatientDetailPanel() {
   const { data: plansHistoryData } = useListTreatmentPlans(selectedPatientId ?? "", {
     query: {
       queryKey: getListTreatmentPlansQueryKey(selectedPatientId ?? ""),
-      enabled: !!selectedPatientId && activeTab === "plan",
+      enabled: !!selectedPatientId && activeTab === "dental",
     },
   });
 
@@ -552,9 +552,6 @@ export function PatientDetailPanel() {
     setIsDiagnosisMode(false);
     setShowSummaryModal(false);
     toast({ title: t("patient.diagnosisSaved") });
-    setTimeout(() => {
-      toast({ title: "Не забудьте обновить план лечения", description: "Перейдите во вкладку «План лечения»" });
-    }, 800);
   }, [selectedPatientId, diagnosisMap, diagnosisNotesMap, teethMap, updateToothMutation, refetchTeeth, toast, t]);
 
   const diagnosisSummaryEntries = useMemo((): DiagnosisSummaryEntry[] => {
@@ -622,7 +619,6 @@ export function PatientDetailPanel() {
   const tabs = [
     { id: "info"   as const, label: "Информация" },
     { id: "dental" as const, label: t("patient.tabDental") },
-    { id: "plan"   as const, label: "План лечения" },
   ];
 
   const doctorUser = patient?.doctorId ? allUsers.find((u) => u.id === patient.doctorId) : null;
@@ -1010,20 +1006,9 @@ export function PatientDetailPanel() {
               </div>
             )}
 
-            {/* Dental Chart Tab */}
+            {/* Dental Chart + Treatment Plan Tab */}
             {activeTab === "dental" && (
               <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-                {hasDiagnosis && !isDiagnosisMode && (
-                  <div className="px-3 pt-2 shrink-0">
-                    <button
-                      onClick={() => setActiveTab("plan")}
-                      className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 transition-colors"
-                    >
-                      <ClipboardList className="w-3.5 h-3.5" />
-                      Открыть план лечения
-                    </button>
-                  </div>
-                )}
                 <div className="flex-1 overflow-y-auto custom-scrollbar">
                   <div className="p-3">
                     {/* No diagnosis yet */}
@@ -1197,45 +1182,50 @@ export function PatientDetailPanel() {
                       </div>
                     )}
                   </div>
-                </div>
-              </div>
-            )}
 
-            {/* Treatment Plan Tab */}
-            {activeTab === "plan" && (
-              <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-                {!activePlan ? (
-                  <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6 py-12">
-                    <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
-                      <ClipboardList className="w-7 h-7 text-primary" />
-                    </div>
-                    <div className="text-center">
-                      <p className="font-semibold text-gray-800 text-sm">
-                        {pastPlans.length > 0
-                          ? `Создать План ${pastPlans.length + 1}`
-                          : "Нет активного плана лечения"}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {pastPlans.length > 0
-                          ? "Предыдущие планы сохранены в истории"
-                          : "Данные из диагностики добавятся автоматически"}
-                      </p>
-                    </div>
-                    <Button
-                      onClick={() => createPlanMutation.mutate({ id: selectedPatientId, data: {} })}
-                      disabled={createPlanMutation.isPending}
-                      className="gap-2"
-                    >
-                      <Plus className="w-4 h-4" />
-                      {pastPlans.length > 0
-                        ? `Создать План ${pastPlans.length + 1}`
-                        : "Составить план из диагностики"}
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    {/* Plan header */}
-                    <div className="px-4 pt-3 pb-2 border-b border-border/40 shrink-0 space-y-2">
+                  {/* Treatment Plan section — below the dental chart */}
+                  {!isDiagnosisMode && (
+                    <div className="border-t border-border/50">
+                      {/* Section label */}
+                      <div className="px-4 py-2.5 flex items-center gap-2 bg-gray-50/60">
+                        <ClipboardList className="w-3.5 h-3.5 text-primary" />
+                        <span className="text-xs font-bold text-gray-600 uppercase tracking-wide">
+                          План лечения
+                        </span>
+                      </div>
+
+                      {!activePlan ? (
+                        <div className="flex flex-col items-center justify-center gap-4 px-6 py-8">
+                          <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                            <ClipboardList className="w-6 h-6 text-primary" />
+                          </div>
+                          <div className="text-center">
+                            <p className="font-semibold text-gray-800 text-sm">
+                              {pastPlans.length > 0
+                                ? `Создать План ${pastPlans.length + 1}`
+                                : "Нет активного плана лечения"}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {pastPlans.length > 0
+                                ? "Предыдущие планы сохранены в истории"
+                                : "Данные из диагностики добавятся автоматически"}
+                            </p>
+                          </div>
+                          <Button
+                            onClick={() => createPlanMutation.mutate({ id: selectedPatientId, data: {} })}
+                            disabled={createPlanMutation.isPending}
+                            className="gap-2"
+                          >
+                            <Plus className="w-4 h-4" />
+                            {pastPlans.length > 0
+                              ? `Создать План ${pastPlans.length + 1}`
+                              : "Составить план из диагностики"}
+                          </Button>
+                        </div>
+                      ) : (
+                        <>
+                          {/* Plan header */}
+                          <div className="px-4 pt-3 pb-2 border-b border-border/40 space-y-2">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-bold text-gray-900">
@@ -1295,9 +1285,8 @@ export function PatientDetailPanel() {
                       </div>
                     </div>
 
-                    {/* Items list */}
-                    <div className="flex-1 overflow-y-auto custom-scrollbar">
-                      <div className="p-3 space-y-2">
+                          {/* Items list */}
+                          <div className="p-3 space-y-2">
                         {activePlan.items.length === 0 && (
                           <p className="text-sm text-muted-foreground text-center py-8">
                             Нет шагов. Добавьте первый шаг.
@@ -1504,11 +1493,10 @@ export function PatientDetailPanel() {
                           )
                         )}
                       </div>
-                    </div>
-                  </>
-                )}
+                      </>
+                      )}
 
-                {/* Plan history — completed/cancelled plans */}
+                      {/* Plan history — completed/cancelled plans */}
                 {pastPlans.length > 0 && (
                   <div className="border-t border-border/40 shrink-0">
                     <button
@@ -1606,8 +1594,11 @@ export function PatientDetailPanel() {
                         })}
                       </div>
                     )}
-                  </div>
-                )}
+                    </div>
+                    )}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
