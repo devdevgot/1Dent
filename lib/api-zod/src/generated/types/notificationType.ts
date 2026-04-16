@@ -14,4 +14,5 @@ export const NotificationType = {
   new_message: "new_message",
   appointment: "appointment",
   system: "system",
+  appointment_reminder: "appointment_reminder",
 } as const;

@@ -53,6 +53,7 @@ export const LoginResponse = zod.object({
     clinic: zod.object({
       id: zod.string(),
       name: zod.string(),
+      whatsappPhone: zod.string().nullish(),
       createdAt: zod.date(),
     }),
   }),
@@ -83,6 +84,7 @@ export const GetMeResponse = zod.object({
     clinic: zod.object({
       id: zod.string(),
       name: zod.string(),
+      whatsappPhone: zod.string().nullish(),
       createdAt: zod.date(),
     }),
   }),
@@ -202,6 +204,10 @@ export const PatchUserCapacityResponse = zod.object({
 /**
  * @summary List patients (doctor sees only own patients)
  */
+export const listPatientsResponseDataPatientsItemIinRegExp = new RegExp(
+  "^\\d{12}$",
+);
+
 export const ListPatientsResponse = zod.object({
   success: zod.literal(true),
   data: zod.object({
@@ -212,7 +218,12 @@ export const ListPatientsResponse = zod.object({
         doctorId: zod.string().nullish(),
         name: zod.string(),
         phone: zod.string(),
-        age: zod.number().nullish(),
+        iin: zod
+          .string()
+          .regex(listPatientsResponseDataPatientsItemIinRegExp)
+          .nullish(),
+        dateOfBirth: zod.date().nullish(),
+        gender: zod.enum(["male", "female", "other"]).nullish(),
         source: zod
           .string()
           .describe(
@@ -242,10 +253,14 @@ export const createPatientBodyNameMin = 2;
 
 export const createPatientBodyPhoneMin = 5;
 
+export const createPatientBodyIinRegExp = new RegExp("^\\d{12}$");
+
 export const CreatePatientBody = zod.object({
   name: zod.string().min(createPatientBodyNameMin),
   phone: zod.string().min(createPatientBodyPhoneMin),
-  age: zod.number().optional(),
+  iin: zod.string().regex(createPatientBodyIinRegExp).optional(),
+  dateOfBirth: zod.date().optional(),
+  gender: zod.enum(["male", "female", "other"]).optional(),
   source: zod
     .string()
     .optional()
@@ -263,6 +278,8 @@ export const GetPatientParams = zod.object({
   id: zod.coerce.string(),
 });
 
+export const getPatientResponseDataPatientIinRegExp = new RegExp("^\\d{12}$");
+
 export const GetPatientResponse = zod.object({
   success: zod.literal(true),
   data: zod.object({
@@ -272,7 +289,9 @@ export const GetPatientResponse = zod.object({
       doctorId: zod.string().nullish(),
       name: zod.string(),
       phone: zod.string(),
-      age: zod.number().nullish(),
+      iin: zod.string().regex(getPatientResponseDataPatientIinRegExp).nullish(),
+      dateOfBirth: zod.date().nullish(),
+      gender: zod.enum(["male", "female", "other"]).nullish(),
       source: zod
         .string()
         .describe(
@@ -322,10 +341,14 @@ export const updatePatientBodyNameMin = 2;
 
 export const updatePatientBodyPhoneMin = 5;
 
+export const updatePatientBodyIinRegExp = new RegExp("^\\d{12}$");
+
 export const UpdatePatientBody = zod.object({
   name: zod.string().min(updatePatientBodyNameMin).optional(),
   phone: zod.string().min(updatePatientBodyPhoneMin).optional(),
-  age: zod.number().optional(),
+  iin: zod.string().regex(updatePatientBodyIinRegExp).optional(),
+  dateOfBirth: zod.date().optional(),
+  gender: zod.enum(["male", "female", "other"]).optional(),
   source: zod
     .string()
     .optional()
@@ -336,6 +359,10 @@ export const UpdatePatientBody = zod.object({
   notes: zod.string().optional(),
 });
 
+export const updatePatientResponseDataPatientIinRegExp = new RegExp(
+  "^\\d{12}$",
+);
+
 export const UpdatePatientResponse = zod.object({
   success: zod.literal(true),
   data: zod.object({
@@ -345,7 +372,12 @@ export const UpdatePatientResponse = zod.object({
       doctorId: zod.string().nullish(),
       name: zod.string(),
       phone: zod.string(),
-      age: zod.number().nullish(),
+      iin: zod
+        .string()
+        .regex(updatePatientResponseDataPatientIinRegExp)
+        .nullish(),
+      dateOfBirth: zod.date().nullish(),
+      gender: zod.enum(["male", "female", "other"]).nullish(),
       source: zod
         .string()
         .describe(
@@ -398,6 +430,10 @@ export const UpdatePatientStatusBody = zod.object({
   ]),
 });
 
+export const updatePatientStatusResponseDataPatientIinRegExp = new RegExp(
+  "^\\d{12}$",
+);
+
 export const UpdatePatientStatusResponse = zod.object({
   success: zod.literal(true),
   data: zod.object({
@@ -407,7 +443,12 @@ export const UpdatePatientStatusResponse = zod.object({
       doctorId: zod.string().nullish(),
       name: zod.string(),
       phone: zod.string(),
-      age: zod.number().nullish(),
+      iin: zod
+        .string()
+        .regex(updatePatientStatusResponseDataPatientIinRegExp)
+        .nullish(),
+      dateOfBirth: zod.date().nullish(),
+      gender: zod.enum(["male", "female", "other"]).nullish(),
       source: zod
         .string()
         .describe(
@@ -491,11 +532,18 @@ export const ListNotificationsResponse = zod.object({
         id: zod.string(),
         clinicId: zod.string(),
         userId: zod.string(),
-        type: zod.enum(["red_alert", "new_message", "appointment", "system"]),
+        type: zod.enum([
+          "red_alert",
+          "new_message",
+          "appointment",
+          "system",
+          "appointment_reminder",
+        ]),
         message: zod.string(),
         read: zod.boolean(),
         patientId: zod.string().nullable(),
         messageId: zod.string().nullable(),
+        payload: zod.record(zod.string(), zod.unknown()).nullish(),
         createdAt: zod.date(),
       }),
     ),
@@ -534,11 +582,18 @@ export const MarkNotificationReadResponse = zod.object({
       id: zod.string(),
       clinicId: zod.string(),
       userId: zod.string(),
-      type: zod.enum(["red_alert", "new_message", "appointment", "system"]),
+      type: zod.enum([
+        "red_alert",
+        "new_message",
+        "appointment",
+        "system",
+        "appointment_reminder",
+      ]),
       message: zod.string(),
       read: zod.boolean(),
       patientId: zod.string().nullable(),
       messageId: zod.string().nullable(),
+      payload: zod.record(zod.string(), zod.unknown()).nullish(),
       createdAt: zod.date(),
     }),
   }),

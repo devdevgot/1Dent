@@ -5,6 +5,7 @@
  * Dental CRM API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { NotificationPayload } from "./notificationPayload";
 import type { NotificationType } from "./notificationType";
 
 export interface Notification {
@@ -16,5 +17,6 @@ export interface Notification {
   read: boolean;
   patientId: string | null;
   messageId: string | null;
+  payload?: NotificationPayload;
   createdAt: Date;
 }

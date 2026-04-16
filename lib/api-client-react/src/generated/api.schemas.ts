@@ -155,6 +155,7 @@ export interface User {
 export interface Clinic {
   id: string;
   name: string;
+  whatsappPhone?: string | null;
   createdAt: string;
 }
 
@@ -269,13 +270,26 @@ export const InteractionType = {
   appointment: "appointment",
 } as const;
 
+export type PatientGender =
+  | (typeof PatientGender)[keyof typeof PatientGender]
+  | null;
+
+export const PatientGender = {
+  male: "male",
+  female: "female",
+  other: "other",
+} as const;
+
 export interface Patient {
   id: string;
   clinicId: string;
   doctorId?: string | null;
   name: string;
   phone: string;
-  age?: number | null;
+  /** @pattern ^\d{12}$ */
+  iin?: string | null;
+  dateOfBirth?: string | null;
+  gender?: PatientGender;
   source: PatientSource;
   status: PatientStatus;
   notes?: string | null;
@@ -293,23 +307,47 @@ export interface PatientInteraction {
   createdAt: string;
 }
 
+export type CreatePatientRequestGender =
+  (typeof CreatePatientRequestGender)[keyof typeof CreatePatientRequestGender];
+
+export const CreatePatientRequestGender = {
+  male: "male",
+  female: "female",
+  other: "other",
+} as const;
+
 export interface CreatePatientRequest {
   /** @minLength 2 */
   name: string;
   /** @minLength 5 */
   phone: string;
-  age?: number;
+  /** @pattern ^\d{12}$ */
+  iin?: string;
+  dateOfBirth?: string;
+  gender?: CreatePatientRequestGender;
   source?: PatientSource;
   doctorId?: string;
   notes?: string;
 }
+
+export type UpdatePatientRequestGender =
+  (typeof UpdatePatientRequestGender)[keyof typeof UpdatePatientRequestGender];
+
+export const UpdatePatientRequestGender = {
+  male: "male",
+  female: "female",
+  other: "other",
+} as const;
 
 export interface UpdatePatientRequest {
   /** @minLength 2 */
   name?: string;
   /** @minLength 5 */
   phone?: string;
-  age?: number;
+  /** @pattern ^\d{12}$ */
+  iin?: string;
+  dateOfBirth?: string;
+  gender?: UpdatePatientRequestGender;
   source?: PatientSource;
   doctorId?: string;
   notes?: string;
@@ -416,7 +454,10 @@ export const NotificationType = {
   new_message: "new_message",
   appointment: "appointment",
   system: "system",
+  appointment_reminder: "appointment_reminder",
 } as const;
+
+export type NotificationPayload = { [key: string]: unknown } | null;
 
 export interface Notification {
   id: string;
@@ -427,6 +468,7 @@ export interface Notification {
   read: boolean;
   patientId: string | null;
   messageId: string | null;
+  payload?: NotificationPayload;
   createdAt: string;
 }
 

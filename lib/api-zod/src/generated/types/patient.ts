@@ -5,6 +5,7 @@
  * Dental CRM API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { PatientGender } from "./patientGender";
 import type { PatientSource } from "./patientSource";
 import type { PatientStatus } from "./patientStatus";
 
@@ -14,7 +15,10 @@ export interface Patient {
   doctorId?: string | null;
   name: string;
   phone: string;
-  age?: number | null;
+  /** @pattern ^\d{12}$ */
+  iin?: string | null;
+  dateOfBirth?: Date | null;
+  gender?: PatientGender;
   source: PatientSource;
   status: PatientStatus;
   notes?: string | null;

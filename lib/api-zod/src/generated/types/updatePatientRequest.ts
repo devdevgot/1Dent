@@ -6,13 +6,17 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { PatientSource } from "./patientSource";
+import type { UpdatePatientRequestGender } from "./updatePatientRequestGender";
 
 export interface UpdatePatientRequest {
   /** @minLength 2 */
   name?: string;
   /** @minLength 5 */
   phone?: string;
-  age?: number;
+  /** @pattern ^\d{12}$ */
+  iin?: string;
+  dateOfBirth?: Date;
+  gender?: UpdatePatientRequestGender;
   source?: PatientSource;
   doctorId?: string;
   notes?: string;

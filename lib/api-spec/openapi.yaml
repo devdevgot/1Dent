@@ -2071,6 +2071,9 @@ components:
           type: string
         name:
           type: string
+        whatsappPhone:
+          type: string
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -2278,8 +2281,17 @@ components:
           type: string
         phone:
           type: string
-        age:
-          type: integer
+        iin:
+          type: string
+          nullable: true
+          pattern: '^\d{12}$'
+        dateOfBirth:
+          type: string
+          format: date
+          nullable: true
+        gender:
+          type: string
+          enum: [male, female, other]
           nullable: true
         source:
           $ref: "#/components/schemas/PatientSource"
@@ -2340,8 +2352,15 @@ components:
         phone:
           type: string
           minLength: 5
-        age:
-          type: integer
+        iin:
+          type: string
+          pattern: '^\d{12}$'
+        dateOfBirth:
+          type: string
+          format: date
+        gender:
+          type: string
+          enum: [male, female, other]
         source:
           $ref: "#/components/schemas/PatientSource"
         doctorId:
@@ -2361,8 +2380,15 @@ components:
         phone:
           type: string
           minLength: 5
-        age:
-          type: integer
+        iin:
+          type: string
+          pattern: '^\d{12}$'
+        dateOfBirth:
+          type: string
+          format: date
+        gender:
+          type: string
+          enum: [male, female, other]
         source:
           $ref: "#/components/schemas/PatientSource"
         doctorId:
@@ -2556,7 +2582,7 @@ components:
 
     NotificationType:
       type: string
-      enum: [red_alert, new_message, appointment, system]
+      enum: [red_alert, new_message, appointment, system, appointment_reminder]
 
     Notification:
       type: object
@@ -2578,6 +2604,10 @@ components:
           nullable: true
         messageId:
           type: string
+          nullable: true
+        payload:
+          type: object
+          additionalProperties: true
           nullable: true
         createdAt:
           type: string

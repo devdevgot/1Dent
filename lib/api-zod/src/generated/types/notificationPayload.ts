@@ -6,9 +6,4 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface Clinic {
-  id: string;
-  name: string;
-  whatsappPhone?: string | null;
-  createdAt: Date;
-}
+export type NotificationPayload = { [key: string]: unknown } | null;
