@@ -746,6 +746,7 @@ export const ListTreatmentPlansResponse = zod.object({
         clinicId: zod.string(),
         patientId: zod.string(),
         doctorId: zod.string().nullish(),
+        planNumber: zod.number(),
         status: zod.enum([
           "draft",
           "approved",
@@ -795,6 +796,7 @@ export const GetActiveTreatmentPlanResponse = zod.object({
         clinicId: zod.string(),
         patientId: zod.string(),
         doctorId: zod.string().nullish(),
+        planNumber: zod.number(),
         status: zod.enum([
           "draft",
           "approved",
@@ -870,6 +872,7 @@ export const UpdateTreatmentPlanResponse = zod.object({
       clinicId: zod.string(),
       patientId: zod.string(),
       doctorId: zod.string().nullish(),
+      planNumber: zod.number(),
       status: zod.enum([
         "draft",
         "approved",
@@ -918,6 +921,7 @@ export const ApproveTreatmentPlanResponse = zod.object({
       clinicId: zod.string(),
       patientId: zod.string(),
       doctorId: zod.string().nullish(),
+      planNumber: zod.number(),
       status: zod.enum([
         "draft",
         "approved",

@@ -4168,6 +4168,8 @@ components:
         doctorId:
           type: string
           nullable: true
+        planNumber:
+          type: integer
         status:
           $ref: "#/components/schemas/TreatmentPlanStatus"
         notes:
@@ -4189,6 +4191,7 @@ components:
         - id
         - clinicId
         - patientId
+        - planNumber
         - status
         - totalCost
         - items

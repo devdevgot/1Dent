@@ -1209,9 +1209,15 @@ export function PatientDetailPanel() {
                       <ClipboardList className="w-7 h-7 text-primary" />
                     </div>
                     <div className="text-center">
-                      <p className="font-semibold text-gray-800 text-sm">Нет активного плана лечения</p>
+                      <p className="font-semibold text-gray-800 text-sm">
+                        {pastPlans.length > 0
+                          ? `Создать План ${pastPlans.length + 1}`
+                          : "Нет активного плана лечения"}
+                      </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Система автоматически добавит шаги из зубной карты
+                        {pastPlans.length > 0
+                          ? "Предыдущие планы сохранены в истории"
+                          : "Данные из диагностики добавятся автоматически"}
                       </p>
                     </div>
                     <Button
@@ -1220,7 +1226,9 @@ export function PatientDetailPanel() {
                       className="gap-2"
                     >
                       <Plus className="w-4 h-4" />
-                      Составить план
+                      {pastPlans.length > 0
+                        ? `Создать План ${pastPlans.length + 1}`
+                        : "Составить план из диагностики"}
                     </Button>
                   </div>
                 ) : (
@@ -1229,6 +1237,9 @@ export function PatientDetailPanel() {
                     <div className="px-4 pt-3 pb-2 border-b border-border/40 shrink-0 space-y-2">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-gray-900">
+                            План {activePlan.planNumber}
+                          </span>
                           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${
                             activePlan.status === "draft"
                               ? "bg-slate-50 text-slate-600 border-slate-200"
@@ -1243,29 +1254,42 @@ export function PatientDetailPanel() {
                               : activePlan.status === "in_progress" ? "В работе"
                               : "Завершён"}
                           </span>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(activePlan.createdAt).toLocaleDateString("ru", { day: "2-digit", month: "short" })}
-                          </span>
                         </div>
-                        {activePlan.status === "draft" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-xs h-7 gap-1.5 border-blue-200 text-blue-700 hover:bg-blue-50"
-                            onClick={() => approvePlanMutation.mutate({ id: selectedPatientId, planId: activePlan.id })}
-                            disabled={approvePlanMutation.isPending}
-                          >
-                            <BadgeCheck className="w-3.5 h-3.5" />
-                            Согласовать
-                          </Button>
-                        )}
+                        <div className="flex items-center gap-1.5">
+                          {activePlan.status === "draft" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-xs h-7 gap-1.5 border-blue-200 text-blue-700 hover:bg-blue-50"
+                              onClick={() => approvePlanMutation.mutate({ id: selectedPatientId, planId: activePlan.id })}
+                              disabled={approvePlanMutation.isPending}
+                            >
+                              <BadgeCheck className="w-3.5 h-3.5" />
+                              Согласовать
+                            </Button>
+                          )}
+                          {(activePlan.status === "completed" || activePlan.status === "in_progress") && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-xs h-7 gap-1.5 border-primary/30 text-primary hover:bg-primary/5"
+                              onClick={() => createPlanMutation.mutate({ id: selectedPatientId, data: {} })}
+                              disabled={createPlanMutation.isPending}
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              Следующий план
+                            </Button>
+                          )}
+                        </div>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground">
                           {activePlan.items.length} шаг{activePlan.items.length === 1 ? "" : activePlan.items.length < 5 ? "а" : "ов"}
+                          {" · "}
+                          {new Date(activePlan.createdAt).toLocaleDateString("ru", { day: "2-digit", month: "short", year: "numeric" })}
                         </span>
                         <span className="text-sm font-bold text-gray-900">
-                          Итого: {activePlan.totalCost.toLocaleString("ru")} ₸
+                          {activePlan.totalCost.toLocaleString("ru")} ₸
                         </span>
                       </div>
                     </div>
@@ -1494,28 +1518,30 @@ export function PatientDetailPanel() {
                       <ChevronDown className={`w-3.5 h-3.5 transition-transform ${historyExpanded ? "rotate-180" : ""}`} />
                     </button>
                     {historyExpanded && (
-                      <div className="max-h-48 overflow-y-auto custom-scrollbar">
-                        {pastPlans.map((plan) => (
-                          <div key={plan.id} className="px-4 py-2.5 border-t border-border/30">
+                      <div className="max-h-52 overflow-y-auto custom-scrollbar">
+                        {[...pastPlans].sort((a, b) => b.planNumber - a.planNumber).map((plan) => (
+                          <div key={plan.id} className="px-4 py-2.5 border-t border-border/30 hover:bg-gray-50/50">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
-                                <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full border ${
+                                <span className="text-xs font-bold text-gray-700">
+                                  План {plan.planNumber}
+                                </span>
+                                <span className={`text-xs px-1.5 py-0.5 rounded-full border ${
                                   plan.status === "completed"
                                     ? "bg-green-50 text-green-700 border-green-200"
                                     : "bg-gray-100 text-gray-500 border-gray-200"
                                 }`}>
                                   {plan.status === "completed" ? "Завершён" : "Архив"}
                                 </span>
-                                <span className="text-xs text-muted-foreground">
-                                  {new Date(plan.createdAt).toLocaleDateString("ru", { day: "2-digit", month: "short", year: "numeric" })}
-                                </span>
                               </div>
-                              <span className="text-xs font-semibold text-gray-600">
+                              <span className="text-xs font-semibold text-gray-700">
                                 {plan.totalCost.toLocaleString("ru")} ₸
                               </span>
                             </div>
                             <p className="text-xs text-muted-foreground mt-0.5">
                               {plan.items.length} шаг{plan.items.length === 1 ? "" : plan.items.length < 5 ? "а" : "ов"}
+                              {" · "}
+                              {new Date(plan.createdAt).toLocaleDateString("ru", { day: "2-digit", month: "short", year: "numeric" })}
                             </p>
                           </div>
                         ))}

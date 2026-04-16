@@ -1167,6 +1167,7 @@ export interface TreatmentPlan {
   clinicId: string;
   patientId: string;
   doctorId?: string | null;
+  planNumber: number;
   status: TreatmentPlanStatus;
   notes?: string | null;
   totalCost: number;

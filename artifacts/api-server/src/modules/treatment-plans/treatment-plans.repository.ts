@@ -7,7 +7,7 @@ import {
   proceduresTable,
   CONDITION_MKB10,
 } from "@workspace/db";
-import { eq, and, desc, ne, inArray } from "drizzle-orm";
+import { eq, and, desc, ne, inArray, count } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import type {
   TreatmentPlan,
@@ -22,13 +22,25 @@ export type TreatmentPlanWithItems = TreatmentPlan & { items: TreatmentPlanItem[
 
 const CONDITION_LABEL: Record<string, string> = {
   healthy: "Здоровый зуб",
-  cavity: "Кариес",
-  treated: "Леченый зуб",
-  crown: "Коронка",
-  root_canal: "Корневой канал",
-  implant: "Имплант",
-  missing: "Удалённый зуб",
+  cavity: "Лечение кариеса",
+  treated: "Повторное лечение",
+  crown: "Установка коронки",
+  root_canal: "Лечение корневого канала",
+  implant: "Имплантация",
+  missing: "Нет зуба",
   extraction_needed: "Удаление зуба",
+};
+
+/** Logical treatment priority: extractions first, then root canals, then cavities, then crowns, then implants */
+const CONDITION_PRIORITY: Record<string, number> = {
+  extraction_needed: 1,
+  root_canal: 2,
+  cavity: 3,
+  crown: 4,
+  implant: 5,
+  treated: 9,
+  healthy: 10,
+  missing: 10,
 };
 
 export class PlanLockedError extends Error {
@@ -105,6 +117,18 @@ export class TreatmentPlansRepository {
     manualItems?: Array<{ toothFdi?: number; condition?: string; mkb10Code?: string; title: string; price: number }>,
   ): Promise<TreatmentPlanWithItems> {
     return db.transaction(async (tx) => {
+      // Calculate next plan number for this patient
+      const [{ total }] = await tx
+        .select({ total: count() })
+        .from(treatmentPlansTable)
+        .where(
+          and(
+            eq(treatmentPlansTable.patientId, patientId),
+            eq(treatmentPlansTable.clinicId, clinicId),
+          ),
+        );
+      const planNumber = (Number(total) || 0) + 1;
+
       // Archive any existing active plans for this patient before creating a new one
       await tx
         .update(treatmentPlansTable)
@@ -154,9 +178,14 @@ export class TreatmentPlansRepository {
             ),
           );
 
-        const problemTeeth = teeth.filter(
-          (t) => t.condition !== "healthy" && t.condition !== "treated" && t.condition !== "missing",
-        );
+        const problemTeeth = teeth
+          .filter((t) => t.condition !== "healthy" && t.condition !== "treated" && t.condition !== "missing")
+          .sort((a, b) => {
+            const pa = CONDITION_PRIORITY[a.condition as string] ?? 9;
+            const pb = CONDITION_PRIORITY[b.condition as string] ?? 9;
+            if (pa !== pb) return pa - pb;
+            return a.toothFdi - b.toothFdi;
+          });
 
         itemsData = problemTeeth.map((tooth, idx) => {
           const cond = tooth.condition as string;
@@ -188,6 +217,7 @@ export class TreatmentPlansRepository {
           clinicId,
           patientId,
           doctorId,
+          planNumber,
           status: "draft",
           notes: null,
           totalCost,

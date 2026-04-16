@@ -178,6 +178,7 @@ export const treatmentPlansTable = pgTable("treatment_plans", {
     .notNull()
     .references(() => patientsTable.id, { onDelete: "cascade" }),
   doctorId: text("doctor_id").references(() => usersTable.id, { onDelete: "set null" }),
+  planNumber: integer("plan_number").notNull().default(1),
   status: treatmentPlanStatusEnum("status").default("draft").notNull(),
   notes: text("notes"),
   totalCost: real("total_cost").notNull().default(0),
