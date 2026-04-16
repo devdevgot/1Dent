@@ -13,7 +13,7 @@ import {
 } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/hooks/use-auth";
-import { Copy, Download, Trash2, Plus, Smartphone } from "lucide-react";
+import { Copy, Download, Trash2, Plus, Smartphone, Pencil } from "lucide-react";
 
 const CHANNEL_TYPE_ICONS: Record<string, string> = {
   instagram: "📸",
@@ -34,6 +34,17 @@ function getRefUrl(refCode: string, phone?: string | null): string {
   return `${base}/ref/${refCode}`;
 }
 
+function isValidPhone(value: string): boolean {
+  return value.replace(/\D/g, "").length >= 10;
+}
+
+function formatPhone(digits: string): string {
+  if (digits.startsWith("7") && digits.length === 11) {
+    return `+7 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7, 9)}-${digits.slice(9)}`;
+  }
+  return `+${digits}`;
+}
+
 export function ChannelsSettings() {
   const { t } = useTranslation();
   const { user, clinic } = useAuthStore();
@@ -45,6 +56,7 @@ export function ChannelsSettings() {
   const [newType, setNewType] = useState<CreateChannelRequest["type"]>("instagram");
   const [whatsappPhone, setWhatsappPhone] = useState("");
   const [savedPhone, setSavedPhone] = useState<string | null>(null);
+  const [showPhoneEdit, setShowPhoneEdit] = useState(false);
 
   const isOwner = user?.role === "owner";
   const isAdmin = user?.role === "admin";
@@ -53,8 +65,12 @@ export function ChannelsSettings() {
   useEffect(() => {
     const phone = (clinic as any)?.whatsappPhone ?? null;
     if (phone) {
-      setSavedPhone(phone);
-      setWhatsappPhone(phone);
+      const digits = String(phone).replace(/\D/g, "");
+      setSavedPhone(digits);
+      setWhatsappPhone(digits);
+      setShowPhoneEdit(false);
+    } else {
+      setShowPhoneEdit(true);
     }
   }, [clinic]);
 
@@ -92,6 +108,7 @@ export function ChannelsSettings() {
       onSuccess: () => {
         const digits = whatsappPhone.replace(/\D/g, "");
         setSavedPhone(digits);
+        setShowPhoneEdit(false);
         toast({ title: t("channels.whatsappPhoneSaved") });
       },
       onError: () => {
@@ -128,9 +145,16 @@ export function ChannelsSettings() {
 
   const handleSavePhone = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!whatsappPhone.trim()) return;
-    updatePhoneMutation.mutate({ data: { whatsappPhone: whatsappPhone.replace(/\D/g, "") } });
+    const digits = whatsappPhone.replace(/\D/g, "");
+    if (!isValidPhone(whatsappPhone) || digits === savedPhone) return;
+    updatePhoneMutation.mutate({ data: { whatsappPhone: digits } });
   };
+
+  const currentDigits = whatsappPhone.replace(/\D/g, "");
+  const saveDisabled =
+    updatePhoneMutation.isPending ||
+    !isValidPhone(whatsappPhone) ||
+    currentDigits === (savedPhone ?? "");
 
   if (!canManage) return null;
 
@@ -138,27 +162,51 @@ export function ChannelsSettings() {
     <div className="space-y-4">
       {isOwner && (
         <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Smartphone className="w-4 h-4 text-emerald-600" />
-            <h3 className="text-sm font-semibold text-emerald-800">{t("channels.whatsappPhone")}</h3>
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <Smartphone className="w-4 h-4 text-emerald-600" />
+              <h3 className="text-sm font-semibold text-emerald-800">{t("channels.whatsappPhone")}</h3>
+            </div>
+            {savedPhone && !showPhoneEdit && (
+              <button
+                onClick={() => {
+                  setWhatsappPhone(savedPhone);
+                  setShowPhoneEdit(true);
+                }}
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-emerald-600 hover:bg-emerald-100 transition-colors"
+                title="Изменить номер"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
-          <p className="text-xs text-emerald-700 mb-3">{t("channels.whatsappPhoneDesc")}</p>
-          <form onSubmit={handleSavePhone} className="flex gap-2">
-            <input
-              type="text"
-              value={whatsappPhone}
-              onChange={(e) => setWhatsappPhone(e.target.value)}
-              placeholder={t("channels.whatsappPhonePlaceholder")}
-              className="flex-1 h-9 rounded-lg border border-emerald-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
-            />
-            <button
-              type="submit"
-              disabled={updatePhoneMutation.isPending || !whatsappPhone.trim()}
-              className="h-9 px-4 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-60"
-            >
-              {t("channels.whatsappPhoneSave")}
-            </button>
-          </form>
+
+          {savedPhone && !showPhoneEdit ? (
+            <p className="text-sm font-semibold text-emerald-900 mt-2">
+              {formatPhone(savedPhone)}
+            </p>
+          ) : (
+            <>
+              <p className="text-xs text-emerald-700 mb-3">{t("channels.whatsappPhoneDesc")}</p>
+              <form onSubmit={handleSavePhone} className="flex gap-2">
+                <input
+                  type="text"
+                  value={whatsappPhone}
+                  onChange={(e) => setWhatsappPhone(e.target.value)}
+                  placeholder={t("channels.whatsappPhonePlaceholder")}
+                  className="flex-1 h-9 rounded-lg border border-emerald-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
+                  autoFocus={showPhoneEdit && !!savedPhone}
+                />
+                <button
+                  type="submit"
+                  disabled={saveDisabled}
+                  className="h-9 px-4 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {t("channels.whatsappPhoneSave")}
+                </button>
+              </form>
+            </>
+          )}
         </div>
       )}
 
