@@ -160,6 +160,7 @@ export const treatmentPlanStatusEnum = pgEnum("treatment_plan_status", [
   "approved",
   "in_progress",
   "completed",
+  "cancelled",
 ]);
 
 export const treatmentPlanItemStatusEnum = pgEnum("treatment_plan_item_status", [

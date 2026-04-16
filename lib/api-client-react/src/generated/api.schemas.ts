@@ -1134,6 +1134,7 @@ export const TreatmentPlanStatus = {
   approved: "approved",
   in_progress: "in_progress",
   completed: "completed",
+  cancelled: "cancelled",
 } as const;
 
 export type TreatmentPlanItemStatus =

@@ -746,7 +746,13 @@ export const ListTreatmentPlansResponse = zod.object({
         clinicId: zod.string(),
         patientId: zod.string(),
         doctorId: zod.string().nullish(),
-        status: zod.enum(["draft", "approved", "in_progress", "completed"]),
+        status: zod.enum([
+          "draft",
+          "approved",
+          "in_progress",
+          "completed",
+          "cancelled",
+        ]),
         notes: zod.string().nullish(),
         totalCost: zod.number(),
         items: zod.array(
@@ -789,7 +795,13 @@ export const GetActiveTreatmentPlanResponse = zod.object({
         clinicId: zod.string(),
         patientId: zod.string(),
         doctorId: zod.string().nullish(),
-        status: zod.enum(["draft", "approved", "in_progress", "completed"]),
+        status: zod.enum([
+          "draft",
+          "approved",
+          "in_progress",
+          "completed",
+          "cancelled",
+        ]),
         notes: zod.string().nullish(),
         totalCost: zod.number(),
         items: zod.array(
@@ -858,7 +870,13 @@ export const UpdateTreatmentPlanResponse = zod.object({
       clinicId: zod.string(),
       patientId: zod.string(),
       doctorId: zod.string().nullish(),
-      status: zod.enum(["draft", "approved", "in_progress", "completed"]),
+      status: zod.enum([
+        "draft",
+        "approved",
+        "in_progress",
+        "completed",
+        "cancelled",
+      ]),
       notes: zod.string().nullish(),
       totalCost: zod.number(),
       items: zod.array(
@@ -900,7 +918,13 @@ export const ApproveTreatmentPlanResponse = zod.object({
       clinicId: zod.string(),
       patientId: zod.string(),
       doctorId: zod.string().nullish(),
-      status: zod.enum(["draft", "approved", "in_progress", "completed"]),
+      status: zod.enum([
+        "draft",
+        "approved",
+        "in_progress",
+        "completed",
+        "cancelled",
+      ]),
       notes: zod.string().nullish(),
       totalCost: zod.number(),
       items: zod.array(

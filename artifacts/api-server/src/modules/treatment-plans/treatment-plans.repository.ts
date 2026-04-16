@@ -53,6 +53,7 @@ export class TreatmentPlansRepository {
           eq(treatmentPlansTable.patientId, patientId),
           eq(treatmentPlansTable.clinicId, clinicId),
           ne(treatmentPlansTable.status, "completed"),
+          ne(treatmentPlansTable.status, "cancelled"),
         ),
       )
       .orderBy(desc(treatmentPlansTable.createdAt))
@@ -107,12 +108,13 @@ export class TreatmentPlansRepository {
       // Archive any existing active plans for this patient before creating a new one
       await tx
         .update(treatmentPlansTable)
-        .set({ status: "completed", updatedAt: new Date() })
+        .set({ status: "cancelled", updatedAt: new Date() })
         .where(
           and(
             eq(treatmentPlansTable.patientId, patientId),
             eq(treatmentPlansTable.clinicId, clinicId),
             ne(treatmentPlansTable.status, "completed"),
+            ne(treatmentPlansTable.status, "cancelled"),
           ),
         );
 
@@ -253,7 +255,10 @@ export class TreatmentPlansRepository {
     if (plan.patientId !== patientId) return null;
 
     const allowedStatuses: TreatmentPlanStatus[] = ["draft", "in_progress"];
-    if (!allowedStatuses.includes(plan.status)) return this._getPlanWithItems(planId, clinicId);
+    if (!allowedStatuses.includes(plan.status)) {
+      // Already approved/completed/cancelled — return as-is with items
+      return this._getPlanWithItems(planId, clinicId);
+    }
 
     await db
       .update(treatmentPlansTable)

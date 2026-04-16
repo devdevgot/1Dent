@@ -29,6 +29,13 @@
       "when": 1776445200000,
       "tag": "0003_treatment_plans",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1776531600000,
+      "tag": "0004_cancelled_plan_status",
+      "breakpoints": true
     }
   ]
 }
