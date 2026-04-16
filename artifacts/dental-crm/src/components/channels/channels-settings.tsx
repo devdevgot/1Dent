@@ -234,107 +234,115 @@ export function ChannelsSettings() {
         </div>
       )}
 
-      {channels.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-6">{t("channels.noChannels")}</p>
-      ) : (
-        <div className="space-y-2">
-          {channels.map((ch) => {
-            const refUrl = getRefUrl(ch.refCode, savedPhone);
-            return (
-              <div key={ch.id} className="flex items-center gap-3 p-3 border border-border/60 rounded-xl bg-white">
-                <ChannelIcon type={ch.type} size={20} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-foreground truncate">{ch.name}</p>
-                  <p className="text-xs text-muted-foreground font-mono truncate">{refUrl}</p>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    onClick={() => handleCopyLink(ch.refCode)}
-                    title={t("channels.copyLink")}
-                    className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                  >
-                    <Copy className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDownloadQr(ch)}
-                    title={t("channels.downloadQr")}
-                    className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                  >
-                    <Download className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (confirm(t("channels.deleteConfirm"))) {
-                        deleteMutation.mutate({ id: ch.id });
-                      }
-                    }}
-                    title={t("channels.deleteChannel")}
-                    className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors text-muted-foreground hover:text-red-600"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      <div className="mt-2">
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+          Каналы сквозной аналитики
+        </h2>
 
-      {showAddForm ? (
-        <form onSubmit={handleCreate} className="border border-primary/30 rounded-xl p-4 bg-primary/5 space-y-3">
-          <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">{t("channels.channelName")}</label>
-            <input
-              type="text"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              required
-              minLength={1}
-              maxLength={100}
-              placeholder={t("channels.channelNamePlaceholder")}
-              className="w-full h-9 rounded-lg border border-border bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">{t("channels.channelType")}</label>
-            <select
-              value={newType}
-              onChange={(e) => setNewType(e.target.value as CreateChannelRequest["type"])}
-              className="w-full h-9 rounded-lg border border-border bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-            >
-              {(["instagram", "telegram", "2gis", "website", "whatsapp", "referral", "other"] as const).map((type) => (
-                <option key={type} value={type}>
-                  {CHANNEL_TYPE_EMOJIS[type]} {t(`source.${type}`, { defaultValue: type })}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex gap-2">
+        <div className="space-y-4">
+          {channels.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">{t("channels.noChannels")}</p>
+          ) : (
+            <div className="space-y-2">
+              {channels.map((ch) => {
+                const refUrl = getRefUrl(ch.refCode, savedPhone);
+                return (
+                  <div key={ch.id} className="flex items-center gap-3 p-3 border border-border/60 rounded-xl bg-white">
+                    <ChannelIcon type={ch.type} size={20} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">{ch.name}</p>
+                      <p className="text-xs text-muted-foreground font-mono truncate">{refUrl}</p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => handleCopyLink(ch.refCode)}
+                        title={t("channels.copyLink")}
+                        className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDownloadQr(ch)}
+                        title={t("channels.downloadQr")}
+                        className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm(t("channels.deleteConfirm"))) {
+                            deleteMutation.mutate({ id: ch.id });
+                          }
+                        }}
+                        title={t("channels.deleteChannel")}
+                        className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors text-muted-foreground hover:text-red-600"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {showAddForm ? (
+            <form onSubmit={handleCreate} className="border border-primary/30 rounded-xl p-4 bg-primary/5 space-y-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">{t("channels.channelName")}</label>
+                <input
+                  type="text"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  required
+                  minLength={1}
+                  maxLength={100}
+                  placeholder={t("channels.channelNamePlaceholder")}
+                  className="w-full h-9 rounded-lg border border-border bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">{t("channels.channelType")}</label>
+                <select
+                  value={newType}
+                  onChange={(e) => setNewType(e.target.value as CreateChannelRequest["type"])}
+                  className="w-full h-9 rounded-lg border border-border bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                >
+                  {(["instagram", "telegram", "2gis", "website", "whatsapp", "referral", "other"] as const).map((type) => (
+                    <option key={type} value={type}>
+                      {CHANNEL_TYPE_EMOJIS[type]} {t(`source.${type}`, { defaultValue: type })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setShowAddForm(false); setNewName(""); }}
+                  className="flex-1 h-9 rounded-lg border border-border text-sm font-medium hover:bg-muted transition-colors"
+                >
+                  {t("channels.cancel")}
+                </button>
+                <button
+                  type="submit"
+                  disabled={createMutation.isPending || !newName.trim()}
+                  className="flex-1 h-9 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-60"
+                >
+                  {createMutation.isPending ? t("channels.creating") : t("channels.create")}
+                </button>
+              </div>
+            </form>
+          ) : (
             <button
-              type="button"
-              onClick={() => { setShowAddForm(false); setNewName(""); }}
-              className="flex-1 h-9 rounded-lg border border-border text-sm font-medium hover:bg-muted transition-colors"
+              onClick={() => setShowAddForm(true)}
+              className="w-full h-10 rounded-xl border-2 border-dashed border-border hover:border-primary/50 text-sm text-muted-foreground hover:text-primary flex items-center justify-center gap-2 transition-colors"
             >
-              {t("channels.cancel")}
+              <Plus className="w-4 h-4" />
+              {t("channels.addChannel")}
             </button>
-            <button
-              type="submit"
-              disabled={createMutation.isPending || !newName.trim()}
-              className="flex-1 h-9 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-60"
-            >
-              {createMutation.isPending ? t("channels.creating") : t("channels.create")}
-            </button>
-          </div>
-        </form>
-      ) : (
-        <button
-          onClick={() => setShowAddForm(true)}
-          className="w-full h-10 rounded-xl border-2 border-dashed border-border hover:border-primary/50 text-sm text-muted-foreground hover:text-primary flex items-center justify-center gap-2 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          {t("channels.addChannel")}
-        </button>
-      )}
+          )}
+        </div>
+      </div>
     </div>
   );
 }
