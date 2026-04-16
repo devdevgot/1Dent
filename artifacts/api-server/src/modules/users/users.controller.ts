@@ -3,8 +3,9 @@ import { z } from "zod";
 import { AuthService } from "../auth/auth.service";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError } from "../../shared/errors";
-import { db, doctorCapacityTable } from "@workspace/db";
+import { db, doctorCapacityTable, usersTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
+import { analyticsCache } from "../../shared/analytics-cache";
 
 const router: IRouter = Router();
 const authService = new AuthService();
@@ -105,6 +106,17 @@ router.patch(
     const { clinicId } = req.user!;
 
     try {
+      // Verify target user is a doctor in the same clinic
+      const [targetUser] = await db
+        .select()
+        .from(usersTable)
+        .where(and(eq(usersTable.id, doctorId), eq(usersTable.clinicId, clinicId), eq(usersTable.role, "doctor")))
+        .limit(1);
+
+      if (!targetUser) {
+        return next(new ValidationError("Doctor not found in this clinic"));
+      }
+
       await db
         .insert(doctorCapacityTable)
         .values({ doctorId, clinicId, maxPatientsPerDay: parsed.data.maxPatientsPerDay })
@@ -112,6 +124,9 @@ router.patch(
           target: doctorCapacityTable.doctorId,
           set: { maxPatientsPerDay: parsed.data.maxPatientsPerDay },
         });
+
+      // Invalidate KPI cache so the next request picks up the new limit
+      await analyticsCache.invalidate(analyticsCache.key("kpi", clinicId));
 
       res.json({ success: true, data: { maxPatientsPerDay: parsed.data.maxPatientsPerDay } });
     } catch (err) {

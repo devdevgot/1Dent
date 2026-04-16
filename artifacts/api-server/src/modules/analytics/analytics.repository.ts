@@ -83,16 +83,40 @@ export interface DoctorKpi {
   maxSlotsPerDay: number;
 }
 
-function computeDoctorScore(kpi: Omit<DoctorKpi, "score" | "slotsUsedToday" | "maxSlotsPerDay">, allKpis: Array<Omit<DoctorKpi, "score" | "slotsUsedToday" | "maxSlotsPerDay">>): number {
+interface RawDoctorKpi {
+  doctorId: string;
+  doctorName: string;
+  patientsCount: number;
+  proceduresCount: number;
+  cancelledCount: number;
+  revenueTotal: number;
+  averageCheck: number;
+  nps: number;
+  slotsUsedToday: number;
+  maxSlotsPerDay: number;
+}
+
+function computeDoctorScore(kpi: RawDoctorKpi, allKpis: RawDoctorKpi[]): number {
   const maxRevenue = Math.max(...allKpis.map((k) => k.revenueTotal), 1);
   const maxProcedures = Math.max(...allKpis.map((k) => k.proceduresCount), 1);
   const maxCheck = Math.max(...allKpis.map((k) => k.averageCheck), 1);
-  const maxPatients = Math.max(...allKpis.map((k) => k.patientsCount), 1);
+
+  const conversionRaw = (kpi.proceduresCount + kpi.cancelledCount) > 0
+    ? kpi.proceduresCount / (kpi.proceduresCount + kpi.cancelledCount)
+    : 0;
+  const maxConversionRaw = Math.max(
+    ...allKpis.map((k) =>
+      (k.proceduresCount + k.cancelledCount) > 0
+        ? k.proceduresCount / (k.proceduresCount + k.cancelledCount)
+        : 0,
+    ),
+    0.001,
+  );
 
   const revenueNorm = kpi.revenueTotal / maxRevenue;
   const proceduresNorm = kpi.proceduresCount / maxProcedures;
   const checkNorm = kpi.averageCheck / maxCheck;
-  const conversionNorm = kpi.patientsCount / maxPatients;
+  const conversionNorm = conversionRaw / maxConversionRaw;
 
   const score = revenueNorm * 35 + proceduresNorm * 30 + checkNorm * 20 + conversionNorm * 15;
   return Math.round(Math.min(100, Math.max(0, score)));
@@ -551,7 +575,7 @@ export class AnalyticsRepository {
 
     const rawKpis = await Promise.all(
       doctors.map(async (doc) => {
-        const [patients, procedures, todayProcs] = await Promise.all([
+        const [patients, procedures, cancelledProcs, todayProcs] = await Promise.all([
           db
             .select()
             .from(patientsTable)
@@ -578,6 +602,16 @@ export class AnalyticsRepository {
               and(
                 eq(proceduresTable.clinicId, clinicId),
                 eq(proceduresTable.doctorId, doc.id),
+                eq(proceduresTable.status, "cancelled"),
+              ),
+            ),
+          db
+            .select()
+            .from(proceduresTable)
+            .where(
+              and(
+                eq(proceduresTable.clinicId, clinicId),
+                eq(proceduresTable.doctorId, doc.id),
                 gte(proceduresTable.createdAt, todayStart),
                 lte(proceduresTable.createdAt, todayEnd),
               ),
@@ -590,9 +624,10 @@ export class AnalyticsRepository {
           doctorName: doc.name,
           patientsCount: patients.length,
           proceduresCount: procedures.length,
+          cancelledCount: cancelledProcs.length,
           revenueTotal,
           averageCheck,
-          nps: 0, // placeholder — will be populated from patient survey results (Task #7)
+          nps: 0, // placeholder — will be populated from patient survey results (Task #28)
           slotsUsedToday: todayProcs.length,
           maxSlotsPerDay: capacityMap.get(doc.id) ?? 20,
         };
@@ -600,7 +635,15 @@ export class AnalyticsRepository {
     );
 
     const kpis: DoctorKpi[] = rawKpis.map((kpi) => ({
-      ...kpi,
+      doctorId: kpi.doctorId,
+      doctorName: kpi.doctorName,
+      patientsCount: kpi.patientsCount,
+      proceduresCount: kpi.proceduresCount,
+      revenueTotal: kpi.revenueTotal,
+      averageCheck: kpi.averageCheck,
+      nps: kpi.nps,
+      slotsUsedToday: kpi.slotsUsedToday,
+      maxSlotsPerDay: kpi.maxSlotsPerDay,
       score: computeDoctorScore(kpi, rawKpis),
     }));
 
