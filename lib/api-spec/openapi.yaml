@@ -1369,6 +1369,38 @@ paths:
               schema:
                 $ref: "#/components/schemas/ProcedureResponse"
 
+  /procedures/{id}/payment:
+    patch:
+      operationId: updateProcedurePayment
+      tags: [procedures]
+      summary: Mark procedure payment method (admin/owner only)
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                paymentMethod:
+                  $ref: "#/components/schemas/PaymentMethod"
+              required:
+                - paymentMethod
+      responses:
+        "200":
+          description: Payment method updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProcedureResponse"
+
   /procedure-templates:
     get:
       operationId: listProcedureTemplatesAlias

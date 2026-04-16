@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { useListProcedures, useListUsers, useListPatients } from "@workspace/api-client-react";
+import { useListProcedures, useListUsers, useListPatients, useUpdateProcedurePayment } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
   BarChart,
@@ -22,6 +23,8 @@ import {
   BarChart3,
   Search,
   ChevronDown,
+  Clock,
+  CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, startOfDay, startOfWeek, startOfMonth, startOfYear, parseISO } from "date-fns";
@@ -83,6 +86,18 @@ export default function AdminFinancePage() {
   const [patientSearch, setPatientSearch] = useState("");
   const [showPatientList, setShowPatientList] = useState(false);
   const [showDebts, setShowDebts] = useState(false);
+  const [showPending, setShowPending] = useState(true);
+  const [selectingPayment, setSelectingPayment] = useState<string | null>(null);
+
+  const queryClient = useQueryClient();
+  const updatePayment = useUpdateProcedurePayment({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["/procedures"] });
+        setSelectingPayment(null);
+      },
+    },
+  });
 
   const { data: proceduresData, isLoading } = useListProcedures();
   const { data: usersData } = useListUsers();
@@ -118,7 +133,8 @@ export default function AdminFinancePage() {
       if (filterStatus && p.status !== filterStatus) return false;
       if (filterDoctorId && p.doctorId !== filterDoctorId) return false;
       if (filterPatientId && p.patientId !== filterPatientId) return false;
-      if (filterPaymentMethod && (p.paymentMethod ?? "cash") !== filterPaymentMethod) return false;
+      if (p.paymentMethod == null) return false;
+      if (filterPaymentMethod && p.paymentMethod !== filterPaymentMethod) return false;
       const date = p.completedAt ?? p.scheduledAt;
       if (!date) return false;
       try {
@@ -135,6 +151,12 @@ export default function AdminFinancePage() {
   const debtProcedures = useMemo(() => {
     return allProcedures.filter(
       (p) => p.status === "completed" && (!p.price || p.price === 0),
+    );
+  }, [allProcedures]);
+
+  const pendingProcedures = useMemo(() => {
+    return allProcedures.filter(
+      (p) => p.status === "completed" && p.paymentMethod == null,
     );
   }, [allProcedures]);
 
@@ -174,7 +196,7 @@ export default function AdminFinancePage() {
     const totals: Record<string, number> = {};
     for (const p of filtered) {
       if (!p.price || p.price === 0) continue;
-      const m = p.paymentMethod ?? "cash";
+      const m = p.paymentMethod ?? "unknown";
       totals[m] = (totals[m] ?? 0) + p.price;
     }
     return Object.entries(totals)
@@ -354,6 +376,93 @@ export default function AdminFinancePage() {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* Pending payments section */}
+      {pendingProcedures.length > 0 && (
+        <div className="bg-white rounded-2xl border border-amber-200 shadow-sm overflow-hidden">
+          <button
+            onClick={() => setShowPending(!showPending)}
+            className="w-full px-5 py-4 border-b border-amber-100 flex items-center gap-2 hover:bg-amber-50/50 transition-colors"
+          >
+            <Clock className="w-4 h-4 text-amber-500" />
+            <h2 className="text-base font-bold text-gray-900">Ожидают оплаты</h2>
+            <span className="ml-1 text-xs font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">
+              {pendingProcedures.length}
+            </span>
+            <ChevronDown className={cn("w-4 h-4 text-gray-400 ml-auto transition-transform", showPending ? "rotate-180" : "")} />
+          </button>
+          {showPending && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-amber-50/50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  <tr>
+                    <th className="px-5 py-3 text-left">Пациент</th>
+                    <th className="px-5 py-3 text-left">Врач</th>
+                    <th className="px-5 py-3 text-left">Услуга</th>
+                    <th className="px-5 py-3 text-right">Сумма</th>
+                    <th className="px-5 py-3 text-left">Дата</th>
+                    <th className="px-5 py-3 text-left">Оплата</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {pendingProcedures.map((proc) => {
+                    const dateStr = proc.completedAt ?? proc.scheduledAt;
+                    const isSelecting = selectingPayment === proc.id;
+                    const isSaving = updatePayment.isPending;
+                    return (
+                      <tr key={proc.id} className="hover:bg-amber-50/20 transition-colors">
+                        <td className="px-5 py-3 font-medium text-gray-900">
+                          {patientMap.get(proc.patientId ?? "") ?? "—"}
+                        </td>
+                        <td className="px-5 py-3 text-gray-500">
+                          {proc.doctorId ? (doctorMap.get(proc.doctorId) ?? "—") : "—"}
+                        </td>
+                        <td className="px-5 py-3 text-gray-700 max-w-[200px] truncate">{proc.name}</td>
+                        <td className="px-5 py-3 text-right font-semibold text-gray-900">
+                          {proc.price ? formatMoney(proc.price) : "—"}
+                        </td>
+                        <td className="px-5 py-3 text-gray-500 whitespace-nowrap">
+                          {dateStr ? (() => { try { return format(parseISO(dateStr), "dd.MM.yyyy"); } catch { return "—"; } })() : "—"}
+                        </td>
+                        <td className="px-5 py-3">
+                          {isSelecting ? (
+                            <div className="flex flex-wrap gap-1.5">
+                              {(["cash", "kaspi_qr", "kaspi_transfer", "terminal", "kaspi_red", "debt"] as const).map((method) => (
+                                <button
+                                  key={method}
+                                  disabled={isSaving}
+                                  onClick={() => updatePayment.mutate({ id: proc.id, data: { paymentMethod: method } })}
+                                  className="px-2 py-1 text-xs rounded-lg border border-gray-200 hover:border-primary hover:bg-primary/10 hover:text-primary transition-colors disabled:opacity-50"
+                                >
+                                  {PAYMENT_METHOD_LABELS[method]}
+                                </button>
+                              ))}
+                              <button
+                                onClick={() => setSelectingPayment(null)}
+                                className="px-2 py-1 text-xs rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 transition-colors"
+                              >
+                                Отмена
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setSelectingPayment(proc.id)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              Отметить оплату
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
@@ -570,7 +679,7 @@ export default function AdminFinancePage() {
                     cancelled:   "bg-gray-100 text-gray-500",
                   };
                   const dateStr = proc.completedAt ?? proc.scheduledAt;
-                  const paymentLabel = PAYMENT_METHOD_LABELS[proc.paymentMethod ?? "cash"] ?? proc.paymentMethod ?? "—";
+                  const paymentLabel = proc.paymentMethod == null ? "Ожидает" : (PAYMENT_METHOD_LABELS[proc.paymentMethod] ?? proc.paymentMethod ?? "—");
                   return (
                     <tr key={proc.id} className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-5 py-3 font-medium text-gray-900">

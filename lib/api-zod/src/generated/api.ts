@@ -1598,6 +1598,64 @@ export const UpdateProcedureStatusResponse = zod.object({
 });
 
 /**
+ * @summary Mark procedure payment method (admin/owner only)
+ */
+export const UpdateProcedurePaymentParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const UpdateProcedurePaymentBody = zod.object({
+  paymentMethod: zod.enum([
+    "kaspi_transfer",
+    "cash",
+    "kaspi_qr",
+    "terminal",
+    "kaspi_red",
+    "debt",
+  ]),
+});
+
+export const UpdateProcedurePaymentResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    procedure: zod.object({
+      id: zod.string(),
+      clinicId: zod.string(),
+      patientId: zod.string(),
+      doctorId: zod.string().nullish(),
+      doctorName: zod.string().nullish(),
+      name: zod.string(),
+      status: zod.enum(["scheduled", "in_progress", "completed", "cancelled"]),
+      price: zod.number(),
+      paymentMethod: zod
+        .enum([
+          "kaspi_transfer",
+          "cash",
+          "kaspi_qr",
+          "terminal",
+          "kaspi_red",
+          "debt",
+        ])
+        .nullish(),
+      notes: zod.string().nullish(),
+      scheduledAt: zod.date().nullish(),
+      completedAt: zod.date().nullish(),
+      createdAt: zod.date(),
+      materials: zod
+        .array(
+          zod.object({
+            itemId: zod.string(),
+            itemName: zod.string(),
+            unit: zod.string().nullish(),
+            quantity: zod.number(),
+          }),
+        )
+        .optional(),
+    }),
+  }),
+});
+
+/**
  * @summary List procedure templates (alias)
  */
 export const ListProcedureTemplatesAliasResponse = zod.object({

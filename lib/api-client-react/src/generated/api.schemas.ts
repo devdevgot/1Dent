@@ -1305,6 +1305,10 @@ export type UpdateProcedureStatusBody = {
   status: ProcedureStatus;
 };
 
+export type UpdateProcedurePaymentBody = {
+  paymentMethod: PaymentMethod;
+};
+
 export type CreateProcedureTemplateBody = {
   name: string;
   description?: string;

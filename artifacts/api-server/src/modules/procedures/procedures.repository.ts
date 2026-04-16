@@ -8,7 +8,7 @@ import {
 } from "@workspace/db";
 import { eq, and, gte, lte, desc, sql, inArray } from "drizzle-orm";
 import { randomUUID } from "crypto";
-import type { Procedure, ProcedureTemplate, ProcedureStatus } from "@workspace/db";
+import type { Procedure, ProcedureTemplate, ProcedureStatus, PaymentMethod } from "@workspace/db";
 
 export interface ProcedureMaterialItem {
   itemId: string;
@@ -228,6 +228,15 @@ export class ProceduresRepository {
         quantity: m.quantity,
       })),
     );
+  }
+
+  async updatePayment(id: string, clinicId: string, paymentMethod: PaymentMethod): Promise<Procedure | null> {
+    const [updated] = await db
+      .update(proceduresTable)
+      .set({ paymentMethod })
+      .where(and(eq(proceduresTable.id, id), eq(proceduresTable.clinicId, clinicId)))
+      .returning();
+    return updated ?? null;
   }
 
 }

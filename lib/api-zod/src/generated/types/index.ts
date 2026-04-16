@@ -198,6 +198,7 @@ export * from "./updatePatientRequest";
 export * from "./updatePatientRequestGender";
 export * from "./updatePatientStatusRequest";
 export * from "./updateProcedureBody";
+export * from "./updateProcedurePaymentBody";
 export * from "./updateProcedureStatusBody";
 export * from "./updateStockRequest";
 export * from "./updateToothRequest";

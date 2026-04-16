@@ -101,6 +101,7 @@ import type {
   UpdatePatientRequest,
   UpdatePatientStatusRequest,
   UpdateProcedureBody,
+  UpdateProcedurePaymentBody,
   UpdateProcedureStatusBody,
   UpdateStockRequest,
   UpdateToothRequest,
@@ -4693,6 +4694,94 @@ export const useUpdateProcedureStatus = <
   TContext
 > => {
   return useMutation(getUpdateProcedureStatusMutationOptions(options));
+};
+
+/**
+ * @summary Mark procedure payment method (admin/owner only)
+ */
+export const getUpdateProcedurePaymentUrl = (id: string) => {
+  return `/api/procedures/${id}/payment`;
+};
+
+export const updateProcedurePayment = async (
+  id: string,
+  updateProcedurePaymentBody: UpdateProcedurePaymentBody,
+  options?: RequestInit,
+): Promise<ProcedureResponse> => {
+  return customFetch<ProcedureResponse>(getUpdateProcedurePaymentUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateProcedurePaymentBody),
+  });
+};
+
+export const getUpdateProcedurePaymentMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateProcedurePayment>>,
+    TError,
+    { id: string; data: BodyType<UpdateProcedurePaymentBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateProcedurePayment>>,
+  TError,
+  { id: string; data: BodyType<UpdateProcedurePaymentBody> },
+  TContext
+> => {
+  const mutationKey = ["updateProcedurePayment"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateProcedurePayment>>,
+    { id: string; data: BodyType<UpdateProcedurePaymentBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateProcedurePayment(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateProcedurePaymentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateProcedurePayment>>
+>;
+export type UpdateProcedurePaymentMutationBody =
+  BodyType<UpdateProcedurePaymentBody>;
+export type UpdateProcedurePaymentMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Mark procedure payment method (admin/owner only)
+ */
+export const useUpdateProcedurePayment = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateProcedurePayment>>,
+    TError,
+    { id: string; data: BodyType<UpdateProcedurePaymentBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateProcedurePayment>>,
+  TError,
+  { id: string; data: BodyType<UpdateProcedurePaymentBody> },
+  TContext
+> => {
+  return useMutation(getUpdateProcedurePaymentMutationOptions(options));
 };
 
 /**

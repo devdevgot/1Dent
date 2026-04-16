@@ -12,7 +12,7 @@ import { InventoryRepository } from "../inventory/inventory.repository";
 import { analyticsRepo } from "../analytics/analytics.controller";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError, ForbiddenError } from "../../shared/errors";
-import type { ProcedureStatus } from "@workspace/db";
+import type { ProcedureStatus, PaymentMethod } from "@workspace/db";
 import { scheduleFollowups } from "../followups/followup.queue";
 import { scheduleAppointmentReminders, cancelAppointmentReminders } from "../followups/appointment-reminders.queue";
 import { db, postopFollowupsTable, patientsTable, usersTable, clinicsTable } from "@workspace/db";
@@ -270,6 +270,26 @@ router.patch(
       }
     }
 
+    res.json({ success: true, data: { procedure } });
+  },
+);
+
+const paymentMethodValues = ["kaspi_transfer", "cash", "kaspi_qr", "terminal", "kaspi_red", "debt"] as const;
+
+// PATCH /procedures/:id/payment — admin/owner marks how patient paid
+router.patch(
+  "/:id/payment",
+  ownerAdminRoles,
+  async (req: Request, res: Response, next: NextFunction) => {
+    const parsed = z.object({ paymentMethod: z.enum(paymentMethodValues) }).safeParse(req.body);
+    if (!parsed.success) {
+      return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+    }
+    const id = String(req.params["id"]);
+    const { clinicId } = req.user!;
+    const procedure = await repo.updatePayment(id, clinicId, parsed.data.paymentMethod as PaymentMethod).catch(next);
+    if (!procedure) return next(new NotFoundError("Procedure not found"));
+    analyticsRepo.invalidateClinicCache(clinicId).catch(() => {});
     res.json({ success: true, data: { procedure } });
   },
 );

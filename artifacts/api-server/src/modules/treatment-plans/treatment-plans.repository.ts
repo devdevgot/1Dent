@@ -414,7 +414,7 @@ export class TreatmentPlansRepository {
         status: "completed",
         price: item.price,
         notes: item.mkb10Code ? `МКБ-10: ${item.mkb10Code}` : null,
-        paymentMethod: "cash",
+        paymentMethod: null,
         scheduledAt: new Date(),
         completedAt: new Date(),
         createdAt: new Date(),
