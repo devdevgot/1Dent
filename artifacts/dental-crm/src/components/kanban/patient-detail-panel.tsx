@@ -360,6 +360,7 @@ export function PatientDetailPanel() {
   const [editItemTitle, setEditItemTitle] = useState("");
   const [editItemPrice, setEditItemPrice] = useState("");
   const [historyExpanded, setHistoryExpanded] = useState(false);
+  const [expandedPlanId, setExpandedPlanId] = useState<string | null>(null);
 
   const { data, isLoading } = useGetPatient(selectedPatientId ?? "", {
     query: {
@@ -1518,33 +1519,91 @@ export function PatientDetailPanel() {
                       <ChevronDown className={`w-3.5 h-3.5 transition-transform ${historyExpanded ? "rotate-180" : ""}`} />
                     </button>
                     {historyExpanded && (
-                      <div className="max-h-52 overflow-y-auto custom-scrollbar">
-                        {[...pastPlans].sort((a, b) => b.planNumber - a.planNumber).map((plan) => (
-                          <div key={plan.id} className="px-4 py-2.5 border-t border-border/30 hover:bg-gray-50/50">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-gray-700">
-                                  План {plan.planNumber}
-                                </span>
-                                <span className={`text-xs px-1.5 py-0.5 rounded-full border ${
-                                  plan.status === "completed"
-                                    ? "bg-green-50 text-green-700 border-green-200"
-                                    : "bg-gray-100 text-gray-500 border-gray-200"
-                                }`}>
-                                  {plan.status === "completed" ? "Завершён" : "Архив"}
-                                </span>
-                              </div>
-                              <span className="text-xs font-semibold text-gray-700">
-                                {plan.totalCost.toLocaleString("ru")} ₸
-                              </span>
+                      <div className="max-h-96 overflow-y-auto custom-scrollbar">
+                        {[...pastPlans].sort((a, b) => b.planNumber - a.planNumber).map((plan) => {
+                          const isOpen = expandedPlanId === plan.id;
+                          const doneCount = plan.items.filter((i) => i.status === "completed").length;
+                          return (
+                            <div key={plan.id} className="border-t border-border/30">
+                              <button
+                                onClick={() => setExpandedPlanId(isOpen ? null : plan.id)}
+                                className="w-full px-4 py-2.5 hover:bg-gray-50/60 transition-colors text-left"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform shrink-0 ${isOpen ? "rotate-180" : ""}`} />
+                                    <span className="text-xs font-bold text-gray-700">
+                                      План {plan.planNumber}
+                                    </span>
+                                    <span className={`text-xs px-1.5 py-0.5 rounded-full border ${
+                                      plan.status === "completed"
+                                        ? "bg-green-50 text-green-700 border-green-200"
+                                        : "bg-gray-100 text-gray-500 border-gray-200"
+                                    }`}>
+                                      {plan.status === "completed" ? "Завершён" : "Архив"}
+                                    </span>
+                                  </div>
+                                  <span className="text-xs font-semibold text-gray-700">
+                                    {plan.totalCost.toLocaleString("ru")} ₸
+                                  </span>
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-0.5 pl-5">
+                                  {doneCount}/{plan.items.length} шаг{plan.items.length === 1 ? "" : plan.items.length < 5 ? "а" : "ов"} выполнено
+                                  {" · "}
+                                  {new Date(plan.createdAt).toLocaleDateString("ru", { day: "2-digit", month: "short", year: "numeric" })}
+                                </p>
+                              </button>
+                              {isOpen && (
+                                <div className="pb-2 bg-gray-50/40">
+                                  {plan.items.length === 0 ? (
+                                    <p className="text-xs text-muted-foreground px-8 py-2">Нет шагов</p>
+                                  ) : (
+                                    plan.items.map((item) => (
+                                      <div key={item.id} className="flex items-start gap-2.5 px-8 py-1.5">
+                                        <span className={`mt-0.5 shrink-0 w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+                                          item.status === "completed"
+                                            ? "bg-green-500 border-green-500"
+                                            : item.status === "cancelled"
+                                            ? "bg-gray-200 border-gray-300"
+                                            : "border-gray-300 bg-white"
+                                        }`}>
+                                          {item.status === "completed" && (
+                                            <svg className="w-2 h-2 text-white" viewBox="0 0 12 12" fill="none">
+                                              <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                            </svg>
+                                          )}
+                                          {item.status === "cancelled" && (
+                                            <svg className="w-2 h-2 text-gray-400" viewBox="0 0 12 12" fill="none">
+                                              <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                                            </svg>
+                                          )}
+                                        </span>
+                                        <div className="flex-1 min-w-0">
+                                          <p className={`text-xs leading-snug ${
+                                            item.status === "completed"
+                                              ? "text-gray-500 line-through"
+                                              : item.status === "cancelled"
+                                              ? "text-gray-400 line-through"
+                                              : "text-gray-700"
+                                          }`}>
+                                            {item.title}
+                                          </p>
+                                          {(item.toothFdi || item.mkb10Code) && (
+                                            <p className="text-xs text-muted-foreground mt-0.5 flex gap-2">
+                                              {item.toothFdi && <span>зуб #{item.toothFdi}</span>}
+                                              {item.mkb10Code && <span className="font-mono">{item.mkb10Code}</span>}
+                                            </p>
+                                          )}
+                                        </div>
+                                        <span className="text-xs text-gray-500 shrink-0">{item.price.toLocaleString("ru")} ₸</span>
+                                      </div>
+                                    ))
+                                  )}
+                                </div>
+                              )}
                             </div>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              {plan.items.length} шаг{plan.items.length === 1 ? "" : plan.items.length < 5 ? "а" : "ов"}
-                              {" · "}
-                              {new Date(plan.createdAt).toLocaleDateString("ru", { day: "2-digit", month: "short", year: "numeric" })}
-                            </p>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
