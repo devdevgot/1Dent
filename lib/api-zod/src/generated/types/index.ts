@@ -173,6 +173,7 @@ export * from "./unreadCountResponseData";
 export * from "./updateChatbotSettings200";
 export * from "./updateChatbotSettings200Data";
 export * from "./updateClinicWhatsappPhoneBody";
+export * from "./updateConditionPriceItem";
 export * from "./updateConditionPricesRequest";
 export * from "./updateConditionPricesRequestPrices";
 export * from "./updateInventoryItemRequest";

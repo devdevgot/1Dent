@@ -23,16 +23,6 @@ const CONDITION_LABELS: Record<string, string> = {
   extraction_needed: "Удаление",
 };
 
-const CONDITION_MKB10_STATIC: Record<string, string> = {
-  healthy: "Z01.2",
-  cavity: "K02.1",
-  treated: "Z98.8",
-  crown: "Z96.6",
-  root_canal: "K04.0",
-  implant: "Z96.5",
-  missing: "K08.1",
-  extraction_needed: "K08.1",
-};
 
 const ALL_CONDITIONS = [
   "healthy", "cavity", "treated", "crown",
@@ -73,28 +63,35 @@ function ConditionPricesSection() {
   const updateMutation = useUpdateConditionPrices();
 
   const [localPrices, setLocalPrices] = useState<Record<string, string>>({});
+  const [localMkb10, setLocalMkb10] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (pricesData?.data?.prices) {
-      const map: Record<string, string> = {};
+      const priceMap: Record<string, string> = {};
+      const mkbMap: Record<string, string> = {};
       for (const cond of ALL_CONDITIONS) {
         const entry = pricesData.data.prices[cond];
-        map[cond] = String(entry?.price ?? 0);
+        priceMap[cond] = String(entry?.price ?? 0);
+        mkbMap[cond] = entry?.mkb10 ?? "";
       }
-      setLocalPrices(map);
+      setLocalPrices(priceMap);
+      setLocalMkb10(mkbMap);
     }
   }, [pricesData]);
 
   const handleSave = () => {
-    const prices: Record<string, number> = {};
-    for (const [cond, val] of Object.entries(localPrices)) {
-      const num = parseFloat(val);
-      prices[cond] = isNaN(num) ? 0 : num;
+    const prices: Record<string, { price: number; mkb10Code?: string }> = {};
+    for (const cond of ALL_CONDITIONS) {
+      const num = parseFloat(localPrices[cond] ?? "0");
+      prices[cond] = {
+        price: isNaN(num) ? 0 : num,
+        mkb10Code: localMkb10[cond] ?? "",
+      };
     }
     updateMutation.mutate(
       { data: { prices } },
       {
-        onSuccess: () => toast({ title: "Цены сохранены" }),
+        onSuccess: () => toast({ title: "Цены и МКБ-10 сохранены" }),
         onError: () => toast({ title: "Ошибка сохранения", variant: "destructive" }),
       },
     );
@@ -110,23 +107,34 @@ function ConditionPricesSection() {
 
   return (
     <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        МКБ-10 коды и цены синхронизируются — изменения здесь отображаются в карточке зуба и плане лечения.
+      </p>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-xs text-muted-foreground">
               <th className="text-left pb-2 font-medium">Состояние</th>
-              <th className="text-left pb-2 font-medium pl-3">МКБ-10</th>
+              <th className="text-left pb-2 font-medium pl-2">МКБ-10</th>
               <th className="text-right pb-2 font-medium">Цена (₸)</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border/30">
             {ALL_CONDITIONS.map((cond) => (
               <tr key={cond}>
-                <td className="py-2 text-sm font-medium text-foreground">
+                <td className="py-2 text-sm font-medium text-foreground pr-2 whitespace-nowrap">
                   {CONDITION_LABELS[cond] ?? cond}
                 </td>
-                <td className="py-2 pl-3 text-xs text-muted-foreground font-mono">
-                  {CONDITION_MKB10_STATIC[cond]}
+                <td className="py-2 pl-2">
+                  <input
+                    type="text"
+                    value={localMkb10[cond] ?? ""}
+                    onChange={(e) =>
+                      setLocalMkb10((prev) => ({ ...prev, [cond]: e.target.value }))
+                    }
+                    placeholder="K02.1"
+                    className="w-20 h-8 rounded-lg border border-border bg-background px-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  />
                 </td>
                 <td className="py-2 text-right">
                   <input
@@ -150,7 +158,7 @@ function ConditionPricesSection() {
         disabled={updateMutation.isPending}
         className="w-full h-10 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-60"
       >
-        {updateMutation.isPending ? "Сохранение..." : "Сохранить цены"}
+        {updateMutation.isPending ? "Сохранение..." : "Сохранить МКБ-10 и цены"}
       </button>
     </div>
   );

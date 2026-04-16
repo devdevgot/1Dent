@@ -8,6 +8,6 @@
 import type { UpdateConditionPricesRequestPrices } from "./updateConditionPricesRequestPrices";
 
 export interface UpdateConditionPricesRequest {
-  /** Map of condition name to price */
+  /** Map of condition name to price and optional МКБ-10 code */
   prices: UpdateConditionPricesRequestPrices;
 }

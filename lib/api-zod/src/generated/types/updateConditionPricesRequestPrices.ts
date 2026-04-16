@@ -5,8 +5,11 @@
  * Dental CRM API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { UpdateConditionPriceItem } from "./updateConditionPriceItem";
 
 /**
- * Map of condition name to price
+ * Map of condition name to price and optional МКБ-10 code
  */
-export type UpdateConditionPricesRequestPrices = { [key: string]: number };
+export type UpdateConditionPricesRequestPrices = {
+  [key: string]: UpdateConditionPriceItem;
+};

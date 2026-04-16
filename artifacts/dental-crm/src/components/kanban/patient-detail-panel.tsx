@@ -38,16 +38,6 @@ import type { PatientStatus, InteractionType, ToothCondition } from "@workspace/
 import { FdiChart, CONDITION_CONFIG } from "@/components/dental-chart/fdi-chart";
 import { useTranslation } from "react-i18next";
 
-const CONDITION_MKB10: Record<ToothCondition, string> = {
-  healthy: "Z01.2",
-  cavity: "K02.1",
-  treated: "Z98.8",
-  crown: "Z96.6",
-  root_canal: "K04.0",
-  implant: "Z96.5",
-  missing: "K08.1",
-  extraction_needed: "K08.1",
-};
 
 const INTERACTION_TYPE_KEYS = [
   { value: "note"        as const },
@@ -477,7 +467,7 @@ export function PatientDetailPanel() {
       const condition = diagnosisMap.get(fdi) ?? teethMap.get(fdi)?.condition ?? "healthy";
       const priceEntry = conditionPricesMap[condition];
       const price = priceEntry?.price ?? 0;
-      const mkb10 = priceEntry?.mkb10 ?? CONDITION_MKB10[condition] ?? "";
+      const mkb10 = priceEntry?.mkb10 ?? "";
       entries.push({ fdi, condition, price, mkb10 });
     }
     return entries.sort((a, b) => a.fdi - b.fdi);

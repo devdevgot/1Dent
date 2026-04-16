@@ -559,13 +559,21 @@ export interface ConditionPricesResponse {
   data: ConditionPricesResponseData;
 }
 
+export interface UpdateConditionPriceItem {
+  /** @minimum 0 */
+  price: number;
+  mkb10Code?: string;
+}
+
 /**
- * Map of condition name to price
+ * Map of condition name to price and optional МКБ-10 code
  */
-export type UpdateConditionPricesRequestPrices = { [key: string]: number };
+export type UpdateConditionPricesRequestPrices = {
+  [key: string]: UpdateConditionPriceItem;
+};
 
 export interface UpdateConditionPricesRequest {
-  /** Map of condition name to price */
+  /** Map of condition name to price and optional МКБ-10 code */
   prices: UpdateConditionPricesRequestPrices;
 }
 

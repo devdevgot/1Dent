@@ -620,10 +620,18 @@ export const GetConditionPricesResponse = zod.object({
 /**
  * @summary Update clinic condition prices (owner/admin only)
  */
+export const updateConditionPricesBodyPricesPriceMin = 0;
+
 export const UpdateConditionPricesBody = zod.object({
   prices: zod
-    .record(zod.string(), zod.number())
-    .describe("Map of condition name to price"),
+    .record(
+      zod.string(),
+      zod.object({
+        price: zod.number().min(updateConditionPricesBodyPricesPriceMin),
+        mkb10Code: zod.string().optional(),
+      }),
+    )
+    .describe("Map of condition name to price and optional МКБ-10 code"),
 });
 
 export const UpdateConditionPricesResponse = zod.object({

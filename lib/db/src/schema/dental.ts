@@ -136,6 +136,7 @@ export const clinicConditionPricesTable = pgTable("clinic_condition_prices", {
     .references(() => clinicsTable.id, { onDelete: "cascade" }),
   condition: toothConditionEnum("condition").notNull(),
   price: real("price").notNull().default(0),
+  mkb10Code: text("mkb10_code"),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

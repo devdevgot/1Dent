@@ -12,8 +12,13 @@ router.use(authMiddleware);
 const readRoles = roleGuard("owner", "admin", "doctor", "accountant", "warehouse");
 const writeRoles = roleGuard("owner", "admin");
 
+const updatePriceItemSchema = z.object({
+  price: z.number().min(0),
+  mkb10Code: z.string().optional(),
+});
+
 const updatePricesSchema = z.object({
-  prices: z.record(z.string(), z.number().min(0)),
+  prices: z.record(z.string(), updatePriceItemSchema),
 });
 
 router.get("/", readRoles, async (req: Request, res: Response, next: NextFunction) => {

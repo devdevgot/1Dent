@@ -2783,14 +2783,25 @@ components:
         - success
         - data
 
+    UpdateConditionPriceItem:
+      type: object
+      properties:
+        price:
+          type: number
+          minimum: 0
+        mkb10Code:
+          type: string
+      required:
+        - price
+
     UpdateConditionPricesRequest:
       type: object
       properties:
         prices:
           type: object
           additionalProperties:
-            type: number
-          description: Map of condition name to price
+            $ref: "#/components/schemas/UpdateConditionPriceItem"
+          description: Map of condition name to price and optional МКБ-10 code
       required:
         - prices
 
