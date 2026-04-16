@@ -44,6 +44,7 @@ import AccountEditProfilePage from "@/pages/account-edit-profile";
 import AccountChangeEmailPage from "@/pages/account-change-email";
 import AccountChangePasswordPage from "@/pages/account-change-password";
 import MenuPage from "@/pages/menu";
+import ChannelsPage from "@/pages/channels";
 import NotFound from "@/pages/not-found";
 
 // Admin-specific pages
@@ -268,6 +269,11 @@ function Router() {
       {/* Menu page */}
       <Route path="/menu">
         <ProtectedRoute component={MenuPage} allowedRoles={['owner', 'admin', 'doctor', 'accountant', 'warehouse']} />
+      </Route>
+
+      {/* Channels page */}
+      <Route path="/channels">
+        <ProtectedRoute component={ChannelsPage} allowedRoles={['owner', 'admin']} />
       </Route>
 
       {/* Settings page */}
