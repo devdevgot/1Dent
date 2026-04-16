@@ -568,14 +568,24 @@ export default function PatientsPage() {
   const { data } = useListPatients({ query: { queryKey: getListPatientsQueryKey() } });
   const allPatients: Patient[] = data?.data?.patients ?? [];
 
+  const isAccountant = user?.role === "accountant";
+
   const viewParam = new URLSearchParams(search).get("view") as PatientView | null;
-  const view: PatientView = viewParam === "kanban" || viewParam === "procedures" ? viewParam : "list";
+  const allowedViews: PatientView[] = isAccountant
+    ? ["procedures"]
+    : ["list", "kanban", "procedures"];
+  const view: PatientView =
+    viewParam && allowedViews.includes(viewParam) ? viewParam : allowedViews[0];
 
   const setView = (v: PatientView) => navigate(`/patients?view=${v}`, { replace: true });
 
   const tabs = [
-    { key: "list"       as PatientView, icon: Users,         label: t("patients.tabList") },
-    { key: "kanban"     as PatientView, icon: KanbanSquare,  label: t("patients.tabKanban") },
+    ...(!isAccountant
+      ? [
+          { key: "list"   as PatientView, icon: Users,        label: t("patients.tabList") },
+          { key: "kanban" as PatientView, icon: KanbanSquare, label: t("patients.tabKanban") },
+        ]
+      : []),
     { key: "procedures" as PatientView, icon: ClipboardList, label: t("patients.tabProcedures") },
   ];
 
