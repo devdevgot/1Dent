@@ -161,11 +161,11 @@ export function ChannelsSettings() {
   return (
     <div className="space-y-4">
       {isOwner && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+        <div className="bg-[#f7fce8] border border-[#cce84a] rounded-xl p-4">
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
-              <Smartphone className="w-4 h-4 text-emerald-600" />
-              <h3 className="text-sm font-semibold text-emerald-800">{t("channels.whatsappPhone")}</h3>
+              <Smartphone className="w-4 h-4 text-[#6b9a10]" />
+              <h3 className="text-sm font-semibold text-[#4a6b0a]">{t("channels.whatsappPhone")}</h3>
             </div>
             {savedPhone && !showPhoneEdit && (
               <button
@@ -173,7 +173,7 @@ export function ChannelsSettings() {
                   setWhatsappPhone(savedPhone);
                   setShowPhoneEdit(true);
                 }}
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-emerald-600 hover:bg-emerald-100 transition-colors"
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-[#6b9a10] hover:bg-[#eef8c0] transition-colors"
                 title="Изменить номер"
               >
                 <Pencil className="w-3.5 h-3.5" />
@@ -182,25 +182,25 @@ export function ChannelsSettings() {
           </div>
 
           {savedPhone && !showPhoneEdit ? (
-            <p className="text-sm font-semibold text-emerald-900 mt-2">
+            <p className="text-sm font-semibold text-[#3a5508] mt-2">
               {formatPhone(savedPhone)}
             </p>
           ) : (
             <>
-              <p className="text-xs text-emerald-700 mb-3">{t("channels.whatsappPhoneDesc")}</p>
+              <p className="text-xs text-[#5c800e] mb-3">{t("channels.whatsappPhoneDesc")}</p>
               <form onSubmit={handleSavePhone} className="flex gap-2">
                 <input
                   type="text"
                   value={whatsappPhone}
                   onChange={(e) => setWhatsappPhone(e.target.value)}
                   placeholder={t("channels.whatsappPhonePlaceholder")}
-                  className="flex-1 h-9 rounded-lg border border-emerald-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
+                  className="flex-1 h-9 rounded-lg border border-[#b8dc3a] bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#98cc1c]/40"
                   autoFocus={showPhoneEdit && !!savedPhone}
                 />
                 <button
                   type="submit"
                   disabled={saveDisabled}
-                  className="h-9 px-4 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="h-9 px-4 rounded-lg bg-[#98cc1c] text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {t("channels.whatsappPhoneSave")}
                 </button>
