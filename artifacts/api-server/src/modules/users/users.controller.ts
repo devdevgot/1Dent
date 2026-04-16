@@ -3,6 +3,8 @@ import { z } from "zod";
 import { AuthService } from "../auth/auth.service";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError } from "../../shared/errors";
+import { db, doctorCapacityTable } from "@workspace/db";
+import { eq, and } from "drizzle-orm";
 
 const router: IRouter = Router();
 const authService = new AuthService();
@@ -80,6 +82,38 @@ router.delete(
     try {
       await authService.deleteUser(id, req.user!.clinicId, req.user!.role);
       res.json({ success: true, message: "User deleted" });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+const capacitySchema = z.object({
+  maxPatientsPerDay: z.number().int().min(1).max(50),
+});
+
+router.patch(
+  "/:id/capacity",
+  roleGuard("owner", "admin"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const parsed = capacitySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+    }
+
+    const doctorId = String(req.params["id"]);
+    const { clinicId } = req.user!;
+
+    try {
+      await db
+        .insert(doctorCapacityTable)
+        .values({ doctorId, clinicId, maxPatientsPerDay: parsed.data.maxPatientsPerDay })
+        .onConflictDoUpdate({
+          target: doctorCapacityTable.doctorId,
+          set: { maxPatientsPerDay: parsed.data.maxPatientsPerDay },
+        });
+
+      res.json({ success: true, data: { maxPatientsPerDay: parsed.data.maxPatientsPerDay } });
     } catch (err) {
       next(err);
     }

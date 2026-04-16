@@ -786,6 +786,12 @@ export interface DoctorKpi {
   averageCheck: number;
   /** Net Promoter Score (0 if not yet tracked) */
   nps: number;
+  /** Weighted performance score 0-100 (revenue 35%, procedures 30%, avg check 20%, conversion 15%) */
+  score: number;
+  /** Number of procedures scheduled or completed today */
+  slotsUsedToday: number;
+  /** Maximum patients per day limit (default 20) */
+  maxSlotsPerDay: number;
 }
 
 export type DoctorDetailedAnalyticsPatientsByStatus = { [key: string]: number };

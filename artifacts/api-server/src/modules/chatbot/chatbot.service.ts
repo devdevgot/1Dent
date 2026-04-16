@@ -161,6 +161,17 @@ async function pickBestDoctorViaKpi(
   const kpis = await analyticsRepo.getDoctorKpis(clinicId);
   if (kpis.length === 0) return null;
 
+  // Sort by score desc, pick best doctor who still has open slots today
+  const withSlots = [...kpis]
+    .filter((k) => k.slotsUsedToday < k.maxSlotsPerDay)
+    .sort((a, b) => b.score - a.score);
+
+  if (withSlots.length > 0) {
+    const best = withSlots[0]!;
+    return { id: best.doctorId, name: best.doctorName };
+  }
+
+  // Fallback: all slots filled — fall back to fewest patients
   const sorted = [...kpis].sort((a, b) => a.patientsCount - b.patientsCount);
   const best = sorted[0]!;
   return { id: best.doctorId, name: best.doctorName };

@@ -4,6 +4,7 @@ import {
   proceduresTable,
   usersTable,
   notificationsTable,
+  doctorCapacityTable,
 } from "@workspace/db";
 import { eq, and, gte, lte, count, sum, sql, isNotNull, SQL } from "drizzle-orm";
 import { analyticsCache } from "../../shared/analytics-cache";
@@ -77,6 +78,24 @@ export interface DoctorKpi {
   revenueTotal: number;
   averageCheck: number;
   nps: number;
+  score: number;
+  slotsUsedToday: number;
+  maxSlotsPerDay: number;
+}
+
+function computeDoctorScore(kpi: Omit<DoctorKpi, "score" | "slotsUsedToday" | "maxSlotsPerDay">, allKpis: Array<Omit<DoctorKpi, "score" | "slotsUsedToday" | "maxSlotsPerDay">>): number {
+  const maxRevenue = Math.max(...allKpis.map((k) => k.revenueTotal), 1);
+  const maxProcedures = Math.max(...allKpis.map((k) => k.proceduresCount), 1);
+  const maxCheck = Math.max(...allKpis.map((k) => k.averageCheck), 1);
+  const maxPatients = Math.max(...allKpis.map((k) => k.patientsCount), 1);
+
+  const revenueNorm = kpi.revenueTotal / maxRevenue;
+  const proceduresNorm = kpi.proceduresCount / maxProcedures;
+  const checkNorm = kpi.averageCheck / maxCheck;
+  const conversionNorm = kpi.patientsCount / maxPatients;
+
+  const score = revenueNorm * 35 + proceduresNorm * 30 + checkNorm * 20 + conversionNorm * 15;
+  return Math.round(Math.min(100, Math.max(0, score)));
 }
 
 function startOfMonth(): Date {
@@ -520,9 +539,19 @@ export class AnalyticsRepository {
         ),
       );
 
-    const kpis = await Promise.all(
+    const capacities = await db
+      .select()
+      .from(doctorCapacityTable)
+      .where(eq(doctorCapacityTable.clinicId, clinicId));
+
+    const capacityMap = new Map(capacities.map((c) => [c.doctorId, c.maxPatientsPerDay]));
+
+    const todayStart = startOfDay();
+    const todayEnd = endOfDay();
+
+    const rawKpis = await Promise.all(
       doctors.map(async (doc) => {
-        const [patients, procedures] = await Promise.all([
+        const [patients, procedures, todayProcs] = await Promise.all([
           db
             .select()
             .from(patientsTable)
@@ -542,6 +571,17 @@ export class AnalyticsRepository {
                 eq(proceduresTable.status, "completed"),
               ),
             ),
+          db
+            .select()
+            .from(proceduresTable)
+            .where(
+              and(
+                eq(proceduresTable.clinicId, clinicId),
+                eq(proceduresTable.doctorId, doc.id),
+                gte(proceduresTable.createdAt, todayStart),
+                lte(proceduresTable.createdAt, todayEnd),
+              ),
+            ),
         ]);
         const revenueTotal = procedures.reduce((acc, p) => acc + (p.price ?? 0), 0);
         const averageCheck = procedures.length > 0 ? revenueTotal / procedures.length : 0;
@@ -553,9 +593,17 @@ export class AnalyticsRepository {
           revenueTotal,
           averageCheck,
           nps: 0, // placeholder — will be populated from patient survey results (Task #7)
+          slotsUsedToday: todayProcs.length,
+          maxSlotsPerDay: capacityMap.get(doc.id) ?? 20,
         };
       }),
     );
+
+    const kpis: DoctorKpi[] = rawKpis.map((kpi) => ({
+      ...kpi,
+      score: computeDoctorScore(kpi, rawKpis),
+    }));
+
     await analyticsCache.set(cacheKey, kpis);
     return kpis;
   }

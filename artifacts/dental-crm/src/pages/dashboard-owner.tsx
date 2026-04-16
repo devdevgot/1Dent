@@ -161,34 +161,51 @@ export default function OwnerDashboard() {
   return (
     <div className="min-h-full bg-[#f7f8fc] pb-8">
 
-      {/* ─── White top strip: doctor circles + date row ─── */}
+      {/* ─── White top strip: doctor leaderboard + date row ─── */}
       <div className="bg-white border-b border-gray-100">
-        {/* Doctor circles */}
+        {/* Doctor leaderboard */}
         {kpis.length > 0 && (
           <div className="px-4 pt-3 pb-2">
-            <div className="flex gap-4 overflow-x-auto custom-scrollbar pb-1">
-              {kpis.map((kpi, i) => {
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Рейтинг врачей</p>
+            <div className="flex flex-col gap-1.5">
+              {[...kpis].sort((a, b) => b.score - a.score).map((kpi, i) => {
                 const initials = kpi.doctorName
                   .split(" ").map((w: string) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
                 const bg = DOCTOR_BG[i % DOCTOR_BG.length];
+                const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}`;
+                const slotsLeft = (kpi.maxSlotsPerDay ?? 20) - (kpi.slotsUsedToday ?? 0);
+                const slotsFull = slotsLeft <= 0;
                 return (
                   <motion.button
                     key={kpi.doctorId}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: i * 0.05 }}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.04 }}
                     onClick={() => navigate(`/staff/${kpi.doctorId}`)}
-                    className="flex flex-col items-center gap-1.5 shrink-0"
+                    className="flex items-center gap-2.5 w-full text-left rounded-xl px-2 py-1.5 hover:bg-gray-50 transition-colors"
                   >
+                    <span className="text-base w-7 text-center shrink-0">{medal}</span>
                     <div
-                      className="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-base shadow-sm"
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0"
                       style={{ backgroundColor: bg }}
                     >
                       {initials}
                     </div>
-                    <span className="text-[11px] font-medium text-gray-600 max-w-[56px] truncate text-center leading-tight">
-                      {kpi.doctorName.split(" ")[0]}
-                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-[12px] font-semibold text-gray-700 truncate pr-2">{kpi.doctorName.split(" ")[0]}</span>
+                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${slotsFull ? "bg-red-100 text-red-600" : "bg-emerald-100 text-emerald-700"}`}>
+                          {kpi.slotsUsedToday ?? 0}/{kpi.maxSlotsPerDay ?? 20}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-1.5">
+                        <div
+                          className="h-1.5 rounded-full transition-all"
+                          style={{ width: `${kpi.score ?? 0}%`, backgroundColor: "#98cc1c" }}
+                        />
+                      </div>
+                    </div>
+                    <span className="text-[11px] font-bold text-gray-500 shrink-0 w-8 text-right">{kpi.score ?? 0}</span>
                   </motion.button>
                 );
               })}

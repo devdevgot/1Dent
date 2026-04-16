@@ -1,16 +1,21 @@
 import { useParams, useLocation } from "wouter";
+import { useState, useEffect } from "react";
 import {
   ArrowLeft, Users, TrendingUp, DollarSign, Activity,
-  CalendarDays, UserCheck,
+  CalendarDays, UserCheck, Gauge,
 } from "lucide-react";
 import {
   useGetDoctorKpis,
   useGetDoctorDetailedAnalytics,
+  usePatchUserCapacity,
   type DoctorKpi,
   type DoctorDetailedAnalytics,
   type DoctorDetailedAnalyticsRevenueByMonthItem,
   type DoctorDetailedAnalyticsProceduresByNameItem,
 } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { getGetDoctorKpisQueryKey } from "@workspace/api-client-react";
+import { useAuthStore } from "@/hooks/use-auth";
 import { useTranslation } from "react-i18next";
 import {
   BarChart, Bar, PieChart, Pie, Cell,
@@ -34,13 +39,32 @@ export default function StaffDetailPage() {
   const { t } = useTranslation();
   const { doctorId } = useParams<{ doctorId: string }>();
   const [, setLocation] = useLocation();
+  const { user } = useAuthStore();
+  const queryClient = useQueryClient();
 
   const { data: kpiData, isLoading: kpiLoading } = useGetDoctorKpis();
   const { data: analyticsData, isLoading: analyticsLoading } = useGetDoctorDetailedAnalytics(doctorId ?? "");
+  const { mutateAsync: patchCapacity, isPending: savingCapacity } = usePatchUserCapacity();
 
   const doctors: DoctorKpi[] = kpiData?.data?.kpis ?? [];
   const doctor = doctors.find((d) => d.doctorId === doctorId);
   const analytics: DoctorDetailedAnalytics | undefined = analyticsData?.data?.analytics;
+
+  const [capacityInput, setCapacityInput] = useState<number | "">(20);
+  const canEditCapacity = user?.role === "owner" || user?.role === "admin";
+
+  // Sync capacity input when doctor data loads
+  useEffect(() => {
+    if (doctor) {
+      setCapacityInput(doctor.maxSlotsPerDay ?? 20);
+    }
+  }, [doctor?.maxSlotsPerDay, doctor?.doctorId]);
+
+  const handleSaveCapacity = async () => {
+    if (!doctorId || capacityInput === "") return;
+    await patchCapacity({ id: doctorId, data: { maxPatientsPerDay: Number(capacityInput) } });
+    await queryClient.invalidateQueries({ queryKey: getGetDoctorKpisQueryKey() });
+  };
 
   const getInitials = (name: string) =>
     name.split(" ").map((w: string) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
@@ -173,6 +197,73 @@ export default function StaffDetailPage() {
                 <p className={`text-xs mt-1 ${card.subColor}`}>{card.sub}</p>
               </div>
             ))}
+          </div>
+
+          {/* ─── Score + Capacity block ─── */}
+          <div className="bg-white rounded-xl border border-border/50 p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="h-8 w-8 rounded-lg bg-[#98cc1c]/10 flex items-center justify-center shrink-0">
+                <Gauge className="h-4 w-4 text-[#98cc1c]" />
+              </div>
+              <h3 className="text-sm font-semibold text-foreground">Рейтинг и ёмкость</h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Score */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-muted-foreground">Рейтинг врача</span>
+                  <span className="text-sm font-bold text-foreground">{doctor.score ?? 0}/100</span>
+                </div>
+                <div className="w-full bg-gray-100 rounded-full h-3">
+                  <div
+                    className="h-3 rounded-full transition-all duration-500"
+                    style={{ width: `${doctor.score ?? 0}%`, backgroundColor: "#98cc1c" }}
+                  />
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1.5">
+                  Выручка 35% · Процедуры 30% · Чек 20% · Конверсия 15%
+                </p>
+              </div>
+
+              {/* Capacity */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-muted-foreground">Слоты сегодня</span>
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                    (doctor.slotsUsedToday ?? 0) >= (doctor.maxSlotsPerDay ?? 20)
+                      ? "bg-red-100 text-red-600"
+                      : "bg-emerald-100 text-emerald-700"
+                  }`}>
+                    {doctor.slotsUsedToday ?? 0} / {doctor.maxSlotsPerDay ?? 20}
+                  </span>
+                </div>
+                {canEditCapacity ? (
+                  <div className="flex items-center gap-2 mt-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={50}
+                      value={capacityInput}
+                      onChange={(e) => setCapacityInput(e.target.value === "" ? "" : Number(e.target.value))}
+                      className="w-20 border border-border rounded-lg px-3 py-1.5 text-sm font-semibold text-center focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                    <span className="text-xs text-muted-foreground">пациентов/день</span>
+                    <button
+                      onClick={handleSaveCapacity}
+                      disabled={savingCapacity || capacityInput === ""}
+                      className="ml-auto px-3 py-1.5 rounded-lg bg-[#98cc1c] text-white text-xs font-semibold disabled:opacity-50 hover:bg-[#7eb015] transition-colors"
+                    >
+                      {savingCapacity ? "..." : "Сохранить"}
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-sm font-semibold text-foreground mt-1">
+                    Лимит: {doctor.maxSlotsPerDay ?? 20} пациентов/день
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
 
           {analyticsLoading ? (

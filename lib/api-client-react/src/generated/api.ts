@@ -915,6 +915,92 @@ export const useDeleteUser = <
 };
 
 /**
+ * @summary Update doctor capacity (max patients per day)
+ */
+export const getPatchUserCapacityUrl = (id: string) => {
+  return `/api/users/${id}/capacity`;
+};
+
+export const patchUserCapacity = async (
+  id: string,
+  data: { maxPatientsPerDay: number },
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getPatchUserCapacityUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...(options?.headers ?? {}) },
+    body: JSON.stringify(data),
+  });
+};
+
+export const getPatchUserCapacityMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof patchUserCapacity>>,
+    TError,
+    { id: string; data: { maxPatientsPerDay: number } },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof patchUserCapacity>>,
+  TError,
+  { id: string; data: { maxPatientsPerDay: number } },
+  TContext
+> => {
+  const mutationKey = ["patchUserCapacity"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof patchUserCapacity>>,
+    { id: string; data: { maxPatientsPerDay: number } }
+  > = (props) => {
+    const { id, data } = props ?? {};
+    return patchUserCapacity(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PatchUserCapacityMutationResult = NonNullable<
+  Awaited<ReturnType<typeof patchUserCapacity>>
+>;
+
+export type PatchUserCapacityMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update doctor capacity (max patients per day)
+ */
+export const usePatchUserCapacity = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof patchUserCapacity>>,
+    TError,
+    { id: string; data: { maxPatientsPerDay: number } },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof patchUserCapacity>>,
+  TError,
+  { id: string; data: { maxPatientsPerDay: number } },
+  TContext
+> => {
+  return useMutation(getPatchUserCapacityMutationOptions(options));
+};
+
+/**
  * @summary List patients (doctor sees only own patients)
  */
 export const getListPatientsUrl = () => {
