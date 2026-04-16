@@ -19,7 +19,7 @@ interface CreatePatientDialogProps {
   onClose: () => void;
 }
 
-const SOURCE_KEYS = ["instagram", "referral", "walk_in", "website", "whatsapp", "other"] as const;
+const SOURCE_KEYS = ["referral", "walk_in"] as const;
 
 export function CreatePatientDialog({ onClose }: CreatePatientDialogProps) {
   const { t } = useTranslation();
@@ -33,7 +33,7 @@ export function CreatePatientDialog({ onClose }: CreatePatientDialogProps) {
   const [iinError, setIinError] = useState<string | null>(null);
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [gender, setGender] = useState<"male" | "female" | "other" | "">("");
-  const [source, setSource] = useState<string>("other");
+  const [source, setSource] = useState<string>("walk_in");
   const [doctorId, setDoctorId] = useState("");
   const [notes, setNotes] = useState("");
 
