@@ -13,8 +13,7 @@ import {
 } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/hooks/use-auth";
-import { Copy, Download, Trash2, Plus, Link, Smartphone } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Copy, Download, Trash2, Plus, Smartphone } from "lucide-react";
 
 const CHANNEL_TYPE_ICONS: Record<string, string> = {
   instagram: "📸",
@@ -26,14 +25,18 @@ const CHANNEL_TYPE_ICONS: Record<string, string> = {
   other: "📢",
 };
 
-function getRefUrl(refCode: string): string {
+function getRefUrl(refCode: string, phone?: string | null): string {
   const base = window.location.origin;
+  if (phone) {
+    const digits = phone.replace(/\D/g, "");
+    if (digits) return `${base}/wa/${digits}/ref/${refCode}`;
+  }
   return `${base}/ref/${refCode}`;
 }
 
 export function ChannelsSettings() {
   const { t } = useTranslation();
-  const { user } = useAuthStore();
+  const { user, clinic } = useAuthStore();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -41,10 +44,19 @@ export function ChannelsSettings() {
   const [newName, setNewName] = useState("");
   const [newType, setNewType] = useState<CreateChannelRequest["type"]>("instagram");
   const [whatsappPhone, setWhatsappPhone] = useState("");
+  const [savedPhone, setSavedPhone] = useState<string | null>(null);
 
   const isOwner = user?.role === "owner";
   const isAdmin = user?.role === "admin";
   const canManage = isOwner || isAdmin;
+
+  useEffect(() => {
+    const phone = (clinic as any)?.whatsappPhone ?? null;
+    if (phone) {
+      setSavedPhone(phone);
+      setWhatsappPhone(phone);
+    }
+  }, [clinic]);
 
   const { data: channelsRes } = useListChannels({
     query: { queryKey: getListChannelsQueryKey(), enabled: canManage },
@@ -78,6 +90,8 @@ export function ChannelsSettings() {
   const updatePhoneMutation = useUpdateClinicWhatsappPhone({
     mutation: {
       onSuccess: () => {
+        const digits = whatsappPhone.replace(/\D/g, "");
+        setSavedPhone(digits);
         toast({ title: t("channels.whatsappPhoneSaved") });
       },
       onError: () => {
@@ -87,14 +101,14 @@ export function ChannelsSettings() {
   });
 
   const handleCopyLink = (refCode: string) => {
-    const url = getRefUrl(refCode);
+    const url = getRefUrl(refCode, savedPhone);
     navigator.clipboard.writeText(url).then(() => {
       toast({ title: t("channels.linkCopied"), description: url });
     });
   };
 
   const handleDownloadQr = async (channel: ClinicChannel) => {
-    const url = getRefUrl(channel.refCode);
+    const url = getRefUrl(channel.refCode, savedPhone);
     try {
       const dataUrl = await QRCode.toDataURL(url, { width: 512, margin: 2 });
       const a = document.createElement("a");
@@ -122,7 +136,6 @@ export function ChannelsSettings() {
 
   return (
     <div className="space-y-4">
-      {/* WhatsApp Phone */}
       {isOwner && (
         <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-3">
@@ -149,51 +162,60 @@ export function ChannelsSettings() {
         </div>
       )}
 
-      {/* Channel List */}
+      {!savedPhone && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+          <p className="text-xs text-amber-700">
+            ⚠️ {t("channels.noPhoneWarning", { defaultValue: "Сначала сохраните номер WhatsApp — тогда ссылки каналов будут вести прямо в чат клиники." })}
+          </p>
+        </div>
+      )}
+
       {channels.length === 0 ? (
         <p className="text-sm text-muted-foreground text-center py-6">{t("channels.noChannels")}</p>
       ) : (
         <div className="space-y-2">
-          {channels.map((ch) => (
-            <div key={ch.id} className="flex items-center gap-3 p-3 border border-border/60 rounded-xl bg-white">
-              <span className="text-xl">{CHANNEL_TYPE_ICONS[ch.type] ?? "📢"}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-foreground truncate">{ch.name}</p>
-                <p className="text-xs text-muted-foreground font-mono">{getRefUrl(ch.refCode)}</p>
+          {channels.map((ch) => {
+            const refUrl = getRefUrl(ch.refCode, savedPhone);
+            return (
+              <div key={ch.id} className="flex items-center gap-3 p-3 border border-border/60 rounded-xl bg-white">
+                <span className="text-xl">{CHANNEL_TYPE_ICONS[ch.type] ?? "📢"}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground truncate">{ch.name}</p>
+                  <p className="text-xs text-muted-foreground font-mono truncate">{refUrl}</p>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => handleCopyLink(ch.refCode)}
+                    title={t("channels.copyLink")}
+                    className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDownloadQr(ch)}
+                    title={t("channels.downloadQr")}
+                    className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                  >
+                    <Download className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm(t("channels.deleteConfirm"))) {
+                        deleteMutation.mutate({ id: ch.id });
+                      }
+                    }}
+                    title={t("channels.deleteChannel")}
+                    className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors text-muted-foreground hover:text-red-600"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  onClick={() => handleCopyLink(ch.refCode)}
-                  title={t("channels.copyLink")}
-                  className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                >
-                  <Copy className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleDownloadQr(ch)}
-                  title={t("channels.downloadQr")}
-                  className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                >
-                  <Download className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => {
-                    if (confirm(t("channels.deleteConfirm"))) {
-                      deleteMutation.mutate({ id: ch.id });
-                    }
-                  }}
-                  title={t("channels.deleteChannel")}
-                  className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors text-muted-foreground hover:text-red-600"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
-      {/* Add Form */}
       {showAddForm ? (
         <form onSubmit={handleCreate} className="border border-primary/30 rounded-xl p-4 bg-primary/5 space-y-3">
           <div>

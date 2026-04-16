@@ -156,6 +156,7 @@ export interface Clinic {
   id: string;
   name: string;
   createdAt: string;
+  whatsappPhone?: string | null;
 }
 
 export interface RegisterRequest {
