@@ -15,6 +15,13 @@
       "when": 1776351000000,
       "tag": "0001_doctor_capacity",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1776358800000,
+      "tag": "0002_mkb10_clinic_prices",
+      "breakpoints": true
     }
   ]
 }
