@@ -360,6 +360,7 @@ export function PatientDetailPanel() {
   const [editItemTitle, setEditItemTitle] = useState("");
   const [editItemPrice, setEditItemPrice] = useState("");
   const [historyExpanded, setHistoryExpanded] = useState(false);
+  const [planSectionCollapsed, setPlanSectionCollapsed] = useState(false);
   const [expandedPlanId, setExpandedPlanId] = useState<string | null>(null);
 
   const { data, isLoading } = useGetPatient(selectedPatientId ?? "", {
@@ -1199,13 +1200,21 @@ export function PatientDetailPanel() {
                   {!isDiagnosisMode && (
                     <div className="border-t border-border/50">
                       {/* Section label */}
-                      <div className="px-4 py-2.5 flex items-center gap-2 bg-gray-50/60">
-                        <ClipboardList className="w-3.5 h-3.5 text-primary" />
-                        <span className="text-xs font-bold text-gray-600 uppercase tracking-wide">
-                          План лечения
-                        </span>
-                      </div>
+                      <button
+                        onClick={() => setPlanSectionCollapsed(!planSectionCollapsed)}
+                        className="w-full px-4 py-2.5 flex items-center justify-between gap-2 bg-gray-50/60 hover:bg-gray-100/60 transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          <ClipboardList className="w-3.5 h-3.5 text-primary" />
+                          <span className="text-xs font-bold text-gray-600 uppercase tracking-wide">
+                            План лечения
+                          </span>
+                        </div>
+                        <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${planSectionCollapsed ? "-rotate-90" : ""}`} />
+                      </button>
 
+                      {!planSectionCollapsed && (
+                      <>
                       {!activePlan ? (
                         <div className="flex flex-col items-center justify-center gap-4 px-6 py-8">
                           <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
@@ -1608,6 +1617,8 @@ export function PatientDetailPanel() {
                     )}
                     </div>
                     )}
+                      </>
+                      )}
                     </div>
                   )}
                 </div>
