@@ -187,7 +187,7 @@ export function CreatePatientDialog({ onClose }: CreatePatientDialogProps) {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-[5fr_7fr] gap-3">
             <div>
               <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.dateOfBirth")}</label>
               <input
