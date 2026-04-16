@@ -114,8 +114,9 @@ function OwnerAccessManager() {
       <div className="divide-y divide-gray-50">
         {users.map((u) => {
           const current = getAccess(u.id, u.role);
+          const cfg = ACCESS_CONFIG[current];
           return (
-            <div key={u.id} className="px-5 py-3.5 flex items-center gap-4">
+            <div key={u.id} className="px-5 py-3.5 flex items-center gap-3">
               {/* Avatar */}
               <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-xs font-bold text-primary">
                 {u.name[0]?.toUpperCase()}
@@ -123,33 +124,30 @@ function OwnerAccessManager() {
               {/* Info */}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">{u.name}</p>
-                <p className="text-xs text-gray-400 capitalize">{u.role === "admin" ? "Администратор" : "Врач"}</p>
+                <p className="text-xs text-gray-400">{u.role === "admin" ? "Администратор" : "Врач"}</p>
               </div>
-              {/* 3-way toggle */}
-              <div className="flex rounded-xl border border-gray-200 overflow-hidden text-xs shrink-0">
-                {ACCESS_LEVELS.map((level) => {
-                  const cfg = ACCESS_CONFIG[level];
-                  const isActive = current === level;
-                  return (
-                    <button
-                      key={level}
-                      type="button"
-                      onClick={() => setUserAccess(u.id, level)}
-                      title={cfg.label}
-                      className={cn(
-                        "flex items-center gap-1 px-3 py-1.5 font-medium transition-colors whitespace-nowrap",
-                        isActive
-                          ? level === "full_access" ? "bg-emerald-500 text-white"
-                          : level === "read_only"   ? "bg-blue-500 text-white"
-                          : "bg-red-500 text-white"
-                          : "bg-white text-gray-500 hover:bg-gray-50",
-                      )}
-                    >
-                      <cfg.icon className="w-3 h-3" />
-                      {cfg.label}
-                    </button>
-                  );
-                })}
+              {/* Dropdown select */}
+              <div className="relative shrink-0">
+                <select
+                  value={current}
+                  onChange={(e) => setUserAccess(u.id, e.target.value as InventoryAccessLevel)}
+                  className={cn(
+                    "appearance-none pl-2.5 pr-7 py-1.5 rounded-xl border text-xs font-semibold cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors",
+                    current === "full_access" && "bg-emerald-50 border-emerald-200 text-emerald-700",
+                    current === "read_only"   && "bg-blue-50 border-blue-200 text-blue-700",
+                    current === "denied"      && "bg-red-50 border-red-200 text-red-600",
+                  )}
+                >
+                  {ACCESS_LEVELS.map((level) => (
+                    <option key={level} value={level}>{ACCESS_CONFIG[level].label}</option>
+                  ))}
+                </select>
+                <cfg.icon className={cn(
+                  "pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3",
+                  current === "full_access" && "text-emerald-600",
+                  current === "read_only"   && "text-blue-600",
+                  current === "denied"      && "text-red-500",
+                )} />
               </div>
             </div>
           );
