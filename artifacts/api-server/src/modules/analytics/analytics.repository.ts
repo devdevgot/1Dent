@@ -149,47 +149,41 @@ export class AnalyticsRepository {
 
     const monthStart = startOfMonth();
 
-    const [allPatients, newPatients, monthlyProcedures, redAlerts, doctors] =
+    const [[allPatients, newPatients, monthlyProcedures, redAlerts], doctorKpis] =
       await Promise.all([
-        db.select().from(patientsTable).where(eq(patientsTable.clinicId, clinicId)),
-        db
-          .select()
-          .from(patientsTable)
-          .where(
-            and(
-              eq(patientsTable.clinicId, clinicId),
-              gte(patientsTable.createdAt, monthStart),
+        Promise.all([
+          db.select().from(patientsTable).where(eq(patientsTable.clinicId, clinicId)),
+          db
+            .select()
+            .from(patientsTable)
+            .where(
+              and(
+                eq(patientsTable.clinicId, clinicId),
+                gte(patientsTable.createdAt, monthStart),
+              ),
             ),
-          ),
-        db
-          .select()
-          .from(proceduresTable)
-          .where(
-            and(
-              eq(proceduresTable.clinicId, clinicId),
-              eq(proceduresTable.status, "completed"),
-              gte(proceduresTable.completedAt, monthStart),
+          db
+            .select()
+            .from(proceduresTable)
+            .where(
+              and(
+                eq(proceduresTable.clinicId, clinicId),
+                eq(proceduresTable.status, "completed"),
+                gte(proceduresTable.completedAt, monthStart),
+              ),
             ),
-          ),
-        db
-          .select()
-          .from(notificationsTable)
-          .where(
-            and(
-              eq(notificationsTable.clinicId, clinicId),
-              eq(notificationsTable.type, "red_alert"),
-              eq(notificationsTable.read, false),
+          db
+            .select()
+            .from(notificationsTable)
+            .where(
+              and(
+                eq(notificationsTable.clinicId, clinicId),
+                eq(notificationsTable.type, "red_alert"),
+                eq(notificationsTable.read, false),
+              ),
             ),
-          ),
-        db
-          .select()
-          .from(usersTable)
-          .where(
-            and(
-              eq(usersTable.clinicId, clinicId),
-              eq(usersTable.role, "doctor"),
-            ),
-          ),
+        ]),
+        this.getDoctorKpis(clinicId),
       ]);
 
     const patientsByStatus: Record<string, number> = {};
@@ -225,45 +219,6 @@ export class AnalyticsRepository {
           : 0,
       }))
       .filter((s) => s.amount > 0);
-
-    const doctorKpis: DoctorKpi[] = await Promise.all(
-      doctors.map(async (doc) => {
-        const [doctorPatients, doctorProcedures] = await Promise.all([
-          db
-            .select()
-            .from(patientsTable)
-            .where(
-              and(
-                eq(patientsTable.clinicId, clinicId),
-                eq(patientsTable.doctorId, doc.id),
-              ),
-            ),
-          db
-            .select()
-            .from(proceduresTable)
-            .where(
-              and(
-                eq(proceduresTable.clinicId, clinicId),
-                eq(proceduresTable.doctorId, doc.id),
-                eq(proceduresTable.status, "completed"),
-              ),
-            ),
-        ]);
-
-        const revenueTotal = doctorProcedures.reduce((acc, p) => acc + (p.price ?? 0), 0);
-        const averageCheck = doctorProcedures.length > 0 ? revenueTotal / doctorProcedures.length : 0;
-
-        return {
-          doctorId: doc.id,
-          doctorName: doc.name,
-          patientsCount: doctorPatients.length,
-          proceduresCount: doctorProcedures.length,
-          revenueTotal,
-          averageCheck,
-          nps: 0, // placeholder — will be populated from patient survey results (Task #7)
-        };
-      }),
-    );
 
     const result: OwnerAnalytics = {
       totalPatients: allPatients.length,
