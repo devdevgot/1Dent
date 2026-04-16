@@ -1126,6 +1126,131 @@ export interface MigrationJobsResponse {
   data: MigrationJobsResponseData;
 }
 
+export type TreatmentPlanStatus =
+  (typeof TreatmentPlanStatus)[keyof typeof TreatmentPlanStatus];
+
+export const TreatmentPlanStatus = {
+  draft: "draft",
+  approved: "approved",
+  in_progress: "in_progress",
+  completed: "completed",
+} as const;
+
+export type TreatmentPlanItemStatus =
+  (typeof TreatmentPlanItemStatus)[keyof typeof TreatmentPlanItemStatus];
+
+export const TreatmentPlanItemStatus = {
+  pending: "pending",
+  completed: "completed",
+  cancelled: "cancelled",
+} as const;
+
+export interface TreatmentPlanItem {
+  id: string;
+  planId: string;
+  clinicId: string;
+  patientId: string;
+  toothFdi?: number | null;
+  condition?: string | null;
+  mkb10Code?: string | null;
+  title: string;
+  price: number;
+  status: TreatmentPlanItemStatus;
+  sortOrder: number;
+  procedureId?: string | null;
+  createdAt: string;
+}
+
+export interface TreatmentPlan {
+  id: string;
+  clinicId: string;
+  patientId: string;
+  doctorId?: string | null;
+  status: TreatmentPlanStatus;
+  notes?: string | null;
+  totalCost: number;
+  items: TreatmentPlanItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type TreatmentPlanResponseData = {
+  plan: TreatmentPlan | null;
+};
+
+export interface TreatmentPlanResponse {
+  success: boolean;
+  data: TreatmentPlanResponseData;
+}
+
+export type TreatmentPlanBaseResponseData = {
+  plan: TreatmentPlan;
+};
+
+export interface TreatmentPlanBaseResponse {
+  success: boolean;
+  data: TreatmentPlanBaseResponseData;
+}
+
+export type TreatmentPlansResponseData = {
+  plans: TreatmentPlan[];
+};
+
+export interface TreatmentPlansResponse {
+  success: boolean;
+  data: TreatmentPlansResponseData;
+}
+
+export type TreatmentPlanItemResponseData = {
+  item: TreatmentPlanItem;
+};
+
+export interface TreatmentPlanItemResponse {
+  success: boolean;
+  data: TreatmentPlanItemResponseData;
+}
+
+export type CompleteTreatmentPlanItemResponseData = {
+  item: TreatmentPlanItem;
+  procedureId: string;
+};
+
+export interface CompleteTreatmentPlanItemResponse {
+  success: boolean;
+  data: CompleteTreatmentPlanItemResponseData;
+}
+
+export type CreateTreatmentPlanRequestItemsItem = {
+  toothFdi?: number;
+  condition?: string;
+  mkb10Code?: string;
+  title: string;
+  price: number;
+};
+
+export interface CreateTreatmentPlanRequest {
+  items?: CreateTreatmentPlanRequestItemsItem[];
+}
+
+export interface UpdateTreatmentPlanRequest {
+  notes?: string | null;
+  status?: TreatmentPlanStatus;
+}
+
+export interface AddTreatmentPlanItemRequest {
+  toothFdi?: number;
+  condition?: string;
+  mkb10Code?: string;
+  title: string;
+  price: number;
+}
+
+export interface UpdateTreatmentPlanItemRequest {
+  title?: string;
+  price?: number;
+  status?: TreatmentPlanItemStatus;
+}
+
 export type GetInventoryConsumptionParams = {
   dateFrom?: string;
   dateTo?: string;

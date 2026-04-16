@@ -662,6 +662,231 @@ paths:
               schema:
                 $ref: "#/components/schemas/ToothResponse"
 
+  /patients/{id}/treatment-plans:
+    get:
+      operationId: listTreatmentPlans
+      tags: [treatment-plans]
+      summary: List all treatment plans for a patient
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of treatment plans
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TreatmentPlansResponse"
+
+  /patients/{id}/treatment-plan:
+    get:
+      operationId: getActiveTreatmentPlan
+      tags: [treatment-plans]
+      summary: Get active (non-completed) treatment plan for a patient
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Active treatment plan or null
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TreatmentPlanResponse"
+    post:
+      operationId: createTreatmentPlan
+      tags: [treatment-plans]
+      summary: Create a treatment plan (auto-generates items from tooth records if items not provided)
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTreatmentPlanRequest"
+      responses:
+        "201":
+          description: Created treatment plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TreatmentPlanResponse"
+
+  /patients/{id}/treatment-plan/{planId}:
+    patch:
+      operationId: updateTreatmentPlan
+      tags: [treatment-plans]
+      summary: Update treatment plan notes or status
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: planId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTreatmentPlanRequest"
+      responses:
+        "200":
+          description: Updated plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TreatmentPlanBaseResponse"
+
+  /patients/{id}/treatment-plan/{planId}/approve:
+    post:
+      operationId: approveTreatmentPlan
+      tags: [treatment-plans]
+      summary: Approve treatment plan (sets status to approved)
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: planId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Approved plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TreatmentPlanBaseResponse"
+
+  /patients/{id}/treatment-plan/{planId}/items:
+    post:
+      operationId: addTreatmentPlanItem
+      tags: [treatment-plans]
+      summary: Add an item to a treatment plan
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: planId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddTreatmentPlanItemRequest"
+      responses:
+        "201":
+          description: Created item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TreatmentPlanItemResponse"
+
+  /patients/{id}/treatment-plan/{planId}/items/{itemId}:
+    patch:
+      operationId: updateTreatmentPlanItem
+      tags: [treatment-plans]
+      summary: Update a treatment plan item (title, price, status)
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: planId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTreatmentPlanItemRequest"
+      responses:
+        "200":
+          description: Updated item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TreatmentPlanItemResponse"
+
+  /patients/{id}/treatment-plan/{planId}/items/{itemId}/complete:
+    post:
+      operationId: completeTreatmentPlanItem
+      tags: [treatment-plans]
+      summary: Mark item as completed — creates a billing procedure
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: planId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Completed item and procedure id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompleteTreatmentPlanItemResponse"
+
   /patients/{id}/treatments:
     get:
       operationId: listPatientTreatments
@@ -3877,3 +4102,245 @@ components:
       required:
         - success
         - data
+
+    TreatmentPlanStatus:
+      type: string
+      enum: [draft, approved, in_progress, completed]
+
+    TreatmentPlanItemStatus:
+      type: string
+      enum: [pending, completed, cancelled]
+
+    TreatmentPlanItem:
+      type: object
+      properties:
+        id:
+          type: string
+        planId:
+          type: string
+        clinicId:
+          type: string
+        patientId:
+          type: string
+        toothFdi:
+          type: integer
+          nullable: true
+        condition:
+          type: string
+          nullable: true
+        mkb10Code:
+          type: string
+          nullable: true
+        title:
+          type: string
+        price:
+          type: number
+        status:
+          $ref: "#/components/schemas/TreatmentPlanItemStatus"
+        sortOrder:
+          type: integer
+        procedureId:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - planId
+        - clinicId
+        - patientId
+        - title
+        - price
+        - status
+        - sortOrder
+        - createdAt
+
+    TreatmentPlan:
+      type: object
+      properties:
+        id:
+          type: string
+        clinicId:
+          type: string
+        patientId:
+          type: string
+        doctorId:
+          type: string
+          nullable: true
+        status:
+          $ref: "#/components/schemas/TreatmentPlanStatus"
+        notes:
+          type: string
+          nullable: true
+        totalCost:
+          type: number
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TreatmentPlanItem"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - clinicId
+        - patientId
+        - status
+        - totalCost
+        - items
+        - createdAt
+        - updatedAt
+
+    TreatmentPlanResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            plan:
+              oneOf:
+                - $ref: "#/components/schemas/TreatmentPlan"
+                - type: "null"
+          required:
+            - plan
+      required:
+        - success
+        - data
+
+    TreatmentPlanBaseResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            plan:
+              $ref: "#/components/schemas/TreatmentPlan"
+          required:
+            - plan
+      required:
+        - success
+        - data
+
+    TreatmentPlansResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            plans:
+              type: array
+              items:
+                $ref: "#/components/schemas/TreatmentPlan"
+          required:
+            - plans
+      required:
+        - success
+        - data
+
+    TreatmentPlanItemResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            item:
+              $ref: "#/components/schemas/TreatmentPlanItem"
+          required:
+            - item
+      required:
+        - success
+        - data
+
+    CompleteTreatmentPlanItemResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            item:
+              $ref: "#/components/schemas/TreatmentPlanItem"
+            procedureId:
+              type: string
+          required:
+            - item
+            - procedureId
+      required:
+        - success
+        - data
+
+    CreateTreatmentPlanRequest:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              toothFdi:
+                type: integer
+              condition:
+                type: string
+              mkb10Code:
+                type: string
+              title:
+                type: string
+              price:
+                type: number
+            required:
+              - title
+              - price
+
+    UpdateTreatmentPlanRequest:
+      type: object
+      properties:
+        notes:
+          type: string
+          nullable: true
+        status:
+          $ref: "#/components/schemas/TreatmentPlanStatus"
+
+    AddTreatmentPlanItemRequest:
+      type: object
+      properties:
+        toothFdi:
+          type: integer
+        condition:
+          type: string
+        mkb10Code:
+          type: string
+        title:
+          type: string
+        price:
+          type: number
+      required:
+        - title
+        - price
+
+    UpdateTreatmentPlanItemRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        price:
+          type: number
+        status:
+          $ref: "#/components/schemas/TreatmentPlanItemStatus"

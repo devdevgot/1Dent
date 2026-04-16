@@ -154,3 +154,61 @@ export type InsertToothTreatment = typeof toothTreatmentsTable.$inferInsert;
 export type ToothTaskType = (typeof toothTaskTypeEnum.enumValues)[number];
 export type ToothTaskStatus = (typeof toothTaskStatusEnum.enumValues)[number];
 export type ClinicConditionPrice = typeof clinicConditionPricesTable.$inferSelect;
+
+export const treatmentPlanStatusEnum = pgEnum("treatment_plan_status", [
+  "draft",
+  "approved",
+  "in_progress",
+  "completed",
+]);
+
+export const treatmentPlanItemStatusEnum = pgEnum("treatment_plan_item_status", [
+  "pending",
+  "completed",
+  "cancelled",
+]);
+
+export const treatmentPlansTable = pgTable("treatment_plans", {
+  id: text("id").primaryKey(),
+  clinicId: text("clinic_id")
+    .notNull()
+    .references(() => clinicsTable.id, { onDelete: "cascade" }),
+  patientId: text("patient_id")
+    .notNull()
+    .references(() => patientsTable.id, { onDelete: "cascade" }),
+  doctorId: text("doctor_id").references(() => usersTable.id, { onDelete: "set null" }),
+  status: treatmentPlanStatusEnum("status").default("draft").notNull(),
+  notes: text("notes"),
+  totalCost: real("total_cost").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const treatmentPlanItemsTable = pgTable("treatment_plan_items", {
+  id: text("id").primaryKey(),
+  planId: text("plan_id")
+    .notNull()
+    .references(() => treatmentPlansTable.id, { onDelete: "cascade" }),
+  clinicId: text("clinic_id")
+    .notNull()
+    .references(() => clinicsTable.id, { onDelete: "cascade" }),
+  patientId: text("patient_id")
+    .notNull()
+    .references(() => patientsTable.id, { onDelete: "cascade" }),
+  toothFdi: integer("tooth_fdi"),
+  condition: toothConditionEnum("condition"),
+  mkb10Code: text("mkb10_code"),
+  title: text("title").notNull(),
+  price: real("price").notNull().default(0),
+  status: treatmentPlanItemStatusEnum("status").default("pending").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  procedureId: text("procedure_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export type TreatmentPlan = typeof treatmentPlansTable.$inferSelect;
+export type InsertTreatmentPlan = typeof treatmentPlansTable.$inferInsert;
+export type TreatmentPlanStatus = (typeof treatmentPlanStatusEnum.enumValues)[number];
+export type TreatmentPlanItem = typeof treatmentPlanItemsTable.$inferSelect;
+export type InsertTreatmentPlanItem = typeof treatmentPlanItemsTable.$inferInsert;
+export type TreatmentPlanItemStatus = (typeof treatmentPlanItemStatusEnum.enumValues)[number];

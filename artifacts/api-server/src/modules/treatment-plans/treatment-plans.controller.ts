@@ -1,0 +1,209 @@
+import { Router, type Request, type Response, type NextFunction } from "express";
+import { z } from "zod";
+import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
+import { NotFoundError, ValidationError } from "../../shared/errors";
+import { TreatmentPlansRepository } from "./treatment-plans.repository";
+import { PatientsRepository } from "../patients/patients.repository";
+import { ClinicPricesRepository } from "../clinic/clinic-prices.repository";
+
+const router = Router({ mergeParams: true });
+const repo = new TreatmentPlansRepository();
+const patientsRepo = new PatientsRepository();
+const pricesRepo = new ClinicPricesRepository();
+
+const docRoles = roleGuard("owner", "admin", "doctor");
+
+const CreatePlanSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        toothFdi: z.number().int().optional(),
+        condition: z.string().optional(),
+        mkb10Code: z.string().optional(),
+        title: z.string().min(1),
+        price: z.number().min(0),
+      }),
+    )
+    .optional(),
+});
+
+const UpdatePlanSchema = z.object({
+  notes: z.string().nullable().optional(),
+  status: z.enum(["draft", "approved", "in_progress", "completed"]).optional(),
+});
+
+const UpdateItemSchema = z.object({
+  title: z.string().min(1).optional(),
+  price: z.number().min(0).optional(),
+  status: z.enum(["pending", "completed", "cancelled"]).optional(),
+});
+
+const AddItemSchema = z.object({
+  toothFdi: z.number().int().optional(),
+  condition: z.string().optional(),
+  mkb10Code: z.string().optional(),
+  title: z.string().min(1),
+  price: z.number().min(0),
+});
+
+async function checkPatient(req: Request, res: Response, next: NextFunction): Promise<boolean> {
+  const patientId = req.params["id"] ?? req.params["patientId"] ?? "";
+  const patient = await patientsRepo.findById(patientId, req.user!.clinicId).catch(next);
+  if (patient === undefined) return false;
+  if (!patient) { next(new NotFoundError("Patient not found")); return false; }
+  return true;
+}
+
+// GET /patients/:id/treatment-plans — list all plans
+router.get(
+  "/patients/:id/treatment-plans",
+  authMiddleware,
+  docRoles,
+  async (req: Request, res: Response, next: NextFunction) => {
+    if (!(await checkPatient(req, res, next))) return;
+    const plans = await repo.listPlans(req.params["id"]!, req.user!.clinicId).catch(next);
+    if (!plans) return;
+    res.json({ success: true, data: { plans } });
+  },
+);
+
+// GET /patients/:id/treatment-plan — get active plan
+router.get(
+  "/patients/:id/treatment-plan",
+  authMiddleware,
+  docRoles,
+  async (req: Request, res: Response, next: NextFunction) => {
+    if (!(await checkPatient(req, res, next))) return;
+    const plan = await repo.getActivePlan(req.params["id"]!, req.user!.clinicId).catch(next);
+    if (plan === undefined) return;
+    res.json({ success: true, data: { plan } });
+  },
+);
+
+// POST /patients/:id/treatment-plan — create plan
+router.post(
+  "/patients/:id/treatment-plan",
+  authMiddleware,
+  docRoles,
+  async (req: Request, res: Response, next: NextFunction) => {
+    const parsed = CreatePlanSchema.safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError(parsed.error.message));
+    if (!(await checkPatient(req, res, next))) return;
+
+    const pricesMap = await pricesRepo.getConditionPrices(req.user!.clinicId).catch(next);
+    if (!pricesMap) return;
+
+    const plan = await repo
+      .createPlan(
+        req.user!.clinicId,
+        req.params["id"]!,
+        req.user!.id,
+        pricesMap,
+        parsed.data.items,
+      )
+      .catch(next);
+    if (!plan) return;
+
+    res.status(201).json({ success: true, data: { plan } });
+  },
+);
+
+// PATCH /patients/:id/treatment-plan/:planId — update plan (notes/status)
+router.patch(
+  "/patients/:id/treatment-plan/:planId",
+  authMiddleware,
+  docRoles,
+  async (req: Request, res: Response, next: NextFunction) => {
+    const parsed = UpdatePlanSchema.safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError(parsed.error.message));
+
+    const plan = await repo
+      .updatePlan(req.params["planId"]!, req.user!.clinicId, parsed.data)
+      .catch(next);
+    if (plan === undefined) return;
+    if (!plan) return next(new NotFoundError("Treatment plan not found"));
+
+    res.json({ success: true, data: { plan } });
+  },
+);
+
+// POST /patients/:id/treatment-plan/:planId/approve
+router.post(
+  "/patients/:id/treatment-plan/:planId/approve",
+  authMiddleware,
+  docRoles,
+  async (req: Request, res: Response, next: NextFunction) => {
+    const plan = await repo
+      .approvePlan(req.params["planId"]!, req.user!.clinicId)
+      .catch(next);
+    if (plan === undefined) return;
+    if (!plan) return next(new NotFoundError("Treatment plan not found"));
+    res.json({ success: true, data: { plan } });
+  },
+);
+
+// POST /patients/:id/treatment-plan/:planId/items — add item
+router.post(
+  "/patients/:id/treatment-plan/:planId/items",
+  authMiddleware,
+  docRoles,
+  async (req: Request, res: Response, next: NextFunction) => {
+    const parsed = AddItemSchema.safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError(parsed.error.message));
+
+    const existingItems = await repo.getActivePlan(req.params["id"]!, req.user!.clinicId).catch(next);
+    if (existingItems === undefined) return;
+
+    const sortOrder = existingItems?.items.length ?? 0;
+
+    const item = await repo
+      .addItem(
+        req.params["planId"]!,
+        req.user!.clinicId,
+        req.params["id"]!,
+        parsed.data,
+        sortOrder,
+      )
+      .catch(next);
+    if (!item) return;
+
+    res.status(201).json({ success: true, data: { item } });
+  },
+);
+
+// PATCH /patients/:id/treatment-plan/:planId/items/:itemId — update item
+router.patch(
+  "/patients/:id/treatment-plan/:planId/items/:itemId",
+  authMiddleware,
+  docRoles,
+  async (req: Request, res: Response, next: NextFunction) => {
+    const parsed = UpdateItemSchema.safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError(parsed.error.message));
+
+    const item = await repo
+      .updateItem(req.params["itemId"]!, req.user!.clinicId, parsed.data)
+      .catch(next);
+    if (item === undefined) return;
+    if (!item) return next(new NotFoundError("Treatment plan item not found"));
+
+    res.json({ success: true, data: { item } });
+  },
+);
+
+// POST /patients/:id/treatment-plan/:planId/items/:itemId/complete — complete item
+router.post(
+  "/patients/:id/treatment-plan/:planId/items/:itemId/complete",
+  authMiddleware,
+  docRoles,
+  async (req: Request, res: Response, next: NextFunction) => {
+    const result = await repo
+      .completeItem(req.params["itemId"]!, req.user!.clinicId, req.user!.id)
+      .catch(next);
+    if (result === undefined) return;
+    if (!result) return next(new NotFoundError("Treatment plan item not found"));
+
+    res.json({ success: true, data: { item: result.item, procedureId: result.procedureId } });
+  },
+);
+
+export default router;

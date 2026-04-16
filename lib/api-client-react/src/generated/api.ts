@@ -20,6 +20,7 @@ import type {
   ActionLogsResponse,
   AddInteractionRequest,
   AddToothTreatmentRequest,
+  AddTreatmentPlanItemRequest,
   AnalyticsResponse,
   AuthResponse,
   ChangePasswordRequest,
@@ -27,6 +28,7 @@ import type {
   ChannelStatsResponse,
   ChannelsListResponse,
   ChatbotSettingsUpdate,
+  CompleteTreatmentPlanItemResponse,
   ConditionPricesResponse,
   CreateChannelRequest,
   CreateFollowupsRequest,
@@ -35,6 +37,7 @@ import type {
   CreateProcedureBody,
   CreateProcedureTemplate201,
   CreateProcedureTemplateBody,
+  CreateTreatmentPlanRequest,
   CreateUserRequest,
   DeleteChatbotSession200,
   DoctorDetailedAnalyticsResponse,
@@ -83,6 +86,10 @@ import type {
   ToothResponse,
   ToothTreatmentResponse,
   ToothTreatmentsResponse,
+  TreatmentPlanBaseResponse,
+  TreatmentPlanItemResponse,
+  TreatmentPlanResponse,
+  TreatmentPlansResponse,
   TrelloConnectRequest,
   TrelloConnectResponse,
   TrelloImportRequest,
@@ -97,6 +104,8 @@ import type {
   UpdateProcedureStatusBody,
   UpdateStockRequest,
   UpdateToothRequest,
+  UpdateTreatmentPlanItemRequest,
+  UpdateTreatmentPlanRequest,
   UpdateUserRequest,
   UserResponse,
   UsersListResponse,
@@ -2420,6 +2429,756 @@ export const useUpdateTooth = <
   TContext
 > => {
   return useMutation(getUpdateToothMutationOptions(options));
+};
+
+/**
+ * @summary List all treatment plans for a patient
+ */
+export const getListTreatmentPlansUrl = (id: string) => {
+  return `/api/patients/${id}/treatment-plans`;
+};
+
+export const listTreatmentPlans = async (
+  id: string,
+  options?: RequestInit,
+): Promise<TreatmentPlansResponse> => {
+  return customFetch<TreatmentPlansResponse>(getListTreatmentPlansUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListTreatmentPlansQueryKey = (id: string) => {
+  return [`/api/patients/${id}/treatment-plans`] as const;
+};
+
+export const getListTreatmentPlansQueryOptions = <
+  TData = Awaited<ReturnType<typeof listTreatmentPlans>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listTreatmentPlans>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListTreatmentPlansQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listTreatmentPlans>>
+  > = ({ signal }) => listTreatmentPlans(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listTreatmentPlans>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListTreatmentPlansQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listTreatmentPlans>>
+>;
+export type ListTreatmentPlansQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all treatment plans for a patient
+ */
+
+export function useListTreatmentPlans<
+  TData = Awaited<ReturnType<typeof listTreatmentPlans>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listTreatmentPlans>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListTreatmentPlansQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get active (non-completed) treatment plan for a patient
+ */
+export const getGetActiveTreatmentPlanUrl = (id: string) => {
+  return `/api/patients/${id}/treatment-plan`;
+};
+
+export const getActiveTreatmentPlan = async (
+  id: string,
+  options?: RequestInit,
+): Promise<TreatmentPlanResponse> => {
+  return customFetch<TreatmentPlanResponse>(getGetActiveTreatmentPlanUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetActiveTreatmentPlanQueryKey = (id: string) => {
+  return [`/api/patients/${id}/treatment-plan`] as const;
+};
+
+export const getGetActiveTreatmentPlanQueryOptions = <
+  TData = Awaited<ReturnType<typeof getActiveTreatmentPlan>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getActiveTreatmentPlan>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetActiveTreatmentPlanQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getActiveTreatmentPlan>>
+  > = ({ signal }) => getActiveTreatmentPlan(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getActiveTreatmentPlan>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetActiveTreatmentPlanQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getActiveTreatmentPlan>>
+>;
+export type GetActiveTreatmentPlanQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get active (non-completed) treatment plan for a patient
+ */
+
+export function useGetActiveTreatmentPlan<
+  TData = Awaited<ReturnType<typeof getActiveTreatmentPlan>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getActiveTreatmentPlan>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetActiveTreatmentPlanQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a treatment plan (auto-generates items from tooth records if items not provided)
+ */
+export const getCreateTreatmentPlanUrl = (id: string) => {
+  return `/api/patients/${id}/treatment-plan`;
+};
+
+export const createTreatmentPlan = async (
+  id: string,
+  createTreatmentPlanRequest: CreateTreatmentPlanRequest,
+  options?: RequestInit,
+): Promise<TreatmentPlanResponse> => {
+  return customFetch<TreatmentPlanResponse>(getCreateTreatmentPlanUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createTreatmentPlanRequest),
+  });
+};
+
+export const getCreateTreatmentPlanMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createTreatmentPlan>>,
+    TError,
+    { id: string; data: BodyType<CreateTreatmentPlanRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createTreatmentPlan>>,
+  TError,
+  { id: string; data: BodyType<CreateTreatmentPlanRequest> },
+  TContext
+> => {
+  const mutationKey = ["createTreatmentPlan"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createTreatmentPlan>>,
+    { id: string; data: BodyType<CreateTreatmentPlanRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return createTreatmentPlan(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateTreatmentPlanMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createTreatmentPlan>>
+>;
+export type CreateTreatmentPlanMutationBody =
+  BodyType<CreateTreatmentPlanRequest>;
+export type CreateTreatmentPlanMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a treatment plan (auto-generates items from tooth records if items not provided)
+ */
+export const useCreateTreatmentPlan = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createTreatmentPlan>>,
+    TError,
+    { id: string; data: BodyType<CreateTreatmentPlanRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createTreatmentPlan>>,
+  TError,
+  { id: string; data: BodyType<CreateTreatmentPlanRequest> },
+  TContext
+> => {
+  return useMutation(getCreateTreatmentPlanMutationOptions(options));
+};
+
+/**
+ * @summary Update treatment plan notes or status
+ */
+export const getUpdateTreatmentPlanUrl = (id: string, planId: string) => {
+  return `/api/patients/${id}/treatment-plan/${planId}`;
+};
+
+export const updateTreatmentPlan = async (
+  id: string,
+  planId: string,
+  updateTreatmentPlanRequest: UpdateTreatmentPlanRequest,
+  options?: RequestInit,
+): Promise<TreatmentPlanBaseResponse> => {
+  return customFetch<TreatmentPlanBaseResponse>(
+    getUpdateTreatmentPlanUrl(id, planId),
+    {
+      ...options,
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(updateTreatmentPlanRequest),
+    },
+  );
+};
+
+export const getUpdateTreatmentPlanMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateTreatmentPlan>>,
+    TError,
+    { id: string; planId: string; data: BodyType<UpdateTreatmentPlanRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateTreatmentPlan>>,
+  TError,
+  { id: string; planId: string; data: BodyType<UpdateTreatmentPlanRequest> },
+  TContext
+> => {
+  const mutationKey = ["updateTreatmentPlan"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateTreatmentPlan>>,
+    { id: string; planId: string; data: BodyType<UpdateTreatmentPlanRequest> }
+  > = (props) => {
+    const { id, planId, data } = props ?? {};
+
+    return updateTreatmentPlan(id, planId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateTreatmentPlanMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateTreatmentPlan>>
+>;
+export type UpdateTreatmentPlanMutationBody =
+  BodyType<UpdateTreatmentPlanRequest>;
+export type UpdateTreatmentPlanMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update treatment plan notes or status
+ */
+export const useUpdateTreatmentPlan = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateTreatmentPlan>>,
+    TError,
+    { id: string; planId: string; data: BodyType<UpdateTreatmentPlanRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateTreatmentPlan>>,
+  TError,
+  { id: string; planId: string; data: BodyType<UpdateTreatmentPlanRequest> },
+  TContext
+> => {
+  return useMutation(getUpdateTreatmentPlanMutationOptions(options));
+};
+
+/**
+ * @summary Approve treatment plan (sets status to approved)
+ */
+export const getApproveTreatmentPlanUrl = (id: string, planId: string) => {
+  return `/api/patients/${id}/treatment-plan/${planId}/approve`;
+};
+
+export const approveTreatmentPlan = async (
+  id: string,
+  planId: string,
+  options?: RequestInit,
+): Promise<TreatmentPlanBaseResponse> => {
+  return customFetch<TreatmentPlanBaseResponse>(
+    getApproveTreatmentPlanUrl(id, planId),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getApproveTreatmentPlanMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof approveTreatmentPlan>>,
+    TError,
+    { id: string; planId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof approveTreatmentPlan>>,
+  TError,
+  { id: string; planId: string },
+  TContext
+> => {
+  const mutationKey = ["approveTreatmentPlan"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof approveTreatmentPlan>>,
+    { id: string; planId: string }
+  > = (props) => {
+    const { id, planId } = props ?? {};
+
+    return approveTreatmentPlan(id, planId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ApproveTreatmentPlanMutationResult = NonNullable<
+  Awaited<ReturnType<typeof approveTreatmentPlan>>
+>;
+
+export type ApproveTreatmentPlanMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Approve treatment plan (sets status to approved)
+ */
+export const useApproveTreatmentPlan = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof approveTreatmentPlan>>,
+    TError,
+    { id: string; planId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof approveTreatmentPlan>>,
+  TError,
+  { id: string; planId: string },
+  TContext
+> => {
+  return useMutation(getApproveTreatmentPlanMutationOptions(options));
+};
+
+/**
+ * @summary Add an item to a treatment plan
+ */
+export const getAddTreatmentPlanItemUrl = (id: string, planId: string) => {
+  return `/api/patients/${id}/treatment-plan/${planId}/items`;
+};
+
+export const addTreatmentPlanItem = async (
+  id: string,
+  planId: string,
+  addTreatmentPlanItemRequest: AddTreatmentPlanItemRequest,
+  options?: RequestInit,
+): Promise<TreatmentPlanItemResponse> => {
+  return customFetch<TreatmentPlanItemResponse>(
+    getAddTreatmentPlanItemUrl(id, planId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(addTreatmentPlanItemRequest),
+    },
+  );
+};
+
+export const getAddTreatmentPlanItemMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addTreatmentPlanItem>>,
+    TError,
+    { id: string; planId: string; data: BodyType<AddTreatmentPlanItemRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof addTreatmentPlanItem>>,
+  TError,
+  { id: string; planId: string; data: BodyType<AddTreatmentPlanItemRequest> },
+  TContext
+> => {
+  const mutationKey = ["addTreatmentPlanItem"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof addTreatmentPlanItem>>,
+    { id: string; planId: string; data: BodyType<AddTreatmentPlanItemRequest> }
+  > = (props) => {
+    const { id, planId, data } = props ?? {};
+
+    return addTreatmentPlanItem(id, planId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AddTreatmentPlanItemMutationResult = NonNullable<
+  Awaited<ReturnType<typeof addTreatmentPlanItem>>
+>;
+export type AddTreatmentPlanItemMutationBody =
+  BodyType<AddTreatmentPlanItemRequest>;
+export type AddTreatmentPlanItemMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Add an item to a treatment plan
+ */
+export const useAddTreatmentPlanItem = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addTreatmentPlanItem>>,
+    TError,
+    { id: string; planId: string; data: BodyType<AddTreatmentPlanItemRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof addTreatmentPlanItem>>,
+  TError,
+  { id: string; planId: string; data: BodyType<AddTreatmentPlanItemRequest> },
+  TContext
+> => {
+  return useMutation(getAddTreatmentPlanItemMutationOptions(options));
+};
+
+/**
+ * @summary Update a treatment plan item (title, price, status)
+ */
+export const getUpdateTreatmentPlanItemUrl = (
+  id: string,
+  planId: string,
+  itemId: string,
+) => {
+  return `/api/patients/${id}/treatment-plan/${planId}/items/${itemId}`;
+};
+
+export const updateTreatmentPlanItem = async (
+  id: string,
+  planId: string,
+  itemId: string,
+  updateTreatmentPlanItemRequest: UpdateTreatmentPlanItemRequest,
+  options?: RequestInit,
+): Promise<TreatmentPlanItemResponse> => {
+  return customFetch<TreatmentPlanItemResponse>(
+    getUpdateTreatmentPlanItemUrl(id, planId, itemId),
+    {
+      ...options,
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(updateTreatmentPlanItemRequest),
+    },
+  );
+};
+
+export const getUpdateTreatmentPlanItemMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateTreatmentPlanItem>>,
+    TError,
+    {
+      id: string;
+      planId: string;
+      itemId: string;
+      data: BodyType<UpdateTreatmentPlanItemRequest>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateTreatmentPlanItem>>,
+  TError,
+  {
+    id: string;
+    planId: string;
+    itemId: string;
+    data: BodyType<UpdateTreatmentPlanItemRequest>;
+  },
+  TContext
+> => {
+  const mutationKey = ["updateTreatmentPlanItem"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateTreatmentPlanItem>>,
+    {
+      id: string;
+      planId: string;
+      itemId: string;
+      data: BodyType<UpdateTreatmentPlanItemRequest>;
+    }
+  > = (props) => {
+    const { id, planId, itemId, data } = props ?? {};
+
+    return updateTreatmentPlanItem(id, planId, itemId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateTreatmentPlanItemMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateTreatmentPlanItem>>
+>;
+export type UpdateTreatmentPlanItemMutationBody =
+  BodyType<UpdateTreatmentPlanItemRequest>;
+export type UpdateTreatmentPlanItemMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update a treatment plan item (title, price, status)
+ */
+export const useUpdateTreatmentPlanItem = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateTreatmentPlanItem>>,
+    TError,
+    {
+      id: string;
+      planId: string;
+      itemId: string;
+      data: BodyType<UpdateTreatmentPlanItemRequest>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateTreatmentPlanItem>>,
+  TError,
+  {
+    id: string;
+    planId: string;
+    itemId: string;
+    data: BodyType<UpdateTreatmentPlanItemRequest>;
+  },
+  TContext
+> => {
+  return useMutation(getUpdateTreatmentPlanItemMutationOptions(options));
+};
+
+/**
+ * @summary Mark item as completed — creates a billing procedure
+ */
+export const getCompleteTreatmentPlanItemUrl = (
+  id: string,
+  planId: string,
+  itemId: string,
+) => {
+  return `/api/patients/${id}/treatment-plan/${planId}/items/${itemId}/complete`;
+};
+
+export const completeTreatmentPlanItem = async (
+  id: string,
+  planId: string,
+  itemId: string,
+  options?: RequestInit,
+): Promise<CompleteTreatmentPlanItemResponse> => {
+  return customFetch<CompleteTreatmentPlanItemResponse>(
+    getCompleteTreatmentPlanItemUrl(id, planId, itemId),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getCompleteTreatmentPlanItemMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof completeTreatmentPlanItem>>,
+    TError,
+    { id: string; planId: string; itemId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof completeTreatmentPlanItem>>,
+  TError,
+  { id: string; planId: string; itemId: string },
+  TContext
+> => {
+  const mutationKey = ["completeTreatmentPlanItem"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof completeTreatmentPlanItem>>,
+    { id: string; planId: string; itemId: string }
+  > = (props) => {
+    const { id, planId, itemId } = props ?? {};
+
+    return completeTreatmentPlanItem(id, planId, itemId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CompleteTreatmentPlanItemMutationResult = NonNullable<
+  Awaited<ReturnType<typeof completeTreatmentPlanItem>>
+>;
+
+export type CompleteTreatmentPlanItemMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Mark item as completed — creates a billing procedure
+ */
+export const useCompleteTreatmentPlanItem = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof completeTreatmentPlanItem>>,
+    TError,
+    { id: string; planId: string; itemId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof completeTreatmentPlanItem>>,
+  TError,
+  { id: string; planId: string; itemId: string },
+  TContext
+> => {
+  return useMutation(getCompleteTreatmentPlanItemMutationOptions(options));
 };
 
 /**

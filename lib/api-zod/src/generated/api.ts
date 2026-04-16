@@ -731,6 +731,288 @@ export const UpdateToothResponse = zod.object({
 });
 
 /**
+ * @summary List all treatment plans for a patient
+ */
+export const ListTreatmentPlansParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const ListTreatmentPlansResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    plans: zod.array(
+      zod.object({
+        id: zod.string(),
+        clinicId: zod.string(),
+        patientId: zod.string(),
+        doctorId: zod.string().nullish(),
+        status: zod.enum(["draft", "approved", "in_progress", "completed"]),
+        notes: zod.string().nullish(),
+        totalCost: zod.number(),
+        items: zod.array(
+          zod.object({
+            id: zod.string(),
+            planId: zod.string(),
+            clinicId: zod.string(),
+            patientId: zod.string(),
+            toothFdi: zod.number().nullish(),
+            condition: zod.string().nullish(),
+            mkb10Code: zod.string().nullish(),
+            title: zod.string(),
+            price: zod.number(),
+            status: zod.enum(["pending", "completed", "cancelled"]),
+            sortOrder: zod.number(),
+            procedureId: zod.string().nullish(),
+            createdAt: zod.date(),
+          }),
+        ),
+        createdAt: zod.date(),
+        updatedAt: zod.date(),
+      }),
+    ),
+  }),
+});
+
+/**
+ * @summary Get active (non-completed) treatment plan for a patient
+ */
+export const GetActiveTreatmentPlanParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const GetActiveTreatmentPlanResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    plan: zod.union([
+      zod.object({
+        id: zod.string(),
+        clinicId: zod.string(),
+        patientId: zod.string(),
+        doctorId: zod.string().nullish(),
+        status: zod.enum(["draft", "approved", "in_progress", "completed"]),
+        notes: zod.string().nullish(),
+        totalCost: zod.number(),
+        items: zod.array(
+          zod.object({
+            id: zod.string(),
+            planId: zod.string(),
+            clinicId: zod.string(),
+            patientId: zod.string(),
+            toothFdi: zod.number().nullish(),
+            condition: zod.string().nullish(),
+            mkb10Code: zod.string().nullish(),
+            title: zod.string(),
+            price: zod.number(),
+            status: zod.enum(["pending", "completed", "cancelled"]),
+            sortOrder: zod.number(),
+            procedureId: zod.string().nullish(),
+            createdAt: zod.date(),
+          }),
+        ),
+        createdAt: zod.date(),
+        updatedAt: zod.date(),
+      }),
+      zod.null(),
+    ]),
+  }),
+});
+
+/**
+ * @summary Create a treatment plan (auto-generates items from tooth records if items not provided)
+ */
+export const CreateTreatmentPlanParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const CreateTreatmentPlanBody = zod.object({
+  items: zod
+    .array(
+      zod.object({
+        toothFdi: zod.number().optional(),
+        condition: zod.string().optional(),
+        mkb10Code: zod.string().optional(),
+        title: zod.string(),
+        price: zod.number(),
+      }),
+    )
+    .optional(),
+});
+
+/**
+ * @summary Update treatment plan notes or status
+ */
+export const UpdateTreatmentPlanParams = zod.object({
+  id: zod.coerce.string(),
+  planId: zod.coerce.string(),
+});
+
+export const UpdateTreatmentPlanBody = zod.object({
+  notes: zod.string().nullish(),
+  status: zod
+    .enum(["draft", "approved", "in_progress", "completed"])
+    .optional(),
+});
+
+export const UpdateTreatmentPlanResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    plan: zod.object({
+      id: zod.string(),
+      clinicId: zod.string(),
+      patientId: zod.string(),
+      doctorId: zod.string().nullish(),
+      status: zod.enum(["draft", "approved", "in_progress", "completed"]),
+      notes: zod.string().nullish(),
+      totalCost: zod.number(),
+      items: zod.array(
+        zod.object({
+          id: zod.string(),
+          planId: zod.string(),
+          clinicId: zod.string(),
+          patientId: zod.string(),
+          toothFdi: zod.number().nullish(),
+          condition: zod.string().nullish(),
+          mkb10Code: zod.string().nullish(),
+          title: zod.string(),
+          price: zod.number(),
+          status: zod.enum(["pending", "completed", "cancelled"]),
+          sortOrder: zod.number(),
+          procedureId: zod.string().nullish(),
+          createdAt: zod.date(),
+        }),
+      ),
+      createdAt: zod.date(),
+      updatedAt: zod.date(),
+    }),
+  }),
+});
+
+/**
+ * @summary Approve treatment plan (sets status to approved)
+ */
+export const ApproveTreatmentPlanParams = zod.object({
+  id: zod.coerce.string(),
+  planId: zod.coerce.string(),
+});
+
+export const ApproveTreatmentPlanResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    plan: zod.object({
+      id: zod.string(),
+      clinicId: zod.string(),
+      patientId: zod.string(),
+      doctorId: zod.string().nullish(),
+      status: zod.enum(["draft", "approved", "in_progress", "completed"]),
+      notes: zod.string().nullish(),
+      totalCost: zod.number(),
+      items: zod.array(
+        zod.object({
+          id: zod.string(),
+          planId: zod.string(),
+          clinicId: zod.string(),
+          patientId: zod.string(),
+          toothFdi: zod.number().nullish(),
+          condition: zod.string().nullish(),
+          mkb10Code: zod.string().nullish(),
+          title: zod.string(),
+          price: zod.number(),
+          status: zod.enum(["pending", "completed", "cancelled"]),
+          sortOrder: zod.number(),
+          procedureId: zod.string().nullish(),
+          createdAt: zod.date(),
+        }),
+      ),
+      createdAt: zod.date(),
+      updatedAt: zod.date(),
+    }),
+  }),
+});
+
+/**
+ * @summary Add an item to a treatment plan
+ */
+export const AddTreatmentPlanItemParams = zod.object({
+  id: zod.coerce.string(),
+  planId: zod.coerce.string(),
+});
+
+export const AddTreatmentPlanItemBody = zod.object({
+  toothFdi: zod.number().optional(),
+  condition: zod.string().optional(),
+  mkb10Code: zod.string().optional(),
+  title: zod.string(),
+  price: zod.number(),
+});
+
+/**
+ * @summary Update a treatment plan item (title, price, status)
+ */
+export const UpdateTreatmentPlanItemParams = zod.object({
+  id: zod.coerce.string(),
+  planId: zod.coerce.string(),
+  itemId: zod.coerce.string(),
+});
+
+export const UpdateTreatmentPlanItemBody = zod.object({
+  title: zod.string().optional(),
+  price: zod.number().optional(),
+  status: zod.enum(["pending", "completed", "cancelled"]).optional(),
+});
+
+export const UpdateTreatmentPlanItemResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    item: zod.object({
+      id: zod.string(),
+      planId: zod.string(),
+      clinicId: zod.string(),
+      patientId: zod.string(),
+      toothFdi: zod.number().nullish(),
+      condition: zod.string().nullish(),
+      mkb10Code: zod.string().nullish(),
+      title: zod.string(),
+      price: zod.number(),
+      status: zod.enum(["pending", "completed", "cancelled"]),
+      sortOrder: zod.number(),
+      procedureId: zod.string().nullish(),
+      createdAt: zod.date(),
+    }),
+  }),
+});
+
+/**
+ * @summary Mark item as completed — creates a billing procedure
+ */
+export const CompleteTreatmentPlanItemParams = zod.object({
+  id: zod.coerce.string(),
+  planId: zod.coerce.string(),
+  itemId: zod.coerce.string(),
+});
+
+export const CompleteTreatmentPlanItemResponse = zod.object({
+  success: zod.literal(true),
+  data: zod.object({
+    item: zod.object({
+      id: zod.string(),
+      planId: zod.string(),
+      clinicId: zod.string(),
+      patientId: zod.string(),
+      toothFdi: zod.number().nullish(),
+      condition: zod.string().nullish(),
+      mkb10Code: zod.string().nullish(),
+      title: zod.string(),
+      price: zod.number(),
+      status: zod.enum(["pending", "completed", "cancelled"]),
+      sortOrder: zod.number(),
+      procedureId: zod.string().nullish(),
+      createdAt: zod.date(),
+    }),
+    procedureId: zod.string(),
+  }),
+});
+
+/**
  * @summary Get all treatment tasks for a patient
  */
 export const ListPatientTreatmentsParams = zod.object({

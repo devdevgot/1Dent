@@ -12,16 +12,23 @@ import {
   useListProcedures,
   useListUsers,
   useGetConditionPrices,
+  useGetActiveTreatmentPlan,
+  useCreateTreatmentPlan,
+  useApproveTreatmentPlan,
+  useAddTreatmentPlanItem,
+  useCompleteTreatmentPlanItem,
   getListPatientsQueryKey,
   getGetPatientQueryKey,
   getListTeethQueryKey,
   getListPatientTreatmentsQueryKey,
+  getGetActiveTreatmentPlanQueryKey,
 } from "@workspace/api-client-react";
 import type { ToothRecord, ToothTreatment } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   X, ChevronDown, CheckCircle2, Clock, ArrowUpRight,
   Phone, User, Calendar, CreditCard, Stethoscope, TrendingUp, Copy, Save, IdCard,
+  ClipboardList, Plus, BadgeCheck, Circle,
 } from "lucide-react";
 import { calculateAge, formatDateOfBirth, maskIIN } from "@workspace/api-zod";
 import { Button } from "@/components/ui/button";
@@ -343,6 +350,10 @@ export function PatientDetailPanel() {
 
   const [modalToothFdi, setModalToothFdi] = useState<number | null>(null);
 
+  const [showAddItemForm, setShowAddItemForm] = useState(false);
+  const [newItemTitle, setNewItemTitle] = useState("");
+  const [newItemPrice, setNewItemPrice] = useState("");
+
   const { data, isLoading } = useGetPatient(selectedPatientId ?? "", {
     query: {
       queryKey: getGetPatientQueryKey(selectedPatientId ?? ""),
@@ -374,9 +385,60 @@ export function PatientDetailPanel() {
   const teethMap = new Map(teethRecords.map((t) => [t.toothFdi, t]));
 
   const { data: conditionPricesData } = useGetConditionPrices({
-    query: { enabled: isDiagnosisMode },
+    query: { enabled: isDiagnosisMode || activeTab === "plan" },
   });
   const conditionPricesMap = conditionPricesData?.data?.prices ?? {};
+
+  const { data: planData } = useGetActiveTreatmentPlan(selectedPatientId ?? "", {
+    query: {
+      queryKey: getGetActiveTreatmentPlanQueryKey(selectedPatientId ?? ""),
+      enabled: !!selectedPatientId && activeTab === "plan",
+    },
+  });
+  const activePlan = planData?.data?.plan ?? null;
+
+  const createPlanMutation = useCreateTreatmentPlan({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetActiveTreatmentPlanQueryKey(selectedPatientId ?? "") });
+        toast({ title: "План лечения создан" });
+      },
+      onError: () => toast({ title: t("account.errorTitle"), variant: "destructive" }),
+    },
+  });
+
+  const approvePlanMutation = useApproveTreatmentPlan({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetActiveTreatmentPlanQueryKey(selectedPatientId ?? "") });
+        toast({ title: "План согласован с пациентом" });
+      },
+      onError: () => toast({ title: t("account.errorTitle"), variant: "destructive" }),
+    },
+  });
+
+  const addPlanItemMutation = useAddTreatmentPlanItem({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetActiveTreatmentPlanQueryKey(selectedPatientId ?? "") });
+        setNewItemTitle("");
+        setNewItemPrice("");
+        setShowAddItemForm(false);
+        toast({ title: "Шаг добавлен" });
+      },
+      onError: () => toast({ title: t("account.errorTitle"), variant: "destructive" }),
+    },
+  });
+
+  const completeItemMutation = useCompleteTreatmentPlanItem({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetActiveTreatmentPlanQueryKey(selectedPatientId ?? "") });
+        toast({ title: "Шаг выполнен, процедура создана" });
+      },
+      onError: () => toast({ title: t("account.errorTitle"), variant: "destructive" }),
+    },
+  });
 
   const { data: tasksData } = useListPatientTreatments(selectedPatientId ?? "", {
     query: {
@@ -458,6 +520,9 @@ export function PatientDetailPanel() {
     setIsDiagnosisMode(false);
     setShowSummaryModal(false);
     toast({ title: t("patient.diagnosisSaved") });
+    setTimeout(() => {
+      toast({ title: "Не забудьте обновить план лечения", description: "Перейдите во вкладку «План лечения»" });
+    }, 800);
   }, [selectedPatientId, diagnosisMap, diagnosisNotesMap, teethMap, updateToothMutation, refetchTeeth, toast, t]);
 
   const diagnosisSummaryEntries = useMemo((): DiagnosisSummaryEntry[] => {
@@ -525,6 +590,7 @@ export function PatientDetailPanel() {
   const tabs = [
     { id: "info"   as const, label: "Информация" },
     { id: "dental" as const, label: t("patient.tabDental") },
+    { id: "plan"   as const, label: "План лечения" },
   ];
 
   const doctorUser = patient?.doctorId ? allUsers.find((u) => u.id === patient.doctorId) : null;
@@ -915,6 +981,17 @@ export function PatientDetailPanel() {
             {/* Dental Chart Tab */}
             {activeTab === "dental" && (
               <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                {hasDiagnosis && !isDiagnosisMode && (
+                  <div className="px-3 pt-2 shrink-0">
+                    <button
+                      onClick={() => setActiveTab("plan")}
+                      className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 transition-colors"
+                    >
+                      <ClipboardList className="w-3.5 h-3.5" />
+                      Открыть план лечения
+                    </button>
+                  </div>
+                )}
                 <div className="flex-1 overflow-y-auto custom-scrollbar">
                   <div className="p-3">
                     {/* No diagnosis yet */}
@@ -1089,6 +1166,196 @@ export function PatientDetailPanel() {
                     )}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Treatment Plan Tab */}
+            {activeTab === "plan" && (
+              <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                {!activePlan ? (
+                  <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6 py-12">
+                    <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+                      <ClipboardList className="w-7 h-7 text-primary" />
+                    </div>
+                    <div className="text-center">
+                      <p className="font-semibold text-gray-800 text-sm">Нет активного плана лечения</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Система автоматически добавит шаги из зубной карты
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => createPlanMutation.mutate({ id: selectedPatientId, data: {} })}
+                      disabled={createPlanMutation.isPending}
+                      className="gap-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Составить план
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    {/* Plan header */}
+                    <div className="px-4 pt-3 pb-2 border-b border-border/40 shrink-0 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${
+                            activePlan.status === "draft"
+                              ? "bg-slate-50 text-slate-600 border-slate-200"
+                              : activePlan.status === "approved"
+                              ? "bg-blue-50 text-blue-700 border-blue-200"
+                              : activePlan.status === "in_progress"
+                              ? "bg-amber-50 text-amber-700 border-amber-200"
+                              : "bg-green-50 text-green-700 border-green-200"
+                          }`}>
+                            {activePlan.status === "draft" ? "Черновик"
+                              : activePlan.status === "approved" ? "Согласован"
+                              : activePlan.status === "in_progress" ? "В работе"
+                              : "Завершён"}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(activePlan.createdAt).toLocaleDateString("ru", { day: "2-digit", month: "short" })}
+                          </span>
+                        </div>
+                        {(activePlan.status === "draft" || activePlan.status === "in_progress") && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs h-7 gap-1.5 border-blue-200 text-blue-700 hover:bg-blue-50"
+                            onClick={() => approvePlanMutation.mutate({ id: selectedPatientId, planId: activePlan.id })}
+                            disabled={approvePlanMutation.isPending}
+                          >
+                            <BadgeCheck className="w-3.5 h-3.5" />
+                            Согласовать
+                          </Button>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">
+                          {activePlan.items.length} шаг{activePlan.items.length === 1 ? "" : activePlan.items.length < 5 ? "а" : "ов"}
+                        </span>
+                        <span className="text-sm font-bold text-gray-900">
+                          Итого: {activePlan.totalCost.toLocaleString("ru")} ₸
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Items list */}
+                    <div className="flex-1 overflow-y-auto custom-scrollbar">
+                      <div className="p-3 space-y-2">
+                        {activePlan.items.length === 0 && (
+                          <p className="text-sm text-muted-foreground text-center py-8">
+                            Нет шагов. Добавьте первый шаг.
+                          </p>
+                        )}
+                        {activePlan.items.map((item) => (
+                          <div
+                            key={item.id}
+                            className={`flex items-start gap-2.5 p-3 rounded-xl border transition-colors ${
+                              item.status === "completed"
+                                ? "bg-green-50/60 border-green-200"
+                                : item.status === "cancelled"
+                                ? "bg-gray-50 border-gray-200 opacity-60"
+                                : "bg-white border-border/50"
+                            }`}
+                          >
+                            <button
+                              className="mt-0.5 shrink-0 disabled:cursor-not-allowed"
+                              disabled={item.status !== "pending" || completeItemMutation.isPending}
+                              onClick={() =>
+                                completeItemMutation.mutate({
+                                  id: selectedPatientId,
+                                  planId: activePlan.id,
+                                  itemId: item.id,
+                                })
+                              }
+                              title={item.status === "pending" ? "Отметить как выполненный" : undefined}
+                            >
+                              {item.status === "completed" ? (
+                                <CheckCircle2 className="w-4.5 h-4.5 text-green-600" />
+                              ) : (
+                                <Circle className="w-4.5 h-4.5 text-border hover:text-primary transition-colors" />
+                              )}
+                            </button>
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm font-medium leading-tight ${item.status === "completed" ? "line-through text-muted-foreground" : "text-gray-800"}`}>
+                                {item.title}
+                              </p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                {item.toothFdi && (
+                                  <span className="text-xs text-muted-foreground">Зуб #{item.toothFdi}</span>
+                                )}
+                                {item.mkb10Code && (
+                                  <span className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono">
+                                    {item.mkb10Code}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <span className="text-sm font-semibold text-gray-700 shrink-0">
+                              {item.price.toLocaleString("ru")} ₸
+                            </span>
+                          </div>
+                        ))}
+
+                        {/* Add item form */}
+                        {showAddItemForm ? (
+                          <div className="border border-dashed border-primary/40 rounded-xl p-3 space-y-2 bg-primary/5">
+                            <input
+                              type="text"
+                              placeholder="Название шага"
+                              value={newItemTitle}
+                              onChange={(e) => setNewItemTitle(e.target.value)}
+                              className="w-full text-sm border border-border rounded-lg px-3 py-1.5 outline-none focus:ring-1 focus:ring-primary"
+                            />
+                            <input
+                              type="number"
+                              placeholder="Цена (₸)"
+                              value={newItemPrice}
+                              onChange={(e) => setNewItemPrice(e.target.value)}
+                              min={0}
+                              className="w-full text-sm border border-border rounded-lg px-3 py-1.5 outline-none focus:ring-1 focus:ring-primary"
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                className="h-7 text-xs"
+                                disabled={!newItemTitle.trim() || addPlanItemMutation.isPending}
+                                onClick={() => {
+                                  const price = parseFloat(newItemPrice) || 0;
+                                  addPlanItemMutation.mutate({
+                                    id: selectedPatientId,
+                                    planId: activePlan.id,
+                                    data: { title: newItemTitle.trim(), price },
+                                  });
+                                }}
+                              >
+                                Добавить
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 text-xs"
+                                onClick={() => { setShowAddItemForm(false); setNewItemTitle(""); setNewItemPrice(""); }}
+                              >
+                                Отмена
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          activePlan.status !== "completed" && (
+                            <button
+                              onClick={() => setShowAddItemForm(true)}
+                              className="w-full flex items-center gap-2 py-2 px-3 rounded-xl border border-dashed border-border text-xs text-muted-foreground hover:border-primary/40 hover:text-primary hover:bg-primary/5 transition-colors"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              Добавить шаг
+                            </button>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
