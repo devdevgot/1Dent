@@ -403,6 +403,14 @@ export function PatientDetailPanel() {
     },
   });
   const activePlan = planData?.data?.plan ?? null;
+
+  const { data: plansHistoryData } = useListTreatmentPlans(selectedPatientId ?? "", {
+    query: {
+      queryKey: getListTreatmentPlansQueryKey(selectedPatientId ?? ""),
+      enabled: !!selectedPatientId && activeTab === "plan",
+    },
+  });
+
   const pastPlans = (plansHistoryData?.data?.plans ?? []).filter(
     (p) => p.status === "completed" || p.status === "cancelled",
   );
@@ -460,13 +468,6 @@ export function PatientDetailPanel() {
         toast({ title: "Шаг обновлён" });
       },
       onError: () => toast({ title: t("account.errorTitle"), variant: "destructive" }),
-    },
-  });
-
-  const { data: plansHistoryData } = useListTreatmentPlans(selectedPatientId ?? "", {
-    query: {
-      queryKey: getListTreatmentPlansQueryKey(selectedPatientId ?? ""),
-      enabled: !!selectedPatientId && activeTab === "plan",
     },
   });
 
