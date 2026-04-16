@@ -89,33 +89,6 @@ function toInputValue(d: Date): string {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ─── DEMO MODE ──────────────────────────────────────────────────────────────
-// Чтобы убрать фейковые данные — поменяй на false
-const USE_MOCK_DATA = true;
-
-const MOCK_ANALYTICS = {
-  revenueThisMonth: 4_850_000,
-  newPatientsThisMonth: 38,
-  completedProceduresThisMonth: 127,
-  totalPatients: 1_240,
-  redAlertCount: 2,
-  revenueByPaymentMethod: [
-    { method: "kaspi_transfer", label: "Kaspi перевод", amount: 1_940_000, percent: 40, color: "#4B7BEC" },
-    { method: "cash",           label: "Наличка",        amount:   970_000, percent: 20, color: "#26de81" },
-    { method: "kaspi_qr",       label: "Kaspi QR",       amount:   727_500, percent: 15, color: "#fd9644" },
-    { method: "terminal",       label: "Терминал",        amount:   485_000, percent: 10, color: "#2d3436" },
-    { method: "kaspi_red",      label: "Kaspi RED",       amount:   484_500, percent: 10, color: "#fc5c65" },
-    { method: "debt",           label: "В долг",          amount:   243_000, percent:  5, color: "#a29bfe" },
-  ],
-};
-
-const MOCK_KPIS = [
-  { doctorId: "d1", doctorName: "Асель Нурланова",   completedProcedures: 42, revenue: 1_820_000, patients: 31 },
-  { doctorId: "d2", doctorName: "Берик Сейтов",      completedProcedures: 35, revenue: 1_540_000, patients: 28 },
-  { doctorId: "d3", doctorName: "Гульнар Ахметова",  completedProcedures: 28, revenue: 1_020_000, patients: 22 },
-  { doctorId: "d4", doctorName: "Данияр Касымов",    completedProcedures: 22, revenue:   470_000, patients: 17 },
-];
-// ─────────────────────────────────────────────────────────────────────────────
 
 export default function OwnerDashboard() {
   const { t } = useTranslation();
@@ -142,10 +115,9 @@ export default function OwnerDashboard() {
   const filterLabel = FILTER_PRESETS.find(p => p.key === filterPreset)?.label ?? "Месяц";
   const dateRangeLabel = fmtDateRange(dateRange.from, dateRange.to);
 
-  const { data: analyticsData, isLoading: apiLoading } = useGetOwnerAnalytics({
+  const { data: analyticsData, isLoading } = useGetOwnerAnalytics({
     query: { queryKey: getGetOwnerAnalyticsQueryKey() },
   });
-  const isLoading = USE_MOCK_DATA ? false : apiLoading;
   const { data: kpiData } = useGetDoctorKpis({
     query: { queryKey: getGetDoctorKpisQueryKey() },
   });
@@ -153,16 +125,18 @@ export default function OwnerDashboard() {
   const rawAnalytics = (analyticsData?.data?.analytics ?? {}) as Record<string, unknown>;
   const rawKpis = kpiData?.data?.kpis ?? [];
 
-  const analytics = USE_MOCK_DATA ? MOCK_ANALYTICS : {
+  type PaymentStat = { method: string; label: string; amount: number; percent: number; color: string };
+
+  const analytics = {
     revenueThisMonth:               Number(rawAnalytics.revenueThisMonth ?? 0),
     newPatientsThisMonth:           Number(rawAnalytics.newPatientsThisMonth ?? 0),
     completedProceduresThisMonth:   Number(rawAnalytics.completedProceduresThisMonth ?? 0),
     totalPatients:                  Number(rawAnalytics.totalPatients ?? 0),
     redAlertCount:                  Number(rawAnalytics.redAlertCount ?? 0),
-    revenueByPaymentMethod:         (rawAnalytics.revenueByPaymentMethod ?? []) as typeof MOCK_ANALYTICS.revenueByPaymentMethod,
+    revenueByPaymentMethod:         (rawAnalytics.revenueByPaymentMethod ?? []) as PaymentStat[],
   };
 
-  const kpis = USE_MOCK_DATA ? MOCK_KPIS : rawKpis;
+  const kpis = rawKpis;
 
   const revenueThisMonth       = analytics.revenueThisMonth;
   const newPatientsThisMonth   = analytics.newPatientsThisMonth;
@@ -170,8 +144,7 @@ export default function OwnerDashboard() {
   const totalPatients          = analytics.totalPatients;
   const redAlertCount          = analytics.redAlertCount;
 
-  type PaymentStat = { method: string; label: string; amount: number; percent: number; color: string };
-  const revenueByPayment = analytics.revenueByPaymentMethod as PaymentStat[];
+  const revenueByPayment = analytics.revenueByPaymentMethod;
 
   const donutData = revenueByPayment.length > 0
     ? revenueByPayment

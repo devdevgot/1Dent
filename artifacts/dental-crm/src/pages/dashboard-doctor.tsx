@@ -7,10 +7,9 @@ import {
 } from "@workspace/api-client-react";
 import type { Procedure } from "@workspace/api-client-react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
-import { buildMockSchedule } from "@/lib/mock-schedule";
 import {
-  ChevronRight, Bell, X, ChevronLeft,
-  Activity, Stethoscope, Banknote, QrCode, CreditCard,
+  ChevronRight, X, ChevronLeft,
+  Banknote, QrCode, CreditCard,
   Clock, Wallet, Calendar, CalendarDays, SlidersHorizontal, Users,
   TrendingUp, BarChart3, Send, UserPlus,
 } from "lucide-react";
@@ -88,25 +87,6 @@ function toDateKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
 
-// ─── MOCK DATA ────────────────────────────────────────────────────────────────
-const USE_MOCK_DATA = false;
-
-const MOCK_ANALYTICS = {
-  myRevenueThisMonth: 1_820_000,
-  myProceduresThisMonth: 42,
-  myPatientsCount: 31,
-  scheduledToday: 8,
-  redAlertCount: 1,
-  revenueByPaymentMethod: [
-    { method: "kaspi_transfer", label: "Kaspi перевод", amount: 728_000,  percent: 40, color: "#4B7BEC" },
-    { method: "cash",           label: "Наличка",        amount: 364_000,  percent: 20, color: "#26de81" },
-    { method: "kaspi_qr",       label: "Kaspi QR",       amount: 273_000,  percent: 15, color: "#fd9644" },
-    { method: "terminal",       label: "Терминал",        amount: 182_000,  percent: 10, color: "#2d3436" },
-    { method: "kaspi_red",      label: "Kaspi RED",       amount: 182_000,  percent: 10, color: "#fc5c65" },
-    { method: "debt",           label: "В долг",          amount:  91_000,  percent:  5, color: "#a29bfe" },
-  ],
-};
-// ─────────────────────────────────────────────────────────────────────────────
 
 export default function DoctorDashboard() {
   const { t } = useTranslation();
@@ -134,27 +114,21 @@ export default function DoctorDashboard() {
   const filterLabel    = FILTER_PRESETS.find(p => p.key === filterPreset)?.label ?? "Месяц";
   const dateRangeLabel = fmtDateRange(dateRange.from, dateRange.to);
 
-  const { data: analyticsData, isLoading: apiLoading } = useGetDoctorAnalytics({
+  const { data: analyticsData, isLoading } = useGetDoctorAnalytics({
     query: { queryKey: getGetDoctorAnalyticsQueryKey() },
   });
-  const isLoading = USE_MOCK_DATA ? false : apiLoading;
 
   const rawAnalytics = (analyticsData?.data?.analytics ?? {}) as Record<string, unknown>;
 
-  const realAnalytics = USE_MOCK_DATA ? MOCK_ANALYTICS : {
+  type PaymentStat = { method: string; label: string; amount: number; percent: number; color: string };
+
+  const analytics = {
     myRevenueThisMonth:       Number(rawAnalytics.myRevenueThisMonth ?? 0),
     myProceduresThisMonth:    Number(rawAnalytics.myProceduresThisMonth ?? 0),
     myPatientsCount:          Number(rawAnalytics.myPatientsCount ?? 0),
     scheduledToday:           Number(rawAnalytics.scheduledToday ?? 0),
     redAlertCount:            Number(rawAnalytics.redAlertCount ?? 0),
-    revenueByPaymentMethod:   (rawAnalytics.revenueByPaymentMethod ?? []) as typeof MOCK_ANALYTICS.revenueByPaymentMethod,
-  };
-
-  const hasRealRevenue = realAnalytics.myRevenueThisMonth > 0 || realAnalytics.revenueByPaymentMethod.length > 0;
-  const analytics = hasRealRevenue ? realAnalytics : {
-    ...realAnalytics,
-    myRevenueThisMonth:     MOCK_ANALYTICS.myRevenueThisMonth,
-    revenueByPaymentMethod: MOCK_ANALYTICS.revenueByPaymentMethod,
+    revenueByPaymentMethod:   (rawAnalytics.revenueByPaymentMethod ?? []) as PaymentStat[],
   };
 
   const revenueThisMonth   = analytics.myRevenueThisMonth;
@@ -163,8 +137,7 @@ export default function DoctorDashboard() {
   const scheduledToday     = analytics.scheduledToday;
   const redAlertCount      = analytics.redAlertCount;
 
-  type PaymentStat = { method: string; label: string; amount: number; percent: number; color: string };
-  const revenueByPayment = analytics.revenueByPaymentMethod as PaymentStat[];
+  const revenueByPayment = analytics.revenueByPaymentMethod;
 
   // ── Schedule widget data ──
   const { data: proceduresData } = useListProcedures();
@@ -172,10 +145,9 @@ export default function DoctorDashboard() {
     const allProcs = (proceduresData?.data?.procedures ?? []) as Procedure[];
     const mine = user?.id ? allProcs.filter(p => p.doctorId === user.id) : allProcs;
     const todayStart = new Date(); todayStart.setHours(0,0,0,0);
-    const upcoming = mine
+    return mine
       .filter(p => p.scheduledAt && p.status === "scheduled" && new Date(p.scheduledAt) >= todayStart)
       .sort((a, b) => new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime());
-    return upcoming.length > 0 ? upcoming : buildMockSchedule();
   }, [proceduresData, user?.id]);
 
   // Group by date key, max 3 days

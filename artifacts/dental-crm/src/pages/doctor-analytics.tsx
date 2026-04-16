@@ -26,39 +26,6 @@ import {
 
 const COLORS = ["#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#ef4444", "#06b6d4"];
 
-// ─── Same mock data as dashboard so both screens show consistent demo numbers ─
-const MOCK_ANALYTICS_DETAILED = {
-  totalRevenue:     1_820_000,
-  totalPatients:    31,
-  totalProcedures:  42,
-  averageCheck:     43_333,
-  scheduledToday:   8,
-  revenueByMonth: [
-    { month: "Окт", revenue: 1_200_000 },
-    { month: "Ноя", revenue: 1_540_000 },
-    { month: "Дек", revenue: 980_000 },
-    { month: "Янв", revenue: 1_650_000 },
-    { month: "Фев", revenue: 1_390_000 },
-    { month: "Мар", revenue: 1_820_000 },
-  ],
-  proceduresByName: [
-    { name: "Чистка", count: 12 },
-    { name: "Пломба", count: 9 },
-    { name: "Брекеты", count: 7 },
-    { name: "Удаление", count: 6 },
-    { name: "Отбеливание", count: 8 },
-  ],
-  patientsByStatus: {
-    treatment_in_progress: 14,
-    post_op_monitoring: 8,
-    completed: 9,
-  },
-  proceduresByStatus: {
-    completed: 28,
-    in_progress: 9,
-    scheduled: 5,
-  },
-};
 
 const STATUS_LABEL_KEYS: Record<string, string> = {
   new_request: "status.new_request",
@@ -167,21 +134,16 @@ export default function DoctorAnalyticsPage() {
   }
 
   // ── Derived chart data ────────────────────────────────────────────────────
-  const hasRealData = Number(analytics?.totalRevenue ?? 0) > 0 || Number(analytics?.totalProcedures ?? 0) > 0;
-  const effectiveAnalytics = hasRealData ? analytics : null;
+  const totalRevenue    = Number(analytics?.totalRevenue    ?? 0);
+  const totalPatients   = Number(analytics?.totalPatients   ?? 0);
+  const totalProcedures = Number(analytics?.totalProcedures ?? 0);
+  const averageCheck    = Number(analytics?.averageCheck    ?? 0);
+  const scheduledToday  = Number(analytics?.scheduledToday  ?? 0);
 
-  const totalRevenue    = effectiveAnalytics ? Number(effectiveAnalytics.totalRevenue    ?? 0) : MOCK_ANALYTICS_DETAILED.totalRevenue;
-  const totalPatients   = effectiveAnalytics ? Number(effectiveAnalytics.totalPatients   ?? 0) : MOCK_ANALYTICS_DETAILED.totalPatients;
-  const totalProcedures = effectiveAnalytics ? Number(effectiveAnalytics.totalProcedures ?? 0) : MOCK_ANALYTICS_DETAILED.totalProcedures;
-  const averageCheck    = effectiveAnalytics ? Number(effectiveAnalytics.averageCheck    ?? 0) : MOCK_ANALYTICS_DETAILED.averageCheck;
-  const scheduledToday  = effectiveAnalytics ? Number(effectiveAnalytics.scheduledToday  ?? 0) : MOCK_ANALYTICS_DETAILED.scheduledToday;
-
-  const revenueByMonth: DoctorDetailedAnalyticsRevenueByMonthItem[] =
-    effectiveAnalytics ? (effectiveAnalytics.revenueByMonth ?? []) : (MOCK_ANALYTICS_DETAILED.revenueByMonth as DoctorDetailedAnalyticsRevenueByMonthItem[]);
-  const proceduresByName: DoctorDetailedAnalyticsProceduresByNameItem[] =
-    effectiveAnalytics ? (effectiveAnalytics.proceduresByName ?? []) : (MOCK_ANALYTICS_DETAILED.proceduresByName as DoctorDetailedAnalyticsProceduresByNameItem[]);
-  const patientsByStatus    = effectiveAnalytics ? (effectiveAnalytics.patientsByStatus  ?? {}) : MOCK_ANALYTICS_DETAILED.patientsByStatus;
-  const rawProceduresByStatus = effectiveAnalytics ? (effectiveAnalytics.proceduresByStatus ?? {}) : MOCK_ANALYTICS_DETAILED.proceduresByStatus;
+  const revenueByMonth: DoctorDetailedAnalyticsRevenueByMonthItem[] = analytics?.revenueByMonth ?? [];
+  const proceduresByName: DoctorDetailedAnalyticsProceduresByNameItem[] = analytics?.proceduresByName ?? [];
+  const patientsByStatus    = analytics?.patientsByStatus  ?? {};
+  const rawProceduresByStatus = analytics?.proceduresByStatus ?? {};
 
   const patientStatusData = Object.entries(patientsByStatus)
     .map(([key, value]) => ({ name: t(STATUS_LABEL_KEYS[key] ?? key), value: Number(value) }))

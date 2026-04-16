@@ -4,7 +4,6 @@ import { useListProcedures, useListPatients } from "@workspace/api-client-react"
 import type { Procedure, ProcedureStatus } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useLocation, useParams } from "wouter";
-import { buildMockSchedule } from "@/lib/mock-schedule";
 import {
   ChevronLeft, ChevronRight,
   Clock, CheckCircle2, PlayCircle, XCircle, Calendar,
@@ -111,9 +110,7 @@ export default function DoctorScheduleDayPage() {
   const dayProcs = useMemo(() => {
     const all = (pData?.data?.procedures ?? []) as Procedure[];
     const mine = user?.id ? all.filter(p => p.doctorId === user.id) : all;
-    const active = mine.filter(p => p.status !== "completed");
-    const source = active.length > 0 ? active : buildMockSchedule(user?.id ?? "mock");
-    return source
+    return mine
       .filter(p => p.scheduledAt && toStr(new Date(p.scheduledAt)) === dateStr)
       .sort((a, b) => new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime());
   }, [pData, user?.id, dateStr]);
