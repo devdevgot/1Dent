@@ -31,15 +31,6 @@ function ChannelIcon({ type, size = 20 }: { type: string; size?: number }) {
   }
 }
 
-const CHANNEL_TYPE_EMOJIS: Record<string, string> = {
-  instagram: "📸",
-  telegram: "✈️",
-  "2gis": "📍",
-  website: "🌐",
-  whatsapp: "💬",
-  referral: "🤝",
-  other: "📢",
-};
 
 function getRefUrl(refCode: string, phone?: string | null): string {
   const base = window.location.origin;
@@ -303,17 +294,28 @@ export function ChannelsSettings() {
               </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">{t("channels.channelType")}</label>
-                <select
-                  value={newType}
-                  onChange={(e) => setNewType(e.target.value as CreateChannelRequest["type"])}
-                  className="w-full h-9 rounded-lg border border-border bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                >
-                  {(["instagram", "telegram", "2gis", "website", "whatsapp", "referral", "other"] as const).map((type) => (
-                    <option key={type} value={type}>
-                      {CHANNEL_TYPE_EMOJIS[type]} {t(`source.${type}`, { defaultValue: type })}
-                    </option>
-                  ))}
-                </select>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {(["instagram", "telegram", "2gis", "website", "whatsapp", "referral", "other"] as const).map((type) => {
+                    const active = newType === type;
+                    return (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setNewType(type)}
+                        className={`flex flex-col items-center gap-1 py-2 rounded-lg border text-[10px] font-medium transition-colors ${
+                          active
+                            ? "border-[#98cc1c] bg-[#f7fce8] text-[#4a6b0a]"
+                            : "border-border bg-white text-muted-foreground hover:bg-muted"
+                        }`}
+                      >
+                        <ChannelIcon type={type} size={16} />
+                        <span className="truncate w-full text-center px-0.5">
+                          {t(`source.${type}`, { defaultValue: type })}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
               <div className="flex gap-2">
                 <button
