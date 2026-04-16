@@ -254,9 +254,8 @@ export class TreatmentPlansRepository {
     if (!plan) return null;
     if (plan.patientId !== patientId) return null;
 
-    const allowedStatuses: TreatmentPlanStatus[] = ["draft", "in_progress"];
-    if (!allowedStatuses.includes(plan.status)) {
-      // Already approved/completed/cancelled — return as-is with items
+    if (plan.status !== "draft") {
+      // Only draft plans may be approved; any other status is a no-op (return as-is)
       return this._getPlanWithItems(planId, clinicId);
     }
 

@@ -153,13 +153,16 @@ router.post(
 
     const existingPlan = await repo.getActivePlan(req.params["id"]!, req.user!.clinicId).catch(next);
     if (existingPlan === undefined) return;
+    if (!existingPlan || existingPlan.id !== req.params["planId"]) {
+      return next(new NotFoundError("Treatment plan not found"));
+    }
 
-    const sortOrder = existingPlan?.items.length ?? 0;
+    const sortOrder = existingPlan.items.length;
 
     let item: Awaited<ReturnType<typeof repo.addItem>> | undefined;
     try {
       item = await repo.addItem(
-        req.params["planId"]!,
+        existingPlan.id,
         req.user!.clinicId,
         req.params["id"]!,
         parsed.data,

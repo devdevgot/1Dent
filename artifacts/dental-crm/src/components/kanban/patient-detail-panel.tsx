@@ -1247,7 +1247,7 @@ export function PatientDetailPanel() {
                             {new Date(activePlan.createdAt).toLocaleDateString("ru", { day: "2-digit", month: "short" })}
                           </span>
                         </div>
-                        {(activePlan.status === "draft" || activePlan.status === "in_progress") && (
+                        {activePlan.status === "draft" && (
                           <Button
                             size="sm"
                             variant="outline"
