@@ -9,7 +9,6 @@ import i18n from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import {
   KanbanSquare,
-  MessageSquare,
   Users,
   Stethoscope,
   BarChart3,
@@ -31,7 +30,6 @@ type Lang = (typeof SUPPORTED_LANGS)[number];
 
 const ALL_NAV_ITEMS = [
   { nameKey: "nav.kanban",       href: "/kanban",             icon: KanbanSquare,    roles: ["owner","admin"] },
-  { nameKey: "nav.chat",         href: "/chat",               icon: MessageSquare,   roles: ["owner","admin","doctor"] },
   { nameKey: "nav.patients",     href: "/patients",           icon: Users,           roles: ["owner","admin","doctor"] },
   { nameKey: "nav.procedures",   href: "/procedures",         icon: Stethoscope,     roles: ["owner","admin","accountant"] },
   { nameKey: "nav.schedule",     href: "/schedule",           icon: Calendar,        roles: ["doctor"] },
