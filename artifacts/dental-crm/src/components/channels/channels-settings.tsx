@@ -13,7 +13,7 @@ import {
 } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/hooks/use-auth";
-import { Copy, Download, Trash2, Plus, Smartphone, Pencil, Globe, Handshake, Megaphone, MapPin } from "lucide-react";
+import { Copy, Download, Trash2, Plus, Smartphone, Pencil, Globe, Handshake, Megaphone, MapPin, ChevronDown } from "lucide-react";
 import { FaInstagram, FaTelegram, FaWhatsapp } from "react-icons/fa";
 
 const BRAND = "#98cc1c";
@@ -62,6 +62,7 @@ export function ChannelsSettings() {
   const [newName, setNewName] = useState("");
   const [newType, setNewType] = useState<CreateChannelRequest["type"]>("instagram");
   const [customTypeName, setCustomTypeName] = useState("");
+  const [showTypeDropdown, setShowTypeDropdown] = useState(false);
   const [whatsappPhone, setWhatsappPhone] = useState("");
   const [savedPhone, setSavedPhone] = useState<string | null>(null);
   const [showPhoneEdit, setShowPhoneEdit] = useState(false);
@@ -296,31 +297,44 @@ export function ChannelsSettings() {
               </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">{t("channels.channelType")}</label>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {(["instagram", "telegram", "2gis", "website", "whatsapp", "other"] as const).map((type) => {
-                    const active = newType === type;
-                    return (
-                      <button
-                        key={type}
-                        type="button"
-                        onClick={() => {
-                          setNewType(type);
-                          if (type !== "other") setCustomTypeName("");
-                        }}
-                        className={`flex flex-col items-center gap-1 py-2 rounded-lg border text-[10px] font-medium transition-colors ${
-                          active
-                            ? "border-[#98cc1c] bg-[#f7fce8] text-[#4a6b0a]"
-                            : "border-border bg-white text-muted-foreground hover:bg-muted"
-                        }`}
-                      >
-                        <ChannelIcon type={type} size={16} />
-                        <span className="truncate w-full text-center px-0.5">
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowTypeDropdown((v) => !v)}
+                    className="w-full h-9 rounded-lg border border-border bg-white px-3 text-sm flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-[#98cc1c]/30"
+                  >
+                    <ChannelIcon type={newType} size={16} />
+                    <span className="flex-1 text-left text-gray-800">
+                      {newType === "other" && customTypeName
+                        ? customTypeName
+                        : t(`source.${newType}`, { defaultValue: newType })}
+                    </span>
+                    <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showTypeDropdown ? "rotate-180" : ""}`} />
+                  </button>
+
+                  {showTypeDropdown && (
+                    <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-border rounded-xl shadow-lg overflow-hidden">
+                      {(["instagram", "telegram", "2gis", "website", "whatsapp", "other"] as const).map((type) => (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => {
+                            setNewType(type);
+                            if (type !== "other") setCustomTypeName("");
+                            setShowTypeDropdown(false);
+                          }}
+                          className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm transition-colors hover:bg-gray-50 ${
+                            newType === type ? "text-[#4a6b0a] font-medium bg-[#f7fce8]" : "text-gray-800"
+                          }`}
+                        >
+                          <ChannelIcon type={type} size={16} />
                           {t(`source.${type}`, { defaultValue: type })}
-                        </span>
-                      </button>
-                    );
-                  })}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
+
                 {newType === "other" && (
                   <input
                     type="text"
@@ -338,7 +352,7 @@ export function ChannelsSettings() {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => { setShowAddForm(false); setNewName(""); setCustomTypeName(""); setNewType("instagram"); }}
+                  onClick={() => { setShowAddForm(false); setNewName(""); setCustomTypeName(""); setNewType("instagram"); setShowTypeDropdown(false); }}
                   className="flex-1 h-9 rounded-lg border border-border text-sm font-medium hover:bg-muted transition-colors"
                 >
                   {t("channels.cancel")}
