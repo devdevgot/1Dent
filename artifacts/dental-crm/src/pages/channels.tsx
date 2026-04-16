@@ -21,9 +21,6 @@ export default function ChannelsPage() {
       </div>
 
       <div className="px-4">
-        <p className="text-sm text-gray-500 mb-4">
-          {t("channels.sectionDesc", { defaultValue: "Уникальные ссылки для отслеживания источников пациентов" })}
-        </p>
         <ChannelsSettings />
       </div>
     </div>
