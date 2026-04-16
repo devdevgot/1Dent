@@ -18,6 +18,7 @@ import { CreatePatientDialog } from "@/components/kanban/create-patient-dialog";
 import { useKanbanStore } from "@/hooks/use-kanban";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import {
   KANBAN_COLUMNS,
   COLUMN_HEADER_COLOR,
@@ -378,32 +379,13 @@ export default function PatientsPage() {
                     {/* Delete */}
                     {canDelete && (
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                        {deleteConfirm === patient.id ? (
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => deleteMutation.mutate({ id: patient.id })}
-                              disabled={deleteMutation.isPending}
-                              className="text-xs text-red-600 hover:text-red-700 font-medium"
-                            >
-                              {t("patients.confirmDelete")}
-                            </button>
-                            <span className="text-gray-300">|</span>
-                            <button
-                              onClick={() => setDeleteConfirm(null)}
-                              className="text-xs text-gray-400 hover:text-gray-600"
-                            >
-                              {t("patients.cancelDelete")}
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => setDeleteConfirm(patient.id)}
-                            className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-all"
-                            title={t("patients.delete")}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
+                        <button
+                          onClick={() => setDeleteConfirm(patient.id)}
+                          className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-all"
+                          title={t("patients.delete")}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </td>
                     )}
                   </tr>
@@ -423,6 +405,11 @@ export default function PatientsPage() {
 
       <PatientDetailPanel />
       {isCreateOpen && <CreatePatientDialog onClose={() => setIsCreateOpen(false)} />}
+      <ConfirmDeleteDialog
+        open={!!deleteConfirm}
+        onConfirm={() => { deleteMutation.mutate({ id: deleteConfirm! }); setDeleteConfirm(null); }}
+        onCancel={() => setDeleteConfirm(null)}
+      />
     </div>
   );
 }

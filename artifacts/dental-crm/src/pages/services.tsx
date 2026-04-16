@@ -9,6 +9,7 @@ import {
 import type { ProcedureTemplate } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import {
   Plus, Search, Pencil, Trash2, Check, X, Stethoscope, DollarSign,
   AlertTriangle,
@@ -223,7 +224,6 @@ export default function ServicesPage() {
           <div className="divide-y divide-gray-50">
             {filtered.map((t) => {
               const isEditing = editing?.id === t.id;
-              const isConfirmingDelete = confirmDeleteId === t.id;
 
               return (
                 <div
@@ -263,24 +263,7 @@ export default function ServicesPage() {
                   {/* Actions */}
                   {canManage && (
                     <div className="flex items-center justify-end gap-1">
-                      {isConfirmingDelete ? (
-                        <>
-                          <span className="text-xs text-red-500 mr-1">Удалить?</span>
-                          <button
-                            onClick={() => handleDelete(t.id)}
-                            disabled={saving}
-                            className="p-1.5 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors"
-                          >
-                            <Check className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => setConfirmDeleteId(null)}
-                            className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </>
-                      ) : isEditing ? (
+                      {isEditing ? (
                         <>
                           <button
                             onClick={handleEditSave}
@@ -334,6 +317,11 @@ export default function ServicesPage() {
           </span>
         </div>
       )}
+      <ConfirmDeleteDialog
+        open={!!confirmDeleteId}
+        onConfirm={() => { handleDelete(confirmDeleteId!); setConfirmDeleteId(null); }}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </div>
   );
 }

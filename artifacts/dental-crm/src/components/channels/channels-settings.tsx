@@ -13,6 +13,7 @@ import {
 } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/hooks/use-auth";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Copy, Download, Trash2, Plus, Smartphone, Pencil, Globe, Handshake, Megaphone, MapPin, ChevronDown } from "lucide-react";
 import { FaInstagram, FaTelegram, FaWhatsapp } from "react-icons/fa";
 
@@ -63,6 +64,7 @@ export function ChannelsSettings() {
   const [newType, setNewType] = useState<CreateChannelRequest["type"]>("instagram");
   const [customTypeName, setCustomTypeName] = useState("");
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [whatsappPhone, setWhatsappPhone] = useState("");
   const [savedPhone, setSavedPhone] = useState<string | null>(null);
   const [showPhoneEdit, setShowPhoneEdit] = useState(false);
@@ -277,11 +279,7 @@ export function ChannelsSettings() {
                         <Download className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => {
-                          if (confirm(t("channels.deleteConfirm"))) {
-                            deleteMutation.mutate({ id: ch.id });
-                          }
-                        }}
+                        onClick={() => setConfirmDeleteId(ch.id)}
                         title={t("channels.deleteChannel")}
                         className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors text-muted-foreground hover:text-red-600"
                       >
@@ -391,6 +389,11 @@ export function ChannelsSettings() {
           )}
         </div>
       </div>
+      <ConfirmDeleteDialog
+        open={!!confirmDeleteId}
+        onConfirm={() => { deleteMutation.mutate({ id: confirmDeleteId! }); setConfirmDeleteId(null); }}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </div>
   );
 }

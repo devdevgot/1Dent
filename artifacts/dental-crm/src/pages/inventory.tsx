@@ -27,6 +27,7 @@ import {
   ShieldCheck, ShieldX, Eye, Shield, Users,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 
 const CATEGORY_KEYS = [
   "materials", "instruments", "medications",
@@ -167,6 +168,7 @@ export default function InventoryPage() {
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [showCreate, setShowCreate] = useState(false);
   const [editingStockId, setEditingStockId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState<CreateForm>({
     name: "", category: "materials", unit: "шт",
     unitPrice: "0", quantity: "0", minQuantity: "0",
@@ -429,7 +431,7 @@ export default function InventoryPage() {
 
                 {canDelete && (
                   <button
-                    onClick={() => deleteMutation.mutate({ id: item.id })}
+                    onClick={() => setConfirmDeleteId(item.id)}
                     className="p-1.5 text-muted-foreground hover:text-destructive transition-colors shrink-0"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -451,6 +453,11 @@ export default function InventoryPage() {
           <OwnerAccessManager />
         </div>
       )}
+      <ConfirmDeleteDialog
+        open={!!confirmDeleteId}
+        onConfirm={() => { deleteMutation.mutate({ id: confirmDeleteId! }); setConfirmDeleteId(null); }}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </div>
   );
 }

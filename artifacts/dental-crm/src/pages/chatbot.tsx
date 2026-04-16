@@ -8,6 +8,7 @@ import {
   useDeleteChatbotSession,
 } from "@workspace/api-client-react";
 import type { ChatbotSettingsUpdate } from "@workspace/api-client-react";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 
 const STATE_LABELS: Record<string, string> = {
   greeting: "Приветствие",
@@ -43,6 +44,7 @@ function formatRelative(dateStr: string) {
 export default function ChatbotPage() {
   const { t } = useTranslation();
   const [tab, setTab] = useState<"sessions" | "settings">("sessions");
+  const [confirmResetPhone, setConfirmResetPhone] = useState<string | null>(null);
   const [localSettings, setLocalSettings] = useState<ChatbotSettingsUpdate>({});
   const [saved, setSaved] = useState(false);
 
@@ -181,7 +183,7 @@ export default function ChatbotPage() {
                       )}
                     </div>
                     <button
-                      onClick={() => handleResetSession(session.phone)}
+                      onClick={() => setConfirmResetPhone(session.phone)}
                       title={t("chatbot.resetSession")}
                       className="shrink-0 p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                     >
@@ -254,6 +256,13 @@ export default function ChatbotPage() {
           </div>
         )}
       </div>
+      <ConfirmDeleteDialog
+        open={!!confirmResetPhone}
+        onConfirm={() => { if (confirmResetPhone) { handleResetSession(confirmResetPhone); } setConfirmResetPhone(null); }}
+        onCancel={() => setConfirmResetPhone(null)}
+        title="Сбросить сессию?"
+        description="Состояние чат-бота для этого номера будет сброшено. Пациент снова получит приветственное сообщение."
+      />
     </div>
   );
 }

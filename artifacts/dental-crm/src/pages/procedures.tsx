@@ -19,6 +19,7 @@ import {
 } from "@workspace/api-client-react";
 import type { Procedure, ProcedureStatus, ToothCondition } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { ToothMiniGrid } from "@/components/dental-chart/tooth-mini-grid";
 import {
   Plus, Search, Filter, MoreVertical, CheckCircle2,
@@ -506,6 +507,7 @@ function ProcedureRow({
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<ProcedureStatus | null>(null);
   const [modalNotes, setModalNotes] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const statusMutation  = useUpdateProcedureStatus();
   const deleteMutation  = useDeleteProcedure();
 
@@ -527,7 +529,6 @@ function ProcedureRow({
   };
 
   const handleDelete = async () => {
-    if (!window.confirm(t("procedure.confirmDelete"))) return;
     await deleteMutation.mutateAsync({ id: proc.id });
     onRefetch();
   };
@@ -593,7 +594,7 @@ function ProcedureRow({
                   ))}
                   {canDelete && (
                     <button
-                      onClick={handleDelete}
+                      onClick={() => { setMenuOpen(false); setShowDeleteConfirm(true); }}
                       className="w-full text-left px-4 py-2.5 text-sm text-destructive hover:bg-destructive/5 transition-colors flex items-center gap-2"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -607,6 +608,11 @@ function ProcedureRow({
         )}
       </td>
     </motion.tr>
+    <ConfirmDeleteDialog
+      open={showDeleteConfirm}
+      onConfirm={() => { handleDelete(); setShowDeleteConfirm(false); }}
+      onCancel={() => setShowDeleteConfirm(false)}
+    />
     {statusModalOpen && selectedStatus && (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setStatusModalOpen(false)}>
         <motion.div

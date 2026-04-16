@@ -14,6 +14,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 
 const ROLES = ["admin", "doctor", "accountant", "warehouse"] as const;
 type Role = (typeof ROLES)[number];
@@ -290,30 +291,12 @@ export default function UsersPage() {
                 {/* Delete */}
                 {canDelete && u.id !== currentUser?.id && u.role !== "owner" && (
                   <div className="flex-none">
-                    {deleteConfirmId === u.id ? (
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setDeleteConfirmId(null)}
-                          className="text-xs px-2.5 py-1.5 border border-border rounded-lg hover:bg-slate-100 transition-colors"
-                        >
-                          {t("users.cancel")}
-                        </button>
-                        <button
-                          onClick={() => handleDelete(u.id)}
-                          disabled={deleteMutation.isPending}
-                          className="text-xs px-2.5 py-1.5 bg-destructive text-white rounded-lg hover:bg-destructive/90 transition-colors disabled:opacity-60"
-                        >
-                          {deleteMutation.isPending ? t("users.deleting") : t("users.confirmDelete")}
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setDeleteConfirmId(u.id)}
-                        className="w-9 h-9 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive flex items-center justify-center transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
+                    <button
+                      onClick={() => setDeleteConfirmId(u.id)}
+                      className="w-9 h-9 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive flex items-center justify-center transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 )}
               </motion.div>
@@ -326,6 +309,11 @@ export default function UsersPage() {
       <p className="text-xs text-muted-foreground text-center px-4">
         {t("users.registrationNote")}
       </p>
+      <ConfirmDeleteDialog
+        open={!!deleteConfirmId}
+        onConfirm={() => { handleDelete(deleteConfirmId!); setDeleteConfirmId(null); }}
+        onCancel={() => setDeleteConfirmId(null)}
+      />
     </div>
   );
 }
