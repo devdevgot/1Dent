@@ -32,4 +32,44 @@ expertMode = true
 [[ports]]
 localPort = 8080
 externalPort = 8080
+
+[[ports]]
+localPort = 8081
+externalPort = 8081
+
+[[ports]]
+localPort = 8082
+externalPort = 4200
+
+[[ports]]
+localPort = 8083
+externalPort = 3001
+
+[[ports]]
+localPort = 8084
+externalPort = 5173
+
+[[ports]]
+localPort = 8085
+externalPort = 6000
+
+[[ports]]
+localPort = 23816
+externalPort = 80
+
+[[ports]]
+localPort = 23817
+externalPort = 5000
+
+[[ports]]
+localPort = 23818
+externalPort = 3000
+
+[[ports]]
+localPort = 23819
+externalPort = 3002
+
+[[ports]]
+localPort = 23820
+externalPort = 3003
   
