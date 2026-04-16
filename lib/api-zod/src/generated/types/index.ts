@@ -202,6 +202,7 @@ export * from "./updateProcedureStatusBody";
 export * from "./updateStockRequest";
 export * from "./updateToothRequest";
 export * from "./updateTreatmentPlanItemRequest";
+export * from "./updateTreatmentPlanItemRequestStatus";
 export * from "./updateTreatmentPlanRequest";
 export * from "./updateUserRequest";
 export * from "./user";

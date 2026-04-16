@@ -104,6 +104,18 @@ export class TreatmentPlansRepository {
     manualItems?: Array<{ toothFdi?: number; condition?: string; mkb10Code?: string; title: string; price: number }>,
   ): Promise<TreatmentPlanWithItems> {
     return db.transaction(async (tx) => {
+      // Archive any existing active plans for this patient before creating a new one
+      await tx
+        .update(treatmentPlansTable)
+        .set({ status: "completed", updatedAt: new Date() })
+        .where(
+          and(
+            eq(treatmentPlansTable.patientId, patientId),
+            eq(treatmentPlansTable.clinicId, clinicId),
+            ne(treatmentPlansTable.status, "completed"),
+          ),
+        );
+
       const planId = randomUUID();
 
       let itemsData: Array<{
@@ -264,6 +276,7 @@ export class TreatmentPlansRepository {
       .limit(1);
 
     if (!plan) throw new Error("Plan not found");
+    if (plan.patientId !== patientId) throw new Error("Plan does not belong to patient");
     if (plan.status !== "draft") throw new PlanLockedError();
 
     const [created] = await db
@@ -294,7 +307,8 @@ export class TreatmentPlansRepository {
     itemId: string,
     clinicId: string,
     planId: string,
-    updates: { title?: string; price?: number; sortOrder?: number },
+    patientId: string,
+    updates: { title?: string; price?: number; sortOrder?: number; status?: "cancelled" },
   ): Promise<TreatmentPlanItem | null> {
     const [item] = await db
       .select()
@@ -304,6 +318,7 @@ export class TreatmentPlansRepository {
 
     if (!item) return null;
     if (item.planId !== planId) return null;
+    if (item.patientId !== patientId) return null;
 
     const isStructuralChange =
       updates.title !== undefined ||
@@ -338,6 +353,7 @@ export class TreatmentPlansRepository {
     clinicId: string,
     doctorId: string,
     planId: string,
+    patientId: string,
   ): Promise<{ item: TreatmentPlanItem; procedureId: string } | null> {
     return db.transaction(async (tx) => {
       const [item] = await tx
@@ -348,6 +364,7 @@ export class TreatmentPlansRepository {
 
       if (!item) return null;
       if (item.planId !== planId) return null;
+      if (item.patientId !== patientId) return null;
 
       if (item.status !== "pending") {
         throw new ItemAlreadyCompletedError();

@@ -1244,11 +1244,19 @@ export interface AddTreatmentPlanItemRequest {
   price: number;
 }
 
+export type UpdateTreatmentPlanItemRequestStatus =
+  (typeof UpdateTreatmentPlanItemRequestStatus)[keyof typeof UpdateTreatmentPlanItemRequestStatus];
+
+export const UpdateTreatmentPlanItemRequestStatus = {
+  cancelled: "cancelled",
+} as const;
+
 export interface UpdateTreatmentPlanItemRequest {
   title?: string;
   price?: number;
   /** @minimum 0 */
   sortOrder?: number;
+  status?: UpdateTreatmentPlanItemRequestStatus;
 }
 
 export type GetInventoryConsumptionParams = {

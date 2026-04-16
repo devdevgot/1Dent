@@ -960,6 +960,7 @@ export const UpdateTreatmentPlanItemBody = zod.object({
     .number()
     .min(updateTreatmentPlanItemBodySortOrderMin)
     .optional(),
+  status: zod.enum(["cancelled"]).optional(),
 });
 
 export const UpdateTreatmentPlanItemResponse = zod.object({

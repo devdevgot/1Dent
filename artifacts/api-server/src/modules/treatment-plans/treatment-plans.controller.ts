@@ -35,6 +35,7 @@ const UpdateItemSchema = z.object({
   title: z.string().min(1).optional(),
   price: z.number().min(0).optional(),
   sortOrder: z.number().int().min(0).optional(),
+  status: z.literal("cancelled").optional(),
 });
 
 const AddItemSchema = z.object({
@@ -186,7 +187,7 @@ router.patch(
 
     let item: Awaited<ReturnType<typeof repo.updateItem>> | undefined;
     try {
-      item = await repo.updateItem(req.params["itemId"]!, req.user!.clinicId, req.params["planId"]!, parsed.data);
+      item = await repo.updateItem(req.params["itemId"]!, req.user!.clinicId, req.params["planId"]!, req.params["id"]!, parsed.data);
     } catch (err) {
       if (err instanceof PlanLockedError) {
         return res.status(409).json({ success: false, error: err.message, code: "PLAN_LOCKED" });
@@ -210,7 +211,7 @@ router.post(
   async (req: Request, res: Response, next: NextFunction) => {
     let result: Awaited<ReturnType<typeof repo.completeItem>> | undefined;
     try {
-      result = await repo.completeItem(req.params["itemId"]!, req.user!.clinicId, req.user!.userId, req.params["planId"]!);
+      result = await repo.completeItem(req.params["itemId"]!, req.user!.clinicId, req.user!.userId, req.params["planId"]!, req.params["id"]!);
     } catch (err) {
       if (err instanceof ItemAlreadyCompletedError) {
         return res.status(409).json({ success: false, error: err.message, code: "ITEM_ALREADY_COMPLETED" });

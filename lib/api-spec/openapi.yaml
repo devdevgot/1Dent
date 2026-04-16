@@ -4343,3 +4343,7 @@ components:
         sortOrder:
           type: integer
           minimum: 0
+        status:
+          type: string
+          enum:
+            - cancelled
