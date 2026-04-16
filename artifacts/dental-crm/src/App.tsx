@@ -45,6 +45,7 @@ import AccountChangeEmailPage from "@/pages/account-change-email";
 import AccountChangePasswordPage from "@/pages/account-change-password";
 import MenuPage from "@/pages/menu";
 import ChannelsPage from "@/pages/channels";
+import ProceduresPage from "@/pages/procedures";
 import NotFound from "@/pages/not-found";
 
 // Admin-specific pages
@@ -237,6 +238,9 @@ function Router() {
       </Route>
       <Route path="/financials">
         <ProtectedRoute component={FinancialsPage} allowedRoles={['owner', 'accountant']} />
+      </Route>
+      <Route path="/procedures">
+        <ProtectedRoute component={ProceduresPage} allowedRoles={['owner', 'admin', 'accountant']} />
       </Route>
       <Route path="/warehouse">
         <ProtectedRoute component={WarehousePage} allowedRoles={['owner', 'admin', 'warehouse']} />

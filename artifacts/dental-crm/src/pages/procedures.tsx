@@ -23,7 +23,7 @@ import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { ToothMiniGrid } from "@/components/dental-chart/tooth-mini-grid";
 import {
   Plus, Search, Filter, MoreVertical, CheckCircle2,
-  Clock, XCircle, PlayCircle, Trash2, ClipboardList, X, ChevronDown, Minus,
+  Clock, XCircle, PlayCircle, Trash2, ClipboardList, X, ChevronDown, ChevronLeft, Minus,
   Activity,
 } from "lucide-react";
 
@@ -695,26 +695,30 @@ export default function ProceduresPage() {
   );
 
   return (
-    <div className="p-4 pb-8 space-y-4">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-border shadow-sm">
-        <div>
-          <h1 className="text-2xl font-bold font-display flex items-center gap-2">
-            <ClipboardList className="w-6 h-6 text-primary" />
-            {t("procedure.pageTitle")}
-          </h1>
-          <p className="text-muted-foreground text-sm mt-0.5">{t("procedure.pageDesc")}</p>
-        </div>
+    <div className="min-h-full bg-[#f2f2f7]">
+      {/* Channels-style header with back button */}
+      <div className="bg-white px-4 pt-5 pb-4 flex items-center gap-3 border-b border-gray-100">
+        <button
+          onClick={() => window.history.back()}
+          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-500 shrink-0"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <ClipboardList className="w-5 h-5 text-primary shrink-0" strokeWidth={1.8} />
+        <h1 className="text-[17px] font-semibold text-gray-900 flex-1 min-w-0 truncate">
+          {t("procedure.pageTitle")}
+        </h1>
         {canCreate && (
           <button
             onClick={() => setShowNew(true)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white font-semibold rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all"
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-primary text-white hover:bg-primary/90 transition-colors shrink-0"
           >
-            <Plus className="w-5 h-5" />
-            {t("procedure.new")}
+            <Plus className="w-4 h-4" />
           </button>
         )}
       </div>
+
+      <div className="p-4 pb-8 space-y-4">
 
       {/* Status filter pills */}
       <div className="flex gap-2 flex-wrap">
@@ -810,6 +814,7 @@ export default function ProceduresPage() {
           />
         )}
       </AnimatePresence>
+      </div>
     </div>
   );
 }
