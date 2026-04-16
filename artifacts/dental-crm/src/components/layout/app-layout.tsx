@@ -35,16 +35,16 @@ const MAX_BOTTOM_TABS = 3;
 
 const ALL_NAV_ITEMS = [
   { nameKey: "nav.dashboard",   href: "__role_dashboard__",  icon: LayoutDashboard, roles: ["owner","admin","doctor","accountant","warehouse"] },
-  { nameKey: "nav.kanban",      href: "/kanban",             icon: KanbanSquare,    roles: ["owner","admin"]                                   },
   { nameKey: "nav.calendar",    href: "/calendar",           icon: Calendar,        roles: ["owner"]                                           },
   { nameKey: "nav.chat",        href: "/chat",               icon: FaWhatsapp,      roles: ["owner","admin","doctor"]                          },
   { nameKey: "nav.patients",    href: "/patients",           icon: Users,           roles: ["owner","admin","doctor"]                          },
-  { nameKey: "nav.services",    href: "/services",           icon: Stethoscope,     roles: ["owner","admin"]                                   },
   { nameKey: "nav.schedule",    href: "/schedule",           icon: Calendar,        roles: ["doctor"]                                          },
+  { nameKey: "nav.services",    href: "/services",           icon: Stethoscope,     roles: ["owner","admin"]                                   },
   { nameKey: "nav.analytics",   href: "/analytics",          icon: BarChart3,       roles: ["owner"]                                           },
   { nameKey: "nav.myAnalytics", href: "/doctor-analytics",   icon: BarChart3,       roles: ["doctor"]                                          },
   { nameKey: "nav.financials",  href: "/financials",         icon: Wallet,          roles: ["owner","accountant"]                              },
   { nameKey: "nav.inventory",   href: "/inventory",          icon: Package,         roles: ["owner","admin","warehouse"]                       },
+  { nameKey: "nav.kanban",      href: "/kanban",             icon: KanbanSquare,    roles: ["owner","admin"]                                   },
   { nameKey: "nav.users",       href: "/users",              icon: Settings,        roles: ["owner","admin"]                                   },
   { nameKey: "nav.chatbot",     href: "/chatbot",            icon: Bot,             roles: ["owner","admin"]                                   },
   { nameKey: "nav.logs",        href: "/logs",               icon: Activity,        roles: ["owner"]                                           },
