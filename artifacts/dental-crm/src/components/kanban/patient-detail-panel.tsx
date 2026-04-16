@@ -16,6 +16,7 @@ import {
   useCreateTreatmentPlan,
   useApproveTreatmentPlan,
   useAddTreatmentPlanItem,
+  useUpdateTreatmentPlanItem,
   useCompleteTreatmentPlanItem,
   getListPatientsQueryKey,
   getGetPatientQueryKey,
@@ -353,6 +354,9 @@ export function PatientDetailPanel() {
   const [showAddItemForm, setShowAddItemForm] = useState(false);
   const [newItemTitle, setNewItemTitle] = useState("");
   const [newItemPrice, setNewItemPrice] = useState("");
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editItemTitle, setEditItemTitle] = useState("");
+  const [editItemPrice, setEditItemPrice] = useState("");
 
   const { data, isLoading } = useGetPatient(selectedPatientId ?? "", {
     query: {
@@ -434,7 +438,19 @@ export function PatientDetailPanel() {
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getGetActiveTreatmentPlanQueryKey(selectedPatientId ?? "") });
+        queryClient.invalidateQueries({ queryKey: getListTeethQueryKey(selectedPatientId ?? "") });
         toast({ title: "Шаг выполнен, процедура создана" });
+      },
+      onError: () => toast({ title: t("account.errorTitle"), variant: "destructive" }),
+    },
+  });
+
+  const updateItemMutation = useUpdateTreatmentPlanItem({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetActiveTreatmentPlanQueryKey(selectedPatientId ?? "") });
+        setEditingItemId(null);
+        toast({ title: "Шаг обновлён" });
       },
       onError: () => toast({ title: t("account.errorTitle"), variant: "destructive" }),
     },
@@ -1250,7 +1266,7 @@ export function PatientDetailPanel() {
                         {activePlan.items.map((item) => (
                           <div
                             key={item.id}
-                            className={`flex items-start gap-2.5 p-3 rounded-xl border transition-colors ${
+                            className={`rounded-xl border transition-colors ${
                               item.status === "completed"
                                 ? "bg-green-50/60 border-green-200"
                                 : item.status === "cancelled"
@@ -1258,91 +1274,154 @@ export function PatientDetailPanel() {
                                 : "bg-white border-border/50"
                             }`}
                           >
-                            <button
-                              className="mt-0.5 shrink-0 disabled:cursor-not-allowed"
-                              disabled={item.status !== "pending" || completeItemMutation.isPending}
-                              onClick={() =>
-                                completeItemMutation.mutate({
-                                  id: selectedPatientId,
-                                  planId: activePlan.id,
-                                  itemId: item.id,
-                                })
-                              }
-                              title={item.status === "pending" ? "Отметить как выполненный" : undefined}
-                            >
-                              {item.status === "completed" ? (
-                                <CheckCircle2 className="w-4.5 h-4.5 text-green-600" />
-                              ) : (
-                                <Circle className="w-4.5 h-4.5 text-border hover:text-primary transition-colors" />
-                              )}
-                            </button>
-                            <div className="flex-1 min-w-0">
-                              <p className={`text-sm font-medium leading-tight ${item.status === "completed" ? "line-through text-muted-foreground" : "text-gray-800"}`}>
-                                {item.title}
-                              </p>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                {item.toothFdi && (
-                                  <span className="text-xs text-muted-foreground">Зуб #{item.toothFdi}</span>
-                                )}
-                                {item.mkb10Code && (
-                                  <span className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono">
-                                    {item.mkb10Code}
-                                  </span>
-                                )}
+                            {editingItemId === item.id ? (
+                              <div className="p-3 space-y-2">
+                                <input
+                                  type="text"
+                                  value={editItemTitle}
+                                  onChange={(e) => setEditItemTitle(e.target.value)}
+                                  className="w-full text-sm border border-border rounded-lg px-3 py-1.5 outline-none focus:ring-1 focus:ring-primary"
+                                />
+                                <input
+                                  type="number"
+                                  value={editItemPrice}
+                                  onChange={(e) => setEditItemPrice(e.target.value)}
+                                  min={0}
+                                  className="w-full text-sm border border-border rounded-lg px-3 py-1.5 outline-none focus:ring-1 focus:ring-primary"
+                                />
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    className="h-7 text-xs"
+                                    disabled={!editItemTitle.trim() || updateItemMutation.isPending}
+                                    onClick={() => {
+                                      updateItemMutation.mutate({
+                                        id: selectedPatientId,
+                                        planId: activePlan.id,
+                                        itemId: item.id,
+                                        data: { title: editItemTitle.trim(), price: parseFloat(editItemPrice) || 0 },
+                                      });
+                                    }}
+                                  >
+                                    Сохранить
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 text-xs"
+                                    onClick={() => setEditingItemId(null)}
+                                  >
+                                    Отмена
+                                  </Button>
+                                </div>
                               </div>
-                            </div>
-                            <span className="text-sm font-semibold text-gray-700 shrink-0">
-                              {item.price.toLocaleString("ru")} ₸
-                            </span>
+                            ) : (
+                              <div className="flex items-start gap-2.5 p-3">
+                                <button
+                                  className="mt-0.5 shrink-0 disabled:cursor-not-allowed"
+                                  disabled={item.status !== "pending" || completeItemMutation.isPending}
+                                  onClick={() =>
+                                    completeItemMutation.mutate({
+                                      id: selectedPatientId,
+                                      planId: activePlan.id,
+                                      itemId: item.id,
+                                    })
+                                  }
+                                  title={item.status === "pending" ? "Отметить как выполненный" : undefined}
+                                >
+                                  {item.status === "completed" ? (
+                                    <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                  ) : (
+                                    <Circle className="w-4 h-4 text-border hover:text-primary transition-colors" />
+                                  )}
+                                </button>
+                                <div className="flex-1 min-w-0">
+                                  <p className={`text-sm font-medium leading-tight ${item.status === "completed" ? "line-through text-muted-foreground" : "text-gray-800"}`}>
+                                    {item.title}
+                                  </p>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    {item.toothFdi && (
+                                      <span className="text-xs text-muted-foreground">Зуб #{item.toothFdi}</span>
+                                    )}
+                                    {item.mkb10Code && (
+                                      <span className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono">
+                                        {item.mkb10Code}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span className="text-sm font-semibold text-gray-700">
+                                    {item.price.toLocaleString("ru")} ₸
+                                  </span>
+                                  {activePlan.status === "draft" && item.status === "pending" && (
+                                    <button
+                                      onClick={() => {
+                                        setEditingItemId(item.id);
+                                        setEditItemTitle(item.title);
+                                        setEditItemPrice(String(item.price));
+                                      }}
+                                      className="text-muted-foreground hover:text-primary transition-colors"
+                                      title="Редактировать"
+                                    >
+                                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                      </svg>
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ))}
 
-                        {/* Add item form */}
-                        {showAddItemForm ? (
-                          <div className="border border-dashed border-primary/40 rounded-xl p-3 space-y-2 bg-primary/5">
-                            <input
-                              type="text"
-                              placeholder="Название шага"
-                              value={newItemTitle}
-                              onChange={(e) => setNewItemTitle(e.target.value)}
-                              className="w-full text-sm border border-border rounded-lg px-3 py-1.5 outline-none focus:ring-1 focus:ring-primary"
-                            />
-                            <input
-                              type="number"
-                              placeholder="Цена (₸)"
-                              value={newItemPrice}
-                              onChange={(e) => setNewItemPrice(e.target.value)}
-                              min={0}
-                              className="w-full text-sm border border-border rounded-lg px-3 py-1.5 outline-none focus:ring-1 focus:ring-primary"
-                            />
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                className="h-7 text-xs"
-                                disabled={!newItemTitle.trim() || addPlanItemMutation.isPending}
-                                onClick={() => {
-                                  const price = parseFloat(newItemPrice) || 0;
-                                  addPlanItemMutation.mutate({
-                                    id: selectedPatientId,
-                                    planId: activePlan.id,
-                                    data: { title: newItemTitle.trim(), price },
-                                  });
-                                }}
-                              >
-                                Добавить
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 text-xs"
-                                onClick={() => { setShowAddItemForm(false); setNewItemTitle(""); setNewItemPrice(""); }}
-                              >
-                                Отмена
-                              </Button>
+                        {/* Add item form — only allowed in draft status */}
+                        {activePlan.status === "draft" && (
+                          showAddItemForm ? (
+                            <div className="border border-dashed border-primary/40 rounded-xl p-3 space-y-2 bg-primary/5">
+                              <input
+                                type="text"
+                                placeholder="Название шага"
+                                value={newItemTitle}
+                                onChange={(e) => setNewItemTitle(e.target.value)}
+                                className="w-full text-sm border border-border rounded-lg px-3 py-1.5 outline-none focus:ring-1 focus:ring-primary"
+                              />
+                              <input
+                                type="number"
+                                placeholder="Цена (₸)"
+                                value={newItemPrice}
+                                onChange={(e) => setNewItemPrice(e.target.value)}
+                                min={0}
+                                className="w-full text-sm border border-border rounded-lg px-3 py-1.5 outline-none focus:ring-1 focus:ring-primary"
+                              />
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  className="h-7 text-xs"
+                                  disabled={!newItemTitle.trim() || addPlanItemMutation.isPending}
+                                  onClick={() => {
+                                    const price = parseFloat(newItemPrice) || 0;
+                                    addPlanItemMutation.mutate({
+                                      id: selectedPatientId,
+                                      planId: activePlan.id,
+                                      data: { title: newItemTitle.trim(), price },
+                                    });
+                                  }}
+                                >
+                                  Добавить
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 text-xs"
+                                  onClick={() => { setShowAddItemForm(false); setNewItemTitle(""); setNewItemPrice(""); }}
+                                >
+                                  Отмена
+                                </Button>
+                              </div>
                             </div>
-                          </div>
-                        ) : (
-                          activePlan.status !== "completed" && (
+                          ) : (
                             <button
                               onClick={() => setShowAddItemForm(true)}
                               className="w-full flex items-center gap-2 py-2 px-3 rounded-xl border border-dashed border-border text-xs text-muted-foreground hover:border-primary/40 hover:text-primary hover:bg-primary/5 transition-colors"

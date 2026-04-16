@@ -2,7 +2,7 @@ import { Router, type Request, type Response, type NextFunction } from "express"
 import { z } from "zod";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { NotFoundError, ValidationError } from "../../shared/errors";
-import { TreatmentPlansRepository } from "./treatment-plans.repository";
+import { TreatmentPlansRepository, PlanLockedError, ItemAlreadyCompletedError } from "./treatment-plans.repository";
 import { PatientsRepository } from "../patients/patients.repository";
 import { ClinicPricesRepository } from "../clinic/clinic-prices.repository";
 
@@ -35,6 +35,7 @@ const UpdatePlanSchema = z.object({
 const UpdateItemSchema = z.object({
   title: z.string().min(1).optional(),
   price: z.number().min(0).optional(),
+  sortOrder: z.number().int().min(0).optional(),
   status: z.enum(["pending", "completed", "cancelled"]).optional(),
 });
 
@@ -151,21 +152,26 @@ router.post(
     const parsed = AddItemSchema.safeParse(req.body);
     if (!parsed.success) return next(new ValidationError(parsed.error.message));
 
-    const existingItems = await repo.getActivePlan(req.params["id"]!, req.user!.clinicId).catch(next);
-    if (existingItems === undefined) return;
+    const existingPlan = await repo.getActivePlan(req.params["id"]!, req.user!.clinicId).catch(next);
+    if (existingPlan === undefined) return;
 
-    const sortOrder = existingItems?.items.length ?? 0;
+    const sortOrder = existingPlan?.items.length ?? 0;
 
-    const item = await repo
-      .addItem(
+    let item: Awaited<ReturnType<typeof repo.addItem>> | undefined;
+    try {
+      item = await repo.addItem(
         req.params["planId"]!,
         req.user!.clinicId,
         req.params["id"]!,
         parsed.data,
         sortOrder,
-      )
-      .catch(next);
-    if (!item) return;
+      );
+    } catch (err) {
+      if (err instanceof PlanLockedError) {
+        return res.status(409).json({ success: false, error: err.message, code: "PLAN_LOCKED" });
+      }
+      return next(err);
+    }
 
     res.status(201).json({ success: true, data: { item } });
   },
@@ -180,11 +186,19 @@ router.patch(
     const parsed = UpdateItemSchema.safeParse(req.body);
     if (!parsed.success) return next(new ValidationError(parsed.error.message));
 
-    const item = await repo
-      .updateItem(req.params["itemId"]!, req.user!.clinicId, parsed.data)
-      .catch(next);
-    if (item === undefined) return;
-    if (!item) return next(new NotFoundError("Treatment plan item not found"));
+    let item: Awaited<ReturnType<typeof repo.updateItem>> | undefined;
+    try {
+      item = await repo.updateItem(req.params["itemId"]!, req.user!.clinicId, parsed.data);
+    } catch (err) {
+      if (err instanceof PlanLockedError) {
+        return res.status(409).json({ success: false, error: err.message, code: "PLAN_LOCKED" });
+      }
+      return next(err);
+    }
+
+    if (item === null || item === undefined) {
+      return next(new NotFoundError("Treatment plan item not found"));
+    }
 
     res.json({ success: true, data: { item } });
   },
@@ -196,11 +210,19 @@ router.post(
   authMiddleware,
   docRoles,
   async (req: Request, res: Response, next: NextFunction) => {
-    const result = await repo
-      .completeItem(req.params["itemId"]!, req.user!.clinicId, req.user!.id)
-      .catch(next);
-    if (result === undefined) return;
-    if (!result) return next(new NotFoundError("Treatment plan item not found"));
+    let result: Awaited<ReturnType<typeof repo.completeItem>> | undefined;
+    try {
+      result = await repo.completeItem(req.params["itemId"]!, req.user!.clinicId, req.user!.id);
+    } catch (err) {
+      if (err instanceof ItemAlreadyCompletedError) {
+        return res.status(409).json({ success: false, error: err.message, code: "ITEM_ALREADY_COMPLETED" });
+      }
+      return next(err);
+    }
+
+    if (result === null || result === undefined) {
+      return next(new NotFoundError("Treatment plan item not found"));
+    }
 
     res.json({ success: true, data: { item: result.item, procedureId: result.procedureId } });
   },

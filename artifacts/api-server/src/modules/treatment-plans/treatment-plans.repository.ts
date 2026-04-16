@@ -3,17 +3,15 @@ import {
   treatmentPlansTable,
   treatmentPlanItemsTable,
   toothRecordsTable,
+  toothTreatmentsTable,
   proceduresTable,
-  toothRecordsTable as teethTable,
   CONDITION_MKB10,
 } from "@workspace/db";
 import { eq, and, desc, ne, inArray } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import type {
   TreatmentPlan,
-  InsertTreatmentPlan,
   TreatmentPlanItem,
-  InsertTreatmentPlanItem,
   TreatmentPlanStatus,
   TreatmentPlanItemStatus,
   ToothCondition,
@@ -32,6 +30,18 @@ const CONDITION_LABEL: Record<string, string> = {
   missing: "Удалённый зуб",
   extraction_needed: "Удаление зуба",
 };
+
+export class PlanLockedError extends Error {
+  constructor() {
+    super("Plan is locked — structural edits are not allowed after approval");
+  }
+}
+
+export class ItemAlreadyCompletedError extends Error {
+  constructor() {
+    super("Item is already completed or cancelled");
+  }
+}
 
 export class TreatmentPlansRepository {
   async getActivePlan(patientId: string, clinicId: string): Promise<TreatmentPlanWithItems | null> {
@@ -96,7 +106,12 @@ export class TreatmentPlansRepository {
     return db.transaction(async (tx) => {
       const planId = randomUUID();
 
-      let itemsData: InsertTreatmentPlanItem[] = [];
+      let itemsData: Array<{
+        id: string; planId: string; clinicId: string; patientId: string;
+        toothFdi: number | null; condition: ToothCondition | null; mkb10Code: string | null;
+        title: string; price: number; status: TreatmentPlanItemStatus; sortOrder: number;
+        procedureId: string | null; createdAt: Date;
+      }> = [];
 
       if (manualItems && manualItems.length > 0) {
         itemsData = manualItems.map((item, idx) => ({
@@ -138,7 +153,7 @@ export class TreatmentPlansRepository {
             clinicId,
             patientId,
             toothFdi: tooth.toothFdi,
-            condition: tooth.condition,
+            condition: tooth.condition as ToothCondition | null,
             mkb10Code: priceEntry?.mkb10 ?? CONDITION_MKB10[cond] ?? null,
             title: `${CONDITION_LABEL[cond] ?? cond} — зуб #${tooth.toothFdi}`,
             price: priceEntry?.price ?? 0,
@@ -150,7 +165,7 @@ export class TreatmentPlansRepository {
         });
       }
 
-      const totalCost = itemsData.reduce((sum, i) => sum + (i.price ?? 0), 0);
+      const totalCost = itemsData.reduce((sum, i) => sum + i.price, 0);
 
       const [plan] = await tx
         .insert(treatmentPlansTable)
@@ -193,6 +208,17 @@ export class TreatmentPlansRepository {
   }
 
   async approvePlan(planId: string, clinicId: string): Promise<TreatmentPlan | null> {
+    const [plan] = await db
+      .select()
+      .from(treatmentPlansTable)
+      .where(and(eq(treatmentPlansTable.id, planId), eq(treatmentPlansTable.clinicId, clinicId)))
+      .limit(1);
+
+    if (!plan) return null;
+
+    const allowedStatuses: TreatmentPlanStatus[] = ["draft", "in_progress"];
+    if (!allowedStatuses.includes(plan.status)) return plan;
+
     return this.updatePlan(planId, clinicId, { status: "approved" });
   }
 
@@ -203,6 +229,15 @@ export class TreatmentPlansRepository {
     item: { toothFdi?: number; condition?: string; mkb10Code?: string; title: string; price: number },
     sortOrder: number,
   ): Promise<TreatmentPlanItem> {
+    const [plan] = await db
+      .select()
+      .from(treatmentPlansTable)
+      .where(and(eq(treatmentPlansTable.id, planId), eq(treatmentPlansTable.clinicId, clinicId)))
+      .limit(1);
+
+    if (!plan) throw new Error("Plan not found");
+    if (plan.status !== "draft") throw new PlanLockedError();
+
     const [created] = await db
       .insert(treatmentPlanItemsTable)
       .values({
@@ -230,15 +265,38 @@ export class TreatmentPlansRepository {
   async updateItem(
     itemId: string,
     clinicId: string,
-    updates: { title?: string; price?: number; status?: TreatmentPlanItemStatus },
+    updates: { title?: string; price?: number; sortOrder?: number; status?: TreatmentPlanItemStatus },
   ): Promise<TreatmentPlanItem | null> {
+    const [item] = await db
+      .select()
+      .from(treatmentPlanItemsTable)
+      .where(and(eq(treatmentPlanItemsTable.id, itemId), eq(treatmentPlanItemsTable.clinicId, clinicId)))
+      .limit(1);
+
+    if (!item) return null;
+
+    const isStructuralChange =
+      updates.title !== undefined ||
+      updates.price !== undefined ||
+      updates.sortOrder !== undefined;
+
+    if (isStructuralChange) {
+      const [plan] = await db
+        .select()
+        .from(treatmentPlansTable)
+        .where(eq(treatmentPlansTable.id, item.planId))
+        .limit(1);
+
+      if (!plan || plan.status !== "draft") throw new PlanLockedError();
+    }
+
     const [updated] = await db
       .update(treatmentPlanItemsTable)
       .set(updates)
       .where(and(eq(treatmentPlanItemsTable.id, itemId), eq(treatmentPlanItemsTable.clinicId, clinicId)))
       .returning();
 
-    if (updated) {
+    if (updated && (updates.price !== undefined)) {
       await this._recalcTotalCost(updated.planId, clinicId);
     }
 
@@ -259,6 +317,10 @@ export class TreatmentPlansRepository {
 
       if (!item) return null;
 
+      if (item.status !== "pending") {
+        throw new ItemAlreadyCompletedError();
+      }
+
       const procedureId = randomUUID();
       await tx.insert(proceduresTable).values({
         id: procedureId,
@@ -274,6 +336,59 @@ export class TreatmentPlansRepository {
         completedAt: new Date(),
         createdAt: new Date(),
       });
+
+      if (item.toothFdi) {
+        const toothTreatmentId = randomUUID();
+        await tx.insert(toothTreatmentsTable).values({
+          id: toothTreatmentId,
+          clinicId,
+          patientId: item.patientId,
+          toothFdi: item.toothFdi,
+          itemId: null,
+          description: item.title,
+          type: "treatment",
+          status: "done",
+          quantityUsed: 1,
+          performedBy: doctorId,
+          performedAt: new Date(),
+        });
+
+        const [existingTooth] = await tx
+          .select()
+          .from(toothRecordsTable)
+          .where(
+            and(
+              eq(toothRecordsTable.patientId, item.patientId),
+              eq(toothRecordsTable.clinicId, clinicId),
+              eq(toothRecordsTable.toothFdi, item.toothFdi),
+            ),
+          )
+          .limit(1);
+
+        const toothCondition = item.condition;
+        const newCondition: ToothCondition =
+          toothCondition === "extraction_needed" ? "missing" : "treated";
+
+        if (existingTooth) {
+          if (existingTooth.condition !== "treated" && existingTooth.condition !== "missing" && existingTooth.condition !== "healthy") {
+            await tx
+              .update(toothRecordsTable)
+              .set({ condition: newCondition, updatedBy: doctorId, updatedAt: new Date() })
+              .where(eq(toothRecordsTable.id, existingTooth.id));
+          }
+        } else {
+          await tx.insert(toothRecordsTable).values({
+            id: randomUUID(),
+            clinicId,
+            patientId: item.patientId,
+            toothFdi: item.toothFdi,
+            condition: newCondition,
+            notes: null,
+            updatedBy: doctorId,
+            updatedAt: new Date(),
+          });
+        }
+      }
 
       const [updatedItem] = await tx
         .update(treatmentPlanItemsTable)
