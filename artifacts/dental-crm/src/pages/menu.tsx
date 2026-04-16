@@ -25,7 +25,7 @@ const SUPPORTED_LANGS = ["ru", "kz", "en"] as const;
 type Lang = (typeof SUPPORTED_LANGS)[number];
 
 const ALL_NAV_ITEMS = [
-  { nameKey: "nav.patients",     href: "/patients",           icon: Users,           roles: ["owner","admin","doctor"] },
+  { nameKey: "nav.patients",     href: "/patients",           icon: Users,           roles: ["owner","admin","doctor","accountant"] },
   { nameKey: "nav.schedule",     href: "/schedule",           icon: Calendar,        roles: ["doctor"] },
   { nameKey: "nav.analytics",    href: "/analytics",          icon: BarChart3,       roles: ["owner"] },
   { nameKey: "nav.myAnalytics",  href: "/doctor-analytics",   icon: BarChart3,       roles: ["doctor"] },
