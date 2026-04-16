@@ -533,9 +533,8 @@ export function PatientDetailPanel() {
   const sourceColor = patient ? (SOURCE_COLORS[patient.source] ?? "bg-slate-100 text-slate-600") : "";
 
   const tabs = [
-    { id: "info"    as const, label: "Информация" },
-    { id: "history" as const, label: t("patient.tabHistory") },
-    { id: "dental"  as const, label: t("patient.tabDental") },
+    { id: "info"   as const, label: "Информация" },
+    { id: "dental" as const, label: t("patient.tabDental") },
   ];
 
   const doctorUser = patient?.doctorId ? allUsers.find((u) => u.id === patient.doctorId) : null;
@@ -589,7 +588,7 @@ export function PatientDetailPanel() {
             onClick={() => {
               setSelectedPatientId(null);
               setSelectedToothFdi(null);
-              setActiveTab("history");
+              setActiveTab("info");
               setIsDiagnosisMode(false);
               setDiagnosisMap(new Map());
               setDiagnosisNotesMap(new Map());
@@ -623,8 +622,9 @@ export function PatientDetailPanel() {
           </div>
         ) : patient ? (
           <>
-            {/* Info Tab */}
+            {/* Info Tab (includes interactions history) */}
             {activeTab === "info" && (
+              <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
               <div className="flex-1 overflow-y-auto custom-scrollbar">
                 <div className="px-6 py-5 space-y-5">
                   {/* Header */}
@@ -841,7 +841,84 @@ export function PatientDetailPanel() {
                       </div>
                     </div>
                   )}
+
+                  {/* Interaction history */}
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 block">
+                      {t("patient.tabHistory")} ({interactions.length})
+                    </label>
+                    <div className="space-y-2.5">
+                      {interactions.length === 0 ? (
+                        <p className="text-sm text-muted-foreground italic">{t("patient.noInteractions")}</p>
+                      ) : (
+                        [...interactions]
+                          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                          .map((interaction) => (
+                            <div
+                              key={interaction.id}
+                              className="bg-slate-50 rounded-xl p-3.5 border border-border/30"
+                            >
+                              <div className="flex items-center justify-between mb-1.5">
+                                <span className="text-xs font-semibold text-foreground flex items-center gap-1">
+                                  <span>{INTERACTION_TYPE_ICONS[interaction.type]}</span>
+                                  <span>{t(`interaction.${interaction.type}`)}</span>
+                                </span>
+                                <span className="text-[11px] text-muted-foreground">
+                                  {new Date(interaction.createdAt).toLocaleDateString(undefined, {
+                                    day: "2-digit",
+                                    month: "short",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </span>
+                              </div>
+                              <p className="text-sm text-muted-foreground leading-relaxed">
+                                {interaction.content}
+                              </p>
+                            </div>
+                          ))
+                      )}
+                    </div>
+                  </div>
                 </div>
+              </div>
+
+              {/* Add interaction (sticky footer) */}
+              <div className="px-6 py-4 border-t border-border/50 bg-slate-50/50 shrink-0">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                  {isDoctor ? "+ Добавить заключение" : t("patient.addRecord")}
+                </p>
+                <form onSubmit={handleAddInteraction} className="space-y-3">
+                  {!isDoctor && (
+                    <select
+                      value={interactionType}
+                      onChange={(e) => setInteractionType(e.target.value as InteractionType)}
+                      className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
+                    >
+                      {INTERACTION_TYPE_KEYS.map((item) => (
+                        <option key={item.value} value={item.value}>
+                          {t(`interaction.${item.value}`)}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  <textarea
+                    value={interactionContent}
+                    onChange={(e) => setInteractionContent(e.target.value)}
+                    rows={2}
+                    required
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+                    placeholder={t("patient.interactionPlaceholder")}
+                  />
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={interactionMutation.isPending || !interactionContent.trim()}
+                  >
+                    {interactionMutation.isPending ? t("tooth.saving") : isDoctor ? "+ Добавить заключение" : t("patient.addRecord")}
+                  </Button>
+                </form>
+              </div>
               </div>
             )}
 
@@ -1025,141 +1102,6 @@ export function PatientDetailPanel() {
               </div>
             )}
 
-            {/* History Tab */}
-            {activeTab === "history" && (
-              <div className="flex-1 overflow-y-auto custom-scrollbar">
-                <div className="px-6 py-5 space-y-4">
-                  <div>
-                    <h3 className="text-xl font-bold text-foreground">{patient.name}</h3>
-                    <p className="text-sm font-mono text-muted-foreground mt-0.5">{patient.phone}</p>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    {patient.dateOfBirth && (
-                      <span className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">
-                        {calculateAge(patient.dateOfBirth)} лет · {formatDateOfBirth(patient.dateOfBirth)}
-                      </span>
-                    )}
-                    <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${sourceColor}`}>
-                      {sourceLabel}
-                    </span>
-                  </div>
-
-                  {patient.notes && (
-                    <div className="bg-slate-50 rounded-xl p-3.5 text-sm text-muted-foreground">
-                      {patient.notes}
-                    </div>
-                  )}
-
-                  {canChangeStatus && (
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">
-                        {t("patient.statusLabel")}
-                      </label>
-                      <div className="relative">
-                        <button
-                          onClick={() => setIsStatusOpen(!isStatusOpen)}
-                          className="w-full flex items-center justify-between px-3.5 py-2.5 border border-border rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors"
-                        >
-                          <span>{currentColumn?.label ?? patient.status}</span>
-                          <ChevronDown className={`w-4 h-4 transition-transform ${isStatusOpen ? "rotate-180" : ""}`} />
-                        </button>
-                        {isStatusOpen && (
-                          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-border rounded-xl shadow-xl z-10 overflow-hidden">
-                            {KANBAN_COLUMNS.map((col) => (
-                              <button
-                                key={col.id}
-                                onClick={() => handleStatusChange(col.id)}
-                                disabled={statusMutation.isPending}
-                                className={`w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 transition-colors ${
-                                  patient.status === col.id ? "font-semibold text-primary bg-primary/5" : ""
-                                }`}
-                              >
-                                {col.label}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 block">
-                      {t("patient.tabHistory")} ({interactions.length})
-                    </label>
-                    <div className="space-y-2.5">
-                      {interactions.length === 0 ? (
-                        <p className="text-sm text-muted-foreground italic">{t("patient.noInteractions")}</p>
-                      ) : (
-                        [...interactions]
-                          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                          .map((interaction) => (
-                            <div
-                              key={interaction.id}
-                              className="bg-slate-50 rounded-xl p-3.5 border border-border/30"
-                            >
-                              <div className="flex items-center justify-between mb-1.5">
-                                <span className="text-xs font-semibold text-foreground flex items-center gap-1">
-                                  <span>{INTERACTION_TYPE_ICONS[interaction.type]}</span>
-                                  <span>{t(`interaction.${interaction.type}`)}</span>
-                                </span>
-                                <span className="text-[11px] text-muted-foreground">
-                                  {new Date(interaction.createdAt).toLocaleDateString(undefined, {
-                                    day: "2-digit",
-                                    month: "short",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  })}
-                                </span>
-                              </div>
-                              <p className="text-sm text-muted-foreground leading-relaxed">
-                                {interaction.content}
-                              </p>
-                            </div>
-                          ))
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="px-6 py-5 border-t border-border/50 bg-slate-50/50">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                    {isDoctor ? "+ Добавить заключение" : t("patient.addRecord")}
-                  </p>
-                  <form onSubmit={handleAddInteraction} className="space-y-3">
-                    {!isDoctor && (
-                      <select
-                        value={interactionType}
-                        onChange={(e) => setInteractionType(e.target.value as InteractionType)}
-                        className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
-                      >
-                        {INTERACTION_TYPE_KEYS.map((item) => (
-                          <option key={item.value} value={item.value}>
-                            {t(`interaction.${item.value}`)}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                    <textarea
-                      value={interactionContent}
-                      onChange={(e) => setInteractionContent(e.target.value)}
-                      rows={3}
-                      required
-                      className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
-                      placeholder={t("patient.interactionPlaceholder")}
-                    />
-                    <Button
-                      type="submit"
-                      className="w-full"
-                      disabled={interactionMutation.isPending || !interactionContent.trim()}
-                    >
-                      {interactionMutation.isPending ? t("tooth.saving") : isDoctor ? "+ Добавить заключение" : t("patient.addRecord")}
-                    </Button>
-                  </form>
-                </div>
-              </div>
-            )}
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">

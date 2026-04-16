@@ -5,8 +5,8 @@ interface KanbanStore {
   setSelectedPatientId: (id: string | null) => void;
   isCreateOpen: boolean;
   setIsCreateOpen: (open: boolean) => void;
-  activeTab: "info" | "history" | "dental";
-  setActiveTab: (tab: "info" | "history" | "dental") => void;
+  activeTab: "info" | "dental";
+  setActiveTab: (tab: "info" | "dental") => void;
 }
 
 export const useKanbanStore = create<KanbanStore>((set) => ({
