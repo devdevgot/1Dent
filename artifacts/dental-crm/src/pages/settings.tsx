@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/use-theme";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/hooks/use-auth";
@@ -6,6 +7,7 @@ import {
   useChangePassword,
   useGetConditionPrices,
   useUpdateConditionPrices,
+  getGetConditionPricesQueryKey,
 } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { User, Shield, Palette, Globe, Eye, EyeOff, DollarSign, Radio, Settings2, ChevronLeft } from "lucide-react";
@@ -59,6 +61,7 @@ function Section({ icon, title, children }: { icon: React.ReactNode; title: stri
 
 function ConditionPricesSection() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { data: pricesData, isLoading } = useGetConditionPrices();
   const updateMutation = useUpdateConditionPrices();
 
@@ -91,7 +94,10 @@ function ConditionPricesSection() {
     updateMutation.mutate(
       { data: { prices } },
       {
-        onSuccess: () => toast({ title: "Цены и МКБ-10 сохранены" }),
+        onSuccess: () => {
+          toast({ title: "Цены и МКБ-10 сохранены" });
+          queryClient.invalidateQueries({ queryKey: getGetConditionPricesQueryKey() });
+        },
         onError: () => toast({ title: "Ошибка сохранения", variant: "destructive" }),
       },
     );
