@@ -42,7 +42,7 @@ export class ClinicPricesRepository {
     for (const cond of ALL_CONDITIONS) {
       const row = overrideMap.get(cond);
       const price = row ? row.price : (CONDITION_DEFAULT_PRICES[cond] ?? 0);
-      const mkb10 = row?.mkb10Code ?? CONDITION_MKB10[cond] ?? "";
+      const mkb10 = row?.mkb10Code?.trim() ? row.mkb10Code.trim() : (CONDITION_MKB10[cond] ?? "");
       result[cond] = { price, mkb10 };
     }
     return result;
@@ -69,7 +69,9 @@ export class ClinicPricesRepository {
           .limit(1);
 
         const mkb10Code =
-          item.mkb10Code !== undefined ? item.mkb10Code : undefined;
+          item.mkb10Code !== undefined
+            ? (item.mkb10Code.trim() || null)
+            : undefined;
 
         if (existing) {
           await tx
