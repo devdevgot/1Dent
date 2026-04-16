@@ -1,4 +1,7 @@
 import { randomBytes } from "crypto";
+import path from "path";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
+import { db } from "@workspace/db";
 import app from "./app";
 import { logger } from "./lib/logger";
 import { startAlertWorker } from "./shared/alert-queue";
@@ -31,6 +34,22 @@ const port = Number(rawPort);
 
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
+}
+
+// Run DB migrations before starting the server
+if (process.env["DATABASE_URL"]) {
+  try {
+    const migrationsFolder = path.resolve(
+      path.dirname(new URL(import.meta.url).pathname),
+      "../../../lib/db/drizzle"
+    );
+    await migrate(db, { migrationsFolder });
+    logger.info("Database migrations applied successfully");
+  } catch (err) {
+    logger.warn({ err }, "Database migration error — continuing server startup");
+  }
+} else {
+  logger.warn("DATABASE_URL not set — skipping migrations");
 }
 
 app.listen(port, (err) => {

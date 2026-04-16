@@ -9,24 +9,15 @@ localPort = 8080
 name = "API Server"
 paths = ["/api", "/ref"]
 
+[services.env]
+PORT = "8080"
+
 [services.development]
 run = "pnpm --filter @workspace/api-server run dev"
 
 [services.production]
-
-[services.production.build]
-args = ["sh", "-c", "pnpm --filter @workspace/dental-crm run build && pnpm --filter @workspace/api-server run build"]
-
-[services.production.build.env]
-NODE_ENV = "production"
-
-[services.production.run]
-# Run DB migrations, then start the server (which also serves the frontend static files)
-args = ["sh", "-c", "pnpm --filter @workspace/db run migrate && node --enable-source-maps artifacts/api-server/dist/index.mjs"]
-
-[services.production.run.env]
-PORT = "8080"
-NODE_ENV = "production"
+build = ["sh", "-c", "pnpm --filter @workspace/dental-crm run build && pnpm --filter @workspace/api-server run build"]
+run = ["sh", "-c", "NODE_ENV=production node --enable-source-maps artifacts/api-server/dist/index.mjs"]
 
 [services.production.health.startup]
 path = "/api/healthz"
