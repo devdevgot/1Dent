@@ -934,7 +934,7 @@ export default function AdminCalendar() {
                     if (id) handleDrop(id, day);
                   }}
                   className={cn(
-                    "min-h-[110px] p-2 border-b border-r border-gray-100 cursor-pointer transition-colors",
+                    "min-h-[80px] p-2 border-b border-r border-gray-100 cursor-pointer transition-colors",
                     "hover:bg-primary/5",
                     !inMonth && "bg-gray-50/60",
                     isWeekend && inMonth && "bg-red-50/30",
