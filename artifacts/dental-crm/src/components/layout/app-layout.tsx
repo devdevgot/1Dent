@@ -82,6 +82,7 @@ const SELF_MANAGED_PREFIXES = [
   "/patients/",      // /patients/:id/teeth/:fdi
   "/staff",
   "/account",
+  "/channels",       // has own header with back button
   "/login",
   "/register",
   "/forgot-password",
