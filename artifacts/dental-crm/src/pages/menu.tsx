@@ -3,13 +3,11 @@ import { Link, useLocation } from "wouter";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useLogout } from "@workspace/api-client-react";
 import { clearAuthToken } from "@/lib/auth-token";
-import { getRoleDashboardPath } from "@/lib/role-redirect";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import i18n from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard,
   KanbanSquare,
   MessageSquare,
   Users,
@@ -28,19 +26,10 @@ import {
   Radio,
 } from "lucide-react";
 
-const ROLE_DASHBOARD_HREF: Record<string, string> = {
-  owner:      "/dashboard",
-  admin:      "/dashboard/admin",
-  doctor:     "/dashboard/doctor",
-  accountant: "/dashboard/accountant",
-  warehouse:  "/dashboard/warehouse",
-};
-
 const SUPPORTED_LANGS = ["ru", "kz", "en"] as const;
 type Lang = (typeof SUPPORTED_LANGS)[number];
 
 const ALL_NAV_ITEMS = [
-  { nameKey: "nav.dashboard",    href: "__role_dashboard__",  icon: LayoutDashboard, roles: ["owner","admin","doctor","accountant","warehouse"] },
   { nameKey: "nav.kanban",       href: "/kanban",             icon: KanbanSquare,    roles: ["owner","admin"] },
   { nameKey: "nav.chat",         href: "/chat",               icon: MessageSquare,   roles: ["owner","admin","doctor"] },
   { nameKey: "nav.patients",     href: "/patients",           icon: Users,           roles: ["owner","admin","doctor"] },
@@ -64,16 +53,11 @@ export default function MenuPage() {
   const { toast } = useToast();
   const [currentLang, setCurrentLang] = useState<Lang>((i18n.language as Lang) || "ru");
 
-  const roleDashboardHref = user
-    ? (ROLE_DASHBOARD_HREF[user.role] ?? getRoleDashboardPath(user.role))
-    : "/dashboard";
-
   const navItems = ALL_NAV_ITEMS.filter((item) =>
     user && item.roles.includes(user.role),
   ).map((item) => ({
     ...item,
     name: t(item.nameKey),
-    href: item.href === "__role_dashboard__" ? roleDashboardHref : item.href,
   }));
 
   const logoutMutation = useLogout({
