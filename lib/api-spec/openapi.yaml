@@ -4342,5 +4342,6 @@ components:
           type: string
         price:
           type: number
-        status:
-          $ref: "#/components/schemas/TreatmentPlanItemStatus"
+        sortOrder:
+          type: integer
+          minimum: 0

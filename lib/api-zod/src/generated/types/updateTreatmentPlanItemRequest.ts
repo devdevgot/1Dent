@@ -5,10 +5,10 @@
  * Dental CRM API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { TreatmentPlanItemStatus } from "./treatmentPlanItemStatus";
 
 export interface UpdateTreatmentPlanItemRequest {
   title?: string;
   price?: number;
-  status?: TreatmentPlanItemStatus;
+  /** @minimum 0 */
+  sortOrder?: number;
 }

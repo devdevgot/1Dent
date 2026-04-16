@@ -194,20 +194,36 @@ export class TreatmentPlansRepository {
     });
   }
 
+  private async _getPlanWithItems(planId: string, clinicId: string): Promise<TreatmentPlanWithItems | null> {
+    const [plan] = await db
+      .select()
+      .from(treatmentPlansTable)
+      .where(and(eq(treatmentPlansTable.id, planId), eq(treatmentPlansTable.clinicId, clinicId)))
+      .limit(1);
+    if (!plan) return null;
+    const items = await db
+      .select()
+      .from(treatmentPlanItemsTable)
+      .where(eq(treatmentPlanItemsTable.planId, planId))
+      .orderBy(treatmentPlanItemsTable.sortOrder, treatmentPlanItemsTable.createdAt);
+    return { ...plan, items };
+  }
+
   async updatePlan(
     planId: string,
     clinicId: string,
     updates: { notes?: string | null; status?: TreatmentPlanStatus },
-  ): Promise<TreatmentPlan | null> {
+  ): Promise<TreatmentPlanWithItems | null> {
     const [updated] = await db
       .update(treatmentPlansTable)
       .set({ ...updates, updatedAt: new Date() })
       .where(and(eq(treatmentPlansTable.id, planId), eq(treatmentPlansTable.clinicId, clinicId)))
       .returning();
-    return updated ?? null;
+    if (!updated) return null;
+    return this._getPlanWithItems(planId, clinicId);
   }
 
-  async approvePlan(planId: string, clinicId: string): Promise<TreatmentPlan | null> {
+  async approvePlan(planId: string, clinicId: string): Promise<TreatmentPlanWithItems | null> {
     const [plan] = await db
       .select()
       .from(treatmentPlansTable)
@@ -217,7 +233,7 @@ export class TreatmentPlansRepository {
     if (!plan) return null;
 
     const allowedStatuses: TreatmentPlanStatus[] = ["draft", "in_progress"];
-    if (!allowedStatuses.includes(plan.status)) return plan;
+    if (!allowedStatuses.includes(plan.status)) return this._getPlanWithItems(planId, clinicId);
 
     return this.updatePlan(planId, clinicId, { status: "approved" });
   }

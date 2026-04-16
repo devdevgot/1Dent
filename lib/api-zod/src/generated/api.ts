@@ -954,10 +954,15 @@ export const UpdateTreatmentPlanItemParams = zod.object({
   itemId: zod.coerce.string(),
 });
 
+export const updateTreatmentPlanItemBodySortOrderMin = 0;
+
 export const UpdateTreatmentPlanItemBody = zod.object({
   title: zod.string().optional(),
   price: zod.number().optional(),
-  status: zod.enum(["pending", "completed", "cancelled"]).optional(),
+  sortOrder: zod
+    .number()
+    .min(updateTreatmentPlanItemBodySortOrderMin)
+    .optional(),
 });
 
 export const UpdateTreatmentPlanItemResponse = zod.object({

@@ -1248,7 +1248,8 @@ export interface AddTreatmentPlanItemRequest {
 export interface UpdateTreatmentPlanItemRequest {
   title?: string;
   price?: number;
-  status?: TreatmentPlanItemStatus;
+  /** @minimum 0 */
+  sortOrder?: number;
 }
 
 export type GetInventoryConsumptionParams = {

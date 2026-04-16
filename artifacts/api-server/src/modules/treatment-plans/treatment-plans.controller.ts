@@ -36,7 +36,6 @@ const UpdateItemSchema = z.object({
   title: z.string().min(1).optional(),
   price: z.number().min(0).optional(),
   sortOrder: z.number().int().min(0).optional(),
-  status: z.enum(["pending", "completed", "cancelled"]).optional(),
 });
 
 const AddItemSchema = z.object({
@@ -98,7 +97,7 @@ router.post(
       .createPlan(
         req.user!.clinicId,
         req.params["id"]!,
-        req.user!.id,
+        req.user!.userId,
         pricesMap,
         parsed.data.items,
       )
@@ -212,7 +211,7 @@ router.post(
   async (req: Request, res: Response, next: NextFunction) => {
     let result: Awaited<ReturnType<typeof repo.completeItem>> | undefined;
     try {
-      result = await repo.completeItem(req.params["itemId"]!, req.user!.clinicId, req.user!.id);
+      result = await repo.completeItem(req.params["itemId"]!, req.user!.clinicId, req.user!.userId);
     } catch (err) {
       if (err instanceof ItemAlreadyCompletedError) {
         return res.status(409).json({ success: false, error: err.message, code: "ITEM_ALREADY_COMPLETED" });
