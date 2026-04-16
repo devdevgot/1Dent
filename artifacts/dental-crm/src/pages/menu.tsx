@@ -41,7 +41,6 @@ const ALL_NAV_ITEMS = [
   { nameKey: "nav.chatbot",      href: "/chatbot",            icon: Bot,             roles: ["owner","admin"] },
   { nameKey: "nav.channels",     href: "/channels",           icon: Radio,           roles: ["owner","admin"] },
   { nameKey: "nav.migration",    href: "/migration",          icon: FileSpreadsheet, roles: ["owner","admin"] },
-  { nameKey: "nav.logs",         href: "/logs",               icon: Activity,        roles: ["owner"] },
 ];
 
 export default function MenuPage() {
@@ -175,6 +174,17 @@ export default function MenuPage() {
               </div>
             </div>
           </div>
+
+          {/* Audit Log — owner only */}
+          {user?.role === "owner" && (
+            <Link replace href="/logs" className="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 transition-colors">
+              <div className="flex items-center gap-2.5">
+                <Activity className="w-4 h-4 text-gray-400" />
+                <span className="text-[15px] text-gray-800">{t("nav.logs")}</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-300" />
+            </Link>
+          )}
 
           {/* Notifications */}
           <div className="flex items-center justify-between px-4 py-3.5">
