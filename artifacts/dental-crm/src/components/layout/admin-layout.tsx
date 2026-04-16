@@ -4,7 +4,6 @@ import { useAuthStore } from "@/hooks/use-auth";
 import { NotificationBell } from "./notification-bell";
 import {
   LayoutDashboard,
-  KanbanSquare,
   Users,
   Stethoscope,
   BarChart3,
@@ -29,7 +28,6 @@ import { clearAuthToken } from "@/lib/auth-token";
 
 const ADMIN_NAV_ITEMS = [
   { nameKey: "nav.dashboard",            href: "/dashboard/admin",         icon: LayoutDashboard, badge: null },
-  { nameKey: "nav.kanban",               href: "/kanban",                  icon: KanbanSquare,    badge: null },
   { nameKey: "adminNav.calendar",        href: "/admin/calendar",          icon: Calendar,        badge: null },
   { nameKey: "adminNav.newAppointment",  href: "/admin/appointments/new",  icon: PlusCircle,      badge: null },
   { nameKey: "adminNav.finance",         href: "/admin/finance",           icon: Wallet,          badge: null },

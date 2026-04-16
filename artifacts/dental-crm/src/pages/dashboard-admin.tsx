@@ -229,7 +229,7 @@ export default function AdminDashboard() {
             { label: t("adminNav.newAppointment"), icon: PlusCircle, path: "/admin/appointments/new" },
             { label: t("adminNav.calendar"),       icon: Calendar,   path: "/admin/calendar" },
             { label: t("adminNav.finance"),        icon: Wallet,     path: "/admin/finance" },
-            { label: t("nav.kanban"),              icon: KanbanSquare, path: "/kanban" },
+            { label: t("patients.tabKanban"),      icon: KanbanSquare, path: "/patients?view=kanban" },
             { label: t("nav.patients"),            icon: Users,      path: "/patients" },
             { label: t("nav.inventory"),           icon: Package,    path: "/inventory" },
           ].map((item) => (

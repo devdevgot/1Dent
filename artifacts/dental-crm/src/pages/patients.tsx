@@ -1,18 +1,34 @@
 import { useState, useMemo } from "react";
+import { useSearch, useLocation } from "wouter";
 import {
   useListPatients,
   useListUsers,
   useListProcedures,
   useDeletePatient,
+  useUpdatePatientStatus,
   getListPatientsQueryKey,
 } from "@workspace/api-client-react";
 import type { Patient, PatientStatus, PatientSource } from "@workspace/api-client-react";
 import { calculateAge, formatDateOfBirth, maskIIN } from "@workspace/api-zod";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  Plus, RefreshCw, Search, Trash2, ChevronUp, ChevronDown, ChevronsUpDown,
+  DndContext,
+  type DragEndEvent,
+  type DragStartEvent,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCorners,
+} from "@dnd-kit/core";
+import {
+  Users, KanbanSquare, ClipboardList,
+  Plus, RefreshCw, Search, Trash2,
+  ChevronUp, ChevronDown, ChevronsUpDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { KanbanColumn } from "@/components/kanban/kanban-column";
+import { PatientCard } from "@/components/kanban/patient-card";
 import { PatientDetailPanel } from "@/components/kanban/patient-detail-panel";
 import { CreatePatientDialog } from "@/components/kanban/create-patient-dialog";
 import { useKanbanStore } from "@/hooks/use-kanban";
@@ -25,8 +41,11 @@ import {
   SOURCE_LABELS,
   SOURCE_COLORS,
 } from "@/lib/patient-utils";
+import { ProceduresContent } from "@/pages/procedures";
 import { useTranslation } from "react-i18next";
+import { cn } from "@/lib/utils";
 
+type PatientView = "list" | "kanban" | "procedures";
 type SortKey = "name" | "phone" | "dateOfBirth" | "status" | "source" | "createdAt" | "doctor";
 type SortDir = "asc" | "desc";
 
@@ -44,7 +63,36 @@ const ALL_SOURCES: PatientSource[] = [
   "instagram", "referral", "walk_in", "website", "whatsapp", "other",
 ];
 
-export default function PatientsPage() {
+/* ─── Tab bar ─────────────────────────────────────────────────────────────── */
+function TabBtn({
+  active,
+  onClick,
+  icon: Icon,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ElementType;
+  label: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-1.5 px-4 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap",
+        active
+          ? "border-primary text-primary"
+          : "border-transparent text-gray-500 hover:text-gray-700",
+      )}
+    >
+      <Icon className="w-4 h-4" />
+      {label}
+    </button>
+  );
+}
+
+/* ─── List view ───────────────────────────────────────────────────────────── */
+function PatientsListView() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { setSelectedPatientId, isCreateOpen, setIsCreateOpen } = useKanbanStore();
@@ -117,17 +165,17 @@ export default function PatientsPage() {
       .sort((a, b) => {
         let cmp = 0;
         switch (sortKey) {
-          case "name":    cmp = a.name.localeCompare(b.name); break;
-          case "phone":   cmp = a.phone.localeCompare(b.phone); break;
+          case "name":        cmp = a.name.localeCompare(b.name); break;
+          case "phone":       cmp = a.phone.localeCompare(b.phone); break;
           case "dateOfBirth": cmp = (a.dateOfBirth ? new Date(a.dateOfBirth).getTime() : 0) - (b.dateOfBirth ? new Date(b.dateOfBirth).getTime() : 0); break;
-          case "status":  cmp = STATUS_ORDER[a.status] - STATUS_ORDER[b.status]; break;
-          case "source":  cmp = a.source.localeCompare(b.source); break;
-          case "createdAt": cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(); break;
-          case "doctor":  cmp = (a.doctorId ? (doctorMap[a.doctorId] ?? "") : "").localeCompare(b.doctorId ? (doctorMap[b.doctorId] ?? "") : ""); break;
+          case "status":      cmp = STATUS_ORDER[a.status] - STATUS_ORDER[b.status]; break;
+          case "source":      cmp = a.source.localeCompare(b.source); break;
+          case "createdAt":   cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(); break;
+          case "doctor":      cmp = (a.doctorId ? (doctorMap[a.doctorId] ?? "") : "").localeCompare(b.doctorId ? (doctorMap[b.doctorId] ?? "") : ""); break;
         }
         return sortDir === "asc" ? cmp : -cmp;
       });
-  }, [allPatients, search, statusFilter, sourceFilter, sortKey, sortDir]);
+  }, [allPatients, search, statusFilter, sourceFilter, sortKey, sortDir, doctorMap]);
 
   const canDelete = user?.role === "owner" || user?.role === "admin";
   const canCreate = user?.role === "owner" || user?.role === "admin";
@@ -159,33 +207,9 @@ export default function PatientsPage() {
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
-      {/* Top bar */}
-      <div className="bg-white border-b border-gray-100 px-6 py-4 shrink-0">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <h1 className="text-lg font-bold text-gray-900">{t("nav.patients")}</h1>
-            <span className="bg-primary/10 text-primary text-xs font-semibold px-2 py-0.5 rounded-full">
-              {allPatients.length}
-            </span>
-            <button
-              onClick={() => queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() })}
-              className="text-gray-400 hover:text-primary transition-colors"
-              title={t("kanban.refresh")}
-            >
-              <RefreshCw className="w-4 h-4" />
-            </button>
-          </div>
-          {canCreate && (
-            <Button onClick={() => setIsCreateOpen(true)} className="gap-2 self-start sm:self-auto">
-              <Plus className="w-4 h-4" />
-              {t("kanban.newPatient")}
-            </Button>
-          )}
-        </div>
-
-        {/* Filters */}
-        <div className="flex flex-wrap gap-2 mt-3">
-          {/* Search */}
+      {/* Filters bar */}
+      <div className="bg-white border-b border-gray-100 px-4 py-3 shrink-0 space-y-2">
+        <div className="flex flex-wrap gap-2">
           <div className="relative flex-1 min-w-[180px] max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
@@ -196,8 +220,6 @@ export default function PatientsPage() {
               className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 bg-gray-50"
             />
           </div>
-
-          {/* Status filter */}
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as PatientStatus | "all")}
@@ -210,8 +232,6 @@ export default function PatientsPage() {
               </option>
             ))}
           </select>
-
-          {/* Source filter */}
           <select
             value={sourceFilter}
             onChange={(e) => setSourceFilter(e.target.value as PatientSource | "all")}
@@ -222,10 +242,16 @@ export default function PatientsPage() {
               <option key={s} value={s}>{SOURCE_LABELS[s]}</option>
             ))}
           </select>
+          {canCreate && (
+            <Button onClick={() => setIsCreateOpen(true)} className="gap-2 ml-auto">
+              <Plus className="w-4 h-4" />
+              {t("kanban.newPatient")}
+            </Button>
+          )}
         </div>
 
         {/* Status stat pills */}
-        <div className="flex flex-wrap gap-1.5 mt-3">
+        <div className="flex flex-wrap gap-1.5">
           {KANBAN_COLUMNS.map((col) => {
             const count = statusCounts[col.id] ?? 0;
             if (count === 0) return null;
@@ -262,17 +288,15 @@ export default function PatientsPage() {
             <thead className="sticky top-0 bg-white border-b border-gray-100 z-10">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-10">#</th>
-                <Th col="name"      label={t("patients.colName")} />
-                <Th col="phone"     label={t("patients.colPhone")} className="hidden sm:table-cell" />
-                <Th col="doctor"    label="Врач" className="hidden md:table-cell" />
-                <Th col="status"    label={t("patients.colStatus")} />
+                <Th col="name"        label={t("patients.colName")} />
+                <Th col="phone"       label={t("patients.colPhone")} className="hidden sm:table-cell" />
+                <Th col="doctor"      label="Врач" className="hidden md:table-cell" />
+                <Th col="status"      label={t("patients.colStatus")} />
                 <Th col="dateOfBirth" label={t("patients.colAge")} className="hidden lg:table-cell" />
-                <Th col="source"    label={t("patients.colSource")} className="hidden xl:table-cell" />
+                <Th col="source"      label={t("patients.colSource")} className="hidden xl:table-cell" />
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell whitespace-nowrap">Оплачено</th>
-                <Th col="createdAt" label={t("patients.colCreated")} className="hidden xl:table-cell" />
-                {canDelete && (
-                  <th className="px-4 py-3 w-12" />
-                )}
+                <Th col="createdAt"   label={t("patients.colCreated")} className="hidden xl:table-cell" />
+                {canDelete && <th className="px-4 py-3 w-12" />}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -292,10 +316,7 @@ export default function PatientsPage() {
                     onClick={() => setSelectedPatientId(patient.id)}
                     className="bg-white hover:bg-primary/5 cursor-pointer transition-colors group"
                   >
-                    {/* Row number */}
                     <td className="px-4 py-3 text-gray-300 text-xs font-mono">{idx + 1}</td>
-
-                    {/* Name + avatar */}
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center shrink-0">
@@ -311,13 +332,9 @@ export default function PatientsPage() {
                         </div>
                       </div>
                     </td>
-
-                    {/* Phone */}
                     <td className="px-4 py-3 hidden sm:table-cell">
                       <span className="font-mono text-gray-600 text-xs">{patient.phone}</span>
                     </td>
-
-                    {/* Doctor */}
                     <td className="px-4 py-3 hidden md:table-cell">
                       {patient.doctorId && doctorMap[patient.doctorId] ? (
                         <span className="text-xs font-medium text-gray-700">{doctorMap[patient.doctorId]}</span>
@@ -325,15 +342,11 @@ export default function PatientsPage() {
                         <span className="text-gray-300 text-xs">—</span>
                       )}
                     </td>
-
-                    {/* Status */}
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${statusCol ? COLUMN_HEADER_COLOR[patient.status] : "bg-gray-100 text-gray-600"}`}>
                         {statusCol?.label ?? patient.status}
                       </span>
                     </td>
-
-                    {/* Age / DOB */}
                     <td className="px-4 py-3 hidden lg:table-cell text-gray-600 text-xs whitespace-nowrap">
                       {patient.dateOfBirth ? (
                         <span>
@@ -345,15 +358,11 @@ export default function PatientsPage() {
                         <span className="text-gray-300">—</span>
                       )}
                     </td>
-
-                    {/* Source */}
                     <td className="px-4 py-3 hidden xl:table-cell">
                       <span className={`inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-full ${SOURCE_COLORS[patient.source] ?? "bg-gray-100 text-gray-600"}`}>
                         {SOURCE_LABELS[patient.source] ?? patient.source}
                       </span>
                     </td>
-
-                    {/* Paid */}
                     <td className="px-4 py-3 hidden lg:table-cell whitespace-nowrap">
                       {patientTotals[patient.id] ? (
                         <div>
@@ -366,17 +375,11 @@ export default function PatientsPage() {
                         <span className="text-gray-300 text-xs">—</span>
                       )}
                     </td>
-
-                    {/* Created */}
                     <td className="px-4 py-3 hidden xl:table-cell text-gray-400 text-xs whitespace-nowrap">
                       {new Date(patient.createdAt).toLocaleDateString("ru", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
+                        day: "2-digit", month: "short", year: "numeric",
                       })}
                     </td>
-
-                    {/* Delete */}
                     {canDelete && (
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         <button
@@ -396,7 +399,6 @@ export default function PatientsPage() {
         )}
       </div>
 
-      {/* Footer count */}
       {!isLoading && !error && filtered.length > 0 && (
         <div className="bg-white border-t border-gray-100 px-6 py-2 text-xs text-gray-400 shrink-0">
           {t("patients.showing", { count: filtered.length, total: allPatients.length })}
@@ -410,6 +412,215 @@ export default function PatientsPage() {
         onConfirm={() => { deleteMutation.mutate({ id: deleteConfirm! }); setDeleteConfirm(null); }}
         onCancel={() => setDeleteConfirm(null)}
       />
+    </div>
+  );
+}
+
+/* ─── Kanban view ─────────────────────────────────────────────────────────── */
+function PatientsKanbanView() {
+  const { t } = useTranslation();
+  const { user } = useAuthStore();
+  const canCreate = user?.role === "owner" || user?.role === "admin";
+  const queryClient = useQueryClient();
+  const { isCreateOpen, setIsCreateOpen } = useKanbanStore();
+  const [activeDragPatient, setActiveDragPatient] = useState<Patient | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+  );
+
+  const { data, isLoading, error } = useListPatients({
+    query: { queryKey: getListPatientsQueryKey() },
+  });
+
+  const patients: Patient[] = data?.data?.patients ?? [];
+
+  const statusMutation = useUpdatePatientStatus({
+    mutation: {
+      onError: () => {
+        queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() });
+      },
+    },
+  });
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const patient = patients.find((p) => p.id === event.active.id);
+    setActiveDragPatient(patient ?? null);
+  };
+
+  const resolveOverColumn = (overId: string | number): PatientStatus | null => {
+    const overIdStr = String(overId);
+    const col = KANBAN_COLUMNS.find((c) => c.id === overIdStr);
+    if (col) return col.id;
+    const overPatient = patients.find((p) => p.id === overIdStr);
+    if (overPatient) return overPatient.status;
+    return null;
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveDragPatient(null);
+    if (!over) return;
+    const draggedPatient = patients.find((p) => p.id === active.id);
+    if (!draggedPatient) return;
+    const overColumnId = resolveOverColumn(over.id);
+    if (overColumnId && draggedPatient.status !== overColumnId) {
+      queryClient.setQueryData(getListPatientsQueryKey(), (old: typeof data) => {
+        if (!old?.data?.patients) return old;
+        return {
+          ...old,
+          data: {
+            ...old.data,
+            patients: old.data.patients.map((p) =>
+              p.id === draggedPatient.id
+                ? { ...p, status: overColumnId as PatientStatus }
+                : p,
+            ),
+          },
+        };
+      });
+      statusMutation.mutate({
+        id: draggedPatient.id,
+        data: { status: overColumnId as PatientStatus },
+      });
+    }
+  };
+
+  const patientsByColumn = (columnId: PatientStatus) =>
+    patients.filter((p) => p.status === columnId);
+
+  return (
+    <div className="flex flex-col h-full bg-[#f2f2f7]">
+      {/* Kanban action row */}
+      <div className="bg-white px-4 py-2.5 flex items-center gap-3 border-b border-gray-100 shrink-0">
+        <span className="text-xs text-muted-foreground flex-1">
+          {t("kanban.totalPatients", { count: patients.length })}
+        </span>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() })}
+          className="w-8 h-8 text-gray-500"
+          title={t("kanban.refresh")}
+        >
+          <RefreshCw className="w-4 h-4" />
+        </Button>
+        {canCreate && (
+          <Button onClick={() => setIsCreateOpen(true)} className="gap-2" size="sm">
+            <Plus className="w-4 h-4" />
+            {t("kanban.newPatient")}
+          </Button>
+        )}
+      </div>
+
+      <div className="flex flex-col flex-1 overflow-hidden gap-4 p-4">
+        {isLoading ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+          </div>
+        ) : error ? (
+          <div className="flex-1 flex items-center justify-center text-destructive text-sm">
+            {t("kanban.loadError")}
+          </div>
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCorners}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="flex gap-3 overflow-x-auto pb-4 flex-1 items-start custom-scrollbar">
+              {KANBAN_COLUMNS.map((col) => (
+                <KanbanColumn
+                  key={col.id}
+                  id={col.id}
+                  label={col.label}
+                  colorClass={col.color}
+                  patients={patientsByColumn(col.id)}
+                />
+              ))}
+            </div>
+            <DragOverlay>
+              {activeDragPatient ? (
+                <div className="rotate-2 opacity-90 pointer-events-none">
+                  <PatientCard patient={activeDragPatient} />
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        )}
+
+        <PatientDetailPanel />
+        {isCreateOpen && <CreatePatientDialog onClose={() => setIsCreateOpen(false)} />}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Unified patients page ───────────────────────────────────────────────── */
+export default function PatientsPage() {
+  const { t } = useTranslation();
+  const { user } = useAuthStore();
+  const search = useSearch();
+  const [, navigate] = useLocation();
+  const queryClient = useQueryClient();
+
+  const { data } = useListPatients({ query: { queryKey: getListPatientsQueryKey() } });
+  const allPatients: Patient[] = data?.data?.patients ?? [];
+
+  const viewParam = new URLSearchParams(search).get("view") as PatientView | null;
+  const view: PatientView = viewParam === "kanban" || viewParam === "procedures" ? viewParam : "list";
+
+  const setView = (v: PatientView) => navigate(`/patients?view=${v}`, { replace: true });
+
+  const tabs = [
+    { key: "list"       as PatientView, icon: Users,         label: t("patients.tabList") },
+    { key: "kanban"     as PatientView, icon: KanbanSquare,  label: t("patients.tabKanban") },
+    { key: "procedures" as PatientView, icon: ClipboardList, label: t("patients.tabProcedures") },
+  ];
+
+  return (
+    <div className="flex flex-col h-full bg-gray-50 overflow-hidden">
+      {/* Page header */}
+      <div className="bg-white border-b border-gray-100 px-4 pt-4 pb-0 shrink-0">
+        <div className="flex items-center gap-3 pb-2">
+          <h1 className="text-lg font-bold text-gray-900 flex-1">{t("nav.patients")}</h1>
+          <span className="bg-primary/10 text-primary text-xs font-semibold px-2 py-0.5 rounded-full">
+            {allPatients.length}
+          </span>
+          <button
+            onClick={() => queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() })}
+            className="text-gray-400 hover:text-primary transition-colors"
+            title={t("kanban.refresh")}
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Tab bar */}
+        <div className="flex gap-0 overflow-x-auto">
+          {tabs.map((tab) => (
+            <TabBtn
+              key={tab.key}
+              active={view === tab.key}
+              onClick={() => setView(tab.key)}
+              icon={tab.icon}
+              label={tab.label}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        {view === "list"       && <PatientsListView />}
+        {view === "kanban"     && <PatientsKanbanView />}
+        {view === "procedures" && (
+          <div className="h-full overflow-y-auto bg-[#f2f2f7]">
+            <ProceduresContent />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

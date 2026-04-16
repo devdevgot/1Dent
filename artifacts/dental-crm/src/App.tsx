@@ -21,7 +21,6 @@ import AdminDashboard from "@/pages/dashboard-admin";
 import DoctorDashboard from "@/pages/dashboard-doctor";
 import AccountantDashboard from "@/pages/dashboard-accountant";
 import WarehouseDashboard from "@/pages/dashboard-warehouse";
-import KanbanPage from "@/pages/kanban";
 import PatientsPage from "@/pages/patients";
 import ToothDetailPage from "@/pages/tooth-detail";
 import ChatPage from "@/pages/chat";
@@ -45,7 +44,6 @@ import AccountChangeEmailPage from "@/pages/account-change-email";
 import AccountChangePasswordPage from "@/pages/account-change-password";
 import MenuPage from "@/pages/menu";
 import ChannelsPage from "@/pages/channels";
-import ProceduresPage from "@/pages/procedures";
 import NotFound from "@/pages/not-found";
 
 // Admin-specific pages
@@ -135,6 +133,18 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
 }
 
 
+function KanbanRedirect() {
+  const [, setLocation] = useLocation();
+  useEffect(() => { setLocation("/patients?view=kanban", { replace: true }); }, [setLocation]);
+  return null;
+}
+
+function ProceduresRedirect() {
+  const [, setLocation] = useLocation();
+  useEffect(() => { setLocation("/patients?view=procedures", { replace: true }); }, [setLocation]);
+  return null;
+}
+
 function Router() {
   const { isAuthenticated, user } = useAuthStore();
   const [location, setLocation] = useLocation();
@@ -185,9 +195,9 @@ function Router() {
         <ProtectedRoute component={WarehouseDashboard} allowedRoles={['warehouse']} />
       </Route>
 
-      {/* Kanban board */}
+      {/* Kanban redirect → unified patients page */}
       <Route path="/kanban">
-        <ProtectedRoute component={KanbanPage} allowedRoles={['owner', 'admin', 'doctor']} />
+        <KanbanRedirect />
       </Route>
 
       {/* Admin-specific routes */}
@@ -240,7 +250,7 @@ function Router() {
         <ProtectedRoute component={FinancialsPage} allowedRoles={['owner', 'accountant']} />
       </Route>
       <Route path="/procedures">
-        <ProtectedRoute component={ProceduresPage} allowedRoles={['owner', 'admin', 'accountant']} />
+        <ProceduresRedirect />
       </Route>
       <Route path="/warehouse">
         <ProtectedRoute component={WarehousePage} allowedRoles={['owner', 'admin', 'warehouse']} />

@@ -8,9 +8,7 @@ import { useTranslation } from "react-i18next";
 import i18n from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import {
-  KanbanSquare,
   Users,
-  Stethoscope,
   BarChart3,
   Settings,
   LogOut,
@@ -27,9 +25,7 @@ const SUPPORTED_LANGS = ["ru", "kz", "en"] as const;
 type Lang = (typeof SUPPORTED_LANGS)[number];
 
 const ALL_NAV_ITEMS = [
-  { nameKey: "nav.kanban",       href: "/kanban",             icon: KanbanSquare,    roles: ["owner","admin"] },
   { nameKey: "nav.patients",     href: "/patients",           icon: Users,           roles: ["owner","admin","doctor"] },
-  { nameKey: "nav.procedures",   href: "/procedures",         icon: Stethoscope,     roles: ["owner","admin","accountant"] },
   { nameKey: "nav.schedule",     href: "/schedule",           icon: Calendar,        roles: ["doctor"] },
   { nameKey: "nav.analytics",    href: "/analytics",          icon: BarChart3,       roles: ["owner"] },
   { nameKey: "nav.myAnalytics",  href: "/doctor-analytics",   icon: BarChart3,       roles: ["doctor"] },

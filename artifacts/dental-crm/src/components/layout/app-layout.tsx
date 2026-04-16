@@ -7,7 +7,6 @@ import { GlobalSearch } from "./global-search";
 import { AppointmentReminderModal } from "./appointment-reminder-modal";
 import {
   LayoutDashboard,
-  KanbanSquare,
   Users,
   Stethoscope,
   BarChart3,
@@ -44,7 +43,6 @@ const ALL_NAV_ITEMS = [
   { nameKey: "nav.myAnalytics", href: "/doctor-analytics",   icon: BarChart3,       roles: ["doctor"]                                          },
   { nameKey: "nav.financials",  href: "/financials",         icon: Wallet,          roles: ["owner","accountant"]                              },
   { nameKey: "nav.inventory",   href: "/inventory",          icon: Package,         roles: ["owner","admin","warehouse"]                       },
-  { nameKey: "nav.kanban",      href: "/kanban",             icon: KanbanSquare,    roles: ["owner","admin"]                                   },
   { nameKey: "nav.users",       href: "/users",              icon: Settings,        roles: ["owner","admin"]                                   },
   { nameKey: "nav.chatbot",     href: "/chatbot",            icon: Bot,             roles: ["owner","admin"]                                   },
   { nameKey: "nav.logs",        href: "/logs",               icon: Activity,        roles: ["owner"]                                           },

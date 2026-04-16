@@ -962,7 +962,9 @@ export default function AdminCalendar() {
 
                   {/* Appointment pills */}
                   <div className="space-y-0.5">
-                    {procs.slice(0, 3).map((p) => (
+                    {procs.slice(0, 3).map((p) => {
+                      const patientName = patients.find((pt) => pt.id === p.patientId)?.name;
+                      return (
                       <div
                         key={p.id}
                         draggable
@@ -977,7 +979,7 @@ export default function AdminCalendar() {
                           STATUS_PILL[p.status ?? "scheduled"],
                           draggingId === p.id && "opacity-50",
                         )}
-                        title={`${p.name} — ${p.scheduledAt ? format(parseISO(p.scheduledAt), "HH:mm") : ""}`}
+                        title={`${patientName ? patientName + " · " : ""}${p.name} — ${p.scheduledAt ? format(parseISO(p.scheduledAt), "HH:mm") : ""}`}
                       >
                         <span
                           className={cn(
@@ -985,14 +987,15 @@ export default function AdminCalendar() {
                             STATUS_DOT[p.status ?? "scheduled"],
                           )}
                         />
-                        <span className="truncate">{p.name}</span>
+                        <span className="truncate">{patientName ?? p.name}</span>
                         {p.scheduledAt && (
                           <span className="opacity-60 shrink-0">
                             {format(parseISO(p.scheduledAt), "HH:mm")}
                           </span>
                         )}
                       </div>
-                    ))}
+                      );
+                    })}
                     {procs.length > 3 && (
                       <div className="text-[10px] text-gray-400 pl-1">
                         +{procs.length - 3} ещё

@@ -668,7 +668,7 @@ function ProcedureRow({
   );
 }
 
-export default function ProceduresPage() {
+export function ProceduresContent({ onAdd }: { onAdd?: () => void } = {}) {
   const { t } = useTranslation();
   const { user } = useAuthStore();
 
@@ -694,31 +694,27 @@ export default function ProceduresPage() {
     {} as Record<string, number>
   );
 
+  const handleShowNew = () => {
+    if (onAdd) onAdd();
+    else setShowNew(true);
+  };
+
   return (
-    <div className="min-h-full bg-[#f2f2f7]">
-      {/* Channels-style header with back button */}
-      <div className="bg-white px-4 pt-5 pb-4 flex items-center gap-3 border-b border-gray-100">
-        <button
-          onClick={() => window.history.back()}
-          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-500 shrink-0"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-        <ClipboardList className="w-5 h-5 text-primary shrink-0" strokeWidth={1.8} />
-        <h1 className="text-[17px] font-semibold text-gray-900 flex-1 min-w-0 truncate">
-          {t("procedure.pageTitle")}
-        </h1>
-        {canCreate && (
+    <>
+      <div className="p-4 pb-8 space-y-4">
+
+      {/* Inline action row (used when embedded in tabs) */}
+      {canCreate && (
+        <div className="flex justify-end">
           <button
-            onClick={() => setShowNew(true)}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-primary text-white hover:bg-primary/90 transition-colors shrink-0"
+            onClick={handleShowNew}
+            className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-sm font-semibold rounded-xl shadow-sm hover:bg-primary/90 transition-colors"
           >
             <Plus className="w-4 h-4" />
+            {t("procedure.new")}
           </button>
-        )}
-      </div>
-
-      <div className="p-4 pb-8 space-y-4">
+        </div>
+      )}
 
       {/* Status filter pills */}
       <div className="flex gap-2 flex-wrap">
@@ -770,7 +766,7 @@ export default function ProceduresPage() {
             <p className="text-muted-foreground text-sm mt-1">{t("procedure.emptyDesc")}</p>
             {canCreate && (
               <button
-                onClick={() => setShowNew(true)}
+                onClick={handleShowNew}
                 className="mt-4 px-5 py-2.5 bg-primary text-white font-semibold rounded-xl shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all text-sm"
               >
                 {t("procedure.new")}
@@ -815,6 +811,47 @@ export default function ProceduresPage() {
         )}
       </AnimatePresence>
       </div>
+    </>
+  );
+}
+
+export default function ProceduresPage() {
+  const { t } = useTranslation();
+  const { user } = useAuthStore();
+  const canCreate = ["owner", "admin", "doctor"].includes(user?.role ?? "");
+  const [showNew, setShowNew] = useState(false);
+
+  return (
+    <div className="min-h-full bg-[#f2f2f7]">
+      <div className="bg-white px-4 pt-5 pb-4 flex items-center gap-3 border-b border-gray-100">
+        <button
+          onClick={() => window.history.back()}
+          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-500 shrink-0"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <ClipboardList className="w-5 h-5 text-primary shrink-0" strokeWidth={1.8} />
+        <h1 className="text-[17px] font-semibold text-gray-900 flex-1 min-w-0 truncate">
+          {t("procedure.pageTitle")}
+        </h1>
+        {canCreate && (
+          <button
+            onClick={() => setShowNew(true)}
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-primary text-white hover:bg-primary/90 transition-colors shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+      <ProceduresContent onAdd={showNew ? undefined : () => setShowNew(true)} />
+      <AnimatePresence>
+        {showNew && (
+          <NewProcedureModal
+            onClose={() => setShowNew(false)}
+            onSuccess={() => setShowNew(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
