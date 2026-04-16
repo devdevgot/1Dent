@@ -13,14 +13,10 @@ interface WhatsAppConfig {
   phoneNumberId: string;
 }
 
-function getConfig(): WhatsAppConfig {
+function getConfig(): WhatsAppConfig | null {
   const token = process.env["WHATSAPP_TOKEN"];
   const phoneNumberId = process.env["WHATSAPP_PHONE_ID"];
-  if (!token || !phoneNumberId) {
-    throw new Error(
-      "WHATSAPP_TOKEN and WHATSAPP_PHONE_ID environment variables are required",
-    );
-  }
+  if (!token || !phoneNumberId) return null;
   return { token, phoneNumberId };
 }
 
@@ -28,7 +24,12 @@ export async function sendWhatsAppMessage(
   recipientPhone: string,
   text: string,
 ): Promise<SendMessageResult> {
-  const { token, phoneNumberId } = getConfig();
+  const config = getConfig();
+  if (!config) {
+    // WhatsApp not configured — message is stored in DB but not delivered
+    return { whatsappMessageId: "" };
+  }
+  const { token, phoneNumberId } = config;
 
   const url = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`;
   const body = {

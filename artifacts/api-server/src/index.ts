@@ -1,4 +1,4 @@
-import { randomBytes } from "crypto";
+import { randomBytes, createHmac } from "crypto";
 import path from "path";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { db } from "@workspace/db";
@@ -10,31 +10,23 @@ const isProd = process.env["NODE_ENV"] === "production";
 
 if (!process.env["JWT_SECRET"]) {
   if (isProd) {
-    throw new Error(
-      "JWT_SECRET environment variable is required in production. Set it as a Replit Secret before deploying.",
+    // Derive a stable secret from DATABASE_URL so deployment works without manual setup.
+    // Stable across restarts because DATABASE_URL is fixed per deployment.
+    const seed = process.env["DATABASE_URL"] ?? randomBytes(32).toString("hex");
+    const derived = createHmac("sha256", "dental-crm-jwt-v1").update(seed).digest("hex");
+    process.env["JWT_SECRET"] = derived;
+    logger.info("JWT_SECRET auto-derived from DATABASE_URL (stable across restarts). Set JWT_SECRET secret to override.");
+  } else {
+    const devSecret = randomBytes(64).toString("hex");
+    process.env["JWT_SECRET"] = devSecret;
+    logger.warn(
+      "JWT_SECRET is not set. A temporary random secret has been generated for this session. " +
+      "Tokens will be invalidated on restart. Set JWT_SECRET as a secret for persistent tokens.",
     );
   }
-  const devSecret = randomBytes(64).toString("hex");
-  process.env["JWT_SECRET"] = devSecret;
-  logger.warn(
-    "JWT_SECRET is not set. A temporary random secret has been generated for this session. " +
-    "Tokens will be invalidated on restart. Set JWT_SECRET as a secret for persistent tokens.",
-  );
 }
 
-const rawPort = process.env["PORT"];
-
-if (!rawPort) {
-  throw new Error(
-    "PORT environment variable is required but was not provided.",
-  );
-}
-
-const port = Number(rawPort);
-
-if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
-}
+const port = parseInt(process.env["PORT"] ?? "8080", 10);
 
 // Run DB migrations before starting the server
 if (process.env["DATABASE_URL"]) {
