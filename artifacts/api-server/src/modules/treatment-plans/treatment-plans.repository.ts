@@ -212,18 +212,25 @@ export class TreatmentPlansRepository {
   async updatePlan(
     planId: string,
     clinicId: string,
-    updates: { notes?: string | null; status?: TreatmentPlanStatus },
+    patientId: string,
+    updates: { notes?: string | null },
   ): Promise<TreatmentPlanWithItems | null> {
-    const [updated] = await db
+    const [existing] = await db
+      .select()
+      .from(treatmentPlansTable)
+      .where(and(eq(treatmentPlansTable.id, planId), eq(treatmentPlansTable.clinicId, clinicId)))
+      .limit(1);
+    if (!existing) return null;
+    if (existing.patientId !== patientId) return null;
+
+    await db
       .update(treatmentPlansTable)
       .set({ ...updates, updatedAt: new Date() })
-      .where(and(eq(treatmentPlansTable.id, planId), eq(treatmentPlansTable.clinicId, clinicId)))
-      .returning();
-    if (!updated) return null;
+      .where(and(eq(treatmentPlansTable.id, planId), eq(treatmentPlansTable.clinicId, clinicId)));
     return this._getPlanWithItems(planId, clinicId);
   }
 
-  async approvePlan(planId: string, clinicId: string): Promise<TreatmentPlanWithItems | null> {
+  async approvePlan(planId: string, clinicId: string, patientId: string): Promise<TreatmentPlanWithItems | null> {
     const [plan] = await db
       .select()
       .from(treatmentPlansTable)
@@ -231,11 +238,16 @@ export class TreatmentPlansRepository {
       .limit(1);
 
     if (!plan) return null;
+    if (plan.patientId !== patientId) return null;
 
     const allowedStatuses: TreatmentPlanStatus[] = ["draft", "in_progress"];
     if (!allowedStatuses.includes(plan.status)) return this._getPlanWithItems(planId, clinicId);
 
-    return this.updatePlan(planId, clinicId, { status: "approved" });
+    await db
+      .update(treatmentPlansTable)
+      .set({ status: "approved", updatedAt: new Date() })
+      .where(and(eq(treatmentPlansTable.id, planId), eq(treatmentPlansTable.clinicId, clinicId)));
+    return this._getPlanWithItems(planId, clinicId);
   }
 
   async addItem(
@@ -281,7 +293,8 @@ export class TreatmentPlansRepository {
   async updateItem(
     itemId: string,
     clinicId: string,
-    updates: { title?: string; price?: number; sortOrder?: number; status?: TreatmentPlanItemStatus },
+    planId: string,
+    updates: { title?: string; price?: number; sortOrder?: number },
   ): Promise<TreatmentPlanItem | null> {
     const [item] = await db
       .select()
@@ -290,6 +303,7 @@ export class TreatmentPlansRepository {
       .limit(1);
 
     if (!item) return null;
+    if (item.planId !== planId) return null;
 
     const isStructuralChange =
       updates.title !== undefined ||
@@ -323,6 +337,7 @@ export class TreatmentPlansRepository {
     itemId: string,
     clinicId: string,
     doctorId: string,
+    planId: string,
   ): Promise<{ item: TreatmentPlanItem; procedureId: string } | null> {
     return db.transaction(async (tx) => {
       const [item] = await tx
@@ -332,6 +347,7 @@ export class TreatmentPlansRepository {
         .limit(1);
 
       if (!item) return null;
+      if (item.planId !== planId) return null;
 
       if (item.status !== "pending") {
         throw new ItemAlreadyCompletedError();

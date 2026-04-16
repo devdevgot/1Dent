@@ -4315,8 +4315,6 @@ components:
         notes:
           type: string
           nullable: true
-        status:
-          $ref: "#/components/schemas/TreatmentPlanStatus"
 
     AddTreatmentPlanItemRequest:
       type: object

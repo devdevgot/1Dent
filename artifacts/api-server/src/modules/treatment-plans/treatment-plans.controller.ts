@@ -29,7 +29,6 @@ const CreatePlanSchema = z.object({
 
 const UpdatePlanSchema = z.object({
   notes: z.string().nullable().optional(),
-  status: z.enum(["draft", "approved", "in_progress", "completed"]).optional(),
 });
 
 const UpdateItemSchema = z.object({
@@ -118,7 +117,7 @@ router.patch(
     if (!parsed.success) return next(new ValidationError(parsed.error.message));
 
     const plan = await repo
-      .updatePlan(req.params["planId"]!, req.user!.clinicId, parsed.data)
+      .updatePlan(req.params["planId"]!, req.user!.clinicId, req.params["id"]!, parsed.data)
       .catch(next);
     if (plan === undefined) return;
     if (!plan) return next(new NotFoundError("Treatment plan not found"));
@@ -134,7 +133,7 @@ router.post(
   docRoles,
   async (req: Request, res: Response, next: NextFunction) => {
     const plan = await repo
-      .approvePlan(req.params["planId"]!, req.user!.clinicId)
+      .approvePlan(req.params["planId"]!, req.user!.clinicId, req.params["id"]!)
       .catch(next);
     if (plan === undefined) return;
     if (!plan) return next(new NotFoundError("Treatment plan not found"));
@@ -187,7 +186,7 @@ router.patch(
 
     let item: Awaited<ReturnType<typeof repo.updateItem>> | undefined;
     try {
-      item = await repo.updateItem(req.params["itemId"]!, req.user!.clinicId, parsed.data);
+      item = await repo.updateItem(req.params["itemId"]!, req.user!.clinicId, req.params["planId"]!, parsed.data);
     } catch (err) {
       if (err instanceof PlanLockedError) {
         return res.status(409).json({ success: false, error: err.message, code: "PLAN_LOCKED" });
@@ -211,7 +210,7 @@ router.post(
   async (req: Request, res: Response, next: NextFunction) => {
     let result: Awaited<ReturnType<typeof repo.completeItem>> | undefined;
     try {
-      result = await repo.completeItem(req.params["itemId"]!, req.user!.clinicId, req.user!.userId);
+      result = await repo.completeItem(req.params["itemId"]!, req.user!.clinicId, req.user!.userId, req.params["planId"]!);
     } catch (err) {
       if (err instanceof ItemAlreadyCompletedError) {
         return res.status(409).json({ success: false, error: err.message, code: "ITEM_ALREADY_COMPLETED" });

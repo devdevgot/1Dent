@@ -848,9 +848,6 @@ export const UpdateTreatmentPlanParams = zod.object({
 
 export const UpdateTreatmentPlanBody = zod.object({
   notes: zod.string().nullish(),
-  status: zod
-    .enum(["draft", "approved", "in_progress", "completed"])
-    .optional(),
 });
 
 export const UpdateTreatmentPlanResponse = zod.object({

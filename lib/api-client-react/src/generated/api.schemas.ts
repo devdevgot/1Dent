@@ -1234,7 +1234,6 @@ export interface CreateTreatmentPlanRequest {
 
 export interface UpdateTreatmentPlanRequest {
   notes?: string | null;
-  status?: TreatmentPlanStatus;
 }
 
 export interface AddTreatmentPlanItemRequest {
