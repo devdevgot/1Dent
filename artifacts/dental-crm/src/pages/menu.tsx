@@ -40,7 +40,6 @@ const ALL_NAV_ITEMS = [
   { nameKey: "nav.users",        href: "/users",              icon: Settings,        roles: ["owner","admin"] },
   { nameKey: "nav.chatbot",      href: "/chatbot",            icon: Bot,             roles: ["owner","admin"] },
   { nameKey: "nav.channels",     href: "/channels",           icon: Radio,           roles: ["owner","admin"] },
-  { nameKey: "nav.migration",    href: "/migration",          icon: FileSpreadsheet, roles: ["owner","admin"] },
 ];
 
 export default function MenuPage() {
@@ -181,6 +180,17 @@ export default function MenuPage() {
               <div className="flex items-center gap-2.5">
                 <Activity className="w-4 h-4 text-gray-400" />
                 <span className="text-[15px] text-gray-800">{t("nav.logs")}</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-300" />
+            </Link>
+          )}
+
+          {/* Migration — owner/admin only */}
+          {(user?.role === "owner" || user?.role === "admin") && (
+            <Link replace href="/migration" className="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 transition-colors">
+              <div className="flex items-center gap-2.5">
+                <FileSpreadsheet className="w-4 h-4 text-gray-400" />
+                <span className="text-[15px] text-gray-800">{t("nav.migration")}</span>
               </div>
               <ChevronRight className="w-4 h-4 text-gray-300" />
             </Link>
