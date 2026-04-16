@@ -14,7 +14,6 @@ import {
   BarChart3,
   Settings,
   LogOut,
-  Activity,
   Calendar,
   Wallet,
   Package,
@@ -178,7 +177,6 @@ export default function MenuPage() {
           {user?.role === "owner" && (
             <Link replace href="/logs" className="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 transition-colors">
               <div className="flex items-center gap-2.5">
-                <Activity className="w-4 h-4 text-gray-400" />
                 <span className="text-[15px] text-gray-800">{t("nav.logs")}</span>
               </div>
               <ChevronRight className="w-4 h-4 text-gray-300" />
