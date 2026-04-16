@@ -295,7 +295,7 @@ export function ChannelsSettings() {
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">{t("channels.channelType")}</label>
                 <div className="grid grid-cols-4 gap-1.5">
-                  {(["instagram", "telegram", "2gis", "website", "whatsapp", "referral", "other"] as const).map((type) => {
+                  {(["instagram", "telegram", "2gis", "website", "whatsapp", "other"] as const).map((type) => {
                     const active = newType === type;
                     return (
                       <button
