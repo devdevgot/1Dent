@@ -4,8 +4,7 @@ import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError } from "../../shared/errors";
 import { MessagesService } from "./messages.service";
 import { verifyWebhook, verifyWebhookSignature } from "../../shared/whatsapp";
-import { parseGreenApiWebhook } from "../../shared/green-api";
-import { db, clinicsTable, chatSessionsTable, usersTable, patientsTable } from "@workspace/db";
+import { db, chatSessionsTable, usersTable, patientsTable } from "@workspace/db";
 import { eq, and, isNull } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
@@ -93,57 +92,6 @@ router.post(
         }
       }
     }
-  },
-);
-
-// ─── Webhook: POST incoming messages from Green API ──────────────────────────
-// Green API calls this URL; no HMAC signature needed.
-// We verify the clinic exists and has Green API configured before processing.
-router.post(
-  "/webhook/greenapi/:clinicId",
-  async (req: Request, res: Response) => {
-    // Always acknowledge quickly so Green API does not retry
-    res.status(200).json({ status: "ok" });
-
-    const clinicId = String(req.params["clinicId"]);
-    const rawBody = req.body as Record<string, unknown>;
-    const typeWebhook = String(rawBody["typeWebhook"] ?? "unknown");
-
-    console.log(`[GreenAPI Webhook] clinicId=${clinicId} type=${typeWebhook} payload=${JSON.stringify(rawBody).slice(0, 300)}`);
-
-    // Verify clinic exists and has Green API credentials configured
-    const [clinic] = await db
-      .select({
-        greenApiInstanceId: clinicsTable.greenApiInstanceId,
-      })
-      .from(clinicsTable)
-      .where(eq(clinicsTable.id, clinicId))
-      .limit(1)
-      .catch(() => [undefined]);
-
-    if (!clinic?.greenApiInstanceId) {
-      console.log(`[GreenAPI Webhook] clinicId=${clinicId} — clinic not found or no Green API credentials`);
-      return;
-    }
-
-    // Validate the payload's instanceId matches the clinic's stored instance
-    const payloadInstanceId = String(rawBody["instanceId"] ?? "");
-    if (payloadInstanceId && payloadInstanceId !== clinic.greenApiInstanceId) {
-      console.log(`[GreenAPI Webhook] instanceId mismatch: got=${payloadInstanceId} expected=${clinic.greenApiInstanceId}`);
-      return;
-    }
-
-    const parsed = parseGreenApiWebhook(req.body);
-    if (!parsed) {
-      console.log(`[GreenAPI Webhook] clinicId=${clinicId} type=${typeWebhook} — not an incoming text message, skipped`);
-      return;
-    }
-
-    console.log(`[GreenAPI Webhook] clinicId=${clinicId} inbound from=${parsed.senderPhone} msgId=${parsed.messageId}`);
-
-    await service
-      .handleInboundWebhook(clinicId, parsed.senderPhone, parsed.text, parsed.messageId)
-      .catch(console.error);
   },
 );
 

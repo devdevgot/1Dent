@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { customFetch } from "@workspace/api-client-react";
-import { X, Check, Copy, CheckCircle2, Loader2 } from "lucide-react";
+import { X, Check, Copy, CheckCircle2, Loader2, AlertTriangle, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const BRAND = "#98cc1c";
@@ -51,6 +51,7 @@ export function WhatsAppConnectModal({
   const [status, setStatus] = useState<WaStatus | null>(null);
   const [copied, setCopied] = useState(false);
   const [initialLoading, setInitialLoading] = useState(false);
+  const [qrError, setQrError] = useState<string | null>(null);
   const qrIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const statusIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -73,13 +74,16 @@ export function WhatsAppConnectModal({
       const res = await customFetch<{ success: boolean; data: WaQr }>(
         "/api/clinic/green-api/qr",
       );
+      setQrError(null);
       setQr(res.data);
       setConfigured(true);
       if (res.data.type === "alreadyLogged") {
         await fetchStatus();
       }
-    } catch {
+    } catch (err) {
       setQr(null);
+      const msg = err instanceof Error ? err.message : "Неизвестная ошибка";
+      setQrError(msg);
     }
   }, [fetchStatus]);
 
@@ -119,6 +123,7 @@ export function WhatsAppConnectModal({
       setSaving(false);
       setConfigured(false);
       setQr(null);
+      setQrError(null);
       setStatus(null);
       setInitialLoading(false);
       if (qrIntervalRef.current) clearInterval(qrIntervalRef.current);
@@ -327,10 +332,42 @@ export function WhatsAppConnectModal({
                   </form>
                 )}
 
-                {configured && !qr && (
+                {configured && !qr && !qrError && (
                   <div className="flex flex-col items-center justify-center py-8 gap-3">
                     <Loader2 className="w-8 h-8 animate-spin text-gray-300" />
                     <p className="text-sm text-gray-400">Запрашиваем QR-код у Green API...</p>
+                  </div>
+                )}
+
+                {configured && !qr && qrError && (
+                  <div className="flex flex-col items-center justify-center py-6 gap-3 text-center">
+                    <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
+                      <AlertTriangle className="w-6 h-6 text-red-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-700 mb-1">Не удалось получить QR-код</p>
+                      <p className="text-xs text-gray-400 leading-relaxed max-w-xs">
+                        Проверьте правильность ID инстанса и токена в личном кабинете Green API.
+                      </p>
+                    </div>
+                    <div className="flex gap-2 mt-1">
+                      <button
+                        type="button"
+                        onClick={() => { setConfigured(false); setQrError(null); setQr(null); setStatus(null); }}
+                        className="flex items-center gap-1.5 h-9 px-4 rounded-lg border border-border text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                      >
+                        Изменить данные
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setQrError(null); void fetchQr(); }}
+                        className="flex items-center gap-1.5 h-9 px-4 rounded-lg text-xs font-semibold text-white transition-colors"
+                        style={{ backgroundColor: BRAND }}
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        Попробовать снова
+                      </button>
+                    </div>
                   </div>
                 )}
 

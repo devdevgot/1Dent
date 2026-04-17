@@ -186,8 +186,14 @@ router.get(
     if (!clinic.greenApiInstanceId || !clinic.greenApiToken) {
       return next(new NotFoundError("Green API credentials not configured"));
     }
-    const qrResult = await getGreenApiQrCode(clinic.greenApiInstanceId, clinic.greenApiToken).catch(next);
-    if (!qrResult) return;
+    let qrResult;
+    try {
+      qrResult = await getGreenApiQrCode(clinic.greenApiInstanceId, clinic.greenApiToken);
+      logger.info({ instanceId: clinic.greenApiInstanceId, type: qrResult.type }, "Green API QR fetched");
+    } catch (err) {
+      logger.error({ err, instanceId: clinic.greenApiInstanceId }, "Green API QR fetch failed");
+      return next(err);
+    }
     res.json({ success: true, data: qrResult });
   },
 );
