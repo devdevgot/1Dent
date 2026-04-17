@@ -2,6 +2,34 @@ import { logger } from "../lib/logger";
 
 const BASE_URL = "https://api.green-api.com";
 
+export function getServerBaseUrl(): string | null {
+  if (process.env["WEBHOOK_BASE_URL"]) return process.env["WEBHOOK_BASE_URL"];
+  if (process.env["REPLIT_DEV_DOMAIN"]) return `https://${process.env["REPLIT_DEV_DOMAIN"]}`;
+  return null;
+}
+
+export async function setGreenApiWebhookUrl(
+  instanceId: string,
+  token: string,
+  webhookUrl: string,
+): Promise<void> {
+  const url = `${BASE_URL}/waInstance${instanceId}/setSettings/${token}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      webhookUrl,
+      outgoingWebhook: "yes",
+      incomingWebhook: "yes",
+      outgoingAPIMessageWebhook: "yes",
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Green API setSettings failed: ${res.status} ${body}`);
+  }
+}
+
 export interface GreenApiQrResult {
   type: "qrCode" | "alreadyLogged" | "notAuthorized" | string;
   message: string;

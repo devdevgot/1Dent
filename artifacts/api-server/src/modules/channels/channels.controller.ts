@@ -11,7 +11,8 @@ import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 import { db, clinicsTable, channelTypes } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { getGreenApiQrCode, getGreenApiState } from "../../shared/green-api";
+import { getGreenApiQrCode, getGreenApiState, setGreenApiWebhookUrl, getServerBaseUrl } from "../../shared/green-api";
+import { logger } from "../../lib/logger";
 
 const router: IRouter = Router();
 const repo = new ChannelsRepository();
@@ -185,6 +186,16 @@ router.get(
         .set({ whatsappPhone: phone })
         .where(eq(clinicsTable.id, req.user!.clinicId))
         .catch(() => {});
+
+      // Auto-register webhook URL so Green API knows where to deliver messages
+      const baseUrl = getServerBaseUrl();
+      if (baseUrl) {
+        const webhookUrl = `${baseUrl}/api/webhook/greenapi/${req.user!.clinicId}`;
+        setGreenApiWebhookUrl(clinic.greenApiInstanceId!, clinic.greenApiToken!, webhookUrl)
+          .catch((err) => logger.warn({ err }, "Failed to set Green API webhook URL — messages may not be delivered"));
+      } else {
+        logger.warn("getServerBaseUrl returned null — cannot register Green API webhook. Set WEBHOOK_BASE_URL env var.");
+      }
     }
     res.json({ success: true, data: { configured: true, connected, phone } });
   },
