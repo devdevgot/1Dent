@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useListPatients,
@@ -30,6 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
+import { getRoleDashboardPath } from "@/lib/role-redirect";
 
 const BRAND      = "#98cc1c";
 const BRAND_DARK = "#1a2204";
@@ -770,9 +772,15 @@ export default function ChatPage() {
     setModalOpen(true);
   };
 
+  const [, setLocation] = useLocation();
+
   const handleModalClose = () => {
     setModalOpen(false);
-    fetchWaStatus();
+    if (!waStatus?.connected) {
+      setLocation(getRoleDashboardPath(user?.role ?? "owner"));
+    } else {
+      fetchWaStatus();
+    }
   };
 
   const { data } = useListPatients({
