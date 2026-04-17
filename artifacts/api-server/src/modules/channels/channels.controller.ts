@@ -11,7 +11,7 @@ import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 import { db, clinicsTable, channelTypes } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { getGreenApiQrCode, getGreenApiState, setGreenApiWebhookUrl, getServerBaseUrl } from "../../shared/green-api";
+import { getGreenApiQrCode, getGreenApiState, setGreenApiWebhookUrl, getServerBaseUrl, logoutGreenApiInstance } from "../../shared/green-api";
 import { logger } from "../../lib/logger";
 
 const router: IRouter = Router();
@@ -131,9 +131,25 @@ router.delete(
   "/clinic/green-api",
   roleGuard("owner", "admin"),
   async (req: Request, res: Response, next: NextFunction) => {
+    // Read current credentials before clearing them
+    const [current] = await db
+      .select({ greenApiInstanceId: clinicsTable.greenApiInstanceId, greenApiToken: clinicsTable.greenApiToken })
+      .from(clinicsTable)
+      .where(eq(clinicsTable.id, req.user!.clinicId))
+      .limit(1)
+      .catch(next) ?? [];
+    if (!current) return;
+
+    // Call Green API logout to properly unlink the WhatsApp device
+    if (current.greenApiInstanceId && current.greenApiToken) {
+      logoutGreenApiInstance(current.greenApiInstanceId, current.greenApiToken)
+        .catch((err) => logger.warn({ err }, "Green API logout call failed — credentials will still be cleared"));
+    }
+
+    // Clear credentials from DB regardless of logout success
     const rows = await db
       .update(clinicsTable)
-      .set({ greenApiInstanceId: null, greenApiToken: null })
+      .set({ greenApiInstanceId: null, greenApiToken: null, whatsappPhone: null })
       .where(eq(clinicsTable.id, req.user!.clinicId))
       .returning({ id: clinicsTable.id })
       .catch(next);
@@ -191,7 +207,9 @@ router.get(
       const baseUrl = getServerBaseUrl();
       if (baseUrl) {
         const webhookUrl = `${baseUrl}/api/webhook/greenapi/${req.user!.clinicId}`;
+        logger.info({ webhookUrl, clinicId: req.user!.clinicId }, "Registering Green API webhook URL");
         setGreenApiWebhookUrl(clinic.greenApiInstanceId!, clinic.greenApiToken!, webhookUrl)
+          .then(() => logger.info({ webhookUrl }, "Green API webhook URL registered successfully"))
           .catch((err) => logger.warn({ err }, "Failed to set Green API webhook URL — messages may not be delivered"));
       } else {
         logger.warn("getServerBaseUrl returned null — cannot register Green API webhook. Set WEBHOOK_BASE_URL env var.");

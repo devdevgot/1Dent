@@ -103,6 +103,18 @@ export async function getGreenApiState(
   return res.json() as Promise<GreenApiStateResult>;
 }
 
+export async function logoutGreenApiInstance(
+  instanceId: string,
+  token: string,
+): Promise<void> {
+  const url = `${BASE_URL}/waInstance${instanceId}/logout/${token}`;
+  const res = await fetch(url, { method: "POST" });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Green API logout failed: ${res.status} ${body}`);
+  }
+}
+
 export function parseGreenApiWebhook(body: unknown): ParsedWebhook | null {
   try {
     const b = body as Record<string, unknown>;

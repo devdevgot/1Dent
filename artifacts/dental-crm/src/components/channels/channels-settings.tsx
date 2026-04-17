@@ -13,7 +13,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/hooks/use-auth";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
-import { Copy, Download, Trash2, Plus, Globe, Handshake, Megaphone, MapPin, ChevronDown, LogOut } from "lucide-react";
+import { Copy, Download, Trash2, Plus, Globe, Handshake, Megaphone, MapPin, ChevronDown, LogOut, RefreshCw } from "lucide-react";
 import { FaInstagram, FaTelegram, FaWhatsapp } from "react-icons/fa";
 import { WhatsAppConnectModal, WhatsAppIcon, type WaStatus } from "@/components/whatsapp/whatsapp-connect-modal";
 import { customFetch } from "@workspace/api-client-react";
@@ -66,6 +66,7 @@ export function ChannelsSettings() {
   const [waModalOpen, setWaModalOpen] = useState(false);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [recheckingWebhook, setRecheckingWebhook] = useState(false);
 
   const isOwner = user?.role === "owner";
   const isAdmin = user?.role === "admin";
@@ -79,6 +80,18 @@ export function ChannelsSettings() {
       setWaStatus(res.data);
     } catch {
       setWaStatus(null);
+    }
+  };
+
+  const handleRecheckWebhook = async () => {
+    setRecheckingWebhook(true);
+    try {
+      await fetchWaStatus();
+      toast({ title: "Вебхук обновлён", description: "Green API получила новый адрес для доставки сообщений." });
+    } catch {
+      toast({ title: "Ошибка проверки", variant: "destructive" });
+    } finally {
+      setRecheckingWebhook(false);
     }
   };
 
@@ -182,6 +195,17 @@ export function ChannelsSettings() {
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
+              {waStatus?.connected && (
+                <button
+                  onClick={handleRecheckWebhook}
+                  disabled={recheckingWebhook}
+                  title="Принудительно перерегистрировать вебхук в Green API"
+                  className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold border border-border text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-60"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${recheckingWebhook ? "animate-spin" : ""}`} />
+                  Проверить
+                </button>
+              )}
               {waStatus?.connected && (
                 <button
                   onClick={() => setConfirmDisconnect(true)}
