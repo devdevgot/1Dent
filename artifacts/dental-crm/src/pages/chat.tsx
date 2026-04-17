@@ -23,6 +23,9 @@ import {
   Pencil,
   X,
   Loader2,
+  PlayCircle,
+  StopCircle,
+  UserCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -87,6 +90,28 @@ function formatTime(dateStr: string) {
 }
 
 type DeliveryStatus = "pending" | "sent" | "delivered" | "failed";
+
+interface ChatSessionData {
+  id: string;
+  patientId: string;
+  clinicId: string;
+  startedById: string;
+  startedAt: string;
+  endedById: string | null;
+  endedAt: string | null;
+  startedByName: string | null;
+  endedByName: string | null;
+}
+
+function formatDateTime(dateStr: string) {
+  return new Date(dateStr).toLocaleString("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 function DeliveryIcon({ status }: { status: DeliveryStatus }) {
   if (status === "pending")   return <Clock      className="w-3 h-3 inline ml-0.5 opacity-60" />;
@@ -188,6 +213,62 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
   const textareaRef     = useRef<HTMLTextAreaElement>(null);
   const qc              = useQueryClient();
   const formatDate      = useChatDateLabel();
+
+  const [session, setSession]         = useState<ChatSessionData | null>(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
+  const [sessionHistory, setSessionHistory] = useState<ChatSessionData[]>([]);
+  const [sessionWorking, setSessionWorking] = useState(false);
+
+  const fetchSession = useCallback(async () => {
+    try {
+      const res = await customFetch<{
+        success: boolean;
+        data: { session: ChatSessionData | null; history: ChatSessionData[] };
+      }>(`/api/patients/${patient.id}/chat-session`);
+      setSession(res.data.session);
+      setSessionHistory(res.data.history);
+    } catch {
+      // ignore
+    } finally {
+      setSessionLoading(false);
+    }
+  }, [patient.id]);
+
+  useEffect(() => {
+    setSession(null);
+    setSessionHistory([]);
+    setSessionLoading(true);
+    fetchSession();
+    const iv = setInterval(fetchSession, 10_000);
+    return () => clearInterval(iv);
+  }, [patient.id, fetchSession]);
+
+  const handleStartSession = async () => {
+    setSessionWorking(true);
+    try {
+      const res = await customFetch<{ success: boolean; data: { session: ChatSessionData } }>(
+        `/api/patients/${patient.id}/chat-session`,
+        { method: "POST" },
+      );
+      setSession(res.data.session);
+    } catch {
+      // ignore
+    } finally {
+      setSessionWorking(false);
+    }
+  };
+
+  const handleEndSession = async () => {
+    setSessionWorking(true);
+    try {
+      await customFetch(`/api/patients/${patient.id}/chat-session/end`, { method: "POST" });
+      await fetchSession();
+    } catch {
+      // ignore
+    } finally {
+      setSessionWorking(false);
+    }
+  };
 
   const { data, isLoading } = useListMessages(patient.id, {
     query: {
@@ -292,6 +373,58 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
           </Badge>
         )}
       </div>
+
+      {/* Session banner */}
+      {!sessionLoading && (
+        <div className="shrink-0 border-b border-border/20">
+          {session ? (
+            <div className="flex items-center gap-2.5 px-4 py-2" style={{ backgroundColor: "#f0fdf4" }}>
+              <div className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-green-800 font-medium leading-snug truncate">
+                  Чат начат: <span className="font-semibold">{session.startedByName ?? "—"}</span>
+                  {" · "}{formatDateTime(session.startedAt)}
+                </p>
+              </div>
+              <button
+                onClick={handleEndSession}
+                disabled={sessionWorking}
+                className="flex items-center gap-1 text-xs font-semibold text-red-500 hover:text-red-700 border border-red-200 rounded-lg px-2.5 py-1 hover:bg-red-50 transition-colors disabled:opacity-50 shrink-0"
+              >
+                {sessionWorking ? <Loader2 className="w-3 h-3 animate-spin" /> : <StopCircle className="w-3 h-3" />}
+                Завершить чат
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2.5 px-4 py-2 bg-gray-50">
+              {sessionHistory.length > 0 && (
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-400 truncate">
+                    <UserCheck className="w-3 h-3 inline mr-1" />
+                    Последний чат завершён:{" "}
+                    <span className="font-medium text-gray-500">
+                      {sessionHistory[sessionHistory.length - 1]!.endedByName ?? sessionHistory[sessionHistory.length - 1]!.startedByName ?? "—"}
+                    </span>
+                    {sessionHistory[sessionHistory.length - 1]!.endedAt && (
+                      <> · {formatDateTime(sessionHistory[sessionHistory.length - 1]!.endedAt!)}</>
+                    )}
+                  </p>
+                </div>
+              )}
+              {sessionHistory.length === 0 && <div className="flex-1" />}
+              <button
+                onClick={handleStartSession}
+                disabled={sessionWorking}
+                className="flex items-center gap-1 text-xs font-semibold shrink-0 px-2.5 py-1 rounded-lg border transition-colors disabled:opacity-50"
+                style={{ color: BRAND_DARK, borderColor: BRAND, backgroundColor: BRAND + "15" }}
+              >
+                {sessionWorking ? <Loader2 className="w-3 h-3 animate-spin" /> : <PlayCircle className="w-3 h-3" />}
+                Начать чат
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       <div
         className="flex-1 overflow-y-auto py-3"

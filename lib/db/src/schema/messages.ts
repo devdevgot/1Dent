@@ -3,6 +3,25 @@ import { clinicsTable } from "./clinics";
 import { usersTable } from "./users";
 import { patientsTable } from "./patients";
 
+export const chatSessionsTable = pgTable("chat_sessions", {
+  id: text("id").primaryKey(),
+  clinicId: text("clinic_id")
+    .notNull()
+    .references(() => clinicsTable.id, { onDelete: "cascade" }),
+  patientId: text("patient_id")
+    .notNull()
+    .references(() => patientsTable.id, { onDelete: "cascade" }),
+  startedById: text("started_by_id")
+    .notNull()
+    .references(() => usersTable.id, { onDelete: "cascade" }),
+  startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
+  endedById: text("ended_by_id").references(() => usersTable.id, { onDelete: "set null" }),
+  endedAt: timestamp("ended_at", { withTimezone: true }),
+});
+
+export type ChatSession = typeof chatSessionsTable.$inferSelect;
+export type InsertChatSession = typeof chatSessionsTable.$inferInsert;
+
 export const messageDirectionEnum = pgEnum("message_direction", [
   "inbound",
   "outbound",

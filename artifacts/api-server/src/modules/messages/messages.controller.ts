@@ -5,8 +5,9 @@ import { ValidationError } from "../../shared/errors";
 import { MessagesService } from "./messages.service";
 import { verifyWebhook, verifyWebhookSignature } from "../../shared/whatsapp";
 import { parseGreenApiWebhook } from "../../shared/green-api";
-import { db, clinicsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, clinicsTable, chatSessionsTable, usersTable, patientsTable } from "@workspace/db";
+import { eq, and, isNull } from "drizzle-orm";
+import { randomUUID } from "crypto";
 
 const router = Router();
 const service = new MessagesService();
@@ -129,6 +130,142 @@ router.post(
     await service
       .handleInboundWebhook(clinicId, parsed.senderPhone, parsed.text, parsed.messageId)
       .catch(console.error);
+  },
+);
+
+// ─── GET /patients/:patientId/chat-session ───────────────────────────────────
+// Returns the active (non-ended) chat session for a patient, or null.
+// Includes startedBy and endedBy user names.
+router.get(
+  "/patients/:patientId/chat-session",
+  authMiddleware,
+  patientReadRoles,
+  async (req: Request, res: Response, next: NextFunction) => {
+    const patientId = String(req.params["patientId"]);
+    const clinicId  = req.user!.clinicId;
+
+    const startedByUser = db
+      .select({ id: usersTable.id, name: usersTable.name })
+      .from(usersTable)
+      .as("started_by_user");
+
+    const endedByUser = db
+      .select({ id: usersTable.id, name: usersTable.name })
+      .from(usersTable)
+      .as("ended_by_user");
+
+    const rows = await db
+      .select({
+        id:           chatSessionsTable.id,
+        patientId:    chatSessionsTable.patientId,
+        clinicId:     chatSessionsTable.clinicId,
+        startedById:  chatSessionsTable.startedById,
+        startedAt:    chatSessionsTable.startedAt,
+        endedById:    chatSessionsTable.endedById,
+        endedAt:      chatSessionsTable.endedAt,
+        startedByName: startedByUser.name,
+        endedByName:   endedByUser.name,
+      })
+      .from(chatSessionsTable)
+      .leftJoin(startedByUser, eq(chatSessionsTable.startedById, startedByUser.id))
+      .leftJoin(endedByUser,   eq(chatSessionsTable.endedById,   endedByUser.id))
+      .where(
+        and(
+          eq(chatSessionsTable.patientId, patientId),
+          eq(chatSessionsTable.clinicId, clinicId),
+        ),
+      )
+      .orderBy(chatSessionsTable.startedAt)
+      .catch(next);
+
+    if (!rows) return;
+    const active = rows.find((r) => !r.endedAt) ?? null;
+    res.json({ success: true, data: { session: active, history: rows } });
+  },
+);
+
+// ─── POST /patients/:patientId/chat-session ───────────────────────────────────
+// Starts a new chat session. If one is already active, returns it unchanged.
+router.post(
+  "/patients/:patientId/chat-session",
+  authMiddleware,
+  patientReadRoles,
+  async (req: Request, res: Response, next: NextFunction) => {
+    const patientId = String(req.params["patientId"]);
+    const clinicId  = req.user!.clinicId;
+    const userId    = req.user!.userId;
+
+    // Verify patient belongs to clinic
+    const [patient] = await db
+      .select({ id: patientsTable.id })
+      .from(patientsTable)
+      .where(and(eq(patientsTable.id, patientId), eq(patientsTable.clinicId, clinicId)))
+      .limit(1)
+      .catch(next) ?? [];
+    if (!patient) { res.status(404).json({ success: false, error: "Patient not found" }); return; }
+
+    // Check for existing active session
+    const [existing] = await db
+      .select()
+      .from(chatSessionsTable)
+      .where(and(
+        eq(chatSessionsTable.patientId, patientId),
+        eq(chatSessionsTable.clinicId, clinicId),
+        isNull(chatSessionsTable.endedAt),
+      ))
+      .limit(1)
+      .catch(next) ?? [];
+
+    if (existing) {
+      res.json({ success: true, data: { session: existing } });
+      return;
+    }
+
+    const [session] = await db
+      .insert(chatSessionsTable)
+      .values({ id: randomUUID(), clinicId, patientId, startedById: userId })
+      .returning()
+      .catch(next) ?? [];
+    if (!session) return;
+    res.status(201).json({ success: true, data: { session } });
+  },
+);
+
+// ─── POST /patients/:patientId/chat-session/end ────────────────────────────────
+// Ends the active chat session for a patient.
+router.post(
+  "/patients/:patientId/chat-session/end",
+  authMiddleware,
+  patientReadRoles,
+  async (req: Request, res: Response, next: NextFunction) => {
+    const patientId = String(req.params["patientId"]);
+    const clinicId  = req.user!.clinicId;
+    const userId    = req.user!.userId;
+
+    const [active] = await db
+      .select({ id: chatSessionsTable.id })
+      .from(chatSessionsTable)
+      .where(and(
+        eq(chatSessionsTable.patientId, patientId),
+        eq(chatSessionsTable.clinicId, clinicId),
+        isNull(chatSessionsTable.endedAt),
+      ))
+      .limit(1)
+      .catch(next) ?? [];
+
+    if (!active) {
+      res.status(404).json({ success: false, error: "No active session" });
+      return;
+    }
+
+    const [session] = await db
+      .update(chatSessionsTable)
+      .set({ endedById: userId, endedAt: new Date() })
+      .where(eq(chatSessionsTable.id, active.id))
+      .returning()
+      .catch(next) ?? [];
+    if (!session) return;
+    res.json({ success: true, data: { session } });
   },
 );
 
