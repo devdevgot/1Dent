@@ -135,11 +135,14 @@ export function WhatsAppConnectModal({
         method: "PATCH",
         body: JSON.stringify({ greenApiInstanceId: instanceId.trim(), greenApiToken: token.trim() }),
       });
-      // Reset status so old "connected" state doesn't prevent QR from showing
+      // Credentials saved — immediately unlock the button and show QR loading state.
+      // fetchQr/fetchStatus run in parallel in the background; polling will take over after.
       setStatus(null);
-      toast({ title: "Данные сохранены. Сканируйте QR-код." });
-      await fetchQr();
-      await fetchStatus();
+      setConfigured(true);
+      setQr(null);
+      toast({ title: "Данные сохранены. Запрашиваем QR-код..." });
+      // Fire both in parallel — do NOT await so the button is released immediately
+      void Promise.all([fetchQr(), fetchStatus()]);
     } catch {
       toast({ title: "Ошибка сохранения", variant: "destructive" });
     } finally {
@@ -322,6 +325,13 @@ export function WhatsAppConnectModal({
                       {saving ? "Сохранение..." : "Сохранить и получить QR"}
                     </button>
                   </form>
+                )}
+
+                {configured && !qr && (
+                  <div className="flex flex-col items-center justify-center py-8 gap-3">
+                    <Loader2 className="w-8 h-8 animate-spin text-gray-300" />
+                    <p className="text-sm text-gray-400">Запрашиваем QR-код у Green API...</p>
+                  </div>
                 )}
 
                 {configured && qr && (
