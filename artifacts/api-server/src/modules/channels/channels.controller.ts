@@ -11,6 +11,7 @@ import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 import { db, clinicsTable, channelTypes } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { getGreenApiQrCode, getGreenApiState } from "../../shared/green-api";
 
 const router: IRouter = Router();
 const repo = new ChannelsRepository();
@@ -99,6 +100,86 @@ router.patch(
       .catch(next) ?? [];
     if (!clinic) return;
     res.json({ success: true, data: { clinic } });
+  },
+);
+
+const greenApiSchema = z.object({
+  greenApiInstanceId: z.string().min(1).max(60),
+  greenApiToken: z.string().min(1).max(120),
+});
+
+router.patch(
+  "/clinic/green-api",
+  roleGuard("owner", "admin"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const parsed = greenApiSchema.safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError(parsed.error.message));
+    const { greenApiInstanceId, greenApiToken } = parsed.data;
+    const [clinic] = await db
+      .update(clinicsTable)
+      .set({ greenApiInstanceId, greenApiToken })
+      .where(eq(clinicsTable.id, req.user!.clinicId))
+      .returning()
+      .catch(next) ?? [];
+    if (!clinic) return;
+    res.json({ success: true, data: { clinic } });
+  },
+);
+
+router.delete(
+  "/clinic/green-api",
+  roleGuard("owner", "admin"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const [clinic] = await db
+      .update(clinicsTable)
+      .set({ greenApiInstanceId: null, greenApiToken: null })
+      .where(eq(clinicsTable.id, req.user!.clinicId))
+      .returning()
+      .catch(next) ?? [];
+    if (!clinic) return;
+    res.json({ success: true });
+  },
+);
+
+router.get(
+  "/clinic/green-api/qr",
+  roleGuard("owner", "admin"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const [clinic] = await db
+      .select({ greenApiInstanceId: clinicsTable.greenApiInstanceId, greenApiToken: clinicsTable.greenApiToken })
+      .from(clinicsTable)
+      .where(eq(clinicsTable.id, req.user!.clinicId))
+      .limit(1)
+      .catch(next) ?? [];
+    if (!clinic) return;
+    if (!clinic.greenApiInstanceId || !clinic.greenApiToken) {
+      return next(new NotFoundError("Green API credentials not configured"));
+    }
+    const qrResult = await getGreenApiQrCode(clinic.greenApiInstanceId, clinic.greenApiToken).catch(next);
+    if (!qrResult) return;
+    res.json({ success: true, data: qrResult });
+  },
+);
+
+router.get(
+  "/clinic/green-api/status",
+  roleGuard("owner", "admin"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const [clinic] = await db
+      .select({ greenApiInstanceId: clinicsTable.greenApiInstanceId, greenApiToken: clinicsTable.greenApiToken })
+      .from(clinicsTable)
+      .where(eq(clinicsTable.id, req.user!.clinicId))
+      .limit(1)
+      .catch(next) ?? [];
+    if (!clinic) return;
+    if (!clinic.greenApiInstanceId || !clinic.greenApiToken) {
+      return res.json({ success: true, data: { connected: false, phone: null } });
+    }
+    const state = await getGreenApiState(clinic.greenApiInstanceId, clinic.greenApiToken).catch(next);
+    if (!state) return;
+    const connected = state.stateInstance === "authorized";
+    const phone = connected && state.wid ? state.wid.replace("@c.us", "") : null;
+    res.json({ success: true, data: { connected, phone } });
   },
 );
 

@@ -9,16 +9,13 @@ import {
   usersTable,
 } from "@workspace/db";
 import { eq, and, inArray, gte } from "drizzle-orm";
-import { sendWhatsAppMessage, isRedAlert } from "../../shared/whatsapp";
+import { isRedAlert } from "../../shared/whatsapp";
+import { sendToPatient } from "../../shared/messaging";
 import { getAlertQueue } from "../../shared/alert-queue";
 import { logger } from "../../lib/logger";
 import { AnalyticsRepository } from "../analytics/analytics.repository";
 import { ChannelsRepository } from "../channels/channels.repository";
 import type { ChatbotState, ChatbotSessionData } from "./chatbot.types";
-
-const WHATSAPP_ENABLED = !!(
-  process.env["WHATSAPP_TOKEN"] && process.env["WHATSAPP_PHONE_ID"]
-);
 
 const SESSION_TTL_SECONDS = 24 * 60 * 60;
 const REDIS_KEY_PREFIX = "chatbot:session:";
@@ -335,11 +332,11 @@ export class ChatbotService {
       if (!options?.skipRedAlert && isRedAlert(text)) {
         await triggerRedAlert(clinicId, phone, text, data.createdPatientId);
         const response = "🚨 Мы видим вашу проблему и передаём её администратору. Ожидайте, пожалуйста.";
-        if (WHATSAPP_ENABLED) sendWhatsAppMessage(phone, response).catch(() => {});
+        sendToPatient(clinicId, phone, response).catch(() => {});
         return response;
       }
       const response = "Рады вашему обращению! Если возникнут вопросы — пишите. Или напишите «оператор» для связи с администратором.";
-      if (WHATSAPP_ENABLED) sendWhatsAppMessage(phone, response).catch(() => {});
+      sendToPatient(clinicId, phone, response).catch(() => {});
       return response;
     }
 
@@ -445,12 +442,10 @@ export class ChatbotService {
     session.data = data;
     await saveSession(session);
 
-    if (response && WHATSAPP_ENABLED) {
-      sendWhatsAppMessage(phone, response).catch((err) =>
+    if (response) {
+      sendToPatient(clinicId, phone, response).catch((err) =>
         logger.error({ err }, "ChatbotService: failed to send WhatsApp reply"),
       );
-    } else if (response) {
-      logger.info({ phone, response }, "ChatbotService: WhatsApp disabled — would have sent reply");
     }
 
     return response;

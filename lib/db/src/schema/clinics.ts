@@ -10,6 +10,8 @@ export const clinicsTable = pgTable("clinics", {
   name: text("name").notNull(),
   plan: text("plan", { enum: clinicPlans }).notNull().default("free"),
   whatsappPhone: text("whatsapp_phone"),
+  greenApiInstanceId: text("green_api_instance_id"),
+  greenApiToken: text("green_api_token"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

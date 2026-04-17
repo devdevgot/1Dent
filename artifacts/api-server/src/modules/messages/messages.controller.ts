@@ -4,6 +4,7 @@ import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError } from "../../shared/errors";
 import { MessagesService } from "./messages.service";
 import { verifyWebhook, verifyWebhookSignature } from "../../shared/whatsapp";
+import { parseGreenApiWebhook } from "../../shared/green-api";
 
 const router = Router();
 const service = new MessagesService();
@@ -89,6 +90,24 @@ router.post(
         }
       }
     }
+  },
+);
+
+// ─── Webhook: POST incoming messages from Green API ──────────────────────────
+// Green API calls this URL; no HMAC signature needed.
+// The clinicId in the path is used to resolve the clinic.
+router.post(
+  "/webhook/greenapi/:clinicId",
+  async (req: Request, res: Response) => {
+    res.status(200).json({ status: "ok" });
+
+    const clinicId = String(req.params["clinicId"]);
+    const parsed = parseGreenApiWebhook(req.body);
+    if (!parsed) return;
+
+    await service
+      .handleInboundWebhook(clinicId, parsed.senderPhone, parsed.text, parsed.messageId)
+      .catch(console.error);
   },
 );
 

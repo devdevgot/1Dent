@@ -3,16 +3,13 @@ import { db } from "@workspace/db";
 import { notificationsTable, usersTable } from "@workspace/db";
 import { eq, and, inArray } from "drizzle-orm";
 import { MessagesRepository } from "./messages.repository";
-import { sendWhatsAppMessage, isRedAlert } from "../../shared/whatsapp";
+import { isRedAlert } from "../../shared/whatsapp";
+import { sendToPatient } from "../../shared/messaging";
 import { getAlertQueue } from "../../shared/alert-queue";
 import { NotFoundError, ForbiddenError } from "../../shared/errors";
 import { logger } from "../../lib/logger";
 import { ChatbotService } from "../chatbot/chatbot.service";
 import type { UserRole, Message, Notification } from "@workspace/db";
-
-const WHATSAPP_ENABLED = !!(
-  process.env["WHATSAPP_TOKEN"] && process.env["WHATSAPP_PHONE_ID"]
-);
 
 export class MessagesService {
   private repo = new MessagesRepository();
@@ -51,11 +48,13 @@ export class MessagesService {
 
     let whatsappMessageId: string | undefined;
 
-    if (WHATSAPP_ENABLED) {
-      // Proxy: real phone only exists server-side, never sent to frontend
-      const result = await sendWhatsAppMessage(patient.phone, content);
-      whatsappMessageId = result.whatsappMessageId;
-    }
+    // Proxy: real phone only exists server-side, never sent to frontend
+    // Routes through Green API (if clinic configured) or falls back to Meta
+    const msgId = await sendToPatient(clinicId, patient.phone, content).catch((err) => {
+      logger.warn({ err }, "sendToPatient failed — message saved without delivery");
+      return "";
+    });
+    if (msgId) whatsappMessageId = msgId;
 
     const alertFlag = isRedAlert(content);
 
