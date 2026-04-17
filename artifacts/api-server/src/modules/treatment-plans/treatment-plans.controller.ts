@@ -5,11 +5,13 @@ import { NotFoundError, ValidationError } from "../../shared/errors";
 import { TreatmentPlansRepository, PlanLockedError, ItemAlreadyCompletedError } from "./treatment-plans.repository";
 import { PatientsRepository } from "../patients/patients.repository";
 import { ClinicPricesRepository } from "../clinic/clinic-prices.repository";
+import { DentalRepository } from "../dental/dental.repository";
 
 const router = Router({ mergeParams: true });
 const repo = new TreatmentPlansRepository();
 const patientsRepo = new PatientsRepository();
 const pricesRepo = new ClinicPricesRepository();
+const dentalRepo = new DentalRepository();
 
 const docRoles = roleGuard("owner", "admin", "doctor");
 
@@ -89,6 +91,27 @@ router.post(
     const parsed = CreatePlanSchema.safeParse(req.body);
     if (!parsed.success) return next(new ValidationError(parsed.error.message));
     if (!(await checkPatient(req, res, next))) return;
+
+    const patientId = req.params["id"]!;
+    const clinicId = req.user!.clinicId;
+
+    // Rule 1: must have at least one tooth record (diagnosis done)
+    const teeth = await dentalRepo.listTeeth(patientId, clinicId).catch(next);
+    if (teeth === undefined) return;
+    if (teeth.length === 0) {
+      return next(new ValidationError("Необходимо провести диагностику перед составлением плана лечения"));
+    }
+
+    // Rule 2: for second+ plan, tooth records must have been updated AFTER the most recent plan was created
+    const existingPlans = await repo.listPlans(patientId, clinicId).catch(next);
+    if (existingPlans === undefined) return;
+    if (existingPlans.length > 0) {
+      const latestPlanTs = Math.max(...existingPlans.map((p) => new Date(p.createdAt).getTime()));
+      const latestToothTs = Math.max(...teeth.map((t) => new Date(t.updatedAt).getTime()));
+      if (latestToothTs <= latestPlanTs) {
+        return next(new ValidationError("Необходима повторная диагностика перед созданием нового плана лечения"));
+      }
+    }
 
     const pricesMap = await pricesRepo.getConditionPrices(req.user!.clinicId).catch(next);
     if (!pricesMap) return;

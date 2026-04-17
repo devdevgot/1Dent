@@ -413,9 +413,18 @@ export function PatientDetailPanel() {
     },
   });
 
-  const pastPlans = (plansHistoryData?.data?.plans ?? []).filter(
+  const allPlans = plansHistoryData?.data?.plans ?? [];
+  const pastPlans = allPlans.filter(
     (p) => p.status === "completed" || p.status === "cancelled",
   );
+
+  // Require re-diagnosis before creating a second/third/etc. plan
+  const needsRediagnosis = (() => {
+    if (!hasDiagnosis || allPlans.length === 0) return false;
+    const latestPlanTs = Math.max(...allPlans.map((p) => new Date(p.createdAt).getTime()));
+    const latestToothTs = Math.max(...teethRecords.map((t) => new Date(t.updatedAt).getTime()));
+    return latestToothTs <= latestPlanTs;
+  })();
 
   const createPlanMutation = useCreateTreatmentPlan({
     mutation: {
@@ -1217,31 +1226,89 @@ export function PatientDetailPanel() {
                       <>
                       {!activePlan ? (
                         <div className="flex flex-col items-center justify-center gap-4 px-6 py-8">
-                          <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                            <ClipboardList className="w-6 h-6 text-primary" />
-                          </div>
-                          <div className="text-center">
-                            <p className="font-semibold text-gray-800 text-sm">
-                              {pastPlans.length > 0
-                                ? `Создать План ${pastPlans.length + 1}`
-                                : "Нет активного плана лечения"}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {pastPlans.length > 0
-                                ? "Предыдущие планы сохранены в истории"
-                                : "Данные из диагностики добавятся автоматически"}
-                            </p>
-                          </div>
-                          <Button
-                            onClick={() => createPlanMutation.mutate({ id: selectedPatientId, data: {} })}
-                            disabled={createPlanMutation.isPending}
-                            className="gap-2"
-                          >
-                            <Plus className="w-4 h-4" />
-                            {pastPlans.length > 0
-                              ? `Создать План ${pastPlans.length + 1}`
-                              : "Составить план из диагностики"}
-                          </Button>
+                          {/* State: no diagnosis at all */}
+                          {!hasDiagnosis && (
+                            <>
+                              <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
+                                <ClipboardList className="w-6 h-6 text-slate-400" />
+                              </div>
+                              <div className="text-center">
+                                <p className="font-semibold text-gray-800 text-sm">Диагностика не проведена</p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Сначала проведите осмотр зубов пациента
+                                </p>
+                              </div>
+                              <Button
+                                onClick={() => setIsDiagnosisMode(true)}
+                                className="gap-2"
+                              >
+                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                                Начать диагностику
+                              </Button>
+                            </>
+                          )}
+
+                          {/* State: has diagnosis but needs re-diagnosis before next plan */}
+                          {hasDiagnosis && needsRediagnosis && (
+                            <>
+                              <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center">
+                                <svg className="w-6 h-6 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                                  <path d="M3 3v5h5"/>
+                                </svg>
+                              </div>
+                              <div className="text-center">
+                                <p className="font-semibold text-gray-800 text-sm">
+                                  Нужна повторная диагностика
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Для создания Плана {allPlans.length + 1} проведите повторный осмотр
+                                </p>
+                              </div>
+                              <Button
+                                onClick={() => setIsDiagnosisMode(true)}
+                                variant="outline"
+                                className="gap-2 border-amber-300 text-amber-700 hover:bg-amber-50"
+                              >
+                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                                  <path d="M3 3v5h5"/>
+                                </svg>
+                                Провести повторную диагностику
+                              </Button>
+                            </>
+                          )}
+
+                          {/* State: ready to create plan */}
+                          {hasDiagnosis && !needsRediagnosis && (
+                            <>
+                              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                                <ClipboardList className="w-6 h-6 text-primary" />
+                              </div>
+                              <div className="text-center">
+                                <p className="font-semibold text-gray-800 text-sm">
+                                  {pastPlans.length > 0
+                                    ? `Создать План ${allPlans.length + 1}`
+                                    : "Нет активного плана лечения"}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {pastPlans.length > 0
+                                    ? "Предыдущие планы сохранены в истории"
+                                    : "Данные из диагностики добавятся автоматически"}
+                                </p>
+                              </div>
+                              <Button
+                                onClick={() => createPlanMutation.mutate({ id: selectedPatientId, data: {} })}
+                                disabled={createPlanMutation.isPending}
+                                className="gap-2"
+                              >
+                                <Plus className="w-4 h-4" />
+                                {pastPlans.length > 0
+                                  ? `Создать План ${allPlans.length + 1}`
+                                  : "Составить план из диагностики"}
+                              </Button>
+                            </>
+                          )}
                         </div>
                       ) : (
                         <>
@@ -1281,16 +1348,31 @@ export function PatientDetailPanel() {
                             </Button>
                           )}
                           {(activePlan.status === "completed" || activePlan.status === "in_progress") && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-xs h-7 gap-1.5 border-primary/30 text-primary hover:bg-primary/5"
-                              onClick={() => createPlanMutation.mutate({ id: selectedPatientId, data: {} })}
-                              disabled={createPlanMutation.isPending}
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                              Следующий план
-                            </Button>
+                            needsRediagnosis ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-xs h-7 gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50"
+                                onClick={() => setIsDiagnosisMode(true)}
+                                title="Нужна повторная диагностика"
+                              >
+                                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+                                </svg>
+                                Повторная диагностика
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-xs h-7 gap-1.5 border-primary/30 text-primary hover:bg-primary/5"
+                                onClick={() => createPlanMutation.mutate({ id: selectedPatientId, data: {} })}
+                                disabled={createPlanMutation.isPending}
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                                Следующий план
+                              </Button>
+                            )
                           )}
                         </div>
                       </div>
