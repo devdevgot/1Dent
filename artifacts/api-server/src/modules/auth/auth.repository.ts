@@ -32,11 +32,20 @@ export class AuthRepository {
 
   async findClinicById(id: string): Promise<Clinic | undefined> {
     const [clinic] = await db
-      .select()
+      .select({
+        id: clinicsTable.id,
+        name: clinicsTable.name,
+        plan: clinicsTable.plan,
+        whatsappPhone: clinicsTable.whatsappPhone,
+        createdAt: clinicsTable.createdAt,
+        // Intentionally omit greenApiInstanceId and greenApiToken:
+        // those are internal integration secrets and must never be
+        // included in auth responses sent to non-owner clients.
+      })
       .from(clinicsTable)
       .where(eq(clinicsTable.id, id))
       .limit(1);
-    return clinic;
+    return clinic as Clinic | undefined;
   }
 
   async createClinic(data: InsertClinic): Promise<Clinic> {
