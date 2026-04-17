@@ -5,6 +5,7 @@ import { db } from "@workspace/db";
 import app from "./app";
 import { logger } from "./lib/logger";
 import { startAlertWorker } from "./shared/alert-queue";
+import { getServerBaseUrl } from "./shared/green-api";
 
 const isProd = process.env["NODE_ENV"] === "production";
 
@@ -51,6 +52,14 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+
+  // Log resolved webhook base URL so it's immediately visible in deployment logs
+  const webhookBase = getServerBaseUrl();
+  if (webhookBase) {
+    logger.info({ webhookBase }, "Green API webhook base URL resolved — incoming messages will be delivered to this URL");
+  } else {
+    logger.warn("Green API webhook base URL could not be resolved — set WEBHOOK_BASE_URL env var to enable incoming WhatsApp messages in production");
+  }
 
   // Warn if WhatsApp env vars are absent in production (messages stored but not sent to patients)
   if (isProd && (!process.env["WHATSAPP_TOKEN"] || !process.env["WHATSAPP_PHONE_ID"])) {

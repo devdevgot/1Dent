@@ -3,7 +3,20 @@ import { logger } from "../lib/logger";
 const BASE_URL = "https://api.green-api.com";
 
 export function getServerBaseUrl(): string | null {
+  // 1. Explicit override — highest priority
   if (process.env["WEBHOOK_BASE_URL"]) return process.env["WEBHOOK_BASE_URL"];
+
+  // 2. REPLIT_DOMAINS — available in BOTH dev and production deployments.
+  //    In production it contains the *.replit.app domain; in dev the *.replit.dev domain.
+  //    Prefer the *.replit.app domain (production) when both are present.
+  const replitDomains = process.env["REPLIT_DOMAINS"];
+  if (replitDomains) {
+    const domains = replitDomains.split(",").map((d) => d.trim()).filter(Boolean);
+    const prodDomain = domains.find((d) => d.endsWith(".replit.app")) ?? domains[0];
+    if (prodDomain) return `https://${prodDomain}`;
+  }
+
+  // 3. Legacy dev-only fallback
   if (process.env["REPLIT_DEV_DOMAIN"]) return `https://${process.env["REPLIT_DEV_DOMAIN"]}`;
   return null;
 }
