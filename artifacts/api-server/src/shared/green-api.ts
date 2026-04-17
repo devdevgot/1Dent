@@ -48,6 +48,28 @@ export interface GreenApiQrResult {
   message: string;
 }
 
+export interface GreenApiPairingCodeResult {
+  status: "ok" | string;
+  authorizationCode?: string;
+  message?: string;
+}
+
+export async function getGreenApiPairingCode(
+  instanceId: string,
+  token: string,
+  phoneNumber: string,
+): Promise<GreenApiPairingCodeResult> {
+  // Strip non-digits so the user can enter phone in any format
+  const digits = phoneNumber.replace(/\D/g, "");
+  const url = `${BASE_URL}/waInstance${instanceId}/getAuthorizationCode/${token}?phoneNumber=${digits}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Green API getAuthorizationCode failed: ${res.status} ${body}`);
+  }
+  return res.json() as Promise<GreenApiPairingCodeResult>;
+}
+
 export interface GreenApiStateResult {
   stateInstance: "authorized" | "notAuthorized" | "yellowCard" | string;
   wid?: string;
