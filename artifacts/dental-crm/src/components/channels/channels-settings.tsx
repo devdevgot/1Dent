@@ -87,10 +87,17 @@ export function ChannelsSettings() {
   const handleRecheckWebhook = async () => {
     setRecheckingWebhook(true);
     try {
+      const res = await customFetch<{ success: boolean; data?: { webhookUrl: string } }>(
+        "/api/clinic/green-api/register-webhook",
+        { method: "POST" },
+      );
+      toast({
+        title: "Вебхук зарегистрирован",
+        description: `Green API настроена на адрес: ${res.data?.webhookUrl ?? ""}`,
+      });
       await fetchWaStatus();
-      toast({ title: "Вебхук обновлён", description: "Green API получила новый адрес для доставки сообщений." });
     } catch {
-      toast({ title: "Ошибка проверки", variant: "destructive" });
+      toast({ title: "Ошибка регистрации вебхука", variant: "destructive" });
     } finally {
       setRecheckingWebhook(false);
     }

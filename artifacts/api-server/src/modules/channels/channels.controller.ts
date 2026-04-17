@@ -11,7 +11,7 @@ import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 import { db, clinicsTable, channelTypes } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { getGreenApiQrCode, getGreenApiState, setGreenApiWebhookUrl, getServerBaseUrl, logoutGreenApiInstance, clearGreenApiStateCache } from "../../shared/green-api";
+import { getGreenApiQrCode, getGreenApiState, setGreenApiWebhookUrl, getServerBaseUrl, logoutGreenApiInstance, clearGreenApiStateCache, getGreenApiWaSettings, shouldRegisterWebhook } from "../../shared/green-api";
 import { logger } from "../../lib/logger";
 
 const router: IRouter = Router();
@@ -209,27 +209,76 @@ router.get(
     const state = await getGreenApiState(clinic.greenApiInstanceId, clinic.greenApiToken).catch(next);
     if (!state) return;
     const connected = state.stateInstance === "authorized";
-    const phone = connected && state.wid ? state.wid.replace("@c.us", "") : null;
-    if (connected && phone) {
-      await db
-        .update(clinicsTable)
-        .set({ whatsappPhone: phone })
-        .where(eq(clinicsTable.id, req.user!.clinicId))
-        .catch(() => {});
 
-      // Auto-register webhook URL so Green API knows where to deliver messages
+    // Get phone from state.wid, or fall back to getWaSettings if not present
+    let phone: string | null = state.wid ? state.wid.replace("@c.us", "") : null;
+
+    if (connected) {
+      // If phone not in state, fetch it from getWaSettings
+      if (!phone) {
+        const waSettings = await getGreenApiWaSettings(clinic.greenApiInstanceId, clinic.greenApiToken).catch(() => null);
+        if (waSettings?.instanceData?.wid) {
+          phone = waSettings.instanceData.wid.replace("@c.us", "");
+        }
+      }
+
+      // Persist phone number if we have it
+      if (phone) {
+        await db
+          .update(clinicsTable)
+          .set({ whatsappPhone: phone })
+          .where(eq(clinicsTable.id, req.user!.clinicId))
+          .catch(() => {});
+      }
+
+      // Always register webhook when connected — do NOT gate on phone presence.
+      // This was the root cause of messages not being delivered: wid is often absent
+      // from getStateInstance, so the webhook was never registered.
+      // Throttle to once per 60 seconds to avoid hammering Green API's setSettings.
       const baseUrl = getServerBaseUrl();
-      if (baseUrl) {
+      if (baseUrl && shouldRegisterWebhook(clinic.greenApiInstanceId)) {
         const webhookUrl = `${baseUrl}/api/webhook/greenapi/${req.user!.clinicId}`;
         logger.info({ webhookUrl, clinicId: req.user!.clinicId }, "Registering Green API webhook URL");
-        setGreenApiWebhookUrl(clinic.greenApiInstanceId!, clinic.greenApiToken!, webhookUrl)
+        setGreenApiWebhookUrl(clinic.greenApiInstanceId, clinic.greenApiToken, webhookUrl)
           .then(() => logger.info({ webhookUrl }, "Green API webhook URL registered successfully"))
           .catch((err) => logger.warn({ err }, "Failed to set Green API webhook URL — messages may not be delivered"));
-      } else {
+      } else if (!baseUrl) {
         logger.warn("getServerBaseUrl returned null — cannot register Green API webhook. Set WEBHOOK_BASE_URL env var.");
       }
     }
     res.json({ success: true, data: { configured: true, connected, phone } });
+  },
+);
+
+// POST /clinic/green-api/register-webhook — force webhook registration, bypassing throttle
+router.post(
+  "/clinic/green-api/register-webhook",
+  roleGuard("owner", "admin"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const [clinic] = await db
+      .select({ greenApiInstanceId: clinicsTable.greenApiInstanceId, greenApiToken: clinicsTable.greenApiToken })
+      .from(clinicsTable)
+      .where(eq(clinicsTable.id, req.user!.clinicId))
+      .limit(1)
+      .catch(next) ?? [];
+    if (!clinic) return;
+    if (!clinic.greenApiInstanceId || !clinic.greenApiToken) {
+      return res.status(400).json({ success: false, error: "Green API not configured" });
+    }
+
+    // Clear throttle so this registration always fires
+    clearGreenApiStateCache(clinic.greenApiInstanceId);
+
+    const baseUrl = getServerBaseUrl();
+    if (!baseUrl) {
+      return res.status(500).json({ success: false, error: "Server base URL not configured. Set WEBHOOK_BASE_URL env var." });
+    }
+
+    const webhookUrl = `${baseUrl}/api/webhook/greenapi/${req.user!.clinicId}`;
+    logger.info({ webhookUrl, clinicId: req.user!.clinicId }, "Force-registering Green API webhook URL");
+    await setGreenApiWebhookUrl(clinic.greenApiInstanceId, clinic.greenApiToken, webhookUrl).catch(next);
+    logger.info({ webhookUrl }, "Green API webhook URL force-registered successfully");
+    res.json({ success: true, data: { webhookUrl } });
   },
 );
 

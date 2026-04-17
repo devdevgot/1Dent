@@ -94,7 +94,18 @@ const stateCache = new Map<string, { result: GreenApiStateResult; expiresAt: num
 
 export function clearGreenApiStateCache(instanceId: string): void {
   stateCache.delete(instanceId);
+  webhookRegisteredAt.delete(instanceId);
   logger.info({ instanceId }, "Green API state cache cleared");
+}
+
+// Throttle webhook re-registration to at most once per 60 seconds per instance
+const webhookRegisteredAt = new Map<string, number>();
+
+export function shouldRegisterWebhook(instanceId: string): boolean {
+  const lastAt = webhookRegisteredAt.get(instanceId) ?? 0;
+  if (Date.now() - lastAt < 60_000) return false;
+  webhookRegisteredAt.set(instanceId, Date.now());
+  return true;
 }
 
 export async function getGreenApiState(
@@ -125,6 +136,23 @@ export async function getGreenApiState(
   const result = await res.json() as GreenApiStateResult;
   stateCache.set(cacheKey, { result, expiresAt: Date.now() + 6_000 });
   return result;
+}
+
+export interface GreenApiWaSettingsResult {
+  instanceData?: {
+    wid?: string;
+    typeInstance?: string;
+  };
+}
+
+export async function getGreenApiWaSettings(
+  instanceId: string,
+  token: string,
+): Promise<GreenApiWaSettingsResult | null> {
+  const url = `${BASE_URL}/waInstance${instanceId}/getWaSettings/${token}`;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  return res.json() as Promise<GreenApiWaSettingsResult>;
 }
 
 export async function logoutGreenApiInstance(
