@@ -6,7 +6,6 @@ import {
   useListChannels,
   useCreateChannel,
   useDeleteChannel,
-  useUpdateClinicWhatsappPhone,
   getListChannelsQueryKey,
   type ClinicChannel,
   type CreateChannelRequest,
@@ -14,8 +13,10 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/hooks/use-auth";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
-import { Copy, Download, Trash2, Plus, Smartphone, Pencil, Globe, Handshake, Megaphone, MapPin, ChevronDown } from "lucide-react";
+import { Copy, Download, Trash2, Plus, Globe, Handshake, Megaphone, MapPin, ChevronDown } from "lucide-react";
 import { FaInstagram, FaTelegram, FaWhatsapp } from "react-icons/fa";
+import { WhatsAppConnectModal, WhatsAppIcon, type WaStatus } from "@/components/whatsapp/whatsapp-connect-modal";
+import { customFetch } from "@workspace/api-client-react";
 
 const BRAND = "#98cc1c";
 
@@ -32,7 +33,6 @@ function ChannelIcon({ type, size = 20 }: { type: string; size?: number }) {
   }
 }
 
-
 function getRefUrl(refCode: string, phone?: string | null): string {
   const base = window.location.origin;
   if (phone) {
@@ -40,10 +40,6 @@ function getRefUrl(refCode: string, phone?: string | null): string {
     if (digits) return `${base}/wa/${digits}/ref/${refCode}`;
   }
   return `${base}/ref/${refCode}`;
-}
-
-function isValidPhone(value: string): boolean {
-  return value.replace(/\D/g, "").length >= 10;
 }
 
 function formatPhone(digits: string): string {
@@ -55,7 +51,7 @@ function formatPhone(digits: string): string {
 
 export function ChannelsSettings() {
   const { t } = useTranslation();
-  const { user, clinic } = useAuthStore();
+  const { user } = useAuthStore();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -65,25 +61,30 @@ export function ChannelsSettings() {
   const [customTypeName, setCustomTypeName] = useState("");
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [whatsappPhone, setWhatsappPhone] = useState("");
-  const [savedPhone, setSavedPhone] = useState<string | null>(null);
-  const [showPhoneEdit, setShowPhoneEdit] = useState(false);
+
+  const [waStatus, setWaStatus] = useState<WaStatus | null>(null);
+  const [waModalOpen, setWaModalOpen] = useState(false);
 
   const isOwner = user?.role === "owner";
   const isAdmin = user?.role === "admin";
   const canManage = isOwner || isAdmin;
 
-  useEffect(() => {
-    const phone = (clinic as any)?.whatsappPhone ?? null;
-    if (phone) {
-      const digits = String(phone).replace(/\D/g, "");
-      setSavedPhone(digits);
-      setWhatsappPhone(digits);
-      setShowPhoneEdit(false);
-    } else {
-      setShowPhoneEdit(true);
+  const fetchWaStatus = async () => {
+    try {
+      const res = await customFetch<{ success: boolean; data: WaStatus }>(
+        "/api/clinic/green-api/status",
+      );
+      setWaStatus(res.data);
+    } catch {
+      setWaStatus(null);
     }
-  }, [clinic]);
+  };
+
+  useEffect(() => {
+    if (canManage) fetchWaStatus();
+  }, [canManage]);
+
+  const savedPhone = waStatus?.phone ?? null;
 
   const { data: channelsRes } = useListChannels({
     query: { queryKey: getListChannelsQueryKey(), enabled: canManage },
@@ -115,20 +116,6 @@ export function ChannelsSettings() {
     },
   });
 
-  const updatePhoneMutation = useUpdateClinicWhatsappPhone({
-    mutation: {
-      onSuccess: () => {
-        const digits = whatsappPhone.replace(/\D/g, "");
-        setSavedPhone(digits);
-        setShowPhoneEdit(false);
-        toast({ title: t("channels.whatsappPhoneSaved") });
-      },
-      onError: () => {
-        toast({ title: t("common.error", { defaultValue: "Ошибка" }), variant: "destructive" });
-      },
-    },
-  });
-
   const handleCopyLink = (refCode: string) => {
     const url = getRefUrl(refCode, savedPhone);
     navigator.clipboard.writeText(url).then(() => {
@@ -155,92 +142,36 @@ export function ChannelsSettings() {
     createMutation.mutate({ data: { name: newName.trim(), type: newType } });
   };
 
-  const handleSavePhone = (e: React.FormEvent) => {
-    e.preventDefault();
-    const digits = whatsappPhone.replace(/\D/g, "");
-    if (!isValidPhone(whatsappPhone) || digits === savedPhone) return;
-    updatePhoneMutation.mutate({ data: { whatsappPhone: digits } });
-  };
-
-  const currentDigits = whatsappPhone.replace(/\D/g, "");
-  const saveDisabled =
-    updatePhoneMutation.isPending ||
-    !isValidPhone(whatsappPhone) ||
-    currentDigits === (savedPhone ?? "");
-
   if (!canManage) return null;
 
   return (
     <div className="space-y-4">
       {isOwner && (
         <div className="bg-white border border-border rounded-xl p-4">
-          <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Smartphone className="w-4 h-4 text-[#98cc1c]" />
-              <h3 className="text-sm font-semibold text-gray-800">{t("channels.whatsappPhone")}</h3>
-            </div>
-            {savedPhone && !showPhoneEdit && (
-              <button
-                onClick={() => {
-                  setWhatsappPhone(savedPhone);
-                  setShowPhoneEdit(true);
-                }}
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 transition-colors"
-                title="Изменить номер"
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: "#25D366" + "20" }}
               >
-                <Pencil className="w-3.5 h-3.5" />
-              </button>
-            )}
+                <WhatsAppIcon size={18} color="#25D366" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-800">WhatsApp клиники</p>
+                {savedPhone ? (
+                  <p className="text-xs text-gray-500 font-mono">{formatPhone(savedPhone)}</p>
+                ) : (
+                  <p className="text-xs text-gray-400">Номер привязан через QR</p>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={() => setWaModalOpen(true)}
+              className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold border border-border text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              Изменить WhatsApp
+            </button>
           </div>
-
-          {savedPhone && !showPhoneEdit ? (
-            <p className="text-sm font-semibold text-gray-900 mt-2">
-              {formatPhone(savedPhone)}
-            </p>
-          ) : (
-            <>
-              <p className="text-xs text-gray-500 mb-3">{t("channels.whatsappPhoneDesc")}</p>
-              <form onSubmit={handleSavePhone} className="space-y-2">
-                <input
-                  type="text"
-                  value={whatsappPhone}
-                  onChange={(e) => setWhatsappPhone(e.target.value)}
-                  placeholder={t("channels.whatsappPhonePlaceholder")}
-                  className="w-full h-9 rounded-lg border border-border bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#98cc1c]/30"
-                  autoFocus={showPhoneEdit && !!savedPhone}
-                />
-                <div className="flex gap-2">
-                  {savedPhone && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setWhatsappPhone(savedPhone);
-                        setShowPhoneEdit(false);
-                      }}
-                      className="flex-1 h-9 rounded-lg border border-border text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
-                    >
-                      {t("channels.cancel")}
-                    </button>
-                  )}
-                  <button
-                    type="submit"
-                    disabled={saveDisabled}
-                    className="flex-1 h-9 rounded-lg bg-[#98cc1c] text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    {t("channels.whatsappPhoneSave")}
-                  </button>
-                </div>
-              </form>
-            </>
-          )}
-        </div>
-      )}
-
-      {!savedPhone && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-          <p className="text-xs text-amber-700">
-            ⚠️ {t("channels.noPhoneWarning", { defaultValue: "Сначала сохраните номер WhatsApp — тогда ссылки каналов будут вести прямо в чат клиники." })}
-          </p>
         </div>
       )}
 
@@ -389,11 +320,26 @@ export function ChannelsSettings() {
           )}
         </div>
       </div>
+
       <ConfirmDeleteDialog
         open={!!confirmDeleteId}
         onConfirm={() => { deleteMutation.mutate({ id: confirmDeleteId! }); setConfirmDeleteId(null); }}
         onCancel={() => setConfirmDeleteId(null)}
       />
+
+      {isOwner && (
+        <WhatsAppConnectModal
+          open={waModalOpen}
+          onClose={() => {
+            setWaModalOpen(false);
+            fetchWaStatus();
+          }}
+          onConnected={() => {
+            fetchWaStatus();
+          }}
+          startAtSetup
+        />
+      )}
     </div>
   );
 }
