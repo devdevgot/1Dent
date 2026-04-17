@@ -517,9 +517,13 @@ export default function ChatPage() {
         "/api/clinic/green-api/status",
       );
       setWaStatus(res.data);
-      if (!res.data.configured && isOwner) {
-        setModalOpen(true);
-        setModalAtSetup(false);
+      // Open modal if not configured at all, OR if configured but device was removed (not connected).
+      // Use functional updater so we don't re-trigger setModalAtSetup if modal is already open.
+      if (isOwner && (!res.data.configured || !res.data.connected)) {
+        setModalOpen((already) => {
+          if (!already) setModalAtSetup(false);
+          return true;
+        });
       }
     } catch {
       setWaStatus(null);
@@ -530,6 +534,9 @@ export default function ChatPage() {
 
   useEffect(() => {
     fetchWaStatus();
+    // Poll every 30 seconds so disconnection is detected while staying on chat page
+    const iv = setInterval(fetchWaStatus, 30_000);
+    return () => clearInterval(iv);
   }, [fetchWaStatus]);
 
   const handleConnected = useCallback(async (phone: string | null) => {
@@ -558,7 +565,9 @@ export default function ChatPage() {
 
   const handleModalClose = () => {
     setModalOpen(false);
-    if (!waStatus?.connected) {
+    // Redirect away from chat only if Green API has no credentials at all.
+    // If credentials exist but device is just disconnected, stay on the page and let them retry later.
+    if (!waStatus?.configured) {
       setLocation(getRoleDashboardPath(user?.role ?? "owner"));
     } else {
       fetchWaStatus();
