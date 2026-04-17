@@ -188,6 +188,7 @@ function WhatsAppGreenApiSettings({ clinicId }: { clinicId: string }) {
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<GreenApiStatus | null>(null);
   const [qr, setQr] = useState<GreenApiQr | null>(null);
+  const [configured, setConfigured] = useState(false);
   const [copied, setCopied] = useState(false);
   const qrIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const statusIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -211,34 +212,41 @@ function WhatsAppGreenApiSettings({ clinicId }: { clinicId: string }) {
         "/api/clinic/green-api/qr",
       );
       setQr(res.data);
+      setConfigured(true);
       if (res.data.type === "alreadyLogged") {
         fetchStatus();
       }
     } catch {
       setQr(null);
+      setConfigured(false);
     }
   }, [fetchStatus]);
 
+  // On mount: always probe status and try to fetch QR.
+  // fetchQr will succeed if credentials are already stored in DB (page reload case)
+  // and fail silently (404) if no credentials are configured yet.
   useEffect(() => {
     fetchStatus();
-  }, [fetchStatus]);
+    fetchQr();
+  }, [fetchStatus, fetchQr]);
 
+  // Start auto-refresh polling whenever credentials are configured and not yet connected
   useEffect(() => {
-    if (status?.connected) {
-      if (qrIntervalRef.current) clearInterval(qrIntervalRef.current);
-      if (statusIntervalRef.current) clearInterval(statusIntervalRef.current);
+    if (qrIntervalRef.current) clearInterval(qrIntervalRef.current);
+    if (statusIntervalRef.current) clearInterval(statusIntervalRef.current);
+
+    if (!configured || status?.connected) {
       return;
     }
-    if (instanceId && token) {
-      fetchQr();
-      qrIntervalRef.current = setInterval(fetchQr, 20_000);
-      statusIntervalRef.current = setInterval(fetchStatus, 10_000);
-    }
+
+    qrIntervalRef.current = setInterval(fetchQr, 20_000);
+    statusIntervalRef.current = setInterval(fetchStatus, 10_000);
+
     return () => {
       if (qrIntervalRef.current) clearInterval(qrIntervalRef.current);
       if (statusIntervalRef.current) clearInterval(statusIntervalRef.current);
     };
-  }, [status?.connected, instanceId, token, fetchQr, fetchStatus]);
+  }, [configured, status?.connected, fetchQr, fetchStatus]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -250,6 +258,7 @@ function WhatsAppGreenApiSettings({ clinicId }: { clinicId: string }) {
         body: JSON.stringify({ greenApiInstanceId: instanceId, greenApiToken: token }),
       });
       toast({ title: "Данные сохранены. Сканируйте QR-код." });
+      // fetchQr will set configured=true and start the polling useEffect
       await fetchQr();
       await fetchStatus();
     } catch {
@@ -264,6 +273,7 @@ function WhatsAppGreenApiSettings({ clinicId }: { clinicId: string }) {
       await customFetch("/api/clinic/green-api", { method: "DELETE" });
       setStatus(null);
       setQr(null);
+      setConfigured(false);
       setInstanceId("");
       setToken("");
       toast({ title: "WhatsApp отключён" });

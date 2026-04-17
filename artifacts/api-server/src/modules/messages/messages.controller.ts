@@ -5,6 +5,8 @@ import { ValidationError } from "../../shared/errors";
 import { MessagesService } from "./messages.service";
 import { verifyWebhook, verifyWebhookSignature } from "../../shared/whatsapp";
 import { parseGreenApiWebhook } from "../../shared/green-api";
+import { db, clinicsTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 
 const router = Router();
 const service = new MessagesService();
@@ -95,13 +97,27 @@ router.post(
 
 // ─── Webhook: POST incoming messages from Green API ──────────────────────────
 // Green API calls this URL; no HMAC signature needed.
-// The clinicId in the path is used to resolve the clinic.
+// We verify the clinic exists and has Green API configured before processing.
 router.post(
   "/webhook/greenapi/:clinicId",
   async (req: Request, res: Response) => {
+    // Always acknowledge quickly so Green API does not retry
     res.status(200).json({ status: "ok" });
 
     const clinicId = String(req.params["clinicId"]);
+
+    // Verify clinic exists and has Green API credentials configured
+    const [clinic] = await db
+      .select({
+        greenApiInstanceId: clinicsTable.greenApiInstanceId,
+      })
+      .from(clinicsTable)
+      .where(eq(clinicsTable.id, clinicId))
+      .limit(1)
+      .catch(() => [undefined]);
+
+    if (!clinic?.greenApiInstanceId) return;
+
     const parsed = parseGreenApiWebhook(req.body);
     if (!parsed) return;
 

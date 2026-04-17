@@ -115,14 +115,14 @@ router.patch(
     const parsed = greenApiSchema.safeParse(req.body);
     if (!parsed.success) return next(new ValidationError(parsed.error.message));
     const { greenApiInstanceId, greenApiToken } = parsed.data;
-    const [clinic] = await db
+    const rows = await db
       .update(clinicsTable)
       .set({ greenApiInstanceId, greenApiToken })
       .where(eq(clinicsTable.id, req.user!.clinicId))
-      .returning()
-      .catch(next) ?? [];
-    if (!clinic) return;
-    res.json({ success: true, data: { clinic } });
+      .returning({ id: clinicsTable.id })
+      .catch(next);
+    if (!rows || rows.length === 0) return;
+    res.json({ success: true });
   },
 );
 
@@ -130,13 +130,13 @@ router.delete(
   "/clinic/green-api",
   roleGuard("owner", "admin"),
   async (req: Request, res: Response, next: NextFunction) => {
-    const [clinic] = await db
+    const rows = await db
       .update(clinicsTable)
       .set({ greenApiInstanceId: null, greenApiToken: null })
       .where(eq(clinicsTable.id, req.user!.clinicId))
-      .returning()
-      .catch(next) ?? [];
-    if (!clinic) return;
+      .returning({ id: clinicsTable.id })
+      .catch(next);
+    if (!rows || rows.length === 0) return;
     res.json({ success: true });
   },
 );
