@@ -565,9 +565,9 @@ export default function ChatPage() {
 
   const handleModalClose = () => {
     setModalOpen(false);
-    // Redirect away from chat only if Green API has no credentials at all.
-    // If credentials exist but device is just disconnected, stay on the page and let them retry later.
-    if (!waStatus?.configured) {
+    // If user manually opened the modal via "Изменить" (modalAtSetup=true), just dismiss and stay.
+    // Otherwise (modal was auto-opened because WA is not connected), redirect to dashboard.
+    if (!modalAtSetup && !waStatus?.connected) {
       setLocation(getRoleDashboardPath(user?.role ?? "owner"));
     } else {
       fetchWaStatus();
