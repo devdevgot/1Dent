@@ -13,7 +13,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/hooks/use-auth";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
-import { Copy, Download, Trash2, Plus, Globe, Handshake, Megaphone, MapPin, ChevronDown } from "lucide-react";
+import { Copy, Download, Trash2, Plus, Globe, Handshake, Megaphone, MapPin, ChevronDown, LogOut } from "lucide-react";
 import { FaInstagram, FaTelegram, FaWhatsapp } from "react-icons/fa";
 import { WhatsAppConnectModal, WhatsAppIcon, type WaStatus } from "@/components/whatsapp/whatsapp-connect-modal";
 import { customFetch } from "@workspace/api-client-react";
@@ -64,6 +64,8 @@ export function ChannelsSettings() {
 
   const [waStatus, setWaStatus] = useState<WaStatus | null>(null);
   const [waModalOpen, setWaModalOpen] = useState(false);
+  const [confirmDisconnect, setConfirmDisconnect] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
 
   const isOwner = user?.role === "owner";
   const isAdmin = user?.role === "admin";
@@ -77,6 +79,20 @@ export function ChannelsSettings() {
       setWaStatus(res.data);
     } catch {
       setWaStatus(null);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    setDisconnecting(true);
+    try {
+      await customFetch("/api/clinic/green-api", { method: "DELETE" });
+      toast({ title: "WhatsApp отключён" });
+      setWaStatus({ configured: false, connected: false, phone: null });
+    } catch {
+      toast({ title: "Ошибка при отключении", variant: "destructive" });
+    } finally {
+      setDisconnecting(false);
+      setConfirmDisconnect(false);
     }
   };
 
@@ -148,30 +164,64 @@ export function ChannelsSettings() {
     <div className="space-y-4">
       {isOwner && (
         <div className="bg-white border border-border rounded-xl p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
               <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
                 style={{ backgroundColor: "#25D366" + "20" }}
               >
                 <WhatsAppIcon size={18} color="#25D366" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-semibold text-gray-800">WhatsApp клиники</p>
                 {savedPhone ? (
                   <p className="text-xs text-gray-500 font-mono">{formatPhone(savedPhone)}</p>
                 ) : (
-                  <p className="text-xs text-gray-400">Номер привязан через QR</p>
+                  <p className="text-xs text-gray-400">Не подключён</p>
                 )}
               </div>
             </div>
-            <button
-              onClick={() => setWaModalOpen(true)}
-              className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold border border-border text-gray-600 hover:bg-gray-50 transition-colors"
-            >
-              Изменить WhatsApp
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              {waStatus?.connected && (
+                <button
+                  onClick={() => setConfirmDisconnect(true)}
+                  className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold border border-red-200 text-red-500 hover:bg-red-50 transition-colors"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  Отключить
+                </button>
+              )}
+              <button
+                onClick={() => setWaModalOpen(true)}
+                className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold border border-border text-gray-600 hover:bg-gray-50 transition-colors"
+              >
+                {waStatus?.connected ? "Изменить" : "Подключить"}
+              </button>
+            </div>
           </div>
+
+          {confirmDisconnect && (
+            <div className="mt-3 pt-3 border-t border-border">
+              <p className="text-xs text-gray-600 mb-3">
+                Отключить WhatsApp? Входящие сообщения перестанут поступать в приложение.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setConfirmDisconnect(false)}
+                  className="flex-1 h-8 rounded-lg border border-border text-xs font-medium hover:bg-gray-50 transition-colors"
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={handleDisconnect}
+                  disabled={disconnecting}
+                  className="flex-1 h-8 rounded-lg bg-red-500 text-white text-xs font-semibold hover:bg-red-600 transition-colors disabled:opacity-60"
+                >
+                  {disconnecting ? "Отключение..." : "Да, отключить"}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
