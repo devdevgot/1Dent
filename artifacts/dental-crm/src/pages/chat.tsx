@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useListPatients,
@@ -6,6 +6,7 @@ import {
   useSendMessage,
   getListPatientsQueryKey,
   getListMessagesQueryKey,
+  customFetch,
 } from "@workspace/api-client-react";
 import type { Patient, Message } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
@@ -19,10 +20,16 @@ import {
   Clock,
   XCircle,
   ChevronLeft,
+  Pencil,
+  X,
+  Copy,
+  CheckCircle2,
+  Loader2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
+import { useToast } from "@/hooks/use-toast";
 
 const BRAND      = "#98cc1c";
 const BRAND_DARK = "#1a2204";
@@ -371,10 +378,396 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
   );
 }
 
+interface WaStatus {
+  configured: boolean;
+  connected: boolean;
+  phone: string | null;
+}
+
+interface WaQr {
+  type: string;
+  message: string;
+}
+
+function WhatsAppConnectModal({
+  open,
+  onClose,
+  onConnected,
+  startAtSetup,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConnected: (phone: string | null) => void;
+  startAtSetup?: boolean;
+}) {
+  const { toast } = useToast();
+  const [step, setStep] = useState<"intro" | "setup">(startAtSetup ? "setup" : "intro");
+  const [instanceId, setInstanceId] = useState("");
+  const [token, setToken] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [configured, setConfigured] = useState(false);
+  const [qr, setQr] = useState<WaQr | null>(null);
+  const [status, setStatus] = useState<WaStatus | null>(null);
+  const [copied, setCopied] = useState(false);
+  const qrIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const statusIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const fetchStatus = useCallback(async () => {
+    try {
+      const res = await customFetch<{ success: boolean; data: WaStatus }>(
+        "/api/clinic/green-api/status",
+      );
+      setStatus(res.data);
+      if (res.data.connected) {
+        onConnected(res.data.phone);
+      }
+    } catch {
+      setStatus(null);
+    }
+  }, [onConnected]);
+
+  const fetchQr = useCallback(async () => {
+    try {
+      const res = await customFetch<{ success: boolean; data: WaQr }>(
+        "/api/clinic/green-api/qr",
+      );
+      setQr(res.data);
+      setConfigured(true);
+      if (res.data.type === "alreadyLogged") {
+        await fetchStatus();
+      }
+    } catch {
+      setQr(null);
+    }
+  }, [fetchStatus]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (startAtSetup) {
+      setStep("setup");
+      fetchQr();
+      fetchStatus();
+    }
+  }, [open, startAtSetup, fetchQr, fetchStatus]);
+
+  useEffect(() => {
+    if (qrIntervalRef.current) clearInterval(qrIntervalRef.current);
+    if (statusIntervalRef.current) clearInterval(statusIntervalRef.current);
+
+    if (!configured || status?.connected) return;
+
+    qrIntervalRef.current = setInterval(fetchQr, 20_000);
+    statusIntervalRef.current = setInterval(fetchStatus, 10_000);
+
+    return () => {
+      if (qrIntervalRef.current) clearInterval(qrIntervalRef.current);
+      if (statusIntervalRef.current) clearInterval(statusIntervalRef.current);
+    };
+  }, [configured, status?.connected, fetchQr, fetchStatus]);
+
+  useEffect(() => {
+    if (!open) {
+      setStep(startAtSetup ? "setup" : "intro");
+      setInstanceId("");
+      setToken("");
+      setSaving(false);
+      setConfigured(false);
+      setQr(null);
+      setStatus(null);
+      if (qrIntervalRef.current) clearInterval(qrIntervalRef.current);
+      if (statusIntervalRef.current) clearInterval(statusIntervalRef.current);
+    }
+  }, [open, startAtSetup]);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!instanceId.trim() || !token.trim()) return;
+    setSaving(true);
+    try {
+      await customFetch("/api/clinic/green-api", {
+        method: "PATCH",
+        body: JSON.stringify({ greenApiInstanceId: instanceId.trim(), greenApiToken: token.trim() }),
+      });
+      toast({ title: "Данные сохранены. Сканируйте QR-код." });
+      await fetchQr();
+      await fetchStatus();
+    } catch {
+      toast({ title: "Ошибка сохранения", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const copyInstanceId = () => {
+    navigator.clipboard.writeText(instanceId).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  if (!open) return null;
+
+  const isConnected = status?.connected;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={isConnected ? onClose : undefined}
+      />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        {(step === "setup" || isConnected) && (
+          <button
+            onClick={onClose}
+            className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+
+        {step === "intro" && (
+          <div className="flex flex-col items-center px-8 py-10 text-center">
+            <div
+              className="w-20 h-20 rounded-3xl flex items-center justify-center shadow-lg mb-5"
+              style={{ backgroundColor: "#25D366" + "20" }}
+            >
+              <WhatsAppIcon size={46} color="#25D366" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Подключите WhatsApp</h2>
+            <p className="text-sm text-gray-500 leading-relaxed mb-6">
+              Подключите WhatsApp вашей клиники, чтобы отправлять сообщения пациентам,
+              напоминания и постоперационные уведомления прямо из CRM.
+            </p>
+            <div className="w-full space-y-3 text-left mb-7">
+              {[
+                "Введите данные вашего Green API инстанса",
+                "Отсканируйте QR-код с телефона клиники",
+                "Номер автоматически добавится в каналы",
+              ].map((step, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <div
+                    className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-white mt-0.5"
+                    style={{ backgroundColor: BRAND }}
+                  >
+                    {i + 1}
+                  </div>
+                  <p className="text-sm text-gray-600">{step}</p>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => setStep("setup")}
+              className="w-full h-11 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98]"
+              style={{ backgroundColor: "#25D366" }}
+            >
+              Подключить WhatsApp
+            </button>
+          </div>
+        )}
+
+        {step === "setup" && (
+          <div className="p-6">
+            <div className="flex items-center gap-2.5 mb-5">
+              <div
+                className="w-9 h-9 rounded-xl flex items-center justify-center"
+                style={{ backgroundColor: "#25D366" + "20" }}
+              >
+                <WhatsAppIcon size={20} color="#25D366" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-gray-900 leading-tight">
+                  {isConnected ? "WhatsApp подключён" : "Настройка WhatsApp"}
+                </h2>
+                <p className="text-xs text-gray-400">Green API</p>
+              </div>
+            </div>
+
+            {isConnected ? (
+              <div className="text-center py-4">
+                <CheckCircle2 className="w-14 h-14 mx-auto mb-3 text-green-500" />
+                <p className="font-semibold text-gray-800 text-base mb-1">WhatsApp успешно подключён!</p>
+                {status?.phone && (
+                  <p className="text-sm text-gray-500">
+                    Номер <span className="font-mono font-semibold text-gray-700">+{status.phone}</span>{" "}
+                    добавлен в раздел Каналы
+                  </p>
+                )}
+                <button
+                  onClick={onClose}
+                  className="mt-5 w-full h-10 rounded-xl text-sm font-semibold text-white"
+                  style={{ backgroundColor: BRAND }}
+                >
+                  Готово
+                </button>
+              </div>
+            ) : (
+              <>
+                {!configured && (
+                  <form onSubmit={handleSave} className="space-y-3 mb-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">
+                        ID инстанса (idInstance)
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={instanceId}
+                          onChange={(e) => setInstanceId(e.target.value)}
+                          placeholder="1234567890"
+                          className="w-full h-9 rounded-lg border border-border bg-white px-3 pr-9 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#98cc1c]/30"
+                        />
+                        {instanceId && (
+                          <button
+                            type="button"
+                            onClick={copyInstanceId}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          >
+                            {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">
+                        API токен (apiTokenInstance)
+                      </label>
+                      <input
+                        type="password"
+                        value={token}
+                        onChange={(e) => setToken(e.target.value)}
+                        placeholder="••••••••••••••••••••••"
+                        className="w-full h-9 rounded-lg border border-border bg-white px-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#98cc1c]/30"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-400">
+                      Данные из личного кабинета{" "}
+                      <a
+                        href="https://green-api.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#98cc1c] hover:underline"
+                      >
+                        green-api.com
+                      </a>
+                    </p>
+                    <button
+                      type="submit"
+                      disabled={saving || !instanceId.trim() || !token.trim()}
+                      className="w-full h-10 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
+                      style={{ backgroundColor: BRAND }}
+                    >
+                      {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                      {saving ? "Сохранение..." : "Сохранить и получить QR"}
+                    </button>
+                  </form>
+                )}
+
+                {configured && qr && (
+                  <div className="text-center">
+                    {qr.type === "qrCode" ? (
+                      <>
+                        <p className="text-xs text-gray-500 mb-3">
+                          Отсканируйте QR с телефона → WhatsApp → Привязанные устройства
+                        </p>
+                        <div className="flex justify-center mb-3">
+                          <img
+                            src={`data:image/png;base64,${qr.message}`}
+                            alt="WhatsApp QR"
+                            className="w-48 h-48 rounded-xl border border-border shadow-sm"
+                          />
+                        </div>
+                        <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Ожидание сканирования...
+                        </div>
+                      </>
+                    ) : qr.type === "alreadyLogged" ? (
+                      <div className="py-2">
+                        <CheckCircle2 className="w-10 h-10 mx-auto mb-2 text-green-500" />
+                        <p className="text-sm font-semibold text-gray-700">WhatsApp уже подключён</p>
+                      </div>
+                    ) : (
+                      <div className="py-2">
+                        <p className="text-sm text-gray-500">{qr.type}: {qr.message}</p>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => { setConfigured(false); setQr(null); setStatus(null); }}
+                      className="mt-4 text-xs text-gray-400 hover:text-gray-600 underline"
+                    >
+                      Изменить данные
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function ChatPage() {
   const { t }                                   = useTranslation();
+  const { user, clinic, setAuth }               = useAuthStore();
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [search, setSearch]                     = useState("");
+  const [waStatus, setWaStatus]                 = useState<WaStatus | null>(null);
+  const [waStatusLoading, setWaStatusLoading]   = useState(true);
+  const [modalOpen, setModalOpen]               = useState(false);
+  const [modalAtSetup, setModalAtSetup]         = useState(false);
+
+  const isOwner = user?.role === "owner";
+
+  const fetchWaStatus = useCallback(async () => {
+    try {
+      const res = await customFetch<{ success: boolean; data: WaStatus }>(
+        "/api/clinic/green-api/status",
+      );
+      setWaStatus(res.data);
+      if (!res.data.configured && isOwner) {
+        setModalOpen(true);
+        setModalAtSetup(false);
+      }
+    } catch {
+      setWaStatus(null);
+    } finally {
+      setWaStatusLoading(false);
+    }
+  }, [isOwner]);
+
+  useEffect(() => {
+    fetchWaStatus();
+  }, [fetchWaStatus]);
+
+  const handleConnected = useCallback(async (phone: string | null) => {
+    if (phone && clinic && user) {
+      try {
+        await customFetch("/api/clinic/whatsapp-phone", {
+          method: "PATCH",
+          body: JSON.stringify({ whatsappPhone: phone }),
+        });
+        const meRes = await customFetch<{ success: boolean; data: { user: typeof user; clinic: typeof clinic } }>(
+          "/api/auth/me",
+        );
+        if (meRes.data) setAuth(meRes.data.user, meRes.data.clinic);
+      } catch {
+      }
+    }
+    setWaStatus({ configured: true, connected: true, phone });
+  }, [clinic, user, setAuth]);
+
+  const handleOpenChangeModal = () => {
+    setModalAtSetup(true);
+    setModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    setModalOpen(false);
+    fetchWaStatus();
+  };
 
   const { data } = useListPatients({
     query: { queryKey: getListPatientsQueryKey() },
@@ -386,6 +779,10 @@ export default function ChatPage() {
   );
   const selectedPatient = patients.find((p) => p.id === selectedPatientId);
   const handleBack      = () => setSelectedPatientId(null);
+
+  const waConnected = waStatus?.connected ?? false;
+  const waConfigured = waStatus?.configured ?? false;
+
   return (
     <div className="flex overflow-hidden h-full">
       <aside
@@ -399,8 +796,34 @@ export default function ChatPage() {
         <div className="px-4 pt-4 pb-3 border-b border-border/40">
           <div className="flex items-center gap-2 mb-3">
             <WhatsAppIcon size={18} />
-            <h2 className="font-bold text-[15px] text-foreground">{t("chat.title")}</h2>
+            <h2 className="font-bold text-[15px] text-foreground flex-1">{t("chat.title")}</h2>
+            {isOwner && (waConnected || waConfigured) && (
+              <button
+                onClick={handleOpenChangeModal}
+                title="Изменить WhatsApp"
+                className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors px-2 py-1 rounded-lg hover:bg-gray-100"
+              >
+                <Pencil className="w-3 h-3" />
+                <span>Изменить</span>
+              </button>
+            )}
           </div>
+
+          {!waStatusLoading && !waConnected && !isOwner && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3">
+              <p className="text-xs text-amber-700 leading-relaxed">
+                WhatsApp не подключён. Обратитесь к Владельцу клиники, чтобы он подключил WhatsApp.
+              </p>
+            </div>
+          )}
+
+          {!waStatusLoading && waConnected && waStatus?.phone && (
+            <div className="flex items-center gap-1.5 mb-3 px-1">
+              <div className="w-2 h-2 rounded-full bg-green-500" />
+              <p className="text-xs text-gray-500 font-mono">+{waStatus.phone}</p>
+            </div>
+          )}
+
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
             <input
@@ -456,6 +879,15 @@ export default function ChatPage() {
           </div>
         )}
       </main>
+
+      {isOwner && (
+        <WhatsAppConnectModal
+          open={modalOpen}
+          onClose={handleModalClose}
+          onConnected={handleConnected}
+          startAtSetup={modalAtSetup}
+        />
+      )}
     </div>
   );
 }

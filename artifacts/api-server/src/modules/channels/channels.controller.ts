@@ -163,7 +163,7 @@ router.get(
 
 router.get(
   "/clinic/green-api/status",
-  roleGuard("owner", "admin"),
+  authMiddleware,
   async (req: Request, res: Response, next: NextFunction) => {
     const [clinic] = await db
       .select({ greenApiInstanceId: clinicsTable.greenApiInstanceId, greenApiToken: clinicsTable.greenApiToken })
@@ -173,13 +173,20 @@ router.get(
       .catch(next) ?? [];
     if (!clinic) return;
     if (!clinic.greenApiInstanceId || !clinic.greenApiToken) {
-      return res.json({ success: true, data: { connected: false, phone: null } });
+      return res.json({ success: true, data: { configured: false, connected: false, phone: null } });
     }
     const state = await getGreenApiState(clinic.greenApiInstanceId, clinic.greenApiToken).catch(next);
     if (!state) return;
     const connected = state.stateInstance === "authorized";
     const phone = connected && state.wid ? state.wid.replace("@c.us", "") : null;
-    res.json({ success: true, data: { connected, phone } });
+    if (connected && phone) {
+      await db
+        .update(clinicsTable)
+        .set({ whatsappPhone: phone })
+        .where(eq(clinicsTable.id, req.user!.clinicId))
+        .catch(() => {});
+    }
+    res.json({ success: true, data: { configured: true, connected, phone } });
   },
 );
 
