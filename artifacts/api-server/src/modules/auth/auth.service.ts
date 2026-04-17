@@ -9,7 +9,8 @@ import {
   ForbiddenError,
   ValidationError,
 } from "../../shared/errors";
-import type { UserRole, User, Clinic } from "@workspace/db";
+import type { UserRole, User } from "@workspace/db";
+import type { SafeClinic } from "./auth.repository";
 
 // In-memory password reset token store: token → { email, expiresAt }
 const resetTokens = new Map<string, { email: string; expiresAt: number }>();
@@ -27,7 +28,7 @@ const SALT_ROUNDS = 10;
 
 export interface AuthResult {
   user: Omit<User, "passwordHash">;
-  clinic: Clinic;
+  clinic: SafeClinic;
   token: string;
 }
 
@@ -89,7 +90,7 @@ export class AuthService {
   async getMe(
     userId: string,
     clinicId: string,
-  ): Promise<{ user: Omit<User, "passwordHash">; clinic: Clinic }> {
+  ): Promise<{ user: Omit<User, "passwordHash">; clinic: SafeClinic }> {
     const user = await this.repo.findUserByIdAndClinic(userId, clinicId);
     if (!user) throw new NotFoundError("User not found");
 

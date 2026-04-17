@@ -2,6 +2,8 @@ import { db, usersTable, clinicsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import type { InsertUser, InsertClinic, User, Clinic } from "@workspace/db";
 
+export type SafeClinic = Omit<Clinic, "greenApiInstanceId" | "greenApiToken">;
+
 export class AuthRepository {
   async findUserByEmail(email: string): Promise<User | undefined> {
     const [user] = await db
@@ -30,7 +32,7 @@ export class AuthRepository {
     return user;
   }
 
-  async findClinicById(id: string): Promise<Clinic | undefined> {
+  async findClinicById(id: string): Promise<SafeClinic | undefined> {
     const [clinic] = await db
       .select({
         id: clinicsTable.id,
@@ -45,7 +47,7 @@ export class AuthRepository {
       .from(clinicsTable)
       .where(eq(clinicsTable.id, id))
       .limit(1);
-    return clinic as Clinic | undefined;
+    return clinic;
   }
 
   async createClinic(data: InsertClinic): Promise<Clinic> {

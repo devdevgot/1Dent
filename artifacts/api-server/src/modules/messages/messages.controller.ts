@@ -118,6 +118,11 @@ router.post(
 
     if (!clinic?.greenApiInstanceId) return;
 
+    // Validate the payload's instanceId matches the clinic's stored instance
+    const rawBody = req.body as Record<string, unknown>;
+    const payloadInstanceId = String(rawBody["instanceId"] ?? "");
+    if (payloadInstanceId && payloadInstanceId !== clinic.greenApiInstanceId) return;
+
     const parsed = parseGreenApiWebhook(req.body);
     if (!parsed) return;
 
