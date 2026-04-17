@@ -527,6 +527,12 @@ function WhatsAppConnectModal({
 
         {step === "intro" && (
           <div className="flex flex-col items-center px-8 py-10 text-center">
+            <button
+              onClick={onClose}
+              className="absolute top-3 left-3 w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
             <div
               className="w-20 h-20 rounded-3xl flex items-center justify-center shadow-lg mb-5"
               style={{ backgroundColor: "#25D366" + "20" }}
