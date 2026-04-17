@@ -88,19 +88,38 @@ export async function getGreenApiQrCode(
   return res.json() as Promise<GreenApiQrResult>;
 }
 
+// In-memory cache for getStateInstance to avoid 429 rate-limit errors.
+// TTL of 6 seconds — the frontend polls every 5s so this prevents duplicate upstream calls.
+const stateCache = new Map<string, { result: GreenApiStateResult; expiresAt: number }>();
+
 export async function getGreenApiState(
   instanceId: string,
   token: string,
 ): Promise<GreenApiStateResult> {
+  const cacheKey = instanceId;
+  const cached = stateCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.result;
+  }
+
   const url = `${BASE_URL}/waInstance${instanceId}/getStateInstance/${token}`;
   const res = await fetch(url);
+
+  if (res.status === 429) {
+    // Rate-limited — return cached value if we have one, otherwise treat as not authorized
+    logger.warn({ instanceId }, "Green API getStateInstance rate-limited (429); returning cached or fallback");
+    if (cached) return cached.result;
+    return { stateInstance: "notAuthorized" };
+  }
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     throw new Error(`Green API getStateInstance failed: ${res.status} ${body}`);
   }
 
-  return res.json() as Promise<GreenApiStateResult>;
+  const result = await res.json() as GreenApiStateResult;
+  stateCache.set(cacheKey, { result, expiresAt: Date.now() + 6_000 });
+  return result;
 }
 
 export async function logoutGreenApiInstance(

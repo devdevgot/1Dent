@@ -96,7 +96,7 @@ export function WhatsAppConnectModal({
     if (statusIntervalRef.current) clearInterval(statusIntervalRef.current);
     if (!configured || status?.connected) return;
     qrIntervalRef.current = setInterval(fetchQr, 20_000);
-    statusIntervalRef.current = setInterval(fetchStatus, 10_000);
+    statusIntervalRef.current = setInterval(fetchStatus, 15_000);
     return () => {
       if (qrIntervalRef.current) clearInterval(qrIntervalRef.current);
       if (statusIntervalRef.current) clearInterval(statusIntervalRef.current);
