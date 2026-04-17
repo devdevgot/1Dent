@@ -77,7 +77,7 @@ export default function MenuPage() {
   return (
     <div className="min-h-full bg-[#f2f2f7] pb-6">
       {/* Profile card */}
-      <Link replace href="/account-settings" className="block bg-white px-4 pt-5 pb-3 mb-5 active:bg-gray-50 transition-colors">
+      <Link href="/account-settings" className="block bg-white px-4 pt-5 pb-3 mb-5 active:bg-gray-50 transition-colors">
         <div className="flex items-center gap-3 py-1">
           <div className="w-11 h-11 rounded-full overflow-hidden bg-primary/15 text-primary flex items-center justify-center font-bold text-base shrink-0">
             {(user as typeof user & { photoUrl?: string | null })?.photoUrl ? (
@@ -117,7 +117,6 @@ export default function MenuPage() {
 
               return (
                 <Link
-                  replace
                   key={item.href}
                   href={item.href}
                   className={cn(
@@ -170,7 +169,7 @@ export default function MenuPage() {
 
           {/* Audit Log — owner only */}
           {user?.role === "owner" && (
-            <Link replace href="/logs" className="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 transition-colors">
+            <Link href="/logs" className="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 transition-colors">
               <div className="flex items-center gap-2.5">
                 <span className="text-[15px] text-gray-800">{t("nav.logs")}</span>
               </div>
@@ -180,7 +179,7 @@ export default function MenuPage() {
 
           {/* Migration — owner/admin only */}
           {(user?.role === "owner" || user?.role === "admin") && (
-            <Link replace href="/migration" className="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 transition-colors">
+            <Link href="/migration" className="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 transition-colors">
               <div className="flex items-center gap-2.5">
                 <span className="text-[15px] text-gray-800">{t("nav.migration")}</span>
               </div>

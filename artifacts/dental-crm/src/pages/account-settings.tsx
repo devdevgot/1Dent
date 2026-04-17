@@ -36,7 +36,7 @@ export default function AccountSettings() {
   return (
     <div className="min-h-full bg-[#f2f2f7]">
       <div className="bg-white px-4 pt-12 pb-3 flex items-center gap-3 border-b border-gray-100">
-        <button onClick={() => setLocation("/menu")} className="p-1 -ml-1 text-gray-500">
+        <button onClick={() => window.history.back()} className="p-1 -ml-1 text-gray-500">
           <ChevronLeft className="w-6 h-6" />
         </button>
         <h1 className="text-lg font-semibold text-gray-900">Настройки аккаунта</h1>
