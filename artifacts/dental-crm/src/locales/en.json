@@ -566,6 +566,8 @@
     "createSuccessDesc": "New staff member has been added to the clinic.",
     "createErrorTitle": "Creation failed",
     "createError": "Failed to create staff member.",
+    "emailAlreadyInUse": "This email is already registered in the system. Please use a different address.",
+    "forbiddenError": "You do not have permission to perform this action.",
     "deleteSuccess": "Staff member deleted",
     "deleteError": "Failed to delete staff member.",
     "registrationNote": "Public registration is only for clinic owners. Staff members are added by the owner or admin."

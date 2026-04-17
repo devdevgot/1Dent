@@ -60,7 +60,15 @@ export default function UsersPage() {
         toast({ title: t("users.createSuccess"), description: t("users.createSuccessDesc") });
       },
       onError: (err: unknown) => {
-        const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? t("users.createError");
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        let msg: string;
+        if (status === 409) {
+          msg = t("users.emailAlreadyInUse");
+        } else if (status === 403) {
+          msg = t("users.forbiddenError");
+        } else {
+          msg = t("users.createError");
+        }
         toast({ title: t("users.createErrorTitle"), description: msg, variant: "destructive" });
       },
     },
