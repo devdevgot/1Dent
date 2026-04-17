@@ -47,6 +47,7 @@ export function WhatsAppConnectModal({
   const [qr, setQr] = useState<WaQr | null>(null);
   const [status, setStatus] = useState<WaStatus | null>(null);
   const [copied, setCopied] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(false);
   const qrIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const statusIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -83,8 +84,10 @@ export function WhatsAppConnectModal({
     if (!open) return;
     if (startAtSetup) {
       setStep("setup");
-      fetchQr();
-      fetchStatus();
+      setInitialLoading(true);
+      Promise.all([fetchQr(), fetchStatus()]).finally(() => {
+        setInitialLoading(false);
+      });
     }
   }, [open, startAtSetup, fetchQr, fetchStatus]);
 
@@ -109,6 +112,7 @@ export function WhatsAppConnectModal({
       setConfigured(false);
       setQr(null);
       setStatus(null);
+      setInitialLoading(false);
       if (qrIntervalRef.current) clearInterval(qrIntervalRef.current);
       if (statusIntervalRef.current) clearInterval(statusIntervalRef.current);
     }
@@ -217,13 +221,18 @@ export function WhatsAppConnectModal({
               </div>
               <div>
                 <h2 className="text-base font-bold text-gray-900 leading-tight">
-                  {isConnected ? "WhatsApp подключён" : "Настройка WhatsApp"}
+                  {initialLoading ? "Загрузка..." : isConnected ? "WhatsApp подключён" : "Настройка WhatsApp"}
                 </h2>
                 <p className="text-xs text-gray-400">Green API</p>
               </div>
             </div>
 
-            {isConnected ? (
+            {initialLoading ? (
+              <div className="flex flex-col items-center justify-center py-10 gap-3">
+                <Loader2 className="w-8 h-8 animate-spin text-gray-300" />
+                <p className="text-sm text-gray-400">Проверка статуса...</p>
+              </div>
+            ) : isConnected ? (
               <div className="text-center py-4">
                 <CheckCircle2 className="w-14 h-14 mx-auto mb-3 text-green-500" />
                 <p className="font-semibold text-gray-800 text-base mb-1">WhatsApp успешно подключён!</p>
