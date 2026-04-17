@@ -11,7 +11,7 @@ import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 import { db, clinicsTable, channelTypes } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { getGreenApiQrCode, getGreenApiState, setGreenApiWebhookUrl, getServerBaseUrl, logoutGreenApiInstance } from "../../shared/green-api";
+import { getGreenApiQrCode, getGreenApiState, setGreenApiWebhookUrl, getServerBaseUrl, logoutGreenApiInstance, clearGreenApiStateCache } from "../../shared/green-api";
 import { logger } from "../../lib/logger";
 
 const router: IRouter = Router();
@@ -116,13 +116,26 @@ router.patch(
     const parsed = greenApiSchema.safeParse(req.body);
     if (!parsed.success) return next(new ValidationError(parsed.error.message));
     const { greenApiInstanceId, greenApiToken } = parsed.data;
+
+    // Read old instanceId to clear its cache entry
+    const [old] = await db
+      .select({ greenApiInstanceId: clinicsTable.greenApiInstanceId })
+      .from(clinicsTable)
+      .where(eq(clinicsTable.id, req.user!.clinicId))
+      .limit(1)
+      .catch(() => [undefined]) ?? [];
+    if (old?.greenApiInstanceId) clearGreenApiStateCache(old.greenApiInstanceId);
+
     const rows = await db
       .update(clinicsTable)
-      .set({ greenApiInstanceId, greenApiToken })
+      .set({ greenApiInstanceId, greenApiToken, whatsappPhone: null })
       .where(eq(clinicsTable.id, req.user!.clinicId))
       .returning({ id: clinicsTable.id })
       .catch(next);
     if (!rows || rows.length === 0) return;
+
+    // Also clear cache for the new instanceId in case it was cached before
+    clearGreenApiStateCache(greenApiInstanceId);
     res.json({ success: true });
   },
 );
@@ -142,6 +155,7 @@ router.delete(
 
     // Call Green API logout to properly unlink the WhatsApp device
     if (current.greenApiInstanceId && current.greenApiToken) {
+      clearGreenApiStateCache(current.greenApiInstanceId);
       logoutGreenApiInstance(current.greenApiInstanceId, current.greenApiToken)
         .catch((err) => logger.warn({ err }, "Green API logout call failed — credentials will still be cleared"));
     }

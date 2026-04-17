@@ -92,6 +92,11 @@ export async function getGreenApiQrCode(
 // TTL of 6 seconds — the frontend polls every 5s so this prevents duplicate upstream calls.
 const stateCache = new Map<string, { result: GreenApiStateResult; expiresAt: number }>();
 
+export function clearGreenApiStateCache(instanceId: string): void {
+  stateCache.delete(instanceId);
+  logger.info({ instanceId }, "Green API state cache cleared");
+}
+
 export async function getGreenApiState(
   instanceId: string,
   token: string,

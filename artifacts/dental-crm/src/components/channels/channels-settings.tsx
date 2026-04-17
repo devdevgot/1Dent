@@ -64,6 +64,7 @@ export function ChannelsSettings() {
 
   const [waStatus, setWaStatus] = useState<WaStatus | null>(null);
   const [waModalOpen, setWaModalOpen] = useState(false);
+  const [waForceSetup, setWaForceSetup] = useState(false);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [recheckingWebhook, setRecheckingWebhook] = useState(false);
@@ -216,7 +217,10 @@ export function ChannelsSettings() {
                 </button>
               )}
               <button
-                onClick={() => setWaModalOpen(true)}
+                onClick={() => {
+                  setWaForceSetup(!!waStatus?.connected);
+                  setWaModalOpen(true);
+                }}
                 className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold border border-border text-gray-600 hover:bg-gray-50 transition-colors"
               >
                 {waStatus?.connected ? "Изменить" : "Подключить"}
@@ -404,11 +408,14 @@ export function ChannelsSettings() {
       {isOwner && (
         <WhatsAppConnectModal
           open={waModalOpen}
+          forceSetup={waForceSetup}
           onClose={() => {
             setWaModalOpen(false);
+            setWaForceSetup(false);
             fetchWaStatus();
           }}
           onConnected={() => {
+            setWaForceSetup(false);
             fetchWaStatus();
           }}
           startAtSetup

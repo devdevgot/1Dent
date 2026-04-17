@@ -32,11 +32,14 @@ export function WhatsAppConnectModal({
   onClose,
   onConnected,
   startAtSetup,
+  forceSetup,
 }: {
   open: boolean;
   onClose: () => void;
   onConnected: (phone: string | null) => void;
   startAtSetup?: boolean;
+  /** Force the setup form regardless of current connection state (used when changing credentials) */
+  forceSetup?: boolean;
 }) {
   const { toast } = useToast();
   const [step, setStep] = useState<"intro" | "setup">(startAtSetup ? "setup" : "intro");
@@ -82,6 +85,11 @@ export function WhatsAppConnectModal({
 
   useEffect(() => {
     if (!open) return;
+    if (forceSetup) {
+      // Changing credentials: go straight to setup form, skip status/QR fetch
+      setStep("setup");
+      return;
+    }
     if (startAtSetup) {
       setStep("setup");
       setInitialLoading(true);
@@ -89,7 +97,7 @@ export function WhatsAppConnectModal({
         setInitialLoading(false);
       });
     }
-  }, [open, startAtSetup, fetchQr, fetchStatus]);
+  }, [open, startAtSetup, forceSetup, fetchQr, fetchStatus]);
 
   useEffect(() => {
     if (qrIntervalRef.current) clearInterval(qrIntervalRef.current);
@@ -127,6 +135,8 @@ export function WhatsAppConnectModal({
         method: "PATCH",
         body: JSON.stringify({ greenApiInstanceId: instanceId.trim(), greenApiToken: token.trim() }),
       });
+      // Reset status so old "connected" state doesn't prevent QR from showing
+      setStatus(null);
       toast({ title: "Данные сохранены. Сканируйте QR-код." });
       await fetchQr();
       await fetchStatus();
@@ -146,7 +156,9 @@ export function WhatsAppConnectModal({
 
   if (!open) return null;
 
-  const isConnected = status?.connected;
+  // When forceSetup is true, we're intentionally changing credentials — don't show the
+  // connected state even if the old credentials are still returning "authorized".
+  const isConnected = status?.connected && !forceSetup;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
