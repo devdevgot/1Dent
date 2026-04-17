@@ -198,6 +198,46 @@ router.get(
   },
 );
 
+const pairingCodeSchema = z.object({
+  phoneNumber: z.string().min(7).max(20),
+});
+
+router.post(
+  "/clinic/green-api/pairing-code",
+  roleGuard("owner", "admin"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const parsed = pairingCodeSchema.safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError(parsed.error.message));
+    const { phoneNumber } = parsed.data;
+
+    const [clinic] = await db
+      .select({ greenApiInstanceId: clinicsTable.greenApiInstanceId, greenApiToken: clinicsTable.greenApiToken })
+      .from(clinicsTable)
+      .where(eq(clinicsTable.id, req.user!.clinicId))
+      .limit(1)
+      .catch(next) ?? [];
+    if (!clinic) return;
+    if (!clinic.greenApiInstanceId || !clinic.greenApiToken) {
+      return next(new NotFoundError("Green API credentials not configured"));
+    }
+
+    let result;
+    try {
+      result = await getGreenApiPairingCode(clinic.greenApiInstanceId, clinic.greenApiToken, phoneNumber);
+      logger.info({ instanceId: clinic.greenApiInstanceId, status: result.status }, "Green API pairing code fetched");
+    } catch (err) {
+      logger.error({ err, instanceId: clinic.greenApiInstanceId }, "Green API pairing code fetch failed");
+      return next(err);
+    }
+
+    if (result.status !== "ok" || !result.authorizationCode) {
+      return res.status(400).json({ success: false, error: result.message ?? "Не удалось получить код. Убедитесь, что инстанс не авторизован." });
+    }
+
+    res.json({ success: true, data: { code: result.authorizationCode } });
+  },
+);
+
 router.get(
   "/clinic/green-api/status",
   authMiddleware,
