@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Bot, Settings, MessageSquare, Trash2, RefreshCw, Power, Save, ChevronLeft } from "lucide-react";
+import { Bot, Settings, MessageSquare, Trash2, RefreshCw, Power, Save, ChevronLeft, ArrowLeft, Phone } from "lucide-react";
 import {
   useGetChatbotSettings,
   useUpdateChatbotSettings,
   useListChatbotSessions,
   useDeleteChatbotSession,
+  useGetChatbotSessionMessages,
 } from "@workspace/api-client-react";
 import type { ChatbotSettingsUpdate } from "@workspace/api-client-react";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
@@ -41,12 +42,103 @@ function formatRelative(dateStr: string) {
   return `${Math.floor(hrs / 24)} д. назад`;
 }
 
+function formatTime(dateStr: string) {
+  return new Date(dateStr).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
+}
+
+// ─── Session conversation view ───────────────────────────────────────────────
+
+function SessionChat({ phone, onBack }: { phone: string; onBack: () => void }) {
+  const { data, isLoading, refetch } = useGetChatbotSessionMessages(phone);
+  const messages = data?.data?.messages ?? [];
+
+  let lastDate = "";
+
+  return (
+    <div className="h-full flex flex-col overflow-hidden">
+      <div className="shrink-0 flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 bg-background">
+        <button
+          onClick={onBack}
+          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-gray-500 shrink-0"
+        >
+          <ArrowLeft className="w-4 h-4" />
+        </button>
+        <div className="h-8 w-8 rounded-full bg-violet-100 flex items-center justify-center">
+          <Phone className="h-3.5 w-3.5 text-violet-600" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-foreground truncate">{phone}</p>
+          <p className="text-xs text-muted-foreground">Чат-бот · {messages.length} сообщений</p>
+        </div>
+        <button
+          onClick={() => refetch()}
+          className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        >
+          <RefreshCw className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1 bg-muted/20">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full text-sm text-muted-foreground">Загрузка...</div>
+        ) : messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full gap-2">
+            <MessageSquare className="h-8 w-8 text-muted-foreground/30" />
+            <p className="text-sm text-muted-foreground">Сообщений пока нет</p>
+          </div>
+        ) : (
+          messages.map((msg) => {
+            const msgDate = formatDate(msg.createdAt);
+            const showDateSep = msgDate !== lastDate;
+            lastDate = msgDate;
+            const isBot = msg.direction === "outbound";
+            return (
+              <div key={msg.id}>
+                {showDateSep && (
+                  <div className="flex items-center gap-2 my-2">
+                    <div className="flex-1 h-px bg-border/50" />
+                    <span className="text-[10px] text-muted-foreground font-medium">{msgDate}</span>
+                    <div className="flex-1 h-px bg-border/50" />
+                  </div>
+                )}
+                <div className={`flex ${isBot ? "justify-start" : "justify-end"} mb-1`}>
+                  <div className={`max-w-[80%] group`}>
+                    <div
+                      className={`px-3 py-2 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+                        isBot
+                          ? "bg-white border border-border/50 text-foreground rounded-tl-sm"
+                          : "bg-primary text-primary-foreground rounded-tr-sm"
+                      }`}
+                    >
+                      {msg.content}
+                    </div>
+                    <p className={`text-[10px] text-muted-foreground mt-0.5 ${isBot ? "text-left pl-1" : "text-right pr-1"}`}>
+                      {isBot ? "🤖 Бот" : "👤 Клиент"} · {formatTime(msg.createdAt)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main page ───────────────────────────────────────────────────────────────
+
 export default function ChatbotPage() {
   const { t } = useTranslation();
   const [tab, setTab] = useState<"sessions" | "settings">("sessions");
   const [confirmResetPhone, setConfirmResetPhone] = useState<string | null>(null);
   const [localSettings, setLocalSettings] = useState<ChatbotSettingsUpdate>({});
   const [saved, setSaved] = useState(false);
+  const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
 
   const { data: settingsRes, refetch: refetchSettings } = useGetChatbotSettings();
   const { data: sessionsRes, refetch: refetchSessions, isLoading: sessionsLoading } = useListChatbotSessions();
@@ -80,6 +172,11 @@ export default function ChatbotPage() {
   };
 
   const isDirty = Object.keys(localSettings).length > 0;
+
+  // Show conversation view when a session is selected
+  if (selectedPhone) {
+    return <SessionChat phone={selectedPhone} onBack={() => setSelectedPhone(null)} />;
+  }
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -157,7 +254,11 @@ export default function ChatbotPage() {
             ) : (
               <div className="divide-y divide-border/50 rounded-xl border border-border/50 bg-card overflow-hidden">
                 {sessions.map((session) => (
-                  <div key={session.id} className="flex items-start gap-3 px-4 py-3">
+                  <button
+                    key={session.id}
+                    onClick={() => setSelectedPhone(session.phone)}
+                    className="w-full flex items-start gap-3 px-4 py-3 hover:bg-muted/40 active:bg-muted/60 transition-colors text-left"
+                  >
                     <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
                       <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
                     </div>
@@ -182,20 +283,28 @@ export default function ChatbotPage() {
                         <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
                           {typeof session.data === "object" &&
                             Object.entries(session.data as Record<string, string>)
-                              .filter(([, v]) => v)
-                              .map(([k, v]) => `${k}: ${v}`)
+                              .filter(([k, v]) => v && k !== "refCode" && k !== "channelId" && k !== "confusedCount")
+                              .map(([k, v]) => {
+                                const labels: Record<string, string> = {
+                                  patientName: "Имя",
+                                  problemDescription: "Проблема",
+                                  suggestedDoctorName: "Врач",
+                                };
+                                return `${labels[k] ?? k}: ${v}`;
+                              })
                               .join(" · ")}
                         </p>
                       )}
                     </div>
+                    <ChevronLeft className="h-4 w-4 text-muted-foreground shrink-0 mt-1 rotate-180" />
                     <button
-                      onClick={() => setConfirmResetPhone(session.phone)}
+                      onClick={(e) => { e.stopPropagation(); setConfirmResetPhone(session.phone); }}
                       title={t("chatbot.resetSession")}
                       className="shrink-0 p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}

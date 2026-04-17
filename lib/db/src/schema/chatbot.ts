@@ -1,4 +1,4 @@
-import { pgTable, text, boolean, timestamp, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, boolean, timestamp, jsonb, uniqueIndex, pgEnum } from "drizzle-orm/pg-core";
 import { clinicsTable } from "./clinics";
 
 export const chatbotSettingsTable = pgTable("chatbot_settings", {
@@ -48,7 +48,22 @@ export const chatbotSessionsTable = pgTable(
   }),
 );
 
+export const chatbotMessageDirectionEnum = pgEnum("chatbot_message_direction", ["inbound", "outbound"]);
+
+export const chatbotMessagesTable = pgTable("chatbot_messages", {
+  id: text("id").primaryKey(),
+  clinicId: text("clinic_id")
+    .notNull()
+    .references(() => clinicsTable.id, { onDelete: "cascade" }),
+  phone: text("phone").notNull(),
+  direction: chatbotMessageDirectionEnum("direction").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 export type ChatbotSettings = typeof chatbotSettingsTable.$inferSelect;
 export type InsertChatbotSettings = typeof chatbotSettingsTable.$inferInsert;
 export type ChatbotSession = typeof chatbotSessionsTable.$inferSelect;
 export type InsertChatbotSession = typeof chatbotSessionsTable.$inferInsert;
+export type ChatbotMessage = typeof chatbotMessagesTable.$inferSelect;
+export type InsertChatbotMessage = typeof chatbotMessagesTable.$inferInsert;

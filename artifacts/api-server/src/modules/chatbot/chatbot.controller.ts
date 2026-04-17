@@ -51,6 +51,17 @@ router.get(
   },
 );
 
+router.get(
+  "/sessions/:phone/messages",
+  roleGuard("owner", "admin"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const phone = String(req.params["phone"]);
+    const messages = await service.listMessages(req.user!.clinicId, phone).catch(next);
+    if (!messages) return;
+    res.json({ success: true, data: { messages } });
+  },
+);
+
 router.delete(
   "/sessions/:phone",
   roleGuard("owner", "admin"),

@@ -4,11 +4,12 @@ import {
   db,
   chatbotSettingsTable,
   chatbotSessionsTable,
+  chatbotMessagesTable,
   patientsTable,
   notificationsTable,
   usersTable,
 } from "@workspace/db";
-import { eq, and, inArray, gte } from "drizzle-orm";
+import { eq, and, inArray, gte, asc } from "drizzle-orm";
 import { isRedAlert } from "../../shared/whatsapp";
 import { sendToPatient } from "../../shared/messaging";
 import { getAlertQueue } from "../../shared/alert-queue";
@@ -140,6 +141,20 @@ async function deleteRedisSession(clinicId: string, phone: string): Promise<void
       await redis.del(`${REDIS_KEY_PREFIX}${clinicId}:${phone}`);
     } catch (_) { /* ignore */ }
   }
+}
+
+// ─── Chatbot message persistence ─────────────────────────────────────────────
+
+async function saveChatbotMessage(
+  clinicId: string,
+  phone: string,
+  direction: "inbound" | "outbound",
+  content: string,
+): Promise<void> {
+  await db
+    .insert(chatbotMessagesTable)
+    .values({ id: randomUUID(), clinicId, phone, direction, content })
+    .catch((err) => logger.error({ err }, "[ChatbotService] Failed to save chatbot message"));
 }
 
 // ─── Analytics-based doctor routing ─────────────────────────────────────────
@@ -282,6 +297,9 @@ export class ChatbotService {
       return null;
     }
 
+    // Always persist the inbound message regardless of chatbot enabled state
+    saveChatbotMessage(clinicId, phone, "inbound", text).catch(() => {});
+
     if (!settings.enabled) return null;
 
     let session = await loadSession(clinicId, phone);
@@ -322,7 +340,9 @@ export class ChatbotService {
       session.humanTakeover = true;
       await saveSession(session);
       await this.notifyHumanTakeover(clinicId, phone, data.patientName);
-      return "Соединяю вас с администратором. Пожалуйста, ожидайте — вам ответят в ближайшее время.";
+      const takoverReply = "Соединяю вас с администратором. Пожалуйста, ожидайте — вам ответят в ближайшее время.";
+      saveChatbotMessage(clinicId, phone, "outbound", takoverReply).catch(() => {});
+      return takoverReply;
     }
 
     if (state === "done") {
@@ -331,13 +351,15 @@ export class ChatbotService {
       // on the stored message — deduplicating to avoid double notifications.
       if (!options?.skipRedAlert && isRedAlert(text)) {
         await triggerRedAlert(clinicId, phone, text, data.createdPatientId);
-        const response = "🚨 Мы видим вашу проблему и передаём её администратору. Ожидайте, пожалуйста.";
-        sendToPatient(clinicId, phone, response).catch(() => {});
-        return response;
+        const alertReply = "🚨 Мы видим вашу проблему и передаём её администратору. Ожидайте, пожалуйста.";
+        saveChatbotMessage(clinicId, phone, "outbound", alertReply).catch(() => {});
+        sendToPatient(clinicId, phone, alertReply).catch(() => {});
+        return alertReply;
       }
-      const response = "Рады вашему обращению! Если возникнут вопросы — пишите. Или напишите «оператор» для связи с администратором.";
-      sendToPatient(clinicId, phone, response).catch(() => {});
-      return response;
+      const doneReply = "Рады вашему обращению! Если возникнут вопросы — пишите. Или напишите «оператор» для связи с администратором.";
+      saveChatbotMessage(clinicId, phone, "outbound", doneReply).catch(() => {});
+      sendToPatient(clinicId, phone, doneReply).catch(() => {});
+      return doneReply;
     }
 
     let response: string | null = null;
@@ -443,6 +465,7 @@ export class ChatbotService {
     await saveSession(session);
 
     if (response) {
+      saveChatbotMessage(clinicId, phone, "outbound", response).catch(() => {});
       sendToPatient(clinicId, phone, response).catch((err) =>
         logger.error({ err }, "ChatbotService: failed to send WhatsApp reply"),
       );
@@ -506,6 +529,14 @@ export class ChatbotService {
       .from(chatbotSessionsTable)
       .where(and(eq(chatbotSessionsTable.clinicId, clinicId), gte(chatbotSessionsTable.updatedAt, cutoff)))
       .orderBy(chatbotSessionsTable.updatedAt);
+  }
+
+  async listMessages(clinicId: string, phone: string) {
+    return db
+      .select()
+      .from(chatbotMessagesTable)
+      .where(and(eq(chatbotMessagesTable.clinicId, clinicId), eq(chatbotMessagesTable.phone, phone)))
+      .orderBy(asc(chatbotMessagesTable.createdAt));
   }
 
   async clearSession(clinicId: string, phone: string) {

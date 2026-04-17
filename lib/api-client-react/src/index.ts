@@ -10,8 +10,8 @@ export type { AuthTokenGetter, UnauthorizedHandler } from "./custom-fetch";
 
 // ─── Custom: update own profile ───────────────────────────────────────────────
 import { customFetch } from "./custom-fetch";
-import { useMutation } from "@tanstack/react-query";
-import type { UseMutationOptions } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import type { UseMutationOptions, UseQueryOptions } from "@tanstack/react-query";
 
 export interface UpdateProfileRequest {
   name?: string;
@@ -44,4 +44,40 @@ export const useUpdateProfile = <TError = unknown>(options?: {
   useMutation<UpdateProfileResponse, TError, UpdateProfileRequest>({
     mutationFn: (data) => updateProfile(data),
     ...options?.mutation,
+  });
+
+// ─── Custom: chatbot session messages ────────────────────────────────────────
+
+export interface ChatbotMessage {
+  id: string;
+  clinicId: string;
+  phone: string;
+  direction: "inbound" | "outbound";
+  content: string;
+  createdAt: string;
+}
+
+export interface GetChatbotSessionMessagesResponse {
+  success: boolean;
+  data: { messages: ChatbotMessage[] };
+}
+
+export const getChatbotSessionMessages = (
+  phone: string,
+  options?: RequestInit,
+): Promise<GetChatbotSessionMessagesResponse> =>
+  customFetch<GetChatbotSessionMessagesResponse>(
+    `/api/chatbot/sessions/${encodeURIComponent(phone)}/messages`,
+    { method: "GET", ...options },
+  );
+
+export const useGetChatbotSessionMessages = <TError = unknown>(
+  phone: string,
+  options?: { query?: UseQueryOptions<GetChatbotSessionMessagesResponse, TError> },
+) =>
+  useQuery<GetChatbotSessionMessagesResponse, TError>({
+    queryKey: ["/api/chatbot/sessions", phone, "messages"],
+    queryFn: ({ signal }) => getChatbotSessionMessages(phone, { signal }),
+    enabled: !!phone,
+    ...options?.query,
   });

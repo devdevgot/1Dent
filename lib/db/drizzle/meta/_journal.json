@@ -50,6 +50,13 @@
       "when": 1776704400000,
       "tag": "0006_green_api",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1776790800000,
+      "tag": "0007_chatbot_messages",
+      "breakpoints": true
     }
   ]
 }
