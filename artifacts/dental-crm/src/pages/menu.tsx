@@ -177,16 +177,6 @@ export default function MenuPage() {
             </Link>
           )}
 
-          {/* Migration — owner/admin only */}
-          {(user?.role === "owner" || user?.role === "admin") && (
-            <Link href="/migration" className="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 transition-colors">
-              <div className="flex items-center gap-2.5">
-                <span className="text-[15px] text-gray-800">{t("nav.migration")}</span>
-              </div>
-              <ChevronRight className="w-4 h-4 text-gray-300" />
-            </Link>
-          )}
-
           {/* Notifications */}
           <div className="flex items-center justify-between px-4 py-3.5">
             <span className="text-[15px] text-gray-800">Уведомления</span>
