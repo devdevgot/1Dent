@@ -34,7 +34,7 @@ import {
   X, ChevronDown, CheckCircle2, Clock, ArrowUpRight,
   Phone, User, Calendar, CreditCard, Stethoscope, TrendingUp, Copy, Save, IdCard,
   ClipboardList, Plus, BadgeCheck, Circle, ArrowLeft, Square, CheckSquare, Loader2,
-  Scissors, Crown, Wrench, Baby, Sparkles, Activity, ScanLine, Paintbrush,
+  Scissors, Crown, Wrench, Baby, Sparkles, Activity, ScanLine, Paintbrush, Search,
 } from "lucide-react";
 import { calculateAge, formatDateOfBirth, maskIIN } from "@workspace/api-zod";
 import { Button } from "@/components/ui/button";
@@ -378,6 +378,7 @@ export function PatientDetailPanel() {
   const [diagnosisToothFdi, setDiagnosisToothFdi] = useState<number | null>(null);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [pickerCategory, setPickerCategory] = useState<string | null>(null);
+  const [pickerSearch, setPickerSearch] = useState("");
   const [diagnosisServicesMap, setDiagnosisServicesMap] = useState<Map<number, ProcedureTemplate[]>>(new Map());
 
   const [modalToothFdi, setModalToothFdi] = useState<number | null>(null);
@@ -438,6 +439,14 @@ export function PatientDetailPanel() {
     },
   );
   const pickerTemplates: ProcedureTemplate[] = pickerTemplatesData?.data?.templates ?? [];
+
+  const filteredPickerTemplates = useMemo(() => {
+    const q = pickerSearch.trim().toLowerCase();
+    if (!q) return pickerTemplates;
+    return pickerTemplates.filter(
+      (s) => s.name.toLowerCase().includes(q) || (s.code ?? "").toLowerCase().includes(q),
+    );
+  }, [pickerTemplates, pickerSearch]);
 
   const { data: planData } = useGetActiveTreatmentPlan(selectedPatientId ?? "", {
     query: {
@@ -1112,7 +1121,7 @@ export function PatientDetailPanel() {
                                 {PICKER_CATEGORIES.map(({ key, label, Icon }) => (
                                   <button
                                     key={key}
-                                    onClick={() => setPickerCategory(key)}
+                                    onClick={() => { setPickerCategory(key); setPickerSearch(""); }}
                                     className="flex items-center gap-2 px-2.5 py-2 rounded-lg border border-border text-left text-xs transition-all hover:border-primary/50 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                                   >
                                     <Icon className="w-3.5 h-3.5 shrink-0 text-primary" />
@@ -1124,20 +1133,44 @@ export function PatientDetailPanel() {
                               /* Level 2 — services list */
                               <div className="space-y-1.5">
                                 <button
-                                  onClick={() => setPickerCategory(null)}
+                                  onClick={() => { setPickerCategory(null); setPickerSearch(""); }}
                                   className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-0.5"
                                 >
                                   <ArrowLeft className="w-3.5 h-3.5" />
                                   <span>Назад к категориям</span>
                                 </button>
+                                {/* Search input */}
+                                <div className="relative">
+                                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
+                                  <input
+                                    type="text"
+                                    value={pickerSearch}
+                                    onChange={(e) => setPickerSearch(e.target.value)}
+                                    placeholder="Поиск услуги..."
+                                    className="w-full pl-7 pr-7 py-1.5 text-xs rounded-lg border border-border bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/60"
+                                    autoFocus
+                                  />
+                                  {pickerSearch && (
+                                    <button
+                                      onClick={() => setPickerSearch("")}
+                                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  )}
+                                </div>
                                 {pickerLoading ? (
                                   <div className="flex items-center justify-center py-5">
                                     <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
                                   </div>
                                 ) : pickerTemplates.length === 0 ? (
                                   <p className="text-xs text-muted-foreground text-center py-4">Нет услуг в этой категории</p>
+                                ) : filteredPickerTemplates.length === 0 ? (
+                                  <p className="text-xs text-muted-foreground text-center py-4">
+                                    Ничего не найдено по «{pickerSearch}»
+                                  </p>
                                 ) : (
-                                  pickerTemplates.map((svc) => {
+                                  filteredPickerTemplates.map((svc) => {
                                     const toothServices = diagnosisServicesMap.get(diagnosisToothFdi) ?? [];
                                     const isChecked = toothServices.some((s) => s.id === svc.id);
                                     return (
