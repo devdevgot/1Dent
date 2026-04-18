@@ -70,7 +70,8 @@ router.get(
   "/procedure-templates",
   authMiddleware,
   async (req: Request, res: Response, next: NextFunction) => {
-    const templates = await _templatesRepo.listTemplates(req.user!.clinicId).catch(next);
+    const category = typeof req.query["category"] === "string" ? req.query["category"] : undefined;
+    const templates = await _templatesRepo.listTemplates(req.user!.clinicId, category).catch(next);
     if (!templates) return;
     res.json({ success: true, data: { templates } });
   },
