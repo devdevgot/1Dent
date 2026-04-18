@@ -168,6 +168,8 @@ export class ProceduresRepository {
     description?: string;
     defaultPrice?: number;
     materials?: string;
+    category?: string;
+    code?: string;
   }): Promise<ProcedureTemplate> {
     const [template] = await db
       .insert(procedureTemplatesTable)
@@ -178,6 +180,8 @@ export class ProceduresRepository {
         description: data.description ?? null,
         defaultPrice: data.defaultPrice ?? 0,
         materials: data.materials ?? "[]",
+        category: data.category ?? "other",
+        code: data.code ?? null,
       })
       .returning();
     return template!;
@@ -204,6 +208,19 @@ export class ProceduresRepository {
         and(eq(procedureTemplatesTable.id, id), eq(procedureTemplatesTable.clinicId, clinicId)),
       )
       .limit(1);
+    return template ?? null;
+  }
+
+  async updateTemplate(
+    id: string,
+    clinicId: string,
+    data: Partial<Pick<ProcedureTemplate, "defaultPrice" | "name" | "category">>,
+  ): Promise<ProcedureTemplate | null> {
+    const [template] = await db
+      .update(procedureTemplatesTable)
+      .set(data)
+      .where(and(eq(procedureTemplatesTable.id, id), eq(procedureTemplatesTable.clinicId, clinicId)))
+      .returning();
     return template ?? null;
   }
 

@@ -59,6 +59,8 @@ export const procedureTemplatesTable = pgTable("procedure_templates", {
   description: text("description"),
   defaultPrice: real("default_price").notNull().default(0),
   materials: text("materials").notNull().default("[]"),
+  category: text("category").notNull().default("other"),
+  code: text("code"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

@@ -821,6 +821,8 @@ export interface ProcedureTemplate {
   description?: string | null;
   defaultPrice: number;
   materials: string;
+  category: string;
+  code?: string | null;
   createdAt: string;
 }
 
@@ -1323,6 +1325,21 @@ export type CreateProcedureTemplate201Data = {
 export type CreateProcedureTemplate201 = {
   success?: boolean;
   data?: CreateProcedureTemplate201Data;
+};
+
+export type UpdateProcedureTemplateBody = {
+  defaultPrice?: number;
+  name?: string;
+  category?: string;
+};
+
+export type UpdateProcedureTemplate200Data = {
+  template?: ProcedureTemplate;
+};
+
+export type UpdateProcedureTemplate200 = {
+  success?: boolean;
+  data?: UpdateProcedureTemplate200Data;
 };
 
 export type GetActionLogsParams = {

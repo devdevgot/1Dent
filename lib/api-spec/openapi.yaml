@@ -1473,6 +1473,49 @@ paths:
                         $ref: "#/components/schemas/ProcedureTemplate"
 
   /procedures/templates/{id}:
+    patch:
+      operationId: updateProcedureTemplate
+      tags: [procedures]
+      summary: Update procedure template price (owner only)
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                defaultPrice:
+                  type: number
+                name:
+                  type: string
+                category:
+                  type: string
+      responses:
+        "200":
+          description: Template updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    type: object
+                    properties:
+                      template:
+                        $ref: "#/components/schemas/ProcedureTemplate"
+        "403":
+          description: Forbidden
     delete:
       operationId: deleteProcedureTemplate
       tags: [procedures]
@@ -3549,6 +3592,11 @@ components:
           type: number
         materials:
           type: string
+        category:
+          type: string
+        code:
+          type: string
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -3558,6 +3606,7 @@ components:
         - name
         - defaultPrice
         - materials
+        - category
         - createdAt
 
     DoctorKpi:

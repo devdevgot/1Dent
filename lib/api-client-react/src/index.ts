@@ -11,7 +11,10 @@ export type { AuthTokenGetter, UnauthorizedHandler } from "./custom-fetch";
 // ─── Custom: update own profile ───────────────────────────────────────────────
 import { customFetch } from "./custom-fetch";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import type { UseMutationOptions, UseQueryOptions } from "@tanstack/react-query";
+import type {
+  UseMutationOptions,
+  UseQueryOptions,
+} from "@tanstack/react-query";
 
 export interface UpdateProfileRequest {
   name?: string;
@@ -73,7 +76,9 @@ export const getChatbotSessionMessages = (
 
 export const useGetChatbotSessionMessages = <TError = unknown>(
   phone: string,
-  options?: { query?: UseQueryOptions<GetChatbotSessionMessagesResponse, TError> },
+  options?: {
+    query?: UseQueryOptions<GetChatbotSessionMessagesResponse, TError>;
+  },
 ) =>
   useQuery<GetChatbotSessionMessagesResponse, TError>({
     queryKey: ["/api/chatbot/sessions", phone, "messages"],

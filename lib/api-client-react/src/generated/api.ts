@@ -103,6 +103,8 @@ import type {
   UpdateProcedureBody,
   UpdateProcedurePaymentBody,
   UpdateProcedureStatusBody,
+  UpdateProcedureTemplate200,
+  UpdateProcedureTemplateBody,
   UpdateStockRequest,
   UpdateToothRequest,
   UpdateTreatmentPlanItemRequest,
@@ -5031,6 +5033,97 @@ export const useCreateProcedureTemplate = <
   TContext
 > => {
   return useMutation(getCreateProcedureTemplateMutationOptions(options));
+};
+
+/**
+ * @summary Update procedure template price (owner only)
+ */
+export const getUpdateProcedureTemplateUrl = (id: string) => {
+  return `/api/procedures/templates/${id}`;
+};
+
+export const updateProcedureTemplate = async (
+  id: string,
+  updateProcedureTemplateBody: UpdateProcedureTemplateBody,
+  options?: RequestInit,
+): Promise<UpdateProcedureTemplate200> => {
+  return customFetch<UpdateProcedureTemplate200>(
+    getUpdateProcedureTemplateUrl(id),
+    {
+      ...options,
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(updateProcedureTemplateBody),
+    },
+  );
+};
+
+export const getUpdateProcedureTemplateMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateProcedureTemplate>>,
+    TError,
+    { id: string; data: BodyType<UpdateProcedureTemplateBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateProcedureTemplate>>,
+  TError,
+  { id: string; data: BodyType<UpdateProcedureTemplateBody> },
+  TContext
+> => {
+  const mutationKey = ["updateProcedureTemplate"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateProcedureTemplate>>,
+    { id: string; data: BodyType<UpdateProcedureTemplateBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateProcedureTemplate(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateProcedureTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateProcedureTemplate>>
+>;
+export type UpdateProcedureTemplateMutationBody =
+  BodyType<UpdateProcedureTemplateBody>;
+export type UpdateProcedureTemplateMutationError = ErrorType<void>;
+
+/**
+ * @summary Update procedure template price (owner only)
+ */
+export const useUpdateProcedureTemplate = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateProcedureTemplate>>,
+    TError,
+    { id: string; data: BodyType<UpdateProcedureTemplateBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateProcedureTemplate>>,
+  TError,
+  { id: string; data: BodyType<UpdateProcedureTemplateBody> },
+  TContext
+> => {
+  return useMutation(getUpdateProcedureTemplateMutationOptions(options));
 };
 
 /**

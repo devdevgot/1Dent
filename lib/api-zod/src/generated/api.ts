@@ -1669,6 +1669,8 @@ export const ListProcedureTemplatesAliasResponse = zod.object({
         description: zod.string().nullish(),
         defaultPrice: zod.number(),
         materials: zod.string(),
+        category: zod.string(),
+        code: zod.string().nullish(),
         createdAt: zod.date(),
       }),
     ),
@@ -1689,6 +1691,8 @@ export const ListProcedureTemplatesResponse = zod.object({
         description: zod.string().nullish(),
         defaultPrice: zod.number(),
         materials: zod.string(),
+        category: zod.string(),
+        code: zod.string().nullish(),
         createdAt: zod.date(),
       }),
     ),
@@ -1710,6 +1714,40 @@ export const CreateProcedureTemplateBody = zod.object({
         unit: zod.string().optional(),
       }),
     )
+    .optional(),
+});
+
+/**
+ * @summary Update procedure template price (owner only)
+ */
+export const UpdateProcedureTemplateParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const UpdateProcedureTemplateBody = zod.object({
+  defaultPrice: zod.number().optional(),
+  name: zod.string().optional(),
+  category: zod.string().optional(),
+});
+
+export const UpdateProcedureTemplateResponse = zod.object({
+  success: zod.literal(true).optional(),
+  data: zod
+    .object({
+      template: zod
+        .object({
+          id: zod.string(),
+          clinicId: zod.string(),
+          name: zod.string(),
+          description: zod.string().nullish(),
+          defaultPrice: zod.number(),
+          materials: zod.string(),
+          category: zod.string(),
+          code: zod.string().nullish(),
+          createdAt: zod.date(),
+        })
+        .optional(),
+    })
     .optional(),
 });
 

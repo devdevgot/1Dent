@@ -19,6 +19,7 @@ import {
   ChevronRight,
   Bell,
   Radio,
+  ClipboardList,
 } from "lucide-react";
 
 const SUPPORTED_LANGS = ["ru", "kz", "en"] as const;
@@ -31,6 +32,7 @@ const ALL_NAV_ITEMS = [
   { nameKey: "nav.myAnalytics",  href: "/doctor-analytics",   icon: BarChart3,       roles: ["doctor"] },
   { nameKey: "nav.financials",   href: "/financials",         icon: Wallet,          roles: ["owner","accountant"] },
   { nameKey: "nav.inventory",    href: "/inventory",          icon: Package,         roles: ["owner","admin","warehouse"] },
+  { nameKey: "nav.services",     href: "/services",           icon: ClipboardList,   roles: ["owner","admin","doctor","accountant"] },
   { nameKey: "nav.users",        href: "/users",              icon: Settings,        roles: ["owner","admin"] },
   { nameKey: "nav.chatbot",      href: "/chatbot",            icon: Bot,             roles: ["owner","admin"] },
   { nameKey: "nav.channels",     href: "/channels",           icon: Radio,           roles: ["owner","admin"] },

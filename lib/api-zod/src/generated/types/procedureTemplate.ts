@@ -13,5 +13,7 @@ export interface ProcedureTemplate {
   description?: string | null;
   defaultPrice: number;
   materials: string;
+  category: string;
+  code?: string | null;
   createdAt: Date;
 }

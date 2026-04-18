@@ -59,11 +59,18 @@ const createTemplateSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
   defaultPrice: z.number().min(0).optional(),
+  category: z.string().optional(),
   materials: z.array(z.object({
     name: z.string(),
     quantity: z.number().positive(),
     unit: z.string().optional(),
   })).optional(),
+});
+
+const updateTemplateSchema = z.object({
+  defaultPrice: z.number().min(0).optional(),
+  name: z.string().min(1).optional(),
+  category: z.string().optional(),
 });
 
 router.use(authMiddleware);
@@ -376,17 +383,34 @@ router.post(
     if (!parsed.success) {
       return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
     }
-    const { materials, ...rest } = parsed.data;
+    const { materials, category, ...rest } = parsed.data;
     const template = await repo
       .createTemplate({
         id: randomUUID(),
         clinicId: req.user!.clinicId,
         materials: JSON.stringify(materials ?? []),
+        category: category ?? "other",
         ...rest,
       })
       .catch(next);
     if (!template) return;
     res.status(201).json({ success: true, data: { template } });
+  },
+);
+
+// PATCH /procedures/templates/:id — owner only, update price/name
+router.patch(
+  "/templates/:id",
+  roleGuard("owner"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const parsed = updateTemplateSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+    }
+    const id = String(req.params["id"]);
+    const template = await repo.updateTemplate(id, req.user!.clinicId, parsed.data).catch(next);
+    if (!template) return next(new NotFoundError("Template not found"));
+    res.json({ success: true, data: { template } });
   },
 );
 
