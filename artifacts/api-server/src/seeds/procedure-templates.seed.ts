@@ -8,18 +8,18 @@ export const MACDENT_SERVICES: ReadonlyArray<{
   readonly category: string;
   readonly code: string | null;
 }> = [
-  { name: "3-D томография (1 сегмент)", price: 5000, category: "other", code: null },
-  { name: "3-D томография (1 сегмент) контрольный/повторный снимок", price: 2500, category: "other", code: null },
-  { name: "3-D томография (1зуб)", price: 3000, category: "other", code: null },
-  { name: "3-D томография (1зуб) контрольный/повторный снимок", price: 1500, category: "other", code: null },
-  { name: "3-D томография (гайморовы пазухи)", price: 10000, category: "other", code: null },
-  { name: "3-D томография (гайморовы пазухи) контрольный/повторный снимок", price: 5000, category: "other", code: null },
-  { name: "3-D томография (две челюсти)", price: 10000, category: "other", code: null },
-  { name: "3-D томография (две челюсти) контрольный/повторный снимок", price: 5000, category: "other", code: null },
-  { name: "3-D томография (одна челюсть)", price: 6000, category: "other", code: null },
-  { name: "3-D томография (одна челюсть) контрольный/повторный снимок", price: 3000, category: "other", code: null },
-  { name: "3-D томография (суставы)", price: 10000, category: "other", code: null },
-  { name: "3-D томография (суставы) контрольный/повторный снимок", price: 5000, category: "other", code: null },
+  { name: "3-D томография (1 сегмент)", price: 5000, category: "radiology", code: null },
+  { name: "3-D томография (1 сегмент) контрольный/повторный снимок", price: 2500, category: "radiology", code: null },
+  { name: "3-D томография (1зуб)", price: 3000, category: "radiology", code: null },
+  { name: "3-D томография (1зуб) контрольный/повторный снимок", price: 1500, category: "radiology", code: null },
+  { name: "3-D томография (гайморовы пазухи)", price: 10000, category: "radiology", code: null },
+  { name: "3-D томография (гайморовы пазухи) контрольный/повторный снимок", price: 5000, category: "radiology", code: null },
+  { name: "3-D томография (две челюсти)", price: 10000, category: "radiology", code: null },
+  { name: "3-D томография (две челюсти) контрольный/повторный снимок", price: 5000, category: "radiology", code: null },
+  { name: "3-D томография (одна челюсть)", price: 6000, category: "radiology", code: null },
+  { name: "3-D томография (одна челюсть) контрольный/повторный снимок", price: 3000, category: "radiology", code: null },
+  { name: "3-D томография (суставы)", price: 10000, category: "radiology", code: null },
+  { name: "3-D томография (суставы) контрольный/повторный снимок", price: 5000, category: "radiology", code: null },
   { name: "All in 4 (ZnO2)", price: 1800000, category: "implantation", code: null },
   { name: "All in 4 (МКL)", price: 1600000, category: "implantation", code: null },
   { name: "All in 6 (ZnO2)", price: 1800000, category: "implantation", code: null },
@@ -81,8 +81,7 @@ export const MACDENT_SERVICES: ReadonlyArray<{
   { name: "Наложение швов", price: 5000, category: "surgery", code: null },
   { name: "Направленная костная регенерация с резорбированной мембраной", price: 150000, category: "surgery", code: null },
   { name: "Операция, резекция верхушки корня однокорневого зуба", price: 24000, category: "surgery", code: null },
-  { name: "Оплата долга", price: 0, category: "orthopedics", code: null },
-  { name: "Оплата долга", price: 0, category: "therapy", code: null },
+  { name: "Оплата долга", price: 0, category: "other", code: null },
   { name: "Ортодонтический набор Те-Ре №1 (Зубная щётка Supreme Compact Soft, Монопучок TUFT, межзубный ёршик Angle, межзубный ёршик Original, индикатор кариеса в таблетках, ортовоск)", price: 5000, category: "hygiene", code: null },
   { name: "Осмотр", price: 0, category: "therapy", code: null },
   { name: "Отбеливание повторный прием", price: 25000, category: "hygiene", code: null },
@@ -90,7 +89,7 @@ export const MACDENT_SERVICES: ReadonlyArray<{
   { name: "Открытый Sinus Lifting (работа)", price: 200000, category: "surgery", code: null },
   { name: "Открытый кюретаж (в области от 1 до 3 зубов)", price: 10000, category: "surgery", code: null },
   { name: "Отторжение имплантанта", price: 0, category: "implantation", code: null },
-  { name: "Панорамный снимок. Ортопонтамограф (распечатка снимка)", price: 3000, category: "other", code: null },
+  { name: "Панорамный снимок. Ортопонтамограф (распечатка снимка)", price: 3000, category: "radiology", code: null },
   { name: "Перебазировка съёмного протеза", price: 5500, category: "orthopedics", code: null },
   { name: "Переимплантация (без учёта импоантанта)", price: 28500, category: "implantation", code: null },
   { name: "Периостомия, иссечение «капюшона»", price: 8000, category: "surgery", code: null },
@@ -110,8 +109,8 @@ export const MACDENT_SERVICES: ReadonlyArray<{
   { name: "Разборная культевая вкладка", price: 20000, category: "orthopedics", code: null },
   { name: "Распломбирование 1 канала", price: 4500, category: "therapy", code: null },
   { name: "Расщепление альвеолярного гребня в области 1 до 3 зубов", price: 250000, category: "surgery", code: null },
-  { name: "Рентгенография зуба (прицельный снимок)", price: 1500, category: "other", code: null },
-  { name: "Реставрация 1 зуба (1 анестезия включена, без стоимости штифта) во фронтальной группе зубов", price: 30000, category: "therapy", code: "8" },
+  { name: "Рентгенография зуба (прицельный снимок)", price: 1500, category: "radiology", code: null },
+  { name: "Реставрация 1 зуба (1 анестезия включена, без стоимости штифта) во фронтальной группе зубов", price: 30000, category: "restoration", code: "8" },
   { name: "Сдача работы", price: 0, category: "orthopedics", code: null },
   { name: "Серебрение (1 зуб)", price: 700, category: "pediatric", code: null },
   { name: "Снятие двухслойного слепка С-силикон для диагностической модели", price: 7000, category: "orthopedics", code: null },
@@ -156,8 +155,8 @@ export const MACDENT_SERVICES: ReadonlyArray<{
   { name: "приварка 1-го зуба", price: 5500, category: "orthopedics", code: null },
 ] as const;
 
-if (MACDENT_SERVICES.length !== 146) {
-  throw new Error(`Expected 146 services, got ${MACDENT_SERVICES.length}`);
+if (MACDENT_SERVICES.length !== 145) {
+  throw new Error(`Expected 145 services, got ${MACDENT_SERVICES.length}`);
 }
 
 export async function seedProcedureTemplates(clinicId: string): Promise<{ inserted: number; skipped: number }> {
