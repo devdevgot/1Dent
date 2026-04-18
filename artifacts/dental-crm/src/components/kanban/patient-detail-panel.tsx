@@ -19,19 +19,21 @@ import {
   useAddTreatmentPlanItem,
   useUpdateTreatmentPlanItem,
   useCompleteTreatmentPlanItem,
+  useListProcedureTemplates,
   getListPatientsQueryKey,
   getGetPatientQueryKey,
   getListTeethQueryKey,
   getListPatientTreatmentsQueryKey,
   getGetActiveTreatmentPlanQueryKey,
   getListTreatmentPlansQueryKey,
+  getListProcedureTemplatesQueryKey,
 } from "@workspace/api-client-react";
-import type { ToothRecord, ToothTreatment } from "@workspace/api-client-react";
+import type { ToothRecord, ToothTreatment, ProcedureTemplate } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   X, ChevronDown, CheckCircle2, Clock, ArrowUpRight,
   Phone, User, Calendar, CreditCard, Stethoscope, TrendingUp, Copy, Save, IdCard,
-  ClipboardList, Plus, BadgeCheck, Circle,
+  ClipboardList, Plus, BadgeCheck, Circle, ArrowLeft, Square, CheckSquare, Loader2,
 } from "lucide-react";
 import { calculateAge, formatDateOfBirth, maskIIN } from "@workspace/api-zod";
 import { Button } from "@/components/ui/button";
@@ -58,6 +60,30 @@ const INTERACTION_TYPE_KEYS = [
 
 type DiagnosisMap = Map<number, ToothCondition>;
 type DiagnosisNotesMap = Map<number, string>;
+
+const PICKER_CATEGORIES: { key: string; label: string; icon: string }[] = [
+  { key: "therapy",        label: "Терапия",        icon: "🦷" },
+  { key: "surgery",        label: "Хирургия",       icon: "✂️" },
+  { key: "orthopedics",    label: "Ортопедия",      icon: "👑" },
+  { key: "implantation",   label: "Имплантация",    icon: "🔩" },
+  { key: "pediatric",      label: "Детская",        icon: "🧒" },
+  { key: "hygiene",        label: "Гигиена",        icon: "✨" },
+  { key: "periodontology", label: "Пародонтология", icon: "🩺" },
+  { key: "radiology",      label: "Рентген",        icon: "📷" },
+  { key: "restoration",    label: "Реставрация",    icon: "💎" },
+];
+
+const CATEGORY_TO_CONDITION: Record<string, ToothCondition> = {
+  therapy:        "caries",
+  surgery:        "missing",
+  orthopedics:    "crown",
+  implantation:   "implant",
+  pediatric:      "caries",
+  hygiene:        "healthy",
+  periodontology: "caries",
+  radiology:      "healthy",
+  restoration:    "treated",
+};
 
 function ToothActionModal({
   fdi,
@@ -350,6 +376,8 @@ export function PatientDetailPanel() {
   const [diagnosisNotesMap, setDiagnosisNotesMap] = useState<DiagnosisNotesMap>(new Map());
   const [diagnosisToothFdi, setDiagnosisToothFdi] = useState<number | null>(null);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [pickerCategory, setPickerCategory] = useState<string | null>(null);
+  const [diagnosisServicesMap, setDiagnosisServicesMap] = useState<Map<number, ProcedureTemplate[]>>(new Map());
 
   const [modalToothFdi, setModalToothFdi] = useState<number | null>(null);
 
@@ -397,6 +425,18 @@ export function PatientDetailPanel() {
     query: { enabled: isDiagnosisMode || activeTab === "dental" },
   });
   const conditionPricesMap = conditionPricesData?.data?.prices ?? {};
+
+  const { data: pickerTemplatesData, isLoading: pickerLoading } = useListProcedureTemplates(
+    pickerCategory ? { category: pickerCategory } : undefined,
+    {
+      query: {
+        queryKey: getListProcedureTemplatesQueryKey(pickerCategory ? { category: pickerCategory } : undefined),
+        enabled: pickerCategory !== null && isDiagnosisMode,
+        staleTime: 60_000,
+      },
+    },
+  );
+  const pickerTemplates: ProcedureTemplate[] = pickerTemplatesData?.data?.templates ?? [];
 
   const { data: planData } = useGetActiveTreatmentPlan(selectedPatientId ?? "", {
     query: {
@@ -559,6 +599,8 @@ export function PatientDetailPanel() {
     setDiagnosisMap(new Map());
     setDiagnosisNotesMap(new Map());
     setDiagnosisToothFdi(null);
+    setDiagnosisServicesMap(new Map());
+    setPickerCategory(null);
     setIsDiagnosisMode(false);
     setShowSummaryModal(false);
     toast({ title: t("patient.diagnosisSaved") });
@@ -578,11 +620,14 @@ export function PatientDetailPanel() {
   }, [diagnosisMap, teethMap, conditionPricesMap]);
 
   const diagnosisTotalCost = useMemo(() => {
-    return diagnosisMap.size === 0 ? 0 : diagnosisSummaryEntries
-      .filter((e) => diagnosisMap.has(e.fdi))
-      .filter((e) => e.condition !== "healthy" && e.condition !== "missing")
-      .reduce((s, e) => s + e.price, 0);
-  }, [diagnosisSummaryEntries, diagnosisMap]);
+    let total = 0;
+    for (const services of diagnosisServicesMap.values()) {
+      for (const svc of services) {
+        total += svc.defaultPrice ?? 0;
+      }
+    }
+    return total;
+  }, [diagnosisServicesMap]);
 
   const financials = useMemo(() => {
     const total = patientProcedures.reduce((s, p) => s + (p.price ?? 0), 0);
@@ -1049,6 +1094,7 @@ export function PatientDetailPanel() {
                           teethData={diagnosisDisplayMap}
                           selectedFdi={diagnosisToothFdi}
                           onToothClick={(fdi) => {
+                            if (fdi !== diagnosisToothFdi) setPickerCategory(null);
                             setDiagnosisToothFdi(fdi === diagnosisToothFdi ? null : fdi);
                           }}
                         />
@@ -1058,45 +1104,86 @@ export function PatientDetailPanel() {
                             <p className="text-xs font-semibold text-muted-foreground">
                               {t("tooth.title", { fdi: diagnosisToothFdi })} — {t("tooth.conditionLabel")}
                             </p>
-                            <div className="grid grid-cols-2 gap-1.5">
-                              {(Object.entries(CONDITION_CONFIG) as [ToothCondition, typeof CONDITION_CONFIG[ToothCondition]][]).map(([cond, cfg]) => {
-                                const current = diagnosisMap.get(diagnosisToothFdi) ?? teethMap.get(diagnosisToothFdi)?.condition ?? "healthy";
-                                const priceEntry = conditionPricesMap[cond];
-                                const condPrice = priceEntry?.price ?? 0;
-                                return (
+                            {/* ── 2-level service picker ── */}
+                            {pickerCategory === null ? (
+                              /* Level 1 — categories (no prices) */
+                              <div className="grid grid-cols-2 gap-1.5">
+                                {PICKER_CATEGORIES.map((cat) => (
                                   <button
-                                    key={cond}
-                                    onClick={() => {
-                                      const next = new Map(diagnosisMap);
-                                      next.set(diagnosisToothFdi, cond);
-                                      setDiagnosisMap(next);
-                                    }}
-                                    className={`flex flex-col items-start gap-0.5 px-2 py-1.5 rounded-lg border text-left text-xs transition-all ${
-                                      current === cond ? "ring-2 ring-primary ring-offset-1 border-transparent" : "border-border"
-                                    }`}
-                                    style={{
-                                      background: current === cond ? cfg.crownFill : undefined,
-                                      borderColor: current === cond ? cfg.stroke : undefined,
-                                    }}
+                                    key={cat.key}
+                                    onClick={() => setPickerCategory(cat.key)}
+                                    className="flex items-center gap-2 px-2.5 py-2 rounded-lg border border-border text-left text-xs transition-all hover:border-primary/50 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                                   >
-                                    <div className="flex items-center gap-1.5">
-                                      <span
-                                        className="w-3 h-3 rounded-sm shrink-0 border"
-                                        style={{ background: cfg.crownFill, borderColor: cfg.stroke }}
-                                      />
-                                      <span style={{ color: current === cond ? cfg.textColor : undefined }}>
-                                        {t(`condition.${cond}`)}
-                                      </span>
-                                    </div>
-                                    {condPrice > 0 && (
-                                      <span className="text-[10px] text-muted-foreground pl-[18px]">
-                                        {condPrice.toLocaleString("ru-RU")} ₸
-                                      </span>
-                                    )}
+                                    <span className="text-base leading-none shrink-0">{cat.icon}</span>
+                                    <span className="font-medium text-foreground leading-tight">{cat.label}</span>
                                   </button>
-                                );
-                              })}
-                            </div>
+                                ))}
+                              </div>
+                            ) : (
+                              /* Level 2 — services list */
+                              <div className="space-y-1.5">
+                                <button
+                                  onClick={() => setPickerCategory(null)}
+                                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-0.5"
+                                >
+                                  <ArrowLeft className="w-3.5 h-3.5" />
+                                  <span>Назад к категориям</span>
+                                </button>
+                                {pickerLoading ? (
+                                  <div className="flex items-center justify-center py-5">
+                                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                                  </div>
+                                ) : pickerTemplates.length === 0 ? (
+                                  <p className="text-xs text-muted-foreground text-center py-4">Нет услуг в этой категории</p>
+                                ) : (
+                                  pickerTemplates.map((svc) => {
+                                    const toothServices = diagnosisServicesMap.get(diagnosisToothFdi) ?? [];
+                                    const isChecked = toothServices.some((s) => s.id === svc.id);
+                                    return (
+                                      <button
+                                        key={svc.id}
+                                        onClick={() => {
+                                          const prev = diagnosisServicesMap.get(diagnosisToothFdi) ?? [];
+                                          const next = new Map(diagnosisServicesMap);
+                                          if (isChecked) {
+                                            next.set(diagnosisToothFdi, prev.filter((s) => s.id !== svc.id));
+                                          } else {
+                                            next.set(diagnosisToothFdi, [...prev, svc]);
+                                            // Auto-set tooth condition based on category
+                                            const cond = CATEGORY_TO_CONDITION[pickerCategory] ?? "caries";
+                                            const cm = new Map(diagnosisMap);
+                                            if (!cm.has(diagnosisToothFdi)) cm.set(diagnosisToothFdi, cond);
+                                            setDiagnosisMap(cm);
+                                          }
+                                          setDiagnosisServicesMap(next);
+                                        }}
+                                        className={`w-full flex items-start gap-2 px-2.5 py-2 rounded-lg border text-left text-xs transition-all ${
+                                          isChecked
+                                            ? "border-primary bg-primary/8 ring-1 ring-primary/30"
+                                            : "border-border hover:border-primary/40 hover:bg-slate-50"
+                                        }`}
+                                      >
+                                        <span className="mt-0.5 shrink-0">
+                                          {isChecked
+                                            ? <CheckSquare className="w-3.5 h-3.5 text-primary" />
+                                            : <Square className="w-3.5 h-3.5 text-muted-foreground" />
+                                          }
+                                        </span>
+                                        <span className="flex-1 min-w-0">
+                                          <span className="block font-medium text-foreground leading-snug">
+                                            {svc.code ? <span className="text-muted-foreground mr-1 font-mono">{svc.code}</span> : null}
+                                            {svc.name}
+                                          </span>
+                                          <span className="block mt-0.5 text-primary font-semibold">
+                                            {svc.defaultPrice > 0 ? `${svc.defaultPrice.toLocaleString("ru-KZ")} ₸` : "Бесплатно"}
+                                          </span>
+                                        </span>
+                                      </button>
+                                    );
+                                  })
+                                )}
+                              </div>
+                            )}
                             <div>
                               <label className="text-xs font-medium text-muted-foreground block mb-1">
                                 {t("tooth.notesLabel")}
@@ -1116,7 +1203,7 @@ export function PatientDetailPanel() {
                           </div>
                         )}
 
-                        {diagnosisMap.size > 0 && (
+                        {diagnosisServicesMap.size > 0 && diagnosisTotalCost > 0 && (
                           <div className="bg-primary/8 border border-primary/20 rounded-xl px-3 py-2.5 flex items-center justify-between">
                             <span className="text-xs font-medium text-primary">Предварительная стоимость:</span>
                             <span className="text-sm font-bold text-primary">
@@ -1135,6 +1222,8 @@ export function PatientDetailPanel() {
                               setDiagnosisMap(new Map());
                               setDiagnosisNotesMap(new Map());
                               setDiagnosisToothFdi(null);
+                              setDiagnosisServicesMap(new Map());
+                              setPickerCategory(null);
                             }}
                           >
                             {t("tooth.cancel")}
