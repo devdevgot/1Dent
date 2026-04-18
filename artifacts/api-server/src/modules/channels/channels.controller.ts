@@ -227,11 +227,18 @@ router.post(
       logger.info({ instanceId: clinic.greenApiInstanceId, status: result.status }, "Green API pairing code fetched");
     } catch (err) {
       logger.error({ err, instanceId: clinic.greenApiInstanceId }, "Green API pairing code fetch failed");
-      return next(err);
+      const msg = err instanceof Error ? err.message : String(err);
+      return res.status(502).json({
+        success: false,
+        error: `Не удалось связаться с Green API: ${msg}. Проверьте ID инстанса и токен.`,
+      });
     }
 
-    if (result.status !== "ok" || !result.authorizationCode) {
-      return res.status(400).json({ success: false, error: result.message ?? "Не удалось получить код. Убедитесь, что инстанс не авторизован." });
+    if (!result.authorizationCode) {
+      return res.status(400).json({
+        success: false,
+        error: result.message ?? "Не удалось получить код. Убедитесь, что инстанс не авторизован и номер телефона верный.",
+      });
     }
 
     res.json({ success: true, data: { code: result.authorizationCode } });

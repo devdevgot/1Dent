@@ -61,8 +61,13 @@ export async function getGreenApiPairingCode(
 ): Promise<GreenApiPairingCodeResult> {
   // Strip non-digits so the user can enter phone in any format
   const digits = phoneNumber.replace(/\D/g, "");
-  const url = `${BASE_URL}/waInstance${instanceId}/getAuthorizationCode/${token}?phoneNumber=${digits}`;
-  const res = await fetch(url);
+  const url = `${BASE_URL}/waInstance${instanceId}/getAuthorizationCode/${token}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    // Green API expects phoneNumber as a number (integer), not a string
+    body: JSON.stringify({ phoneNumber: parseInt(digits, 10) }),
+  });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     throw new Error(`Green API getAuthorizationCode failed: ${res.status} ${body}`);
