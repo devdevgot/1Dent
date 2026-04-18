@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, type ComponentType } from "react";
 import { useLocation } from "wouter";
 import {
   useGetPatient,
@@ -34,6 +34,7 @@ import {
   X, ChevronDown, CheckCircle2, Clock, ArrowUpRight,
   Phone, User, Calendar, CreditCard, Stethoscope, TrendingUp, Copy, Save, IdCard,
   ClipboardList, Plus, BadgeCheck, Circle, ArrowLeft, Square, CheckSquare, Loader2,
+  Scissors, Crown, Wrench, Baby, Sparkles, Activity, ScanLine, Paintbrush,
 } from "lucide-react";
 import { calculateAge, formatDateOfBirth, maskIIN } from "@workspace/api-zod";
 import { Button } from "@/components/ui/button";
@@ -61,16 +62,16 @@ const INTERACTION_TYPE_KEYS = [
 type DiagnosisMap = Map<number, ToothCondition>;
 type DiagnosisNotesMap = Map<number, string>;
 
-const PICKER_CATEGORIES: { key: string; label: string; icon: string }[] = [
-  { key: "therapy",        label: "Терапия",        icon: "🦷" },
-  { key: "surgery",        label: "Хирургия",       icon: "✂️" },
-  { key: "orthopedics",    label: "Ортопедия",      icon: "👑" },
-  { key: "implantation",   label: "Имплантация",    icon: "🔩" },
-  { key: "pediatric",      label: "Детская",        icon: "🧒" },
-  { key: "hygiene",        label: "Гигиена",        icon: "✨" },
-  { key: "periodontology", label: "Пародонтология", icon: "🩺" },
-  { key: "radiology",      label: "Рентген",        icon: "📷" },
-  { key: "restoration",    label: "Реставрация",    icon: "💎" },
+const PICKER_CATEGORIES: { key: string; label: string; Icon: ComponentType<{ className?: string }> }[] = [
+  { key: "therapy",        label: "Терапия",        Icon: Stethoscope },
+  { key: "surgery",        label: "Хирургия",       Icon: Scissors   },
+  { key: "orthopedics",    label: "Ортопедия",      Icon: Crown      },
+  { key: "implantation",   label: "Имплантация",    Icon: Wrench     },
+  { key: "pediatric",      label: "Детская",        Icon: Baby       },
+  { key: "hygiene",        label: "Гигиена",        Icon: Sparkles   },
+  { key: "periodontology", label: "Пародонтология", Icon: Activity   },
+  { key: "radiology",      label: "Рентген",        Icon: ScanLine   },
+  { key: "restoration",    label: "Реставрация",    Icon: Paintbrush },
 ];
 
 const CATEGORY_TO_CONDITION: Record<string, ToothCondition> = {
@@ -1108,14 +1109,14 @@ export function PatientDetailPanel() {
                             {pickerCategory === null ? (
                               /* Level 1 — categories (no prices) */
                               <div className="grid grid-cols-2 gap-1.5">
-                                {PICKER_CATEGORIES.map((cat) => (
+                                {PICKER_CATEGORIES.map(({ key, label, Icon }) => (
                                   <button
-                                    key={cat.key}
-                                    onClick={() => setPickerCategory(cat.key)}
+                                    key={key}
+                                    onClick={() => setPickerCategory(key)}
                                     className="flex items-center gap-2 px-2.5 py-2 rounded-lg border border-border text-left text-xs transition-all hover:border-primary/50 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                                   >
-                                    <span className="text-base leading-none shrink-0">{cat.icon}</span>
-                                    <span className="font-medium text-foreground leading-tight">{cat.label}</span>
+                                    <Icon className="w-3.5 h-3.5 shrink-0 text-primary" />
+                                    <span className="font-medium text-foreground leading-tight">{label}</span>
                                   </button>
                                 ))}
                               </div>
