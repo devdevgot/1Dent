@@ -233,7 +233,7 @@ function Router() {
         <ProtectedRoute component={InventoryPage} allowedRoles={['owner', 'admin', 'warehouse', 'doctor', 'accountant']} />
       </Route>
       <Route path="/services">
-        <ProtectedRoute component={ServicesPage} allowedRoles={['owner', 'admin']} />
+        <ProtectedRoute component={ServicesPage} allowedRoles={['owner', 'admin', 'doctor', 'accountant']} />
       </Route>
 
       {/* Doctor schedule (read-only calendar) */}

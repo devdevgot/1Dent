@@ -1423,6 +1423,13 @@ paths:
       summary: List procedure templates
       security:
         - cookieAuth: []
+      parameters:
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by category key (e.g. therapy, surgery, orthopedics, implantation, pediatric, hygiene, periodontology, radiology, restoration, other)
       responses:
         "200":
           description: List of templates
@@ -1494,10 +1501,8 @@ paths:
               properties:
                 defaultPrice:
                   type: number
-                name:
-                  type: string
-                category:
-                  type: string
+              required:
+                - defaultPrice
       responses:
         "200":
           description: Template updated

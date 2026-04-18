@@ -1311,6 +1311,13 @@ export type UpdateProcedurePaymentBody = {
   paymentMethod: PaymentMethod;
 };
 
+export type ListProcedureTemplatesParams = {
+  /**
+   * Filter by category key (e.g. therapy, surgery, orthopedics, implantation, pediatric, hygiene, periodontology, radiology, restoration, other)
+   */
+  category?: string;
+};
+
 export type CreateProcedureTemplateBody = {
   name: string;
   description?: string;
@@ -1328,9 +1335,7 @@ export type CreateProcedureTemplate201 = {
 };
 
 export type UpdateProcedureTemplateBody = {
-  defaultPrice?: number;
-  name?: string;
-  category?: string;
+  defaultPrice: number;
 };
 
 export type UpdateProcedureTemplate200Data = {

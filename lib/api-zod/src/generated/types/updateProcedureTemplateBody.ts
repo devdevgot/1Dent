@@ -7,7 +7,5 @@
  */
 
 export type UpdateProcedureTemplateBody = {
-  defaultPrice?: number;
-  name?: string;
-  category?: string;
+  defaultPrice: number;
 };

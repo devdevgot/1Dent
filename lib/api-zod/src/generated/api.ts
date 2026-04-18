@@ -1680,6 +1680,15 @@ export const ListProcedureTemplatesAliasResponse = zod.object({
 /**
  * @summary List procedure templates
  */
+export const ListProcedureTemplatesQueryParams = zod.object({
+  category: zod.coerce
+    .string()
+    .optional()
+    .describe(
+      "Filter by category key (e.g. therapy, surgery, orthopedics, implantation, pediatric, hygiene, periodontology, radiology, restoration, other)",
+    ),
+});
+
 export const ListProcedureTemplatesResponse = zod.object({
   success: zod.literal(true),
   data: zod.object({
@@ -1725,9 +1734,7 @@ export const UpdateProcedureTemplateParams = zod.object({
 });
 
 export const UpdateProcedureTemplateBody = zod.object({
-  defaultPrice: zod.number().optional(),
-  name: zod.string().optional(),
-  category: zod.string().optional(),
+  defaultPrice: zod.number(),
 });
 
 export const UpdateProcedureTemplateResponse = zod.object({

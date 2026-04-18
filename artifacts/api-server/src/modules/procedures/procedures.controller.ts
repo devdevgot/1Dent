@@ -68,9 +68,7 @@ const createTemplateSchema = z.object({
 });
 
 const updateTemplateSchema = z.object({
-  defaultPrice: z.number().min(0).optional(),
-  name: z.string().min(1).optional(),
-  category: z.string().optional(),
+  defaultPrice: z.number().min(0),
 });
 
 router.use(authMiddleware);
@@ -114,7 +112,8 @@ router.get(
   "/templates",
   allRoles,
   async (req: Request, res: Response, next: NextFunction) => {
-    const templates = await repo.listTemplates(req.user!.clinicId).catch(next);
+    const category = typeof req.query["category"] === "string" ? req.query["category"] : undefined;
+    const templates = await repo.listTemplates(req.user!.clinicId, category).catch(next);
     if (!templates) return;
     res.json({ success: true, data: { templates } });
   },

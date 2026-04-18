@@ -62,6 +62,7 @@ import type {
   InventoryItemResponse,
   InventoryListResponse,
   ListChatbotSessions200,
+  ListProcedureTemplatesParams,
   LoginRequest,
   MeResponse,
   MessageResponse,
@@ -4869,15 +4870,30 @@ export function useListProcedureTemplatesAlias<
 /**
  * @summary List procedure templates
  */
-export const getListProcedureTemplatesUrl = () => {
-  return `/api/procedures/templates`;
+export const getListProcedureTemplatesUrl = (
+  params?: ListProcedureTemplatesParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/procedures/templates?${stringifiedParams}`
+    : `/api/procedures/templates`;
 };
 
 export const listProcedureTemplates = async (
+  params?: ListProcedureTemplatesParams,
   options?: RequestInit,
 ): Promise<ProcedureTemplateListResponse> => {
   return customFetch<ProcedureTemplateListResponse>(
-    getListProcedureTemplatesUrl(),
+    getListProcedureTemplatesUrl(params),
     {
       ...options,
       method: "GET",
@@ -4885,29 +4901,35 @@ export const listProcedureTemplates = async (
   );
 };
 
-export const getListProcedureTemplatesQueryKey = () => {
-  return [`/api/procedures/templates`] as const;
+export const getListProcedureTemplatesQueryKey = (
+  params?: ListProcedureTemplatesParams,
+) => {
+  return [`/api/procedures/templates`, ...(params ? [params] : [])] as const;
 };
 
 export const getListProcedureTemplatesQueryOptions = <
   TData = Awaited<ReturnType<typeof listProcedureTemplates>>,
   TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof listProcedureTemplates>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}) => {
+>(
+  params?: ListProcedureTemplatesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listProcedureTemplates>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
-    queryOptions?.queryKey ?? getListProcedureTemplatesQueryKey();
+    queryOptions?.queryKey ?? getListProcedureTemplatesQueryKey(params);
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof listProcedureTemplates>>
-  > = ({ signal }) => listProcedureTemplates({ signal, ...requestOptions });
+  > = ({ signal }) =>
+    listProcedureTemplates(params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof listProcedureTemplates>>,
@@ -4928,15 +4950,18 @@ export type ListProcedureTemplatesQueryError = ErrorType<unknown>;
 export function useListProcedureTemplates<
   TData = Awaited<ReturnType<typeof listProcedureTemplates>>,
   TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof listProcedureTemplates>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getListProcedureTemplatesQueryOptions(options);
+>(
+  params?: ListProcedureTemplatesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listProcedureTemplates>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListProcedureTemplatesQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

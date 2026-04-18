@@ -99,6 +99,7 @@ export * from "./inventoryListResponse";
 export * from "./inventoryListResponseData";
 export * from "./listChatbotSessions200";
 export * from "./listChatbotSessions200Data";
+export * from "./listProcedureTemplatesParams";
 export * from "./loginRequest";
 export * from "./meResponse";
 export * from "./meResponseData";

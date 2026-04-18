@@ -153,11 +153,14 @@ export class ProceduresRepository {
       .where(and(eq(proceduresTable.id, id), eq(proceduresTable.clinicId, clinicId)));
   }
 
-  async listTemplates(clinicId: string): Promise<ProcedureTemplate[]> {
+  async listTemplates(clinicId: string, category?: string): Promise<ProcedureTemplate[]> {
+    const where = category && category !== "all"
+      ? and(eq(procedureTemplatesTable.clinicId, clinicId), eq(procedureTemplatesTable.category, category))
+      : eq(procedureTemplatesTable.clinicId, clinicId);
     return db
       .select()
       .from(procedureTemplatesTable)
-      .where(eq(procedureTemplatesTable.clinicId, clinicId))
+      .where(where)
       .orderBy(procedureTemplatesTable.name);
   }
 
@@ -214,7 +217,7 @@ export class ProceduresRepository {
   async updateTemplate(
     id: string,
     clinicId: string,
-    data: Partial<Pick<ProcedureTemplate, "defaultPrice" | "name" | "category">>,
+    data: Pick<ProcedureTemplate, "defaultPrice">,
   ): Promise<ProcedureTemplate | null> {
     const [template] = await db
       .update(procedureTemplatesTable)
