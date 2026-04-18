@@ -22,7 +22,7 @@ import { authMiddleware, roleGuard } from "../middlewares/auth.middleware";
 import { ProceduresRepository } from "../modules/procedures/procedures.repository";
 import { DentalRepository } from "../modules/dental/dental.repository";
 import { PatientsRepository } from "../modules/patients/patients.repository";
-import { NotFoundError } from "../shared/errors";
+import { NotFoundError, ValidationError } from "../shared/errors";
 
 const router: IRouter = Router();
 const _templatesRepo = new ProceduresRepository();
@@ -73,6 +73,23 @@ router.get(
     const templates = await _templatesRepo.listTemplates(req.user!.clinicId).catch(next);
     if (!templates) return;
     res.json({ success: true, data: { templates } });
+  },
+);
+
+// Alias: PATCH /procedure-templates/:id — owner only, update price
+router.patch(
+  "/procedure-templates/:id",
+  authMiddleware,
+  roleGuard("owner"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const defaultPrice = req.body?.defaultPrice;
+    if (typeof defaultPrice !== "number" || defaultPrice < 0) {
+      return next(new ValidationError("defaultPrice must be a non-negative number"));
+    }
+    const id = String(req.params["id"]);
+    const template = await _templatesRepo.updateTemplate(id, req.user!.clinicId, { defaultPrice }).catch(next);
+    if (!template) return next(new NotFoundError("Template not found"));
+    res.json({ success: true, data: { template } });
   },
 );
 

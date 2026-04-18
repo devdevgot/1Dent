@@ -6,6 +6,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { startAlertWorker } from "./shared/alert-queue";
 import { getServerBaseUrl } from "./shared/green-api";
+import { seedAllClinics } from "./seeds/procedure-templates.seed";
 
 const isProd = process.env["NODE_ENV"] === "production";
 
@@ -40,6 +41,14 @@ if (process.env["DATABASE_URL"]) {
     logger.info("Database migrations applied successfully");
   } catch (err) {
     logger.warn({ err }, "Database migration error — continuing server startup");
+  }
+
+  // Seed initial price catalog for all clinics that have no templates yet
+  try {
+    await seedAllClinics();
+    logger.info("Procedure template seed completed");
+  } catch (err) {
+    logger.warn({ err }, "Procedure template seed failed — continuing server startup");
   }
 } else {
   logger.warn("DATABASE_URL not set — skipping migrations");

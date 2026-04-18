@@ -191,14 +191,21 @@ export async function seedProcedureTemplates(clinicId: string): Promise<{ insert
 
 export async function seedAllClinics(): Promise<void> {
   const clinics = await db.select({ id: clinicsTable.id }).from(clinicsTable);
-  console.log(`Seeding ${MACDENT_SERVICES.length} services for ${clinics.length} clinics...`);
+  if (clinics.length === 0) return;
+
+  let totalInserted = 0;
+  let clinicsSeeded = 0;
   for (const clinic of clinics) {
     const result = await seedProcedureTemplates(clinic.id);
-    console.log(`  Clinic ${clinic.id}: inserted=${result.inserted}, skipped=${result.skipped}`);
+    if (result.inserted > 0) {
+      clinicsSeeded++;
+      totalInserted += result.inserted;
+    }
   }
-  console.log("Done.");
+  if (totalInserted > 0) {
+    console.log(`[seedAllClinics] Inserted ${totalInserted} templates across ${clinicsSeeded} clinics.`);
+  } else {
+    console.log(`[seedAllClinics] All ${clinics.length} clinics already have procedure templates.`);
+  }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
-  seedAllClinics().then(() => process.exit(0)).catch((e: Error) => { console.error(e); process.exit(1); });
-}

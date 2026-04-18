@@ -373,10 +373,10 @@ router.delete(
   },
 );
 
-// POST /procedure-templates
+// POST /procedures/templates — owner only
 router.post(
   "/templates",
-  ownerAdminRoles,
+  roleGuard("owner"),
   async (req: Request, res: Response, next: NextFunction) => {
     const parsed = createTemplateSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -413,10 +413,10 @@ router.patch(
   },
 );
 
-// DELETE /procedure-templates/:id
+// DELETE /procedures/templates/:id — owner only
 router.delete(
   "/templates/:id",
-  ownerAdminRoles,
+  roleGuard("owner"),
   async (req: Request, res: Response, next: NextFunction) => {
     const id = String(req.params["id"]);
     await repo.deleteTemplate(id, req.user!.clinicId).catch(next);
