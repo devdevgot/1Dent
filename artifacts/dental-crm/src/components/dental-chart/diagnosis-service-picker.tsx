@@ -1,13 +1,15 @@
 import { useState, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useListProcedureTemplates,
   useCreateProcedure,
   getListProcedureTemplatesQueryKey,
+  getListProceduresQueryKey,
 } from "@workspace/api-client-react";
 import type { ProcedureTemplate } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, CheckSquare, Square, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckSquare, Square, Loader2, AlertCircle } from "lucide-react";
 import { useAuthStore } from "@/hooks/use-auth";
 
 const DIAGNOSIS_CATEGORIES: ReadonlyArray<{ key: string; label: string; icon: string }> = [
@@ -36,8 +38,10 @@ export function DiagnosisServicePicker({
   onSuccess,
 }: DiagnosisServicePickerProps) {
   const { user } = useAuthStore();
+  const qc = useQueryClient();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchError, setBatchError] = useState<string | null>(null);
 
   const { data: servicesData, isLoading: servicesLoading } = useListProcedureTemplates(
     selectedCategory ? { category: selectedCategory } : undefined,
@@ -64,13 +68,7 @@ export function DiagnosisServicePicker({
     [selectedServices],
   );
 
-  const createMutation = useCreateProcedure({
-    mutation: {
-      onSuccess: () => {
-        onSuccess?.();
-      },
-    },
-  });
+  const createMutation = useCreateProcedure();
 
   const handleToggle = (id: string) => {
     setSelectedIds((prev) => {
@@ -83,19 +81,41 @@ export function DiagnosisServicePicker({
 
   const handleAddToPlan = async () => {
     if (selectedServices.length === 0) return;
+    setBatchError(null);
+
+    let successCount = 0;
+    const failures: string[] = [];
+
     for (const svc of selectedServices) {
-      await createMutation.mutateAsync({
-        data: {
-          patientId,
-          doctorId: user?.id,
-          templateId: svc.id,
-          name: `[Зуб ${toothFdi}] ${svc.name}`,
-          price: svc.defaultPrice,
-        },
-      });
+      try {
+        await createMutation.mutateAsync({
+          data: {
+            patientId,
+            doctorId: user?.id,
+            templateId: svc.id,
+            name: `[Зуб ${toothFdi}] ${svc.name}`,
+            price: svc.defaultPrice,
+          },
+        });
+        successCount++;
+      } catch {
+        failures.push(svc.name);
+      }
     }
-    onClose();
+
+    if (successCount > 0) {
+      void qc.invalidateQueries({ queryKey: getListProceduresQueryKey() });
+    }
+
+    if (failures.length > 0) {
+      setBatchError(
+        `Не удалось добавить: ${failures.join(", ")}. Успешно добавлено: ${successCount}.`,
+      );
+      return;
+    }
+
     onSuccess?.();
+    onClose();
   };
 
   const handleBack = () => {
@@ -209,6 +229,12 @@ export function DiagnosisServicePicker({
 
           {/* Total + submit */}
           <div className="shrink-0 border-t border-border/50 bg-white px-4 py-3 space-y-2">
+            {batchError && (
+              <div className="flex items-start gap-2 rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2">
+                <AlertCircle className="w-3.5 h-3.5 text-destructive mt-0.5 shrink-0" />
+                <p className="text-xs text-destructive leading-snug">{batchError}</p>
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground">
                 Выбрано: {selectedIds.size} услуг
