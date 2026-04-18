@@ -12,6 +12,7 @@ import {
 } from "@workspace/api-client-react";
 import type { ToothCondition, ToothRecord, Patient } from "@workspace/api-client-react";
 import { CONDITION_CONFIG } from "./fdi-chart";
+import { DiagnosisServicePicker } from "./diagnosis-service-picker";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -23,7 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { X, Clock, Beaker } from "lucide-react";
+import { X, Clock, Beaker, Stethoscope } from "lucide-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useTranslation } from "react-i18next";
 
@@ -61,6 +62,7 @@ export function ToothDetailPanel({
   const [treatmentItemId, setTreatmentItemId] = useState<string | undefined>(undefined);
   const [treatmentQty, setTreatmentQty] = useState<string>("1");
   const [showAddTreatment, setShowAddTreatment] = useState(false);
+  const [showDiagnosis, setShowDiagnosis] = useState(false);
 
   const { data: teethData } = useListTeeth(patientId, {
     query: { queryKey: getListTeethQueryKey(patientId) },
@@ -160,8 +162,33 @@ export function ToothDetailPanel({
         </button>
       </div>
 
+      {/* Diagnosis service picker — replaces main content when open */}
+      {showDiagnosis && canWrite ? (
+        <DiagnosisServicePicker
+          patientId={patientId}
+          toothFdi={toothFdi}
+          onClose={() => setShowDiagnosis(false)}
+          onSuccess={() => {
+            void qc.invalidateQueries({ queryKey: getListToothTreatmentsQueryKey(patientId, toothFdi) });
+            setShowDiagnosis(false);
+          }}
+        />
+      ) : (
       <ScrollArea className="flex-1 min-h-0 overflow-hidden">
         <div className="p-4 space-y-5">
+          {/* Diagnosis button */}
+          {canWrite && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full flex items-center gap-2 border-primary/30 text-primary hover:bg-primary/5"
+              onClick={() => setShowDiagnosis(true)}
+            >
+              <Stethoscope className="w-4 h-4" />
+              Провести диагностику
+            </Button>
+          )}
+
           {/* Condition selector */}
           {canWrite && (
             <div>
@@ -360,6 +387,7 @@ export function ToothDetailPanel({
 
         </div>
       </ScrollArea>
+      )}
     </div>
   );
 }
