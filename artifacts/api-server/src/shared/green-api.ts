@@ -255,7 +255,8 @@ export async function logoutGreenApiInstance(
   token: string,
 ): Promise<void> {
   const url = `${BASE_URL}/waInstance${instanceId}/logout/${token}`;
-  const res = await fetch(url, { method: "POST" });
+  const signal = AbortSignal.timeout(15_000);
+  const res = await fetch(url, { method: "POST", signal });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     throw new Error(`Green API logout failed: ${res.status} ${body}`);

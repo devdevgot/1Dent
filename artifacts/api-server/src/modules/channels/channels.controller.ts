@@ -178,14 +178,22 @@ router.delete(
       .catch(next) ?? [];
     if (!current) return;
 
-    // Call Green API logout to properly unlink the WhatsApp device
+    // Call Green API logout — await it so the device is actually unlinked before we clear credentials.
+    // This removes the linked device from WhatsApp on the owner's phone and sets the instance
+    // to "notAuthorized" in Green API dashboard.
+    let greenApiLogoutOk = false;
     if (current.greenApiInstanceId && current.greenApiToken) {
       clearGreenApiStateCache(current.greenApiInstanceId);
-      logoutGreenApiInstance(current.greenApiInstanceId, current.greenApiToken)
-        .catch((err) => logger.warn({ err }, "Green API logout call failed — credentials will still be cleared"));
+      try {
+        await logoutGreenApiInstance(current.greenApiInstanceId, current.greenApiToken);
+        greenApiLogoutOk = true;
+        logger.info({ instanceId: current.greenApiInstanceId }, "Green API logout succeeded — device unlinked");
+      } catch (err) {
+        logger.warn({ err, instanceId: current.greenApiInstanceId }, "Green API logout call failed — credentials will still be cleared from DB");
+      }
     }
 
-    // Clear credentials from DB regardless of logout success
+    // Clear credentials from DB regardless of Green API logout success
     const rows = await db
       .update(clinicsTable)
       .set({ greenApiInstanceId: null, greenApiToken: null, whatsappPhone: null })
@@ -193,7 +201,15 @@ router.delete(
       .returning({ id: clinicsTable.id })
       .catch(next);
     if (!rows || rows.length === 0) return;
-    res.json({ success: true });
+    res.json({
+      success: true,
+      data: {
+        greenApiLogoutOk,
+        message: greenApiLogoutOk
+          ? "WhatsApp отключён — устройство удалено из телефона и из Green API"
+          : "Данные удалены из CRM, но отключить Green API не удалось — выйдите вручную через green-api.com",
+      },
+    });
   },
 );
 

@@ -133,8 +133,16 @@ export function ChannelsSettings() {
   const handleDisconnect = async () => {
     setDisconnecting(true);
     try {
-      await customFetch("/api/clinic/green-api", { method: "DELETE" });
-      toast({ title: "WhatsApp отключён" });
+      const res = await customFetch<{ success: boolean; data: { greenApiLogoutOk: boolean; message: string } }>(
+        "/api/clinic/green-api", { method: "DELETE" }
+      );
+      const ok = res.data?.greenApiLogoutOk ?? false;
+      toast({
+        title: ok ? "WhatsApp отключён" : "Отключено из CRM",
+        description: res.data?.message,
+        variant: ok ? "default" : "destructive",
+        duration: ok ? 4000 : 8000,
+      });
       setWaStatus({ configured: false, connected: false, phone: null });
     } catch {
       toast({ title: "Ошибка при отключении", variant: "destructive" });
