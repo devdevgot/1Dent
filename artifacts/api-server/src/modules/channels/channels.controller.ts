@@ -192,7 +192,11 @@ router.get(
       logger.info({ instanceId: clinic.greenApiInstanceId, type: qrResult.type }, "Green API QR fetched");
     } catch (err) {
       logger.error({ err, instanceId: clinic.greenApiInstanceId }, "Green API QR fetch failed");
-      return next(err);
+      const msg = err instanceof Error ? err.message : String(err);
+      return res.status(502).json({
+        success: false,
+        error: `Не удалось получить QR-код от Green API: ${msg}. Проверьте ID инстанса и токен.`,
+      });
     }
     res.json({ success: true, data: qrResult });
   },
@@ -228,16 +232,45 @@ router.post(
     } catch (err) {
       logger.error({ err, instanceId: clinic.greenApiInstanceId }, "Green API pairing code fetch failed");
       const msg = err instanceof Error ? err.message : String(err);
+      const msgLower = msg.toLowerCase();
+      // Detect "already authorized" — instance already has an active WhatsApp session
+      if (
+        msgLower.includes("already") ||
+        msgLower.includes("authorized") ||
+        msgLower.includes("авторизован") ||
+        msgLower.includes("authorized") ||
+        msgLower.includes("active") ||
+        // HTTP 409 Conflict or 400 with "already" body
+        msgLower.includes("409")
+      ) {
+        return res.status(400).json({
+          success: false,
+          error: "Инстанс уже авторизован в WhatsApp. Сначала выйдите из аккаунта через кнопку «Отключить», затем повторите подключение. Или используйте метод QR-кода, если устройство уже привязано.",
+          code: "ALREADY_AUTHORIZED",
+        });
+      }
       return res.status(502).json({
         success: false,
-        error: `Не удалось связаться с Green API: ${msg}. Проверьте ID инстанса и токен.`,
+        error: `Не удалось получить код от Green API. Убедитесь, что инстанс НЕ авторизован (должен быть в состоянии "notAuthorized"). Ошибка: ${msg}`,
       });
     }
 
     if (!result.authorizationCode) {
+      const msgLower = (result.message ?? "").toLowerCase();
+      if (
+        msgLower.includes("already") ||
+        msgLower.includes("authorized") ||
+        msgLower.includes("авторизован")
+      ) {
+        return res.status(400).json({
+          success: false,
+          error: "Инстанс уже авторизован в WhatsApp. Сначала нажмите «Отключить», затем повторите подключение.",
+          code: "ALREADY_AUTHORIZED",
+        });
+      }
       return res.status(400).json({
         success: false,
-        error: result.message ?? "Не удалось получить код. Убедитесь, что инстанс не авторизован и номер телефона верный.",
+        error: result.message ?? "Не удалось получить код. Убедитесь, что инстанс НЕ авторизован и номер телефона верный.",
       });
     }
 
@@ -259,8 +292,13 @@ router.get(
     if (!clinic.greenApiInstanceId || !clinic.greenApiToken) {
       return res.json({ success: true, data: { configured: false, connected: false, phone: null } });
     }
-    const state = await getGreenApiState(clinic.greenApiInstanceId, clinic.greenApiToken).catch(next);
-    if (!state) return;
+    let state: Awaited<ReturnType<typeof getGreenApiState>>;
+    try {
+      state = await getGreenApiState(clinic.greenApiInstanceId, clinic.greenApiToken);
+    } catch (err) {
+      logger.warn({ err, instanceId: clinic.greenApiInstanceId }, "Green API getStateInstance failed — returning not-connected");
+      return res.json({ success: true, data: { configured: true, connected: false, phone: null } });
+    }
     const connected = state.stateInstance === "authorized";
 
     // Get phone from state.wid, or fall back to getWaSettings if not present

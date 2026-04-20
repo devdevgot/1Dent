@@ -3,6 +3,20 @@ import { customFetch } from "@workspace/api-client-react";
 import { X, Check, Copy, CheckCircle2, Loader2, AlertTriangle, RefreshCw, Smartphone, QrCode } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+function extractApiErrorMessage(err: unknown): string {
+  if (err && typeof err === "object") {
+    // ApiError has a .data field with the parsed API response
+    const data = (err as { data?: unknown }).data;
+    if (data && typeof data === "object") {
+      const errorField = (data as Record<string, unknown>).error;
+      const messageField = (data as Record<string, unknown>).message;
+      if (typeof errorField === "string" && errorField) return errorField;
+      if (typeof messageField === "string" && messageField) return messageField;
+    }
+  }
+  return err instanceof Error ? err.message : "Неизвестная ошибка";
+}
+
 const BRAND = "#98cc1c";
 
 export const WA_ICON_PATH =
@@ -95,8 +109,7 @@ export function WhatsAppConnectModal({
       }
     } catch (err) {
       setQr(null);
-      const msg = err instanceof Error ? err.message : "Неизвестная ошибка";
-      setQrError(msg);
+      setQrError(extractApiErrorMessage(err));
     }
   }, [fetchStatus]);
 
@@ -112,8 +125,7 @@ export function WhatsAppConnectModal({
       );
       setPairingCode(res.data.code);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Неизвестная ошибка";
-      setPairingError(msg);
+      setPairingError(extractApiErrorMessage(err));
     } finally {
       setPairingLoading(false);
     }
