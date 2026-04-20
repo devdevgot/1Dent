@@ -10,7 +10,7 @@ import { ChannelsRepository } from "./channels.repository";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 import { db, clinicsTable, channelTypes } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { getGreenApiQrCode, getGreenApiState, setGreenApiWebhookUrl, getServerBaseUrl, logoutGreenApiInstance, clearGreenApiStateCache, getGreenApiWaSettings, shouldRegisterWebhook, getGreenApiPairingCode, extractPhoneFromWaSettings } from "../../shared/green-api";
 import { logger } from "../../lib/logger";
 
@@ -148,9 +148,12 @@ router.patch(
       .catch(() => [undefined]) ?? [];
     if (old?.greenApiInstanceId) clearGreenApiStateCache(old.greenApiInstanceId);
 
+    // Note: we deliberately do NOT clear whatsappPhone here.
+    // The user may have entered their real phone number before connecting,
+    // and we want to preserve that manually-set value.
     const rows = await db
       .update(clinicsTable)
-      .set({ greenApiInstanceId, greenApiToken, whatsappPhone: null })
+      .set({ greenApiInstanceId, greenApiToken })
       .where(eq(clinicsTable.id, req.user!.clinicId))
       .returning({ id: clinicsTable.id })
       .catch(next);
@@ -346,12 +349,12 @@ router.get(
         logger.info({ instanceId: clinic.greenApiInstanceId, waSettingsKeys: waSettings ? Object.keys(waSettings) : null, resolvedPhone: phone ? phone.slice(0, 5) + "***" : null }, "Green API WaSettings phone extraction");
       }
 
-      // Persist phone number if we have it
+      // Persist phone number only if not already manually set by the user (whatsapp_phone IS NULL)
       if (phone) {
         await db
           .update(clinicsTable)
           .set({ whatsappPhone: phone })
-          .where(eq(clinicsTable.id, req.user!.clinicId))
+          .where(and(eq(clinicsTable.id, req.user!.clinicId), isNull(clinicsTable.whatsappPhone)))
           .catch(() => {});
       }
 

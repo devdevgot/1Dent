@@ -57,11 +57,18 @@ export function WhatsAppConnectModal({
   forceSetup?: boolean;
 }) {
   const { toast } = useToast();
-  const [step, setStep] = useState<"intro" | "setup">(startAtSetup ? "setup" : "intro");
+  // Steps: intro → phone (enter real number) → setup (Green API credentials + QR)
+  const [step, setStep] = useState<"intro" | "phone" | "setup">(
+    forceSetup ? "phone" : startAtSetup ? "setup" : "intro"
+  );
   const [instanceId, setInstanceId] = useState("");
   const [token, setToken] = useState("");
   const [saving, setSaving] = useState(false);
   const [configured, setConfigured] = useState(false);
+
+  // Real clinic WhatsApp phone (step 1 — independent of Green API)
+  const [clinicPhone, setClinicPhone] = useState("");
+  const [clinicPhoneSaving, setClinicPhoneSaving] = useState(false);
 
   // Method selector
   const [method, setMethod] = useState<ConnectMethod>("qr");
@@ -163,11 +170,13 @@ export function WhatsAppConnectModal({
 
   useEffect(() => {
     if (!open) {
-      setStep(startAtSetup ? "setup" : "intro");
+      setStep(forceSetup ? "phone" : startAtSetup ? "setup" : "intro");
       setInstanceId("");
       setToken("");
       setSaving(false);
       setConfigured(false);
+      setClinicPhone("");
+      setClinicPhoneSaving(false);
       setQr(null);
       setQrError(null);
       setStatus(null);
@@ -179,7 +188,28 @@ export function WhatsAppConnectModal({
       if (qrIntervalRef.current) clearInterval(qrIntervalRef.current);
       if (statusIntervalRef.current) clearInterval(statusIntervalRef.current);
     }
-  }, [open, startAtSetup]);
+  }, [open, startAtSetup, forceSetup]);
+
+  const handleClinicPhoneSave = async () => {
+    const digits = clinicPhone.replace(/\D/g, "");
+    if (!digits || digits.length < 7 || digits.length > 15) {
+      toast({ title: "Введите корректный номер (например 77071234567)", variant: "destructive" });
+      return;
+    }
+    setClinicPhoneSaving(true);
+    try {
+      await customFetch("/api/clinic/whatsapp-phone", {
+        method: "PATCH",
+        body: JSON.stringify({ phone: digits }),
+        headers: { "Content-Type": "application/json" },
+      });
+      setStep("setup");
+    } catch {
+      toast({ title: "Ошибка сохранения номера", variant: "destructive" });
+    } finally {
+      setClinicPhoneSaving(false);
+    }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -274,9 +304,9 @@ export function WhatsAppConnectModal({
             </p>
             <div className="w-full space-y-3 text-left mb-7">
               {[
+                "Укажите номер WhatsApp вашей клиники",
                 "Введите данные вашего Green API инстанса",
                 "Выберите способ: QR-код или номер телефона",
-                "Номер автоматически добавится в каналы",
               ].map((s, i) => (
                 <div key={i} className="flex items-start gap-3">
                   <div
@@ -290,12 +320,67 @@ export function WhatsAppConnectModal({
               ))}
             </div>
             <button
-              onClick={() => setStep("setup")}
+              onClick={() => setStep("phone")}
               className="w-full h-11 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98]"
               style={{ backgroundColor: "#25D366" }}
             >
               Подключить WhatsApp
             </button>
+          </div>
+        )}
+
+        {step === "phone" && (
+          <div className="p-6">
+            <button
+              onClick={onClose}
+              className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <div className="flex items-center gap-2.5 mb-5">
+              <div
+                className="w-9 h-9 rounded-xl flex items-center justify-center"
+                style={{ backgroundColor: "#25D366" + "20" }}
+              >
+                <WhatsAppIcon size={20} color="#25D366" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-gray-900 leading-tight">Номер WhatsApp клиники</h2>
+                <p className="text-xs text-gray-400">Шаг 1 из 2</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-500 mb-4 leading-relaxed">
+              Введите номер телефона, на котором работает WhatsApp вашей клиники. Он будет использоваться для реферальных ссылок и отображения в CRM.
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">
+                  Номер WhatsApp (международный формат)
+                </label>
+                <input
+                  type="tel"
+                  value={clinicPhone}
+                  onChange={e => setClinicPhone(e.target.value)}
+                  placeholder="77071234567"
+                  className="w-full h-10 rounded-lg border border-border bg-white px-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#98cc1c]/30"
+                  onKeyDown={e => { if (e.key === "Enter") void handleClinicPhoneSave(); }}
+                  autoFocus
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Введите цифры без «+» и пробелов. Например: <span className="font-mono">77071234567</span>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void handleClinicPhoneSave()}
+                disabled={clinicPhoneSaving || !clinicPhone.trim()}
+                className="w-full h-10 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
+                style={{ backgroundColor: BRAND }}
+              >
+                {clinicPhoneSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                {clinicPhoneSaving ? "Сохранение..." : "Далее →"}
+              </button>
+            </div>
           </div>
         )}
 
@@ -310,9 +395,9 @@ export function WhatsAppConnectModal({
               </div>
               <div>
                 <h2 className="text-base font-bold text-gray-900 leading-tight">
-                  {initialLoading ? "Загрузка..." : isConnected ? "WhatsApp подключён" : "Настройка WhatsApp"}
+                  {initialLoading ? "Загрузка..." : isConnected ? "WhatsApp подключён" : "Данные Green API"}
                 </h2>
-                <p className="text-xs text-gray-400">Green API</p>
+                <p className="text-xs text-gray-400">{isConnected ? "Подключён" : "Шаг 2 из 2"}</p>
               </div>
             </div>
 

@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { db, clinicsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { parseGreenApiWebhook, clearGreenApiStateCache, getGreenApiWaSettings, extractPhoneFromWaSettings } from "../shared/green-api";
 import { MessagesService } from "../modules/messages/messages.service";
 import { logger } from "../lib/logger";
@@ -68,11 +68,12 @@ router.post(
         }
 
         if (phone) {
+          // Only write phone if not already manually set by the user (whatsapp_phone IS NULL)
           await db.update(clinicsTable)
             .set({ whatsappPhone: phone })
-            .where(eq(clinicsTable.id, clinicId))
+            .where(and(eq(clinicsTable.id, clinicId), isNull(clinicsTable.whatsappPhone)))
             .catch((err) => logger.warn({ err }, "[GreenAPI Webhook] Failed to persist whatsappPhone"));
-          logger.info({ clinicId, phone: phone.slice(0, 5) + "***" }, "[GreenAPI Webhook] WhatsApp connected — phone saved");
+          logger.info({ clinicId, phone: phone.slice(0, 5) + "***" }, "[GreenAPI Webhook] WhatsApp connected — phone saved (if not already set)");
         } else {
           logger.warn({ clinicId }, "[GreenAPI Webhook] WhatsApp authorized but phone not resolved yet");
         }
