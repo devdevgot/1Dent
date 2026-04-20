@@ -150,6 +150,7 @@ interface FdiChartProps {
   teethData: ToothMap;
   selectedFdi: number | null;
   onToothClick: (fdi: number) => void;
+  inProgressFdi?: number | null;
   className?: string;
 }
 
@@ -189,12 +190,14 @@ function ToothGlyph({
   fdi,
   record,
   isSelected,
+  isInProgress,
   isUpper,
   onClick,
 }: {
   fdi: number;
   record: ToothRecord | undefined;
   isSelected: boolean;
+  isInProgress: boolean;
   isUpper: boolean;
   onClick: () => void;
 }) {
@@ -236,8 +239,35 @@ function ToothGlyph({
       aria-label={`Зуб ${fdi}: ${cfg.label}`}
       aria-pressed={isSelected}
     >
+      {/* In-progress pulsing rings */}
+      {isInProgress && (
+        <>
+          <rect
+            x={-6} y={-6}
+            width={w + 12} height={h + 12}
+            rx={8}
+            fill="none"
+            stroke="#22c55e"
+            strokeWidth={2.5}
+          >
+            <animate attributeName="opacity" values="0.9;0.15;0.9" dur="1.4s" repeatCount="indefinite" />
+            <animate attributeName="stroke-width" values="2;4.5;2" dur="1.4s" repeatCount="indefinite" />
+          </rect>
+          <rect
+            x={-10} y={-10}
+            width={w + 20} height={h + 20}
+            rx={11}
+            fill="none"
+            stroke="#22c55e"
+            strokeWidth={1.2}
+          >
+            <animate attributeName="opacity" values="0.5;0;0.5" dur="1.4s" begin="0.2s" repeatCount="indefinite" />
+          </rect>
+        </>
+      )}
+
       {/* Selected ring */}
-      {isSelected && (
+      {isSelected && !isInProgress && (
         <rect
           x={-4} y={-4}
           width={w + 8} height={h + 8}
@@ -320,7 +350,7 @@ function ToothGlyph({
   );
 }
 
-export function FdiChart({ teethData, selectedFdi, onToothClick, className }: FdiChartProps) {
+export function FdiChart({ teethData, selectedFdi, onToothClick, inProgressFdi, className }: FdiChartProps) {
   const upperPositions = buildRowPositions(UPPER_ROW);
   const lowerPositions = buildRowPositions(LOWER_ROW);
 
@@ -350,6 +380,7 @@ export function FdiChart({ teethData, selectedFdi, onToothClick, className }: Fd
                   fdi={fdi}
                   record={teethData.get(fdi)}
                   isSelected={selectedFdi === fdi}
+                  isInProgress={inProgressFdi === fdi}
                   isUpper={true}
                   onClick={() => onToothClick(fdi)}
                 />
@@ -396,6 +427,7 @@ export function FdiChart({ teethData, selectedFdi, onToothClick, className }: Fd
                   fdi={fdi}
                   record={teethData.get(fdi)}
                   isSelected={selectedFdi === fdi}
+                  isInProgress={inProgressFdi === fdi}
                   isUpper={false}
                   onClick={() => onToothClick(fdi)}
                 />

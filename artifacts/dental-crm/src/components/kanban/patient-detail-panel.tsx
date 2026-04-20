@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, type ComponentType } from "react";
+import { useState, useCallback, useMemo, useEffect, type ComponentType } from "react";
 import { useLocation } from "wouter";
 import {
   useGetPatient,
@@ -135,26 +135,61 @@ function ToothActionModal({
   planItems = [],
   onClose,
   onNavigate,
+  onTreatmentStarted,
+  onTreatmentEnded,
 }: {
   fdi: number;
   patientId: string;
   planItems?: Array<{ id: string; title: string; price: number; status: string }>;
   onClose: () => void;
   onNavigate: () => void;
+  onTreatmentStarted?: (fdi: number) => void;
+  onTreatmentEnded?: () => void;
 }) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const qc = useQueryClient();
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [treatmentPhase, setTreatmentPhase] = useState<"select" | "in_progress">("select");
+  const [inProgressTreatmentId, setInProgressTreatmentId] = useState<string | null>(null);
+  const [inProgressLabel, setInProgressLabel] = useState("");
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  useEffect(() => {
+    if (treatmentPhase !== "in_progress") return;
+    const interval = setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
+    return () => clearInterval(interval);
+  }, [treatmentPhase]);
+
+  const formatElapsed = (s: number) => {
+    const mm = String(Math.floor(s / 60)).padStart(2, "0");
+    const ss = String(s % 60).padStart(2, "0");
+    return `${mm}:${ss}`;
+  };
 
   const pendingItems = planItems.filter((i) => i.status === "pending");
 
   const addMutation = useAddToothTreatment({
     mutation: {
+      onSuccess: (data) => {
+        qc.invalidateQueries({ queryKey: getListPatientTreatmentsQueryKey(patientId) });
+        qc.invalidateQueries({ queryKey: getListTeethQueryKey(patientId) });
+        const treatmentId = (data as any)?.data?.data?.treatment?.id ?? null;
+        setInProgressTreatmentId(treatmentId);
+        setTreatmentPhase("in_progress");
+        onTreatmentStarted?.(fdi);
+      },
+      onError: () => toast({ title: t("account.errorTitle"), variant: "destructive" }),
+    },
+  });
+
+  const completeMutation = useCompleteToothTreatment({
+    mutation: {
       onSuccess: () => {
         qc.invalidateQueries({ queryKey: getListPatientTreatmentsQueryKey(patientId) });
         qc.invalidateQueries({ queryKey: getListTeethQueryKey(patientId) });
-        toast({ title: t("tooth.taskCreated") });
+        toast({ title: "Лечение завершено" });
+        onTreatmentEnded?.();
         onClose();
       },
       onError: () => toast({ title: t("account.errorTitle"), variant: "destructive" }),
@@ -162,132 +197,209 @@ function ToothActionModal({
   });
 
   const handleAction = (type: "treatment" | "extraction", label?: string) => {
+    const desc = label ?? (type === "treatment" ? t("tooth.startTreatment") : t("tooth.extractTooth"));
+    setInProgressLabel(desc);
+    setElapsedSeconds(0);
     addMutation.mutate({
       id: patientId,
       toothFdi: fdi,
-      data: {
-        description: label ?? (type === "treatment" ? t("tooth.startTreatment") : t("tooth.extractTooth")),
-        type,
-      },
+      data: { description: desc, type },
     });
   };
 
+  const handleComplete = () => {
+    if (!inProgressTreatmentId) {
+      onTreatmentEnded?.();
+      onClose();
+      return;
+    }
+    completeMutation.mutate({
+      id: patientId,
+      toothFdi: fdi,
+      treatmentId: inProgressTreatmentId,
+    });
+  };
+
+  const handleAbort = () => {
+    onTreatmentEnded?.();
+    onClose();
+  };
+
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center" onClick={onClose}>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center" onClick={handleAbort}>
       <div
         className="bg-white rounded-2xl shadow-2xl w-80 border border-border/50 overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border/40">
-          <h3 className="font-bold text-base">{t("tooth.actionModalTitle", { fdi })}</h3>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+        {treatmentPhase === "in_progress" ? (
+          <>
+            {/* In-progress header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border/40 bg-green-50/60">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500" />
+                </span>
+                <h3 className="font-bold text-sm text-green-800">Зуб {fdi} — Лечение</h3>
+              </div>
+              <button onClick={handleAbort} className="text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
 
-        {/* Plan items list */}
-        {pendingItems.length > 0 ? (
-          <div className="p-3 space-y-1.5 max-h-64 overflow-y-auto">
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide px-1 mb-2">
-              Услуги из плана лечения
-            </p>
-            {pendingItems.map((item) => {
-              const isSelected = item.id === selectedItemId;
-              const isExtraction = isExtractionItem(item.title);
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setSelectedItemId(isSelected ? null : item.id)}
-                  className={`w-full text-left rounded-xl border px-3 py-2.5 transition-all ${
-                    isSelected
-                      ? "border-primary bg-primary/8 ring-1 ring-primary/20"
-                      : "border-border/50 bg-slate-50 hover:border-primary/30 hover:bg-primary/5"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-start gap-2 min-w-0">
-                      <span className={`mt-0.5 shrink-0 w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${
-                        isSelected ? "border-primary bg-primary" : "border-border/60"
-                      }`}>
-                        {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
-                      </span>
-                      <span className="text-xs font-medium text-gray-800 leading-tight">{item.title}</span>
-                    </div>
-                    <span className="text-xs font-semibold text-gray-600 shrink-0 whitespace-nowrap">
-                      {item.price.toLocaleString("ru")} ₸
-                    </span>
+            {/* In-progress body */}
+            <div className="px-5 py-6 flex flex-col items-center gap-4">
+              {/* Service label */}
+              {inProgressLabel && (
+                <div className="w-full rounded-xl bg-slate-50 border border-border/40 px-3 py-2.5 text-center">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Услуга</p>
+                  <p className="text-xs font-medium text-gray-800 leading-snug">{inProgressLabel}</p>
+                </div>
+              )}
+
+              {/* Pulsing circle + timer */}
+              <div className="flex flex-col items-center gap-2">
+                <div className="relative flex items-center justify-center w-16 h-16">
+                  <span className="absolute animate-ping w-14 h-14 rounded-full bg-green-200 opacity-50" />
+                  <span className="absolute animate-ping w-10 h-10 rounded-full bg-green-300 opacity-40" style={{ animationDelay: "0.3s" }} />
+                  <div className="relative z-10 w-10 h-10 rounded-full bg-green-500 flex items-center justify-center shadow-lg">
+                    <Activity className="w-5 h-5 text-white" />
                   </div>
-                  {isSelected && (
-                    <div className="mt-2.5 pl-5">
-                      <Button
-                        size="sm"
-                        className={`w-full h-8 text-xs gap-1.5 ${
-                          isExtraction
-                            ? "bg-red-500 hover:bg-red-600 text-white border-0"
-                            : ""
-                        }`}
-                        variant={isExtraction ? "default" : "default"}
-                        disabled={addMutation.isPending}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleAction(isExtraction ? "extraction" : "treatment", item.title);
-                        }}
-                      >
-                        {isExtraction ? (
-                          <>
-                            <X className="w-3 h-3" />
-                            Удалить зуб
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle2 className="w-3 h-3" />
-                            Начать лечение
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-          /* No plan items — fallback to original buttons */
-          <div className="p-4 space-y-2">
-            <p className="text-xs text-muted-foreground italic text-center pb-1">Нет позиций в плане лечения</p>
-            <Button
-              className="w-full justify-start gap-2"
-              variant="outline"
-              disabled={addMutation.isPending}
-              onClick={() => handleAction("treatment")}
-            >
-              <CheckCircle2 className="w-4 h-4 text-blue-500" />
-              {t("tooth.startTreatment")}
-            </Button>
-            <Button
-              className="w-full justify-start gap-2"
-              variant="outline"
-              disabled={addMutation.isPending}
-              onClick={() => handleAction("extraction")}
-            >
-              <X className="w-4 h-4 text-red-500" />
-              {t("tooth.extractTooth")}
-            </Button>
-          </div>
-        )}
+                </div>
+                <p className="text-2xl font-mono font-bold text-gray-800 tabular-nums">{formatElapsed(elapsedSeconds)}</p>
+                <p className="text-[11px] text-muted-foreground">Процедура выполняется</p>
+              </div>
 
-        {/* Footer */}
-        <div className="border-t border-border/30 px-4 py-2.5">
-          <Button
-            className="w-full justify-start gap-2 h-8"
-            variant="ghost"
-            onClick={onNavigate}
-          >
-            <ArrowUpRight className="w-4 h-4 text-muted-foreground" />
-            {t("tooth.viewDetails")}
-          </Button>
-        </div>
+              {/* Complete button */}
+              <Button
+                className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white border-0 h-10"
+                disabled={completeMutation.isPending}
+                onClick={handleComplete}
+              >
+                {completeMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="w-4 h-4" />
+                )}
+                Завершить лечение
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Selection header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border/40">
+              <h3 className="font-bold text-base">{t("tooth.actionModalTitle", { fdi })}</h3>
+              <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Plan items list */}
+            {pendingItems.length > 0 ? (
+              <div className="p-3 space-y-1.5 max-h-64 overflow-y-auto">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide px-1 mb-2">
+                  Услуги из плана лечения
+                </p>
+                {pendingItems.map((item) => {
+                  const isSelected = item.id === selectedItemId;
+                  const isExtraction = isExtractionItem(item.title);
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setSelectedItemId(isSelected ? null : item.id)}
+                      className={`w-full text-left rounded-xl border px-3 py-2.5 transition-all ${
+                        isSelected
+                          ? "border-primary bg-primary/8 ring-1 ring-primary/20"
+                          : "border-border/50 bg-slate-50 hover:border-primary/30 hover:bg-primary/5"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2 min-w-0">
+                          <span className={`mt-0.5 shrink-0 w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${
+                            isSelected ? "border-primary bg-primary" : "border-border/60"
+                          }`}>
+                            {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                          </span>
+                          <span className="text-xs font-medium text-gray-800 leading-tight">{item.title}</span>
+                        </div>
+                        <span className="text-xs font-semibold text-gray-600 shrink-0 whitespace-nowrap">
+                          {item.price.toLocaleString("ru")} ₸
+                        </span>
+                      </div>
+                      {isSelected && (
+                        <div className="mt-2.5 pl-5">
+                          <Button
+                            size="sm"
+                            className={`w-full h-8 text-xs gap-1.5 ${
+                              isExtraction
+                                ? "bg-red-500 hover:bg-red-600 text-white border-0"
+                                : ""
+                            }`}
+                            variant="default"
+                            disabled={addMutation.isPending}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAction(isExtraction ? "extraction" : "treatment", item.title);
+                            }}
+                          >
+                            {addMutation.isPending ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : isExtraction ? (
+                              <>
+                                <X className="w-3 h-3" />
+                                Удалить зуб
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle2 className="w-3 h-3" />
+                                Начать лечение
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="p-4 space-y-2">
+                <p className="text-xs text-muted-foreground italic text-center pb-1">Нет позиций в плане лечения</p>
+                <Button
+                  className="w-full justify-start gap-2"
+                  variant="outline"
+                  disabled={addMutation.isPending}
+                  onClick={() => handleAction("treatment")}
+                >
+                  <CheckCircle2 className="w-4 h-4 text-blue-500" />
+                  {t("tooth.startTreatment")}
+                </Button>
+                <Button
+                  className="w-full justify-start gap-2"
+                  variant="outline"
+                  disabled={addMutation.isPending}
+                  onClick={() => handleAction("extraction")}
+                >
+                  <X className="w-4 h-4 text-red-500" />
+                  {t("tooth.extractTooth")}
+                </Button>
+              </div>
+            )}
+
+            {/* Footer */}
+            <div className="border-t border-border/30 px-4 py-2.5">
+              <Button
+                className="w-full justify-start gap-2 h-8"
+                variant="ghost"
+                onClick={onNavigate}
+              >
+                <ArrowUpRight className="w-4 h-4 text-muted-foreground" />
+                {t("tooth.viewDetails")}
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -500,6 +612,7 @@ export function PatientDetailPanel() {
   const [diagnosisServicesMap, setDiagnosisServicesMap] = useState<Map<number, ProcedureTemplate[]>>(new Map());
 
   const [modalToothFdi, setModalToothFdi] = useState<number | null>(null);
+  const [activeToothFdi, setActiveToothFdi] = useState<number | null>(null);
   // Tracks which tooth is selected in the plan view (to filter plan items by tooth)
   const [planViewToothFdi, setPlanViewToothFdi] = useState<number | null>(null);
 
@@ -1288,6 +1401,7 @@ export function PatientDetailPanel() {
                         <FdiChart
                           teethData={diagnosisDisplayMap}
                           selectedFdi={diagnosisToothFdi}
+                          inProgressFdi={activeToothFdi}
                           onToothClick={(fdi) => {
                             setPickerSearch("");
                             if (fdi === diagnosisToothFdi) {
@@ -1536,6 +1650,7 @@ export function PatientDetailPanel() {
                         <FdiChart
                           teethData={teethMap}
                           selectedFdi={selectedToothFdi}
+                          inProgressFdi={activeToothFdi}
                           onToothClick={(fdi) => {
                             setSelectedToothFdi(fdi);
                             setModalToothFdi(fdi);
@@ -2090,6 +2205,8 @@ export function PatientDetailPanel() {
             setModalToothFdi(null);
             setLocation(`/patients/${patient.id}/teeth/${modalToothFdi}`);
           }}
+          onTreatmentStarted={(f) => setActiveToothFdi(f)}
+          onTreatmentEnded={() => setActiveToothFdi(null)}
         />
       )}
 
