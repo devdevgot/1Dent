@@ -2304,6 +2304,9 @@ components:
           type: string
         refCode:
           type: string
+        clickCount:
+          type: integer
+          description: Total number of unique clicks on the referral link
         patientCount:
           type: integer
         consultationCount:
@@ -2317,6 +2320,7 @@ components:
         - channelName
         - channelType
         - refCode
+        - clickCount
         - patientCount
         - consultationCount
         - conversionRate

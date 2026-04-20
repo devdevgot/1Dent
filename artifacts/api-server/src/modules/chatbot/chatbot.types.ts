@@ -16,4 +16,5 @@ export interface ChatbotSessionData {
   confusedCount?: number;
   refCode?: string;
   channelId?: string;
+  clickId?: string;
 }

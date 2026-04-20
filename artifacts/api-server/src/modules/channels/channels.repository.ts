@@ -1,6 +1,6 @@
 import { randomBytes, randomUUID } from "crypto";
-import { db, clinicChannelsTable, patientsTable, proceduresTable } from "@workspace/db";
-import { eq, and, gte, lte } from "drizzle-orm";
+import { db, clinicChannelsTable, channelClicksTable, patientsTable, proceduresTable } from "@workspace/db";
+import { eq, and, gte, lte, sql, type SQL } from "drizzle-orm";
 
 function generateRefCode(): string {
   return randomBytes(4).toString("hex");
@@ -11,10 +11,24 @@ export interface ChannelStat {
   channelName: string;
   channelType: string;
   refCode: string;
+  clickCount: number;
   patientCount: number;
   consultationCount: number;
   conversionRate: number;
   totalRevenue: number;
+}
+
+export interface ClickData {
+  id?: string;
+  channelId: string;
+  clinicId: string;
+  ip?: string | null;
+  userAgent?: string | null;
+  utmSource?: string | null;
+  utmMedium?: string | null;
+  utmCampaign?: string | null;
+  utmContent?: string | null;
+  utmTerm?: string | null;
 }
 
 export class ChannelsRepository {
@@ -52,6 +66,39 @@ export class ChannelsRepository {
     return (result.rowCount ?? 0) > 0;
   }
 
+  /**
+   * Record a click on a referral link.
+   * Returns the generated click_id (UUID).
+   * Non-blocking: caller should fire-and-forget — redirect must not wait on this.
+   */
+  async createClick(data: ClickData): Promise<string> {
+    const id = data.id ?? randomUUID();
+    await db.insert(channelClicksTable).values({
+      id,
+      channelId: data.channelId,
+      clinicId: data.clinicId,
+      ip: data.ip ?? null,
+      userAgent: data.userAgent ?? null,
+      utmSource: data.utmSource ?? null,
+      utmMedium: data.utmMedium ?? null,
+      utmCampaign: data.utmCampaign ?? null,
+      utmContent: data.utmContent ?? null,
+      utmTerm: data.utmTerm ?? null,
+      patientId: null,
+    });
+    return id;
+  }
+
+  /**
+   * Link a click record to a patient once the chatbot creates them.
+   */
+  async linkClickToPatient(clickId: string, patientId: string): Promise<void> {
+    await db
+      .update(channelClicksTable)
+      .set({ patientId })
+      .where(eq(channelClicksTable.id, clickId));
+  }
+
   async getChannelStats(clinicId: string, dateFrom?: Date, dateTo?: Date): Promise<ChannelStat[]> {
     const channels = await this.list(clinicId);
     if (channels.length === 0) return [];
@@ -82,6 +129,24 @@ export class ChannelsRepository {
         ),
       );
 
+    // Aggregate click counts per channel (respect date filters)
+    const clickFilters: SQL[] = [eq(channelClicksTable.clinicId, clinicId)];
+    if (dateFrom) clickFilters.push(gte(channelClicksTable.createdAt, dateFrom));
+    if (dateTo) clickFilters.push(lte(channelClicksTable.createdAt, dateTo));
+
+    const clickRows = await db
+      .select({
+        channelId: channelClicksTable.channelId,
+        count: sql<number>`cast(count(*) as int)`,
+      })
+      .from(channelClicksTable)
+      .where(and(...clickFilters))
+      .groupBy(channelClicksTable.channelId);
+
+    const clicksByChannel = new Map<string, number>(
+      clickRows.map((r) => [r.channelId, r.count]),
+    );
+
     const procByPatient = new Map<string, number>();
     for (const proc of completedProcs) {
       procByPatient.set(
@@ -111,6 +176,7 @@ export class ChannelsRepository {
         channelName: ch.name,
         channelType: ch.type,
         refCode: ch.refCode,
+        clickCount: clicksByChannel.get(ch.id) ?? 0,
         patientCount,
         consultationCount,
         conversionRate,

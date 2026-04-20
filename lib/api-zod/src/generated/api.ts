@@ -2368,6 +2368,9 @@ export const GetChannelStatsResponse = zod.object({
         channelName: zod.string(),
         channelType: zod.string(),
         refCode: zod.string(),
+        clickCount: zod
+          .number()
+          .describe("Total number of unique clicks on the referral link"),
         patientCount: zod.number(),
         consultationCount: zod.number(),
         conversionRate: zod.number(),

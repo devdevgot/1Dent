@@ -118,6 +118,8 @@ export interface ChannelStat {
   channelName: string;
   channelType: string;
   refCode: string;
+  /** Total number of unique clicks on the referral link */
+  clickCount: number;
   patientCount: number;
   consultationCount: number;
   conversionRate: number;

@@ -167,6 +167,11 @@ function extractRefCode(text: string): string | null {
   return match ? match[1]!.toLowerCase() : null;
 }
 
+function extractClickId(text: string): string | null {
+  const match = text.match(/cid:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+  return match ? match[1]!.toLowerCase() : null;
+}
+
 async function pickBestDoctorViaKpi(
   clinicId: string,
 ): Promise<{ id: string; name: string } | null> {
@@ -320,7 +325,7 @@ export class ChatbotService {
     const state = session.state;
     const data = { ...session.data };
 
-    // Parse ref code from any incoming message and persist in session
+    // Parse ref code and click_id from any incoming message and persist in session
     const refCode = extractRefCode(text);
     if (refCode && !data.refCode) {
       try {
@@ -332,6 +337,11 @@ export class ChatbotService {
       } catch (err) {
         logger.warn({ err }, "ChatbotService: failed to resolve ref code");
       }
+    }
+
+    const clickId = extractClickId(text);
+    if (clickId && !data.clickId) {
+      data.clickId = clickId;
     }
 
     if (isOperatorRequest(text)) {
@@ -427,6 +437,13 @@ export class ChatbotService {
               const patient = await createPatient(clinicId, phone, data.patientName, data.suggestedDoctorId, patientSource);
               data.createdPatientId = patient.id;
               session.data = data;
+
+              // Link click to patient (async, non-blocking)
+              if (data.clickId) {
+                channelsRepo
+                  .linkClickToPatient(data.clickId, patient.id)
+                  .catch((err) => logger.warn({ err, clickId: data.clickId }, "ChatbotService: failed to link click to patient"));
+              }
               // Post-op BullMQ followup jobs (24h/72h/168h) are scheduled automatically
               // via followup.queue.ts when the doctor marks the procedure as "completed".
             } catch (err) {

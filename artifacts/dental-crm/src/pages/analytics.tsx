@@ -353,28 +353,40 @@ export default function AnalyticsPage() {
                       <thead>
                         <tr className="border-b border-border/30">
                           <th className="text-left text-xs font-semibold text-muted-foreground py-2 px-3">{t("channelAnalytics.channel")}</th>
+                          <th className="text-right text-xs font-semibold text-muted-foreground py-2 px-3">Клики</th>
                           <th className="text-right text-xs font-semibold text-muted-foreground py-2 px-3">{t("channelAnalytics.patients")}</th>
                           <th className="text-right text-xs font-semibold text-muted-foreground py-2 px-3">{t("channelAnalytics.conversion")}</th>
                           <th className="text-right text-xs font-semibold text-muted-foreground py-2 px-3">{t("channelAnalytics.revenue")}</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {channelStats.map((s) => (
-                          <tr key={s.channelId} className="border-b border-border/30 hover:bg-muted/50 transition-colors">
-                            <td className="text-xs text-foreground py-2 px-3 font-medium">{s.channelName}</td>
-                            <td className="text-xs text-foreground py-2 px-3 text-right">{s.patientCount}</td>
-                            <td className="text-xs py-2 px-3 text-right">
-                              <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                                s.conversionRate >= 50 ? "bg-emerald-100 text-emerald-700" :
-                                s.conversionRate >= 25 ? "bg-amber-100 text-amber-700" :
-                                "bg-red-100 text-red-700"
-                              }`}>
-                                {s.conversionRate}%
-                              </span>
-                            </td>
-                            <td className="text-xs text-foreground py-2 px-3 text-right">₸{s.totalRevenue.toLocaleString()}</td>
-                          </tr>
-                        ))}
+                        {channelStats.map((s) => {
+                          const clickToLead = s.clickCount > 0
+                            ? Math.round((s.patientCount / s.clickCount) * 100)
+                            : null;
+                          return (
+                            <tr key={s.channelId} className="border-b border-border/30 hover:bg-muted/50 transition-colors">
+                              <td className="text-xs text-foreground py-2 px-3 font-medium">{s.channelName}</td>
+                              <td className="text-xs text-foreground py-2 px-3 text-right">
+                                <span className="font-mono">{s.clickCount}</span>
+                                {clickToLead !== null && (
+                                  <span className="ml-1 text-muted-foreground">({clickToLead}%→)</span>
+                                )}
+                              </td>
+                              <td className="text-xs text-foreground py-2 px-3 text-right">{s.patientCount}</td>
+                              <td className="text-xs py-2 px-3 text-right">
+                                <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                                  s.conversionRate >= 50 ? "bg-emerald-100 text-emerald-700" :
+                                  s.conversionRate >= 25 ? "bg-amber-100 text-amber-700" :
+                                  "bg-red-100 text-red-700"
+                                }`}>
+                                  {s.conversionRate}%
+                                </span>
+                              </td>
+                              <td className="text-xs text-foreground py-2 px-3 text-right">₸{s.totalRevenue.toLocaleString()}</td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
