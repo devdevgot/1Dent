@@ -48,7 +48,7 @@ import {
   SOURCE_COLORS,
 } from "@/lib/patient-utils";
 import type { PatientStatus, InteractionType, ToothCondition } from "@workspace/api-client-react";
-import { FdiChart, CONDITION_CONFIG } from "@/components/dental-chart/fdi-chart";
+import { FdiChart, CONDITION_CONFIG, getCanalCount } from "@/components/dental-chart/fdi-chart";
 import { useTranslation } from "react-i18next";
 
 
@@ -481,14 +481,42 @@ export function PatientDetailPanel() {
     if (pickerShowAll || !diagnosisToothFdi) return pickerTemplates;
     const condition = diagnosisMap.get(diagnosisToothFdi);
     if (!condition) return pickerTemplates;
+
+    let result = pickerTemplates;
+
+    // Step 1: filter by condition keywords
     const keywords = CONDITION_SERVICE_KEYWORDS[condition];
-    if (!keywords || keywords.length === 0) return pickerTemplates;
-    const filtered = pickerTemplates.filter((s) => {
-      const haystack = `${s.name} ${s.code ?? ""}`.toLowerCase();
-      return keywords.some((kw) => haystack.includes(kw));
-    });
-    // If filtering leaves nothing, fall back to full list so picker isn't empty
-    return filtered.length > 0 ? filtered : pickerTemplates;
+    if (keywords && keywords.length > 0) {
+      const byCondition = result.filter((s) => {
+        const haystack = `${s.name} ${s.code ?? ""}`.toLowerCase();
+        return keywords.some((kw) => haystack.includes(kw));
+      });
+      if (byCondition.length > 0) result = byCondition;
+    }
+
+    // Step 2: for root_canal, also filter by canal count of this specific tooth
+    if (condition === "root_canal") {
+      const toothCanals = getCanalCount(diagnosisToothFdi);
+      if (toothCanals < 3) {
+        const byCanals = result.filter((s) => {
+          const haystack = `${s.name} ${s.code ?? ""}`.toLowerCase();
+          if (toothCanals === 1) {
+            // Exclude services that mention 2, 3+ canals
+            return !/[23456]\s*кан/.test(haystack) && !haystack.includes("многоканальн");
+          }
+          if (toothCanals === 2) {
+            // Exclude services that mention 3+ canals
+            return !/[3456]\s*кан/.test(haystack) && !haystack.includes("многоканальн");
+          }
+          return true;
+        });
+        // Only apply canal filter if it doesn't empty the list
+        if (byCanals.length > 0) result = byCanals;
+      }
+      // toothCanals === 3: show everything (molars get all multi-canal services)
+    }
+
+    return result;
   }, [pickerTemplates, diagnosisToothFdi, diagnosisMap, pickerShowAll]);
 
   const filteredPickerTemplates = useMemo(() => {
@@ -1265,11 +1293,22 @@ export function PatientDetailPanel() {
                                   const cond = diagnosisToothFdi ? diagnosisMap.get(diagnosisToothFdi) : undefined;
                                   if (!cond || !CONDITION_CONFIG[cond as ToothCondition]) return null;
                                   const cfg = CONDITION_CONFIG[cond as ToothCondition];
+                                  const canalCount = getCanalCount(diagnosisToothFdi!);
+                                  const canalLabel = cond === "root_canal"
+                                    ? canalCount === 1 ? "· 1 канал"
+                                      : canalCount === 2 ? "· 2 канала"
+                                      : "· 3 канала"
+                                    : null;
                                   return (
-                                    <div className="flex items-center gap-1.5 px-1">
+                                    <div className="flex items-center gap-1.5 px-1 flex-wrap">
                                       <span className="w-2.5 h-2.5 rounded border shrink-0" style={{ background: cfg.crownFill, borderColor: cfg.stroke }} />
                                       <span className="text-[11px] text-muted-foreground">
                                         Услуги для: <span className="font-semibold text-foreground">{cfg.label}</span>
+                                        {canalLabel && (
+                                          <span className="ml-1 px-1.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 font-medium text-[10px]">
+                                            {canalLabel}
+                                          </span>
+                                        )}
                                         {!pickerShowAll && <span className="text-muted-foreground/70"> · отфильтровано</span>}
                                       </span>
                                     </div>

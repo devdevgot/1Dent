@@ -125,7 +125,7 @@ function getFullOutlinePath(type: ToothType, isUpper: boolean, w: number, h: num
 }
 
 /** Returns the number of root canals for a given FDI tooth number */
-function getCanalCount(fdi: number): number {
+export function getCanalCount(fdi: number): number {
   const n = fdi % 10;          // position within quadrant (1–8)
   const q = Math.floor(fdi / 10); // quadrant (1–4)
   const isUpper = q === 1 || q === 2;
