@@ -34,7 +34,7 @@ import {
   X, ChevronDown, CheckCircle2, Clock, ArrowUpRight,
   Phone, User, Calendar, CreditCard, Stethoscope, TrendingUp, Copy, Save, IdCard,
   ClipboardList, Plus, BadgeCheck, Circle, ArrowLeft, Square, CheckSquare, Loader2,
-  Scissors, Crown, Wrench, Baby, Sparkles, Activity, ScanLine, Paintbrush, Search,
+  Scissors, Crown, Wrench, Baby, Sparkles, Activity, ScanLine, Paintbrush, Search, GripVertical,
 } from "lucide-react";
 import { calculateAge, formatDateOfBirth, maskIIN } from "@workspace/api-zod";
 import { Button } from "@/components/ui/button";
@@ -155,6 +155,39 @@ function ToothActionModal({
   const [inProgressLabel, setInProgressLabel] = useState("");
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
+  type PlanItem = { id: string; title: string; price: number; status: string };
+  const [orderedItems, setOrderedItems] = useState<PlanItem[]>(() =>
+    planItems.filter((i) => i.status === "pending"),
+  );
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  const handleDragStart = (index: number) => setDragIndex(index);
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (dragIndex !== index) setDragOverIndex(index);
+  };
+
+  const handleDrop = (index: number) => {
+    if (dragIndex === null || dragIndex === index) {
+      setDragIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+    const next = [...orderedItems];
+    const [moved] = next.splice(dragIndex, 1);
+    next.splice(index, 0, moved);
+    setOrderedItems(next);
+    setDragIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDragIndex(null);
+    setDragOverIndex(null);
+  };
+
   useEffect(() => {
     if (treatmentPhase !== "in_progress") return;
     const interval = setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
@@ -166,8 +199,6 @@ function ToothActionModal({
     const ss = String(s % 60).padStart(2, "0");
     return `${mm}:${ss}`;
   };
-
-  const pendingItems = planItems.filter((i) => i.status === "pending");
 
   const addMutation = useAddToothTreatment({
     mutation: {
@@ -296,39 +327,74 @@ function ToothActionModal({
             </div>
 
             {/* Plan items list */}
-            {pendingItems.length > 0 ? (
-              <div className="p-3 space-y-1.5 max-h-64 overflow-y-auto">
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide px-1 mb-2">
-                  Услуги из плана лечения
-                </p>
-                {pendingItems.map((item) => {
+            {orderedItems.length > 0 ? (
+              <div className="p-3 space-y-1.5 max-h-72 overflow-y-auto">
+                <div className="flex items-center justify-between px-1 mb-2">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                    Услуги из плана лечения
+                  </p>
+                  <p className="text-[9px] text-muted-foreground/60 flex items-center gap-1">
+                    <GripVertical className="w-3 h-3" />
+                    перетащите для приоритета
+                  </p>
+                </div>
+                {orderedItems.map((item, idx) => {
                   const isSelected = item.id === selectedItemId;
                   const isExtraction = isExtractionItem(item.title);
+                  const isFirst = idx === 0;
+                  const isDragging = dragIndex === idx;
+                  const isDragOver = dragOverIndex === idx && dragIndex !== idx;
                   return (
-                    <button
+                    <div
                       key={item.id}
+                      draggable
+                      onDragStart={() => handleDragStart(idx)}
+                      onDragOver={(e) => handleDragOver(e, idx)}
+                      onDrop={() => handleDrop(idx)}
+                      onDragEnd={handleDragEnd}
                       onClick={() => setSelectedItemId(isSelected ? null : item.id)}
-                      className={`w-full text-left rounded-xl border px-3 py-2.5 transition-all ${
-                        isSelected
+                      className={`rounded-xl border transition-all cursor-pointer select-none ${
+                        isDragOver
+                          ? "border-primary border-dashed bg-primary/5"
+                          : isDragging
+                          ? "opacity-40 border-border/30"
+                          : isSelected
                           ? "border-primary bg-primary/8 ring-1 ring-primary/20"
                           : "border-border/50 bg-slate-50 hover:border-primary/30 hover:bg-primary/5"
                       }`}
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-start gap-2 min-w-0">
-                          <span className={`mt-0.5 shrink-0 w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${
-                            isSelected ? "border-primary bg-primary" : "border-border/60"
-                          }`}>
-                            {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
-                          </span>
-                          <span className="text-xs font-medium text-gray-800 leading-tight">{item.title}</span>
-                        </div>
-                        <span className="text-xs font-semibold text-gray-600 shrink-0 whitespace-nowrap">
-                          {item.price.toLocaleString("ru")} ₸
+                      <div className="flex items-start gap-2 px-2.5 pt-2.5 pb-2">
+                        {/* Priority badge */}
+                        <span className={`shrink-0 min-w-[18px] h-[18px] rounded-full text-[10px] font-bold flex items-center justify-center mt-0.5 ${
+                          isFirst
+                            ? "bg-primary text-white"
+                            : "bg-gray-100 text-gray-500"
+                        }`}>
+                          {idx + 1}
                         </span>
+
+                        {/* Text content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="text-xs font-medium text-gray-800 leading-tight">{item.title}</span>
+                            <span className="text-xs font-semibold text-gray-600 shrink-0 whitespace-nowrap">
+                              {item.price.toLocaleString("ru")} ₸
+                            </span>
+                          </div>
+                          {isFirst && (
+                            <p className="text-[9px] font-semibold text-primary mt-0.5 uppercase tracking-wide">
+                              Приоритет №1
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Drag handle */}
+                        <GripVertical className="w-4 h-4 text-gray-300 shrink-0 mt-0.5 cursor-grab active:cursor-grabbing" />
                       </div>
+
+                      {/* Action button */}
                       {isSelected && (
-                        <div className="mt-2.5 pl-5">
+                        <div className="px-2.5 pb-2.5 pt-0 pl-9">
                           <Button
                             size="sm"
                             className={`w-full h-8 text-xs gap-1.5 ${
@@ -359,7 +425,7 @@ function ToothActionModal({
                           </Button>
                         </div>
                       )}
-                    </button>
+                    </div>
                   );
                 })}
               </div>
