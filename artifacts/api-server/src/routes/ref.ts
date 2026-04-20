@@ -22,6 +22,10 @@ async function handleRefCode(
   code: string,
   phoneOverride?: string,
 ) {
+  // Never cache referral redirects — phone availability and WA status change frequently
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
   try {
     const channel = await channelsRepo.findByRefCode(code);
 
@@ -86,16 +90,36 @@ async function handleRefCode(
         try {
           // Try getStateInstance first — it often contains wid
           const state = await getGreenApiState(clinic.greenApiInstanceId, clinic.greenApiToken);
+          logger.info({ clinicId: channel.clinicId, stateInstance: state.stateInstance, hasWidInState: !!state.wid }, "[ref] Green API state checked");
+
           if (state.stateInstance === "authorized") {
             let resolvedPhone = state.wid ? state.wid.replace("@c.us", "") : null;
 
             if (!resolvedPhone) {
               // Try getWaSettings as secondary source
-              const waSettings = await getGreenApiWaSettings(clinic.greenApiInstanceId, clinic.greenApiToken).catch(() => null);
+              const waSettings = await getGreenApiWaSettings(clinic.greenApiInstanceId, clinic.greenApiToken).catch((err) => {
+                logger.warn({ err, clinicId: channel.clinicId }, "[ref] getWaSettings threw");
+                return null;
+              });
+              logger.info({
+                clinicId: channel.clinicId,
+                waSettingsKeys: waSettings ? Object.keys(waSettings) : null,
+                hasWid: !!waSettings?.wid,
+                hasPhoneNumber: !!waSettings?.phoneNumber,
+              }, "[ref] getWaSettings response inspected");
+
               if (waSettings?.wid) {
                 resolvedPhone = waSettings.wid.replace("@c.us", "");
               } else if (waSettings?.phoneNumber) {
-                resolvedPhone = waSettings.phoneNumber.replace(/\D/g, "") || null;
+                resolvedPhone = String(waSettings.phoneNumber).replace(/\D/g, "") || null;
+              } else if (waSettings) {
+                // Last-resort: scan the entire response for any wa.me-like @c.us identifier
+                const raw = JSON.stringify(waSettings);
+                const m = raw.match(/(\d{8,15})@c\.us/);
+                if (m && m[1]) {
+                  resolvedPhone = m[1];
+                  logger.info({ clinicId: channel.clinicId }, "[ref] phone extracted via raw scan of waSettings");
+                }
               }
             }
 
@@ -107,11 +131,19 @@ async function handleRefCode(
                 .where(eq(clinicsTable.id, channel.clinicId))
                 .catch((err) => logger.warn({ err }, "[ref] Failed to persist whatsappPhone"));
               logger.info({ clinicId: channel.clinicId, phone: phone?.slice(0, 5) + "***" }, "[ref] resolved phone from Green API live lookup");
+            } else {
+              logger.warn({ clinicId: channel.clinicId }, "[ref] Green API authorized but no phone could be resolved");
             }
           }
         } catch (err) {
           logger.warn({ err, clinicId: channel.clinicId }, "[ref] Green API live lookup failed — continuing without phone");
         }
+      } else if (!phone) {
+        logger.info({
+          clinicId: channel.clinicId,
+          hasInstance: !!clinic?.greenApiInstanceId,
+          hasToken: !!clinic?.greenApiToken,
+        }, "[ref] no phone in DB and no Green API credentials — fallback page will be shown");
       }
     }
 
