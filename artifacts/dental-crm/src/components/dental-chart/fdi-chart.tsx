@@ -124,6 +124,28 @@ function getFullOutlinePath(type: ToothType, isUpper: boolean, w: number, h: num
   return "";
 }
 
+/** Returns the number of root canals for a given FDI tooth number */
+function getCanalCount(fdi: number): number {
+  const n = fdi % 10;          // position within quadrant (1–8)
+  const q = Math.floor(fdi / 10); // quadrant (1–4)
+  const isUpper = q === 1 || q === 2;
+  if (n === 1 || n === 2) return 1; // central & lateral incisors
+  if (n === 3)            return 1; // canines
+  if (n === 4)            return isUpper ? 2 : 1; // 1st premolar: upper=2, lower=1
+  if (n === 5)            return 1; // 2nd premolars mostly 1
+  if (n === 6 || n === 7) return 3; // 1st & 2nd molars
+  if (n === 8)            return 3; // wisdom teeth (simplified to 3)
+  return 1;
+}
+
+/** Canal x-offsets (normalised: fraction of half-crown-width cw)
+ *  so the positions scale with tooth size */
+function getCanalOffsets(count: number): number[] {
+  if (count === 1) return [0];
+  if (count === 2) return [-0.38, 0.38];
+  return [-0.50, 0, 0.50];
+}
+
 interface FdiChartProps {
   teethData: ToothMap;
   selectedFdi: number | null;
@@ -191,6 +213,19 @@ function ToothGlyph({
   const strokeColor = isSelected ? "#6366f1" : cfg.stroke;
   const strokeW     = isSelected ? 2 : 1.2;
 
+  const canalCount   = getCanalCount(fdi);
+  const canalOffsets = getCanalOffsets(canalCount);
+  const cw = w * 0.46;
+  const cej = isUpper ? h * 0.42 : h * 0.58;
+  // Canal ellipse geometry
+  const canalRx = canalCount === 1 ? 1.5 : canalCount === 2 ? 1.1 : 0.85;
+  // Ry spans most of the root length
+  const canalRy     = isUpper ? (cej - h * 0.03) / 2 - 0.5 : (h * 0.97 - cej) / 2 - 0.5;
+  const canalCy     = isUpper ? h * 0.03 + canalRy : cej + canalRy + 0.5;
+  // Colors: treated canal vs normal anatomy
+  const canalFill   = condition === "root_canal" ? "#fde8c8" : "#f5e2c5";
+  const canalStroke = condition === "root_canal" ? "#d47a30" : "#c4955a";
+
   return (
     <g
       className="cursor-pointer"
@@ -224,6 +259,24 @@ function ToothGlyph({
         strokeDasharray={isMissing ? "3 2" : undefined}
       />
 
+      {/* Canal ellipses — drawn inside root, behind crown */}
+      {!isMissing && canalOffsets.map((offset, i) => {
+        const cx = m + offset * cw * 0.55;
+        return (
+          <ellipse
+            key={i}
+            cx={cx}
+            cy={canalCy}
+            rx={canalRx}
+            ry={Math.max(canalRy, 1)}
+            fill={canalFill}
+            stroke={canalStroke}
+            strokeWidth={0.6}
+            opacity={0.82}
+          />
+        );
+      })}
+
       {/* Crown */}
       <path
         d={crownPath}
@@ -255,9 +308,9 @@ function ToothGlyph({
       {!isMissing && (
         <line
           x1={m - w * 0.46}
-          y1={isUpper ? h * 0.42 : h * 0.58}
+          y1={cej}
           x2={m + w * 0.46}
-          y2={isUpper ? h * 0.42 : h * 0.58}
+          y2={cej}
           stroke={cfg.stroke}
           strokeWidth={0.5}
           strokeOpacity={0.35}
@@ -352,7 +405,7 @@ export function FdiChart({ teethData, selectedFdi, onToothClick, className }: Fd
         </div>
       </div>
 
-      {/* Legend */}
+      {/* Legend — conditions */}
       <div className="flex flex-wrap gap-x-3 gap-y-1.5 mt-3 px-0.5">
         {(Object.entries(CONDITION_CONFIG) as [ToothCondition, (typeof CONDITION_CONFIG)[ToothCondition]][]).map(
           ([cond, cfg]) => (
@@ -365,6 +418,26 @@ export function FdiChart({ teethData, selectedFdi, onToothClick, className }: Fd
             </div>
           ),
         )}
+      </div>
+
+      {/* Legend — canal count */}
+      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 px-0.5 border-t border-border/30 pt-2">
+        <span className="text-[10px] text-muted-foreground font-medium self-center">Каналы:</span>
+        {([
+          { label: "1 канал",    offsets: [0],              rx: 1.5 },
+          { label: "2 канала",   offsets: [-0.38, 0.38],    rx: 1.1 },
+          { label: "3 канала",   offsets: [-0.5, 0, 0.5],   rx: 0.85 },
+        ] as const).map(({ label, offsets, rx }) => (
+          <div key={label} className="flex items-center gap-1.5">
+            <svg width="20" height="9" viewBox="0 0 20 9">
+              <rect x="1" y="0.5" width="18" height="8" rx="2.5" fill="#fef6ee" stroke="#e8d5c0" strokeWidth="0.7" />
+              {(offsets as readonly number[]).map((o, i) => (
+                <ellipse key={i} cx={10 + o * 14} cy="4.5" rx={rx} ry={3.2} fill="#f5e2c5" stroke="#c4955a" strokeWidth="0.6" />
+              ))}
+            </svg>
+            <span className="text-[10px] text-muted-foreground">{label}</span>
+          </div>
+        ))}
       </div>
     </div>
   );
