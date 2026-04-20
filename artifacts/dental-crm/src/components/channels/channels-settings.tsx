@@ -265,8 +265,8 @@ export function ChannelsSettings() {
           Каналы сквозной аналитики
         </h2>
 
-        {/* Warning: phone not set — ref links won't redirect to WhatsApp */}
-        {channels.length > 0 && !savedPhone && (
+        {/* Warning: WhatsApp not connected — ref links won't redirect to WhatsApp */}
+        {channels.length > 0 && waStatus !== null && !waStatus?.connected && (
           <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200 mb-3">
             <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
             <div className="min-w-0">

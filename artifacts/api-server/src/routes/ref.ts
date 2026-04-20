@@ -92,7 +92,11 @@ async function handleRefCode(
             if (!resolvedPhone) {
               // Try getWaSettings as secondary source
               const waSettings = await getGreenApiWaSettings(clinic.greenApiInstanceId, clinic.greenApiToken).catch(() => null);
-              resolvedPhone = waSettings?.instanceData?.wid?.replace("@c.us", "") ?? null;
+              if (waSettings?.wid) {
+                resolvedPhone = waSettings.wid.replace("@c.us", "");
+              } else if (waSettings?.phoneNumber) {
+                resolvedPhone = waSettings.phoneNumber.replace(/\D/g, "") || null;
+              }
             }
 
             if (resolvedPhone) {

@@ -308,8 +308,10 @@ router.get(
       // If phone not in state, fetch it from getWaSettings
       if (!phone) {
         const waSettings = await getGreenApiWaSettings(clinic.greenApiInstanceId, clinic.greenApiToken).catch(() => null);
-        if (waSettings?.instanceData?.wid) {
-          phone = waSettings.instanceData.wid.replace("@c.us", "");
+        if (waSettings?.wid) {
+          phone = waSettings.wid.replace("@c.us", "");
+        } else if (waSettings?.phoneNumber) {
+          phone = waSettings.phoneNumber.replace(/\D/g, "") || null;
         }
       }
 

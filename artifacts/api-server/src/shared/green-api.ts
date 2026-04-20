@@ -179,10 +179,10 @@ export async function getGreenApiState(
 }
 
 export interface GreenApiWaSettingsResult {
-  instanceData?: {
-    wid?: string;
-    typeInstance?: string;
-  };
+  wid?: string;
+  phoneNumber?: string;
+  nameAccount?: string;
+  stateInstance?: string;
 }
 
 export async function getGreenApiWaSettings(
