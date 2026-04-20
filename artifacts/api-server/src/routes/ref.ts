@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 const router: IRouter = Router();
 const channelsRepo = new ChannelsRepository();
 
-async function handleRefCode(code: string, res: Response, next: NextFunction) {
+async function handleRefCode(code: string, res: Response, next: NextFunction, phoneOverride?: string) {
   try {
     const channel = await channelsRepo.findByRefCode(code);
 
@@ -14,6 +14,20 @@ async function handleRefCode(code: string, res: Response, next: NextFunction) {
       return res.status(404).send("Channel not found");
     }
 
+    const text = encodeURIComponent(
+      `Здравствуйте, хочу записаться на приём 👋 (ref:${code})`,
+    );
+
+    // Use phone from the URL if provided (most reliable — embedded by the CRM at link-generation time)
+    if (phoneOverride) {
+      const phone = phoneOverride.replace(/\D/g, "");
+      if (phone) {
+        const waUrl = `https://wa.me/${phone}?text=${text}`;
+        return res.redirect(302, waUrl);
+      }
+    }
+
+    // Fallback: look up whatsappPhone from the clinic record
     const [clinic] = await db
       .select({ whatsappPhone: clinicsTable.whatsappPhone })
       .from(clinicsTable)
@@ -21,9 +35,6 @@ async function handleRefCode(code: string, res: Response, next: NextFunction) {
       .limit(1);
 
     const whatsappPhone = clinic?.whatsappPhone ?? "";
-    const text = encodeURIComponent(
-      `Здравствуйте, хочу записаться на приём 👋 (ref:${code})`,
-    );
 
     if (!whatsappPhone) {
       return res.status(200).send(
@@ -50,7 +61,7 @@ router.get(
 router.get(
   "/wa/:phone/ref/:code",
   (req: Request, res: Response, next: NextFunction) => {
-    return handleRefCode(req.params.code!, res, next);
+    return handleRefCode(req.params.code!, res, next, req.params.phone);
   },
 );
 
