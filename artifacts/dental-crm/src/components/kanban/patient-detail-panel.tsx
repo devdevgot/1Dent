@@ -1139,13 +1139,8 @@ export function PatientDetailPanel() {
                           teethData={diagnosisDisplayMap}
                           selectedFdi={diagnosisToothFdi}
                           onToothClick={(fdi) => {
-                            if (fdi !== diagnosisToothFdi) {
-                              // Auto-jump to the relevant service category for this tooth's condition
-                              const condition = diagnosisMap.get(fdi) ?? teethMap.get(fdi)?.condition ?? "healthy";
-                              const autoCategory = CONDITION_TO_PICKER_CATEGORY[condition as string] ?? null;
-                              setPickerCategory(autoCategory);
-                              setPickerSearch("");
-                            }
+                            setPickerCategory(null);
+                            setPickerSearch("");
                             setDiagnosisToothFdi(fdi === diagnosisToothFdi ? null : fdi);
                           }}
                         />
@@ -1155,30 +1150,54 @@ export function PatientDetailPanel() {
                             <p className="text-xs font-semibold text-muted-foreground">
                               {t("tooth.title", { fdi: diagnosisToothFdi })} — {t("tooth.conditionLabel")}
                             </p>
-                            {/* ── 2-level service picker ── */}
+                            {/* ── 2-level picker: conditions → services ── */}
                             {pickerCategory === null ? (
-                              /* Level 1 — categories (no prices) */
-                              <div className="grid grid-cols-2 gap-1.5">
-                                {PICKER_CATEGORIES.map(({ key, label, Icon }) => (
-                                  <button
-                                    key={key}
-                                    onClick={() => { setPickerCategory(key); setPickerSearch(""); }}
-                                    className="flex items-center gap-2 px-2.5 py-2 rounded-lg border border-border text-left text-xs transition-all hover:border-primary/50 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                                  >
-                                    <Icon className="w-3.5 h-3.5 shrink-0 text-primary" />
-                                    <span className="font-medium text-foreground leading-tight">{label}</span>
-                                  </button>
-                                ))}
+                              /* Level 1 — Condition (disease) selection */
+                              <div className="space-y-2">
+                                <p className="text-[11px] text-muted-foreground font-medium">Выберите диагноз зуба:</p>
+                                <div className="grid grid-cols-2 gap-1.5">
+                                  {(Object.entries(CONDITION_CONFIG) as [ToothCondition, typeof CONDITION_CONFIG[ToothCondition]][]).map(([cond, cfg]) => {
+                                    const currentCondition = diagnosisMap.get(diagnosisToothFdi!) ?? teethMap.get(diagnosisToothFdi!)?.condition ?? "healthy";
+                                    const isSelected = currentCondition === cond;
+                                    return (
+                                      <button
+                                        key={cond}
+                                        onClick={() => {
+                                          const cm = new Map(diagnosisMap);
+                                          cm.set(diagnosisToothFdi!, cond);
+                                          setDiagnosisMap(cm);
+                                          const autoCategory = CONDITION_TO_PICKER_CATEGORY[cond] ?? null;
+                                          if (autoCategory) {
+                                            setPickerCategory(autoCategory);
+                                            setPickerSearch("");
+                                          }
+                                        }}
+                                        className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border text-left text-xs transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                                          isSelected
+                                            ? "border-primary bg-primary/10 ring-1 ring-primary/30"
+                                            : "border-border hover:border-primary/40 hover:bg-slate-50"
+                                        }`}
+                                      >
+                                        <span
+                                          className="w-3 h-3 rounded border shrink-0"
+                                          style={{ background: cfg.crownFill, borderColor: cfg.stroke }}
+                                        />
+                                        <span className="font-medium text-foreground leading-tight">{cfg.label}</span>
+                                        {isSelected && <span className="ml-auto text-primary">✓</span>}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
                               </div>
                             ) : (
-                              /* Level 2 — services list */
+                              /* Level 2 — Service list for selected condition */
                               <div className="space-y-1.5">
                                 <button
                                   onClick={() => { setPickerCategory(null); setPickerSearch(""); }}
                                   className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-0.5"
                                 >
                                   <ArrowLeft className="w-3.5 h-3.5" />
-                                  <span>Назад к категориям</span>
+                                  <span>Назад к диагнозу</span>
                                 </button>
                                 {/* Search input */}
                                 <div className="relative">
@@ -1224,11 +1243,6 @@ export function PatientDetailPanel() {
                                             next.set(diagnosisToothFdi, prev.filter((s) => s.id !== svc.id));
                                           } else {
                                             next.set(diagnosisToothFdi, [...prev, svc]);
-                                            // Auto-set tooth condition based on category
-                                            const cond = CATEGORY_TO_CONDITION[pickerCategory] ?? "caries";
-                                            const cm = new Map(diagnosisMap);
-                                            if (!cm.has(diagnosisToothFdi)) cm.set(diagnosisToothFdi, cond);
-                                            setDiagnosisMap(cm);
                                           }
                                           setDiagnosisServicesMap(next);
                                         }}
