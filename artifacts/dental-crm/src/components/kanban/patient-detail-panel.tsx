@@ -1361,13 +1361,12 @@ export function PatientDetailPanel() {
                                   Сначала проведите осмотр зубов пациента
                                 </p>
                               </div>
-                              <Button
-                                onClick={() => setIsDiagnosisMode(true)}
-                                className="gap-2"
-                              >
-                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                                Начать диагностику
-                              </Button>
+                              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-left max-w-xs">
+                                <svg className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                <p className="text-xs text-amber-700 leading-relaxed">
+                                  Чтобы составить план лечения, сначала перейдите на вкладку <span className="font-semibold">«Диагностика»</span> и проведите осмотр зубов
+                                </p>
+                              </div>
                             </>
                           )}
 
@@ -1388,17 +1387,12 @@ export function PatientDetailPanel() {
                                   Для создания Плана {allPlans.length + 1} проведите повторный осмотр
                                 </p>
                               </div>
-                              <Button
-                                onClick={() => setIsDiagnosisMode(true)}
-                                variant="outline"
-                                className="gap-2 border-amber-300 text-amber-700 hover:bg-amber-50"
-                              >
-                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                                  <path d="M3 3v5h5"/>
-                                </svg>
-                                Провести повторную диагностику
-                              </Button>
+                              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-left max-w-xs">
+                                <svg className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                <p className="text-xs text-amber-700 leading-relaxed">
+                                  Для создания нового плана перейдите на вкладку <span className="font-semibold">«Диагностика»</span> и проведите повторный осмотр
+                                </p>
+                              </div>
                             </>
                           )}
 
