@@ -74,6 +74,16 @@ const PICKER_CATEGORIES: { key: string; label: string; Icon: ComponentType<{ cla
   { key: "restoration",    label: "Реставрация",    Icon: Paintbrush },
 ];
 
+// Maps tooth condition → recommended service category (auto-opens category in picker)
+const CONDITION_TO_PICKER_CATEGORY: Record<string, string> = {
+  cavity:             "therapy",
+  root_canal:         "therapy",
+  treated:            "therapy",
+  crown:              "orthopedics",
+  implant:            "implantation",
+  extraction_needed:  "surgery",
+};
+
 const CATEGORY_TO_CONDITION: Record<string, ToothCondition> = {
   therapy:        "caries",
   surgery:        "missing",
@@ -382,6 +392,8 @@ export function PatientDetailPanel() {
   const [diagnosisServicesMap, setDiagnosisServicesMap] = useState<Map<number, ProcedureTemplate[]>>(new Map());
 
   const [modalToothFdi, setModalToothFdi] = useState<number | null>(null);
+  // Tracks which tooth is selected in the plan view (to filter plan items by tooth)
+  const [planViewToothFdi, setPlanViewToothFdi] = useState<number | null>(null);
 
   const [showAddItemForm, setShowAddItemForm] = useState(false);
   const [newItemTitle, setNewItemTitle] = useState("");
@@ -590,6 +602,8 @@ export function PatientDetailPanel() {
 
   const handleSaveDiagnosis = useCallback(async () => {
     if (!selectedPatientId) return;
+
+    // 1. Save tooth conditions
     const allFdis = new Set([...diagnosisMap.keys(), ...diagnosisNotesMap.keys()]);
     await Promise.all(
       Array.from(allFdis).map((fdi) => {
@@ -605,6 +619,26 @@ export function PatientDetailPanel() {
         });
       }),
     );
+
+    // 2. If services were selected per tooth during diagnosis → create treatment plan with those items
+    if (diagnosisServicesMap.size > 0) {
+      const items: Array<{ toothFdi: number; condition: string; title: string; price: number }> = [];
+      for (const [fdi, services] of diagnosisServicesMap.entries()) {
+        const condition = diagnosisMap.get(fdi) ?? teethMap.get(fdi)?.condition ?? "healthy";
+        for (const svc of services) {
+          items.push({
+            toothFdi: fdi,
+            condition: condition as string,
+            title: svc.name,
+            price: svc.defaultPrice ?? 0,
+          });
+        }
+      }
+      if (items.length > 0) {
+        await createPlanMutation.mutateAsync({ id: selectedPatientId, data: { items } });
+      }
+    }
+
     await refetchTeeth();
     setDiagnosisMap(new Map());
     setDiagnosisNotesMap(new Map());
@@ -613,8 +647,9 @@ export function PatientDetailPanel() {
     setPickerCategory(null);
     setIsDiagnosisMode(false);
     setShowSummaryModal(false);
+    setPlanViewToothFdi(null);
     toast({ title: t("patient.diagnosisSaved") });
-  }, [selectedPatientId, diagnosisMap, diagnosisNotesMap, teethMap, updateToothMutation, refetchTeeth, toast, t]);
+  }, [selectedPatientId, diagnosisMap, diagnosisNotesMap, diagnosisServicesMap, teethMap, updateToothMutation, createPlanMutation, refetchTeeth, toast, t]);
 
   const diagnosisSummaryEntries = useMemo((): DiagnosisSummaryEntry[] => {
     const allFdis = new Set([...diagnosisMap.keys(), ...teethMap.keys()]);
@@ -1104,7 +1139,13 @@ export function PatientDetailPanel() {
                           teethData={diagnosisDisplayMap}
                           selectedFdi={diagnosisToothFdi}
                           onToothClick={(fdi) => {
-                            if (fdi !== diagnosisToothFdi) setPickerCategory(null);
+                            if (fdi !== diagnosisToothFdi) {
+                              // Auto-jump to the relevant service category for this tooth's condition
+                              const condition = diagnosisMap.get(fdi) ?? teethMap.get(fdi)?.condition ?? "healthy";
+                              const autoCategory = CONDITION_TO_PICKER_CATEGORY[condition as string] ?? null;
+                              setPickerCategory(autoCategory);
+                              setPickerSearch("");
+                            }
                             setDiagnosisToothFdi(fdi === diagnosisToothFdi ? null : fdi);
                           }}
                         />
@@ -1298,6 +1339,7 @@ export function PatientDetailPanel() {
                           onToothClick={(fdi) => {
                             setSelectedToothFdi(fdi);
                             setModalToothFdi(fdi);
+                            setPlanViewToothFdi(fdi);
                           }}
                         />
 
@@ -1505,14 +1547,37 @@ export function PatientDetailPanel() {
                       </div>
                     </div>
 
+                          {/* Tooth filter bar */}
+                          {planViewToothFdi !== null && (
+                            <div className="px-3 pt-2 pb-0">
+                              <div className="flex items-center justify-between bg-primary/8 border border-primary/20 rounded-lg px-3 py-1.5">
+                                <span className="text-xs font-medium text-primary">
+                                  🦷 Зуб #{planViewToothFdi} — план лечения
+                                </span>
+                                <button
+                                  onClick={() => setPlanViewToothFdi(null)}
+                                  className="text-xs text-primary hover:text-primary/70 font-medium transition-colors"
+                                >
+                                  Все зубы
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
                           {/* Items list */}
                           <div className="p-3 space-y-2">
-                        {activePlan.items.length === 0 && (
+                        {activePlan.items.filter(item =>
+                          planViewToothFdi === null || item.toothFdi === planViewToothFdi
+                        ).length === 0 && (
                           <p className="text-sm text-muted-foreground text-center py-8">
-                            Нет шагов. Добавьте первый шаг.
+                            {planViewToothFdi !== null
+                              ? `Нет позиций плана для зуба #${planViewToothFdi}`
+                              : "Нет шагов. Добавьте первый шаг."}
                           </p>
                         )}
-                        {activePlan.items.map((item) => (
+                        {activePlan.items.filter(item =>
+                          planViewToothFdi === null || item.toothFdi === planViewToothFdi
+                        ).map((item) => (
                           <div
                             key={item.id}
                             className={`rounded-xl border transition-colors ${
