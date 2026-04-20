@@ -82,30 +82,8 @@ router.get(
   },
 );
 
-const updateClinicSchema = z.object({
-  whatsappPhone: z.string().min(5).max(20),
-});
-
-router.patch(
-  "/clinic/whatsapp-phone",
-  roleGuard("owner"),
-  async (req: Request, res: Response, next: NextFunction) => {
-    const parsed = updateClinicSchema.safeParse(req.body);
-    if (!parsed.success) return next(new ValidationError(parsed.error.message));
-    const { whatsappPhone } = parsed.data;
-    const [clinic] = await db
-      .update(clinicsTable)
-      .set({ whatsappPhone })
-      .where(eq(clinicsTable.id, req.user!.clinicId))
-      .returning()
-      .catch(next) ?? [];
-    if (!clinic) return;
-    res.json({ success: true, data: { clinic } });
-  },
-);
-
-// PATCH /clinic/whatsapp-phone — manual override for the WhatsApp phone number
-// Used when Green API returns a wrong/internal number and the user needs to correct it.
+// PATCH /clinic/whatsapp-phone — set or override the clinic WhatsApp phone number.
+// Accepts { phone: "77071234567" } — digits only, no + or spaces.
 router.patch(
   "/clinic/whatsapp-phone",
   roleGuard("owner", "admin"),
@@ -121,7 +99,7 @@ router.patch(
       .set({ whatsappPhone: digits })
       .where(eq(clinicsTable.id, req.user!.clinicId))
       .catch(next);
-    logger.info({ clinicId: req.user!.clinicId, phone: digits.slice(0, 5) + "***" }, "WhatsApp phone overridden manually");
+    logger.info({ clinicId: req.user!.clinicId, phone: digits.slice(0, 5) + "***" }, "WhatsApp phone saved manually");
     res.json({ success: true, data: { phone: digits } });
   },
 );
