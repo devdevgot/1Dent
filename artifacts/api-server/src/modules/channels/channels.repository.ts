@@ -3,7 +3,7 @@ import { db, clinicChannelsTable, channelClicksTable, patientsTable, proceduresT
 import { eq, and, gte, lte, sql, type SQL } from "drizzle-orm";
 
 function generateRefCode(): string {
-  return randomBytes(4).toString("hex");
+  return randomBytes(2).toString("hex"); // 4 hex chars, e.g. "a3f2"
 }
 
 export interface ChannelStat {

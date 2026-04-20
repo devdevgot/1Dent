@@ -163,7 +163,8 @@ const analyticsRepo = new AnalyticsRepository();
 const channelsRepo = new ChannelsRepository();
 
 function extractRefCode(text: string): string | null {
-  const match = text.match(/ref:([a-f0-9]{8})/i);
+  // Matches 4–8 hex chars: supports both new short codes (4) and legacy 8-char codes
+  const match = text.match(/ref:([a-f0-9]{4,8})/i);
   return match ? match[1]!.toLowerCase() : null;
 }
 
