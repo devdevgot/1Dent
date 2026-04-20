@@ -254,9 +254,11 @@ export async function logoutGreenApiInstance(
   instanceId: string,
   token: string,
 ): Promise<void> {
+  // Green API: Logout is a GET endpoint (not POST). POSTing returns 404 "Cannot POST".
+  // Docs: https://green-api.com/en/docs/api/account/Logout/
   const url = `${BASE_URL}/waInstance${instanceId}/logout/${token}`;
   const signal = AbortSignal.timeout(15_000);
-  const res = await fetch(url, { method: "POST", signal });
+  const res = await fetch(url, { method: "GET", signal });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     throw new Error(`Green API logout failed: ${res.status} ${body}`);
