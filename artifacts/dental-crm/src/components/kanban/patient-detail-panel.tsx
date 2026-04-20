@@ -1205,9 +1205,20 @@ export function PatientDetailPanel() {
                           teethData={diagnosisDisplayMap}
                           selectedFdi={diagnosisToothFdi}
                           onToothClick={(fdi) => {
-                            setPickerCategory(null);
                             setPickerSearch("");
-                            setDiagnosisToothFdi(fdi === diagnosisToothFdi ? null : fdi);
+                            if (fdi === diagnosisToothFdi) {
+                              // Deselect tooth
+                              setDiagnosisToothFdi(null);
+                              setPickerCategory(null);
+                            } else {
+                              setDiagnosisToothFdi(fdi);
+                              // If this tooth already has a condition, auto-open its service category
+                              const existingCond = diagnosisMap.get(fdi);
+                              const autoCategory = existingCond
+                                ? (CONDITION_TO_PICKER_CATEGORY[existingCond] ?? null)
+                                : null;
+                              setPickerCategory(autoCategory);
+                            }
                           }}
                         />
 
