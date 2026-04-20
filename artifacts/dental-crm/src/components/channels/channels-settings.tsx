@@ -13,7 +13,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/hooks/use-auth";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
-import { Copy, Download, Trash2, Plus, Globe, Handshake, Megaphone, MapPin, ChevronDown, LogOut, RefreshCw, AlertTriangle } from "lucide-react";
+import { Copy, Download, Trash2, Plus, Globe, Handshake, Megaphone, MapPin, ChevronDown, LogOut, RefreshCw, AlertTriangle, Pencil, Check, X } from "lucide-react";
 import { FaInstagram, FaTelegram, FaWhatsapp } from "react-icons/fa";
 import { WhatsAppConnectModal, WhatsAppIcon, type WaStatus } from "@/components/whatsapp/whatsapp-connect-modal";
 import { customFetch } from "@workspace/api-client-react";
@@ -68,6 +68,9 @@ export function ChannelsSettings() {
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [recheckingWebhook, setRecheckingWebhook] = useState(false);
+  const [phoneEditing, setPhoneEditing] = useState(false);
+  const [phoneInput, setPhoneInput] = useState("");
+  const [phoneSaving, setPhoneSaving] = useState(false);
 
   const isOwner = user?.role === "owner";
   const isAdmin = user?.role === "admin";
@@ -100,6 +103,30 @@ export function ChannelsSettings() {
       toast({ title: "Ошибка регистрации вебхука", variant: "destructive" });
     } finally {
       setRecheckingWebhook(false);
+    }
+  };
+
+  const handlePhoneSave = async () => {
+    const digits = phoneInput.replace(/\D/g, "");
+    if (!digits || digits.length < 7 || digits.length > 15) {
+      toast({ title: "Введите корректный номер", variant: "destructive" });
+      return;
+    }
+    setPhoneSaving(true);
+    try {
+      await customFetch("/api/clinic/whatsapp-phone", {
+        method: "PATCH",
+        body: JSON.stringify({ phone: digits }),
+        headers: { "Content-Type": "application/json" },
+      });
+      toast({ title: "Номер сохранён" });
+      setPhoneEditing(false);
+      setPhoneInput("");
+      await fetchWaStatus();
+    } catch {
+      toast({ title: "Ошибка сохранения номера", variant: "destructive" });
+    } finally {
+      setPhoneSaving(false);
     }
   };
 
@@ -196,7 +223,18 @@ export function ChannelsSettings() {
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-gray-800">WhatsApp клиники</p>
                 {savedPhone ? (
-                  <p className="text-xs text-gray-500 font-mono">{formatPhone(savedPhone)}</p>
+                  <div className="flex items-center gap-1">
+                    <p className="text-xs text-gray-500 font-mono">{formatPhone(savedPhone)}</p>
+                    {isOwner && !phoneEditing && (
+                      <button
+                        onClick={() => { setPhoneEditing(true); setPhoneInput(savedPhone); }}
+                        title="Исправить номер вручную"
+                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
                 ) : (
                   <p className="text-xs text-gray-400">Не подключён</p>
                 )}
@@ -234,6 +272,39 @@ export function ChannelsSettings() {
               </button>
             </div>
           </div>
+
+          {phoneEditing && (
+            <div className="mt-3 pt-3 border-t border-border">
+              <p className="text-xs text-gray-600 mb-2">
+                Введите правильный номер WhatsApp (в международном формате, например <span className="font-mono">77071234567</span>):
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="tel"
+                  value={phoneInput}
+                  onChange={e => setPhoneInput(e.target.value)}
+                  placeholder="77071234567"
+                  className="flex-1 h-8 px-3 rounded-lg border border-border text-xs font-mono focus:outline-none focus:ring-2 focus:ring-[#98cc1c]/50"
+                  onKeyDown={e => { if (e.key === "Enter") handlePhoneSave(); if (e.key === "Escape") setPhoneEditing(false); }}
+                  autoFocus
+                />
+                <button
+                  onClick={() => { setPhoneEditing(false); setPhoneInput(""); }}
+                  className="w-8 h-8 rounded-lg border border-border flex items-center justify-center text-gray-400 hover:bg-gray-50 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={handlePhoneSave}
+                  disabled={phoneSaving}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-white disabled:opacity-60 transition-colors"
+                  style={{ backgroundColor: BRAND }}
+                >
+                  <Check className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
 
           {confirmDisconnect && (
             <div className="mt-3 pt-3 border-t border-border">

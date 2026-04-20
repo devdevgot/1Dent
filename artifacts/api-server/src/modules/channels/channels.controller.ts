@@ -104,6 +104,28 @@ router.patch(
   },
 );
 
+// PATCH /clinic/whatsapp-phone — manual override for the WhatsApp phone number
+// Used when Green API returns a wrong/internal number and the user needs to correct it.
+router.patch(
+  "/clinic/whatsapp-phone",
+  roleGuard("owner", "admin"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const raw = req.body?.phone;
+    if (typeof raw !== "string") return next(new ValidationError("phone is required"));
+    const digits = raw.replace(/\D/g, "");
+    if (!digits || digits.length < 7 || digits.length > 15) {
+      return next(new ValidationError("Введите корректный номер (7–15 цифр)"));
+    }
+    await db
+      .update(clinicsTable)
+      .set({ whatsappPhone: digits })
+      .where(eq(clinicsTable.id, req.user!.clinicId))
+      .catch(next);
+    logger.info({ clinicId: req.user!.clinicId, phone: digits.slice(0, 5) + "***" }, "WhatsApp phone overridden manually");
+    res.json({ success: true, data: { phone: digits } });
+  },
+);
+
 const greenApiSchema = z.object({
   greenApiInstanceId: z.string().min(1).max(60),
   greenApiToken: z.string().min(1).max(120),
