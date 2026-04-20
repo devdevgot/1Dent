@@ -312,14 +312,18 @@ router.get(
   authMiddleware,
   async (req: Request, res: Response, next: NextFunction) => {
     const [clinic] = await db
-      .select({ greenApiInstanceId: clinicsTable.greenApiInstanceId, greenApiToken: clinicsTable.greenApiToken })
+      .select({
+        greenApiInstanceId: clinicsTable.greenApiInstanceId,
+        greenApiToken: clinicsTable.greenApiToken,
+        whatsappPhone: clinicsTable.whatsappPhone,
+      })
       .from(clinicsTable)
       .where(eq(clinicsTable.id, req.user!.clinicId))
       .limit(1)
       .catch(next) ?? [];
     if (!clinic) return;
     if (!clinic.greenApiInstanceId || !clinic.greenApiToken) {
-      return res.json({ success: true, data: { configured: false, connected: false, phone: null } });
+      return res.json({ success: true, data: { configured: false, connected: false, phone: clinic.whatsappPhone ?? null } });
     }
     let state: Awaited<ReturnType<typeof getGreenApiState>>;
     try {
@@ -367,9 +371,13 @@ router.get(
         logger.warn("getServerBaseUrl returned null — cannot register Green API webhook. Set WEBHOOK_BASE_URL env var.");
       }
     }
+    // Always prefer the phone manually set by the user (step 1 of modal).
+    // Green API on business plans returns an internal ID in wid/phone fields, not the real number.
+    const finalPhone = clinic.whatsappPhone ?? phone;
+
     // Disable ETag/304 caching — state can change at any moment (QR scan)
     res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
-    res.json({ success: true, data: { configured: true, connected, phone } });
+    res.json({ success: true, data: { configured: true, connected, phone: finalPhone } });
   },
 );
 

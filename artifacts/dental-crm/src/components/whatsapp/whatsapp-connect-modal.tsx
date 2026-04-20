@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { customFetch } from "@workspace/api-client-react";
-import { X, Check, Copy, CheckCircle2, Loader2, AlertTriangle, RefreshCw, Smartphone, QrCode } from "lucide-react";
+import { X, Check, Copy, CheckCircle2, Loader2, AlertTriangle, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 function extractApiErrorMessage(err: unknown): string {
@@ -41,8 +41,6 @@ interface WaQr {
   message: string;
 }
 
-type ConnectMethod = "qr" | "phone";
-
 export function WhatsAppConnectModal({
   open,
   onClose,
@@ -70,18 +68,9 @@ export function WhatsAppConnectModal({
   const [clinicPhone, setClinicPhone] = useState("");
   const [clinicPhoneSaving, setClinicPhoneSaving] = useState(false);
 
-  // Method selector
-  const [method, setMethod] = useState<ConnectMethod>("qr");
-
   // QR state
   const [qr, setQr] = useState<WaQr | null>(null);
   const [qrError, setQrError] = useState<string | null>(null);
-
-  // Phone pairing state
-  const [pairingPhone, setPairingPhone] = useState("");
-  const [pairingCode, setPairingCode] = useState<string | null>(null);
-  const [pairingLoading, setPairingLoading] = useState(false);
-  const [pairingError, setPairingError] = useState<string | null>(null);
 
   const [status, setStatus] = useState<WaStatus | null>(null);
   const [copied, setCopied] = useState(false);
@@ -125,24 +114,6 @@ export function WhatsAppConnectModal({
     }
   }, [fetchStatus]);
 
-  const requestPairingCode = async () => {
-    if (!pairingPhone.trim()) return;
-    setPairingLoading(true);
-    setPairingError(null);
-    setPairingCode(null);
-    try {
-      const res = await customFetch<{ success: boolean; data: { code: string } }>(
-        "/api/clinic/green-api/pairing-code",
-        { method: "POST", body: JSON.stringify({ phoneNumber: pairingPhone.trim() }) },
-      );
-      setPairingCode(res.data.code);
-    } catch (err) {
-      setPairingError(extractApiErrorMessage(err));
-    } finally {
-      setPairingLoading(false);
-    }
-  };
-
   useEffect(() => {
     if (!open) return;
     if (forceSetup) {
@@ -162,16 +133,14 @@ export function WhatsAppConnectModal({
     if (qrIntervalRef.current) clearInterval(qrIntervalRef.current);
     if (statusIntervalRef.current) clearInterval(statusIntervalRef.current);
     if (!configured || status?.connected) return;
-    if (method === "qr") {
-      qrIntervalRef.current = setInterval(fetchQr, 20_000);
-    }
+    qrIntervalRef.current = setInterval(fetchQr, 20_000);
     // Poll every 5s so the UI reacts within seconds after QR scan
     statusIntervalRef.current = setInterval(fetchStatus, 5_000);
     return () => {
       if (qrIntervalRef.current) clearInterval(qrIntervalRef.current);
       if (statusIntervalRef.current) clearInterval(statusIntervalRef.current);
     };
-  }, [configured, status?.connected, method, fetchQr, fetchStatus]);
+  }, [configured, status?.connected, fetchQr, fetchStatus]);
 
   useEffect(() => {
     if (!open) {
@@ -186,10 +155,6 @@ export function WhatsAppConnectModal({
       setQrError(null);
       setStatus(null);
       setInitialLoading(false);
-      setPairingPhone("");
-      setPairingCode(null);
-      setPairingError(null);
-      setPairingLoading(false);
       if (qrIntervalRef.current) clearInterval(qrIntervalRef.current);
       if (statusIntervalRef.current) clearInterval(statusIntervalRef.current);
     }
@@ -219,7 +184,7 @@ export function WhatsAppConnectModal({
   const SAVE_STAGES = [
     { threshold: 0,  label: "Сохраняем данные инстанса..." },
     { threshold: 40, label: "Проверяем подключение к Green API..." },
-    { threshold: 72, label: method === "qr" ? "Запрашиваем QR-код..." : "Подготовка к подключению..." },
+    { threshold: 72, label: "Запрашиваем QR-код..." },
   ];
 
   const handleSave = async (e: React.FormEvent) => {
@@ -250,11 +215,7 @@ export function WhatsAppConnectModal({
       setStatus(null);
       setConfigured(true);
       setQr(null);
-      if (method === "qr") {
-        void Promise.all([fetchQr(), fetchStatus()]);
-      } else {
-        void fetchStatus();
-      }
+      void Promise.all([fetchQr(), fetchStatus()]);
     } catch {
       setSaveProgress(100);
       setSaveStage("Ошибка сохранения");
@@ -273,25 +234,6 @@ export function WhatsAppConnectModal({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
-  };
-
-  const copyPairingCode = (code: string) => {
-    navigator.clipboard.writeText(code.replace("-", "")).then(() => {
-      toast({ title: "Код скопирован" });
-    });
-  };
-
-  const handleMethodChange = (m: ConnectMethod) => {
-    setMethod(m);
-    setQr(null);
-    setQrError(null);
-    setPairingCode(null);
-    setPairingError(null);
-    setPairingPhone("");
-    if (qrIntervalRef.current) clearInterval(qrIntervalRef.current);
-    if (m === "qr" && configured) {
-      void fetchQr();
-    }
   };
 
   if (!open) return null;
@@ -337,7 +279,7 @@ export function WhatsAppConnectModal({
               {[
                 "Укажите номер WhatsApp вашей клиники",
                 "Введите данные вашего Green API инстанса",
-                "Выберите способ: QR-код или номер телефона",
+                "Отсканируйте QR-код на телефоне клиники",
               ].map((s, i) => (
                 <div key={i} className="flex items-start gap-3">
                   <div
@@ -485,38 +427,9 @@ export function WhatsAppConnectModal({
                       </div>
                     )}
 
-                    {/* Method selector + credentials form — hidden while saving */}
+                    {/* Credentials form — hidden while saving */}
                     {!saving && (
                       <>
-                        <div className="flex rounded-xl overflow-hidden border border-border mb-4">
-                          <button
-                            type="button"
-                            onClick={() => setMethod("qr")}
-                            className={`flex-1 flex items-center justify-center gap-1.5 h-9 text-xs font-medium transition-colors ${
-                              method === "qr"
-                                ? "text-white"
-                                : "text-gray-500 hover:bg-gray-50"
-                            }`}
-                            style={method === "qr" ? { backgroundColor: BRAND } : undefined}
-                          >
-                            <QrCode className="w-3.5 h-3.5" />
-                            QR-код
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setMethod("phone")}
-                            className={`flex-1 flex items-center justify-center gap-1.5 h-9 text-xs font-medium transition-colors border-l border-border ${
-                              method === "phone"
-                                ? "text-white"
-                                : "text-gray-500 hover:bg-gray-50"
-                            }`}
-                            style={method === "phone" ? { backgroundColor: BRAND } : undefined}
-                          >
-                            <Smartphone className="w-3.5 h-3.5" />
-                            По номеру
-                          </button>
-                        </div>
-
                         <form onSubmit={handleSave} className="space-y-3 mb-4">
                           <div>
                             <label className="block text-xs font-medium text-gray-500 mb-1">
@@ -570,7 +483,7 @@ export function WhatsAppConnectModal({
                             className="w-full h-10 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
                             style={{ backgroundColor: BRAND }}
                           >
-                            {method === "qr" ? "Сохранить и получить QR" : "Сохранить"}
+                            Сохранить и получить QR
                           </button>
                         </form>
                       </>
@@ -578,8 +491,8 @@ export function WhatsAppConnectModal({
                   </>
                 )}
 
-                {/* ── QR method ── */}
-                {configured && method === "qr" && (
+                {/* ── QR ── */}
+                {configured && (
                   <>
                     {!qr && !qrError && (
                       <div className="flex flex-col items-center justify-center py-8 gap-3">
@@ -661,115 +574,6 @@ export function WhatsAppConnectModal({
                   </>
                 )}
 
-                {/* ── Phone / pairing code method ── */}
-                {configured && method === "phone" && (
-                  <div>
-                    {!pairingCode ? (
-                      <>
-                        <p className="text-xs text-gray-500 mb-3 leading-relaxed">
-                          Введите номер телефона, привязанного к WhatsApp на устройстве клиники.
-                          Вы получите 8-значный код.
-                        </p>
-                        <div className="space-y-3">
-                          <div>
-                            <label className="block text-xs font-medium text-gray-500 mb-1">
-                              Номер телефона (с кодом страны)
-                            </label>
-                            <input
-                              type="tel"
-                              value={pairingPhone}
-                              onChange={(e) => setPairingPhone(e.target.value)}
-                              placeholder="77001234567"
-                              className="w-full h-9 rounded-lg border border-border bg-white px-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#98cc1c]/30"
-                            />
-                            <p className="text-xs text-gray-400 mt-1">Только цифры, без +</p>
-                          </div>
-
-                          {pairingError && (
-                            <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-100">
-                              <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                              <p className="text-xs text-red-600 leading-relaxed">{pairingError}</p>
-                            </div>
-                          )}
-
-                          <button
-                            type="button"
-                            disabled={pairingLoading || !pairingPhone.trim()}
-                            onClick={() => void requestPairingCode()}
-                            className="w-full h-10 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
-                            style={{ backgroundColor: BRAND }}
-                          >
-                            {pairingLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                            {pairingLoading ? "Запрашиваем код..." : "Получить код"}
-                          </button>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="text-center">
-                        <p className="text-xs text-gray-500 mb-4 leading-relaxed">
-                          Откройте WhatsApp на телефоне клиники →{" "}
-                          <span className="font-medium text-gray-700">Настройки</span> →{" "}
-                          <span className="font-medium text-gray-700">Привязанные устройства</span> →{" "}
-                          <span className="font-medium text-gray-700">Привязать устройство</span> →{" "}
-                          выберите <span className="font-medium text-gray-700">«Войти по номеру телефона»</span> и введите код:
-                        </p>
-
-                        <div className="relative inline-flex items-center gap-1 mb-2">
-                          <div className="flex items-center gap-1 bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl px-5 py-3">
-                            {pairingCode.split("").map((char, i) => (
-                              <span
-                                key={i}
-                                className={`text-3xl font-mono font-bold tracking-widest ${char === "-" ? "text-gray-300 text-2xl" : "text-gray-900"}`}
-                              >
-                                {char}
-                              </span>
-                            ))}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => copyPairingCode(pairingCode)}
-                            className="absolute -right-9 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-                            title="Копировать"
-                          >
-                            <Copy className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-
-                        <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400 mb-4">
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                          Ожидание подтверждения...
-                        </div>
-
-                        <div className="flex gap-2 justify-center">
-                          <button
-                            type="button"
-                            onClick={() => { setPairingCode(null); setPairingError(null); }}
-                            className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border text-xs text-gray-500 hover:bg-gray-50 transition-colors"
-                          >
-                            Другой номер
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => void requestPairingCode()}
-                            disabled={pairingLoading}
-                            className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border text-xs text-gray-500 hover:bg-gray-50 transition-colors"
-                          >
-                            <RefreshCw className="w-3 h-3" />
-                            Новый код
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={() => { setConfigured(false); setPairingCode(null); setPairingError(null); setPairingPhone(""); setStatus(null); }}
-                      className="mt-4 w-full text-xs text-gray-400 hover:text-gray-600 underline"
-                    >
-                      Изменить данные
-                    </button>
-                  </div>
-                )}
               </>
             )}
           </div>
