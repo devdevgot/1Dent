@@ -4,7 +4,7 @@ import { ChannelsRepository } from "../modules/channels/channels.repository";
 import { db, clinicsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { logger } from "../lib/logger";
-import { getGreenApiWaSettings, getGreenApiState } from "../shared/green-api";
+import { getGreenApiWaSettings, getGreenApiState, extractPhoneFromWaSettings } from "../shared/green-api";
 
 const router: IRouter = Router();
 const channelsRepo = new ChannelsRepository();
@@ -96,31 +96,18 @@ async function handleRefCode(
             let resolvedPhone = state.wid ? state.wid.replace("@c.us", "") : null;
 
             if (!resolvedPhone) {
-              // Try getWaSettings as secondary source
+              // Try getWaSettings as secondary source.
+              // extractPhoneFromWaSettings() handles all field name variants across Green API plan tiers.
               const waSettings = await getGreenApiWaSettings(clinic.greenApiInstanceId, clinic.greenApiToken).catch((err) => {
                 logger.warn({ err, clinicId: channel.clinicId }, "[ref] getWaSettings threw");
                 return null;
               });
+              resolvedPhone = extractPhoneFromWaSettings(waSettings);
               logger.info({
                 clinicId: channel.clinicId,
                 waSettingsKeys: waSettings ? Object.keys(waSettings) : null,
-                hasWid: !!waSettings?.wid,
-                hasPhoneNumber: !!waSettings?.phoneNumber,
-              }, "[ref] getWaSettings response inspected");
-
-              if (waSettings?.wid) {
-                resolvedPhone = waSettings.wid.replace("@c.us", "");
-              } else if (waSettings?.phoneNumber) {
-                resolvedPhone = String(waSettings.phoneNumber).replace(/\D/g, "") || null;
-              } else if (waSettings) {
-                // Last-resort: scan the entire response for any wa.me-like @c.us identifier
-                const raw = JSON.stringify(waSettings);
-                const m = raw.match(/(\d{8,15})@c\.us/);
-                if (m && m[1]) {
-                  resolvedPhone = m[1];
-                  logger.info({ clinicId: channel.clinicId }, "[ref] phone extracted via raw scan of waSettings");
-                }
-              }
+                resolved: !!resolvedPhone,
+              }, "[ref] getWaSettings phone extraction");
             }
 
             if (resolvedPhone) {

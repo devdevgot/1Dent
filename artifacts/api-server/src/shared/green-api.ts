@@ -183,6 +183,10 @@ export interface GreenApiWaSettingsResult {
   phoneNumber?: string;
   nameAccount?: string;
   stateInstance?: string;
+  // Fields present in some Green API plan tiers:
+  phone?: number | string;   // Raw phone number digits
+  chatId?: string;           // e.g. "77001234567@c.us"
+  deviceId?: string;
 }
 
 export async function getGreenApiWaSettings(
@@ -193,6 +197,49 @@ export async function getGreenApiWaSettings(
   const res = await fetch(url);
   if (!res.ok) return null;
   return res.json() as Promise<GreenApiWaSettingsResult>;
+}
+
+/**
+ * Extract a clean phone number (digits only) from any Green API WaSettings response.
+ * Green API uses different field names across plan tiers:
+ *   - Business/partner plans: `phone` (number) + `chatId` ("XXXX@c.us")
+ *   - Developer plans: `wid` ("XXXX@c.us") + `phoneNumber` (string)
+ */
+export function extractPhoneFromWaSettings(
+  waSettings: GreenApiWaSettingsResult | null | undefined,
+): string | null {
+  if (!waSettings) return null;
+
+  // Priority 1: wid field (e.g. "77001234567@c.us")
+  if (waSettings.wid) {
+    const digits = waSettings.wid.replace("@c.us", "").replace(/\D/g, "");
+    if (digits) return digits;
+  }
+
+  // Priority 2: chatId field (same format as wid)
+  if (waSettings.chatId) {
+    const digits = waSettings.chatId.replace("@c.us", "").replace(/\D/g, "");
+    if (digits) return digits;
+  }
+
+  // Priority 3: phone field (numeric, present in business plan responses)
+  if (waSettings.phone != null) {
+    const digits = String(waSettings.phone).replace(/\D/g, "");
+    if (digits) return digits;
+  }
+
+  // Priority 4: phoneNumber string field
+  if (waSettings.phoneNumber) {
+    const digits = String(waSettings.phoneNumber).replace(/\D/g, "");
+    if (digits) return digits;
+  }
+
+  // Last resort: scan entire JSON for any @c.us identifier
+  const raw = JSON.stringify(waSettings);
+  const m = raw.match(/"(\d{8,15})@c\.us"/);
+  if (m && m[1]) return m[1];
+
+  return null;
 }
 
 export async function logoutGreenApiInstance(

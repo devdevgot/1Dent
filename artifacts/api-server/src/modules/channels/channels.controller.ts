@@ -11,7 +11,7 @@ import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 import { db, clinicsTable, channelTypes } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { getGreenApiQrCode, getGreenApiState, setGreenApiWebhookUrl, getServerBaseUrl, logoutGreenApiInstance, clearGreenApiStateCache, getGreenApiWaSettings, shouldRegisterWebhook, getGreenApiPairingCode } from "../../shared/green-api";
+import { getGreenApiQrCode, getGreenApiState, setGreenApiWebhookUrl, getServerBaseUrl, logoutGreenApiInstance, clearGreenApiStateCache, getGreenApiWaSettings, shouldRegisterWebhook, getGreenApiPairingCode, extractPhoneFromWaSettings } from "../../shared/green-api";
 import { logger } from "../../lib/logger";
 
 const router: IRouter = Router();
@@ -305,14 +305,13 @@ router.get(
     let phone: string | null = state.wid ? state.wid.replace("@c.us", "") : null;
 
     if (connected) {
-      // If phone not in state, fetch it from getWaSettings
+      // If phone not in state, fetch it from getWaSettings.
+      // Green API uses different field names across plan tiers (wid / chatId / phone / phoneNumber).
+      // extractPhoneFromWaSettings() handles all variants.
       if (!phone) {
         const waSettings = await getGreenApiWaSettings(clinic.greenApiInstanceId, clinic.greenApiToken).catch(() => null);
-        if (waSettings?.wid) {
-          phone = waSettings.wid.replace("@c.us", "");
-        } else if (waSettings?.phoneNumber) {
-          phone = waSettings.phoneNumber.replace(/\D/g, "") || null;
-        }
+        phone = extractPhoneFromWaSettings(waSettings);
+        logger.info({ instanceId: clinic.greenApiInstanceId, waSettingsKeys: waSettings ? Object.keys(waSettings) : null, resolvedPhone: phone ? phone.slice(0, 5) + "***" : null }, "Green API WaSettings phone extraction");
       }
 
       // Persist phone number if we have it
@@ -339,6 +338,8 @@ router.get(
         logger.warn("getServerBaseUrl returned null — cannot register Green API webhook. Set WEBHOOK_BASE_URL env var.");
       }
     }
+    // Disable ETag/304 caching — state can change at any moment (QR scan)
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
     res.json({ success: true, data: { configured: true, connected, phone } });
   },
 );

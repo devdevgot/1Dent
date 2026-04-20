@@ -153,7 +153,8 @@ export function WhatsAppConnectModal({
     if (method === "qr") {
       qrIntervalRef.current = setInterval(fetchQr, 20_000);
     }
-    statusIntervalRef.current = setInterval(fetchStatus, 15_000);
+    // Poll every 5s so the UI reacts within seconds after QR scan
+    statusIntervalRef.current = setInterval(fetchStatus, 5_000);
     return () => {
       if (qrIntervalRef.current) clearInterval(qrIntervalRef.current);
       if (statusIntervalRef.current) clearInterval(statusIntervalRef.current);
