@@ -1558,7 +1558,7 @@ export function PatientDetailPanel() {
                         <div className="flex items-center gap-2">
                           <ClipboardList className="w-3.5 h-3.5 text-primary" />
                           <span className="text-xs font-bold text-gray-600 uppercase tracking-wide">
-                            План лечения
+                            История плана лечения
                           </span>
                         </div>
                         <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${planSectionCollapsed ? "-rotate-90" : ""}`} />
@@ -1566,7 +1566,7 @@ export function PatientDetailPanel() {
 
                       {!planSectionCollapsed && (
                       <>
-                      {!activePlan ? (
+                      {false && (!activePlan ? (
                         <div className="flex flex-col items-center justify-center gap-4 px-6 py-8">
                           {/* State: no diagnosis at all */}
                           {!hasDiagnosis && (
@@ -1956,7 +1956,7 @@ export function PatientDetailPanel() {
                         )}
                       </div>
                       </>
-                      )}
+                      ))}
 
                       {/* Plan history — completed/cancelled plans */}
                 {pastPlans.length > 0 && (
