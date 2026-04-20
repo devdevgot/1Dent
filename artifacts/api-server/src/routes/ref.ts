@@ -4,6 +4,7 @@ import { ChannelsRepository } from "../modules/channels/channels.repository";
 import { db, clinicsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { logger } from "../lib/logger";
+import { getGreenApiWaSettings, getGreenApiState } from "../shared/green-api";
 
 const router: IRouter = Router();
 const channelsRepo = new ChannelsRepository();
@@ -58,8 +59,7 @@ async function handleRefCode(
       .catch((err) => logger.warn({ err, clickId }, "[ref] Failed to persist click — redirect already sent"));
 
     // ── Step 4: determine WhatsApp phone number ───────────────────────────────
-    // Priority: phone from URL > phone stored in clinic DB record
-    // Critical: do NOT call Green API or check WA status — redirect always fires.
+    // Priority: phone from URL > phone stored in clinic DB record > Green API live lookup
     let phone: string | null = null;
 
     if (phoneOverride) {
@@ -68,11 +68,47 @@ async function handleRefCode(
 
     if (!phone) {
       const [clinic] = await db
-        .select({ whatsappPhone: clinicsTable.whatsappPhone })
+        .select({
+          whatsappPhone: clinicsTable.whatsappPhone,
+          greenApiInstanceId: clinicsTable.greenApiInstanceId,
+          greenApiToken: clinicsTable.greenApiToken,
+        })
         .from(clinicsTable)
         .where(eq(clinicsTable.id, channel.clinicId))
         .limit(1);
+
       phone = clinic?.whatsappPhone?.replace(/\D/g, "") ?? null;
+
+      // ── Fallback: if phone not saved yet but Green API credentials exist,
+      //    try to retrieve phone number live from Green API. This handles the
+      //    case where WhatsApp was connected but the phone hasn't been persisted yet.
+      if (!phone && clinic?.greenApiInstanceId && clinic?.greenApiToken) {
+        try {
+          // Try getStateInstance first — it often contains wid
+          const state = await getGreenApiState(clinic.greenApiInstanceId, clinic.greenApiToken);
+          if (state.stateInstance === "authorized") {
+            let resolvedPhone = state.wid ? state.wid.replace("@c.us", "") : null;
+
+            if (!resolvedPhone) {
+              // Try getWaSettings as secondary source
+              const waSettings = await getGreenApiWaSettings(clinic.greenApiInstanceId, clinic.greenApiToken).catch(() => null);
+              resolvedPhone = waSettings?.instanceData?.wid?.replace("@c.us", "") ?? null;
+            }
+
+            if (resolvedPhone) {
+              phone = resolvedPhone.replace(/\D/g, "") || null;
+              // Persist phone so subsequent clicks don't need the live lookup
+              db.update(clinicsTable)
+                .set({ whatsappPhone: resolvedPhone })
+                .where(eq(clinicsTable.id, channel.clinicId))
+                .catch((err) => logger.warn({ err }, "[ref] Failed to persist whatsappPhone"));
+              logger.info({ clinicId: channel.clinicId, phone: phone?.slice(0, 5) + "***" }, "[ref] resolved phone from Green API live lookup");
+            }
+          }
+        } catch (err) {
+          logger.warn({ err, clinicId: channel.clinicId }, "[ref] Green API live lookup failed — continuing without phone");
+        }
+      }
     }
 
     // ── Step 5: build text — embed both ref code and click_id ─────────────────

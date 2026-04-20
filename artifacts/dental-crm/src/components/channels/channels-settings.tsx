@@ -13,7 +13,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/hooks/use-auth";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
-import { Copy, Download, Trash2, Plus, Globe, Handshake, Megaphone, MapPin, ChevronDown, LogOut, RefreshCw } from "lucide-react";
+import { Copy, Download, Trash2, Plus, Globe, Handshake, Megaphone, MapPin, ChevronDown, LogOut, RefreshCw, AlertTriangle } from "lucide-react";
 import { FaInstagram, FaTelegram, FaWhatsapp } from "react-icons/fa";
 import { WhatsAppConnectModal, WhatsAppIcon, type WaStatus } from "@/components/whatsapp/whatsapp-connect-modal";
 import { customFetch } from "@workspace/api-client-react";
@@ -264,6 +264,19 @@ export function ChannelsSettings() {
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
           Каналы сквозной аналитики
         </h2>
+
+        {/* Warning: phone not set — ref links won't redirect to WhatsApp */}
+        {channels.length > 0 && !savedPhone && (
+          <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200 mb-3">
+            <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-amber-700">WhatsApp не подключён</p>
+              <p className="text-xs text-amber-600 mt-0.5 leading-relaxed">
+                Реферальные ссылки не будут открывать WhatsApp. Подключите WhatsApp клиники выше, чтобы ссылки работали корректно.
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-4">
           {channels.length === 0 ? (
