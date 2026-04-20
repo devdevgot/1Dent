@@ -11,7 +11,9 @@ async function handleRefCode(code: string, res: Response, next: NextFunction, ph
     const channel = await channelsRepo.findByRefCode(code);
 
     if (!channel) {
-      return res.status(404).send("Channel not found");
+      return res.status(404).send(
+        `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ссылка недействительна</title><style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f2f2f7;min-height:100vh;display:flex;align-items:center;justify-content:center;margin:0;padding:24px;box-sizing:border-box}div{background:#fff;border-radius:20px;padding:32px 24px;max-width:360px;width:100%;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,0.08)}h2{font-size:20px;font-weight:700;color:#1c1c1e;margin:16px 0 8px}p{font-size:14px;color:#6e6e73;line-height:1.5;margin:0}</style></head><body><div><svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="56" height="56" rx="16" fill="#f2f2f7"/><path d="M28 20v10M28 34v2" stroke="#8e8e93" stroke-width="2.5" stroke-linecap="round"/></svg><h2>Ссылка недействительна</h2><p>Эта реферальная ссылка не найдена или устарела. Попросите клинику прислать актуальную ссылку.</p></div></body></html>`
+      );
     }
 
     const text = encodeURIComponent(
