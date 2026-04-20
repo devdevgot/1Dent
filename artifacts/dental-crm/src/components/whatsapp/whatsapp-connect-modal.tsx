@@ -455,7 +455,7 @@ export function WhatsAppConnectModal({
                         <div>
                           <p className="text-sm font-semibold text-gray-700 mb-1">Не удалось получить QR-код</p>
                           <p className="text-xs text-gray-400 leading-relaxed max-w-xs">
-                            Проверьте правильность ID инстанса и токена в личном кабинете Green API.
+                            {qrError}
                           </p>
                         </div>
                         <div className="flex gap-2 mt-1">

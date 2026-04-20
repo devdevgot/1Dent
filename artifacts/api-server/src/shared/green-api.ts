@@ -2,6 +2,11 @@ import { logger } from "../lib/logger";
 
 const BASE_URL = "https://api.green-api.com";
 
+/** AbortSignal with a timeout — prevents Green API calls from hanging indefinitely */
+function greenApiSignal(timeoutMs = 15_000): AbortSignal {
+  return AbortSignal.timeout(timeoutMs);
+}
+
 export function getServerBaseUrl(): string | null {
   // 1. Explicit override — highest priority
   if (process.env["WEBHOOK_BASE_URL"]) return process.env["WEBHOOK_BASE_URL"];
@@ -29,6 +34,7 @@ export async function setGreenApiWebhookUrl(
   const url = `${BASE_URL}/waInstance${instanceId}/setSettings/${token}`;
   const res = await fetch(url, {
     method: "POST",
+    signal: greenApiSignal(),
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       webhookUrl,
@@ -64,6 +70,7 @@ export async function getGreenApiPairingCode(
   const url = `${BASE_URL}/waInstance${instanceId}/getAuthorizationCode/${token}`;
   const res = await fetch(url, {
     method: "POST",
+    signal: greenApiSignal(),
     headers: { "Content-Type": "application/json" },
     // Green API expects phoneNumber as a number (integer), not a string
     body: JSON.stringify({ phoneNumber: parseInt(digits, 10) }),
@@ -101,6 +108,7 @@ export async function sendGreenApiMessage(
 
   const res = await fetch(url, {
     method: "POST",
+    signal: greenApiSignal(),
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ chatId, message: text }),
   });
@@ -118,7 +126,7 @@ export async function getGreenApiQrCode(
   token: string,
 ): Promise<GreenApiQrResult> {
   const url = `${BASE_URL}/waInstance${instanceId}/qr/${token}`;
-  const res = await fetch(url);
+  const res = await fetch(url, { signal: greenApiSignal() });
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
@@ -159,7 +167,7 @@ export async function getGreenApiState(
   }
 
   const url = `${BASE_URL}/waInstance${instanceId}/getStateInstance/${token}`;
-  const res = await fetch(url);
+  const res = await fetch(url, { signal: greenApiSignal(10_000) });
 
   if (res.status === 429) {
     // Rate-limited — return cached value if we have one, otherwise treat as not authorized
@@ -194,7 +202,7 @@ export async function getGreenApiWaSettings(
   token: string,
 ): Promise<GreenApiWaSettingsResult | null> {
   const url = `${BASE_URL}/waInstance${instanceId}/getWaSettings/${token}`;
-  const res = await fetch(url);
+  const res = await fetch(url, { signal: greenApiSignal() });
   if (!res.ok) return null;
   return res.json() as Promise<GreenApiWaSettingsResult>;
 }

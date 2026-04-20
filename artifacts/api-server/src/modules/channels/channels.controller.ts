@@ -193,10 +193,20 @@ router.get(
     } catch (err) {
       logger.error({ err, instanceId: clinic.greenApiInstanceId }, "Green API QR fetch failed");
       const msg = err instanceof Error ? err.message : String(err);
-      return res.status(502).json({
-        success: false,
-        error: `Не удалось получить QR-код от Green API: ${msg}. Проверьте ID инстанса и токен.`,
-      });
+      const isTimeout = msg.includes("Timeout") || msg.includes("timeout") || msg.includes("abort") || msg.includes("Abort");
+      const is500 = msg.includes(": 500");
+      const is401 = msg.includes(": 401") || msg.includes(": 403");
+      let userMsg: string;
+      if (isTimeout) {
+        userMsg = "Сервер Green API не отвечает (таймаут). Это временная проблема — подождите 30 секунд и попробуйте снова.";
+      } else if (is500) {
+        userMsg = "Green API вернул ошибку (500). Возможно, инстанс уже авторизован в WhatsApp — попробуйте способ «По номеру» (pairing code) или отключите инстанс в личном кабинете Green API и повторите.";
+      } else if (is401) {
+        userMsg = "Неверный ID инстанса или токен. Проверьте данные в личном кабинете green-api.com.";
+      } else {
+        userMsg = `Green API вернул ошибку: ${msg}`;
+      }
+      return res.status(502).json({ success: false, error: userMsg });
     }
     res.json({ success: true, data: qrResult });
   },
