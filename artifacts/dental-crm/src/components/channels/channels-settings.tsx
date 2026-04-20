@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import QRCode from "qrcode";
@@ -71,6 +71,9 @@ export function ChannelsSettings() {
   const [phoneEditing, setPhoneEditing] = useState(false);
   const [phoneInput, setPhoneInput] = useState("");
   const [phoneSaving, setPhoneSaving] = useState(false);
+  const [disconnectProgress, setDisconnectProgress] = useState(0);
+  const [disconnectStage, setDisconnectStage] = useState("");
+  const disconnectTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const isOwner = user?.role === "owner";
   const isAdmin = user?.role === "admin";
@@ -130,25 +133,53 @@ export function ChannelsSettings() {
     }
   };
 
+  const DISCONNECT_STAGES = [
+    { threshold: 0,  label: "Отправляем запрос на отключение..." },
+    { threshold: 20, label: "Выходим из Green API..." },
+    { threshold: 55, label: "Удаляем устройство с телефона..." },
+    { threshold: 80, label: "Завершение..." },
+  ];
+
   const handleDisconnect = async () => {
+    setConfirmDisconnect(false);
     setDisconnecting(true);
+    setDisconnectProgress(0);
+    setDisconnectStage(DISCONNECT_STAGES[0].label);
+
+    const startMs = Date.now();
+    const TOTAL_MS = 14_000;
+    disconnectTimerRef.current = setInterval(() => {
+      const pct = Math.min(85, Math.floor(((Date.now() - startMs) / TOTAL_MS) * 85));
+      setDisconnectProgress(pct);
+      const stage = [...DISCONNECT_STAGES].reverse().find(s => pct >= s.threshold);
+      setDisconnectStage(stage?.label ?? "");
+    }, 150);
+
     try {
       const res = await customFetch<{ success: boolean; data: { greenApiLogoutOk: boolean; message: string } }>(
         "/api/clinic/green-api", { method: "DELETE" }
       );
       const ok = res.data?.greenApiLogoutOk ?? false;
+      setDisconnectProgress(100);
+      setDisconnectStage(ok ? "Устройство отключено!" : "Данные удалены из CRM");
+      await new Promise(r => setTimeout(r, 700));
+      setWaStatus({ configured: false, connected: false, phone: null });
       toast({
         title: ok ? "WhatsApp отключён" : "Отключено из CRM",
         description: res.data?.message,
         variant: ok ? "default" : "destructive",
         duration: ok ? 4000 : 8000,
       });
-      setWaStatus({ configured: false, connected: false, phone: null });
     } catch {
+      setDisconnectProgress(100);
+      setDisconnectStage("Ошибка");
+      await new Promise(r => setTimeout(r, 500));
       toast({ title: "Ошибка при отключении", variant: "destructive" });
     } finally {
+      if (disconnectTimerRef.current) clearInterval(disconnectTimerRef.current);
       setDisconnecting(false);
-      setConfirmDisconnect(false);
+      setDisconnectProgress(0);
+      setDisconnectStage("");
     }
   };
 
@@ -218,6 +249,43 @@ export function ChannelsSettings() {
 
   return (
     <div className="space-y-4">
+      {/* ─── Disconnecting progress overlay ─────────────────────────────────── */}
+      {disconnecting && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-80 flex flex-col items-center gap-5 mx-4">
+            {/* Icon */}
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ backgroundColor: "#25D366" + "18" }}>
+              <WhatsAppIcon size={36} color="#25D366" />
+            </div>
+            {/* Title + stage */}
+            <div className="text-center">
+              <p className="text-base font-bold text-gray-900 mb-1">Отключение WhatsApp</p>
+              <p className="text-xs text-gray-400 min-h-[16px]">{disconnectStage}</p>
+            </div>
+            {/* Big percentage */}
+            <div
+              className="text-5xl font-bold tabular-nums transition-all duration-200"
+              style={{ color: disconnectProgress === 100 ? "#22c55e" : "#ef4444" }}
+            >
+              {disconnectProgress}%
+            </div>
+            {/* Progress bar */}
+            <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-200 ease-linear"
+                style={{
+                  width: `${disconnectProgress}%`,
+                  backgroundColor: disconnectProgress === 100 ? "#22c55e" : "#ef4444",
+                }}
+              />
+            </div>
+            <p className="text-xs text-gray-400 text-center leading-relaxed">
+              Пожалуйста, не закрывайте страницу.<br />Устройство отвязывается от WhatsApp...
+            </p>
+          </div>
+        </div>
+      )}
+
       {isOwner && (
         <div className="bg-white border border-border rounded-xl p-4">
           <div className="flex items-center justify-between gap-3">

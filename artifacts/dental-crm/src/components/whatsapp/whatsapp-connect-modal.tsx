@@ -89,6 +89,11 @@ export function WhatsAppConnectModal({
   const qrIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const statusIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Saving credentials progress
+  const [saveProgress, setSaveProgress] = useState(0);
+  const [saveStage, setSaveStage] = useState("");
+  const saveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const fetchStatus = useCallback(async () => {
     try {
       const res = await customFetch<{ success: boolean; data: WaStatus }>(
@@ -211,29 +216,55 @@ export function WhatsAppConnectModal({
     }
   };
 
+  const SAVE_STAGES = [
+    { threshold: 0,  label: "Сохраняем данные инстанса..." },
+    { threshold: 40, label: "Проверяем подключение к Green API..." },
+    { threshold: 72, label: method === "qr" ? "Запрашиваем QR-код..." : "Подготовка к подключению..." },
+  ];
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!instanceId.trim() || !token.trim()) return;
     setSaving(true);
+    setSaveProgress(0);
+    setSaveStage(SAVE_STAGES[0].label);
+
+    const startMs = Date.now();
+    const TOTAL_MS = 5_000;
+    saveTimerRef.current = setInterval(() => {
+      const pct = Math.min(85, Math.floor(((Date.now() - startMs) / TOTAL_MS) * 85));
+      setSaveProgress(pct);
+      const stage = [...SAVE_STAGES].reverse().find(s => pct >= s.threshold);
+      setSaveStage(stage?.label ?? "");
+    }, 100);
+
     try {
       await customFetch("/api/clinic/green-api", {
         method: "PATCH",
         body: JSON.stringify({ greenApiInstanceId: instanceId.trim(), greenApiToken: token.trim() }),
       });
+      setSaveProgress(100);
+      setSaveStage("Данные сохранены!");
+      await new Promise(r => setTimeout(r, 500));
+
       setStatus(null);
       setConfigured(true);
       setQr(null);
       if (method === "qr") {
-        toast({ title: "Данные сохранены. Запрашиваем QR-код..." });
         void Promise.all([fetchQr(), fetchStatus()]);
       } else {
-        toast({ title: "Данные сохранены. Введите номер телефона для получения кода." });
         void fetchStatus();
       }
     } catch {
+      setSaveProgress(100);
+      setSaveStage("Ошибка сохранения");
+      await new Promise(r => setTimeout(r, 400));
       toast({ title: "Ошибка сохранения", variant: "destructive" });
     } finally {
+      if (saveTimerRef.current) clearInterval(saveTimerRef.current);
       setSaving(false);
+      setSaveProgress(0);
+      setSaveStage("");
     }
   };
 
@@ -428,97 +459,122 @@ export function WhatsAppConnectModal({
               <>
                 {!configured && (
                   <>
-                    {/* Method selector */}
-                    <div className="flex rounded-xl overflow-hidden border border-border mb-4">
-                      <button
-                        type="button"
-                        onClick={() => setMethod("qr")}
-                        className={`flex-1 flex items-center justify-center gap-1.5 h-9 text-xs font-medium transition-colors ${
-                          method === "qr"
-                            ? "text-white"
-                            : "text-gray-500 hover:bg-gray-50"
-                        }`}
-                        style={method === "qr" ? { backgroundColor: BRAND } : undefined}
-                      >
-                        <QrCode className="w-3.5 h-3.5" />
-                        QR-код
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setMethod("phone")}
-                        className={`flex-1 flex items-center justify-center gap-1.5 h-9 text-xs font-medium transition-colors border-l border-border ${
-                          method === "phone"
-                            ? "text-white"
-                            : "text-gray-500 hover:bg-gray-50"
-                        }`}
-                        style={method === "phone" ? { backgroundColor: BRAND } : undefined}
-                      >
-                        <Smartphone className="w-3.5 h-3.5" />
-                        По номеру
-                      </button>
-                    </div>
-
-                    <form onSubmit={handleSave} className="space-y-3 mb-4">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">
-                          ID инстанса (idInstance)
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="text"
-                            value={instanceId}
-                            onChange={(e) => setInstanceId(e.target.value)}
-                            placeholder="1234567890"
-                            className="w-full h-9 rounded-lg border border-border bg-white px-3 pr-9 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#98cc1c]/30"
+                    {/* ── Saving progress (shown while credentials are being saved) ── */}
+                    {saving && (
+                      <div className="flex flex-col items-center py-6 gap-5">
+                        <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ backgroundColor: "#25D366" + "18" }}>
+                          <WhatsAppIcon size={36} color="#25D366" />
+                        </div>
+                        <div className="text-center">
+                          <p className="text-sm font-bold text-gray-900 mb-1">Подключение к Green API</p>
+                          <p className="text-xs text-gray-400 min-h-[16px]">{saveStage}</p>
+                        </div>
+                        <div className="text-5xl font-bold tabular-nums transition-all duration-150"
+                          style={{ color: saveProgress === 100 ? "#22c55e" : BRAND }}>
+                          {saveProgress}%
+                        </div>
+                        <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-150 ease-linear"
+                            style={{
+                              width: `${saveProgress}%`,
+                              backgroundColor: saveProgress === 100 ? "#22c55e" : BRAND,
+                            }}
                           />
-                          {instanceId && (
-                            <button
-                              type="button"
-                              onClick={copyInstanceId}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                            >
-                              {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
-                            </button>
-                          )}
                         </div>
                       </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">
-                          API токен (apiTokenInstance)
-                        </label>
-                        <input
-                          type="password"
-                          value={token}
-                          onChange={(e) => setToken(e.target.value)}
-                          placeholder="••••••••••••••••••••••"
-                          className="w-full h-9 rounded-lg border border-border bg-white px-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#98cc1c]/30"
-                        />
-                      </div>
-                      <p className="text-xs text-gray-400">
-                        Данные из личного кабинета{" "}
-                        <a
-                          href="https://green-api.com"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[#98cc1c] hover:underline"
-                        >
-                          green-api.com
-                        </a>
-                      </p>
-                      <button
-                        type="submit"
-                        disabled={saving || !instanceId.trim() || !token.trim()}
-                        className="w-full h-10 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
-                        style={{ backgroundColor: BRAND }}
-                      >
-                        {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                        {saving
-                          ? "Сохранение..."
-                          : method === "qr"
-                          ? "Сохранить и получить QR"
-                          : "Сохранить"}
-                      </button>
-                    </form>
+                    )}
+
+                    {/* Method selector + credentials form — hidden while saving */}
+                    {!saving && (
+                      <>
+                        <div className="flex rounded-xl overflow-hidden border border-border mb-4">
+                          <button
+                            type="button"
+                            onClick={() => setMethod("qr")}
+                            className={`flex-1 flex items-center justify-center gap-1.5 h-9 text-xs font-medium transition-colors ${
+                              method === "qr"
+                                ? "text-white"
+                                : "text-gray-500 hover:bg-gray-50"
+                            }`}
+                            style={method === "qr" ? { backgroundColor: BRAND } : undefined}
+                          >
+                            <QrCode className="w-3.5 h-3.5" />
+                            QR-код
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setMethod("phone")}
+                            className={`flex-1 flex items-center justify-center gap-1.5 h-9 text-xs font-medium transition-colors border-l border-border ${
+                              method === "phone"
+                                ? "text-white"
+                                : "text-gray-500 hover:bg-gray-50"
+                            }`}
+                            style={method === "phone" ? { backgroundColor: BRAND } : undefined}
+                          >
+                            <Smartphone className="w-3.5 h-3.5" />
+                            По номеру
+                          </button>
+                        </div>
+
+                        <form onSubmit={handleSave} className="space-y-3 mb-4">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                              ID инстанса (idInstance)
+                            </label>
+                            <div className="relative">
+                              <input
+                                type="text"
+                                value={instanceId}
+                                onChange={(e) => setInstanceId(e.target.value)}
+                                placeholder="1234567890"
+                                className="w-full h-9 rounded-lg border border-border bg-white px-3 pr-9 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#98cc1c]/30"
+                              />
+                              {instanceId && (
+                                <button
+                                  type="button"
+                                  onClick={copyInstanceId}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                >
+                                  {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                              API токен (apiTokenInstance)
+                            </label>
+                            <input
+                              type="password"
+                              value={token}
+                              onChange={(e) => setToken(e.target.value)}
+                              placeholder="••••••••••••••••••••••"
+                              className="w-full h-9 rounded-lg border border-border bg-white px-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#98cc1c]/30"
+                            />
+                          </div>
+                          <p className="text-xs text-gray-400">
+                            Данные из личного кабинета{" "}
+                            <a
+                              href="https://green-api.com"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[#98cc1c] hover:underline"
+                            >
+                              green-api.com
+                            </a>
+                          </p>
+                          <button
+                            type="submit"
+                            disabled={!instanceId.trim() || !token.trim()}
+                            className="w-full h-10 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
+                            style={{ backgroundColor: BRAND }}
+                          >
+                            {method === "qr" ? "Сохранить и получить QR" : "Сохранить"}
+                          </button>
+                        </form>
+                      </>
+                    )}
                   </>
                 )}
 
