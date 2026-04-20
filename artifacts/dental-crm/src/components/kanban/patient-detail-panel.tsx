@@ -1459,29 +1459,6 @@ export function PatientDetailPanel() {
                           }}
                         />
 
-                        {/* Active treatment tasks */}
-                        {activeTasks.length > 0 && (
-                          <div>
-                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                              {t("patient.activeTasks")}
-                            </p>
-                            <div className="space-y-2">
-                              {activeTasks.map((task) => (
-                                <TreatmentTaskItem
-                                  key={task.id}
-                                  task={task}
-                                  patientId={selectedPatientId}
-                                />
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {activeTasks.length === 0 && (
-                          <p className="text-xs text-muted-foreground italic">
-                            {t("patient.noActiveTasks")}
-                          </p>
-                        )}
                       </div>
                     )}
                   </div>
