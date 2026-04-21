@@ -2,6 +2,8 @@ import {
   db,
   toothRecordsTable,
   toothTreatmentsTable,
+  treatmentPlanItemsTable,
+  treatmentPlansTable,
 } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -184,6 +186,44 @@ export class DentalRepository {
           })
           .returning();
         tooth = created!;
+      }
+
+      const [matchingPlanItem] = await tx
+        .select()
+        .from(treatmentPlanItemsTable)
+        .where(
+          and(
+            eq(treatmentPlanItemsTable.clinicId, clinicId),
+            eq(treatmentPlanItemsTable.patientId, treatment.patientId),
+            eq(treatmentPlanItemsTable.toothFdi, treatment.toothFdi),
+            eq(treatmentPlanItemsTable.title, treatment.description),
+            eq(treatmentPlanItemsTable.status, "pending"),
+          ),
+        )
+        .limit(1);
+
+      if (matchingPlanItem) {
+        await tx
+          .update(treatmentPlanItemsTable)
+          .set({ status: "completed" })
+          .where(eq(treatmentPlanItemsTable.id, matchingPlanItem.id));
+
+        const allItems = await tx
+          .select()
+          .from(treatmentPlanItemsTable)
+          .where(eq(treatmentPlanItemsTable.planId, matchingPlanItem.planId));
+
+        const allCompleted = allItems.every(
+          (item) => item.status === "completed" || item.status === "cancelled",
+        );
+
+        await tx
+          .update(treatmentPlansTable)
+          .set({
+            status: allCompleted ? "completed" : "in_progress",
+            updatedAt: new Date(),
+          })
+          .where(eq(treatmentPlansTable.id, matchingPlanItem.planId));
       }
 
       return { completed: completed!, tooth };

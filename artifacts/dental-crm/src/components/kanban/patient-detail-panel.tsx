@@ -390,6 +390,7 @@ function ToothActionModal({
       onSuccess: () => {
         qc.invalidateQueries({ queryKey: getListPatientTreatmentsQueryKey(patientId) });
         qc.invalidateQueries({ queryKey: getListTeethQueryKey(patientId) });
+        qc.invalidateQueries({ queryKey: getGetActiveTreatmentPlanQueryKey(patientId) });
         toast({ title: "Лечение завершено" });
         onTreatmentEnded?.();
         onClose();
@@ -1034,6 +1035,18 @@ export function PatientDetailPanel() {
     },
   });
   const activePlan = planData?.data?.plan ?? null;
+  const visibleActivePlanItems = useMemo(() => {
+    if (!activePlan) return [];
+    return activePlan.items
+      .filter((item) => planViewToothFdi === null || item.toothFdi === planViewToothFdi)
+      .slice()
+      .sort((a, b) => {
+        const aFinished = a.status === "completed" || a.status === "cancelled";
+        const bFinished = b.status === "completed" || b.status === "cancelled";
+        if (aFinished !== bFinished) return aFinished ? 1 : -1;
+        return a.sortOrder - b.sortOrder || new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      });
+  }, [activePlan, planViewToothFdi]);
 
   const { data: plansHistoryData } = useListTreatmentPlans(selectedPatientId ?? "", {
     query: {
@@ -2164,18 +2177,14 @@ export function PatientDetailPanel() {
 
                           {/* Items list */}
                           <div className="p-3 space-y-2">
-                        {activePlan.items.filter(item =>
-                          planViewToothFdi === null || item.toothFdi === planViewToothFdi
-                        ).length === 0 && (
+                        {visibleActivePlanItems.length === 0 && (
                           <p className="text-sm text-muted-foreground text-center py-8">
                             {planViewToothFdi !== null
                               ? `Нет позиций плана для зуба #${planViewToothFdi}`
                               : "Нет шагов. Добавьте первый шаг."}
                           </p>
                         )}
-                        {activePlan.items.filter(item =>
-                          planViewToothFdi === null || item.toothFdi === planViewToothFdi
-                        ).map((item) => (
+                        {visibleActivePlanItems.map((item) => (
                           <div
                             key={item.id}
                             className={`rounded-xl border transition-colors ${

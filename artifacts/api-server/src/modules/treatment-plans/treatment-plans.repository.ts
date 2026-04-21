@@ -73,11 +73,59 @@ export class TreatmentPlansRepository {
 
     if (!plan) return null;
 
-    const items = await db
+    let items = await db
       .select()
       .from(treatmentPlanItemsTable)
       .where(eq(treatmentPlanItemsTable.planId, plan.id))
       .orderBy(treatmentPlanItemsTable.sortOrder, treatmentPlanItemsTable.createdAt);
+
+    const pendingItems = items.filter((item) => item.status === "pending" && item.toothFdi !== null);
+
+    if (pendingItems.length > 0) {
+      const doneTreatments = await db
+        .select()
+        .from(toothTreatmentsTable)
+        .where(
+          and(
+            eq(toothTreatmentsTable.clinicId, clinicId),
+            eq(toothTreatmentsTable.patientId, patientId),
+            eq(toothTreatmentsTable.status, "done"),
+          ),
+        );
+
+      const completedItemIds = pendingItems
+        .filter((item) =>
+          doneTreatments.some(
+            (treatment) =>
+              treatment.toothFdi === item.toothFdi &&
+              treatment.description === item.title,
+          ),
+        )
+        .map((item) => item.id);
+
+      if (completedItemIds.length > 0) {
+        await db
+          .update(treatmentPlanItemsTable)
+          .set({ status: "completed" })
+          .where(inArray(treatmentPlanItemsTable.id, completedItemIds));
+
+        items = items.map((item) =>
+          completedItemIds.includes(item.id) ? { ...item, status: "completed" as const } : item,
+        );
+
+        const allCompleted = items.every(
+          (item) => item.status === "completed" || item.status === "cancelled",
+        );
+
+        if (allCompleted) {
+          await db
+            .update(treatmentPlansTable)
+            .set({ status: "completed", updatedAt: new Date() })
+            .where(eq(treatmentPlansTable.id, plan.id));
+          return null;
+        }
+      }
+    }
 
     return { ...plan, items };
   }
