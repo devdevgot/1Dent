@@ -1037,15 +1037,7 @@ export function PatientDetailPanel() {
   const activePlan = planData?.data?.plan ?? null;
   const visibleActivePlanItems = useMemo(() => {
     if (!activePlan) return [];
-    return activePlan.items
-      .filter((item) => planViewToothFdi === null || item.toothFdi === planViewToothFdi)
-      .slice()
-      .sort((a, b) => {
-        const aFinished = a.status === "completed" || a.status === "cancelled";
-        const bFinished = b.status === "completed" || b.status === "cancelled";
-        if (aFinished !== bFinished) return aFinished ? 1 : -1;
-        return a.sortOrder - b.sortOrder || new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-      });
+    return activePlan.items.filter((item) => planViewToothFdi === null || item.toothFdi === planViewToothFdi);
   }, [activePlan, planViewToothFdi]);
 
   const { data: plansHistoryData } = useListTreatmentPlans(selectedPatientId ?? "", {
@@ -2189,7 +2181,7 @@ export function PatientDetailPanel() {
                             key={item.id}
                             className={`rounded-xl border transition-colors ${
                               item.status === "completed"
-                                ? "bg-green-50/60 border-green-200"
+                                ? "bg-green-50/80 border-green-200"
                                 : item.status === "cancelled"
                                 ? "bg-gray-50 border-gray-200 opacity-60"
                                 : "bg-white border-border/50"
@@ -2257,12 +2249,17 @@ export function PatientDetailPanel() {
                                   )}
                                 </button>
                                 <div className="flex-1 min-w-0">
-                                  <p className={`text-sm font-medium leading-tight ${item.status === "completed" ? "line-through text-muted-foreground" : "text-gray-800"}`}>
+                                  <p className={`text-sm font-medium leading-tight ${item.status === "completed" ? "line-through text-green-700" : "text-gray-800"}`}>
                                     {item.title}
                                   </p>
                                   <div className="flex items-center gap-2 mt-0.5">
                                     {item.toothFdi && (
-                                      <span className="text-xs text-muted-foreground">Зуб #{item.toothFdi}</span>
+                                      <span className={`text-xs ${item.status === "completed" ? "text-green-700/80" : "text-muted-foreground"}`}>Зуб #{item.toothFdi}</span>
+                                    )}
+                                    {item.status === "completed" && (
+                                      <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
+                                        Выполнено
+                                      </span>
                                     )}
                                     {item.mkb10Code && (
                                       <span className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono">
@@ -2272,7 +2269,7 @@ export function PatientDetailPanel() {
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-1 shrink-0">
-                                  <span className="text-sm font-semibold text-gray-700 mr-1">
+                                  <span className={`text-sm font-semibold mr-1 ${item.status === "completed" ? "text-green-700" : "text-gray-700"}`}>
                                     {item.price.toLocaleString("ru")} ₸
                                   </span>
                                   {activePlan.status === "draft" && item.status === "pending" && (() => {
