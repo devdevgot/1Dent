@@ -195,20 +195,23 @@ function ToothActionModal({
   const ghostRef = useRef<HTMLDivElement | null>(null);
   const ghostOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  const handleTouchStart = (idx: number, e: React.TouchEvent) => {
-    touchDragRef.current = idx;
-    setDragIndex(idx);
+  // Long-press state
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressDataRef = useRef<{ idx: number; el: HTMLElement; x: number; y: number } | null>(null);
+  const currentTouchPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
-    // Build a floating ghost clone of the dragged element
-    const itemEl = e.currentTarget as HTMLElement;
-    const rect = itemEl.getBoundingClientRect();
-    const touch = e.touches[0];
+  const cancelLongPress = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    longPressDataRef.current = null;
+  };
 
-    ghostOffsetRef.current = {
-      x: touch.clientX - rect.left,
-      y: touch.clientY - rect.top,
-    };
-
+  // Build and attach a ghost DOM element at the given screen rect
+  const spawnGhost = (el: HTMLElement, touchX: number, touchY: number) => {
+    const rect = el.getBoundingClientRect();
+    ghostOffsetRef.current = { x: touchX - rect.left, y: touchY - rect.top };
     const ghost = document.createElement("div");
     ghost.style.cssText = [
       "position:fixed",
@@ -226,16 +229,38 @@ function ToothActionModal({
       "overflow:hidden",
       "will-change:transform",
     ].join(";");
-    ghost.innerHTML = itemEl.innerHTML;
+    ghost.innerHTML = el.innerHTML;
     document.body.appendChild(ghost);
     ghostRef.current = ghost;
   };
 
+  // Long-press start — fires on every item touch (no reorder mode required)
+  const startLongPress = (idx: number, e: React.TouchEvent) => {
+    cancelLongPress();
+    const touch = e.touches[0];
+    const el = e.currentTarget as HTMLElement;
+    longPressDataRef.current = { idx, el, x: touch.clientX, y: touch.clientY };
+    currentTouchPosRef.current = { x: touch.clientX, y: touch.clientY };
+
+    longPressTimerRef.current = setTimeout(() => {
+      const data = longPressDataRef.current;
+      if (!data) return;
+      navigator.vibrate?.(40); // haptic feedback
+      // Activate reorder mode and immediately start drag
+      setIsReordering(true);
+      touchDragRef.current = data.idx;
+      setDragIndex(data.idx);
+      const pos = currentTouchPosRef.current;
+      spawnGhost(data.el, pos.x, pos.y);
+      longPressTimerRef.current = null;
+      longPressDataRef.current = null;
+    }, 2000);
+  };
+
   const handleTouchEnd = () => {
-    // Remove ghost
+    cancelLongPress();
     ghostRef.current?.remove();
     ghostRef.current = null;
-
     const from = touchDragRef.current;
     setDragOverIndex((over) => {
       if (from !== null && over !== null && from !== over) {
@@ -255,16 +280,32 @@ function ToothActionModal({
   useEffect(() => {
     const el = listRef.current;
     if (!el) return;
-    const SCROLL_ZONE = 64; // px from top/bottom edge that triggers auto-scroll
-    const SCROLL_SPEED = 7; // px per touchmove event
+    const SCROLL_ZONE = 64;
+    const SCROLL_SPEED = 7;
 
     const onTouchMove = (e: TouchEvent) => {
-      if (touchDragRef.current === null) return;
-      e.preventDefault(); // prevent scroll only while dragging
-
       const touch = e.touches[0];
 
-      // Auto-scroll the list container when near edges
+      // Always track current touch position (needed for ghost creation on long-press fire)
+      currentTouchPosRef.current = { x: touch.clientX, y: touch.clientY };
+
+      // Cancel long press if finger moved > 10px
+      const lpData = longPressDataRef.current;
+      if (lpData && longPressTimerRef.current) {
+        const dx = touch.clientX - lpData.x;
+        const dy = touch.clientY - lpData.y;
+        if (dx * dx + dy * dy > 100) {
+          clearTimeout(longPressTimerRef.current);
+          longPressTimerRef.current = null;
+          longPressDataRef.current = null;
+        }
+      }
+
+      // Only intercept scroll / move ghost when actively dragging
+      if (touchDragRef.current === null) return;
+      e.preventDefault();
+
+      // Auto-scroll near edges
       const containerRect = el.getBoundingClientRect();
       if (touch.clientY < containerRect.top + SCROLL_ZONE) {
         el.scrollTop -= SCROLL_SPEED;
@@ -277,8 +318,6 @@ function ToothActionModal({
       if (ghost) {
         ghost.style.left = `${touch.clientX - ghostOffsetRef.current.x}px`;
         ghost.style.top = `${touch.clientY - ghostOffsetRef.current.y}px`;
-
-        // Temporarily hide ghost so elementFromPoint hits the list items underneath
         ghost.style.display = "none";
       }
       const target = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -450,13 +489,10 @@ function ToothActionModal({
                       Готово
                     </button>
                   ) : (
-                    <button
-                      onClick={() => setIsReordering(true)}
-                      className="flex items-center gap-1 text-[10px] font-semibold text-primary border border-primary/40 bg-primary/5 px-2.5 py-1 rounded-full hover:bg-primary/10"
-                    >
+                    <span className="text-[9px] text-muted-foreground/50 flex items-center gap-0.5">
                       <GripVertical className="w-3 h-3" />
-                      Изменить порядок
-                    </button>
+                      удерживайте для сортировки
+                    </span>
                   )}
                 </div>
                 {orderedItems.map((item, idx) => {
@@ -474,8 +510,8 @@ function ToothActionModal({
                       onDragOver={isReordering ? (e) => handleDragOver(e, idx) : undefined}
                       onDrop={isReordering ? () => handleDrop(idx) : undefined}
                       onDragEnd={isReordering ? handleDragEnd : undefined}
-                      onTouchStart={isReordering ? (e) => handleTouchStart(idx, e) : undefined}
-                      onTouchEnd={isReordering ? handleTouchEnd : undefined}
+                      onTouchStart={(e) => startLongPress(idx, e)}
+                      onTouchEnd={handleTouchEnd}
                       onClick={isReordering ? undefined : () => setSelectedItemId(isSelected ? null : item.id)}
                       className={`rounded-xl border transition-all select-none ${
                         isReordering
