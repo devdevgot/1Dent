@@ -118,6 +118,45 @@ export class TreatmentPlansRepository {
         );
 
         if (allCompleted) {
+          const finalItemsByTooth = new Map<number, ToothCondition>();
+          for (const item of items) {
+            if (!item.toothFdi) continue;
+            const finalCondition: ToothCondition = item.condition === "extraction_needed" ? "missing" : "treated";
+            finalItemsByTooth.set(item.toothFdi, finalCondition);
+          }
+
+          for (const [toothFdi, condition] of finalItemsByTooth) {
+            const [existingTooth] = await db
+              .select()
+              .from(toothRecordsTable)
+              .where(
+                and(
+                  eq(toothRecordsTable.patientId, patientId),
+                  eq(toothRecordsTable.clinicId, clinicId),
+                  eq(toothRecordsTable.toothFdi, toothFdi),
+                ),
+              )
+              .limit(1);
+
+            if (existingTooth) {
+              await db
+                .update(toothRecordsTable)
+                .set({ condition, updatedBy: plan.doctorId, updatedAt: new Date() })
+                .where(eq(toothRecordsTable.id, existingTooth.id));
+            } else {
+              await db.insert(toothRecordsTable).values({
+                id: randomUUID(),
+                clinicId,
+                patientId,
+                toothFdi,
+                condition,
+                notes: null,
+                updatedBy: plan.doctorId,
+                updatedAt: new Date(),
+              });
+            }
+          }
+
           await db
             .update(treatmentPlansTable)
             .set({ status: "completed", updatedAt: new Date() })
@@ -483,42 +522,6 @@ export class TreatmentPlansRepository {
           performedBy: doctorId,
           performedAt: new Date(),
         });
-
-        const [existingTooth] = await tx
-          .select()
-          .from(toothRecordsTable)
-          .where(
-            and(
-              eq(toothRecordsTable.patientId, item.patientId),
-              eq(toothRecordsTable.clinicId, clinicId),
-              eq(toothRecordsTable.toothFdi, item.toothFdi),
-            ),
-          )
-          .limit(1);
-
-        const toothCondition = item.condition;
-        const newCondition: ToothCondition =
-          toothCondition === "extraction_needed" ? "missing" : "treated";
-
-        if (existingTooth) {
-          if (existingTooth.condition !== "treated" && existingTooth.condition !== "missing" && existingTooth.condition !== "healthy") {
-            await tx
-              .update(toothRecordsTable)
-              .set({ condition: newCondition, updatedBy: doctorId, updatedAt: new Date() })
-              .where(eq(toothRecordsTable.id, existingTooth.id));
-          }
-        } else {
-          await tx.insert(toothRecordsTable).values({
-            id: randomUUID(),
-            clinicId,
-            patientId: item.patientId,
-            toothFdi: item.toothFdi,
-            condition: newCondition,
-            notes: null,
-            updatedBy: doctorId,
-            updatedAt: new Date(),
-          });
-        }
       }
 
       const [updatedItem] = await tx
@@ -535,6 +538,47 @@ export class TreatmentPlansRepository {
       const allCompleted = allItems.every(
         (i) => i.status === "completed" || i.status === "cancelled",
       );
+
+      if (allCompleted) {
+        const finalItemsByTooth = new Map<number, ToothCondition>();
+        for (const planItem of allItems) {
+          if (!planItem.toothFdi) continue;
+          const finalCondition: ToothCondition = planItem.condition === "extraction_needed" ? "missing" : "treated";
+          finalItemsByTooth.set(planItem.toothFdi, finalCondition);
+        }
+
+        for (const [toothFdi, condition] of finalItemsByTooth) {
+          const [existingTooth] = await tx
+            .select()
+            .from(toothRecordsTable)
+            .where(
+              and(
+                eq(toothRecordsTable.patientId, item.patientId),
+                eq(toothRecordsTable.clinicId, clinicId),
+                eq(toothRecordsTable.toothFdi, toothFdi),
+              ),
+            )
+            .limit(1);
+
+          if (existingTooth) {
+            await tx
+              .update(toothRecordsTable)
+              .set({ condition, updatedBy: doctorId, updatedAt: new Date() })
+              .where(eq(toothRecordsTable.id, existingTooth.id));
+          } else {
+            await tx.insert(toothRecordsTable).values({
+              id: randomUUID(),
+              clinicId,
+              patientId: item.patientId,
+              toothFdi,
+              condition,
+              notes: null,
+              updatedBy: doctorId,
+              updatedAt: new Date(),
+            });
+          }
+        }
+      }
 
       await tx
         .update(treatmentPlansTable)

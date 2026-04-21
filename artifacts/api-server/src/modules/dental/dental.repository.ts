@@ -142,7 +142,7 @@ export class DentalRepository {
     treatment: ToothTreatment,
     clinicId: string,
     updatedBy: string,
-  ): Promise<{ completed: ToothTreatment; tooth: ToothRecord }> {
+  ): Promise<{ completed: ToothTreatment; tooth: ToothRecord | null }> {
     const newCondition: ToothCondition = treatment.type === "extraction" ? "missing" : "treated";
     return db.transaction(async (tx) => {
       const [completed] = await tx
@@ -163,15 +163,16 @@ export class DentalRepository {
         )
         .limit(1);
 
-      let tooth: ToothRecord;
-      if (existingTooth) {
-        const [updated] = await tx
-          .update(toothRecordsTable)
-          .set({ condition: newCondition, updatedBy, updatedAt: new Date() })
-          .where(eq(toothRecordsTable.id, existingTooth.id))
-          .returning();
-        tooth = updated!;
-      } else {
+      const finalizeTooth = async (): Promise<ToothRecord> => {
+        if (existingTooth) {
+          const [updated] = await tx
+            .update(toothRecordsTable)
+            .set({ condition: newCondition, updatedBy, updatedAt: new Date() })
+            .where(eq(toothRecordsTable.id, existingTooth.id))
+            .returning();
+          return updated!;
+        }
+
         const [created] = await tx
           .insert(toothRecordsTable)
           .values({
@@ -185,8 +186,10 @@ export class DentalRepository {
             updatedAt: new Date(),
           })
           .returning();
-        tooth = created!;
-      }
+        return created!;
+      };
+
+      let tooth: ToothRecord | null = existingTooth ?? null;
 
       const [matchingPlanItem] = await tx
         .select()
@@ -202,11 +205,16 @@ export class DentalRepository {
         )
         .limit(1);
 
-      if (matchingPlanItem) {
-        await tx
+      if (!matchingPlanItem) {
+        tooth = await finalizeTooth();
+      } else {
+        const [updated] = await tx
           .update(treatmentPlanItemsTable)
           .set({ status: "completed" })
-          .where(eq(treatmentPlanItemsTable.id, matchingPlanItem.id));
+          .where(eq(treatmentPlanItemsTable.id, matchingPlanItem.id))
+          .returning();
+
+        if (updated && !tooth) tooth = existingTooth ?? null;
 
         const allItems = await tx
           .select()
@@ -216,6 +224,53 @@ export class DentalRepository {
         const allCompleted = allItems.every(
           (item) => item.status === "completed" || item.status === "cancelled",
         );
+
+        if (allCompleted) {
+          const finalItemsByTooth = new Map<number, ToothCondition>();
+          for (const item of allItems) {
+            if (!item.toothFdi) continue;
+            const finalCondition: ToothCondition = item.condition === "extraction_needed" ? "missing" : "treated";
+            finalItemsByTooth.set(item.toothFdi, finalCondition);
+          }
+
+          for (const [toothFdi, condition] of finalItemsByTooth) {
+            const [currentTooth] = await tx
+              .select()
+              .from(toothRecordsTable)
+              .where(
+                and(
+                  eq(toothRecordsTable.patientId, treatment.patientId),
+                  eq(toothRecordsTable.clinicId, clinicId),
+                  eq(toothRecordsTable.toothFdi, toothFdi),
+                ),
+              )
+              .limit(1);
+
+            if (currentTooth) {
+              const [updatedTooth] = await tx
+                .update(toothRecordsTable)
+                .set({ condition, updatedBy, updatedAt: new Date() })
+                .where(eq(toothRecordsTable.id, currentTooth.id))
+                .returning();
+              if (toothFdi === treatment.toothFdi) tooth = updatedTooth!;
+            } else {
+              const [createdTooth] = await tx
+                .insert(toothRecordsTable)
+                .values({
+                  id: randomUUID(),
+                  clinicId,
+                  patientId: treatment.patientId,
+                  toothFdi,
+                  condition,
+                  notes: null,
+                  updatedBy,
+                  updatedAt: new Date(),
+                })
+                .returning();
+              if (toothFdi === treatment.toothFdi) tooth = createdTooth!;
+            }
+          }
+        }
 
         await tx
           .update(treatmentPlansTable)
