@@ -163,23 +163,28 @@ function ToothActionModal({
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [isReordering, setIsReordering] = useState(false);
 
+  const moveOrderedItem = (from: number, to: number) => {
+    if (from === to) return;
+    setOrderedItems((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+  };
+
   const handleDragStart = (index: number) => setDragIndex(index);
 
   const handleDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
-    if (dragIndex !== index) setDragOverIndex(index);
+    if (dragIndex !== null && dragIndex !== index) {
+      moveOrderedItem(dragIndex, index);
+      setDragIndex(index);
+    }
+    setDragOverIndex(index);
   };
 
-  const handleDrop = (index: number) => {
-    if (dragIndex === null || dragIndex === index) {
-      setDragIndex(null);
-      setDragOverIndex(null);
-      return;
-    }
-    const next = [...orderedItems];
-    const [moved] = next.splice(dragIndex, 1);
-    next.splice(index, 0, moved);
-    setOrderedItems(next);
+  const handleDrop = () => {
     setDragIndex(null);
     setDragOverIndex(null);
   };
@@ -261,18 +266,7 @@ function ToothActionModal({
     cancelLongPress();
     ghostRef.current?.remove();
     ghostRef.current = null;
-    const from = touchDragRef.current;
-    setDragOverIndex((over) => {
-      if (from !== null && over !== null && from !== over) {
-        setOrderedItems((prev) => {
-          const next = [...prev];
-          const [moved] = next.splice(from, 1);
-          next.splice(over, 0, moved);
-          return next;
-        });
-      }
-      return null;
-    });
+    setDragOverIndex(null);
     setDragIndex(null);
     touchDragRef.current = null;
   };
@@ -327,8 +321,12 @@ function ToothActionModal({
       if (itemEl) {
         const over = parseInt((itemEl as HTMLElement).getAttribute("data-drag-idx") ?? "-1");
         if (over >= 0 && over !== touchDragRef.current) {
-          setDragOverIndex(over);
+          const from = touchDragRef.current;
+          moveOrderedItem(from, over);
+          touchDragRef.current = over;
+          setDragIndex(over);
         }
+        setDragOverIndex(over);
       }
     };
     el.addEventListener("touchmove", onTouchMove, { passive: false });
@@ -508,7 +506,7 @@ function ToothActionModal({
                       draggable={isReordering}
                       onDragStart={isReordering ? () => handleDragStart(idx) : undefined}
                       onDragOver={isReordering ? (e) => handleDragOver(e, idx) : undefined}
-                      onDrop={isReordering ? () => handleDrop(idx) : undefined}
+                      onDrop={isReordering ? handleDrop : undefined}
                       onDragEnd={isReordering ? handleDragEnd : undefined}
                       onTouchStart={(e) => startLongPress(idx, e)}
                       onTouchEnd={handleTouchEnd}
