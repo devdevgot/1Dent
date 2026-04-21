@@ -161,6 +161,7 @@ function ToothActionModal({
   );
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [isReordering, setIsReordering] = useState(false);
 
   const handleDragStart = (index: number) => setDragIndex(index);
 
@@ -254,11 +255,22 @@ function ToothActionModal({
   useEffect(() => {
     const el = listRef.current;
     if (!el) return;
+    const SCROLL_ZONE = 64; // px from top/bottom edge that triggers auto-scroll
+    const SCROLL_SPEED = 7; // px per touchmove event
+
     const onTouchMove = (e: TouchEvent) => {
       if (touchDragRef.current === null) return;
       e.preventDefault(); // prevent scroll only while dragging
 
       const touch = e.touches[0];
+
+      // Auto-scroll the list container when near edges
+      const containerRect = el.getBoundingClientRect();
+      if (touch.clientY < containerRect.top + SCROLL_ZONE) {
+        el.scrollTop -= SCROLL_SPEED;
+      } else if (touch.clientY > containerRect.bottom - SCROLL_ZONE) {
+        el.scrollTop += SCROLL_SPEED;
+      }
 
       // Move ghost with finger
       const ghost = ghostRef.current;
@@ -429,10 +441,23 @@ function ToothActionModal({
                   <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
                     Услуги из плана лечения
                   </p>
-                  <p className="text-[9px] text-muted-foreground/60 flex items-center gap-1">
-                    <GripVertical className="w-3 h-3" />
-                    перетащите для приоритета
-                  </p>
+                  {isReordering ? (
+                    <button
+                      onClick={() => setIsReordering(false)}
+                      className="flex items-center gap-1 text-[10px] font-semibold bg-primary text-white px-2.5 py-1 rounded-full"
+                    >
+                      <CheckCircle2 className="w-3 h-3" />
+                      Готово
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setIsReordering(true)}
+                      className="flex items-center gap-1 text-[10px] font-semibold text-primary border border-primary/40 bg-primary/5 px-2.5 py-1 rounded-full hover:bg-primary/10"
+                    >
+                      <GripVertical className="w-3 h-3" />
+                      Изменить порядок
+                    </button>
+                  )}
                 </div>
                 {orderedItems.map((item, idx) => {
                   const isSelected = item.id === selectedItemId;
@@ -444,22 +469,24 @@ function ToothActionModal({
                     <div
                       key={item.id}
                       data-drag-idx={idx}
-                      draggable
-                      onDragStart={() => handleDragStart(idx)}
-                      onDragOver={(e) => handleDragOver(e, idx)}
-                      onDrop={() => handleDrop(idx)}
-                      onDragEnd={handleDragEnd}
-                      onTouchStart={(e) => handleTouchStart(idx, e)}
-                      onTouchEnd={handleTouchEnd}
-                      onClick={() => setSelectedItemId(isSelected ? null : item.id)}
-                      className={`rounded-xl border transition-all cursor-pointer select-none ${
-                        isDragOver
-                          ? "border-primary border-dashed bg-primary/5"
-                          : isDragging
-                          ? "opacity-40 border-border/30"
+                      draggable={isReordering}
+                      onDragStart={isReordering ? () => handleDragStart(idx) : undefined}
+                      onDragOver={isReordering ? (e) => handleDragOver(e, idx) : undefined}
+                      onDrop={isReordering ? () => handleDrop(idx) : undefined}
+                      onDragEnd={isReordering ? handleDragEnd : undefined}
+                      onTouchStart={isReordering ? (e) => handleTouchStart(idx, e) : undefined}
+                      onTouchEnd={isReordering ? handleTouchEnd : undefined}
+                      onClick={isReordering ? undefined : () => setSelectedItemId(isSelected ? null : item.id)}
+                      className={`rounded-xl border transition-all select-none ${
+                        isReordering
+                          ? isDragOver
+                            ? "border-primary border-dashed bg-primary/5 cursor-grabbing"
+                            : isDragging
+                            ? "opacity-40 border-border/30 cursor-grabbing"
+                            : "border-border/50 bg-slate-50 cursor-grab"
                           : isSelected
-                          ? "border-primary bg-primary/8 ring-1 ring-primary/20"
-                          : "border-border/50 bg-slate-50 hover:border-primary/30 hover:bg-primary/5"
+                          ? "border-primary bg-primary/8 ring-1 ring-primary/20 cursor-pointer"
+                          : "border-border/50 bg-slate-50 hover:border-primary/30 hover:bg-primary/5 cursor-pointer"
                       }`}
                     >
                       <div className="flex items-start gap-2 px-2.5 pt-2.5 pb-2">
@@ -474,12 +501,7 @@ function ToothActionModal({
 
                         {/* Text content */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2">
-                            <span className="text-xs font-medium text-gray-800 leading-tight">{item.title}</span>
-                            <span className="text-xs font-semibold text-gray-600 shrink-0 whitespace-nowrap">
-                              {item.price.toLocaleString("ru")} ₸
-                            </span>
-                          </div>
+                          <span className="text-xs font-medium text-gray-800 leading-tight block">{item.title}</span>
                           {isFirst && (
                             <p className="text-[9px] font-semibold text-primary mt-0.5 uppercase tracking-wide">
                               Приоритет №1
@@ -487,12 +509,18 @@ function ToothActionModal({
                           )}
                         </div>
 
-                        {/* Drag handle */}
-                        <GripVertical className="w-4 h-4 text-gray-300 shrink-0 mt-0.5 cursor-grab active:cursor-grabbing" />
+                        {/* Right side: drag handle in reorder mode, price otherwise */}
+                        {isReordering ? (
+                          <GripVertical className="w-5 h-5 text-primary/50 shrink-0 mt-0.5" />
+                        ) : (
+                          <span className="text-xs font-semibold text-gray-600 shrink-0 whitespace-nowrap mt-0.5">
+                            {item.price.toLocaleString("ru")} ₸
+                          </span>
+                        )}
                       </div>
 
-                      {/* Action button */}
-                      {isSelected && (
+                      {/* Action button — only when not reordering */}
+                      {!isReordering && isSelected && (
                         <div className="px-2.5 pb-2.5 pt-0 pl-9">
                           <Button
                             size="sm"
