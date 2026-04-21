@@ -1126,6 +1126,16 @@ export function PatientDetailPanel() {
   const activeTasks = allTasks.filter((t) => t.status === "in_progress");
   const activeTreatment = activeTasks[0] ?? activeTreatmentSnapshot;
   const activeTreatmentFdi = activeTreatment?.toothFdi ?? activeToothFdi;
+  const disabledTreatmentFdis = useMemo(() => {
+    const allFdis = [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28, 48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38];
+    if (!hasDiagnosis) return new Set<number>();
+    if (activePlan) {
+      const plannedFdis = new Set(activePlan.items.filter((item) => item.status === "pending" && item.toothFdi !== null).map((item) => item.toothFdi!));
+      return new Set(allFdis.filter((fdi) => !plannedFdis.has(fdi) && fdi !== activeTreatmentFdi));
+    }
+    if (needsRediagnosis) return new Set(allFdis);
+    return new Set<number>();
+  }, [activePlan, activeTreatmentFdi, hasDiagnosis, needsRediagnosis]);
 
   const updateToothMutation = useUpdateTooth({
     mutation: {
@@ -1962,7 +1972,9 @@ export function PatientDetailPanel() {
                           teethData={teethMap}
                           selectedFdi={selectedToothFdi}
                           inProgressFdi={activeTreatmentFdi}
+                          disabledFdis={disabledTreatmentFdis}
                           onToothClick={(fdi) => {
+                            if (disabledTreatmentFdis.has(fdi)) return;
                             setSelectedToothFdi(fdi);
                             setModalToothFdi(fdi);
                             setPlanViewToothFdi(fdi);

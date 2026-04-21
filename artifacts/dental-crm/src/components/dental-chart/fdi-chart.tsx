@@ -151,6 +151,7 @@ interface FdiChartProps {
   selectedFdi: number | null;
   onToothClick: (fdi: number) => void;
   inProgressFdi?: number | null;
+  disabledFdis?: Set<number>;
   className?: string;
 }
 
@@ -191,6 +192,7 @@ function ToothGlyph({
   record,
   isSelected,
   isInProgress,
+  isDisabled,
   isUpper,
   onClick,
 }: {
@@ -198,6 +200,7 @@ function ToothGlyph({
   record: ToothRecord | undefined;
   isSelected: boolean;
   isInProgress: boolean;
+  isDisabled: boolean;
   isUpper: boolean;
   onClick: () => void;
 }) {
@@ -231,12 +234,19 @@ function ToothGlyph({
 
   return (
     <g
-      className="cursor-pointer"
-      onClick={onClick}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
+      className={isDisabled ? "cursor-not-allowed" : "cursor-pointer"}
+      opacity={isDisabled ? 0.38 : 1}
+      onClick={() => {
+        if (!isDisabled) onClick();
+      }}
+      onKeyDown={(e) => {
+        if (isDisabled) return;
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); }
+      }}
       role="button"
-      tabIndex={0}
+      tabIndex={isDisabled ? -1 : 0}
       aria-label={`Зуб ${fdi}: ${cfg.label}`}
+      aria-disabled={isDisabled}
       aria-pressed={isSelected}
     >
       {/* In-progress pulsing rings */}
@@ -362,7 +372,7 @@ function ToothGlyph({
   );
 }
 
-export function FdiChart({ teethData, selectedFdi, onToothClick, inProgressFdi, className }: FdiChartProps) {
+export function FdiChart({ teethData, selectedFdi, onToothClick, inProgressFdi, disabledFdis, className }: FdiChartProps) {
   const upperPositions = buildRowPositions(UPPER_ROW);
   const lowerPositions = buildRowPositions(LOWER_ROW);
 
@@ -393,6 +403,7 @@ export function FdiChart({ teethData, selectedFdi, onToothClick, inProgressFdi, 
                   record={teethData.get(fdi)}
                   isSelected={selectedFdi === fdi}
                   isInProgress={inProgressFdi === fdi}
+                  isDisabled={disabledFdis?.has(fdi) ?? false}
                   isUpper={true}
                   onClick={() => onToothClick(fdi)}
                 />
@@ -440,6 +451,7 @@ export function FdiChart({ teethData, selectedFdi, onToothClick, inProgressFdi, 
                   record={teethData.get(fdi)}
                   isSelected={selectedFdi === fdi}
                   isInProgress={inProgressFdi === fdi}
+                  isDisabled={disabledFdis?.has(fdi) ?? false}
                   isUpper={false}
                   onClick={() => onToothClick(fdi)}
                 />
