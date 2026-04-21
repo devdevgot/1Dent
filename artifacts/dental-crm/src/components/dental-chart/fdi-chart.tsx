@@ -315,6 +315,18 @@ function ToothGlyph({
         strokeDasharray={isMissing ? "3 2" : undefined}
       />
 
+      {isInProgress && !isMissing && (
+        <>
+          <path d={crownPath} fill="#22c55e" opacity={0.18}>
+            <animate attributeName="opacity" values="0.10;0.34;0.10" dur="1s" repeatCount="indefinite" />
+          </path>
+          <circle cx={w - 2} cy={isUpper ? 4 : h - 4} r={3.2} fill="#22c55e">
+            <animate attributeName="r" values="2.4;4.1;2.4" dur="1s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.95;0.35;0.95" dur="1s" repeatCount="indefinite" />
+          </circle>
+        </>
+      )}
+
       {/* Full outline */}
       <path
         d={outlinePath}

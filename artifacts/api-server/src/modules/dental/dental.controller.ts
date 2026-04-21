@@ -114,6 +114,12 @@ router.post("/:toothFdi/treatments", writeRoles, async (req: Request, res: Respo
   }
   const ok = await assertPatientAccess(patientId, req.user!.clinicId, next).catch(next);
   if (!ok) return;
+  const existingTreatments = await repo.listAllTreatments(patientId, req.user!.clinicId).catch(next);
+  if (!existingTreatments) return;
+  const activeTreatment = existingTreatments.find((t) => t.status === "in_progress");
+  if (activeTreatment) {
+    return next(new ValidationError(`Finish current treatment on tooth ${activeTreatment.toothFdi} first`));
+  }
   const treatment = await repo
     .addTreatment({
       id: randomUUID(),

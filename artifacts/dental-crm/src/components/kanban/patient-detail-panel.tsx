@@ -133,27 +133,43 @@ function ToothActionModal({
   fdi,
   patientId,
   planItems = [],
+  activeTreatment,
   onClose,
   onNavigate,
+  onOpenTreatment,
   onTreatmentStarted,
   onTreatmentEnded,
 }: {
   fdi: number;
   patientId: string;
   planItems?: Array<{ id: string; title: string; price: number; status: string }>;
+  activeTreatment?: ToothTreatment | null;
   onClose: () => void;
   onNavigate: () => void;
-  onTreatmentStarted?: (fdi: number) => void;
+  onOpenTreatment?: (fdi: number) => void;
+  onTreatmentStarted?: (fdi: number, treatment?: ToothTreatment | null) => void;
   onTreatmentEnded?: () => void;
 }) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const qc = useQueryClient();
+  const activeTreatmentForThisTooth = activeTreatment?.toothFdi === fdi ? activeTreatment : null;
+  const blockingTreatment = activeTreatment && activeTreatment.toothFdi !== fdi ? activeTreatment : null;
+  const secondsSinceTreatmentStarted = (treatment: ToothTreatment | null | undefined) => {
+    if (!treatment?.performedAt) return 0;
+    const startedAt = new Date(treatment.performedAt).getTime();
+    if (Number.isNaN(startedAt)) return 0;
+    return Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
+  };
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  const [treatmentPhase, setTreatmentPhase] = useState<"select" | "in_progress">("select");
-  const [inProgressTreatmentId, setInProgressTreatmentId] = useState<string | null>(null);
-  const [inProgressLabel, setInProgressLabel] = useState("");
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [treatmentPhase, setTreatmentPhase] = useState<"select" | "in_progress">(
+    activeTreatmentForThisTooth ? "in_progress" : "select",
+  );
+  const [inProgressTreatmentId, setInProgressTreatmentId] = useState<string | null>(
+    activeTreatmentForThisTooth?.id ?? null,
+  );
+  const [inProgressLabel, setInProgressLabel] = useState(activeTreatmentForThisTooth?.description ?? "");
+  const [elapsedSeconds, setElapsedSeconds] = useState(secondsSinceTreatmentStarted(activeTreatmentForThisTooth));
 
   type PlanItem = { id: string; title: string; price: number; status: string };
   const [orderedItems, setOrderedItems] = useState<PlanItem[]>(() =>
@@ -339,6 +355,15 @@ function ToothActionModal({
     return () => clearInterval(interval);
   }, [treatmentPhase]);
 
+  useEffect(() => {
+    if (!activeTreatmentForThisTooth) return;
+    setTreatmentPhase("in_progress");
+    setInProgressTreatmentId(activeTreatmentForThisTooth.id);
+    setInProgressLabel(activeTreatmentForThisTooth.description);
+    setElapsedSeconds(secondsSinceTreatmentStarted(activeTreatmentForThisTooth));
+    onTreatmentStarted?.(fdi, activeTreatmentForThisTooth);
+  }, [activeTreatmentForThisTooth?.id]);
+
   const formatElapsed = (s: number) => {
     const mm = String(Math.floor(s / 60)).padStart(2, "0");
     const ss = String(s % 60).padStart(2, "0");
@@ -350,10 +375,11 @@ function ToothActionModal({
       onSuccess: (data) => {
         qc.invalidateQueries({ queryKey: getListPatientTreatmentsQueryKey(patientId) });
         qc.invalidateQueries({ queryKey: getListTeethQueryKey(patientId) });
-        const treatmentId = (data as any)?.data?.data?.treatment?.id ?? null;
+        const treatment = (data as any)?.data?.data?.treatment as ToothTreatment | undefined;
+        const treatmentId = treatment?.id ?? null;
         setInProgressTreatmentId(treatmentId);
         setTreatmentPhase("in_progress");
-        onTreatmentStarted?.(fdi);
+        onTreatmentStarted?.(fdi, treatment ?? null);
       },
       onError: () => toast({ title: t("account.errorTitle"), variant: "destructive" }),
     },
@@ -373,6 +399,14 @@ function ToothActionModal({
   });
 
   const handleAction = (type: "treatment" | "extraction", label?: string) => {
+    if (blockingTreatment) {
+      toast({
+        title: "Уже идёт лечение",
+        description: `Сначала завершите текущее лечение зуба ${blockingTreatment.toothFdi}.`,
+        variant: "destructive",
+      });
+      return;
+    }
     const desc = label ?? (type === "treatment" ? t("tooth.startTreatment") : t("tooth.extractTooth"));
     setInProgressLabel(desc);
     setElapsedSeconds(0);
@@ -397,7 +431,6 @@ function ToothActionModal({
   };
 
   const handleAbort = () => {
-    onTreatmentEnded?.();
     onClose();
   };
 
@@ -407,7 +440,50 @@ function ToothActionModal({
         className="bg-white rounded-2xl shadow-2xl w-80 border border-border/50 overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {treatmentPhase === "in_progress" ? (
+        {blockingTreatment ? (
+          <>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-amber-200 bg-amber-50/80">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-amber-600" />
+                <h3 className="font-bold text-sm text-amber-900">Лечение уже идёт</h3>
+              </div>
+              <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="px-5 py-5 space-y-4">
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-3">
+                <p className="text-sm font-semibold text-amber-900 mb-1">
+                  Сначала завершите текущее лечение
+                </p>
+                <p className="text-xs text-amber-800 leading-relaxed">
+                  Сейчас выполняется процедура на зубе {blockingTreatment.toothFdi}. Другой зуб нельзя начать лечить, пока это лечение не завершено.
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 border border-border/40 px-3 py-2.5">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">
+                  Текущая услуга
+                </p>
+                <p className="text-xs font-medium text-gray-800 leading-snug">
+                  {blockingTreatment.description}
+                </p>
+              </div>
+
+              <Button
+                className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white border-0 h-10"
+                onClick={() => {
+                  setSelectedItemId(null);
+                  onOpenTreatment?.(blockingTreatment.toothFdi);
+                }}
+              >
+                <Activity className="w-4 h-4" />
+                Открыть текущее лечение
+              </Button>
+            </div>
+          </>
+        ) : treatmentPhase === "in_progress" ? (
           <>
             {/* In-progress header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-border/40 bg-green-50/60">
@@ -840,6 +916,7 @@ export function PatientDetailPanel() {
 
   const [modalToothFdi, setModalToothFdi] = useState<number | null>(null);
   const [activeToothFdi, setActiveToothFdi] = useState<number | null>(null);
+  const [activeTreatmentSnapshot, setActiveTreatmentSnapshot] = useState<ToothTreatment | null>(null);
   // Tracks which tooth is selected in the plan view (to filter plan items by tooth)
   const [planViewToothFdi, setPlanViewToothFdi] = useState<number | null>(null);
 
@@ -1042,6 +1119,8 @@ export function PatientDetailPanel() {
   });
   const allTasks: ToothTreatment[] = tasksData?.data?.treatments ?? [];
   const activeTasks = allTasks.filter((t) => t.status === "in_progress");
+  const activeTreatment = activeTasks[0] ?? activeTreatmentSnapshot;
+  const activeTreatmentFdi = activeTreatment?.toothFdi ?? activeToothFdi;
 
   const updateToothMutation = useUpdateTooth({
     mutation: {
@@ -1628,7 +1707,7 @@ export function PatientDetailPanel() {
                         <FdiChart
                           teethData={diagnosisDisplayMap}
                           selectedFdi={diagnosisToothFdi}
-                          inProgressFdi={activeToothFdi}
+                          inProgressFdi={activeTreatmentFdi}
                           onToothClick={(fdi) => {
                             setPickerSearch("");
                             if (fdi === diagnosisToothFdi) {
@@ -1877,7 +1956,7 @@ export function PatientDetailPanel() {
                         <FdiChart
                           teethData={teethMap}
                           selectedFdi={selectedToothFdi}
-                          inProgressFdi={activeToothFdi}
+                          inProgressFdi={activeTreatmentFdi}
                           onToothClick={(fdi) => {
                             setSelectedToothFdi(fdi);
                             setModalToothFdi(fdi);
@@ -2424,6 +2503,7 @@ export function PatientDetailPanel() {
           planItems={
             activePlan?.items.filter((i) => i.toothFdi === modalToothFdi) ?? []
           }
+          activeTreatment={activeTreatment}
           onClose={() => {
             setModalToothFdi(null);
             setSelectedToothFdi(null);
@@ -2432,8 +2512,19 @@ export function PatientDetailPanel() {
             setModalToothFdi(null);
             setLocation(`/patients/${patient.id}/teeth/${modalToothFdi}`);
           }}
-          onTreatmentStarted={(f) => setActiveToothFdi(f)}
-          onTreatmentEnded={() => setActiveToothFdi(null)}
+          onOpenTreatment={(fdi) => {
+            setSelectedToothFdi(fdi);
+            setModalToothFdi(fdi);
+            setPlanViewToothFdi(fdi);
+          }}
+          onTreatmentStarted={(f, treatment) => {
+            setActiveToothFdi(f);
+            if (treatment) setActiveTreatmentSnapshot(treatment);
+          }}
+          onTreatmentEnded={() => {
+            setActiveToothFdi(null);
+            setActiveTreatmentSnapshot(null);
+          }}
         />
       )}
 
