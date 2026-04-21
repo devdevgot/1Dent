@@ -259,7 +259,7 @@ function ToothActionModal({
       spawnGhost(data.el, pos.x, pos.y);
       longPressTimerRef.current = null;
       longPressDataRef.current = null;
-    }, 2000);
+    }, 700);
   };
 
   const handleTouchEnd = () => {
