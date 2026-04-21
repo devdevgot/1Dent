@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect, type ComponentType } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef, type ComponentType } from "react";
 import { useLocation } from "wouter";
 import {
   useGetPatient,
@@ -188,6 +188,52 @@ function ToothActionModal({
     setDragOverIndex(null);
   };
 
+  // Touch drag-and-drop (mobile support)
+  const touchDragRef = useRef<number | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  const handleTouchStart = (idx: number) => {
+    touchDragRef.current = idx;
+    setDragIndex(idx);
+  };
+
+  const handleTouchEnd = () => {
+    const from = touchDragRef.current;
+    setDragOverIndex((over) => {
+      if (from !== null && over !== null && from !== over) {
+        setOrderedItems((prev) => {
+          const next = [...prev];
+          const [moved] = next.splice(from, 1);
+          next.splice(over, 0, moved);
+          return next;
+        });
+      }
+      return null;
+    });
+    setDragIndex(null);
+    touchDragRef.current = null;
+  };
+
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const onTouchMove = (e: TouchEvent) => {
+      if (touchDragRef.current === null) return;
+      e.preventDefault();
+      const touch = e.touches[0];
+      const target = document.elementFromPoint(touch.clientX, touch.clientY);
+      const itemEl = target?.closest("[data-drag-idx]");
+      if (itemEl) {
+        const over = parseInt((itemEl as HTMLElement).getAttribute("data-drag-idx") ?? "-1");
+        if (over >= 0 && over !== touchDragRef.current) {
+          setDragOverIndex(over);
+        }
+      }
+    };
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => el.removeEventListener("touchmove", onTouchMove);
+  }, []);
+
   useEffect(() => {
     if (treatmentPhase !== "in_progress") return;
     const interval = setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
@@ -328,7 +374,7 @@ function ToothActionModal({
 
             {/* Plan items list */}
             {orderedItems.length > 0 ? (
-              <div className="p-3 space-y-1.5 max-h-72 overflow-y-auto">
+              <div ref={listRef} className="p-3 space-y-1.5 max-h-72 overflow-y-auto touch-none">
                 <div className="flex items-center justify-between px-1 mb-2">
                   <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
                     Услуги из плана лечения
@@ -347,11 +393,14 @@ function ToothActionModal({
                   return (
                     <div
                       key={item.id}
+                      data-drag-idx={idx}
                       draggable
                       onDragStart={() => handleDragStart(idx)}
                       onDragOver={(e) => handleDragOver(e, idx)}
                       onDrop={() => handleDrop(idx)}
                       onDragEnd={handleDragEnd}
+                      onTouchStart={() => handleTouchStart(idx)}
+                      onTouchEnd={handleTouchEnd}
                       onClick={() => setSelectedItemId(isSelected ? null : item.id)}
                       className={`rounded-xl border transition-all cursor-pointer select-none ${
                         isDragOver
