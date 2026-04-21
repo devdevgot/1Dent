@@ -191,13 +191,50 @@ function ToothActionModal({
   // Touch drag-and-drop (mobile support)
   const touchDragRef = useRef<number | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const ghostRef = useRef<HTMLDivElement | null>(null);
+  const ghostOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  const handleTouchStart = (idx: number) => {
+  const handleTouchStart = (idx: number, e: React.TouchEvent) => {
     touchDragRef.current = idx;
     setDragIndex(idx);
+
+    // Build a floating ghost clone of the dragged element
+    const itemEl = e.currentTarget as HTMLElement;
+    const rect = itemEl.getBoundingClientRect();
+    const touch = e.touches[0];
+
+    ghostOffsetRef.current = {
+      x: touch.clientX - rect.left,
+      y: touch.clientY - rect.top,
+    };
+
+    const ghost = document.createElement("div");
+    ghost.style.cssText = [
+      "position:fixed",
+      `left:${rect.left}px`,
+      `top:${rect.top}px`,
+      `width:${rect.width}px`,
+      "z-index:9999",
+      "pointer-events:none",
+      "opacity:0.92",
+      "box-shadow:0 10px 28px rgba(0,0,0,0.22)",
+      "border-radius:12px",
+      "background:white",
+      "border:2px solid hsl(var(--primary,142 76% 36%))",
+      "transform:scale(1.04)",
+      "overflow:hidden",
+      "will-change:transform",
+    ].join(";");
+    ghost.innerHTML = itemEl.innerHTML;
+    document.body.appendChild(ghost);
+    ghostRef.current = ghost;
   };
 
   const handleTouchEnd = () => {
+    // Remove ghost
+    ghostRef.current?.remove();
+    ghostRef.current = null;
+
     const from = touchDragRef.current;
     setDragOverIndex((over) => {
       if (from !== null && over !== null && from !== over) {
@@ -219,9 +256,22 @@ function ToothActionModal({
     if (!el) return;
     const onTouchMove = (e: TouchEvent) => {
       if (touchDragRef.current === null) return;
-      e.preventDefault();
+      e.preventDefault(); // prevent scroll only while dragging
+
       const touch = e.touches[0];
+
+      // Move ghost with finger
+      const ghost = ghostRef.current;
+      if (ghost) {
+        ghost.style.left = `${touch.clientX - ghostOffsetRef.current.x}px`;
+        ghost.style.top = `${touch.clientY - ghostOffsetRef.current.y}px`;
+
+        // Temporarily hide ghost so elementFromPoint hits the list items underneath
+        ghost.style.display = "none";
+      }
       const target = document.elementFromPoint(touch.clientX, touch.clientY);
+      if (ghost) ghost.style.display = "";
+
       const itemEl = target?.closest("[data-drag-idx]");
       if (itemEl) {
         const over = parseInt((itemEl as HTMLElement).getAttribute("data-drag-idx") ?? "-1");
@@ -374,7 +424,7 @@ function ToothActionModal({
 
             {/* Plan items list */}
             {orderedItems.length > 0 ? (
-              <div ref={listRef} className="p-3 space-y-1.5 max-h-72 overflow-y-auto touch-none">
+              <div ref={listRef} className="p-3 space-y-1.5 max-h-72 overflow-y-auto">
                 <div className="flex items-center justify-between px-1 mb-2">
                   <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
                     Услуги из плана лечения
@@ -399,7 +449,7 @@ function ToothActionModal({
                       onDragOver={(e) => handleDragOver(e, idx)}
                       onDrop={() => handleDrop(idx)}
                       onDragEnd={handleDragEnd}
-                      onTouchStart={() => handleTouchStart(idx)}
+                      onTouchStart={(e) => handleTouchStart(idx, e)}
                       onTouchEnd={handleTouchEnd}
                       onClick={() => setSelectedItemId(isSelected ? null : item.id)}
                       className={`rounded-xl border transition-all cursor-pointer select-none ${
