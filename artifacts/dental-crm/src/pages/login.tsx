@@ -75,7 +75,7 @@ export default function Login() {
               />
             </svg>
           </div>
-          <h1 className="text-xl font-display font-bold text-gray-900">Dental CRM</h1>
+          <h1 className="text-xl font-display font-bold text-gray-900">1Dent</h1>
           <p className="text-sm text-gray-400 mt-0.5">Управление клиникой</p>
         </div>
 
