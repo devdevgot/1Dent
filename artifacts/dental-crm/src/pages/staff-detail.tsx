@@ -10,7 +10,6 @@ import {
   usePatchUserCapacity,
   useGetPayrollRecords,
   useGetSalarySettings,
-  useCalculatePayroll,
   useUpdateSalarySettings,
   type DoctorKpi,
   type DoctorDetailedAnalytics,
@@ -18,6 +17,7 @@ import {
   type DoctorDetailedAnalyticsProceduresByNameItem,
   type PayrollRecord,
 } from "@workspace/api-client-react";
+import PayrollApproveModal from "./payroll-approve-modal";
 import { useQueryClient } from "@tanstack/react-query";
 import { getGetDoctorKpisQueryKey } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
@@ -61,16 +61,12 @@ export default function StaffDetailPage() {
 
   const { data: payrollData, refetch: refetchPayroll } = useGetPayrollRecords(doctorId ?? "");
   const { data: salaryData, refetch: refetchSalary } = useGetSalarySettings(doctorId ?? "");
-  const { mutateAsync: calcPayroll, isPending: calculating } = useCalculatePayroll();
   const { mutateAsync: saveSettings, isPending: savingSettings } = useUpdateSalarySettings();
 
   const payrollRecords: PayrollRecord[] = payrollData?.data?.records ?? [];
   const salarySettings = salaryData?.data?.settings;
 
-  const now = new Date();
-  const [calcYear, setCalcYear] = useState(now.getFullYear());
-  const [calcMonth, setCalcMonth] = useState(now.getMonth() + 1);
-
+  const [showPayrollModal, setShowPayrollModal] = useState(false);
   const [editingSalary, setEditingSalary] = useState(false);
   const [salaryType, setSalaryType] = useState<"fixed" | "commission" | "fixed_plus_commission">("fixed");
   const [fixedAmount, setFixedAmount] = useState(0);
@@ -89,17 +85,6 @@ export default function StaffDetailPage() {
     await saveSettings({ userId: doctorId, data: { salaryType, fixedAmount, commissionPercent } });
     await refetchSalary();
     setEditingSalary(false);
-  };
-
-  const handleCalculate = async () => {
-    if (!doctorId) return;
-    try {
-      await calcPayroll({ userId: doctorId, periodYear: calcYear, periodMonth: calcMonth });
-      await refetchPayroll();
-    } catch (e: unknown) {
-      const msg = (e as { message?: string })?.message ?? "Ошибка";
-      alert(msg);
-    }
   };
 
   // Sync capacity input when doctor data loads
@@ -546,40 +531,16 @@ export default function StaffDetailPage() {
                 )}
               </div>
 
-              {/* Calculate payroll */}
-              {user?.role === "owner" && (
-                <div className="border border-border/50 rounded-xl p-4">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">{t("payroll.calculate")}</p>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="number"
-                      min={2020}
-                      max={2099}
-                      value={calcYear}
-                      onChange={(e) => setCalcYear(Number(e.target.value))}
-                      placeholder="Год"
-                      className="w-24 border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    />
-                    <input
-                      type="number"
-                      min={1}
-                      max={12}
-                      value={calcMonth}
-                      onChange={(e) => setCalcMonth(Number(e.target.value))}
-                      placeholder="Месяц"
-                      className="w-20 border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    />
-                    <button
-                      onClick={handleCalculate}
-                      disabled={calculating || !salarySettings}
-                      className="flex-1 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
-                    >
-                      {calculating ? t("common.saving") : t("payroll.calculate")}
-                    </button>
-                  </div>
-                  {!salarySettings && (
-                    <p className="text-xs text-amber-600 mt-2">{t("payroll.setSettingsFirst")}</p>
-                  )}
+              {/* Approve FOT button */}
+              {canManagePayroll && (
+                <div>
+                  <button
+                    onClick={() => setShowPayrollModal(true)}
+                    className="w-full py-2.5 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Banknote className="w-4 h-4" />
+                    {t("payroll.approveFot", "Утвердить ФОТ")}
+                  </button>
                 </div>
               )}
 
@@ -640,6 +601,13 @@ export default function StaffDetailPage() {
 
         </div>
       </div>
+
+      {showPayrollModal && (
+        <PayrollApproveModal
+          onClose={() => setShowPayrollModal(false)}
+          onSuccess={() => refetchPayroll()}
+        />
+      )}
     </div>
   );
 }

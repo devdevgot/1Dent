@@ -897,6 +897,30 @@
     "myPeriod": "Кезең",
     "myCalculated": "Есептелді",
     "myApproved": "Бекітілді",
-    "myStatus": "Мәртебе"
+    "myStatus": "Мәртебе",
+    "approveSubtitle": "Кезең үшін ЕАҚ-ты бекітіп, шығынды тіркеңіз",
+    "year": "Жыл",
+    "month": "Ай",
+    "employee": "Қызметкер",
+    "fotTotal": "ЕАҚ жиыны",
+    "noStaffSettings": "Жалақысы орнатылған қызметкерлер жоқ",
+    "approveAndRecord": "ЕАҚ-ты бекіту",
+    "approveFot": "ЕАҚ-ты бекіту",
+    "fotApproved": "қызм. бекітілді",
+    "fotNotApproved": "Ағымдағы айдың ЕАҚ бекітілмеген"
+  },
+  "months": {
+    "january": "Қаңтар",
+    "february": "Ақпан",
+    "march": "Наурыз",
+    "april": "Сәуір",
+    "may": "Мамыр",
+    "june": "Маусым",
+    "july": "Шілде",
+    "august": "Тамыз",
+    "september": "Қыркүйек",
+    "october": "Қазан",
+    "november": "Қараша",
+    "december": "Желтоқсан"
   }
 }

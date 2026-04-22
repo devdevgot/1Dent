@@ -138,14 +138,47 @@ export interface GetAllSalarySettingsResponse {
   data: { settings: SalarySettings[] };
 }
 
-export interface CalculatePayrollRequest {
+export interface PayrollPreviewRow {
   userId: string;
-  periodYear: number;
-  periodMonth: number;
+  userName: string;
+  userRole: string;
+  salaryType: SalaryType;
+  fixedAmount: number;
+  commissionPercent: number;
+  revenueBase: number;
+  calculatedAmount: number;
 }
 
-export interface ApprovePayrollRequest {
-  approvedAmount: number;
+export interface GetPayrollPreviewResponse {
+  success: boolean;
+  data: { preview: PayrollPreviewRow[]; totalFot: number };
+}
+
+export interface ApprovePeriodPayrollRequest {
+  year: number;
+  month: number;
+  employees: Array<{
+    userId: string;
+    approvedAmount: number;
+    notes?: string;
+  }>;
+}
+
+export interface ApprovePeriodPayrollResponse {
+  success: boolean;
+  data: {
+    records: PayrollRecord[];
+    totalFot: number;
+    expense: {
+      id: string;
+      clinicId: string;
+      category: string;
+      amount: string;
+      description: string | null;
+      periodMonth: number | null;
+      periodYear: number | null;
+    };
+  };
 }
 
 export interface UpdateSalarySettingsRequest {
@@ -199,22 +232,21 @@ export const updateSalarySettings = (
     ...options,
   });
 
-export const calculatePayroll = (
-  data: CalculatePayrollRequest,
+export const getPayrollPreview = (
+  year: number,
+  month: number,
   options?: RequestInit,
-): Promise<{ success: boolean; data: { record: PayrollRecord } }> =>
-  customFetch("/api/payroll/calculate", {
-    method: "POST",
-    body: JSON.stringify(data),
-    ...options,
-  });
+): Promise<GetPayrollPreviewResponse> =>
+  customFetch<GetPayrollPreviewResponse>(
+    `/api/payroll/preview?year=${year}&month=${month}`,
+    { method: "GET", ...options },
+  );
 
-export const approvePayroll = (
-  id: string,
-  data: ApprovePayrollRequest,
+export const approvePeriodPayroll = (
+  data: ApprovePeriodPayrollRequest,
   options?: RequestInit,
-): Promise<{ success: boolean; data: { record: PayrollRecord } }> =>
-  customFetch(`/api/payroll/approve/${id}`, {
+): Promise<ApprovePeriodPayrollResponse> =>
+  customFetch<ApprovePeriodPayrollResponse>("/api/payroll/approve", {
     method: "POST",
     body: JSON.stringify(data),
     ...options,
@@ -275,34 +307,26 @@ export const useUpdateSalarySettings = <TError = unknown>(options?: {
     ...options?.mutation,
   });
 
-export const useCalculatePayroll = <TError = unknown>(options?: {
-  mutation?: UseMutationOptions<
-    { success: boolean; data: { record: PayrollRecord } },
-    TError,
-    CalculatePayrollRequest
-  >;
-}) =>
-  useMutation<
-    { success: boolean; data: { record: PayrollRecord } },
-    TError,
-    CalculatePayrollRequest
-  >({
-    mutationFn: (data) => calculatePayroll(data),
-    ...options?.mutation,
+export const usePreviewPayroll = <TError = unknown>(
+  year: number,
+  month: number,
+  options?: { query?: UseQueryOptions<GetPayrollPreviewResponse, TError> },
+) =>
+  useQuery<GetPayrollPreviewResponse, TError>({
+    queryKey: ["/api/payroll/preview", year, month],
+    queryFn: ({ signal }) => getPayrollPreview(year, month, { signal }),
+    enabled: year > 0 && month > 0,
+    ...options?.query,
   });
 
-export const useApprovePayroll = <TError = unknown>(options?: {
+export const useApprovePayrollPeriod = <TError = unknown>(options?: {
   mutation?: UseMutationOptions<
-    { success: boolean; data: { record: PayrollRecord } },
+    ApprovePeriodPayrollResponse,
     TError,
-    { id: string; approvedAmount: number }
+    ApprovePeriodPayrollRequest
   >;
 }) =>
-  useMutation<
-    { success: boolean; data: { record: PayrollRecord } },
-    TError,
-    { id: string; approvedAmount: number }
-  >({
-    mutationFn: ({ id, approvedAmount }) => approvePayroll(id, { approvedAmount }),
+  useMutation<ApprovePeriodPayrollResponse, TError, ApprovePeriodPayrollRequest>({
+    mutationFn: (data) => approvePeriodPayroll(data),
     ...options?.mutation,
   });

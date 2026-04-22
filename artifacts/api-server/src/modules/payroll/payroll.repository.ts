@@ -4,15 +4,28 @@ import {
   userSalarySettingsTable,
   payrollRecordsTable,
   proceduresTable,
+  clinicExpensesTable,
 } from "@workspace/db";
 import {
   eq,
   and,
   gte,
-  lte,
+  lt,
   sum,
   desc,
 } from "drizzle-orm";
+import { randomUUID } from "crypto";
+
+export interface PayrollPreviewRow {
+  userId: string;
+  userName: string;
+  userRole: string;
+  salaryType: "fixed" | "commission" | "fixed_plus_commission";
+  fixedAmount: number;
+  commissionPercent: number;
+  revenueBase: number;
+  calculatedAmount: number;
+}
 
 export class PayrollRepository {
   async getSalarySettings(userId: string, clinicId: string) {
@@ -71,7 +84,7 @@ export class PayrollRepository {
       .where(eq(userSalarySettingsTable.clinicId, clinicId));
   }
 
-  async getDoctorRevenueForPeriod(
+  private async getDoctorRevenueForPeriod(
     doctorId: string,
     clinicId: string,
     year: number,
@@ -89,66 +102,154 @@ export class PayrollRepository {
           eq(proceduresTable.clinicId, clinicId),
           eq(proceduresTable.status, "completed"),
           gte(proceduresTable.createdAt, startDate),
-          lte(proceduresTable.createdAt, endDate),
+          lt(proceduresTable.createdAt, endDate),
         ),
       );
 
     return Number(result?.total ?? 0);
   }
 
-  async createPayrollRecord(data: {
-    id: string;
-    clinicId: string;
-    userId: string;
-    periodMonth: number;
-    periodYear: number;
-    salaryType: "fixed" | "commission" | "fixed_plus_commission";
-    fixedAmount: string;
-    commissionPercent: string;
-    revenueBase: string;
-    calculatedAmount: string;
-  }) {
-    const [row] = await db
-      .insert(payrollRecordsTable)
-      .values(data)
-      .returning();
-    return row;
+  private calcSalary(
+    salaryType: "fixed" | "commission" | "fixed_plus_commission",
+    fixedAmount: number,
+    commissionPercent: number,
+    revenueBase: number,
+  ): number {
+    if (salaryType === "fixed") return fixedAmount;
+    if (salaryType === "commission")
+      return (revenueBase * commissionPercent) / 100;
+    return fixedAmount + (revenueBase * commissionPercent) / 100;
   }
 
-  async getPayrollRecord(id: string, clinicId: string) {
-    const [row] = await db
-      .select()
-      .from(payrollRecordsTable)
-      .where(
-        and(eq(payrollRecordsTable.id, id), eq(payrollRecordsTable.clinicId, clinicId)),
-      )
-      .limit(1);
-    return row ?? null;
+  async previewPayrollForPeriod(
+    clinicId: string,
+    year: number,
+    month: number,
+  ): Promise<PayrollPreviewRow[]> {
+    const settings = await this.listSalarySettings(clinicId);
+    const rows: PayrollPreviewRow[] = [];
+
+    for (const s of settings) {
+      if (!s.userId) continue;
+      const revenue = await this.getDoctorRevenueForPeriod(
+        s.userId,
+        clinicId,
+        year,
+        month,
+      );
+      const fixedAmount = Number(s.fixedAmount ?? 0);
+      const commissionPercent = Number(s.commissionPercent ?? 0);
+      const salaryType = s.salaryType as "fixed" | "commission" | "fixed_plus_commission";
+      const calculatedAmount = this.calcSalary(
+        salaryType,
+        fixedAmount,
+        commissionPercent,
+        revenue,
+      );
+      rows.push({
+        userId: s.userId,
+        userName: s.userName ?? "",
+        userRole: s.userRole ?? "",
+        salaryType,
+        fixedAmount,
+        commissionPercent,
+        revenueBase: revenue,
+        calculatedAmount,
+      });
+    }
+
+    return rows;
   }
 
-  async approvePayrollRecord(
-    id: string,
+  async approvePeriodPayroll(
     clinicId: string,
     approvedBy: string,
-    approvedAmount: string,
+    year: number,
+    month: number,
+    employees: Array<{
+      userId: string;
+      approvedAmount: number;
+      notes?: string;
+    }>,
   ) {
-    const [row] = await db
-      .update(payrollRecordsTable)
-      .set({
-        status: "approved",
-        approvedAmount,
+    const preview = await this.previewPayrollForPeriod(clinicId, year, month);
+
+    const upserted: typeof payrollRecordsTable.$inferSelect[] = [];
+
+    for (const emp of employees) {
+      const row = preview.find((p) => p.userId === emp.userId);
+      if (!row) continue;
+
+      const values = {
+        clinicId,
+        userId: emp.userId,
+        periodMonth: month,
+        periodYear: year,
+        salaryType: row.salaryType,
+        fixedAmount: String(row.fixedAmount),
+        commissionPercent: String(row.commissionPercent),
+        revenueBase: String(row.revenueBase),
+        calculatedAmount: String(row.calculatedAmount),
+        approvedAmount: String(emp.approvedAmount),
+        status: "approved" as const,
         approvedBy,
         approvedAt: new Date(),
+        notes: emp.notes ?? null,
+      };
+
+      const [saved] = await db
+        .insert(payrollRecordsTable)
+        .values({ id: randomUUID(), ...values })
+        .onConflictDoUpdate({
+          target: [
+            payrollRecordsTable.clinicId,
+            payrollRecordsTable.userId,
+            payrollRecordsTable.periodYear,
+            payrollRecordsTable.periodMonth,
+          ],
+          set: {
+            approvedAmount: values.approvedAmount,
+            status: "approved",
+            approvedBy,
+            approvedAt: new Date(),
+            notes: values.notes,
+            calculatedAmount: values.calculatedAmount,
+            revenueBase: values.revenueBase,
+          },
+        })
+        .returning();
+
+      if (saved) upserted.push(saved);
+    }
+
+    const totalFot = employees.reduce((sum, e) => sum + e.approvedAmount, 0);
+
+    const [expense] = await db
+      .insert(clinicExpensesTable)
+      .values({
+        id: randomUUID(),
+        clinicId,
+        category: "salary",
+        amount: String(totalFot),
+        description: `ФОТ ${month.toString().padStart(2, "0")}/${year} — ${employees.length} сотр.`,
+        periodMonth: month,
+        periodYear: year,
+        payrollRef: `${year}-${month}`,
+        createdBy: approvedBy,
+        expenseDate: new Date(),
       })
-      .where(
-        and(eq(payrollRecordsTable.id, id), eq(payrollRecordsTable.clinicId, clinicId)),
-      )
       .returning();
-    return row ?? null;
+
+    return { records: upserted, expense, totalFot };
   }
 
-  async listPayrollRecords(clinicId: string, userId?: string) {
-    const baseQuery = db
+  async listPayrollRecords(clinicId: string, userId?: string, year?: number, month?: number) {
+    const conditions = [eq(payrollRecordsTable.clinicId, clinicId)];
+    if (userId) conditions.push(eq(payrollRecordsTable.userId, userId));
+    if (year) conditions.push(eq(payrollRecordsTable.periodYear, year));
+    if (month) conditions.push(eq(payrollRecordsTable.periodMonth, month));
+
+    return db
       .select({
         id: payrollRecordsTable.id,
         clinicId: payrollRecordsTable.clinicId,
@@ -164,46 +265,17 @@ export class PayrollRepository {
         status: payrollRecordsTable.status,
         approvedBy: payrollRecordsTable.approvedBy,
         approvedAt: payrollRecordsTable.approvedAt,
+        notes: payrollRecordsTable.notes,
         createdAt: payrollRecordsTable.createdAt,
         userName: usersTable.name,
         userRole: usersTable.role,
       })
       .from(payrollRecordsTable)
       .leftJoin(usersTable, eq(payrollRecordsTable.userId, usersTable.id))
-      .where(
-        userId
-          ? and(
-              eq(payrollRecordsTable.clinicId, clinicId),
-              eq(payrollRecordsTable.userId, userId),
-            )
-          : eq(payrollRecordsTable.clinicId, clinicId),
-      )
+      .where(and(...conditions))
       .orderBy(
         desc(payrollRecordsTable.periodYear),
         desc(payrollRecordsTable.periodMonth),
       );
-
-    return baseQuery;
-  }
-
-  async getExistingRecord(
-    clinicId: string,
-    userId: string,
-    periodYear: number,
-    periodMonth: number,
-  ) {
-    const [row] = await db
-      .select()
-      .from(payrollRecordsTable)
-      .where(
-        and(
-          eq(payrollRecordsTable.clinicId, clinicId),
-          eq(payrollRecordsTable.userId, userId),
-          eq(payrollRecordsTable.periodYear, periodYear),
-          eq(payrollRecordsTable.periodMonth, periodMonth),
-        ),
-      )
-      .limit(1);
-    return row ?? null;
   }
 }

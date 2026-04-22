@@ -902,6 +902,30 @@
     "myPeriod": "Период",
     "myCalculated": "Начислено",
     "myApproved": "Утверждено",
-    "myStatus": "Статус"
+    "myStatus": "Статус",
+    "approveSubtitle": "Утвердите ФОТ за период и зафиксируйте расход",
+    "year": "Год",
+    "month": "Месяц",
+    "employee": "Сотрудник",
+    "fotTotal": "Итого ФОТ",
+    "noStaffSettings": "Нет сотрудников с настроенной зарплатой",
+    "approveAndRecord": "Утвердить ФОТ",
+    "approveFot": "Утвердить ФОТ",
+    "fotApproved": "сотр. утверждено",
+    "fotNotApproved": "ФОТ за текущий месяц не утверждён"
+  },
+  "months": {
+    "january": "Январь",
+    "february": "Февраль",
+    "march": "Март",
+    "april": "Апрель",
+    "may": "Май",
+    "june": "Июнь",
+    "july": "Июль",
+    "august": "Август",
+    "september": "Сентябрь",
+    "october": "Октябрь",
+    "november": "Ноябрь",
+    "december": "Декабрь"
   }
 }
