@@ -57,7 +57,7 @@ export default function StaffDetailPage() {
 
   const [capacityInput, setCapacityInput] = useState<number | "">(20);
   const canEditCapacity = user?.role === "owner" || user?.role === "admin";
-  const canManagePayroll = user?.role === "owner" || user?.role === "accountant";
+  const canManagePayroll = user?.role === "owner" || user?.role === "accountant" || user?.role === "admin";
 
   const { data: payrollData, refetch: refetchPayroll } = useGetPayrollRecords(doctorId ?? "");
   const { data: salaryData, refetch: refetchSalary } = useGetSalarySettings(doctorId ?? "");

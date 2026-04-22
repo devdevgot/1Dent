@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
+import { toast } from "sonner";
 import {
   usePreviewPayroll,
   useApprovePayrollPeriod,
@@ -39,16 +40,23 @@ export default function PayrollApproveModal({ onClose, onSuccess }: PayrollAppro
 
   const handleApprove = async () => {
     if (rows.length === 0) return;
-    await approvePeriod({
-      year,
-      month,
-      employees: rows.map((r) => ({
-        userId: r.userId,
-        approvedAmount: getApproved(r),
-      })),
-    });
-    onSuccess?.();
-    onClose();
+    try {
+      await approvePeriod({
+        year,
+        month,
+        employees: rows.map((r) => ({
+          userId: r.userId,
+          approvedAmount: getApproved(r),
+        })),
+      });
+      toast.success(
+        t("payroll.fotApprovedSuccess", `ФОТ за ${MONTH_NAMES[month - 1]} ${year} утверждён — ₸${totalFot.toLocaleString("ru-KZ")}`),
+      );
+      onSuccess?.();
+      onClose();
+    } catch {
+      toast.error(t("common.errorGeneric", "Произошла ошибка. Попробуйте снова."));
+    }
   };
 
   const MONTH_NAMES = [

@@ -97,7 +97,7 @@ router.put(
 
 router.get(
   "/preview",
-  roleGuard("owner", "accountant"),
+  roleGuard("owner", "admin", "accountant"),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const parsed = periodSchema.safeParse({
@@ -124,7 +124,7 @@ router.get(
 
 router.post(
   "/approve",
-  roleGuard("owner", "accountant"),
+  roleGuard("owner", "admin", "accountant"),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const parsed = approveSchema.safeParse(req.body);

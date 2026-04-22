@@ -101,8 +101,8 @@ export class PayrollRepository {
           eq(proceduresTable.doctorId, doctorId),
           eq(proceduresTable.clinicId, clinicId),
           eq(proceduresTable.status, "completed"),
-          gte(proceduresTable.createdAt, startDate),
-          lt(proceduresTable.createdAt, endDate),
+          gte(proceduresTable.completedAt, startDate),
+          lt(proceduresTable.completedAt, endDate),
         ),
       );
 
@@ -224,6 +224,9 @@ export class PayrollRepository {
 
     const totalFot = employees.reduce((sum, e) => sum + e.approvedAmount, 0);
 
+    const periodEndDate = new Date(year, month, 0);
+    const payrollRef = `${year}-${String(month).padStart(2, "0")}`;
+
     const [expense] = await db
       .insert(clinicExpensesTable)
       .values({
@@ -231,12 +234,25 @@ export class PayrollRepository {
         clinicId,
         category: "salary",
         amount: String(totalFot),
-        description: `ФОТ ${month.toString().padStart(2, "0")}/${year} — ${employees.length} сотр.`,
+        description: `ФОТ ${String(month).padStart(2, "0")}/${year} — ${employees.length} сотр.`,
         periodMonth: month,
         periodYear: year,
-        payrollRef: `${year}-${month}`,
+        payrollRef,
         createdBy: approvedBy,
-        expenseDate: new Date(),
+        expenseDate: periodEndDate,
+      })
+      .onConflictDoUpdate({
+        target: [
+          clinicExpensesTable.clinicId,
+          clinicExpensesTable.payrollRef,
+          clinicExpensesTable.category,
+        ],
+        set: {
+          amount: String(totalFot),
+          description: `ФОТ ${String(month).padStart(2, "0")}/${year} — ${employees.length} сотр.`,
+          createdBy: approvedBy,
+          expenseDate: periodEndDate,
+        },
       })
       .returning();
 
