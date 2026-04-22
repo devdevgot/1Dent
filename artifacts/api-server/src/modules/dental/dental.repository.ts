@@ -4,6 +4,7 @@ import {
   toothTreatmentsTable,
   treatmentPlanItemsTable,
   treatmentPlansTable,
+  proceduresTable,
 } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -208,9 +209,25 @@ export class DentalRepository {
       if (!matchingPlanItem) {
         tooth = await finalizeTooth();
       } else {
+        const procedureId = randomUUID();
+        await tx.insert(proceduresTable).values({
+          id: procedureId,
+          clinicId,
+          patientId: treatment.patientId,
+          doctorId: updatedBy,
+          name: matchingPlanItem.title,
+          status: "pending_payment",
+          price: matchingPlanItem.price ?? 0,
+          notes: matchingPlanItem.mkb10Code ? `МКБ-10: ${matchingPlanItem.mkb10Code}` : null,
+          paymentMethod: null,
+          scheduledAt: new Date(),
+          completedAt: null,
+          createdAt: new Date(),
+        });
+
         const [updated] = await tx
           .update(treatmentPlanItemsTable)
-          .set({ status: "completed" })
+          .set({ status: "completed", procedureId })
           .where(eq(treatmentPlanItemsTable.id, matchingPlanItem.id))
           .returning();
 
