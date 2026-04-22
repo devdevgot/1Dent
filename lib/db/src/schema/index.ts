@@ -8,3 +8,4 @@ export * from "./logs";
 export * from "./chatbot";
 export * from "./migration";
 export * from "./channels";
+export * from "./payroll";

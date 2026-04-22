@@ -3,15 +3,19 @@ import {
   useGetOwnerAnalytics,
   getGetOwnerAnalyticsQueryKey,
   useListProcedures,
+  useGetPayrollRecords,
+  useApprovePayroll,
+  type PayrollRecord,
 } from "@workspace/api-client-react";
 import {
   TrendingUp, Activity, Users, Star,
   RefreshCw, ChevronRight, Wallet,
-  Stethoscope,
+  Stethoscope, Banknote, CheckCircle, Clock,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
+import { useState } from "react";
 
 function StatCard({
   titleKey,
@@ -63,6 +67,32 @@ export default function AccountantDashboard() {
     query: { queryKey: getGetOwnerAnalyticsQueryKey() },
   });
   const { data: proceduresData } = useListProcedures();
+  const { data: payrollData, refetch: refetchPayroll } = useGetPayrollRecords();
+  const { mutateAsync: approveRecord, isPending: approving } = useApprovePayroll();
+
+  const allRecords: PayrollRecord[] = payrollData?.data?.records ?? [];
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  const currentYear = now.getFullYear();
+
+  const thisMonthRecords = allRecords.filter(
+    (r) => r.periodMonth === currentMonth && r.periodYear === currentYear,
+  );
+  const pendingRecords = thisMonthRecords.filter((r) => r.status === "pending");
+  const fotTotal = thisMonthRecords.reduce(
+    (sum, r) => sum + Number(r.approvedAmount ?? r.calculatedAmount),
+    0,
+  );
+
+  const [approveModal, setApproveModal] = useState<PayrollRecord | null>(null);
+  const [approveInput, setApproveInput] = useState(0);
+
+  const handleApprove = async () => {
+    if (!approveModal) return;
+    await approveRecord({ id: approveModal.id, approvedAmount: approveInput });
+    await refetchPayroll();
+    setApproveModal(null);
+  };
 
   const analytics = (analyticsData?.data?.analytics ?? {}) as Record<string, unknown>;
   const procedures = proceduresData?.data?.procedures ?? [];
@@ -140,6 +170,93 @@ export default function AccountantDashboard() {
               <StatCard key={i} titleKey={c.titleKey} value={c.value} icon={c.icon} delay={c.delay} />
             ))}
       </div>
+
+      {/* ─── ФОТ (Payroll Fund) Card ─── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="bg-card rounded-2xl border border-border/50 p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="p-2 bg-[#98cc1c]/10 rounded-xl">
+              <Banknote className="w-5 h-5 text-[#98cc1c]" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold font-display">{t("payroll.fot")}</h3>
+              <p className="text-xs text-muted-foreground">{t("payroll.fotSubtitle")}</p>
+            </div>
+          </div>
+          <div className="text-3xl font-display font-bold text-foreground mb-3">
+            ₸ {fotTotal.toLocaleString("ru-KZ")}
+          </div>
+          {pendingRecords.length > 0 ? (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-amber-600 flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5" />
+                {pendingRecords.length} {t("payroll.fotPending")}
+              </p>
+              {pendingRecords.slice(0, 3).map((r) => (
+                <div
+                  key={r.id}
+                  className="flex items-center justify-between p-2.5 bg-amber-50 rounded-lg border border-amber-100"
+                >
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-foreground truncate">{r.userName ?? "—"}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {r.periodMonth.toString().padStart(2, "0")}/{r.periodYear}
+                      {" · "}₸{Number(r.calculatedAmount).toLocaleString("ru-KZ")}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => { setApproveModal(r); setApproveInput(Number(r.calculatedAmount)); }}
+                    className="ml-2 px-2.5 py-1 bg-primary text-white text-[11px] font-semibold rounded-lg hover:bg-primary/90 transition-colors shrink-0"
+                  >
+                    {t("payroll.approveConfirm")}
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 text-emerald-600">
+              <CheckCircle className="w-4 h-4" />
+              <span className="text-xs font-semibold">{t("accountantDashboard.allBilled")}</span>
+            </div>
+          )}
+        </div>
+
+      </div>
+
+      {/* Approve modal */}
+      {approveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+            <h3 className="text-lg font-bold font-display mb-1">{t("payroll.approveTitle")}</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              {approveModal.userName} · {approveModal.periodMonth.toString().padStart(2, "0")}/{approveModal.periodYear}
+            </p>
+            <label className="text-xs font-semibold text-muted-foreground">{t("payroll.approveAmount")}</label>
+            <input
+              type="number"
+              min={0}
+              value={approveInput}
+              onChange={(e) => setApproveInput(Number(e.target.value))}
+              className="mt-1 w-full border border-border rounded-xl px-4 py-2.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/30 mb-4"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => setApproveModal(null)}
+                className="flex-1 py-2.5 border border-border rounded-xl text-sm font-semibold hover:bg-slate-50 transition-colors"
+              >
+                {t("common.cancel")}
+              </button>
+              <button
+                onClick={handleApprove}
+                disabled={approving}
+                className="flex-1 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 transition-colors"
+              >
+                {approving ? t("payroll.approving") : t("payroll.approveConfirm")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Revenue by Doctor — computed from procedures (accessible to accountants) */}

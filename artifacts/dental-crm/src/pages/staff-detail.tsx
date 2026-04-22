@@ -2,16 +2,21 @@ import { useParams, useLocation } from "wouter";
 import { useState, useEffect } from "react";
 import {
   ArrowLeft, Users, TrendingUp, DollarSign, Activity,
-  CalendarDays, UserCheck, Gauge,
+  CalendarDays, UserCheck, Gauge, Banknote, CheckCircle, Clock,
 } from "lucide-react";
 import {
   useGetDoctorKpis,
   useGetDoctorDetailedAnalytics,
   usePatchUserCapacity,
+  useGetPayrollRecords,
+  useGetSalarySettings,
+  useCalculatePayroll,
+  useUpdateSalarySettings,
   type DoctorKpi,
   type DoctorDetailedAnalytics,
   type DoctorDetailedAnalyticsRevenueByMonthItem,
   type DoctorDetailedAnalyticsProceduresByNameItem,
+  type PayrollRecord,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getGetDoctorKpisQueryKey } from "@workspace/api-client-react";
@@ -52,6 +57,50 @@ export default function StaffDetailPage() {
 
   const [capacityInput, setCapacityInput] = useState<number | "">(20);
   const canEditCapacity = user?.role === "owner" || user?.role === "admin";
+  const canManagePayroll = user?.role === "owner" || user?.role === "accountant";
+
+  const { data: payrollData, refetch: refetchPayroll } = useGetPayrollRecords(doctorId ?? "");
+  const { data: salaryData, refetch: refetchSalary } = useGetSalarySettings(doctorId ?? "");
+  const { mutateAsync: calcPayroll, isPending: calculating } = useCalculatePayroll();
+  const { mutateAsync: saveSettings, isPending: savingSettings } = useUpdateSalarySettings();
+
+  const payrollRecords: PayrollRecord[] = payrollData?.data?.records ?? [];
+  const salarySettings = salaryData?.data?.settings;
+
+  const now = new Date();
+  const [calcYear, setCalcYear] = useState(now.getFullYear());
+  const [calcMonth, setCalcMonth] = useState(now.getMonth() + 1);
+
+  const [editingSalary, setEditingSalary] = useState(false);
+  const [salaryType, setSalaryType] = useState<"fixed" | "commission" | "fixed_plus_commission">("fixed");
+  const [fixedAmount, setFixedAmount] = useState(0);
+  const [commissionPercent, setCommissionPercent] = useState(0);
+
+  useEffect(() => {
+    if (salarySettings) {
+      setSalaryType(salarySettings.salaryType);
+      setFixedAmount(Number(salarySettings.fixedAmount));
+      setCommissionPercent(Number(salarySettings.commissionPercent));
+    }
+  }, [salarySettings?.userId]);
+
+  const handleSaveSettings = async () => {
+    if (!doctorId) return;
+    await saveSettings({ userId: doctorId, data: { salaryType, fixedAmount, commissionPercent } });
+    await refetchSalary();
+    setEditingSalary(false);
+  };
+
+  const handleCalculate = async () => {
+    if (!doctorId) return;
+    try {
+      await calcPayroll({ userId: doctorId, periodYear: calcYear, periodMonth: calcMonth });
+      await refetchPayroll();
+    } catch (e: unknown) {
+      const msg = (e as { message?: string })?.message ?? "Ошибка";
+      alert(msg);
+    }
+  };
 
   // Sync capacity input when doctor data loads
   useEffect(() => {
@@ -399,6 +448,194 @@ export default function StaffDetailPage() {
                 )}
               </div>
             </>
+          )}
+
+          {/* ─── Payroll Section ─── */}
+          {canManagePayroll && doctorId && (
+            <div className="bg-white rounded-xl border border-border/50 p-6 shadow-sm space-y-5">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="h-8 w-8 rounded-lg bg-[#98cc1c]/10 flex items-center justify-center shrink-0">
+                  <Banknote className="h-4 w-4 text-[#98cc1c]" />
+                </div>
+                <h3 className="text-sm font-semibold text-foreground">{t("payroll.title")}</h3>
+              </div>
+
+              {/* Salary settings */}
+              <div className="border border-border/50 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("payroll.settings")}</span>
+                  {user?.role === "owner" && (
+                    <button
+                      onClick={() => setEditingSalary((v) => !v)}
+                      className="text-xs text-primary font-semibold hover:underline"
+                    >
+                      {editingSalary ? t("common.cancel") : t("common.edit")}
+                    </button>
+                  )}
+                </div>
+
+                {editingSalary ? (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs text-muted-foreground">{t("payroll.salaryType")}</label>
+                      <select
+                        value={salaryType}
+                        onChange={(e) => setSalaryType(e.target.value as typeof salaryType)}
+                        className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      >
+                        <option value="fixed">{t("payroll.fixed")}</option>
+                        <option value="commission">{t("payroll.commission")}</option>
+                        <option value="fixed_plus_commission">{t("payroll.fixedPlusCommission")}</option>
+                      </select>
+                    </div>
+                    {(salaryType === "fixed" || salaryType === "fixed_plus_commission") && (
+                      <div>
+                        <label className="text-xs text-muted-foreground">{t("payroll.fixedAmount")} (₸)</label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={fixedAmount}
+                          onChange={(e) => setFixedAmount(Number(e.target.value))}
+                          className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        />
+                      </div>
+                    )}
+                    {(salaryType === "commission" || salaryType === "fixed_plus_commission") && (
+                      <div>
+                        <label className="text-xs text-muted-foreground">{t("payroll.commissionPercent")} (%)</label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          step={0.5}
+                          value={commissionPercent}
+                          onChange={(e) => setCommissionPercent(Number(e.target.value))}
+                          className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        />
+                      </div>
+                    )}
+                    <button
+                      onClick={handleSaveSettings}
+                      disabled={savingSettings}
+                      className="w-full py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                    >
+                      {savingSettings ? t("common.saving") : t("common.save")}
+                    </button>
+                  </div>
+                ) : salarySettings ? (
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-slate-50 rounded-lg p-3 text-center">
+                      <p className="text-[11px] text-muted-foreground">{t("payroll.salaryType")}</p>
+                      <p className="text-sm font-semibold text-foreground mt-1">
+                        {salarySettings.salaryType === "fixed" ? t("payroll.fixed") :
+                         salarySettings.salaryType === "commission" ? t("payroll.commission") :
+                         t("payroll.fixedPlusCommission")}
+                      </p>
+                    </div>
+                    <div className="bg-slate-50 rounded-lg p-3 text-center">
+                      <p className="text-[11px] text-muted-foreground">{t("payroll.fixedAmount")}</p>
+                      <p className="text-sm font-semibold text-foreground mt-1">₸{Number(salarySettings.fixedAmount).toLocaleString()}</p>
+                    </div>
+                    <div className="bg-slate-50 rounded-lg p-3 text-center">
+                      <p className="text-[11px] text-muted-foreground">{t("payroll.commissionPercent")}</p>
+                      <p className="text-sm font-semibold text-foreground mt-1">{salarySettings.commissionPercent}%</p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">{t("payroll.noSettings")}</p>
+                )}
+              </div>
+
+              {/* Calculate payroll */}
+              {user?.role === "owner" && (
+                <div className="border border-border/50 rounded-xl p-4">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">{t("payroll.calculate")}</p>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="number"
+                      min={2020}
+                      max={2099}
+                      value={calcYear}
+                      onChange={(e) => setCalcYear(Number(e.target.value))}
+                      placeholder="Год"
+                      className="w-24 border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                    <input
+                      type="number"
+                      min={1}
+                      max={12}
+                      value={calcMonth}
+                      onChange={(e) => setCalcMonth(Number(e.target.value))}
+                      placeholder="Месяц"
+                      className="w-20 border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                    <button
+                      onClick={handleCalculate}
+                      disabled={calculating || !salarySettings}
+                      className="flex-1 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                    >
+                      {calculating ? t("common.saving") : t("payroll.calculate")}
+                    </button>
+                  </div>
+                  {!salarySettings && (
+                    <p className="text-xs text-amber-600 mt-2">{t("payroll.setSettingsFirst")}</p>
+                  )}
+                </div>
+              )}
+
+              {/* History table */}
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">{t("payroll.history")}</p>
+                {payrollRecords.length === 0 ? (
+                  <div className="text-center py-6 text-sm text-muted-foreground">{t("payroll.noRecords")}</div>
+                ) : (
+                  <div className="overflow-x-auto rounded-xl border border-border/50">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-border/50">
+                          <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground">{t("payroll.period")}</th>
+                          <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground">{t("payroll.revenueBase")}</th>
+                          <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground">{t("payroll.calculated")}</th>
+                          <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground">{t("payroll.approved")}</th>
+                          <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground">{t("payroll.status")}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/30">
+                        {payrollRecords.map((r) => (
+                          <tr key={r.id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-4 py-3 font-medium text-foreground">
+                              {r.periodMonth.toString().padStart(2, "0")}/{r.periodYear}
+                            </td>
+                            <td className="px-4 py-3 text-right text-muted-foreground">
+                              ₸{Number(r.revenueBase).toLocaleString("ru-KZ")}
+                            </td>
+                            <td className="px-4 py-3 text-right font-semibold text-foreground">
+                              ₸{Number(r.calculatedAmount).toLocaleString("ru-KZ")}
+                            </td>
+                            <td className="px-4 py-3 text-right text-emerald-700 font-semibold">
+                              {r.approvedAmount ? `₸${Number(r.approvedAmount).toLocaleString("ru-KZ")}` : "—"}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {r.status === "approved" || r.status === "paid" ? (
+                                <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                                  <CheckCircle className="w-3 h-3" />
+                                  {r.status === "paid" ? t("payroll.paid") : t("payroll.approved")}
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                                  <Clock className="w-3 h-3" />
+                                  {t("payroll.pending")}
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
           )}
 
         </div>

@@ -15,6 +15,7 @@ import migrationRouter from "../modules/migration/migration.controller";
 import clinicPricesRouter from "../modules/clinic/clinic-prices.controller";
 import treatmentPlansRouter from "../modules/treatment-plans/treatment-plans.controller";
 import channelsRouter from "../modules/channels/channels.controller";
+import payrollRouter from "../modules/payroll/payroll.controller";
 import refRouter from "./ref";
 import { actionLogMiddleware } from "../middlewares/action-log.middleware";
 import { authRateLimit } from "../middlewares/rate-limit.middleware";
@@ -58,6 +59,7 @@ router.get(
 router.use("/inventory", inventoryRouter);
 router.use("/procedures", proceduresRouter);
 router.use("/logs", logsRouter);
+router.use("/payroll", payrollRouter);
 router.use("/followups", followupsRouter);
 router.use("/chatbot", chatbotRouter);
 router.use("/migration", migrationRouter);

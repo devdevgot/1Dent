@@ -1,10 +1,15 @@
 import { useLocation } from "wouter";
 import { useAuthStore } from "@/hooks/use-auth";
-import { ChevronLeft, ChevronRight, User, Mail, Lock, Camera } from "lucide-react";
+import { ChevronLeft, ChevronRight, User, Mail, Lock, Camera, Banknote, CheckCircle, Clock } from "lucide-react";
+import { useGetMyPayrollRecords, type PayrollRecord } from "@workspace/api-client-react";
+import { useTranslation } from "react-i18next";
 
 export default function AccountSettings() {
+  const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const { user } = useAuthStore();
+  const { data: myPayrollData } = useGetMyPayrollRecords();
+  const myRecords: PayrollRecord[] = myPayrollData?.data?.records ?? [];
 
   const photoUrl = (user as typeof user & { photoUrl?: string | null })?.photoUrl;
   const initials = (user?.name ?? "?").charAt(0).toUpperCase();
@@ -81,6 +86,55 @@ export default function AccountSettings() {
               <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
             </button>
           ))}
+        </div>
+
+        {/* Моя зарплата */}
+        <div className="bg-white rounded-2xl overflow-hidden">
+          <div className="flex items-center gap-3 px-4 py-4 border-b border-gray-100">
+            <div className="w-8 h-8 rounded-lg bg-[#98cc1c]/10 flex items-center justify-center shrink-0">
+              <Banknote className="w-[18px] h-[18px] text-[#98cc1c]" />
+            </div>
+            <div>
+              <p className="text-[15px] font-semibold text-gray-900">{t("payroll.mySalary")}</p>
+              <p className="text-[12px] text-gray-400">{t("payroll.mySalaryDesc")}</p>
+            </div>
+          </div>
+          {myRecords.length === 0 ? (
+            <div className="px-4 py-6 text-center text-sm text-gray-400">{t("payroll.noMySalary")}</div>
+          ) : (
+            <div className="divide-y divide-gray-50">
+              {myRecords.slice(0, 6).map((r) => (
+                <div key={r.id} className="flex items-center justify-between px-4 py-3">
+                  <div>
+                    <p className="text-[14px] font-semibold text-gray-900">
+                      {r.periodMonth.toString().padStart(2, "0")}/{r.periodYear}
+                    </p>
+                    <p className="text-[12px] text-gray-400">
+                      {t("payroll.myCalculated")}: ₸{Number(r.calculatedAmount).toLocaleString("ru-KZ")}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    {r.approvedAmount && (
+                      <p className="text-[14px] font-bold text-emerald-600">
+                        ₸{Number(r.approvedAmount).toLocaleString("ru-KZ")}
+                      </p>
+                    )}
+                    {r.status === "approved" || r.status === "paid" ? (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                        <CheckCircle className="w-3 h-3" />
+                        {r.status === "paid" ? t("payroll.paid") : t("payroll.approved")}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                        <Clock className="w-3 h-3" />
+                        {t("payroll.pending")}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
