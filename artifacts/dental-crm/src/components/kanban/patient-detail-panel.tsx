@@ -2411,6 +2411,9 @@ export function PatientDetailPanel() {
                         {[...pastPlans].sort((a, b) => b.planNumber - a.planNumber).map((plan) => {
                           const isOpen = expandedPlanId === plan.id;
                           const doneCount = plan.items.filter((i) => i.status === "completed").length;
+                          const uniqueToothFdis = Array.from(
+                            new Set(plan.items.map((i) => i.toothFdi).filter((f): f is number => f !== null && f !== undefined))
+                          ).sort((a, b) => a - b);
                           return (
                             <div key={plan.id} className="border-t border-border/30">
                               <button
@@ -2418,10 +2421,12 @@ export function PatientDetailPanel() {
                                 className="w-full px-4 py-2.5 hover:bg-gray-50/60 transition-colors text-left"
                               >
                                 <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
                                     <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform shrink-0 ${isOpen ? "rotate-180" : ""}`} />
                                     <span className="text-xs font-bold text-gray-700">
-                                      План {plan.planNumber}
+                                      {uniqueToothFdis.length > 0
+                                        ? `Лечение зуб${uniqueToothFdis.length === 1 ? "а" : "ов"} №${uniqueToothFdis.join(", №")}`
+                                        : `План ${plan.planNumber}`}
                                     </span>
                                     <span className={`text-xs px-1.5 py-0.5 rounded-full border ${
                                       plan.status === "completed"
@@ -2431,10 +2436,29 @@ export function PatientDetailPanel() {
                                       {plan.status === "completed" ? "Завершён" : "Архив"}
                                     </span>
                                   </div>
-                                  <span className="text-xs font-semibold text-gray-700">
+                                  <span className="text-xs font-semibold text-gray-700 shrink-0 ml-2">
                                     {plan.totalCost.toLocaleString("ru")} ₸
                                   </span>
                                 </div>
+                                {uniqueToothFdis.length > 0 && (
+                                  <div className="flex items-center gap-1.5 mt-1 pl-5 flex-wrap">
+                                    {uniqueToothFdis.map((fdi) => (
+                                      <span
+                                        key={fdi}
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setModalToothFdi(fdi);
+                                        }}
+                                        onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); setModalToothFdi(fdi); } }}
+                                        className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer transition-colors border border-primary/20"
+                                      >
+                                        Зуб #{fdi}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
                                 <p className="text-xs text-muted-foreground mt-0.5 pl-5">
                                   {doneCount}/{plan.items.length} шаг{plan.items.length === 1 ? "" : plan.items.length < 5 ? "а" : "ов"} выполнено
                                   {" · "}
