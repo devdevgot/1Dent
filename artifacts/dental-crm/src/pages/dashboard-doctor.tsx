@@ -168,8 +168,6 @@ export default function DoctorDashboard() {
 
   // salary helpers
   const mySalary = salaryData?.data;
-  const salaryTotal = mySalary ? Number(mySalary.calculatedSalary) : null;
-  const salaryPaid = mySalary ? Number(mySalary.approvedAmount ?? 0) : null;
   const salaryTypeLabel = mySalary
     ? mySalary.salaryType === "fixed"
       ? t("payroll.fixed", "Оклад")
@@ -201,93 +199,78 @@ export default function DoctorDashboard() {
       {/* ─── My Revenue + Salary Card ─── */}
       <div className="mx-4 mt-3 bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="px-5 pt-4 pb-4">
-          {/* Revenue row */}
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
-                {t("dashboard.myRevenue", "Моя выручка")}
-              </p>
-              {isLoading ? (
-                <div className="h-8 w-32 bg-gray-100 rounded-xl animate-pulse" />
-              ) : (
-                <p className="text-2xl font-bold text-gray-900 tracking-tight">
-                  {fmtRevenue(revenueThisMonth)}
+          {/* PRIMARY: Salary */}
+          <div className="flex items-start justify-between mb-1">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  {t("payroll.mySalary", "Моя зарплата")}
+                  {mySalary?.period && (
+                    <span className="ml-1.5 font-normal normal-case text-gray-400">
+                      {t("employees.since", "за")} {new Date(mySalary.period.year, mySalary.period.month - 1).toLocaleDateString("ru", { month: "long", year: "numeric" })}
+                    </span>
+                  )}
                 </p>
+                {mySalary && (
+                  <span className={cn(
+                    "text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0",
+                    mySalary.status === "paid"     ? "bg-emerald-100 text-emerald-700" :
+                    mySalary.status === "approved" ? "bg-blue-100 text-blue-700" :
+                                                     "bg-amber-100 text-amber-700",
+                  )}>
+                    {mySalary.status === "paid"     ? t("payroll.statusPaid", "Выплачено") :
+                     mySalary.status === "approved" ? t("payroll.statusApproved", "Утверждено") :
+                                                      t("payroll.statusPending", "Предварительно")}
+                  </span>
+                )}
+              </div>
+
+              {isLoading ? (
+                <div className="h-9 w-40 bg-gray-100 rounded-xl animate-pulse" />
+              ) : !mySalary ? (
+                <p className="text-sm text-gray-400 italic">{t("payroll.noSettings", "Настройки зарплаты не заданы")}</p>
+              ) : (
+                <>
+                  <p className="text-3xl font-bold text-gray-900 tracking-tight leading-none">
+                    {fmtRevenue(mySalary.calculatedSalary)}
+                  </p>
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    {mySalary.salaryType === "fixed" && `${t("payroll.fixed", "Оклад")}: ${fmtRevenue(mySalary.fixedAmount)}`}
+                    {mySalary.salaryType === "commission" && `${mySalary.commissionPercent}% ${t("payroll.ofRevenue", "от выручки")}`}
+                    {mySalary.salaryType === "fixed_plus_commission" && `${fmtRevenue(mySalary.fixedAmount)} + ${mySalary.commissionPercent}%`}
+                  </p>
+                </>
               )}
             </div>
             <button
-              onClick={() => navigate("/doctor-analytics")}
-              className="mt-1 flex items-center gap-0.5 text-xs font-semibold"
-              style={{ color: "#98cc1c" }}
+              onClick={() => navigate("/payroll/my")}
+              className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-xl mt-1"
+              style={{ backgroundColor: "#98cc1c22", color: "#98cc1c" }}
             >
-              {t("dashboard.details", "Подробнее")} <ChevronRight className="w-3.5 h-3.5" />
+              {t("payroll.history", "История")}
             </button>
           </div>
 
           {/* Divider */}
-          <div className="border-t border-gray-100 mb-4" />
+          <div className="border-t border-gray-100 my-3" />
 
-          {/* Salary row */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-1.5">
-                <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ backgroundColor: "#98cc1c22" }}>
-                  <Wallet className="w-3.5 h-3.5" style={{ color: "#98cc1c" }} />
-                </div>
-                <p className="text-xs font-semibold text-gray-700">
-                  {t("payroll.mySalary", "Моя зарплата")}
-                  {mySalary?.period && (
-                    <span className="ml-1.5 font-normal text-gray-400">
-                      {new Date(mySalary.period.year, mySalary.period.month - 1).toLocaleDateString("ru", { month: "long", year: "numeric" })}
-                    </span>
-                  )}
-                </p>
-              </div>
-              {mySalary && (
-                <span className={cn(
-                  "text-[10px] font-bold px-2 py-0.5 rounded-full",
-                  mySalary.status === "paid"     ? "bg-emerald-100 text-emerald-700" :
-                  mySalary.status === "approved" ? "bg-blue-100 text-blue-700" :
-                                                   "bg-amber-100 text-amber-700",
-                )}>
-                  {mySalary.status === "paid"     ? t("payroll.statusPaid", "Выплачено") :
-                   mySalary.status === "approved" ? t("payroll.statusApproved", "Утверждено") :
-                                                    t("payroll.statusPending", "Предварительно")}
-                </span>
-              )}
+          {/* SECONDARY: Revenue + analytics link */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">
+                {t("dashboard.myRevenue", "Выручка")}
+              </p>
+              <p className="text-base font-semibold text-gray-700">
+                {isLoading ? "—" : fmtRevenue(revenueThisMonth)}
+              </p>
             </div>
-
-            {!mySalary ? (
-              <p className="text-xs text-gray-400 italic">{t("payroll.noSettings", "Настройки зарплаты не заданы")}</p>
-            ) : (
-              <>
-                {/* Rate line */}
-                <p className="text-[11px] text-gray-400 mb-1.5">
-                  {mySalary.salaryType === "fixed" && `${t("payroll.fixed", "Оклад")}: ${fmtRevenue(mySalary.fixedAmount)}`}
-                  {mySalary.salaryType === "commission" && `${mySalary.commissionPercent}% ${t("payroll.ofRevenue", "от выручки")}`}
-                  {mySalary.salaryType === "fixed_plus_commission" && `${fmtRevenue(mySalary.fixedAmount)} + ${mySalary.commissionPercent}%`}
-                </p>
-                <div className="flex items-end justify-between">
-                  <div>
-                    <p className="text-lg font-bold text-gray-900">
-                      {fmtRevenue(salaryTotal ?? mySalary.calculatedSalary)}
-                    </p>
-                    {salaryPaid !== null && salaryPaid > 0 && mySalary.status === "paid" && (
-                      <p className="text-xs text-emerald-600 mt-0.5">
-                        ✓ {t("payroll.paid", "Выплачено")}: {fmtRevenue(salaryPaid)}
-                      </p>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => navigate("/payroll/my")}
-                    className="text-xs font-semibold px-3 py-1.5 rounded-xl"
-                    style={{ backgroundColor: "#98cc1c22", color: "#98cc1c" }}
-                  >
-                    {t("payroll.history", "История")}
-                  </button>
-                </div>
-              </>
-            )}
+            <button
+              onClick={() => navigate("/doctor-analytics")}
+              className="flex items-center gap-0.5 text-xs font-semibold"
+              style={{ color: "#98cc1c" }}
+            >
+              {t("dashboard.details", "Подробнее")} <ChevronRight className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
       </div>

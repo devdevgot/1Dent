@@ -64,6 +64,7 @@ const DEV_MOCK_USER: User = {
   name: "Dev Owner",
   email: "dev@clinic.com",
   role: "owner",
+  isActive: true,
   createdAt: new Date().toISOString(),
 };
 

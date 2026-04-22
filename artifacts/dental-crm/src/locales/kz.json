@@ -972,6 +972,10 @@
     "searchPlaceholder": "Аты немесе email бойынша іздеу...",
     "analytics": "Аналитика",
     "showInactive": "Белсенді еместерді көрсету",
-    "includingInactive": "белсенді еместерді қоса"
+    "includingInactive": "белсенді еместерді қоса",
+    "statusActive": "Белсенді",
+    "statusInactive": "Белсенді емес",
+    "statusActiveHint": "Жүйеге кіре алады",
+    "statusInactiveHint": "Қол жеткізу бұғатталған"
   }
 }

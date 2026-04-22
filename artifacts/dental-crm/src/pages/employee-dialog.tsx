@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, User2, Briefcase, Wallet, Eye, EyeOff } from "lucide-react";
+import { X, User2, Briefcase, Wallet, Eye, EyeOff, ToggleLeft, ToggleRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { User } from "@workspace/api-client-react";
 
@@ -20,11 +20,13 @@ export interface EmployeeFormData {
   email: string;
   password: string;
   role: Role;
+  isActive: boolean;
   phone: string;
   position: string;
   specialty: string;
   hireDate: string;
   maxPatientsPerDay: number;
+  maxPatientsChanged: boolean;
   salaryType: "fixed" | "commission" | "fixed_plus_commission";
   fixedAmount: number;
   commissionPercent: number;
@@ -50,20 +52,14 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
   const [activeTab, setActiveTab] = useState<TabKey>("personal");
   const [showPassword, setShowPassword] = useState(false);
 
-  const [form, setForm] = useState<EmployeeFormData>({
-    name: "",
-    email: "",
-    password: "",
-    role: "doctor",
-    phone: "",
-    position: "",
-    specialty: "",
-    hireDate: "",
-    maxPatientsPerDay: 15,
-    salaryType: "fixed",
-    fixedAmount: 0,
-    commissionPercent: 0,
-  });
+  const defaultForm: EmployeeFormData = {
+    name: "", email: "", password: "", role: "doctor",
+    isActive: true, phone: "", position: "", specialty: "", hireDate: "",
+    maxPatientsPerDay: 15, maxPatientsChanged: false,
+    salaryType: "fixed", fixedAmount: 0, commissionPercent: 0,
+  };
+
+  const [form, setForm] = useState<EmployeeFormData>(defaultForm);
 
   useEffect(() => {
     if (!open) {
@@ -76,26 +72,28 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
         email: editUser.email ?? "",
         password: "",
         role: (editUser.role as Role) ?? "doctor",
+        isActive: editUser.isActive !== false,
         phone: editUser.phone ?? "",
         position: editUser.position ?? "",
         specialty: editUser.specialty ?? "",
         hireDate: editUser.hireDate ?? "",
         maxPatientsPerDay: 15,
+        maxPatientsChanged: false,
         salaryType: editUser.salarySettings?.salaryType ?? "fixed",
         fixedAmount: Number(editUser.salarySettings?.fixedAmount ?? 0),
         commissionPercent: Number(editUser.salarySettings?.commissionPercent ?? 0),
       });
     } else {
-      setForm({
-        name: "", email: "", password: "", role: "doctor",
-        phone: "", position: "", specialty: "", hireDate: "",
-        maxPatientsPerDay: 15, salaryType: "fixed", fixedAmount: 0, commissionPercent: 0,
-      });
+      setForm(defaultForm);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editUser]);
 
-  const set = (field: keyof EmployeeFormData, value: string | number) =>
+  const set = (field: keyof EmployeeFormData, value: string | number | boolean) =>
     setForm((prev) => ({ ...prev, [field]: value }));
+  
+  const setMaxPatients = (value: number) =>
+    setForm((prev) => ({ ...prev, maxPatientsPerDay: value, maxPatientsChanged: true }));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -236,6 +234,38 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                           className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/30"
                         />
                       </div>
+
+                      {isEdit && (
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 mb-2">
+                            {t("employees.status", "Статус")}
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => set("isActive", !form.isActive)}
+                            className="w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all"
+                            style={form.isActive
+                              ? { borderColor: "#98cc1c", backgroundColor: "#98cc1c11" }
+                              : { borderColor: "#e5e7eb", backgroundColor: "#f9fafb" }}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              {form.isActive
+                                ? <ToggleRight className="w-5 h-5" style={{ color: "#98cc1c" }} />
+                                : <ToggleLeft className="w-5 h-5 text-gray-400" />}
+                              <span className="text-sm font-semibold" style={form.isActive ? { color: "#98cc1c" } : { color: "#6b7280" }}>
+                                {form.isActive
+                                  ? t("employees.statusActive", "Активен")
+                                  : t("employees.statusInactive", "Неактивен")}
+                              </span>
+                            </div>
+                            <span className="text-xs text-gray-400">
+                              {form.isActive
+                                ? t("employees.statusActiveHint", "Может входить в систему")
+                                : t("employees.statusInactiveHint", "Доступ заблокирован")}
+                            </span>
+                          </button>
+                        </div>
+                      )}
                     </motion.div>
                   )}
 
@@ -305,7 +335,7 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                               min={1}
                               max={50}
                               value={form.maxPatientsPerDay}
-                              onChange={(e) => set("maxPatientsPerDay", Number(e.target.value))}
+                              onChange={(e) => setMaxPatients(Number(e.target.value))}
                               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/30"
                             />
                           </div>

@@ -972,6 +972,10 @@
     "searchPlaceholder": "Search by name or email...",
     "analytics": "Analytics",
     "showInactive": "Show inactive",
-    "includingInactive": "including inactive"
+    "includingInactive": "including inactive",
+    "statusActive": "Active",
+    "statusInactive": "Inactive",
+    "statusActiveHint": "Can log in to the system",
+    "statusInactiveHint": "Access blocked"
   }
 }

@@ -976,6 +976,10 @@
     "searchPlaceholder": "Поиск по имени или email...",
     "analytics": "Аналитика",
     "showInactive": "Показать неактивных",
-    "includingInactive": "включая неактивных"
+    "includingInactive": "включая неактивных",
+    "statusActive": "Активен",
+    "statusInactive": "Неактивен",
+    "statusActiveHint": "Может входить в систему",
+    "statusInactiveHint": "Доступ заблокирован"
   }
 }

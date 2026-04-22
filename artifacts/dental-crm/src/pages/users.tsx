@@ -25,6 +25,13 @@ import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import EmployeeDialog, { type EmployeeFormData } from "./employee-dialog";
 import { cn } from "@/lib/utils";
 
+interface CreateUserApiResponse {
+  user?: {
+    id?: string;
+    rawPassword?: string;
+  };
+}
+
 const ROLES = ["admin", "doctor", "accountant", "warehouse"] as const;
 
 const ROLE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
@@ -185,12 +192,12 @@ export default function UsersPage() {
       onSuccess: (res) => {
         invalidate();
         setDialogOpen(false);
-        const rawPw = ((res?.data as unknown) as Record<string, Record<string, unknown>>)?.user?.rawPassword as string | undefined;
+        const rawPw = (res?.data as unknown as CreateUserApiResponse)?.user?.rawPassword;
         if (rawPw) {
           toast.success(t("employees.created", "Сотрудник создан"), {
             description: `${t("employees.password", "Пароль")}: ${rawPw}`,
             action: {
-              label: <span className="flex items-center gap-1"><Copy className="w-3 h-3" />{t("employees.copy", "Копировать")}</span> as unknown as string,
+              label: t("employees.copy", "Копировать"),
               onClick: () => void navigator.clipboard.writeText(rawPw),
             },
             duration: 12000,
@@ -277,11 +284,14 @@ export default function UsersPage() {
           },
         });
       }
-      if (formData.role === "doctor" && formData.maxPatientsPerDay > 0) {
+      if (formData.role === "doctor" && formData.maxPatientsChanged) {
         await capacityMutation.mutateAsync({
           id: editingUser.id,
           data: { maxPatientsPerDay: formData.maxPatientsPerDay },
         });
+      }
+      if (formData.isActive !== (editingUser.isActive !== false)) {
+        await statusMutation.mutateAsync({ id: editingUser.id, isActive: formData.isActive });
       }
     } else {
       const res = await createMutation.mutateAsync({
@@ -297,7 +307,7 @@ export default function UsersPage() {
           maxPatientsPerDay: formData.maxPatientsPerDay,
         },
       });
-      const newUserId = ((res?.data as unknown) as Record<string, Record<string, unknown>>)?.user?.id as string | undefined;
+      const newUserId = (res?.data as unknown as CreateUserApiResponse)?.user?.id;
       if (newUserId && isOwnerOrAdminForSalary) {
         await updateSalaryMutation.mutateAsync({
           userId: newUserId,
