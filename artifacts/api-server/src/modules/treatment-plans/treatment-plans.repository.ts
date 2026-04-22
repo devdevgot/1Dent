@@ -498,12 +498,12 @@ export class TreatmentPlansRepository {
         patientId: item.patientId,
         doctorId,
         name: item.title,
-        status: "completed",
+        status: "pending_payment",
         price: item.price,
         notes: item.mkb10Code ? `МКБ-10: ${item.mkb10Code}` : null,
         paymentMethod: null,
         scheduledAt: new Date(),
-        completedAt: new Date(),
+        completedAt: null,
         createdAt: new Date(),
       });
 

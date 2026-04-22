@@ -605,15 +605,17 @@
     "searchPlaceholder": "Поиск по названию...",
     "statusAll": "Все",
     "status": {
-      "scheduled":   "Запланирована",
-      "in_progress": "В процессе",
-      "completed":   "Завершена",
-      "cancelled":   "Отменена"
+      "scheduled":       "Запланирована",
+      "in_progress":     "В процессе",
+      "pending_payment": "Ожидает оплаты",
+      "completed":       "Завершена",
+      "cancelled":       "Отменена"
     },
     "markAs": {
-      "in_progress": "Начать",
-      "completed":   "Завершить",
-      "cancelled":   "Отменить"
+      "in_progress":     "Начать",
+      "pending_payment": "Ожидает оплаты",
+      "completed":       "Завершить",
+      "cancelled":       "Отменить"
     },
     "col": {
       "name":      "Процедура",

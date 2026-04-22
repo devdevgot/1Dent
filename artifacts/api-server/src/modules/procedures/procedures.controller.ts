@@ -25,6 +25,7 @@ const inventoryRepo = new InventoryRepository();
 const procedureStatusValues = [
   "scheduled",
   "in_progress",
+  "pending_payment",
   "completed",
   "cancelled",
 ] as const;
@@ -255,7 +256,7 @@ router.patch(
 
     analyticsRepo.invalidateClinicCache(clinicId).catch(() => {});
 
-    if (parsed.data.status === "completed" && procedure.patientId) {
+    if ((parsed.data.status === "completed" || parsed.data.status === "pending_payment") && procedure.patientId) {
       const [existing] = await db
         .select({ id: postopFollowupsTable.id })
         .from(postopFollowupsTable)

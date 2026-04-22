@@ -1,19 +1,31 @@
+import { useState } from "react";
 import { useAuthStore } from "@/hooks/use-auth";
 import {
   useListProcedures,
   useListPatients,
   useGetDoctorKpis,
   getGetDoctorKpisQueryKey,
+  useUpdateProcedurePayment,
 } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Users, Calendar,
   KanbanSquare, Stethoscope, ChevronRight,
-  Clock, Package, Wallet, PlusCircle,
+  Clock, Package, Wallet, PlusCircle, CheckCircle2,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
 import { format, parseISO, startOfDay, endOfDay } from "date-fns";
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  kaspi_transfer: "Kaspi Transfer",
+  cash:           "Наличные",
+  kaspi_qr:       "Kaspi QR",
+  terminal:       "Терминал",
+  kaspi_red:      "Kaspi Red",
+  debt:           "Долг",
+};
 
 const BRAND_GREEN = "#98cc1c";
 
@@ -21,11 +33,22 @@ export default function AdminDashboard() {
   const { t } = useTranslation();
   const { user, clinic } = useAuthStore();
   const [, navigate] = useLocation();
+  const [selectingPayment, setSelectingPayment] = useState<string | null>(null);
+  const qc = useQueryClient();
 
   const { data: proceduresData } = useListProcedures();
   const { data: patientsData } = useListPatients();
   const { data: kpiData } = useGetDoctorKpis({
     query: { queryKey: getGetDoctorKpisQueryKey() },
+  });
+
+  const updatePayment = useUpdateProcedurePayment({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["/procedures"] });
+        setSelectingPayment(null);
+      },
+    },
   });
 
   const procedures = proceduresData?.data?.procedures ?? [];
@@ -49,6 +72,12 @@ export default function AdminDashboard() {
   });
 
   const activeTasks = procedures.filter((p) => p.status === "in_progress");
+
+  const pendingPaymentQueue = procedures.filter((p) => {
+    if (p.status !== "pending_payment") return false;
+    const d = p.scheduledAt ? parseISO(p.scheduledAt) : null;
+    return d ? d >= todayStart && d <= todayEnd : true;
+  });
 
   const formatMoney = (v: number) => v.toLocaleString("ru-RU") + " ₸";
 
@@ -220,6 +249,78 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Pending Payment Queue */}
+      {pendingPaymentQueue.length > 0 && (
+        <div className="bg-white rounded-2xl border border-orange-200 shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-orange-100 flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-orange-500" />
+            <h3 className="text-base font-bold text-gray-900">Ожидают оплаты сегодня</h3>
+            <span className="ml-1 text-xs font-bold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">
+              {pendingPaymentQueue.length}
+            </span>
+            <button
+              onClick={() => navigate("/admin/finance")}
+              className="ml-auto text-sm text-primary font-semibold flex items-center gap-1 hover:underline"
+            >
+              Все <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="divide-y divide-orange-50">
+            {pendingPaymentQueue.map((proc, i) => {
+              const patient = patients.find((p) => p.id === proc.patientId);
+              const isSelecting = selectingPayment === proc.id;
+              const isSaving = updatePayment.isPending;
+              return (
+                <motion.div
+                  key={proc.id}
+                  initial={{ opacity: 0, x: -4 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                  className="flex items-center gap-4 px-5 py-3"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{proc.name}</p>
+                    <p className="text-xs text-gray-500">
+                      {patient?.name ?? "—"}
+                      {proc.doctorName && ` · ${proc.doctorName}`}
+                      {proc.price ? ` · ${formatMoney(proc.price)}` : ""}
+                    </p>
+                  </div>
+                  {isSelecting ? (
+                    <div className="flex flex-wrap gap-1.5 justify-end">
+                      {(["cash", "kaspi_qr", "kaspi_transfer", "terminal", "kaspi_red", "debt"] as const).map((method) => (
+                        <button
+                          key={method}
+                          disabled={isSaving}
+                          onClick={() => updatePayment.mutate({ id: proc.id, data: { paymentMethod: method } })}
+                          className="px-2 py-1 text-xs rounded-lg border border-gray-200 hover:border-primary hover:bg-primary/10 hover:text-primary transition-colors disabled:opacity-50"
+                        >
+                          {PAYMENT_METHOD_LABELS[method]}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => setSelectingPayment(null)}
+                        className="px-2 py-1 text-xs rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 transition-colors"
+                      >
+                        Отмена
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setSelectingPayment(proc.id)}
+                      className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Принять оплату
+                    </button>
+                  )}
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Quick Links row */}
       <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">

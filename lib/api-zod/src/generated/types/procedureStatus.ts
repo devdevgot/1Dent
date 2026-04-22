@@ -12,6 +12,7 @@ export type ProcedureStatus =
 export const ProcedureStatus = {
   scheduled: "scheduled",
   in_progress: "in_progress",
+  pending_payment: "pending_payment",
   completed: "completed",
   cancelled: "cancelled",
 } as const;

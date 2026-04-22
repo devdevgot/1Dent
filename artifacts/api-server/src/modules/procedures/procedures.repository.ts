@@ -253,7 +253,7 @@ export class ProceduresRepository {
   async updatePayment(id: string, clinicId: string, paymentMethod: PaymentMethod): Promise<Procedure | null> {
     const [updated] = await db
       .update(proceduresTable)
-      .set({ paymentMethod })
+      .set({ paymentMethod, status: "completed", completedAt: new Date() })
       .where(and(eq(proceduresTable.id, id), eq(proceduresTable.clinicId, clinicId)))
       .returning();
     return updated ?? null;

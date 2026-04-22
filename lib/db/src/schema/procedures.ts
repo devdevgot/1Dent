@@ -14,6 +14,7 @@ import { inventoryItemsTable } from "./dental";
 export const procedureStatusEnum = pgEnum("procedure_status", [
   "scheduled",
   "in_progress",
+  "pending_payment",
   "completed",
   "cancelled",
 ]);

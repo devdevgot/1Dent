@@ -155,9 +155,7 @@ export default function AdminFinancePage() {
   }, [allProcedures]);
 
   const pendingProcedures = useMemo(() => {
-    return allProcedures.filter(
-      (p) => p.status === "completed" && p.paymentMethod == null,
-    );
+    return allProcedures.filter((p) => p.status === "pending_payment");
   }, [allProcedures]);
 
   const totalRevenue = filtered.reduce((acc, p) => acc + (p.price ?? 0), 0);
@@ -582,6 +580,7 @@ export default function AdminFinancePage() {
             >
               <option value="">{t("adminFinance.allStatuses")}</option>
               <option value="completed">{t("adminFinance.completed")}</option>
+              <option value="pending_payment">Ожидает оплаты</option>
               <option value="scheduled">{t("adminFinance.scheduled")}</option>
               <option value="in_progress">{t("adminFinance.inProgress")}</option>
               <option value="cancelled">{t("adminFinance.cancelled")}</option>

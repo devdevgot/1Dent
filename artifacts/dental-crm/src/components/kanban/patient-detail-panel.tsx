@@ -1829,7 +1829,6 @@ export function PatientDetailPanel() {
                                     onChange={(e) => setPickerSearch(e.target.value)}
                                     placeholder="Поиск услуги..."
                                     className="w-full pl-7 pr-7 py-1.5 text-xs rounded-lg border border-border bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/60"
-                                    autoFocus
                                   />
                                   {pickerSearch && (
                                     <button

@@ -28,17 +28,19 @@ import {
 } from "lucide-react";
 
 const STATUS_COLORS: Record<ProcedureStatus, string> = {
-  scheduled:   "bg-blue-50 text-blue-700 border-blue-200",
-  in_progress: "bg-amber-50 text-amber-700 border-amber-200",
-  completed:   "bg-emerald-50 text-emerald-700 border-emerald-200",
-  cancelled:   "bg-slate-100 text-slate-500 border-slate-200",
+  scheduled:       "bg-blue-50 text-blue-700 border-blue-200",
+  in_progress:     "bg-amber-50 text-amber-700 border-amber-200",
+  pending_payment: "bg-orange-50 text-orange-700 border-orange-200",
+  completed:       "bg-emerald-50 text-emerald-700 border-emerald-200",
+  cancelled:       "bg-slate-100 text-slate-500 border-slate-200",
 };
 
 const STATUS_ICONS: Record<ProcedureStatus, React.ElementType> = {
-  scheduled:   Clock,
-  in_progress: PlayCircle,
-  completed:   CheckCircle2,
-  cancelled:   XCircle,
+  scheduled:       Clock,
+  in_progress:     PlayCircle,
+  pending_payment: Clock,
+  completed:       CheckCircle2,
+  cancelled:       XCircle,
 };
 
 function StatusBadge({ status }: { status: ProcedureStatus }) {
@@ -718,7 +720,7 @@ export function ProceduresContent({ onAdd }: { onAdd?: () => void } = {}) {
 
       {/* Status filter pills */}
       <div className="flex gap-2 flex-wrap">
-        {(["all", "scheduled", "in_progress", "completed", "cancelled"] as const).map((s) => (
+        {(["all", "scheduled", "in_progress", "pending_payment", "completed", "cancelled"] as const).map((s) => (
           <button
             key={s}
             onClick={() => setFilter(s)}
