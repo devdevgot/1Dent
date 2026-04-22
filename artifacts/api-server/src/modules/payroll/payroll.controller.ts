@@ -132,7 +132,14 @@ router.post(
         return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
       }
 
-      const { year, month, employees } = parsed.data;
+      const { year, month } = parsed.data;
+      const seenUserIds = new Set<string>();
+      const employees = parsed.data.employees.filter((e) => {
+        if (seenUserIds.has(e.userId)) return false;
+        seenUserIds.add(e.userId);
+        return true;
+      });
+
       const result = await repo.approvePeriodPayroll(
         req.user!.clinicId,
         req.user!.userId,
