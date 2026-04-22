@@ -40,6 +40,17 @@ export class PatientsRepository {
     return patient;
   }
 
+  async findByIIN(clinicId: string, iin: string): Promise<Patient | null> {
+    const [patient] = await db
+      .select()
+      .from(patientsTable)
+      .where(
+        and(eq(patientsTable.clinicId, clinicId), eq(patientsTable.iin, iin)),
+      )
+      .limit(1);
+    return patient ?? null;
+  }
+
   async create(data: InsertPatient): Promise<Patient> {
     const [patient] = await db.insert(patientsTable).values(data).returning();
     return patient!;

@@ -115,6 +115,23 @@ router.post("/", patientWriteRoles, async (req: Request, res: Response, next: Ne
   res.status(201).json({ success: true, data: { patient: result } });
 });
 
+// GET /patients/by-iin/:iin — must be before /:id
+router.get(
+  "/by-iin/:iin",
+  patientReadRoles,
+  async (req: Request, res: Response, next: NextFunction) => {
+    const iin = String(req.params["iin"]);
+    if (!/^\d{12}$/.test(iin)) {
+      return next(new ValidationError("ИИН должен содержать ровно 12 цифр"));
+    }
+    const patient = await service
+      .findByIIN(req.user!.clinicId, iin, req.user!.role, req.user!.userId)
+      .catch(next);
+    if (patient === undefined) return;
+    res.json({ success: true, data: { patient } });
+  },
+);
+
 // GET /patients/:id
 router.get(
   "/:id",

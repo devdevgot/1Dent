@@ -62,6 +62,17 @@ export class PatientsService {
     };
   }
 
+  async findByIIN(
+    clinicId: string,
+    iin: string,
+    requestingRole: UserRole,
+    _requestingUserId: string,
+  ): Promise<PatientDTO | null> {
+    const patient = await this.repo.findByIIN(clinicId, iin);
+    if (!patient) return null;
+    return { ...patient, phone: maskPhone(patient.phone, requestingRole) };
+  }
+
   async create(
     clinicId: string,
     data: {

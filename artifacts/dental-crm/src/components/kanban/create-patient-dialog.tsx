@@ -1,14 +1,16 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   useCreatePatient,
   useListUsers,
   useListChannels,
+  useListPatients,
   getListPatientsQueryKey,
   getListUsersQueryKey,
   getListChannelsQueryKey,
 } from "@workspace/api-client-react";
+import type { Patient } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { X } from "lucide-react";
+import { X, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -17,11 +19,19 @@ import { parseIIN, isIINError } from "@workspace/api-zod";
 
 interface CreatePatientDialogProps {
   onClose: () => void;
+  onExistingPatient?: (patientId: string) => void;
 }
 
 const SOURCE_KEYS = ["referral", "walk_in"] as const;
 
-export function CreatePatientDialog({ onClose }: CreatePatientDialogProps) {
+function formatDob(dob: string | null | undefined): string {
+  if (!dob) return "";
+  const d = new Date(dob);
+  if (isNaN(d.getTime())) return dob;
+  return d.toLocaleDateString("ru-RU");
+}
+
+export function CreatePatientDialog({ onClose, onExistingPatient }: CreatePatientDialogProps) {
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const { toast } = useToast();
@@ -52,6 +62,19 @@ export function CreatePatientDialog({ onClose }: CreatePatientDialogProps) {
     },
   });
   const channels = channelsData?.data?.channels ?? [];
+
+  const { data: patientsData } = useListPatients({
+    query: {
+      queryKey: getListPatientsQueryKey(),
+      staleTime: 60_000,
+    },
+  });
+  const allPatients: Patient[] = patientsData?.data?.patients ?? [];
+
+  const foundPatient = useMemo<Patient | null>(() => {
+    if (iin.length !== 12 || iinError) return null;
+    return allPatients.find((p) => p.iin === iin) ?? null;
+  }, [iin, iinError, allPatients]);
 
   const mutation = useCreatePatient({
     mutation: {
@@ -106,6 +129,7 @@ export function CreatePatientDialog({ onClose }: CreatePatientDialogProps) {
     e.preventDefault();
 
     if (iin && iinError) return;
+    if (foundPatient) return;
 
     mutation.mutate({
       data: {
@@ -140,32 +164,7 @@ export function CreatePatientDialog({ onClose }: CreatePatientDialogProps) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.fullName")}</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              minLength={2}
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-              placeholder={t("createPatient.fullNamePlaceholder")}
-            />
-          </div>
-
-          <div>
-            <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.phone")}</label>
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              required
-              minLength={5}
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-              placeholder={t("createPatient.phonePlaceholder")}
-            />
-          </div>
-
+          {/* ИИН — первое поле */}
           <div>
             <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.iin")}</label>
             <input
@@ -175,7 +174,7 @@ export function CreatePatientDialog({ onClose }: CreatePatientDialogProps) {
               maxLength={12}
               inputMode="numeric"
               className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono ${
-                iinError ? "border-red-400 bg-red-50" : "border-border"
+                iinError ? "border-red-400 bg-red-50" : foundPatient ? "border-green-400 bg-green-50" : "border-border"
               }`}
               placeholder={t("createPatient.iinPlaceholder")}
             />
@@ -187,87 +186,164 @@ export function CreatePatientDialog({ onClose }: CreatePatientDialogProps) {
             )}
           </div>
 
-          <div className="grid grid-cols-[5fr_7fr] gap-3">
-            <div>
-              <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.dateOfBirth")}</label>
-              <input
-                type="date"
-                value={dateOfBirth}
-                onChange={(e) => setDateOfBirth(e.target.value)}
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.gender")}</label>
-              <select
-                value={gender}
-                onChange={(e) => setGender(e.target.value as "male" | "female" | "other" | "")}
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
-              >
-                <option value="">{t("gender.notSpecified")}</option>
-                <option value="male">{t("gender.male")}</option>
-                <option value="female">{t("gender.female")}</option>
-                <option value="other">{t("gender.other")}</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.source")}</label>
-            <select
-              value={source}
-              onChange={(e) => setSource(e.target.value)}
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
-            >
-              {SOURCE_KEYS.map((s) => (
-                <option key={s} value={s}>{t(`source.${s}`)}</option>
-              ))}
-              {channels.length > 0 && (
-                <optgroup label={t("channels.sectionTitle")}>
-                  {channels.map((c) => (
-                    <option key={c.id} value={`ref:${c.refCode}`}>{c.name}</option>
-                  ))}
-                </optgroup>
-              )}
-            </select>
-          </div>
-
-          {doctors.length > 0 && (
-            <div>
-              <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.doctor")}</label>
-              <select
-                value={doctorId}
-                onChange={(e) => setDoctorId(e.target.value)}
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
-              >
-                <option value="">{t("createPatient.noDoctor")}</option>
-                {doctors.map((d) => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
-                ))}
-              </select>
+          {/* Карточка найденного пациента */}
+          {foundPatient && (
+            <div className="rounded-xl border border-green-200 bg-green-50 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <UserCheck className="w-4 h-4 text-green-600 shrink-0" />
+                <p className="text-sm font-semibold text-green-800">{t("createPatient.foundPatientTitle")}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-gray-900">{foundPatient.name}</p>
+                <p className="text-xs text-gray-500">{foundPatient.phone}</p>
+                {foundPatient.dateOfBirth && (
+                  <p className="text-xs text-gray-500">{formatDob(foundPatient.dateOfBirth)}</p>
+                )}
+                {foundPatient.gender && (
+                  <p className="text-xs text-gray-500">{genderLabel(foundPatient.gender)}</p>
+                )}
+              </div>
+              <p className="text-xs text-green-700">{t("createPatient.foundPatientHint")}</p>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm"
+                  onClick={() => {
+                    onClose();
+                    onExistingPatient?.(foundPatient.id);
+                  }}
+                >
+                  {t("createPatient.foundPatientOpen")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1 text-sm"
+                  onClick={() => {
+                    setIin("");
+                    setIinError(null);
+                    setDateOfBirth("");
+                    setGender("");
+                  }}
+                >
+                  {t("createPatient.foundPatientCreate")}
+                </Button>
+              </div>
             </div>
           )}
 
-          <div>
-            <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.notes")}</label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={2}
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
-              placeholder={t("createPatient.notesPlaceholder")}
-            />
-          </div>
+          {/* Остальные поля скрыты если найден пациент */}
+          {!foundPatient && (
+            <>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.fullName")}</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  minLength={2}
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  placeholder={t("createPatient.fullNamePlaceholder")}
+                />
+              </div>
 
-          <div className="flex gap-3 pt-1">
-            <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
-              {t("createPatient.cancel")}
-            </Button>
-            <Button type="submit" className="flex-1" disabled={mutation.isPending || (iin.length > 0 && !!iinError)}>
-              {mutation.isPending ? t("createPatient.submitting") : t("createPatient.submit")}
-            </Button>
-          </div>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.phone")}</label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  required
+                  minLength={5}
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  placeholder={t("createPatient.phonePlaceholder")}
+                />
+              </div>
+
+              <div className="grid grid-cols-[5fr_7fr] gap-3">
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.dateOfBirth")}</label>
+                  <input
+                    type="date"
+                    value={dateOfBirth}
+                    onChange={(e) => setDateOfBirth(e.target.value)}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.gender")}</label>
+                  <select
+                    value={gender}
+                    onChange={(e) => setGender(e.target.value as "male" | "female" | "other" | "")}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
+                  >
+                    <option value="">{t("gender.notSpecified")}</option>
+                    <option value="male">{t("gender.male")}</option>
+                    <option value="female">{t("gender.female")}</option>
+                    <option value="other">{t("gender.other")}</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.source")}</label>
+                <select
+                  value={source}
+                  onChange={(e) => setSource(e.target.value)}
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
+                >
+                  {SOURCE_KEYS.map((s) => (
+                    <option key={s} value={s}>{t(`source.${s}`)}</option>
+                  ))}
+                  {channels.length > 0 && (
+                    <optgroup label={t("channels.sectionTitle")}>
+                      {channels.map((c) => (
+                        <option key={c.id} value={`ref:${c.refCode}`}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
+              </div>
+
+              {doctors.length > 0 && (
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.doctor")}</label>
+                  <select
+                    value={doctorId}
+                    onChange={(e) => setDoctorId(e.target.value)}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
+                  >
+                    <option value="">{t("createPatient.noDoctor")}</option>
+                    {doctors.map((d) => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.notes")}</label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={2}
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+                  placeholder={t("createPatient.notesPlaceholder")}
+                />
+              </div>
+
+              <div className="flex gap-3 pt-1">
+                <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
+                  {t("createPatient.cancel")}
+                </Button>
+                <Button type="submit" className="flex-1" disabled={mutation.isPending || (iin.length > 0 && !!iinError)}>
+                  {mutation.isPending ? t("createPatient.submitting") : t("createPatient.submit")}
+                </Button>
+              </div>
+            </>
+          )}
         </form>
       </div>
     </div>

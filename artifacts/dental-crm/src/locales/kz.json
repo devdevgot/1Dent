@@ -250,9 +250,10 @@
     "fullNamePlaceholder": "Иванов Иван Иванович",
     "phone": "Телефон *",
     "phonePlaceholder": "+7 900 000 00 00",
-    "iin": "ЖСН (12 сан)",
+    "iin": "ЖСН",
     "iinPlaceholder": "920315XXXXXX",
-    "iinHint": "Міндетті емес. Туған күн мен жынысты автоматты толтырады.",
+    "iinHint": "ЖСН енгізіңіз — жыныс пен туған күн автоматты толтырылады.",
+    "iinRequired": "ЖСН *",
     "dateOfBirth": "Туған күні",
     "gender": "Жынысы",
     "source": "Қайдан келді",
@@ -265,7 +266,11 @@
     "submitting": "Сақталуда...",
     "successTitle": "Пациент қосылды",
     "errorTitle": "Қате",
-    "errorDesc": "Пациентті қосу мүмкін болмады"
+    "errorDesc": "Пациентті қосу мүмкін болмады",
+    "foundPatientTitle": "Пациент тіркелген",
+    "foundPatientHint": "Бұл ЖСН-мен пациент базада бар. Оның картасын ашыңыз.",
+    "foundPatientOpen": "Картаны ашу",
+    "foundPatientCreate": "Жаңасын жасау"
   },
   "gender": {
     "male": "Еркек",

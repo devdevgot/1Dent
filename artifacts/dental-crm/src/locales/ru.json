@@ -246,13 +246,14 @@
   },
   "createPatient": {
     "title": "Новый пациент",
+    "iin": "ИИН",
+    "iinPlaceholder": "920315XXXXXX",
+    "iinHint": "Введите ИИН — пол и дата рождения заполнятся автоматически.",
+    "iinRequired": "ИИН *",
     "fullName": "ФИО *",
     "fullNamePlaceholder": "Иванов Иван Иванович",
     "phone": "Телефон *",
     "phonePlaceholder": "+7 900 000 00 00",
-    "iin": "ИИН (12 цифр)",
-    "iinPlaceholder": "920315XXXXXX",
-    "iinHint": "Необязательно. При вводе заполняет дату рождения и пол.",
     "dateOfBirth": "Дата рождения",
     "gender": "Пол",
     "source": "Источник",
@@ -265,7 +266,11 @@
     "submitting": "Сохранение...",
     "successTitle": "Пациент добавлен",
     "errorTitle": "Ошибка",
-    "errorDesc": "Не удалось добавить пациента"
+    "errorDesc": "Не удалось добавить пациента",
+    "foundPatientTitle": "Пациент уже зарегистрирован",
+    "foundPatientHint": "Пациент с таким ИИН уже есть в базе. Откройте его карточку.",
+    "foundPatientOpen": "Открыть карточку",
+    "foundPatientCreate": "Создать нового"
   },
   "gender": {
     "male": "Мужской",

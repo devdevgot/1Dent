@@ -250,9 +250,10 @@
     "fullNamePlaceholder": "John Smith",
     "phone": "Phone *",
     "phonePlaceholder": "+1 900 000 0000",
-    "iin": "IIN (12 digits)",
+    "iin": "IIN",
     "iinPlaceholder": "920315XXXXXX",
-    "iinHint": "Optional. Auto-fills date of birth and gender.",
+    "iinHint": "Enter IIN — gender and date of birth will be filled automatically.",
+    "iinRequired": "IIN *",
     "dateOfBirth": "Date of Birth",
     "gender": "Gender",
     "source": "Source",
@@ -265,7 +266,11 @@
     "submitting": "Saving...",
     "successTitle": "Patient added",
     "errorTitle": "Error",
-    "errorDesc": "Failed to add patient"
+    "errorDesc": "Failed to add patient",
+    "foundPatientTitle": "Patient already registered",
+    "foundPatientHint": "A patient with this IIN already exists. Open their card.",
+    "foundPatientOpen": "Open card",
+    "foundPatientCreate": "Create new"
   },
   "gender": {
     "male": "Male",

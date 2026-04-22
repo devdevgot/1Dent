@@ -1,4 +1,5 @@
-import { pgTable, text, timestamp, varchar, date, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, varchar, date, pgEnum, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { clinicsTable } from "./clinics";
 import { usersTable } from "./users";
 
@@ -37,29 +38,37 @@ export const patientGenderEnum = pgEnum("patient_gender", [
   "other",
 ]);
 
-export const patientsTable = pgTable("patients", {
-  id: text("id").primaryKey(),
-  clinicId: text("clinic_id")
-    .notNull()
-    .references(() => clinicsTable.id, { onDelete: "cascade" }),
-  doctorId: text("doctor_id").references(() => usersTable.id, {
-    onDelete: "set null",
-  }),
-  name: text("name").notNull(),
-  phone: text("phone").notNull(),
-  iin: varchar("iin", { length: 12 }),
-  dateOfBirth: date("date_of_birth"),
-  gender: patientGenderEnum("gender"),
-  source: text("source").default("other").notNull(),
-  status: patientStatusEnum("status").default("new_request").notNull(),
-  notes: text("notes"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const patientsTable = pgTable(
+  "patients",
+  {
+    id: text("id").primaryKey(),
+    clinicId: text("clinic_id")
+      .notNull()
+      .references(() => clinicsTable.id, { onDelete: "cascade" }),
+    doctorId: text("doctor_id").references(() => usersTable.id, {
+      onDelete: "set null",
+    }),
+    name: text("name").notNull(),
+    phone: text("phone").notNull(),
+    iin: varchar("iin", { length: 12 }),
+    dateOfBirth: date("date_of_birth"),
+    gender: patientGenderEnum("gender"),
+    source: text("source").default("other").notNull(),
+    status: patientStatusEnum("status").default("new_request").notNull(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex("patients_clinic_iin_uidx")
+      .on(t.clinicId, t.iin)
+      .where(sql`${t.iin} IS NOT NULL`),
+  ],
+);
 
 export const patientInteractionsTable = pgTable("patient_interactions", {
   id: text("id").primaryKey(),

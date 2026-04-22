@@ -32,7 +32,7 @@ export default function KanbanPage() {
   const { user } = useAuthStore();
   const canCreate = user?.role === "owner" || user?.role === "admin";
   const queryClient = useQueryClient();
-  const { isCreateOpen, setIsCreateOpen } = useKanbanStore();
+  const { isCreateOpen, setIsCreateOpen, setSelectedPatientId } = useKanbanStore();
   const [activeDragPatient, setActiveDragPatient] = useState<Patient | null>(null);
 
   const sensors = useSensors(
@@ -177,7 +177,15 @@ export default function KanbanPage() {
 
       <PatientDetailPanel />
 
-      {isCreateOpen && <CreatePatientDialog onClose={() => setIsCreateOpen(false)} />}
+      {isCreateOpen && (
+        <CreatePatientDialog
+          onClose={() => setIsCreateOpen(false)}
+          onExistingPatient={(patientId) => {
+            setIsCreateOpen(false);
+            setSelectedPatientId(patientId);
+          }}
+        />
+      )}
       </div>
     </div>
   );
