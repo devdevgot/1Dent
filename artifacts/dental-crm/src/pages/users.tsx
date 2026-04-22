@@ -4,334 +4,491 @@ import {
   useListUsers,
   useCreateUser,
   useDeleteUser,
+  useUpdateUser,
+  useUpdateUserStatus,
+  useUpdateSalarySettings,
   getListUsersQueryKey,
 } from "@workspace/api-client-react";
+import type { User } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  UserPlus, Trash2, RefreshCw, Shield, User2,
-  Mail, Lock, ChevronDown, ChevronLeft, Users,
+  UserPlus, Search, Phone, Calendar, Briefcase,
+  ChevronRight, MoreVertical, UserCheck, UserX,
+  Trash2, Users, SlidersHorizontal, Copy,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { useLocation } from "wouter";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import EmployeeDialog, { type EmployeeFormData } from "./employee-dialog";
+import { cn } from "@/lib/utils";
 
 const ROLES = ["admin", "doctor", "accountant", "warehouse"] as const;
-type Role = (typeof ROLES)[number];
 
-function RoleBadge({ role }: { role: string }) {
+const ROLE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  owner:      { bg: "bg-purple-100", text: "text-purple-700", border: "border-purple-200" },
+  admin:      { bg: "bg-blue-100",   text: "text-blue-700",   border: "border-blue-200" },
+  doctor:     { bg: "bg-emerald-100",text: "text-emerald-700",border: "border-emerald-200" },
+  accountant: { bg: "bg-amber-100",  text: "text-amber-700",  border: "border-amber-200" },
+  warehouse:  { bg: "bg-slate-100",  text: "text-slate-700",  border: "border-slate-200" },
+};
+
+const AVATAR_COLORS: Record<string, string> = {
+  owner:      "#7c3aed",
+  admin:      "#2563eb",
+  doctor:     "#059669",
+  accountant: "#d97706",
+  warehouse:  "#6b7280",
+};
+
+function initials(name: string) {
+  return name.split(" ").map((w) => w[0]?.toUpperCase() ?? "").slice(0, 2).join("");
+}
+
+function fmtSalaryShort(user: User): string {
+  const s = user.salarySettings;
+  if (!s) return "—";
+  const type = s.salaryType;
+  const fixed = Number(s.fixedAmount);
+  const pct = Number(s.commissionPercent);
+  if (type === "fixed") return `${fixed.toLocaleString("ru-KZ")} ₸`;
+  if (type === "commission") return `${pct}%`;
+  return `${fixed.toLocaleString("ru-KZ")} ₸ + ${pct}%`;
+}
+
+function fmtHireDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("ru", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function UserActionMenu({
+  user,
+  currentUserId,
+  currentRole,
+  onEdit,
+  onDelete,
+  onToggleActive,
+  onNavigate,
+}: {
+  user: User;
+  currentUserId: string;
+  currentRole: string;
+  onEdit: () => void;
+  onDelete: () => void;
+  onToggleActive: () => void;
+  onNavigate: () => void;
+}) {
   const { t } = useTranslation();
-  const colors: Record<string, string> = {
-    owner:      "bg-purple-100 text-purple-700",
-    admin:      "bg-blue-100 text-blue-700",
-    doctor:     "bg-emerald-100 text-emerald-700",
-    accountant: "bg-amber-100 text-amber-700",
-    warehouse:  "bg-slate-100 text-slate-700",
-  };
+  const [open, setOpen] = useState(false);
+  const isSelf = user.id === currentUserId;
+
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide ${colors[role] ?? "bg-slate-100 text-slate-700"}`}>
-      {t(`role.${role}`)}
-    </span>
+    <div className="relative">
+      <button
+        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+        className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors"
+      >
+        <MoreVertical className="w-4 h-4" />
+      </button>
+      <AnimatePresence>
+        {open && (
+          <>
+            <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: -4 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -4 }}
+              transition={{ duration: 0.1 }}
+              className="absolute right-0 top-9 z-20 bg-white rounded-2xl shadow-xl border border-gray-100 py-1.5 min-w-[160px]"
+            >
+              <button
+                onClick={() => { setOpen(false); onEdit(); }}
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                <Briefcase className="w-3.5 h-3.5 text-gray-400" />
+                {t("common.edit")}
+              </button>
+              {user.role === "doctor" && (
+                <button
+                  onClick={() => { setOpen(false); onNavigate(); }}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
+                  {t("employees.analytics", "Аналитика")}
+                </button>
+              )}
+              {!isSelf && user.role !== "owner" && (currentRole === "owner" || currentRole === "admin") && (
+                <button
+                  onClick={() => { setOpen(false); onToggleActive(); }}
+                  className={cn(
+                    "w-full flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-gray-50",
+                    user.isActive ? "text-amber-600" : "text-emerald-600",
+                  )}
+                >
+                  {user.isActive
+                    ? <><UserX className="w-3.5 h-3.5" /> {t("employees.deactivate", "Деактивировать")}</>
+                    : <><UserCheck className="w-3.5 h-3.5" /> {t("employees.activate", "Активировать")}</>}
+                </button>
+              )}
+              {!isSelf && currentRole === "owner" && user.role !== "owner" && (
+                <button
+                  onClick={() => { setOpen(false); onDelete(); }}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  {t("common.delete")}
+                </button>
+              )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
 export default function UsersPage() {
   const { t } = useTranslation();
   const { user: currentUser } = useAuthStore();
+  const [, navigate] = useLocation();
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
-  const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({ name: "", email: "", password: "", role: "doctor" as Role });
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [showInactive, setShowInactive] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
-  const { data, isLoading, refetch } = useListUsers({
+  const { data, isLoading } = useListUsers({
     query: { queryKey: getListUsersQueryKey() },
   });
 
-  const users = data?.data?.users ?? [];
+  const rawUsers = (data?.data?.users ?? []) as User[];
+  const users = rawUsers.filter((u) => showInactive || u.isActive !== false);
+
+  const filtered = users.filter((u) => {
+    const q = search.toLowerCase();
+    const matchSearch = u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
+    const matchRole = roleFilter === "all" || u.role === roleFilter;
+    return matchSearch && matchRole;
+  });
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
 
   const createMutation = useCreateUser({
     mutation: {
-      onSuccess: () => {
-        void queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
-        setShowForm(false);
-        setFormData({ name: "", email: "", password: "", role: "doctor" });
-        toast({ title: t("users.createSuccess"), description: t("users.createSuccessDesc") });
+      onSuccess: (res) => {
+        invalidate();
+        setDialogOpen(false);
+        const rawPw = ((res?.data as unknown) as Record<string, Record<string, unknown>>)?.user?.rawPassword as string | undefined;
+        if (rawPw) {
+          toast.success(t("employees.created", "Сотрудник создан"), {
+            description: `${t("employees.password", "Пароль")}: ${rawPw}`,
+            action: {
+              label: <span className="flex items-center gap-1"><Copy className="w-3 h-3" />{t("employees.copy", "Копировать")}</span> as unknown as string,
+              onClick: () => void navigator.clipboard.writeText(rawPw),
+            },
+            duration: 12000,
+          });
+        } else {
+          toast.success(t("employees.created", "Сотрудник создан"));
+        }
       },
       onError: (err: unknown) => {
         const status = (err as { response?: { status?: number } })?.response?.status;
-        let msg: string;
-        if (status === 409) {
-          msg = t("users.emailAlreadyInUse");
-        } else if (status === 403) {
-          msg = t("users.forbiddenError");
-        } else {
-          msg = t("users.createError");
-        }
-        toast({ title: t("users.createErrorTitle"), description: msg, variant: "destructive" });
+        const msg = status === 409 ? t("users.emailAlreadyInUse") : t("users.createError");
+        toast.error(t("users.createErrorTitle"), { description: msg });
       },
+    },
+  });
+
+  const updateMutation = useUpdateUser({
+    mutation: {
+      onSuccess: () => {
+        invalidate();
+        setDialogOpen(false);
+        setEditingUser(null);
+        toast.success(t("employees.updated", "Данные обновлены"));
+      },
+      onError: () => toast.error(t("employees.updateError", "Ошибка обновления")),
+    },
+  });
+
+  const updateSalaryMutation = useUpdateSalarySettings({
+    mutation: { onSuccess: () => invalidate() },
+  });
+
+  const statusMutation = useUpdateUserStatus({
+    mutation: {
+      onSuccess: (_, vars) => {
+        invalidate();
+        toast.success(vars.isActive
+          ? t("employees.activated", "Активирован")
+          : t("employees.deactivated", "Деактивирован"),
+        );
+      },
+      onError: () => toast.error(t("employees.statusError", "Ошибка изменения статуса")),
     },
   });
 
   const deleteMutation = useDeleteUser({
     mutation: {
       onSuccess: () => {
-        void queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
+        invalidate();
         setDeleteConfirmId(null);
-        toast({ title: t("users.deleteSuccess") });
+        toast.success(t("users.deleteSuccess"));
       },
-      onError: () => {
-        toast({ title: t("users.deleteError"), variant: "destructive" });
-      },
+      onError: () => toast.error(t("users.deleteError")),
     },
   });
 
-  const handleCreate = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name.trim() || !formData.email.trim() || !formData.password.trim()) return;
-    createMutation.mutate({ data: formData });
+  const handleSave = async (formData: EmployeeFormData) => {
+    if (editingUser) {
+      await updateMutation.mutateAsync({
+        id: editingUser.id,
+        data: {
+          name: formData.name,
+          role: formData.role,
+          phone: formData.phone || null,
+          position: formData.position || null,
+          specialty: formData.specialty || null,
+          hireDate: formData.hireDate || null,
+          password: formData.password || undefined,
+        },
+      });
+      if (currentUser?.role === "owner") {
+        await updateSalaryMutation.mutateAsync({
+          userId: editingUser.id,
+          data: {
+            salaryType: formData.salaryType,
+            fixedAmount: formData.fixedAmount,
+            commissionPercent: formData.commissionPercent,
+          },
+        });
+      }
+    } else {
+      await createMutation.mutateAsync({
+        data: {
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          role: formData.role,
+          phone: formData.phone || undefined,
+          position: formData.position || undefined,
+          specialty: formData.specialty || undefined,
+          hireDate: formData.hireDate || undefined,
+          maxPatientsPerDay: formData.maxPatientsPerDay,
+        },
+      });
+    }
   };
 
-  const handleDelete = (id: string) => {
-    deleteMutation.mutate({ id });
-  };
-
-  const canDelete = currentUser?.role === "owner";
+  const isSaving = createMutation.isPending || updateMutation.isPending;
+  const isOwnerOrAdmin = currentUser?.role === "owner" || currentUser?.role === "admin";
 
   return (
-    <div className="min-h-full bg-[#f2f2f7]">
-      <div className="bg-white px-4 pt-5 pb-4 flex items-center gap-3 border-b border-gray-100">
-        <button
-          onClick={() => window.history.back()}
-          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-500 shrink-0"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-primary shrink-0" strokeWidth={1.8} />
-            <h1 className="text-[17px] font-semibold text-gray-900">{t("users.title")}</h1>
+    <div className="min-h-full bg-[#f7f8fc] pb-8">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-100 px-4 py-4">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h1 className="text-base font-bold text-gray-900">{t("users.title")}</h1>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {filtered.length} {t("employees.people", "чел.")}
+              {showInactive && ` (${t("employees.includingInactive", "включая неактивных")})`}
+            </p>
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">{t("users.subtitle")}</p>
+          {isOwnerOrAdmin && (
+            <button
+              onClick={() => { setEditingUser(null); setDialogOpen(true); }}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-2xl text-white text-sm font-semibold"
+              style={{ backgroundColor: "#98cc1c" }}
+            >
+              <UserPlus className="w-4 h-4" />
+              {t("users.addStaff")}
+            </button>
+          )}
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={() => refetch()}
-            className="w-8 h-8 flex items-center justify-center rounded-full border border-border text-muted-foreground hover:bg-slate-50 transition-colors"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setShowForm((s) => !s)}
-            className="px-3 py-1.5 bg-primary text-white text-sm font-semibold rounded-xl flex items-center gap-1.5 hover:bg-primary/90 transition-colors"
-          >
-            <UserPlus className="w-4 h-4" />
-            {t("users.addStaff")}
-          </button>
+
+        <div className="flex gap-2">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t("employees.searchPlaceholder", "Поиск...")}
+              className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+          </div>
+          {currentUser?.role === "owner" && (
+            <button
+              onClick={() => setShowInactive((v) => !v)}
+              className={cn(
+                "px-3 py-2.5 rounded-xl border text-xs font-semibold transition-colors",
+                showInactive ? "bg-primary/10 border-primary/30 text-primary" : "bg-gray-50 border-gray-200 text-gray-500",
+              )}
+              title={t("employees.showInactive", "Показать неактивных")}
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Role filter pills */}
+        <div className="flex gap-1.5 mt-2.5 overflow-x-auto pb-0.5 scrollbar-none">
+          {["all", ...ROLES].map((r) => {
+            const colors = r !== "all" ? ROLE_COLORS[r] : null;
+            const isActive = roleFilter === r;
+            return (
+              <button
+                key={r}
+                onClick={() => setRoleFilter(r)}
+                className={cn(
+                  "shrink-0 px-3 py-1 rounded-full text-xs font-semibold border transition-all",
+                  isActive
+                    ? colors
+                      ? `${colors.bg} ${colors.text} ${colors.border}`
+                      : "bg-gray-900 text-white border-gray-900"
+                    : "bg-gray-50 text-gray-500 border-gray-200",
+                )}
+              >
+                {r === "all" ? t("employees.allRoles", "Все") : t(`role.${r}`, r)}
+              </button>
+            );
+          })}
         </div>
       </div>
-      <div className="space-y-4 p-4 pb-8">
 
-      {/* Add Staff Form */}
-      <AnimatePresence>
-        {showForm && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
-          >
-            <form
-              onSubmit={handleCreate}
-              className="bg-card rounded-2xl border border-primary/20 p-6 shadow-sm space-y-4"
-            >
-              <h3 className="text-lg font-bold font-display flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-primary" />
-                {t("users.formTitle")}
-              </h3>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Name */}
-                <div>
-                  <label className="block text-sm font-semibold text-foreground mb-1.5">
-                    {t("users.name")}
-                  </label>
-                  <div className="relative">
-                    <User2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <input
-                      type="text"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder={t("users.namePlaceholder")}
-                      required
-                      className="w-full pl-9 pr-4 py-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                    />
-                  </div>
-                </div>
-
-                {/* Email */}
-                <div>
-                  <label className="block text-sm font-semibold text-foreground mb-1.5">
-                    {t("users.email")}
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder={t("users.emailPlaceholder")}
-                      required
-                      className="w-full pl-9 pr-4 py-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                    />
-                  </div>
-                </div>
-
-                {/* Password */}
-                <div>
-                  <label className="block text-sm font-semibold text-foreground mb-1.5">
-                    {t("users.password")}
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <input
-                      type="password"
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      placeholder={t("users.passwordPlaceholder")}
-                      required
-                      minLength={6}
-                      className="w-full pl-9 pr-4 py-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                    />
-                  </div>
-                </div>
-
-                {/* Role */}
-                <div>
-                  <label className="block text-sm font-semibold text-foreground mb-1.5">
-                    {t("users.role")}
-                  </label>
-                  <div className="relative">
-                    <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <select
-                      value={formData.role}
-                      onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
-                      className="w-full pl-9 pr-8 py-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none bg-background"
-                    >
-                      {ROLES.map((r) => (
-                        <option key={r} value={r}>
-                          {t(`role.${r}`)}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowForm(false)}
-                  className="flex-1 py-2.5 border border-border rounded-xl text-sm font-semibold text-muted-foreground hover:bg-slate-50 transition-colors"
-                >
-                  {t("users.cancel")}
-                </button>
-                <button
-                  type="submit"
-                  disabled={createMutation.isPending}
-                  className="flex-1 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold disabled:opacity-60 hover:-translate-y-0.5 transition-all shadow-lg shadow-primary/20"
-                >
-                  {createMutation.isPending ? t("users.creating") : t("users.create")}
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Users List */}
-      <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
+      {/* Staff list */}
+      <div className="px-4 pt-3 space-y-2">
         {isLoading ? (
-          <div className="p-6 space-y-4">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="flex items-center gap-4 animate-pulse">
-                <div className="w-12 h-12 rounded-full bg-slate-200 flex-none" />
-                <div className="flex-1">
-                  <div className="h-4 bg-slate-200 rounded w-32 mb-2" />
-                  <div className="h-3 bg-slate-100 rounded w-48" />
-                </div>
-                <div className="w-20 h-6 bg-slate-200 rounded-full" />
-              </div>
-            ))}
+          <div className="flex items-center justify-center py-16">
+            <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
           </div>
-        ) : users.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-muted-foreground mb-4">
-              <User2 className="w-8 h-8 opacity-50" />
-            </div>
-            <h3 className="text-xl font-bold font-display">{t("users.emptyTitle")}</h3>
-            <p className="text-muted-foreground max-w-sm mt-2">{t("users.emptyDesc")}</p>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-16">
+            <Users className="w-12 h-12 text-gray-200 mx-auto mb-3" />
+            <p className="text-sm font-semibold text-gray-400">{t("users.emptyTitle")}</p>
+            <p className="text-xs text-gray-300 mt-1">{t("users.emptyDesc")}</p>
           </div>
         ) : (
-          <div className="divide-y divide-border/50">
-            {users.map((u, i) => (
-              <motion.div
-                key={u.id}
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.03 }}
-                className="flex items-center gap-4 p-5 hover:bg-slate-50 transition-colors"
-              >
-                {/* Avatar */}
-                <div className="w-11 h-11 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg flex-none">
-                  {u.name.charAt(0).toUpperCase()}
-                </div>
+          <AnimatePresence>
+            {filtered.map((u, i) => {
+              const colors = ROLE_COLORS[u.role] ?? ROLE_COLORS["warehouse"];
+              const avatarColor = AVATAR_COLORS[u.role] ?? "#6b7280";
+              const isSelf = u.id === currentUser?.id;
+              const isInactive = u.isActive === false;
 
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-semibold text-foreground">{u.name}</p>
-                    {u.id === currentUser?.id && (
-                      <span className="text-[10px] font-bold text-primary uppercase tracking-wide bg-primary/10 px-2 py-0.5 rounded-full">
-                        {t("users.you")}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground truncate">{u.email}</p>
-                </div>
-
-                {/* Role */}
-                <RoleBadge role={u.role} />
-
-                {/* Delete */}
-                {canDelete && u.id !== currentUser?.id && u.role !== "owner" && (
-                  <div className="flex-none">
-                    <button
-                      onClick={() => setDeleteConfirmId(u.id)}
-                      className="w-9 h-9 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive flex items-center justify-center transition-colors"
+              return (
+                <motion.div
+                  key={u.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.03 }}
+                  className={cn(
+                    "bg-white rounded-2xl border border-gray-100 shadow-sm p-4",
+                    isInactive && "opacity-60",
+                  )}
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className="w-11 h-11 rounded-2xl flex items-center justify-center text-white font-bold text-sm shrink-0"
+                      style={{ backgroundColor: avatarColor }}
                     >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                      {initials(u.name)}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="text-sm font-bold text-gray-900 truncate">{u.name}</p>
+                            {isSelf && (
+                              <span className="text-[10px] bg-primary/10 text-primary font-bold px-1.5 py-0.5 rounded-full">
+                                {t("users.you")}
+                              </span>
+                            )}
+                            {isInactive && (
+                              <span className="text-[10px] bg-gray-100 text-gray-500 font-bold px-1.5 py-0.5 rounded-full">
+                                {t("employees.inactive", "Неактивен")}
+                              </span>
+                            )}
+                          </div>
+                          <span className={cn(
+                            "inline-block mt-0.5 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border",
+                            colors.bg, colors.text, colors.border,
+                          )}>
+                            {t(`role.${u.role}`)}
+                          </span>
+                        </div>
+
+                        <UserActionMenu
+                          user={u}
+                          currentUserId={currentUser?.id ?? ""}
+                          currentRole={currentUser?.role ?? ""}
+                          onEdit={() => { setEditingUser(u); setDialogOpen(true); }}
+                          onDelete={() => setDeleteConfirmId(u.id)}
+                          onToggleActive={() => statusMutation.mutate({ id: u.id, isActive: !u.isActive })}
+                          onNavigate={() => navigate(`/staff/${u.id}`)}
+                        />
+                      </div>
+
+                      <div className="mt-2 space-y-1">
+                        {u.position && (
+                          <div className="flex items-center gap-1.5">
+                            <Briefcase className="w-3 h-3 text-gray-300 shrink-0" />
+                            <span className="text-xs text-gray-500">{u.position}</span>
+                            {u.specialty && <span className="text-xs text-gray-400">· {u.specialty}</span>}
+                          </div>
+                        )}
+                        {u.phone && (
+                          <div className="flex items-center gap-1.5">
+                            <Phone className="w-3 h-3 text-gray-300 shrink-0" />
+                            <span className="text-xs text-gray-500">{u.phone}</span>
+                          </div>
+                        )}
+                        {u.hireDate && (
+                          <div className="flex items-center gap-1.5">
+                            <Calendar className="w-3 h-3 text-gray-300 shrink-0" />
+                            <span className="text-xs text-gray-400">
+                              {t("employees.since", "с")} {fmtHireDate(u.hireDate)}
+                            </span>
+                          </div>
+                        )}
+                        {u.salarySettings && (
+                          <div className="mt-1 inline-block bg-gray-50 rounded-lg px-2.5 py-1">
+                            <span className="text-[11px] font-semibold text-gray-600">
+                              {fmtSalaryShort(u)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                )}
-              </motion.div>
-            ))}
-          </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
         )}
       </div>
 
-      {/* Footer note */}
-      <p className="text-xs text-muted-foreground text-center px-4">
-        {t("users.registrationNote")}
-      </p>
+      <EmployeeDialog
+        open={dialogOpen}
+        onClose={() => { setDialogOpen(false); setEditingUser(null); }}
+        onSave={handleSave}
+        isSaving={isSaving}
+        editUser={editingUser}
+      />
+
       <ConfirmDeleteDialog
         open={!!deleteConfirmId}
-        onConfirm={() => { handleDelete(deleteConfirmId!); setDeleteConfirmId(null); }}
+        onConfirm={() => { if (deleteConfirmId) deleteMutation.mutate({ id: deleteConfirmId }); }}
         onCancel={() => setDeleteConfirmId(null)}
+        isDeleting={deleteMutation.isPending}
       />
-      </div>
     </div>
   );
 }

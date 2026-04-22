@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { randomUUID } from "crypto";
 import { AuthRepository } from "./auth.repository";
+import type { UpdateUserData } from "./auth.repository";
 import {
   ConflictError,
   UnauthorizedError,
@@ -12,9 +13,8 @@ import {
 import type { UserRole, User } from "@workspace/db";
 import type { SafeClinic } from "./auth.repository";
 
-// In-memory password reset token store: token → { email, expiresAt }
 const resetTokens = new Map<string, { email: string; expiresAt: number }>();
-const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 
 function getJwtSecret(): string {
   const secret = process.env["JWT_SECRET"];
@@ -77,6 +77,10 @@ export class AuthService {
       throw new UnauthorizedError("Invalid email or password");
     }
 
+    if (user.isActive === false) {
+      throw new UnauthorizedError("Account is deactivated");
+    }
+
     const clinic = await this.repo.findClinicById(user.clinicId);
     if (!clinic) {
       throw new UnauthorizedError("Clinic not found");
@@ -103,13 +107,10 @@ export class AuthService {
 
   async requestPasswordReset(email: string): Promise<{ token: string }> {
     const user = await this.repo.findUserByEmail(email);
-    // Always return success to avoid email enumeration (but only generate token if user exists)
     if (!user) {
-      // Return a fake token so the response is always the same shape
       return { token: "" };
     }
 
-    // Clean up expired tokens for this email
     for (const [t, data] of resetTokens.entries()) {
       if (data.email === email || data.expiresAt < Date.now()) {
         resetTokens.delete(t);
@@ -118,10 +119,7 @@ export class AuthService {
 
     const token = randomUUID();
     resetTokens.set(token, { email, expiresAt: Date.now() + RESET_TOKEN_TTL_MS });
-
-    // In production, send via email. For now, log it.
     console.log(`[PasswordReset] Token for ${email}: ${token}`);
-
     return { token };
   }
 
@@ -136,8 +134,6 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
     await this.repo.updateUserPassword(user.id, passwordHash);
-
-    // Invalidate the token after use
     resetTokens.delete(token);
   }
 
@@ -148,7 +144,12 @@ export class AuthService {
     password: string;
     role: UserRole;
     requestingRole: UserRole;
-  }): Promise<Omit<User, "passwordHash">> {
+    phone?: string;
+    position?: string;
+    specialty?: string;
+    hireDate?: string;
+    maxPatientsPerDay?: number;
+  }): Promise<Omit<User, "passwordHash"> & { rawPassword: string }> {
     if (data.requestingRole !== "owner" && data.requestingRole !== "admin") {
       throw new ForbiddenError("Only owners and admins can create users");
     }
@@ -167,21 +168,24 @@ export class AuthService {
       email: data.email,
       passwordHash,
       role: data.role,
+      phone: data.phone ?? null,
+      position: data.position ?? null,
+      specialty: data.specialty ?? null,
+      hireDate: data.hireDate ?? null,
     });
 
     const { passwordHash: _, ...safeUser } = user;
-    return safeUser;
+    return { ...safeUser, rawPassword: data.password };
   }
 
-  async listUsers(clinicId: string): Promise<Omit<User, "passwordHash">[]> {
-    const users = await this.repo.listUsersByClinic(clinicId);
-    return users.map(({ passwordHash: _, ...u }) => u);
+  async listUsers(clinicId: string, includeInactive = false) {
+    return this.repo.listUsersWithSalary(clinicId, includeInactive);
   }
 
   async updateUser(
     id: string,
     clinicId: string,
-    data: Partial<Pick<User, "name" | "role">>,
+    data: UpdateUserData,
     requestingRole: UserRole,
   ): Promise<Omit<User, "passwordHash">> {
     const user = await this.repo.findUserByIdAndClinic(id, clinicId);
@@ -194,7 +198,35 @@ export class AuthService {
       throw new ForbiddenError("Only owners can modify other owners");
     }
 
-    const updated = await this.repo.updateUser(id, clinicId, data);
+    let passwordHash: string | undefined;
+    if (data.password) {
+      passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
+    }
+
+    const updated = await this.repo.updateUser(id, clinicId, { ...data, passwordHash });
+    if (!updated) throw new NotFoundError("User not found");
+
+    const { passwordHash: _, ...safeUser } = updated;
+    return safeUser;
+  }
+
+  async updateUserStatus(
+    id: string,
+    clinicId: string,
+    isActive: boolean,
+    requestingRole: UserRole,
+  ): Promise<Omit<User, "passwordHash">> {
+    const user = await this.repo.findUserByIdAndClinic(id, clinicId);
+    if (!user) throw new NotFoundError("User not found");
+
+    if (user.role === "owner") {
+      throw new ForbiddenError("Cannot deactivate the owner account");
+    }
+    if (requestingRole !== "owner" && requestingRole !== "admin") {
+      throw new ForbiddenError("Only owners and admins can change user status");
+    }
+
+    const updated = await this.repo.updateUserStatus(id, clinicId, isActive);
     if (!updated) throw new NotFoundError("User not found");
 
     const { passwordHash: _, ...safeUser } = updated;

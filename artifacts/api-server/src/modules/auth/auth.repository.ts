@@ -1,8 +1,12 @@
-import { db, usersTable, clinicsTable } from "@workspace/db";
+import { db, usersTable, clinicsTable, userSalarySettingsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import type { InsertUser, InsertClinic, User, Clinic } from "@workspace/db";
 
 export type SafeClinic = Omit<Clinic, "greenApiInstanceId" | "greenApiToken">;
+
+export type UpdateUserData = Partial<
+  Pick<User, "name" | "role" | "phone" | "position" | "specialty" | "hireDate" | "isActive" | "photoUrl">
+> & { password?: string; passwordHash?: string };
 
 export class AuthRepository {
   async findUserByEmail(email: string): Promise<User | undefined> {
@@ -40,9 +44,6 @@ export class AuthRepository {
         plan: clinicsTable.plan,
         whatsappPhone: clinicsTable.whatsappPhone,
         createdAt: clinicsTable.createdAt,
-        // Intentionally omit greenApiInstanceId and greenApiToken:
-        // those are internal integration secrets and must never be
-        // included in auth responses sent to non-owner clients.
       })
       .from(clinicsTable)
       .where(eq(clinicsTable.id, id))
@@ -60,21 +61,51 @@ export class AuthRepository {
     return user!;
   }
 
-  async listUsersByClinic(clinicId: string): Promise<User[]> {
-    return db
+  async listUsersByClinic(clinicId: string, includeInactive = false): Promise<User[]> {
+    const rows = await db
       .select()
       .from(usersTable)
       .where(eq(usersTable.clinicId, clinicId));
+    if (includeInactive) return rows;
+    return rows.filter((u) => u.isActive !== false);
+  }
+
+  async listUsersWithSalary(clinicId: string, includeInactive = false) {
+    const users = await this.listUsersByClinic(clinicId, includeInactive);
+    const salaryRows = await db
+      .select()
+      .from(userSalarySettingsTable)
+      .where(eq(userSalarySettingsTable.clinicId, clinicId));
+
+    const salaryMap = new Map(salaryRows.map((s) => [s.userId, s]));
+
+    return users.map((u) => {
+      const { passwordHash: _, ...safe } = u;
+      return { ...safe, salarySettings: salaryMap.get(u.id) ?? null };
+    });
   }
 
   async updateUser(
     id: string,
     clinicId: string,
-    data: Partial<Pick<User, "name" | "role">>,
+    data: UpdateUserData,
   ): Promise<User | undefined> {
+    const { password: _pw, passwordHash, ...rest } = data;
+    const setData: Record<string, unknown> = { ...rest, updatedAt: new Date() };
+    if (passwordHash) setData["passwordHash"] = passwordHash;
+
     const [user] = await db
       .update(usersTable)
-      .set(data)
+      .set(setData)
+      .where(and(eq(usersTable.id, id), eq(usersTable.clinicId, clinicId)))
+      .returning();
+    return user;
+  }
+
+  async updateUserStatus(id: string, clinicId: string, isActive: boolean): Promise<User | undefined> {
+    const [user] = await db
+      .update(usersTable)
+      .set({ isActive, updatedAt: new Date() })
       .where(and(eq(usersTable.id, id), eq(usersTable.clinicId, clinicId)))
       .returning();
     return user;
@@ -89,7 +120,7 @@ export class AuthRepository {
   async updateUserPassword(id: string, passwordHash: string): Promise<void> {
     await db
       .update(usersTable)
-      .set({ passwordHash })
+      .set({ passwordHash, updatedAt: new Date() })
       .where(eq(usersTable.id, id));
   }
 
@@ -99,7 +130,7 @@ export class AuthRepository {
   ): Promise<User | undefined> {
     const [user] = await db
       .update(usersTable)
-      .set(data)
+      .set({ ...data, updatedAt: new Date() })
       .where(eq(usersTable.id, id))
       .returning();
     return user;

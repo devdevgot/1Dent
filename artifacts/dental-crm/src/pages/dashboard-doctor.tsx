@@ -4,9 +4,9 @@ import {
   useGetDoctorAnalytics,
   getGetDoctorAnalyticsQueryKey,
   useListProcedures,
+  useGetMySalary,
 } from "@workspace/api-client-react";
 import type { Procedure } from "@workspace/api-client-react";
-import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import {
   ChevronRight, X, ChevronLeft,
   Banknote, QrCode, CreditCard,
@@ -92,7 +92,6 @@ export default function DoctorDashboard() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const [, navigate] = useLocation();
-  const [activeIdx, setActiveIdx] = useState<number | null>(null);
 
   // ── Date filter state ──
   const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
@@ -137,7 +136,8 @@ export default function DoctorDashboard() {
   const scheduledToday     = analytics.scheduledToday;
   const redAlertCount      = analytics.redAlertCount;
 
-  const revenueByPayment = analytics.revenueByPaymentMethod;
+  // ── My salary ──
+  const { data: salaryData } = useGetMySalary();
 
   // ── Schedule widget data ──
   const { data: proceduresData } = useListProcedures();
@@ -166,17 +166,17 @@ export default function DoctorDashboard() {
     : scheduleByDay[0]?.[0] ?? toDateKey(new Date());
   const activeDayProcs = scheduleByDay.find(([k]) => k === activeDayKey)?.[1] ?? [];
 
-  const donutData = revenueByPayment.length > 0
-    ? revenueByPayment
-    : [{ method: "empty", label: "", amount: 1, percent: 100, color: "#e2e8f0" }];
-
-  const centerValue = activeIdx !== null && revenueByPayment[activeIdx]
-    ? fmtRevenue(revenueByPayment[activeIdx].amount)
-    : fmtRevenue(revenueThisMonth);
-
-  const centerLabel = activeIdx !== null && revenueByPayment[activeIdx]
-    ? `${revenueByPayment[activeIdx].percent}%`
-    : "Подробнее";
+  // salary helpers
+  const mySalary = salaryData?.data;
+  const salaryTotal = mySalary ? Number(mySalary.calculatedSalary) : null;
+  const salaryPaid = mySalary ? Number(mySalary.approvedAmount ?? 0) : null;
+  const salaryTypeLabel = mySalary
+    ? mySalary.salaryType === "fixed"
+      ? t("payroll.fixed", "Оклад")
+      : mySalary.salaryType === "commission"
+        ? t("payroll.commission", "Процент")
+        : t("payroll.fixedPlusCommission", "Оклад + %")
+    : null;
 
   return (
     <div className="min-h-full bg-[#f7f8fc] pb-8">
@@ -198,63 +198,80 @@ export default function DoctorDashboard() {
         </div>
       </div>
 
-      {/* ─── Revenue Donut Card ─── */}
+      {/* ─── My Revenue + Salary Card ─── */}
       <div className="mx-4 mt-3 bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-
-        {/* Ring chart */}
-        <div className="relative pt-4 pb-2">
-          {isLoading ? (
-            <div className="h-56 flex items-center justify-center">
-              <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+        <div className="px-5 pt-4 pb-4">
+          {/* Revenue row */}
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                {t("dashboard.myRevenue", "Моя выручка")}
+              </p>
+              {isLoading ? (
+                <div className="h-8 w-32 bg-gray-100 rounded-xl animate-pulse" />
+              ) : (
+                <p className="text-2xl font-bold text-gray-900 tracking-tight">
+                  {fmtRevenue(revenueThisMonth)}
+                </p>
+              )}
             </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie
-                  data={donutData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={80}
-                  outerRadius={activeIdx !== null ? 108 : 104}
-                  paddingAngle={donutData.length > 1 ? 2 : 0}
-                  dataKey="amount"
-                  startAngle={90}
-                  endAngle={-270}
-                  animationBegin={0}
-                  animationDuration={800}
-                  onMouseEnter={(_, idx) => revenueByPayment.length > 0 && setActiveIdx(idx)}
-                  onMouseLeave={() => setActiveIdx(null)}
-                  strokeWidth={0}
+            <button
+              onClick={() => navigate("/doctor-analytics")}
+              className="mt-1 flex items-center gap-0.5 text-xs font-semibold"
+              style={{ color: "#98cc1c" }}
+            >
+              {t("dashboard.details", "Подробнее")} <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-gray-100 mb-4" />
+
+          {/* Salary row */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1.5">
+                <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ backgroundColor: "#98cc1c22" }}>
+                  <Wallet className="w-3.5 h-3.5" style={{ color: "#98cc1c" }} />
+                </div>
+                <p className="text-xs font-semibold text-gray-700">
+                  {t("payroll.mySalary", "Моя зарплата")}
+                </p>
+              </div>
+              {salaryTypeLabel && (
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">
+                  {salaryTypeLabel}
+                </span>
+              )}
+            </div>
+
+            {!mySalary ? (
+              <p className="text-xs text-gray-400 italic">{t("payroll.noSettings", "Настройки зарплаты не заданы")}</p>
+            ) : salaryTotal === null ? (
+              <p className="text-xs text-gray-400 italic">{t("payroll.noMySalary", "Начислений нет")}</p>
+            ) : (
+              <div className="flex items-end justify-between">
+                <div>
+                  <p className="text-lg font-bold text-gray-900">
+                    {fmtRevenue(salaryTotal)}
+                  </p>
+                  {salaryPaid !== null && salaryPaid > 0 && (
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {t("payroll.paid", "Выплачено")}: {fmtRevenue(salaryPaid)}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={() => navigate("/payroll/my")}
+                  className="text-xs font-semibold px-3 py-1.5 rounded-xl"
+                  style={{ backgroundColor: "#98cc1c22", color: "#98cc1c" }}
                 >
-                  {donutData.map((entry, idx) => (
-                    <Cell
-                      key={entry.method}
-                      fill={entry.color}
-                      opacity={activeIdx === null || activeIdx === idx ? 1 : 0.4}
-                      style={{ cursor: "pointer", transition: "opacity 0.2s" }}
-                    />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-          )}
-
-          {/* Center overlay */}
-          {!isLoading && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-2xl font-bold text-gray-900 leading-none tracking-tight">
-                {centerValue}
-              </span>
-              <button
-                className="text-xs text-gray-400 mt-1.5 flex items-center gap-0.5 pointer-events-auto"
-                onClick={() => navigate("/doctor-analytics")}
-              >
-                {centerLabel} <ChevronRight className="w-3 h-3" />
-              </button>
-            </div>
-          )}
+                  {t("payroll.history", "История")}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-
       </div>
 
       {/* ─── Schedule Widget ─── */}

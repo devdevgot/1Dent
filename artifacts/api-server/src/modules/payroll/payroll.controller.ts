@@ -183,4 +183,19 @@ router.get(
   },
 );
 
+router.get(
+  "/my-salary",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1;
+      const salary = await repo.getMySalary(req.user!.userId, req.user!.clinicId, year, month);
+      res.json({ success: true, data: salary });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
 export default router;

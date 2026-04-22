@@ -259,6 +259,43 @@ export class PayrollRepository {
     return { records: upserted, expense, totalFot };
   }
 
+  async getMySalary(userId: string, clinicId: string, year: number, month: number) {
+    const settings = await this.getSalarySettings(userId, clinicId);
+    const revenue = await this.getDoctorRevenueForPeriod(userId, clinicId, year, month);
+
+    const salaryType = (settings?.salaryType ?? "fixed") as "fixed" | "commission" | "fixed_plus_commission";
+    const fixedAmount = Number(settings?.fixedAmount ?? 0);
+    const commissionPercent = Number(settings?.commissionPercent ?? 0);
+    const calculatedSalary = this.calcSalary(salaryType, fixedAmount, commissionPercent, revenue);
+
+    const [approvedRecord] = await db
+      .select()
+      .from(payrollRecordsTable)
+      .where(
+        and(
+          eq(payrollRecordsTable.userId, userId),
+          eq(payrollRecordsTable.clinicId, clinicId),
+          eq(payrollRecordsTable.periodYear, year),
+          eq(payrollRecordsTable.periodMonth, month),
+        ),
+      )
+      .limit(1);
+
+    const status = approvedRecord?.status ?? "pending";
+    const approvedAmount = approvedRecord?.approvedAmount ? Number(approvedRecord.approvedAmount) : null;
+
+    return {
+      salaryType,
+      fixedAmount,
+      commissionPercent,
+      revenueThisMonth: revenue,
+      calculatedSalary,
+      approvedAmount,
+      status,
+      period: { year, month },
+    };
+  }
+
   async listPayrollRecords(clinicId: string, userId?: string, year?: number, month?: number) {
     const conditions = [eq(payrollRecordsTable.clinicId, clinicId)];
     if (userId) conditions.push(eq(payrollRecordsTable.userId, userId));

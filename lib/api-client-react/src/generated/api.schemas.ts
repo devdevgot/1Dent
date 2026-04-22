@@ -151,7 +151,20 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
+  photoUrl?: string | null;
+  phone?: string | null;
+  position?: string | null;
+  specialty?: string | null;
+  hireDate?: string | null;
+  isActive: boolean;
   createdAt: string;
+  updatedAt?: string;
+  salarySettings?: {
+    salaryType: "fixed" | "commission" | "fixed_plus_commission";
+    fixedAmount: string;
+    commissionPercent: string;
+    updatedAt?: string;
+  } | null;
 }
 
 export interface Clinic {
@@ -190,11 +203,39 @@ export interface CreateUserRequest {
   /** @minLength 6 */
   password: string;
   role: UserRole;
+  phone?: string;
+  position?: string;
+  specialty?: string;
+  hireDate?: string;
+  maxPatientsPerDay?: number;
 }
 
 export interface UpdateUserRequest {
   name?: string;
   role?: UserRole;
+  phone?: string | null;
+  position?: string | null;
+  specialty?: string | null;
+  hireDate?: string | null;
+  password?: string;
+}
+
+export interface UpdateUserStatusRequest {
+  isActive: boolean;
+}
+
+export interface MySalaryResponse {
+  success: boolean;
+  data: {
+    salaryType: "fixed" | "commission" | "fixed_plus_commission";
+    fixedAmount: number;
+    commissionPercent: number;
+    revenueThisMonth: number;
+    calculatedSalary: number;
+    approvedAmount: number | null;
+    status: "pending" | "approved" | "paid";
+    period: { year: number; month: number };
+  };
 }
 
 export interface PatchUserCapacityRequest {

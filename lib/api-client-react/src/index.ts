@@ -8,13 +8,11 @@ export {
 } from "./custom-fetch";
 export type { AuthTokenGetter, UnauthorizedHandler } from "./custom-fetch";
 
-// ─── Custom: update own profile ───────────────────────────────────────────────
+// ─── Custom hooks (manually maintained) ───────────────────────────────────────
 import { customFetch } from "./custom-fetch";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import type {
-  UseMutationOptions,
-  UseQueryOptions,
-} from "@tanstack/react-query";
+import type { UseMutationOptions, UseQueryOptions } from "@tanstack/react-query";
+import type { MySalaryResponse, UpdateUserStatusRequest } from "./generated/api.schemas";
 
 export interface UpdateProfileRequest {
   name?: string;
@@ -329,4 +327,49 @@ export const useApprovePayrollPeriod = <TError = unknown>(options?: {
   useMutation<ApprovePeriodPayrollResponse, TError, ApprovePeriodPayrollRequest>({
     mutationFn: (data) => approvePeriodPayroll(data),
     ...options?.mutation,
+  });
+
+// ─── Custom: update user status ───────────────────────────────────────────────
+export interface UpdateUserStatusResponse {
+  success: boolean;
+  data: { user: Record<string, unknown> };
+}
+
+export const updateUserStatus = (
+  id: string,
+  data: UpdateUserStatusRequest,
+  options?: RequestInit,
+): Promise<UpdateUserStatusResponse> =>
+  customFetch<UpdateUserStatusResponse>(`/api/users/${id}/status`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+    ...options,
+  });
+
+export const useUpdateUserStatus = <TError = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    UpdateUserStatusResponse,
+    TError,
+    { id: string; isActive: boolean }
+  >;
+}) =>
+  useMutation<UpdateUserStatusResponse, TError, { id: string; isActive: boolean }>({
+    mutationFn: ({ id, isActive }) => updateUserStatus(id, { isActive }),
+    ...options?.mutation,
+  });
+
+// ─── Custom: get my salary ─────────────────────────────────────────────────────
+export const getMySalary = (options?: RequestInit): Promise<MySalaryResponse> =>
+  customFetch<MySalaryResponse>("/api/payroll/my-salary", {
+    method: "GET",
+    ...options,
+  });
+
+export const useGetMySalary = <TError = unknown>(options?: {
+  query?: UseQueryOptions<MySalaryResponse, TError>;
+}) =>
+  useQuery<MySalaryResponse, TError>({
+    queryKey: ["/api/payroll/my-salary"],
+    queryFn: ({ signal }) => getMySalary({ signal }),
+    ...options?.query,
   });

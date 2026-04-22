@@ -15,20 +15,35 @@ const createUserSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
   role: z.enum(["owner", "admin", "doctor", "accountant", "warehouse"]),
+  phone: z.string().optional(),
+  position: z.string().optional(),
+  specialty: z.string().optional(),
+  hireDate: z.string().optional(),
+  maxPatientsPerDay: z.number().int().min(1).max(50).optional(),
 });
 
 const updateUserSchema = z.object({
   name: z.string().min(2).optional(),
   role: z.enum(["owner", "admin", "doctor", "accountant", "warehouse"]).optional(),
+  phone: z.string().optional().nullable(),
+  position: z.string().optional().nullable(),
+  specialty: z.string().optional().nullable(),
+  hireDate: z.string().optional().nullable(),
+  password: z.string().min(6).optional(),
+});
+
+const statusSchema = z.object({
+  isActive: z.boolean(),
 });
 
 router.use(authMiddleware);
 
 router.get(
   "/",
-  roleGuard("owner", "admin"),
+  roleGuard("owner", "admin", "accountant"),
   async (req: Request, res: Response, next: NextFunction) => {
-    const users = await authService.listUsers(req.user!.clinicId).catch(next);
+    const includeInactive = req.user?.role === "owner" && req.query["includeInactive"] === "true";
+    const users = await authService.listUsers(req.user!.clinicId, includeInactive).catch(next);
     if (!users) return;
     res.json({ success: true, data: { users } });
   },
@@ -75,6 +90,30 @@ router.put(
   },
 );
 
+router.patch(
+  "/:id/status",
+  roleGuard("owner", "admin"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const parsed = statusSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+    }
+
+    const id = String(req.params["id"]);
+    try {
+      const user = await authService.updateUserStatus(
+        id,
+        req.user!.clinicId,
+        parsed.data.isActive,
+        req.user!.role,
+      );
+      res.json({ success: true, data: { user } });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
 router.delete(
   "/:id",
   roleGuard("owner"),
@@ -106,7 +145,6 @@ router.patch(
     const { clinicId } = req.user!;
 
     try {
-      // Verify target user is a doctor in the same clinic
       const [targetUser] = await db
         .select()
         .from(usersTable)
@@ -125,7 +163,6 @@ router.patch(
           set: { maxPatientsPerDay: parsed.data.maxPatientsPerDay },
         });
 
-      // Invalidate KPI cache so the next request picks up the new limit
       await analyticsCache.invalidate(analyticsCache.key("kpi", clinicId));
 
       res.json({ success: true, data: { maxPatientsPerDay: parsed.data.maxPatientsPerDay } });
