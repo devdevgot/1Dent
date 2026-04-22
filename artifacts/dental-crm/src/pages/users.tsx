@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { useAuthStore } from "@/hooks/use-auth";
 import {
-  useListUsers,
+  useListUsersAll,
+  getListUsersAllQueryKey,
   useCreateUser,
   useDeleteUser,
   useUpdateUser,
   useUpdateUserStatus,
   useUpdateSalarySettings,
-  getListUsersQueryKey,
+  usePatchUserCapacity,
 } from "@workspace/api-client-react";
 import type { User } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -162,21 +163,22 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
-  const { data, isLoading } = useListUsers({
-    query: { queryKey: getListUsersQueryKey() },
-  });
+  const { data, isLoading } = useListUsersAll(
+    { includeInactive: showInactive },
+    { query: { queryKey: getListUsersAllQueryKey(showInactive) } },
+  );
 
   const rawUsers = (data?.data?.users ?? []) as User[];
-  const users = rawUsers.filter((u) => showInactive || u.isActive !== false);
 
-  const filtered = users.filter((u) => {
+  const filtered = rawUsers.filter((u) => {
     const q = search.toLowerCase();
     const matchSearch = u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
     const matchRole = roleFilter === "all" || u.role === roleFilter;
     return matchSearch && matchRole;
   });
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: getListUsersAllQueryKey(showInactive) });
 
   const createMutation = useCreateUser({
     mutation: {
@@ -221,6 +223,10 @@ export default function UsersPage() {
     mutation: { onSuccess: () => invalidate() },
   });
 
+  const capacityMutation = usePatchUserCapacity({
+    mutation: { onSuccess: () => invalidate() },
+  });
+
   const statusMutation = useUpdateUserStatus({
     mutation: {
       onSuccess: (_, vars) => {
@@ -245,6 +251,8 @@ export default function UsersPage() {
     },
   });
 
+  const isOwnerOrAdminForSalary = currentUser?.role === "owner" || currentUser?.role === "admin";
+
   const handleSave = async (formData: EmployeeFormData) => {
     if (editingUser) {
       await updateMutation.mutateAsync({
@@ -259,7 +267,7 @@ export default function UsersPage() {
           password: formData.password || undefined,
         },
       });
-      if (currentUser?.role === "owner") {
+      if (isOwnerOrAdminForSalary) {
         await updateSalaryMutation.mutateAsync({
           userId: editingUser.id,
           data: {
@@ -269,8 +277,14 @@ export default function UsersPage() {
           },
         });
       }
+      if (formData.role === "doctor" && formData.maxPatientsPerDay > 0) {
+        await capacityMutation.mutateAsync({
+          id: editingUser.id,
+          data: { maxPatientsPerDay: formData.maxPatientsPerDay },
+        });
+      }
     } else {
-      await createMutation.mutateAsync({
+      const res = await createMutation.mutateAsync({
         data: {
           name: formData.name,
           email: formData.email,
@@ -283,11 +297,28 @@ export default function UsersPage() {
           maxPatientsPerDay: formData.maxPatientsPerDay,
         },
       });
+      const newUserId = ((res?.data as unknown) as Record<string, Record<string, unknown>>)?.user?.id as string | undefined;
+      if (newUserId && isOwnerOrAdminForSalary) {
+        await updateSalaryMutation.mutateAsync({
+          userId: newUserId,
+          data: {
+            salaryType: formData.salaryType,
+            fixedAmount: formData.fixedAmount,
+            commissionPercent: formData.commissionPercent,
+          },
+        }).catch(() => {});
+      }
+      if (newUserId && formData.role === "doctor" && formData.maxPatientsPerDay > 0) {
+        await capacityMutation.mutateAsync({
+          id: newUserId,
+          data: { maxPatientsPerDay: formData.maxPatientsPerDay },
+        }).catch(() => {});
+      }
     }
   };
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
-  const isOwnerOrAdmin = currentUser?.role === "owner" || currentUser?.role === "admin";
+  const isOwnerOrAdmin = isOwnerOrAdminForSalary;
 
   return (
     <div className="min-h-full bg-[#f7f8fc] pb-8">
@@ -487,7 +518,6 @@ export default function UsersPage() {
         open={!!deleteConfirmId}
         onConfirm={() => { if (deleteConfirmId) deleteMutation.mutate({ id: deleteConfirmId }); }}
         onCancel={() => setDeleteConfirmId(null)}
-        isDeleting={deleteMutation.isPending}
       />
     </div>
   );

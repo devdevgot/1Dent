@@ -63,7 +63,7 @@ router.get(
 
 router.put(
   "/settings/:userId",
-  roleGuard("owner"),
+  roleGuard("owner", "admin"),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = String(req.params["userId"]);

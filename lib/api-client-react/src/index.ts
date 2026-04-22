@@ -12,7 +12,7 @@ export type { AuthTokenGetter, UnauthorizedHandler } from "./custom-fetch";
 import { customFetch } from "./custom-fetch";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type { UseMutationOptions, UseQueryOptions } from "@tanstack/react-query";
-import type { MySalaryResponse, UpdateUserStatusRequest } from "./generated/api.schemas";
+import type { MySalaryResponse, UpdateUserStatusRequest, UsersListResponse } from "./generated/api.schemas";
 
 export interface UpdateProfileRequest {
   name?: string;
@@ -327,6 +327,31 @@ export const useApprovePayrollPeriod = <TError = unknown>(options?: {
   useMutation<ApprovePeriodPayrollResponse, TError, ApprovePeriodPayrollRequest>({
     mutationFn: (data) => approvePeriodPayroll(data),
     ...options?.mutation,
+  });
+
+// ─── Custom: list users with includeInactive option ───────────────────────────
+export const listUsersAll = (
+  params?: { includeInactive?: boolean },
+  options?: RequestInit,
+): Promise<UsersListResponse> => {
+  const qs = params?.includeInactive ? "?includeInactive=true" : "";
+  return customFetch<UsersListResponse>(`/api/users${qs}`, {
+    method: "GET",
+    ...options,
+  });
+};
+
+export const getListUsersAllQueryKey = (includeInactive?: boolean) =>
+  ["/api/users", { includeInactive: !!includeInactive }] as const;
+
+export const useListUsersAll = <TError = unknown>(
+  params?: { includeInactive?: boolean },
+  options?: { query?: UseQueryOptions<UsersListResponse, TError> },
+) =>
+  useQuery<UsersListResponse, TError>({
+    queryKey: getListUsersAllQueryKey(params?.includeInactive),
+    queryFn: ({ signal }) => listUsersAll(params, { signal }),
+    ...options?.query,
   });
 
 // ─── Custom: update user status ───────────────────────────────────────────────

@@ -236,39 +236,57 @@ export default function DoctorDashboard() {
                 </div>
                 <p className="text-xs font-semibold text-gray-700">
                   {t("payroll.mySalary", "Моя зарплата")}
+                  {mySalary?.period && (
+                    <span className="ml-1.5 font-normal text-gray-400">
+                      {new Date(mySalary.period.year, mySalary.period.month - 1).toLocaleDateString("ru", { month: "long", year: "numeric" })}
+                    </span>
+                  )}
                 </p>
               </div>
-              {salaryTypeLabel && (
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">
-                  {salaryTypeLabel}
+              {mySalary && (
+                <span className={cn(
+                  "text-[10px] font-bold px-2 py-0.5 rounded-full",
+                  mySalary.status === "paid"     ? "bg-emerald-100 text-emerald-700" :
+                  mySalary.status === "approved" ? "bg-blue-100 text-blue-700" :
+                                                   "bg-amber-100 text-amber-700",
+                )}>
+                  {mySalary.status === "paid"     ? t("payroll.statusPaid", "Выплачено") :
+                   mySalary.status === "approved" ? t("payroll.statusApproved", "Утверждено") :
+                                                    t("payroll.statusPending", "Предварительно")}
                 </span>
               )}
             </div>
 
             {!mySalary ? (
               <p className="text-xs text-gray-400 italic">{t("payroll.noSettings", "Настройки зарплаты не заданы")}</p>
-            ) : salaryTotal === null ? (
-              <p className="text-xs text-gray-400 italic">{t("payroll.noMySalary", "Начислений нет")}</p>
             ) : (
-              <div className="flex items-end justify-between">
-                <div>
-                  <p className="text-lg font-bold text-gray-900">
-                    {fmtRevenue(salaryTotal)}
-                  </p>
-                  {salaryPaid !== null && salaryPaid > 0 && (
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {t("payroll.paid", "Выплачено")}: {fmtRevenue(salaryPaid)}
+              <>
+                {/* Rate line */}
+                <p className="text-[11px] text-gray-400 mb-1.5">
+                  {mySalary.salaryType === "fixed" && `${t("payroll.fixed", "Оклад")}: ${fmtRevenue(mySalary.fixedAmount)}`}
+                  {mySalary.salaryType === "commission" && `${mySalary.commissionPercent}% ${t("payroll.ofRevenue", "от выручки")}`}
+                  {mySalary.salaryType === "fixed_plus_commission" && `${fmtRevenue(mySalary.fixedAmount)} + ${mySalary.commissionPercent}%`}
+                </p>
+                <div className="flex items-end justify-between">
+                  <div>
+                    <p className="text-lg font-bold text-gray-900">
+                      {fmtRevenue(salaryTotal ?? mySalary.calculatedSalary)}
                     </p>
-                  )}
+                    {salaryPaid !== null && salaryPaid > 0 && mySalary.status === "paid" && (
+                      <p className="text-xs text-emerald-600 mt-0.5">
+                        ✓ {t("payroll.paid", "Выплачено")}: {fmtRevenue(salaryPaid)}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => navigate("/payroll/my")}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-xl"
+                    style={{ backgroundColor: "#98cc1c22", color: "#98cc1c" }}
+                  >
+                    {t("payroll.history", "История")}
+                  </button>
                 </div>
-                <button
-                  onClick={() => navigate("/payroll/my")}
-                  className="text-xs font-semibold px-3 py-1.5 rounded-xl"
-                  style={{ backgroundColor: "#98cc1c22", color: "#98cc1c" }}
-                >
-                  {t("payroll.history", "История")}
-                </button>
-              </div>
+              </>
             )}
           </div>
         </div>
