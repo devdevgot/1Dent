@@ -7,6 +7,7 @@ import {
   pgEnum,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { clinicsTable } from "./clinics";
 import { usersTable } from "./users";
 
@@ -102,26 +103,34 @@ export const payrollRecordsTable = pgTable(
 
 export type PayrollRecord = typeof payrollRecordsTable.$inferSelect;
 
-export const clinicExpensesTable = pgTable("clinic_expenses", {
-  id: text("id").primaryKey(),
-  clinicId: text("clinic_id")
-    .notNull()
-    .references(() => clinicsTable.id, { onDelete: "cascade" }),
-  category: expenseCategoryEnum("category").notNull().default("other"),
-  amount: numeric("amount", { precision: 12, scale: 2 }).notNull().default("0"),
-  description: text("description"),
-  expenseDate: timestamp("expense_date", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  periodMonth: integer("period_month"),
-  periodYear: integer("period_year"),
-  payrollRef: text("payroll_ref"),
-  createdBy: text("created_by").references(() => usersTable.id, {
-    onDelete: "set null",
-  }),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const clinicExpensesTable = pgTable(
+  "clinic_expenses",
+  {
+    id: text("id").primaryKey(),
+    clinicId: text("clinic_id")
+      .notNull()
+      .references(() => clinicsTable.id, { onDelete: "cascade" }),
+    category: expenseCategoryEnum("category").notNull().default("other"),
+    amount: numeric("amount", { precision: 12, scale: 2 }).notNull().default("0"),
+    description: text("description"),
+    expenseDate: timestamp("expense_date", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    periodMonth: integer("period_month"),
+    periodYear: integer("period_year"),
+    payrollRef: text("payroll_ref"),
+    createdBy: text("created_by").references(() => usersTable.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("clinic_expenses_payroll_unique")
+      .on(t.clinicId, t.payrollRef, t.category)
+      .where(sql`payroll_ref IS NOT NULL`),
+  ],
+);
 
 export type ClinicExpense = typeof clinicExpensesTable.$inferSelect;

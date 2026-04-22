@@ -88,8 +88,8 @@ export default function AccountSettings() {
           ))}
         </div>
 
-        {/* Моя зарплата */}
-        <div className="bg-white rounded-2xl overflow-hidden">
+        {/* Моя зарплата — only for staff who receive payroll approval (not shown to doctors) */}
+        {user?.role !== "doctor" && <div className="bg-white rounded-2xl overflow-hidden">
           <div className="flex items-center gap-3 px-4 py-4 border-b border-gray-100">
             <div className="w-8 h-8 rounded-lg bg-[#98cc1c]/10 flex items-center justify-center shrink-0">
               <Banknote className="w-[18px] h-[18px] text-[#98cc1c]" />
@@ -135,7 +135,7 @@ export default function AccountSettings() {
               ))}
             </div>
           )}
-        </div>
+        </div>}
       </div>
     </div>
   );
