@@ -187,16 +187,27 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
 
                       <div>
                         <label className="block text-xs font-semibold text-gray-500 mb-1.5">
-                          Email *
+                          Email {!isEdit && "*"}
                         </label>
-                        <input
-                          required
-                          type="email"
-                          value={form.email}
-                          onChange={(e) => set("email", e.target.value)}
-                          placeholder="maria@clinic.kz"
-                          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                        />
+                        {isEdit ? (
+                          <div className="w-full border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-400 bg-gray-50 cursor-not-allowed select-none">
+                            {form.email}
+                          </div>
+                        ) : (
+                          <input
+                            required
+                            type="email"
+                            value={form.email}
+                            onChange={(e) => set("email", e.target.value)}
+                            placeholder="maria@clinic.kz"
+                            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          />
+                        )}
+                        {isEdit && (
+                          <p className="text-[11px] text-gray-400 mt-1">
+                            {t("employees.emailReadonly", "Email нельзя изменить после создания")}
+                          </p>
+                        )}
                       </div>
 
                       <div>

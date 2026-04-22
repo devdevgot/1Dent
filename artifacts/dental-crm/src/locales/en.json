@@ -907,7 +907,14 @@
     "approveAndRecord": "Approve Payroll",
     "approveFot": "Approve Payroll",
     "fotApproved": "employees approved",
-    "fotNotApproved": "Payroll for current month not yet approved"
+    "fotNotApproved": "Payroll for current month not yet approved",
+    "statusPaid": "Paid",
+    "statusApproved": "Approved",
+    "statusPending": "Preliminary",
+    "revenue": "Revenue for period",
+    "ofRevenue": "of revenue",
+    "historyComingSoon": "History for past months will be available in the next update",
+    "contactAdmin": "Contact your administrator"
   },
   "months": {
     "january": "January",
@@ -976,6 +983,8 @@
     "statusActive": "Active",
     "statusInactive": "Inactive",
     "statusActiveHint": "Can log in to the system",
-    "statusInactiveHint": "Access blocked"
+    "statusInactiveHint": "Access blocked",
+    "emailReadonly": "Email cannot be changed after creation",
+    "partialSaveWarning": "Employee created, but salary / capacity settings could not be saved. Open the profile and save again."
   }
 }

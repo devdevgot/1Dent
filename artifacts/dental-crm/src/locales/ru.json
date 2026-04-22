@@ -911,7 +911,14 @@
     "approveAndRecord": "Утвердить ФОТ",
     "approveFot": "Утвердить ФОТ",
     "fotApproved": "сотр. утверждено",
-    "fotNotApproved": "ФОТ за текущий месяц не утверждён"
+    "fotNotApproved": "ФОТ за текущий месяц не утверждён",
+    "statusPaid": "Выплачено",
+    "statusApproved": "Утверждено",
+    "statusPending": "Предварительно",
+    "revenue": "Выручка за период",
+    "ofRevenue": "от выручки",
+    "historyComingSoon": "История за прошлые месяцы будет доступна в следующем обновлении",
+    "contactAdmin": "Обратитесь к администратору"
   },
   "months": {
     "january": "Январь",
@@ -980,6 +987,8 @@
     "statusActive": "Активен",
     "statusInactive": "Неактивен",
     "statusActiveHint": "Может входить в систему",
-    "statusInactiveHint": "Доступ заблокирован"
+    "statusInactiveHint": "Доступ заблокирован",
+    "emailReadonly": "Email нельзя изменить после создания",
+    "partialSaveWarning": "Сотрудник создан, но настройки зарплаты / лимита не сохранились. Откройте профиль и сохраните снова."
   }
 }

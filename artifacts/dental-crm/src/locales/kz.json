@@ -907,7 +907,14 @@
     "approveAndRecord": "ЕАҚ-ты бекіту",
     "approveFot": "ЕАҚ-ты бекіту",
     "fotApproved": "қызм. бекітілді",
-    "fotNotApproved": "Ағымдағы айдың ЕАҚ бекітілмеген"
+    "fotNotApproved": "Ағымдағы айдың ЕАҚ бекітілмеген",
+    "statusPaid": "Төленді",
+    "statusApproved": "Бекітілді",
+    "statusPending": "Алдын ала",
+    "revenue": "Кезеңдегі табыс",
+    "ofRevenue": "табыстан",
+    "historyComingSoon": "Өткен айлардың тарихы келесі жаңартуда қолжетімді болады",
+    "contactAdmin": "Әкімшіге хабарласыңыз"
   },
   "months": {
     "january": "Қаңтар",
@@ -976,6 +983,8 @@
     "statusActive": "Белсенді",
     "statusInactive": "Белсенді емес",
     "statusActiveHint": "Жүйеге кіре алады",
-    "statusInactiveHint": "Қол жеткізу бұғатталған"
+    "statusInactiveHint": "Қол жеткізу бұғатталған",
+    "emailReadonly": "Жасалғаннан кейін email өзгертуге болмайды",
+    "partialSaveWarning": "Қызметкер жасалды, бірақ жалақы / лимит параметрлері сақталмады. Профильді ашып, қайта сақтаңыз."
   }
 }

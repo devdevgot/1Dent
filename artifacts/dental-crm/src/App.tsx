@@ -50,6 +50,7 @@ import NotFound from "@/pages/not-found";
 import AdminCalendarPage from "@/pages/admin-calendar";
 import AdminAppointmentNewPage from "@/pages/admin-appointment-new";
 import AdminFinancePage from "@/pages/admin-finance";
+import PayrollMyPage from "@/pages/payroll-my";
 
 const queryClient = new QueryClient();
 
@@ -243,6 +244,9 @@ function Router() {
       </Route>
       <Route path="/schedule/:date">
         <ProtectedRoute component={DoctorScheduleDayPage} allowedRoles={['doctor']} />
+      </Route>
+      <Route path="/payroll/my">
+        <ProtectedRoute component={PayrollMyPage} allowedRoles={['doctor']} />
       </Route>
       <Route path="/logs">
         <ProtectedRoute component={LogsPage} allowedRoles={['owner']} />

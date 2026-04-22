@@ -308,21 +308,33 @@ export default function UsersPage() {
         },
       });
       const newUserId = (res?.data as unknown as CreateUserApiResponse)?.user?.id;
+      let partialFailure = false;
       if (newUserId && isOwnerOrAdminForSalary) {
-        await updateSalaryMutation.mutateAsync({
-          userId: newUserId,
-          data: {
-            salaryType: formData.salaryType,
-            fixedAmount: formData.fixedAmount,
-            commissionPercent: formData.commissionPercent,
-          },
-        }).catch(() => {});
+        try {
+          await updateSalaryMutation.mutateAsync({
+            userId: newUserId,
+            data: {
+              salaryType: formData.salaryType,
+              fixedAmount: formData.fixedAmount,
+              commissionPercent: formData.commissionPercent,
+            },
+          });
+        } catch {
+          partialFailure = true;
+        }
       }
       if (newUserId && formData.role === "doctor" && formData.maxPatientsPerDay > 0) {
-        await capacityMutation.mutateAsync({
-          id: newUserId,
-          data: { maxPatientsPerDay: formData.maxPatientsPerDay },
-        }).catch(() => {});
+        try {
+          await capacityMutation.mutateAsync({
+            id: newUserId,
+            data: { maxPatientsPerDay: formData.maxPatientsPerDay },
+          });
+        } catch {
+          partialFailure = true;
+        }
+      }
+      if (partialFailure) {
+        toast.warning(t("employees.partialSaveWarning", "Сотрудник создан, но настройки зарплаты / лимита не сохранились. Откройте профиль и сохраните снова."), { duration: 8000 });
       }
     }
   };
