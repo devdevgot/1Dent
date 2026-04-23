@@ -1,5 +1,5 @@
 import { db, clinicExpensesTable } from "@workspace/db";
-import { eq, and, gte, lte, isNull, desc } from "drizzle-orm";
+import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 export interface CreateExpenseInput {
@@ -32,11 +32,6 @@ export interface ExpenseFilters {
 
 export class ExpensesRepository {
   async listExpenses(clinicId: string, filters?: ExpenseFilters) {
-    let query = db
-      .select()
-      .from(clinicExpensesTable)
-      .where(eq(clinicExpensesTable.clinicId, clinicId));
-
     const conditions = [eq(clinicExpensesTable.clinicId, clinicId)];
 
     if (filters?.dateFrom) {

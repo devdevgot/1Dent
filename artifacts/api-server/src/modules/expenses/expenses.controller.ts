@@ -16,7 +16,13 @@ const createExpenseSchema = z.object({
   subcategory: z.string().max(100).optional(),
   amount: z.number().positive(),
   description: z.string().max(500).optional(),
-  expenseDate: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
+  expenseDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$|^\d{4}-\d{2}-\d{2}T/)
+    .refine((v) => {
+      const d = new Date(v);
+      return !isNaN(d.getTime()) && d <= new Date();
+    }, "Expense date cannot be in the future"),
   periodMonth: z.number().int().min(1).max(12).optional(),
   periodYear: z.number().int().min(2020).max(2100).optional(),
 });

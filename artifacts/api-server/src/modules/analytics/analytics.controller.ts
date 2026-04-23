@@ -8,8 +8,17 @@ import {
 import { AnalyticsRepository, type DoctorAnalyticsFilters } from "./analytics.repository";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ForbiddenError } from "../../shared/errors";
-import { db, proceduresTable, procedureMaterialsTable, inventoryItemsTable, clinicExpensesTable } from "@workspace/db";
-import { eq, and, gte, lte, sql } from "drizzle-orm";
+import {
+  db,
+  proceduresTable,
+  procedureMaterialsTable,
+  inventoryItemsTable,
+  clinicExpensesTable,
+  patientsTable,
+  usersTable,
+  clinicsTable,
+} from "@workspace/db";
+import { eq, and, gte, lte, sql, type SQL } from "drizzle-orm";
 import ExcelJS from "exceljs";
 import PdfPrinter from "pdfmake";
 
@@ -135,9 +144,9 @@ router.get(
   ownerAdminRoles,
   async (req: Request, res: Response, next: NextFunction) => {
     const { clinicId } = req.user!;
-    const { doctorId } = req.params;
+    const doctorId = String(req.params["doctorId"]);
     const filters = parseAnalyticsFilters(req.query);
-    const analytics = await repo.getDoctorDetailedAnalytics(clinicId, doctorId!, filters).catch(next);
+    const analytics = await repo.getDoctorDetailedAnalytics(clinicId, doctorId, filters).catch(next);
     if (analytics === undefined) return;
     res.json({ success: true, data: { analytics } });
   },
@@ -155,7 +164,86 @@ router.get(
   },
 );
 
-// ─── Financial Summary ───────────────────────────────────────────────────────
+// ─── Shared helpers ───────────────────────────────────────────────────────────
+
+function buildProcConditions(clinicId: string, dateFrom?: Date, dateTo?: Date): SQL[] {
+  const conds: SQL[] = [
+    eq(proceduresTable.clinicId, clinicId),
+    eq(proceduresTable.status, "completed"),
+  ];
+  if (dateFrom) conds.push(gte(proceduresTable.completedAt, dateFrom));
+  if (dateTo) conds.push(lte(proceduresTable.completedAt, dateTo));
+  return conds;
+}
+
+function buildExpConditions(clinicId: string, dateFrom?: Date, dateTo?: Date): SQL[] {
+  const conds: SQL[] = [eq(clinicExpensesTable.clinicId, clinicId)];
+  if (dateFrom) conds.push(gte(clinicExpensesTable.expenseDate, dateFrom));
+  if (dateTo) conds.push(lte(clinicExpensesTable.expenseDate, dateTo));
+  return conds;
+}
+
+function parseDateRange(query: Request["query"]): { dateFrom?: Date; dateTo?: Date } {
+  const dateFrom = typeof query["dateFrom"] === "string" ? new Date(query["dateFrom"]) : undefined;
+  const dateTo = typeof query["dateTo"] === "string" ? new Date(query["dateTo"] + "T23:59:59Z") : undefined;
+  return { dateFrom, dateTo };
+}
+
+async function loadFinancialData(clinicId: string, dateFrom?: Date, dateTo?: Date) {
+  const procConds = buildProcConditions(clinicId, dateFrom, dateTo);
+  const expConds = buildExpConditions(clinicId, dateFrom, dateTo);
+
+  const [procedures, materialRows, expenses] = await Promise.all([
+    db
+      .select({
+        id: proceduresTable.id,
+        name: proceduresTable.name,
+        price: proceduresTable.price,
+        paymentMethod: proceduresTable.paymentMethod,
+        completedAt: proceduresTable.completedAt,
+        patientId: proceduresTable.patientId,
+        doctorId: proceduresTable.doctorId,
+      })
+      .from(proceduresTable)
+      .where(and(...procConds)),
+    db
+      .select({
+        totalCost: sql<number>`COALESCE(SUM(${procedureMaterialsTable.quantity} * ${inventoryItemsTable.unitPrice}), 0)`,
+      })
+      .from(procedureMaterialsTable)
+      .innerJoin(proceduresTable, eq(procedureMaterialsTable.procedureId, proceduresTable.id))
+      .innerJoin(inventoryItemsTable, eq(procedureMaterialsTable.inventoryItemId, inventoryItemsTable.id))
+      .where(and(...procConds)),
+    db
+      .select({
+        id: clinicExpensesTable.id,
+        category: clinicExpensesTable.category,
+        subcategory: clinicExpensesTable.subcategory,
+        amount: clinicExpensesTable.amount,
+        description: clinicExpensesTable.description,
+        expenseDate: clinicExpensesTable.expenseDate,
+      })
+      .from(clinicExpensesTable)
+      .where(and(...expConds)),
+  ]);
+
+  const totalRevenue = procedures.reduce((s, p) => s + (p.price ?? 0), 0);
+  const totalMaterialCost = Number(materialRows[0]?.totalCost ?? 0);
+
+  const expensesByCategory: Record<string, number> = {};
+  let totalOperationalExpenses = 0;
+  for (const e of expenses) {
+    expensesByCategory[e.category] = (expensesByCategory[e.category] ?? 0) + Number(e.amount);
+    totalOperationalExpenses += Number(e.amount);
+  }
+
+  const netProfit = totalRevenue - totalMaterialCost - totalOperationalExpenses;
+  const marginPct = totalRevenue > 0 ? Math.round((netProfit / totalRevenue) * 100) : 0;
+
+  return { procedures, expenses, totalRevenue, totalMaterialCost, expensesByCategory, totalOperationalExpenses, netProfit, marginPct };
+}
+
+// ─── Financial Summary ────────────────────────────────────────────────────────
 
 router.get(
   "/analytics/financial-summary",
@@ -163,62 +251,19 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { clinicId } = req.user!;
-      const dateFrom = typeof req.query["dateFrom"] === "string" ? new Date(req.query["dateFrom"]) : undefined;
-      const dateTo = typeof req.query["dateTo"] === "string" ? new Date(req.query["dateTo"] + "T23:59:59Z") : undefined;
-
-      const procConditions: ReturnType<typeof eq>[] = [
-        eq(proceduresTable.clinicId, clinicId),
-        eq(proceduresTable.status, "completed"),
-      ];
-      if (dateFrom) procConditions.push(gte(proceduresTable.completedAt, dateFrom) as ReturnType<typeof eq>);
-      if (dateTo) procConditions.push(lte(proceduresTable.completedAt, dateTo) as ReturnType<typeof eq>);
-
-      const matConditions = [eq(proceduresTable.clinicId, clinicId)];
-      if (dateFrom) matConditions.push(gte(proceduresTable.completedAt, dateFrom) as ReturnType<typeof eq>);
-      if (dateTo) matConditions.push(lte(proceduresTable.completedAt, dateTo) as ReturnType<typeof eq>);
-
-      const expConditions: ReturnType<typeof eq>[] = [eq(clinicExpensesTable.clinicId, clinicId)];
-      if (dateFrom) expConditions.push(gte(clinicExpensesTable.expenseDate, dateFrom) as ReturnType<typeof eq>);
-      if (dateTo) expConditions.push(lte(clinicExpensesTable.expenseDate, dateTo) as ReturnType<typeof eq>);
-
-      const [procedures, materialRows, expenses] = await Promise.all([
-        db.select({ price: proceduresTable.price }).from(proceduresTable).where(and(...procConditions)),
-        db
-          .select({
-            totalCost: sql<number>`SUM(${procedureMaterialsTable.quantity} * ${inventoryItemsTable.unitPrice})`,
-          })
-          .from(procedureMaterialsTable)
-          .innerJoin(proceduresTable, eq(procedureMaterialsTable.procedureId, proceduresTable.id))
-          .innerJoin(inventoryItemsTable, eq(procedureMaterialsTable.inventoryItemId, inventoryItemsTable.id))
-          .where(and(...matConditions)),
-        db.select({ category: clinicExpensesTable.category, amount: clinicExpensesTable.amount })
-          .from(clinicExpensesTable)
-          .where(and(...expConditions)),
-      ]);
-
-      const totalRevenue = procedures.reduce((s, p) => s + (p.price ?? 0), 0);
-      const totalMaterialCost = Number(materialRows[0]?.totalCost ?? 0);
-
-      const expensesByCategory: Record<string, number> = {};
-      let totalOperationalExpenses = 0;
-      for (const e of expenses) {
-        expensesByCategory[e.category] = (expensesByCategory[e.category] ?? 0) + Number(e.amount);
-        totalOperationalExpenses += Number(e.amount);
-      }
-
-      const netProfit = totalRevenue - totalMaterialCost - totalOperationalExpenses;
-      const marginPct = totalRevenue > 0 ? Math.round((netProfit / totalRevenue) * 100) : 0;
+      const { dateFrom, dateTo } = parseDateRange(req.query);
+      const data = await loadFinancialData(clinicId, dateFrom, dateTo);
 
       res.json({
         success: true,
         data: {
-          totalRevenue,
-          totalMaterialCost,
-          totalOperationalExpenses,
-          netProfit,
-          marginPct,
-          expensesByCategory,
-          procedureCount: procedures.length,
+          totalRevenue: data.totalRevenue,
+          totalMaterialCost: data.totalMaterialCost,
+          totalOperationalExpenses: data.totalOperationalExpenses,
+          netProfit: data.netProfit,
+          marginPct: data.marginPct,
+          expensesByCategory: data.expensesByCategory,
+          procedureCount: data.procedures.length,
         },
       });
     } catch (err) {
@@ -229,99 +274,106 @@ router.get(
 
 // ─── Excel Export ─────────────────────────────────────────────────────────────
 
+const PAYMENT_LABELS: Record<string, string> = {
+  cash: "Наличные",
+  card: "Карта",
+  insurance: "Страховка",
+  transfer: "Перевод",
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  salary: "Зарплата",
+  materials: "Материалы",
+  rent: "Аренда",
+  utilities: "Коммунальные",
+  equipment: "Оборудование",
+  marketing: "Маркетинг",
+  other: "Прочее",
+};
+
 router.get(
   "/analytics/export/excel",
   roleGuard("owner", "admin", "accountant"),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { clinicId } = req.user!;
-      const dateFrom = typeof req.query["dateFrom"] === "string" ? new Date(req.query["dateFrom"]) : undefined;
-      const dateTo = typeof req.query["dateTo"] === "string" ? new Date(req.query["dateTo"] + "T23:59:59Z") : undefined;
+      const { dateFrom, dateTo } = parseDateRange(req.query);
+      const data = await loadFinancialData(clinicId, dateFrom, dateTo);
 
-      const procConditions: ReturnType<typeof eq>[] = [
-        eq(proceduresTable.clinicId, clinicId),
-        eq(proceduresTable.status, "completed"),
-      ];
-      if (dateFrom) procConditions.push(gte(proceduresTable.completedAt, dateFrom) as ReturnType<typeof eq>);
-      if (dateTo) procConditions.push(lte(proceduresTable.completedAt, dateTo) as ReturnType<typeof eq>);
+      // Fetch patient and doctor names for the income sheet
+      const patientIds = [...new Set(data.procedures.map((p) => p.patientId).filter(Boolean))];
+      const doctorIds = [...new Set(data.procedures.map((p) => p.doctorId).filter(Boolean))];
 
-      const expConditions: ReturnType<typeof eq>[] = [eq(clinicExpensesTable.clinicId, clinicId)];
-      if (dateFrom) expConditions.push(gte(clinicExpensesTable.expenseDate, dateFrom) as ReturnType<typeof eq>);
-      if (dateTo) expConditions.push(lte(clinicExpensesTable.expenseDate, dateTo) as ReturnType<typeof eq>);
-
-      const [procedures, materialRows, expenses] = await Promise.all([
-        db.select({ name: proceduresTable.name, price: proceduresTable.price, completedAt: proceduresTable.completedAt })
-          .from(proceduresTable).where(and(...procConditions)),
-        db
-          .select({
-            totalCost: sql<number>`SUM(${procedureMaterialsTable.quantity} * ${inventoryItemsTable.unitPrice})`,
-          })
-          .from(procedureMaterialsTable)
-          .innerJoin(proceduresTable, eq(procedureMaterialsTable.procedureId, proceduresTable.id))
-          .innerJoin(inventoryItemsTable, eq(procedureMaterialsTable.inventoryItemId, inventoryItemsTable.id))
-          .where(and(...procConditions)),
-        db.select().from(clinicExpensesTable).where(and(...expConditions)),
+      const [patientRows, doctorRows] = await Promise.all([
+        patientIds.length > 0
+          ? db.select({ id: patientsTable.id, name: patientsTable.name }).from(patientsTable).where(eq(patientsTable.clinicId, clinicId))
+          : Promise.resolve([]),
+        doctorIds.length > 0
+          ? db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable).where(eq(usersTable.clinicId, clinicId))
+          : Promise.resolve([]),
       ]);
 
-      const totalRevenue = procedures.reduce((s, p) => s + (p.price ?? 0), 0);
-      const totalMaterialCost = Number(materialRows[0]?.totalCost ?? 0);
-      const totalOperationalExpenses = expenses.reduce((s, e) => s + Number(e.amount), 0);
-      const netProfit = totalRevenue - totalMaterialCost - totalOperationalExpenses;
-      const marginPct = totalRevenue > 0 ? Math.round((netProfit / totalRevenue) * 100) : 0;
+      const patientMap = new Map(patientRows.map((p) => [p.id, p.name]));
+      const doctorMap = new Map(doctorRows.map((d) => [d.id, d.name]));
 
       const workbook = new ExcelJS.Workbook();
       workbook.creator = "Dental CRM";
       workbook.created = new Date();
 
+      // ── Sheet 1: Сводка ──────────────────────────────────────────────────────
       const summarySheet = workbook.addWorksheet("Сводка");
       summarySheet.columns = [
-        { header: "Показатель", key: "label", width: 30 },
+        { header: "Показатель", key: "label", width: 32 },
         { header: "Сумма (₸)", key: "value", width: 20 },
+        { header: "%", key: "pct", width: 12 },
       ];
-      summarySheet.addRow({ label: "Выручка", value: totalRevenue });
-      summarySheet.addRow({ label: "Затраты на материалы", value: totalMaterialCost });
-      summarySheet.addRow({ label: "Операционные расходы", value: totalOperationalExpenses });
-      summarySheet.addRow({ label: "Чистая прибыль", value: netProfit });
-      summarySheet.addRow({ label: "Рентабельность (%)", value: marginPct });
+      summarySheet.addRow({ label: "Выручка", value: data.totalRevenue, pct: "100%" });
+      summarySheet.addRow({ label: "Затраты на материалы", value: data.totalMaterialCost, pct: data.totalRevenue > 0 ? `${Math.round((data.totalMaterialCost / data.totalRevenue) * 100)}%` : "—" });
+      summarySheet.addRow({ label: "Операционные расходы", value: data.totalOperationalExpenses, pct: data.totalRevenue > 0 ? `${Math.round((data.totalOperationalExpenses / data.totalRevenue) * 100)}%` : "—" });
+      summarySheet.addRow({ label: "Чистая прибыль", value: data.netProfit, pct: `${data.marginPct}%` });
+      const hdr = summarySheet.getRow(1);
+      hdr.font = { bold: true };
+      hdr.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF98CC1C" } };
 
-      summarySheet.getRow(1).font = { bold: true };
-      summarySheet.getRow(1).fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FF98CC1C" },
-      };
+      // ── Sheet 2: Доходы (detailed procedures) ────────────────────────────────
+      const incomeSheet = workbook.addWorksheet("Доходы");
+      incomeSheet.columns = [
+        { header: "Дата", key: "date", width: 14 },
+        { header: "Пациент", key: "patient", width: 28 },
+        { header: "Врач", key: "doctor", width: 24 },
+        { header: "Услуга", key: "service", width: 35 },
+        { header: "Способ оплаты", key: "payment", width: 18 },
+        { header: "Сумма (₸)", key: "amount", width: 15 },
+      ];
+      incomeSheet.getRow(1).font = { bold: true };
+      for (const p of data.procedures) {
+        incomeSheet.addRow({
+          date: p.completedAt ? new Date(p.completedAt).toLocaleDateString("ru-KZ") : "",
+          patient: patientMap.get(p.patientId) ?? "—",
+          doctor: p.doctorId ? (doctorMap.get(p.doctorId) ?? "—") : "—",
+          service: p.name,
+          payment: PAYMENT_LABELS[p.paymentMethod ?? "cash"] ?? p.paymentMethod ?? "",
+          amount: p.price ?? 0,
+        });
+      }
 
+      // ── Sheet 3: Расходы ─────────────────────────────────────────────────────
       const expensesSheet = workbook.addWorksheet("Расходы");
       expensesSheet.columns = [
-        { header: "Дата", key: "date", width: 15 },
-        { header: "Категория", key: "category", width: 18 },
-        { header: "Подкатегория", key: "subcategory", width: 20 },
+        { header: "Дата", key: "date", width: 14 },
+        { header: "Категория", key: "category", width: 20 },
+        { header: "Подкатегория", key: "subcategory", width: 22 },
         { header: "Описание", key: "description", width: 35 },
         { header: "Сумма (₸)", key: "amount", width: 15 },
       ];
       expensesSheet.getRow(1).font = { bold: true };
-      for (const e of expenses) {
+      for (const e of data.expenses) {
         expensesSheet.addRow({
           date: e.expenseDate ? new Date(e.expenseDate).toLocaleDateString("ru-KZ") : "",
-          category: e.category,
+          category: CATEGORY_LABELS[e.category] ?? e.category,
           subcategory: e.subcategory ?? "",
           description: e.description ?? "",
           amount: Number(e.amount),
-        });
-      }
-
-      const procSheet = workbook.addWorksheet("Процедуры");
-      procSheet.columns = [
-        { header: "Дата", key: "date", width: 15 },
-        { header: "Процедура", key: "name", width: 35 },
-        { header: "Сумма (₸)", key: "price", width: 15 },
-      ];
-      procSheet.getRow(1).font = { bold: true };
-      for (const p of procedures) {
-        procSheet.addRow({
-          date: p.completedAt ? new Date(p.completedAt).toLocaleDateString("ru-KZ") : "",
-          name: p.name,
-          price: p.price ?? 0,
         });
       }
 
@@ -347,60 +399,33 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { clinicId } = req.user!;
-      const dateFrom = typeof req.query["dateFrom"] === "string" ? new Date(req.query["dateFrom"]) : undefined;
-      const dateTo = typeof req.query["dateTo"] === "string" ? new Date(req.query["dateTo"] + "T23:59:59Z") : undefined;
+      const { dateFrom, dateTo } = parseDateRange(req.query);
+      const data = await loadFinancialData(clinicId, dateFrom, dateTo);
 
-      const procConditions: ReturnType<typeof eq>[] = [
-        eq(proceduresTable.clinicId, clinicId),
-        eq(proceduresTable.status, "completed"),
-      ];
-      if (dateFrom) procConditions.push(gte(proceduresTable.completedAt, dateFrom) as ReturnType<typeof eq>);
-      if (dateTo) procConditions.push(lte(proceduresTable.completedAt, dateTo) as ReturnType<typeof eq>);
+      // Fetch clinic name
+      const [clinic] = await db.select({ name: clinicsTable.name }).from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1);
+      const clinicName = clinic?.name ?? "Dental CRM";
 
-      const expConditions: ReturnType<typeof eq>[] = [eq(clinicExpensesTable.clinicId, clinicId)];
-      if (dateFrom) expConditions.push(gte(clinicExpensesTable.expenseDate, dateFrom) as ReturnType<typeof eq>);
-      if (dateTo) expConditions.push(lte(clinicExpensesTable.expenseDate, dateTo) as ReturnType<typeof eq>);
+      // Aggregate income by doctor
+      const doctorIds = [...new Set(data.procedures.map((p) => p.doctorId).filter((id): id is string => Boolean(id)))];
+      const doctorRows = doctorIds.length > 0
+        ? await db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable).where(eq(usersTable.clinicId, clinicId))
+        : [];
+      const doctorMap = new Map(doctorRows.map((d) => [d.id, d.name]));
 
-      const [procedures, materialRows, expenses] = await Promise.all([
-        db.select({ name: proceduresTable.name, price: proceduresTable.price })
-          .from(proceduresTable).where(and(...procConditions)),
-        db
-          .select({
-            totalCost: sql<number>`SUM(${procedureMaterialsTable.quantity} * ${inventoryItemsTable.unitPrice})`,
-          })
-          .from(procedureMaterialsTable)
-          .innerJoin(proceduresTable, eq(procedureMaterialsTable.procedureId, proceduresTable.id))
-          .innerJoin(inventoryItemsTable, eq(procedureMaterialsTable.inventoryItemId, inventoryItemsTable.id))
-          .where(and(...procConditions)),
-        db.select().from(clinicExpensesTable).where(and(...expConditions)),
-      ]);
+      const revenueByDoctor: Map<string, number> = new Map();
+      for (const p of data.procedures) {
+        const key = p.doctorId ? (doctorMap.get(p.doctorId) ?? "Неизвестно") : "Не назначен";
+        revenueByDoctor.set(key, (revenueByDoctor.get(key) ?? 0) + (p.price ?? 0));
+      }
 
-      const totalRevenue = procedures.reduce((s, p) => s + (p.price ?? 0), 0);
-      const totalMaterialCost = Number(materialRows[0]?.totalCost ?? 0);
-      const totalOperationalExpenses = expenses.reduce((s, e) => s + Number(e.amount), 0);
-      const netProfit = totalRevenue - totalMaterialCost - totalOperationalExpenses;
-      const marginPct = totalRevenue > 0 ? Math.round((netProfit / totalRevenue) * 100) : 0;
-
-      const fmtMoney = (n: number) => `${n.toLocaleString("ru-KZ")} ₸`;
-      const fmtDate = (d: Date | null | undefined) =>
-        d ? new Date(d).toLocaleDateString("ru-KZ") : "—";
+      const fmtMoney = (n: number) => `${n.toLocaleString("ru-KZ")} KZT`;
+      const fmtDate = (d: Date | null | undefined) => d ? new Date(d).toLocaleDateString("ru-KZ") : "—";
       const periodLabel = dateFrom && dateTo
         ? `${fmtDate(dateFrom)} — ${fmtDate(dateTo)}`
-        : dateFrom
-        ? `с ${fmtDate(dateFrom)}`
-        : dateTo
-        ? `по ${fmtDate(dateTo)}`
+        : dateFrom ? `с ${fmtDate(dateFrom)}`
+        : dateTo ? `по ${fmtDate(dateTo)}`
         : "За всё время";
-
-      const CATEGORY_LABELS: Record<string, string> = {
-        salary: "Зарплата",
-        materials: "Материалы",
-        rent: "Аренда",
-        utilities: "Коммунальные",
-        equipment: "Оборудование",
-        marketing: "Маркетинг",
-        other: "Прочее",
-      };
 
       const fonts = {
         Roboto: {
@@ -412,48 +437,98 @@ router.get(
       };
 
       const printer = new PdfPrinter(fonts);
+
       const docDefinition = {
         content: [
-          { text: "Финансовый отчёт", style: "title" },
-          { text: periodLabel, style: "subtitle", margin: [0, 0, 0, 16] },
-          { text: "Сводка", style: "sectionHeader" },
+          // Clinic header
+          { text: clinicName, style: "title" },
+          { text: `Finansovyy otchet: ${periodLabel}`, style: "subtitle", margin: [0, 0, 0, 16] },
+
+          // KPI table: 3 columns — metric | value | %
+          { text: "Svodnaya tablica", style: "sectionHeader" },
           {
             table: {
-              widths: ["*", "auto"],
+              widths: ["*", "auto", "auto"],
               body: [
-                [{ text: "Показатель", bold: true }, { text: "Сумма (₸)", bold: true }],
-                ["Выручка", fmtMoney(totalRevenue)],
-                ["Затраты на материалы", fmtMoney(totalMaterialCost)],
-                ["Операционные расходы", fmtMoney(totalOperationalExpenses)],
-                [{ text: "Чистая прибыль", bold: true }, { text: fmtMoney(netProfit), bold: true }],
-                ["Рентабельность", `${marginPct}%`],
+                [
+                  { text: "Pokazatel", bold: true },
+                  { text: "Summa (KZT)", bold: true, alignment: "right" as const },
+                  { text: "%", bold: true, alignment: "right" as const },
+                ],
+                [
+                  "Vyruchka",
+                  { text: fmtMoney(data.totalRevenue), alignment: "right" as const },
+                  { text: "100%", alignment: "right" as const },
+                ],
+                [
+                  "Zatraty na materialy",
+                  { text: fmtMoney(data.totalMaterialCost), alignment: "right" as const },
+                  { text: data.totalRevenue > 0 ? `${Math.round((data.totalMaterialCost / data.totalRevenue) * 100)}%` : "-", alignment: "right" as const },
+                ],
+                [
+                  "Operatsionnye rashody",
+                  { text: fmtMoney(data.totalOperationalExpenses), alignment: "right" as const },
+                  { text: data.totalRevenue > 0 ? `${Math.round((data.totalOperationalExpenses / data.totalRevenue) * 100)}%` : "-", alignment: "right" as const },
+                ],
+                [
+                  { text: "Chistaya pribyl", bold: true },
+                  { text: fmtMoney(data.netProfit), bold: true, alignment: "right" as const },
+                  { text: `${data.marginPct}%`, bold: true, alignment: "right" as const },
+                ],
               ],
             },
-            margin: [0, 8, 0, 16],
+            margin: [0, 8, 0, 20],
           },
-          ...(expenses.length > 0 ? [
-            { text: "Операционные расходы", style: "sectionHeader" },
-            {
-              table: {
-                widths: ["auto", "auto", "*", "auto"],
-                body: [
-                  [
-                    { text: "Дата", bold: true },
-                    { text: "Категория", bold: true },
-                    { text: "Описание", bold: true },
-                    { text: "Сумма", bold: true },
-                  ],
-                  ...expenses.map((e) => [
-                    fmtDate(e.expenseDate),
-                    CATEGORY_LABELS[e.category] ?? e.category,
-                    e.description ?? "",
-                    fmtMoney(Number(e.amount)),
-                  ]),
-                ],
-              },
-              margin: [0, 8, 0, 16],
-            },
-          ] : []),
+
+          // Income by doctor
+          ...(revenueByDoctor.size > 0
+            ? [
+                { text: "Dokhody po vracham", style: "sectionHeader" },
+                {
+                  table: {
+                    widths: ["*", "auto", "auto"],
+                    body: [
+                      [
+                        { text: "Vrach", bold: true },
+                        { text: "Summa (KZT)", bold: true, alignment: "right" as const },
+                        { text: "%", bold: true, alignment: "right" as const },
+                      ],
+                      ...[...revenueByDoctor.entries()].map(([name, amount]) => [
+                        name,
+                        { text: fmtMoney(amount), alignment: "right" as const },
+                        { text: data.totalRevenue > 0 ? `${Math.round((amount / data.totalRevenue) * 100)}%` : "0%", alignment: "right" as const },
+                      ]),
+                    ],
+                  },
+                  margin: [0, 8, 0, 20],
+                },
+              ]
+            : []),
+
+          // Expenses by category (aggregated)
+          ...(Object.keys(data.expensesByCategory).length > 0
+            ? [
+                { text: "Rashody po kategoriyam", style: "sectionHeader" },
+                {
+                  table: {
+                    widths: ["*", "auto", "auto"],
+                    body: [
+                      [
+                        { text: "Kategoriya", bold: true },
+                        { text: "Summa (KZT)", bold: true, alignment: "right" as const },
+                        { text: "%", bold: true, alignment: "right" as const },
+                      ],
+                      ...Object.entries(data.expensesByCategory).map(([cat, amount]) => [
+                        CATEGORY_LABELS[cat] ?? cat,
+                        { text: fmtMoney(amount), alignment: "right" as const },
+                        { text: data.totalOperationalExpenses > 0 ? `${Math.round((amount / data.totalOperationalExpenses) * 100)}%` : "0%", alignment: "right" as const },
+                      ]),
+                    ],
+                  },
+                  margin: [0, 8, 0, 16],
+                },
+              ]
+            : []),
         ],
         styles: {
           title: { fontSize: 20, bold: true, margin: [0, 0, 0, 4] },

@@ -159,13 +159,15 @@ export default function AccountantDashboard() {
           >
             <RefreshCw className="w-5 h-5" />
           </button>
-          <button
-            onClick={() => setShowExpenseDialog(true)}
-            className="px-4 py-2.5 border border-primary text-primary font-semibold rounded-xl hover:bg-primary/5 transition-all flex items-center gap-2"
-          >
-            <PlusCircle className="w-4 h-4" />
-            {t("expenses.add")}
-          </button>
+          {user?.role !== "accountant" && (
+            <button
+              onClick={() => setShowExpenseDialog(true)}
+              className="px-4 py-2.5 border border-primary text-primary font-semibold rounded-xl hover:bg-primary/5 transition-all flex items-center gap-2"
+            >
+              <PlusCircle className="w-4 h-4" />
+              {t("expenses.add")}
+            </button>
+          )}
           <button
             onClick={() => navigate("/financials")}
             className="px-5 py-2.5 bg-primary text-white font-semibold rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2"
