@@ -845,7 +845,21 @@
     "patients": "Пациенттер",
     "procedures": "Процедуралар",
     "avgCheck": "Орташа чек",
-    "nps": "NPS"
+    "nps": "NPS",
+    "retentionSection": "Пациент адалдығы",
+    "retentionRate": "Пациент қайтымдылығы",
+    "retentionRateDesc": "қайталама қабылдауға оралды",
+    "avgLtv": "Орташа LTV",
+    "avgLtvDesc": "пациент бойынша жалпы табыс",
+    "treatmentConversion": "Емдеу жоспарының конверсиясы",
+    "treatmentConversionDesc": "жоспар қабылданды",
+    "cohortTitle": "Пациент оралымының когорттық талдауы",
+    "cohortMonth": "Ай",
+    "cohortNewPatients": "Жаңа",
+    "cohortReturn3m": "3 айда оралды",
+    "cohortReturn6m": "6 айда оралды",
+    "cohortReturn12m": "12 айда оралды",
+    "topByLtv": "Табыс бойынша үздік пациенттер"
   },
   "settingsPage": {
     "title": "Баптаулар",

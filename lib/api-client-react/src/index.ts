@@ -561,3 +561,60 @@ export const useGetFinancialSummary = <TError = unknown>(
     queryFn: ({ signal }) => getFinancialSummary(params, { signal }),
     ...options?.query,
   });
+
+// ─── Custom: patient metrics (retention, LTV, treatment plan conversion) ───────
+
+export interface RetentionCohort {
+  month: string;
+  newPatients: number;
+  returnedIn3m: number;
+  returnedIn6m: number;
+  returnedIn12m: number;
+}
+
+export interface TopPatientLtv {
+  id: string;
+  name: string;
+  totalSpent: number;
+  procedureCount: number;
+}
+
+export interface PatientMetrics {
+  retentionRate: number;
+  retentionCohorts: RetentionCohort[];
+  avgLtv: number;
+  medianLtv: number;
+  topPatientsByLtv: TopPatientLtv[];
+  treatmentPlanConversion: number;
+  treatmentPlanAccepted: number;
+  treatmentPlanTotal: number;
+  treatmentItemCompletion: number;
+}
+
+export interface GetPatientMetricsResponse {
+  success: boolean;
+  data: PatientMetrics;
+}
+
+export const getPatientMetrics = (
+  params?: { doctorId?: string },
+  options?: RequestInit,
+): Promise<GetPatientMetricsResponse> => {
+  const qs = new URLSearchParams();
+  if (params?.doctorId) qs.set("doctorId", params.doctorId);
+  const q = qs.toString();
+  return customFetch<GetPatientMetricsResponse>(
+    `/api/analytics/patient-metrics${q ? `?${q}` : ""}`,
+    { method: "GET", ...options },
+  );
+};
+
+export const useGetPatientMetrics = <TError = unknown>(
+  params?: { doctorId?: string },
+  options?: { query?: UseQueryOptions<GetPatientMetricsResponse, TError> },
+) =>
+  useQuery<GetPatientMetricsResponse, TError>({
+    queryKey: ["/api/analytics/patient-metrics", params],
+    queryFn: ({ signal }) => getPatientMetrics(params, { signal }),
+    ...options?.query,
+  });

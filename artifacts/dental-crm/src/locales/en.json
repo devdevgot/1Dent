@@ -845,7 +845,21 @@
     "patients": "Patients",
     "procedures": "Procedures",
     "avgCheck": "Average Check",
-    "nps": "NPS"
+    "nps": "NPS",
+    "retentionSection": "Patient Loyalty",
+    "retentionRate": "Patient Retention",
+    "retentionRateDesc": "returned for a follow-up visit",
+    "avgLtv": "Average LTV",
+    "avgLtvDesc": "lifetime revenue per patient",
+    "treatmentConversion": "Treatment Plan Conversion",
+    "treatmentConversionDesc": "plans accepted",
+    "cohortTitle": "Patient Return Cohort Analysis",
+    "cohortMonth": "Month",
+    "cohortNewPatients": "New",
+    "cohortReturn3m": "Returned 3m",
+    "cohortReturn6m": "Returned 6m",
+    "cohortReturn12m": "Returned 12m",
+    "topByLtv": "Top Patients by Revenue"
   },
   "settingsPage": {
     "title": "Settings",

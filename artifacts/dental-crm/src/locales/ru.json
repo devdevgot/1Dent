@@ -849,7 +849,21 @@
     "patients": "Пациентов",
     "procedures": "Процедур",
     "avgCheck": "Средний чек",
-    "nps": "NPS"
+    "nps": "NPS",
+    "retentionSection": "Лояльность пациентов",
+    "retentionRate": "Возврат пациентов",
+    "retentionRateDesc": "вернулись на повторный приём",
+    "avgLtv": "Средний LTV",
+    "avgLtvDesc": "выручка на пациента за всё время",
+    "treatmentConversion": "Конверсия планов лечения",
+    "treatmentConversionDesc": "планов принято",
+    "cohortTitle": "Когортный анализ возврата пациентов",
+    "cohortMonth": "Месяц",
+    "cohortNewPatients": "Новых",
+    "cohortReturn3m": "Вернулись 3м",
+    "cohortReturn6m": "Вернулись 6м",
+    "cohortReturn12m": "Вернулись 12м",
+    "topByLtv": "Топ пациентов по выручке"
   },
   "settingsPage": {
     "title": "Настройки",

@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { TrendingUp, Users, DollarSign, Zap, AlertCircle, CheckCircle, Radio, BarChart3, ChevronLeft } from "lucide-react";
-import { useGetAnalytics, useGetChannelStats, getGetChannelStatsQueryKey, type ChannelStat } from "@workspace/api-client-react";
+import { TrendingUp, Users, DollarSign, Zap, AlertCircle, CheckCircle, Radio, BarChart3, ChevronLeft, Repeat2, Heart, ClipboardCheck, Crown } from "lucide-react";
+import { useGetAnalytics, useGetChannelStats, getGetChannelStatsQueryKey, useGetPatientMetrics, type ChannelStat } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 
 const COLORS = ["#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#06b6d4", "#6366f1"];
@@ -50,6 +50,11 @@ export default function AnalyticsPage() {
     }
   );
   const channelStats: ChannelStat[] = channelStatsRes?.data?.stats ?? [];
+
+  const { data: patientMetricsRes } = useGetPatientMetrics(undefined, {
+    query: { enabled: isOwnerOrAdmin || user?.role === "doctor" || user?.role === "accountant" },
+  });
+  const pm = patientMetricsRes?.data;
 
   const statusData = analytics && "patientsByStatus" in analytics && analytics.patientsByStatus
     ? Object.entries(analytics.patientsByStatus).map(([status, count]: [string, unknown]) => ({
@@ -284,6 +289,152 @@ export default function AnalyticsPage() {
                   </tbody>
                 </table>
               </div>
+            </div>
+          )}
+
+          {/* Patient Retention, LTV, Treatment Plan Conversion */}
+          {pm && (
+            <div className="space-y-4">
+              {/* Section header */}
+              <div className="flex items-center gap-2">
+                <Heart className="h-4 w-4 text-primary" />
+                <h3 className="text-sm font-semibold text-foreground">{t("analytics.retentionSection")}</h3>
+              </div>
+
+              {/* 3 KPI cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Retention rate */}
+                <div className="bg-white rounded-xl border border-border/50 p-4 shadow-sm">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium">{t("analytics.retentionRate")}</p>
+                      <p className="text-3xl font-bold text-foreground mt-2">{pm.retentionRate}%</p>
+                      <p className="text-xs text-muted-foreground mt-1">{t("analytics.retentionRateDesc")}</p>
+                    </div>
+                    <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
+                      <Repeat2 className="h-5 w-5 text-emerald-600" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Average LTV */}
+                <div className="bg-white rounded-xl border border-border/50 p-4 shadow-sm">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium">{t("analytics.avgLtv")}</p>
+                      <p className="text-3xl font-bold text-foreground mt-2">₸{pm.avgLtv.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{t("analytics.avgLtvDesc")}</p>
+                    </div>
+                    <div className="h-10 w-10 rounded-lg bg-violet-100 flex items-center justify-center shrink-0">
+                      <TrendingUp className="h-5 w-5 text-violet-600" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Treatment Plan Conversion */}
+                <div className="bg-white rounded-xl border border-border/50 p-4 shadow-sm">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium">{t("analytics.treatmentConversion")}</p>
+                      <p className="text-3xl font-bold text-foreground mt-2">{pm.treatmentPlanConversion}%</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {pm.treatmentPlanAccepted} / {pm.treatmentPlanTotal} {t("analytics.treatmentConversionDesc")}
+                      </p>
+                    </div>
+                    <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+                      <ClipboardCheck className="h-5 w-5 text-amber-600" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cohort retention table */}
+              {pm.retentionCohorts.some((c) => c.newPatients > 0) && (
+                <div className="bg-white rounded-xl border border-border/50 p-5 shadow-sm">
+                  <h4 className="text-sm font-semibold text-foreground mb-3">{t("analytics.cohortTitle")}</h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-border/30">
+                          <th className="text-left font-semibold text-muted-foreground py-2 px-3">{t("analytics.cohortMonth")}</th>
+                          <th className="text-right font-semibold text-muted-foreground py-2 px-3">{t("analytics.cohortNewPatients")}</th>
+                          <th className="text-right font-semibold text-muted-foreground py-2 px-3">{t("analytics.cohortReturn3m")}</th>
+                          <th className="text-right font-semibold text-muted-foreground py-2 px-3">{t("analytics.cohortReturn6m")}</th>
+                          <th className="text-right font-semibold text-muted-foreground py-2 px-3">{t("analytics.cohortReturn12m")}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pm.retentionCohorts.map((cohort) => (
+                          <tr key={cohort.month} className="border-b border-border/20 hover:bg-muted/30 transition-colors">
+                            <td className="py-2 px-3 font-medium text-foreground">{cohort.month}</td>
+                            <td className="py-2 px-3 text-right text-foreground">{cohort.newPatients}</td>
+                            <td className="py-2 px-3 text-right">
+                              {cohort.newPatients > 0 ? (
+                                <span className={`px-1.5 py-0.5 rounded font-medium ${
+                                  cohort.returnedIn3m / cohort.newPatients >= 0.5 ? "bg-emerald-100 text-emerald-700" :
+                                  cohort.returnedIn3m > 0 ? "bg-amber-100 text-amber-700" : "text-muted-foreground"
+                                }`}>
+                                  {cohort.returnedIn3m > 0
+                                    ? `${cohort.returnedIn3m} (${Math.round((cohort.returnedIn3m / cohort.newPatients) * 100)}%)`
+                                    : "—"}
+                                </span>
+                              ) : "—"}
+                            </td>
+                            <td className="py-2 px-3 text-right">
+                              {cohort.newPatients > 0 ? (
+                                <span className={`px-1.5 py-0.5 rounded font-medium ${
+                                  cohort.returnedIn6m / cohort.newPatients >= 0.5 ? "bg-emerald-100 text-emerald-700" :
+                                  cohort.returnedIn6m > 0 ? "bg-amber-100 text-amber-700" : "text-muted-foreground"
+                                }`}>
+                                  {cohort.returnedIn6m > 0
+                                    ? `${cohort.returnedIn6m} (${Math.round((cohort.returnedIn6m / cohort.newPatients) * 100)}%)`
+                                    : "—"}
+                                </span>
+                              ) : "—"}
+                            </td>
+                            <td className="py-2 px-3 text-right">
+                              {cohort.newPatients > 0 ? (
+                                <span className={`px-1.5 py-0.5 rounded font-medium ${
+                                  cohort.returnedIn12m / cohort.newPatients >= 0.5 ? "bg-emerald-100 text-emerald-700" :
+                                  cohort.returnedIn12m > 0 ? "bg-amber-100 text-amber-700" : "text-muted-foreground"
+                                }`}>
+                                  {cohort.returnedIn12m > 0
+                                    ? `${cohort.returnedIn12m} (${Math.round((cohort.returnedIn12m / cohort.newPatients) * 100)}%)`
+                                    : "—"}
+                                </span>
+                              ) : "—"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Top patients by LTV — owner/admin only */}
+              {isOwnerOrAdmin && pm.topPatientsByLtv.length > 0 && (
+                <div className="bg-white rounded-xl border border-border/50 p-5 shadow-sm">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Crown className="h-4 w-4 text-amber-500" />
+                    <h4 className="text-sm font-semibold text-foreground">{t("analytics.topByLtv")}</h4>
+                  </div>
+                  <div className="space-y-2">
+                    {pm.topPatientsByLtv.map((p, idx) => (
+                      <div key={p.id} className="flex items-center gap-3 py-2 border-b border-border/20 last:border-0">
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                          idx === 0 ? "bg-amber-100 text-amber-700" :
+                          idx === 1 ? "bg-slate-100 text-slate-600" :
+                          idx === 2 ? "bg-orange-100 text-orange-700" : "bg-muted text-muted-foreground"
+                        }`}>{idx + 1}</span>
+                        <span className="text-sm text-foreground font-medium flex-1 truncate">{p.name}</span>
+                        <span className="text-xs text-muted-foreground">{p.procedureCount} {t("analytics.procedures")}</span>
+                        <span className="text-sm font-semibold text-foreground">₸{p.totalSpent.toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

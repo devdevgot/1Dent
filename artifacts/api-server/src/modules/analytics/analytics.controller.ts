@@ -17,8 +17,10 @@ import {
   patientsTable,
   usersTable,
   clinicsTable,
+  treatmentPlansTable,
+  treatmentPlanItemsTable,
 } from "@workspace/db";
-import { eq, and, gte, lte, sql, type SQL } from "drizzle-orm";
+import { eq, and, gte, lte, sql, inArray, type SQL } from "drizzle-orm";
 import ExcelJS from "exceljs";
 import PdfPrinter from "pdfmake";
 
@@ -553,6 +555,149 @@ router.get(
       const pdfDoc = printer.createPdfKitDocument(docDefinition as Parameters<typeof printer.createPdfKitDocument>[0]);
       pdfDoc.pipe(res);
       pdfDoc.end();
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// ─── Patient Metrics (Retention, LTV, Treatment Plan Conversion) ──────────────
+
+router.get(
+  "/analytics/patient-metrics",
+  roleGuard("owner", "admin", "doctor", "accountant"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { clinicId, role, userId } = req.user!;
+      const rawDoctorId = typeof req.query["doctorId"] === "string" ? req.query["doctorId"] : undefined;
+      const effectiveDoctorId = role === "doctor" ? userId : rawDoctorId;
+
+      const procConds: SQL[] = [
+        eq(proceduresTable.clinicId, clinicId),
+        eq(proceduresTable.status, "completed"),
+      ];
+      if (effectiveDoctorId) procConds.push(eq(proceduresTable.doctorId, effectiveDoctorId));
+
+      const planConds: SQL[] = [eq(treatmentPlansTable.clinicId, clinicId)];
+      if (effectiveDoctorId) planConds.push(eq(treatmentPlansTable.doctorId, effectiveDoctorId));
+
+      const [completedProcs, treatmentPlans, treatmentItems] = await Promise.all([
+        db
+          .select({
+            id: proceduresTable.id,
+            patientId: proceduresTable.patientId,
+            price: proceduresTable.price,
+            completedAt: proceduresTable.completedAt,
+          })
+          .from(proceduresTable)
+          .where(and(...procConds)),
+        db
+          .select({ id: treatmentPlansTable.id, status: treatmentPlansTable.status })
+          .from(treatmentPlansTable)
+          .where(and(...planConds)),
+        db
+          .select({ id: treatmentPlanItemsTable.id, procedureId: treatmentPlanItemsTable.procedureId })
+          .from(treatmentPlanItemsTable)
+          .where(eq(treatmentPlanItemsTable.clinicId, clinicId)),
+      ]);
+
+      // ── Retention ──────────────────────────────────────────────────────────
+      const patientProcMap = new Map<string, Date[]>();
+      for (const p of completedProcs) {
+        if (!p.completedAt) continue;
+        const arr = patientProcMap.get(p.patientId) ?? [];
+        arr.push(new Date(p.completedAt));
+        patientProcMap.set(p.patientId, arr);
+      }
+
+      const totalWithProcs = patientProcMap.size;
+      const returnedCount = [...patientProcMap.values()].filter((d) => d.length >= 2).length;
+      const retentionRate = totalWithProcs > 0 ? Math.round((returnedCount / totalWithProcs) * 100) : 0;
+
+      // ── Retention Cohorts (last 12 months) ─────────────────────────────────
+      const now = new Date();
+      const retentionCohorts = Array.from({ length: 12 }, (_, i) => {
+        const offset = 11 - i;
+        const cohortStart = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+        const cohortEnd = new Date(now.getFullYear(), now.getMonth() - offset + 1, 0, 23, 59, 59, 999);
+        const month = cohortStart.toISOString().slice(0, 7);
+
+        const newInMonth: string[] = [];
+        for (const [patientId, dates] of patientProcMap.entries()) {
+          const sorted = [...dates].sort((a, b) => a.getTime() - b.getTime());
+          const first = sorted[0]!;
+          if (first >= cohortStart && first <= cohortEnd) newInMonth.push(patientId);
+        }
+
+        const cut3m = new Date(cohortEnd); cut3m.setMonth(cut3m.getMonth() + 3);
+        const cut6m = new Date(cohortEnd); cut6m.setMonth(cut6m.getMonth() + 6);
+        const cut12m = new Date(cohortEnd); cut12m.setFullYear(cut12m.getFullYear() + 1);
+
+        let ret3m = 0, ret6m = 0, ret12m = 0;
+        for (const pid of newInMonth) {
+          const dates = patientProcMap.get(pid)!;
+          const later = dates.filter((d) => d > cohortEnd);
+          if (later.some((d) => d <= cut3m)) ret3m++;
+          if (later.some((d) => d <= cut6m)) ret6m++;
+          if (later.some((d) => d <= cut12m)) ret12m++;
+        }
+
+        return { month, newPatients: newInMonth.length, returnedIn3m: ret3m, returnedIn6m: ret6m, returnedIn12m: ret12m };
+      });
+
+      // ── LTV ────────────────────────────────────────────────────────────────
+      const patientLtvMap = new Map<string, number>();
+      const patientProcCountMap = new Map<string, number>();
+      for (const p of completedProcs) {
+        patientLtvMap.set(p.patientId, (patientLtvMap.get(p.patientId) ?? 0) + (p.price ?? 0));
+        patientProcCountMap.set(p.patientId, (patientProcCountMap.get(p.patientId) ?? 0) + 1);
+      }
+
+      const ltvArr = [...patientLtvMap.values()].sort((a, b) => a - b);
+      const avgLtv = ltvArr.length > 0 ? Math.round(ltvArr.reduce((s, v) => s + v, 0) / ltvArr.length) : 0;
+      const medianLtv = ltvArr.length > 0 ? Math.round(ltvArr[Math.floor(ltvArr.length / 2)]!) : 0;
+
+      const top5 = [...patientLtvMap.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+      let topPatientsByLtv: Array<{ id: string; name: string; totalSpent: number; procedureCount: number }> = [];
+      if (top5.length > 0) {
+        const top5Ids = top5.map(([id]) => id);
+        const patientRows = await db
+          .select({ id: patientsTable.id, name: patientsTable.name })
+          .from(patientsTable)
+          .where(and(eq(patientsTable.clinicId, clinicId), inArray(patientsTable.id, top5Ids)));
+        const nameMap = new Map(patientRows.map((p) => [p.id, p.name]));
+        topPatientsByLtv = top5.map(([id, totalSpent]) => ({
+          id,
+          name: nameMap.get(id) ?? "—",
+          totalSpent: Math.round(totalSpent),
+          procedureCount: patientProcCountMap.get(id) ?? 0,
+        }));
+      }
+
+      // ── Treatment Plan Conversion ───────────────────────────────────────────
+      const totalPlans = treatmentPlans.length;
+      const acceptedPlans = treatmentPlans.filter(
+        (p) => p.status === "approved" || p.status === "in_progress" || p.status === "completed",
+      ).length;
+      const treatmentPlanConversion = totalPlans > 0 ? Math.round((acceptedPlans / totalPlans) * 100) : 0;
+      const totalItems = treatmentItems.length;
+      const linkedItems = treatmentItems.filter((item) => item.procedureId !== null).length;
+      const treatmentItemCompletion = totalItems > 0 ? Math.round((linkedItems / totalItems) * 100) : 0;
+
+      res.json({
+        success: true,
+        data: {
+          retentionRate,
+          retentionCohorts,
+          avgLtv,
+          medianLtv,
+          topPatientsByLtv,
+          treatmentPlanConversion,
+          treatmentPlanAccepted: acceptedPlans,
+          treatmentPlanTotal: totalPlans,
+          treatmentItemCompletion,
+        },
+      });
     } catch (err) {
       next(err);
     }
