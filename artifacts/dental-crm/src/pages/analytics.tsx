@@ -54,9 +54,10 @@ export default function AnalyticsPage() {
   );
   const channelStats: ChannelStat[] = channelStatsRes?.data?.stats ?? [];
 
-  const { data: patientMetricsRes } = useGetPatientMetrics(
+  const pmEnabled = isOwnerOrAdmin || user?.role === "doctor" || user?.role === "accountant";
+  const { data: patientMetricsRes, isLoading: pmLoading, isFetching: pmFetching } = useGetPatientMetrics(
     { dateFrom: retentionDates.dateFrom, dateTo: retentionDates.dateTo },
-    { query: { enabled: isOwnerOrAdmin || user?.role === "doctor" || user?.role === "accountant" } },
+    { query: { enabled: pmEnabled } },
   );
   const pm = patientMetricsRes?.data;
 
@@ -297,29 +298,23 @@ export default function AnalyticsPage() {
           )}
 
           {/* Patient Retention, LTV, Treatment Plan Conversion */}
-          {pm && (
+          {pmEnabled && (
             <div className="space-y-4">
-              {/* Section header with period picker */}
+              {/* Section header with period dropdown */}
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <Heart className="h-4 w-4 text-primary" />
                   <h3 className="text-sm font-semibold text-foreground">{t("analytics.retentionSection")}</h3>
                 </div>
-                <div className="flex gap-1 bg-muted rounded-lg p-1">
-                  {(["week", "month", "quarter"] as Period[]).map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => setRetentionPeriod(p)}
-                      className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-                        retentionPeriod === p
-                          ? "bg-white text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      {p === "week" ? t("channel.week") : p === "month" ? t("channel.month") : t("channel.quarter")}
-                    </button>
-                  ))}
-                </div>
+                <select
+                  value={retentionPeriod}
+                  onChange={(e) => setRetentionPeriod(e.target.value as Period)}
+                  className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-gray-700"
+                >
+                  <option value="week">{t("channel.week")}</option>
+                  <option value="month">{t("channel.month")}</option>
+                  <option value="quarter">{t("channel.quarter")}</option>
+                </select>
               </div>
 
               {/* 3 KPI cards */}
@@ -327,12 +322,16 @@ export default function AnalyticsPage() {
                 {/* Retention rate */}
                 <div className="bg-white rounded-xl border border-border/50 p-4 shadow-sm">
                   <div className="flex items-start justify-between">
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <p className="text-xs text-muted-foreground font-medium">{t("analytics.retentionRate")}</p>
-                      <p className="text-3xl font-bold text-foreground mt-2">{pm.retentionRate}%</p>
+                      {pmLoading || pmFetching ? (
+                        <div className="h-9 w-20 bg-muted animate-pulse rounded mt-2" />
+                      ) : (
+                        <p className="text-3xl font-bold text-foreground mt-2">{pm?.retentionRate ?? 0}%</p>
+                      )}
                       <p className="text-xs text-muted-foreground mt-1">{t("analytics.retentionRateDesc")}</p>
                     </div>
-                    <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
+                    <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0 ml-3">
                       <Repeat2 className="h-5 w-5 text-emerald-600" />
                     </div>
                   </div>
@@ -341,12 +340,16 @@ export default function AnalyticsPage() {
                 {/* Average LTV */}
                 <div className="bg-white rounded-xl border border-border/50 p-4 shadow-sm">
                   <div className="flex items-start justify-between">
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <p className="text-xs text-muted-foreground font-medium">{t("analytics.avgLtv")}</p>
-                      <p className="text-3xl font-bold text-foreground mt-2">₸{pm.avgLtv.toLocaleString()}</p>
+                      {pmLoading || pmFetching ? (
+                        <div className="h-9 w-28 bg-muted animate-pulse rounded mt-2" />
+                      ) : (
+                        <p className="text-3xl font-bold text-foreground mt-2">₸{(pm?.avgLtv ?? 0).toLocaleString()}</p>
+                      )}
                       <p className="text-xs text-muted-foreground mt-1">{t("analytics.avgLtvDesc")}</p>
                     </div>
-                    <div className="h-10 w-10 rounded-lg bg-violet-100 flex items-center justify-center shrink-0">
+                    <div className="h-10 w-10 rounded-lg bg-violet-100 flex items-center justify-center shrink-0 ml-3">
                       <TrendingUp className="h-5 w-5 text-violet-600" />
                     </div>
                   </div>
@@ -355,14 +358,20 @@ export default function AnalyticsPage() {
                 {/* Treatment Plan Conversion */}
                 <div className="bg-white rounded-xl border border-border/50 p-4 shadow-sm">
                   <div className="flex items-start justify-between">
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <p className="text-xs text-muted-foreground font-medium">{t("analytics.treatmentConversion")}</p>
-                      <p className="text-3xl font-bold text-foreground mt-2">{pm.treatmentPlanConversion}%</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {pm.treatmentPlanAccepted} / {pm.treatmentPlanTotal} {t("analytics.treatmentConversionDesc")}
-                      </p>
+                      {pmLoading || pmFetching ? (
+                        <div className="h-9 w-20 bg-muted animate-pulse rounded mt-2" />
+                      ) : (
+                        <p className="text-3xl font-bold text-foreground mt-2">{pm?.treatmentPlanConversion ?? 0}%</p>
+                      )}
+                      {!pmLoading && !pmFetching && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {pm?.treatmentPlanAccepted ?? 0} / {pm?.treatmentPlanTotal ?? 0} {t("analytics.treatmentConversionDesc")}
+                        </p>
+                      )}
                     </div>
-                    <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+                    <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center shrink-0 ml-3">
                       <ClipboardCheck className="h-5 w-5 text-amber-600" />
                     </div>
                   </div>
@@ -370,7 +379,20 @@ export default function AnalyticsPage() {
               </div>
 
               {/* Cohort retention table */}
-              {pm.retentionCohorts.some((c) => c.newPatients > 0) && (
+              {pmLoading ? (
+                <div className="bg-white rounded-xl border border-border/50 p-5 shadow-sm">
+                  <div className="h-4 w-48 bg-muted animate-pulse rounded mb-4" />
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="flex gap-4 mb-3">
+                      <div className="h-3 w-20 bg-muted animate-pulse rounded" />
+                      <div className="h-3 w-10 bg-muted animate-pulse rounded ml-auto" />
+                      <div className="h-3 w-12 bg-muted animate-pulse rounded" />
+                      <div className="h-3 w-12 bg-muted animate-pulse rounded" />
+                      <div className="h-3 w-14 bg-muted animate-pulse rounded" />
+                    </div>
+                  ))}
+                </div>
+              ) : pm && pm.retentionCohorts.some((c) => c.newPatients > 0) ? (
                 <div className="bg-white rounded-xl border border-border/50 p-5 shadow-sm">
                   <h4 className="text-sm font-semibold text-foreground mb-3">{t("analytics.cohortTitle")}</h4>
                   <div className="overflow-x-auto">
@@ -431,29 +453,43 @@ export default function AnalyticsPage() {
                     </table>
                   </div>
                 </div>
-              )}
+              ) : null}
 
               {/* Top patients by LTV — owner/admin only */}
-              {isOwnerOrAdmin && pm.topPatientsByLtv.length > 0 && (
+              {isOwnerOrAdmin && (
                 <div className="bg-white rounded-xl border border-border/50 p-5 shadow-sm">
                   <div className="flex items-center gap-2 mb-3">
                     <Crown className="h-4 w-4 text-amber-500" />
                     <h4 className="text-sm font-semibold text-foreground">{t("analytics.topByLtv")}</h4>
                   </div>
-                  <div className="space-y-2">
-                    {pm.topPatientsByLtv.map((p, idx) => (
-                      <div key={p.id} className="flex items-center gap-3 py-2 border-b border-border/20 last:border-0">
-                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                          idx === 0 ? "bg-amber-100 text-amber-700" :
-                          idx === 1 ? "bg-slate-100 text-slate-600" :
-                          idx === 2 ? "bg-orange-100 text-orange-700" : "bg-muted text-muted-foreground"
-                        }`}>{idx + 1}</span>
-                        <span className="text-sm text-foreground font-medium flex-1 truncate">{p.name}</span>
-                        <span className="text-xs text-muted-foreground">{p.procedureCount} {t("analytics.procedures")}</span>
-                        <span className="text-sm font-semibold text-foreground">₸{p.totalSpent.toLocaleString()}</span>
-                      </div>
-                    ))}
-                  </div>
+                  {pmLoading ? (
+                    <div className="space-y-3">
+                      {[...Array(3)].map((_, i) => (
+                        <div key={i} className="flex items-center gap-3">
+                          <div className="w-6 h-6 rounded-full bg-muted animate-pulse shrink-0" />
+                          <div className="h-3 flex-1 bg-muted animate-pulse rounded" />
+                          <div className="h-3 w-16 bg-muted animate-pulse rounded" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : pm && pm.topPatientsByLtv.length > 0 ? (
+                    <div className="space-y-2">
+                      {pm.topPatientsByLtv.map((p, idx) => (
+                        <div key={p.id} className="flex items-center gap-3 py-2 border-b border-border/20 last:border-0">
+                          <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                            idx === 0 ? "bg-amber-100 text-amber-700" :
+                            idx === 1 ? "bg-slate-100 text-slate-600" :
+                            idx === 2 ? "bg-orange-100 text-orange-700" : "bg-muted text-muted-foreground"
+                          }`}>{idx + 1}</span>
+                          <span className="text-sm text-foreground font-medium flex-1 truncate">{p.name}</span>
+                          <span className="text-xs text-muted-foreground">{p.procedureCount} {t("analytics.procedures")}</span>
+                          <span className="text-sm font-semibold text-foreground">₸{p.totalSpent.toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">{t("analytics.noData", "—")}</p>
+                  )}
                 </div>
               )}
             </div>
