@@ -4,18 +4,23 @@ import {
   getGetOwnerAnalyticsQueryKey,
   useListProcedures,
   useGetPayrollRecords,
+  useGetFinancialSummary,
   type PayrollRecord,
 } from "@workspace/api-client-react";
 import {
   TrendingUp, Activity, Users, Star,
   RefreshCw, ChevronRight, Wallet,
   Stethoscope, Banknote, CheckCircle, Clock, PlusCircle,
+  TrendingDown,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
 import { useState } from "react";
+import { format, startOfMonth, endOfMonth } from "date-fns";
 import PayrollApproveModal from "./payroll-approve-modal";
+import ExpenseDialog from "@/components/expense-dialog";
+import { useQueryClient } from "@tanstack/react-query";
 
 function StatCard({
   titleKey,
@@ -63,13 +68,21 @@ export default function AccountantDashboard() {
   const { user, clinic } = useAuthStore();
   const [, navigate] = useLocation();
 
+  const queryClient = useQueryClient();
+  const today = new Date();
+
   const { data: analyticsData, isLoading, refetch } = useGetOwnerAnalytics({
     query: { queryKey: getGetOwnerAnalyticsQueryKey() },
   });
   const { data: proceduresData } = useListProcedures();
   const { data: payrollData, refetch: refetchPayroll } = useGetPayrollRecords();
+  const { data: summaryData } = useGetFinancialSummary({
+    dateFrom: format(startOfMonth(today), "yyyy-MM-dd"),
+    dateTo: format(endOfMonth(today), "yyyy-MM-dd"),
+  });
 
   const [showApproveModal, setShowApproveModal] = useState(false);
+  const [showExpenseDialog, setShowExpenseDialog] = useState(false);
 
   const allRecords: PayrollRecord[] = payrollData?.data?.records ?? [];
   const now = new Date();
@@ -117,11 +130,14 @@ export default function AccountantDashboard() {
     return `₸ ${num.toLocaleString("ru-KZ")}`;
   };
 
+  const netProfit = summaryData?.data?.netProfit;
+  const marginPct = summaryData?.data?.marginPct;
+
   const cards = [
     { titleKey: "dashboard.totalPatients",    value: fmt(analytics.totalPatients),                   icon: Users,      delay: 0 },
     { titleKey: "dashboard.revenue",          value: fmtMoney(analytics.revenueThisMonth),            icon: TrendingUp, delay: 0.05 },
     { titleKey: "dashboard.monthlyProcedures",value: fmt(analytics.completedProceduresThisMonth),     icon: Activity,   delay: 0.1 },
-    { titleKey: "dashboard.newPatients",      value: fmt(analytics.newPatientsThisMonth),              icon: Star,       delay: 0.15 },
+    { titleKey: "accountantDashboard.netProfit", value: netProfit !== undefined ? fmtMoney(netProfit) : "—", icon: netProfit !== undefined && netProfit >= 0 ? TrendingUp : TrendingDown, delay: 0.15 },
   ];
 
   return (
@@ -142,6 +158,13 @@ export default function AccountantDashboard() {
             className="p-2.5 border border-border rounded-xl text-muted-foreground hover:bg-slate-50 transition-colors"
           >
             <RefreshCw className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => setShowExpenseDialog(true)}
+            className="px-4 py-2.5 border border-primary text-primary font-semibold rounded-xl hover:bg-primary/5 transition-all flex items-center gap-2"
+          >
+            <PlusCircle className="w-4 h-4" />
+            {t("expenses.add")}
           </button>
           <button
             onClick={() => navigate("/financials")}
@@ -329,6 +352,17 @@ export default function AccountantDashboard() {
         <PayrollApproveModal
           onClose={() => setShowApproveModal(false)}
           onSuccess={() => refetchPayroll()}
+        />
+      )}
+
+      {showExpenseDialog && (
+        <ExpenseDialog
+          expense={null}
+          onClose={() => setShowExpenseDialog(false)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/analytics/financial-summary"] });
+          }}
         />
       )}
     </div>

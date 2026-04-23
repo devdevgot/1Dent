@@ -111,6 +111,7 @@ export const clinicExpensesTable = pgTable(
       .notNull()
       .references(() => clinicsTable.id, { onDelete: "cascade" }),
     category: expenseCategoryEnum("category").notNull().default("other"),
+    subcategory: text("subcategory"),
     amount: numeric("amount", { precision: 12, scale: 2 }).notNull().default("0"),
     description: text("description"),
     expenseDate: timestamp("expense_date", { withTimezone: true })

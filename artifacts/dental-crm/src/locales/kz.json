@@ -526,7 +526,8 @@
     "noBillingPrice": "Баға көрсетілмеген",
     "more": "тағы",
     "noData": "Деректер жоқ",
-    "totalRevenue": "Жалпы табыс"
+    "totalRevenue": "Жалпы табыс",
+    "netProfit": "Таза пайда (MTD)"
   },
   "warehouseDashboard": {
     "subtitle": "{{clinic}} клиникасының қойма жағдайы.",
@@ -652,6 +653,12 @@
     "materialCost": "Материал шығыны",
     "materials": "материал",
     "grossMargin": "Жалпы пайда",
+    "opExpenses": "Операциялық шығындар",
+    "opExpensesList": "Операциялық шығындар",
+    "expensesPcs": "шығын",
+    "netProfit": "Таза пайда",
+    "margin": "рентабельділік",
+    "expensesBreakdown": "Шығындар санат бойынша",
     "materialsBreakdown": "Материал шығысы",
     "proceduresPcs": "проц.",
     "moreItems": "тағы позиция",
@@ -665,7 +672,38 @@
     "cancelled": "Болдырмады",
     "proceduresList": "Процедуралар тізімі",
     "empty": "Процедура табылмады",
-    "unassigned": "Тағайындалмаған"
+    "unassigned": "Тағайындалмаған",
+    "exportExcel": "Excel экспорт",
+    "exportPdf": "PDF экспорт"
+  },
+  "expenses": {
+    "addTitle": "Шығын қосу",
+    "editTitle": "Шығынды өңдеу",
+    "add": "+ Шығын",
+    "category": "Санат",
+    "subcategory": "Кіші санат",
+    "subcategoryPlaceholder": "мыс. Кеңсе жалдауы",
+    "amount": "Сомасы",
+    "date": "Күні",
+    "description": "Сипаттама",
+    "descriptionPlaceholder": "Шығын туралы ескерту...",
+    "created": "Шығын қосылды",
+    "updated": "Шығын жаңартылды",
+    "deleted": "Шығын жойылды",
+    "error": "Сақтау қатесі",
+    "deleteError": "Жою қатесі",
+    "confirmDelete": "Шығынды жою?",
+    "empty": "Шығын жоқ",
+    "amountInvalid": "Дұрыс соманы енгізіңіз",
+    "cat": {
+      "salary": "Жалақы",
+      "materials": "Материалдар",
+      "rent": "Жалдау",
+      "utilities": "Коммуналдық",
+      "equipment": "Жабдық",
+      "marketing": "Маркетинг",
+      "other": "Басқа"
+    }
   },
   "chatbot": {
     "title": "AI-чатбот",

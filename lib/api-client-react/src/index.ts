@@ -398,3 +398,166 @@ export const useGetMySalary = <TError = unknown>(options?: {
     queryFn: ({ signal }) => getMySalary({ signal }),
     ...options?.query,
   });
+
+// ─── Custom: expenses ─────────────────────────────────────────────────────────
+
+export type ExpenseCategory = "salary" | "materials" | "rent" | "utilities" | "equipment" | "marketing" | "other";
+
+export interface ClinicExpense {
+  id: string;
+  clinicId: string;
+  category: ExpenseCategory;
+  subcategory: string | null;
+  amount: string;
+  description: string | null;
+  expenseDate: string;
+  periodMonth: number | null;
+  periodYear: number | null;
+  payrollRef: string | null;
+  createdBy: string | null;
+  createdAt: string;
+}
+
+export interface GetExpensesResponse {
+  success: boolean;
+  data: { expenses: ClinicExpense[] };
+}
+
+export interface GetExpenseResponse {
+  success: boolean;
+  data: { expense: ClinicExpense };
+}
+
+export interface CreateExpenseRequest {
+  category: ExpenseCategory;
+  subcategory?: string;
+  amount: number;
+  description?: string;
+  expenseDate: string;
+  periodMonth?: number;
+  periodYear?: number;
+}
+
+export interface UpdateExpenseRequest extends Partial<CreateExpenseRequest> {}
+
+export const listExpenses = (
+  params?: { dateFrom?: string; dateTo?: string; category?: string; periodMonth?: number; periodYear?: number },
+  options?: RequestInit,
+): Promise<GetExpensesResponse> => {
+  const qs = new URLSearchParams();
+  if (params?.dateFrom) qs.set("dateFrom", params.dateFrom);
+  if (params?.dateTo) qs.set("dateTo", params.dateTo);
+  if (params?.category) qs.set("category", params.category);
+  if (params?.periodMonth) qs.set("periodMonth", String(params.periodMonth));
+  if (params?.periodYear) qs.set("periodYear", String(params.periodYear));
+  const q = qs.toString();
+  return customFetch<GetExpensesResponse>(`/api/expenses${q ? `?${q}` : ""}`, {
+    method: "GET",
+    ...options,
+  });
+};
+
+export const createExpense = (
+  data: CreateExpenseRequest,
+  options?: RequestInit,
+): Promise<GetExpenseResponse> =>
+  customFetch<GetExpenseResponse>("/api/expenses", {
+    method: "POST",
+    body: JSON.stringify(data),
+    ...options,
+  });
+
+export const updateExpense = (
+  id: string,
+  data: UpdateExpenseRequest,
+  options?: RequestInit,
+): Promise<GetExpenseResponse> =>
+  customFetch<GetExpenseResponse>(`/api/expenses/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+    ...options,
+  });
+
+export const deleteExpense = (
+  id: string,
+  options?: RequestInit,
+): Promise<GetExpenseResponse> =>
+  customFetch<GetExpenseResponse>(`/api/expenses/${id}`, {
+    method: "DELETE",
+    ...options,
+  });
+
+export const useListExpenses = <TError = unknown>(
+  params?: { dateFrom?: string; dateTo?: string; category?: string; periodMonth?: number; periodYear?: number },
+  options?: { query?: UseQueryOptions<GetExpensesResponse, TError> },
+) =>
+  useQuery<GetExpensesResponse, TError>({
+    queryKey: ["/api/expenses", params],
+    queryFn: ({ signal }) => listExpenses(params, { signal }),
+    ...options?.query,
+  });
+
+export const useCreateExpense = <TError = unknown>(options?: {
+  mutation?: UseMutationOptions<GetExpenseResponse, TError, CreateExpenseRequest>;
+}) =>
+  useMutation<GetExpenseResponse, TError, CreateExpenseRequest>({
+    mutationFn: (data) => createExpense(data),
+    ...options?.mutation,
+  });
+
+export const useUpdateExpense = <TError = unknown>(options?: {
+  mutation?: UseMutationOptions<GetExpenseResponse, TError, { id: string; data: UpdateExpenseRequest }>;
+}) =>
+  useMutation<GetExpenseResponse, TError, { id: string; data: UpdateExpenseRequest }>({
+    mutationFn: ({ id, data }) => updateExpense(id, data),
+    ...options?.mutation,
+  });
+
+export const useDeleteExpense = <TError = unknown>(options?: {
+  mutation?: UseMutationOptions<GetExpenseResponse, TError, string>;
+}) =>
+  useMutation<GetExpenseResponse, TError, string>({
+    mutationFn: (id) => deleteExpense(id),
+    ...options?.mutation,
+  });
+
+// ─── Custom: financial summary ────────────────────────────────────────────────
+
+export interface FinancialSummary {
+  totalRevenue: number;
+  totalMaterialCost: number;
+  totalOperationalExpenses: number;
+  netProfit: number;
+  marginPct: number;
+  expensesByCategory: Record<string, number>;
+  procedureCount: number;
+}
+
+export interface GetFinancialSummaryResponse {
+  success: boolean;
+  data: FinancialSummary;
+}
+
+export const getFinancialSummary = (
+  params?: { dateFrom?: string; dateTo?: string },
+  options?: RequestInit,
+): Promise<GetFinancialSummaryResponse> => {
+  const qs = new URLSearchParams();
+  if (params?.dateFrom) qs.set("dateFrom", params.dateFrom);
+  if (params?.dateTo) qs.set("dateTo", params.dateTo);
+  const q = qs.toString();
+  return customFetch<GetFinancialSummaryResponse>(
+    `/api/analytics/financial-summary${q ? `?${q}` : ""}`,
+    { method: "GET", ...options },
+  );
+};
+
+export const useGetFinancialSummary = <TError = unknown>(
+  params?: { dateFrom?: string; dateTo?: string },
+  options?: { query?: UseQueryOptions<GetFinancialSummaryResponse, TError> },
+) =>
+  useQuery<GetFinancialSummaryResponse, TError>({
+    queryKey: ["/api/analytics/financial-summary", params],
+    queryFn: ({ signal }) => getFinancialSummary(params, { signal }),
+    ...options?.query,
+  });

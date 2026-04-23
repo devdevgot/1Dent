@@ -526,7 +526,8 @@
     "noBillingPrice": "No price set",
     "more": "more",
     "noData": "No data yet",
-    "totalRevenue": "Total Revenue"
+    "totalRevenue": "Total Revenue",
+    "netProfit": "Net Profit (MTD)"
   },
   "warehouseDashboard": {
     "subtitle": "Inventory status for {{clinic}}.",
@@ -652,6 +653,12 @@
     "materialCost": "Material Cost",
     "materials": "materials",
     "grossMargin": "Gross Margin",
+    "opExpenses": "Operational Expenses",
+    "opExpensesList": "Operational Expenses",
+    "expensesPcs": "expenses",
+    "netProfit": "Net Profit",
+    "margin": "margin",
+    "expensesBreakdown": "Expenses by Category",
     "materialsBreakdown": "Material Consumption",
     "proceduresPcs": "proc.",
     "moreItems": "more items",
@@ -665,7 +672,38 @@
     "cancelled": "Cancelled",
     "proceduresList": "Procedures List",
     "empty": "No procedures found",
-    "unassigned": "Unassigned"
+    "unassigned": "Unassigned",
+    "exportExcel": "Export Excel",
+    "exportPdf": "Export PDF"
+  },
+  "expenses": {
+    "addTitle": "Add Expense",
+    "editTitle": "Edit Expense",
+    "add": "+ Expense",
+    "category": "Category",
+    "subcategory": "Subcategory",
+    "subcategoryPlaceholder": "e.g. Office rent",
+    "amount": "Amount",
+    "date": "Date",
+    "description": "Description",
+    "descriptionPlaceholder": "Notes about this expense...",
+    "created": "Expense added",
+    "updated": "Expense updated",
+    "deleted": "Expense deleted",
+    "error": "Failed to save",
+    "deleteError": "Failed to delete",
+    "confirmDelete": "Delete expense?",
+    "empty": "No expenses",
+    "amountInvalid": "Enter a valid amount",
+    "cat": {
+      "salary": "Salary",
+      "materials": "Materials",
+      "rent": "Rent",
+      "utilities": "Utilities",
+      "equipment": "Equipment",
+      "marketing": "Marketing",
+      "other": "Other"
+    }
   },
   "chatbot": {
     "title": "AI Chatbot",

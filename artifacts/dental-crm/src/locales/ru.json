@@ -528,7 +528,8 @@
     "noBillingPrice": "Цена не указана",
     "more": "ещё",
     "noData": "Данных пока нет",
-    "totalRevenue": "Итого выручка"
+    "totalRevenue": "Итого выручка",
+    "netProfit": "Чистая прибыль (MTD)"
   },
   "warehouseDashboard": {
     "subtitle": "Складские остатки клиники {{clinic}}.",
@@ -656,6 +657,12 @@
     "materialCost": "Затраты на материалы",
     "materials": "материалов",
     "grossMargin": "Валовая прибыль",
+    "opExpenses": "Операционные расходы",
+    "opExpensesList": "Операционные расходы",
+    "expensesPcs": "расходов",
+    "netProfit": "Чистая прибыль",
+    "margin": "рентабельность",
+    "expensesBreakdown": "Расходы по категориям",
     "materialsBreakdown": "Расход материалов",
     "proceduresPcs": "проц.",
     "moreItems": "ещё позиций",
@@ -669,7 +676,38 @@
     "cancelled": "Отменена",
     "proceduresList": "Список процедур",
     "empty": "Процедур не найдено",
-    "unassigned": "Не назначен"
+    "unassigned": "Не назначен",
+    "exportExcel": "Экспорт Excel",
+    "exportPdf": "Экспорт PDF"
+  },
+  "expenses": {
+    "addTitle": "Добавить расход",
+    "editTitle": "Редактировать расход",
+    "add": "+ Расход",
+    "category": "Категория",
+    "subcategory": "Подкатегория",
+    "subcategoryPlaceholder": "Например: Аренда офиса",
+    "amount": "Сумма",
+    "date": "Дата",
+    "description": "Описание",
+    "descriptionPlaceholder": "Комментарий к расходу...",
+    "created": "Расход добавлен",
+    "updated": "Расход обновлён",
+    "deleted": "Расход удалён",
+    "error": "Ошибка при сохранении",
+    "deleteError": "Ошибка при удалении",
+    "confirmDelete": "Удалить расход?",
+    "empty": "Расходов нет",
+    "amountInvalid": "Укажите корректную сумму",
+    "cat": {
+      "salary": "Зарплата",
+      "materials": "Материалы",
+      "rent": "Аренда",
+      "utilities": "Коммунальные",
+      "equipment": "Оборудование",
+      "marketing": "Маркетинг",
+      "other": "Прочее"
+    }
   },
   "chatbot": {
     "title": "AI-чатбот",
