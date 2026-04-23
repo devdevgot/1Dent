@@ -14,7 +14,7 @@ import type { User } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   UserPlus, Search, Phone, Calendar, Briefcase,
-  ChevronRight, MoreVertical, UserCheck, UserX,
+  ChevronRight, ChevronLeft, MoreVertical, UserCheck, UserX,
   Trash2, Users, SlidersHorizontal, Copy,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -347,21 +347,29 @@ export default function UsersPage() {
       {/* Header */}
       <div className="bg-white border-b border-gray-100 px-4 py-4">
         <div className="flex items-center justify-between mb-3">
-          <div>
-            <h1 className="text-base font-bold text-gray-900">{t("users.title")}</h1>
-            <p className="text-xs text-gray-400 mt-0.5">
-              {filtered.length} {t("employees.people", "чел.")}
-              {showInactive && ` (${t("employees.includingInactive", "включая неактивных")})`}
-            </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => window.history.back()}
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-500 shrink-0"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <div>
+              <h1 className="text-base font-bold text-gray-900">{t("users.title")}</h1>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {filtered.length} {t("employees.people", "чел.")}
+                {showInactive && ` (${t("employees.includingInactive", "включая неактивных")})`}
+              </p>
+            </div>
           </div>
           {isOwnerOrAdmin && (
             <button
               onClick={() => { setEditingUser(null); setDialogOpen(true); }}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-2xl text-white text-sm font-semibold"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl text-white text-sm font-semibold"
               style={{ backgroundColor: "#98cc1c" }}
             >
               <UserPlus className="w-4 h-4" />
-              {t("users.addStaff")}
+              {t("common.add", "Добавить")}
             </button>
           )}
         </div>
