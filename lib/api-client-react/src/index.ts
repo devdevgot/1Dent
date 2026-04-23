@@ -597,11 +597,13 @@ export interface GetPatientMetricsResponse {
 }
 
 export const getPatientMetrics = (
-  params?: { doctorId?: string },
+  params?: { doctorId?: string; dateFrom?: string; dateTo?: string },
   options?: RequestInit,
 ): Promise<GetPatientMetricsResponse> => {
   const qs = new URLSearchParams();
   if (params?.doctorId) qs.set("doctorId", params.doctorId);
+  if (params?.dateFrom) qs.set("dateFrom", params.dateFrom);
+  if (params?.dateTo) qs.set("dateTo", params.dateTo);
   const q = qs.toString();
   return customFetch<GetPatientMetricsResponse>(
     `/api/analytics/patient-metrics${q ? `?${q}` : ""}`,
@@ -610,7 +612,7 @@ export const getPatientMetrics = (
 };
 
 export const useGetPatientMetrics = <TError = unknown>(
-  params?: { doctorId?: string },
+  params?: { doctorId?: string; dateFrom?: string; dateTo?: string },
   options?: { query?: UseQueryOptions<GetPatientMetricsResponse, TError> },
 ) =>
   useQuery<GetPatientMetricsResponse, TError>({

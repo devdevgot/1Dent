@@ -572,16 +572,22 @@ router.get(
       const rawDoctorId = typeof req.query["doctorId"] === "string" ? req.query["doctorId"] : undefined;
       const effectiveDoctorId = role === "doctor" ? userId : rawDoctorId;
 
+      const { dateFrom, dateTo } = parseDateRange(req.query);
+
       const procConds: SQL[] = [
         eq(proceduresTable.clinicId, clinicId),
         eq(proceduresTable.status, "completed"),
       ];
       if (effectiveDoctorId) procConds.push(eq(proceduresTable.doctorId, effectiveDoctorId));
+      if (dateFrom) procConds.push(gte(proceduresTable.completedAt, dateFrom));
+      if (dateTo) procConds.push(lte(proceduresTable.completedAt, dateTo));
 
       const planConds: SQL[] = [eq(treatmentPlansTable.clinicId, clinicId)];
       if (effectiveDoctorId) planConds.push(eq(treatmentPlansTable.doctorId, effectiveDoctorId));
+      if (dateFrom) planConds.push(gte(treatmentPlansTable.createdAt, dateFrom));
+      if (dateTo) planConds.push(lte(treatmentPlansTable.createdAt, dateTo));
 
-      const [completedProcs, treatmentPlans, treatmentItems] = await Promise.all([
+      const [completedProcs, treatmentPlans] = await Promise.all([
         db
           .select({
             id: proceduresTable.id,
@@ -595,11 +601,17 @@ router.get(
           .select({ id: treatmentPlansTable.id, status: treatmentPlansTable.status })
           .from(treatmentPlansTable)
           .where(and(...planConds)),
-        db
-          .select({ id: treatmentPlanItemsTable.id, procedureId: treatmentPlanItemsTable.procedureId })
-          .from(treatmentPlanItemsTable)
-          .where(eq(treatmentPlanItemsTable.clinicId, clinicId)),
       ]);
+
+      // Treatment items scoped to doctor-filtered plan IDs to honour least-privilege access
+      const planIds = treatmentPlans.map((p) => p.id);
+      const treatmentItems =
+        planIds.length > 0
+          ? await db
+              .select({ id: treatmentPlanItemsTable.id, procedureId: treatmentPlanItemsTable.procedureId })
+              .from(treatmentPlanItemsTable)
+              .where(inArray(treatmentPlanItemsTable.planId, planIds))
+          : [];
 
       // ── Retention ──────────────────────────────────────────────────────────
       const patientProcMap = new Map<string, Date[]>();

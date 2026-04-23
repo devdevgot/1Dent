@@ -38,6 +38,9 @@ export default function AnalyticsPage() {
   const [channelPeriod, setChannelPeriod] = useState<Period>("month");
   const periodDates = getPeriodDates(channelPeriod);
 
+  const [retentionPeriod, setRetentionPeriod] = useState<Period>("month");
+  const retentionDates = getPeriodDates(retentionPeriod);
+
   const isOwnerOrAdmin = user?.role === "owner" || user?.role === "admin";
 
   const { data: channelStatsRes } = useGetChannelStats(
@@ -51,9 +54,10 @@ export default function AnalyticsPage() {
   );
   const channelStats: ChannelStat[] = channelStatsRes?.data?.stats ?? [];
 
-  const { data: patientMetricsRes } = useGetPatientMetrics(undefined, {
-    query: { enabled: isOwnerOrAdmin || user?.role === "doctor" || user?.role === "accountant" },
-  });
+  const { data: patientMetricsRes } = useGetPatientMetrics(
+    { dateFrom: retentionDates.dateFrom, dateTo: retentionDates.dateTo },
+    { query: { enabled: isOwnerOrAdmin || user?.role === "doctor" || user?.role === "accountant" } },
+  );
   const pm = patientMetricsRes?.data;
 
   const statusData = analytics && "patientsByStatus" in analytics && analytics.patientsByStatus
@@ -295,10 +299,27 @@ export default function AnalyticsPage() {
           {/* Patient Retention, LTV, Treatment Plan Conversion */}
           {pm && (
             <div className="space-y-4">
-              {/* Section header */}
-              <div className="flex items-center gap-2">
-                <Heart className="h-4 w-4 text-primary" />
-                <h3 className="text-sm font-semibold text-foreground">{t("analytics.retentionSection")}</h3>
+              {/* Section header with period picker */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Heart className="h-4 w-4 text-primary" />
+                  <h3 className="text-sm font-semibold text-foreground">{t("analytics.retentionSection")}</h3>
+                </div>
+                <div className="flex gap-1 bg-muted rounded-lg p-1">
+                  {(["week", "month", "quarter"] as Period[]).map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setRetentionPeriod(p)}
+                      className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                        retentionPeriod === p
+                          ? "bg-white text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {p === "week" ? t("channel.week") : p === "month" ? t("channel.month") : t("channel.quarter")}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* 3 KPI cards */}
