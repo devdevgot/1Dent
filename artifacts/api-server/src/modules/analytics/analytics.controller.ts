@@ -184,9 +184,14 @@ function buildExpConditions(clinicId: string, dateFrom?: Date, dateTo?: Date): S
 }
 
 function parseDateRange(query: Request["query"]): { dateFrom?: Date; dateTo?: Date } {
-  const dateFrom = typeof query["dateFrom"] === "string" ? new Date(query["dateFrom"]) : undefined;
-  const dateTo = typeof query["dateTo"] === "string" ? new Date(query["dateTo"] + "T23:59:59Z") : undefined;
-  return { dateFrom, dateTo };
+  const rawFrom = typeof query["dateFrom"] === "string" ? query["dateFrom"] : undefined;
+  const rawTo = typeof query["dateTo"] === "string" ? query["dateTo"] : undefined;
+  const dateFrom = rawFrom ? new Date(rawFrom) : undefined;
+  const dateTo = rawTo ? new Date(rawTo + "T23:59:59Z") : undefined;
+  return {
+    dateFrom: dateFrom && !isNaN(dateFrom.getTime()) ? dateFrom : undefined,
+    dateTo: dateTo && !isNaN(dateTo.getTime()) ? dateTo : undefined,
+  };
 }
 
 async function loadFinancialData(clinicId: string, dateFrom?: Date, dateTo?: Date) {
@@ -442,17 +447,17 @@ router.get(
         content: [
           // Clinic header
           { text: clinicName, style: "title" },
-          { text: `Finansovyy otchet: ${periodLabel}`, style: "subtitle", margin: [0, 0, 0, 16] },
+          { text: `Finansovyi otchet: ${periodLabel}`, style: "subtitle", margin: [0, 0, 0, 16] },
 
           // KPI table: 3 columns — metric | value | %
-          { text: "Svodnaya tablica", style: "sectionHeader" },
+          { text: "Svodnye pokazateli", style: "sectionHeader" },
           {
             table: {
               widths: ["*", "auto", "auto"],
               body: [
                 [
                   { text: "Pokazatel", bold: true },
-                  { text: "Summa (KZT)", bold: true, alignment: "right" as const },
+                  { text: "Summa, KZT", bold: true, alignment: "right" as const },
                   { text: "%", bold: true, alignment: "right" as const },
                 ],
                 [
@@ -461,12 +466,12 @@ router.get(
                   { text: "100%", alignment: "right" as const },
                 ],
                 [
-                  "Zatraty na materialy",
+                  "Sebestoimost materialov",
                   { text: fmtMoney(data.totalMaterialCost), alignment: "right" as const },
                   { text: data.totalRevenue > 0 ? `${Math.round((data.totalMaterialCost / data.totalRevenue) * 100)}%` : "-", alignment: "right" as const },
                 ],
                 [
-                  "Operatsionnye rashody",
+                  "Operatsionnye raskhody",
                   { text: fmtMoney(data.totalOperationalExpenses), alignment: "right" as const },
                   { text: data.totalRevenue > 0 ? `${Math.round((data.totalOperationalExpenses / data.totalRevenue) * 100)}%` : "-", alignment: "right" as const },
                 ],
@@ -490,7 +495,7 @@ router.get(
                     body: [
                       [
                         { text: "Vrach", bold: true },
-                        { text: "Summa (KZT)", bold: true, alignment: "right" as const },
+                        { text: "Summa, KZT", bold: true, alignment: "right" as const },
                         { text: "%", bold: true, alignment: "right" as const },
                       ],
                       ...[...revenueByDoctor.entries()].map(([name, amount]) => [
@@ -508,14 +513,14 @@ router.get(
           // Expenses by category (aggregated)
           ...(Object.keys(data.expensesByCategory).length > 0
             ? [
-                { text: "Rashody po kategoriyam", style: "sectionHeader" },
+                { text: "Raskhody po kategoriyam", style: "sectionHeader" },
                 {
                   table: {
                     widths: ["*", "auto", "auto"],
                     body: [
                       [
                         { text: "Kategoriya", bold: true },
-                        { text: "Summa (KZT)", bold: true, alignment: "right" as const },
+                        { text: "Summa, KZT", bold: true, alignment: "right" as const },
                         { text: "%", bold: true, alignment: "right" as const },
                       ],
                       ...Object.entries(data.expensesByCategory).map(([cat, amount]) => [
