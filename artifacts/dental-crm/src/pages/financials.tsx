@@ -36,6 +36,7 @@ export default function FinancialsPage() {
   const { user } = useAuthStore();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const canCreate = user?.role === "owner" || user?.role === "admin" || user?.role === "accountant";
   const canWrite = user?.role === "owner" || user?.role === "admin";
 
   const [filterDoctor, setFilterDoctor] = useState("");
@@ -124,20 +125,38 @@ export default function FinancialsPage() {
     queryClient.invalidateQueries({ queryKey: ["/api/analytics/financial-summary"] });
   }
 
-  function handleExportExcel() {
+  async function downloadBlob(path: string, filename: string) {
     const base = getBaseUrl();
+    const token = localStorage.getItem("auth_token");
+    try {
+      const res = await fetch(`${base}${path}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast({ title: t("expenses.error"), variant: "destructive" });
+    }
+  }
+
+  function handleExportExcel() {
     const qs = new URLSearchParams();
     if (dateFrom) qs.set("dateFrom", dateFrom);
     if (dateTo) qs.set("dateTo", dateTo);
-    window.location.href = `${base}/api/analytics/export/excel?${qs.toString()}`;
+    downloadBlob(`/api/analytics/export/excel?${qs.toString()}`, `financial-report-${dateFrom ?? "all"}-${dateTo ?? "all"}.xlsx`);
   }
 
   function handleExportPdf() {
-    const base = getBaseUrl();
     const qs = new URLSearchParams();
     if (dateFrom) qs.set("dateFrom", dateFrom);
     if (dateTo) qs.set("dateTo", dateTo);
-    window.location.href = `${base}/api/analytics/export/pdf?${qs.toString()}`;
+    downloadBlob(`/api/analytics/export/pdf?${qs.toString()}`, `financial-report-${dateFrom ?? "all"}-${dateTo ?? "all"}.pdf`);
   }
 
   return (
@@ -221,14 +240,23 @@ export default function FinancialsPage() {
 
           <div className={`rounded-2xl border border-border/50 p-4 ${netProfit >= 0 ? "bg-emerald-50" : "bg-red-50"}`}>
             <div className="flex items-center gap-2 mb-1">
-              <Wallet className={`w-4 h-4 ${netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`} />
+              {netProfit >= 0
+                ? <TrendingUp className="w-4 h-4 text-emerald-600" />
+                : <TrendingDown className="w-4 h-4 text-red-500" />}
               <span className="text-xs font-semibold text-muted-foreground">{t("financials.netProfit")}</span>
             </div>
             <p className={`text-xl font-bold ${netProfit >= 0 ? "text-emerald-700" : "text-red-600"}`}>
               {netProfit.toLocaleString("ru-RU")} ₸
             </p>
-            <p className={`text-xs mt-0.5 font-semibold ${netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>
-              {marginPct}% {t("financials.margin")}
+          </div>
+
+          <div className={`col-span-2 rounded-2xl border border-border/50 p-4 ${netProfit >= 0 ? "bg-emerald-50/60" : "bg-red-50/60"}`}>
+            <div className="flex items-center gap-2 mb-1">
+              <Wallet className={`w-4 h-4 ${netProfit >= 0 ? "text-emerald-600" : "text-red-500"}`} />
+              <span className="text-xs font-semibold text-muted-foreground">{t("financials.margin")}</span>
+            </div>
+            <p className={`text-xl font-bold ${netProfit >= 0 ? "text-emerald-700" : "text-red-600"}`}>
+              {marginPct}%
             </p>
           </div>
         </div>
@@ -263,7 +291,7 @@ export default function FinancialsPage() {
         <div className="bg-white rounded-2xl border border-border/50 overflow-hidden">
           <div className="px-4 py-3 border-b border-border/50 flex items-center justify-between">
             <span className="text-sm font-semibold text-foreground">{t("financials.opExpensesList")}</span>
-            {canWrite && (
+            {canCreate && (
               <button
                 onClick={() => { setEditingExpense(null); setExpenseDialogOpen(true); }}
                 className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:bg-primary/10 px-2.5 py-1.5 rounded-lg transition-colors"

@@ -30,6 +30,7 @@ const createExpenseSchema = z.object({
 const updateExpenseSchema = createExpenseSchema.partial();
 
 const canRead = roleGuard("owner", "admin", "accountant");
+const canCreate = roleGuard("owner", "admin", "accountant");
 const canWrite = roleGuard("owner", "admin");
 
 router.get(
@@ -76,7 +77,7 @@ router.get(
 
 router.post(
   "/expenses",
-  canWrite,
+  canCreate,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { clinicId, userId } = req.user!;
