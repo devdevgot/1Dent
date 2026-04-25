@@ -14,9 +14,14 @@ import { isRedAlert } from "../../shared/whatsapp";
 import { sendToPatient } from "../../shared/messaging";
 import { getAlertQueue } from "../../shared/alert-queue";
 import { logger } from "../../lib/logger";
-import { AnalyticsRepository } from "../analytics/analytics.repository";
+import { AnalyticsRepository, computeAdvancedScore, type AdvancedScoringOptions } from "../analytics/analytics.repository";
 import { ChannelsRepository } from "../channels/channels.repository";
+import { classifyPatientRequest, generateChatbotResponse, type ChatMessage } from "./ai-classifier";
+import { isOpenRouterAvailable } from "../../lib/openrouter-client";
 import type { ChatbotState, ChatbotSessionData } from "./chatbot.types";
+import type { ChatbotSettings } from "@workspace/db";
+
+type CachedSettings = { settings: ChatbotSettings; expiresAt: number };
 
 const SESSION_TTL_SECONDS = 24 * 60 * 60;
 const REDIS_KEY_PREFIX = "chatbot:session:";
@@ -59,7 +64,6 @@ if (process.env["REDIS_URL"]) {
 }
 
 async function loadSession(clinicId: string, phone: string): Promise<SessionRecord | null> {
-  // Try Redis first (fast path)
   if (redis) {
     try {
       const raw = await redis.get(`${REDIS_KEY_PREFIX}${clinicId}:${phone}`);
@@ -69,7 +73,6 @@ async function loadSession(clinicId: string, phone: string): Promise<SessionReco
     }
   }
 
-  // Always check DB (source of truth for session listing UI)
   const [row] = await db
     .select()
     .from(chatbotSessionsTable)
@@ -90,7 +93,6 @@ async function loadSession(clinicId: string, phone: string): Promise<SessionReco
     humanTakeover: row.humanTakeover,
   };
 
-  // Re-populate Redis cache from DB if miss
   if (redis) {
     redis
       .setex(`${REDIS_KEY_PREFIX}${clinicId}:${phone}`, SESSION_TTL_SECONDS, JSON.stringify(session))
@@ -101,7 +103,6 @@ async function loadSession(clinicId: string, phone: string): Promise<SessionReco
 }
 
 async function saveSession(session: SessionRecord): Promise<void> {
-  // Write-through: always persist to DB so listSessions() UI always works
   await db
     .insert(chatbotSessionsTable)
     .values({
@@ -123,7 +124,6 @@ async function saveSession(session: SessionRecord): Promise<void> {
       },
     });
 
-  // Also update Redis cache (non-blocking — DB is authoritative)
   if (redis) {
     redis
       .setex(
@@ -162,8 +162,10 @@ async function saveChatbotMessage(
 const analyticsRepo = new AnalyticsRepository();
 const channelsRepo = new ChannelsRepository();
 
+// Simple settings cache (60s TTL) to avoid DB on every message
+const settingsCache = new Map<string, CachedSettings>();
+
 function extractRefCode(text: string): string | null {
-  // Matches 4–8 hex chars: supports both new short codes (4) and legacy 8-char codes
   const match = text.match(/ref:([a-f0-9]{4,8})/i);
   return match ? match[1]!.toLowerCase() : null;
 }
@@ -173,38 +175,85 @@ function extractClickId(text: string): string | null {
   return match ? match[1]!.toLowerCase() : null;
 }
 
-async function pickBestDoctorViaKpi(
+/**
+ * Pick the best doctor using the advanced multi-factor scoring algorithm.
+ * For urgent cases, picks doctor with most remaining capacity today.
+ */
+async function pickBestDoctorAdvanced(
   clinicId: string,
+  opts: AdvancedScoringOptions = {},
 ): Promise<{ id: string; name: string } | null> {
   const kpis = await analyticsRepo.getDoctorKpis(clinicId);
   if (kpis.length === 0) return null;
 
-  // Sort by score desc, pick best doctor who still has open slots today
-  const withSlots = [...kpis]
-    .filter((k) => k.slotsUsedToday < k.maxSlotsPerDay)
-    .sort((a, b) => b.score - a.score);
+  // Raw KPI shape for scoring (reconstruct cancelledCount from available data)
+  const rawKpis = kpis.map((k) => ({
+    doctorId: k.doctorId,
+    doctorName: k.doctorName,
+    patientsCount: k.patientsCount,
+    proceduresCount: k.proceduresCount,
+    cancelledCount: 0, // Not stored directly in DoctorKpi — conversion uses proceduresCount
+    revenueTotal: k.revenueTotal,
+    averageCheck: k.averageCheck,
+    nps: k.nps,
+    slotsUsedToday: k.slotsUsedToday,
+    maxSlotsPerDay: k.maxSlotsPerDay,
+  }));
 
-  if (withSlots.length > 0) {
-    const best = withSlots[0]!;
-    return { id: best.doctorId, name: best.doctorName };
+  // For urgent cases — skip scoring, pick whoever has most remaining capacity
+  if (opts.urgency === "urgent") {
+    const withCapacity = rawKpis
+      .filter((k) => k.slotsUsedToday < k.maxSlotsPerDay)
+      .sort((a, b) => (a.slotsUsedToday / a.maxSlotsPerDay) - (b.slotsUsedToday / b.maxSlotsPerDay));
+
+    if (withCapacity.length > 0) {
+      return { id: withCapacity[0]!.doctorId, name: withCapacity[0]!.doctorName };
+    }
+    // All full — pick least loaded
+    const sorted = [...rawKpis].sort((a, b) => a.slotsUsedToday - b.slotsUsedToday);
+    return { id: sorted[0]!.doctorId, name: sorted[0]!.doctorName };
   }
 
-  // Fallback: all slots filled — fall back to fewest patients
-  const sorted = [...kpis].sort((a, b) => a.patientsCount - b.patientsCount);
-  const best = sorted[0]!;
-  return { id: best.doctorId, name: best.doctorName };
+  // Score all doctors
+  const scored = rawKpis.map((kpi) => ({
+    doctorId: kpi.doctorId,
+    doctorName: kpi.doctorName,
+    score: computeAdvancedScore(kpi, rawKpis, opts),
+    slotsUsedToday: kpi.slotsUsedToday,
+    maxSlotsPerDay: kpi.maxSlotsPerDay,
+  }));
+
+  // Prefer doctors with remaining capacity
+  const withCapacity = scored.filter((s) => s.slotsUsedToday < s.maxSlotsPerDay);
+  const pool = withCapacity.length > 0 ? withCapacity : scored;
+
+  // Sort by score desc
+  pool.sort((a, b) => b.score - a.score);
+
+  // exploration_factor: 60% best, 40% random from top-3
+  const top3 = pool.slice(0, Math.min(3, pool.length));
+  const pick = Math.random() < 0.6 ? top3[0]! : top3[Math.floor(Math.random() * top3.length)]!;
+
+  return { id: pick.doctorId, name: pick.doctorName };
 }
 
 // ─── Settings helpers ────────────────────────────────────────────────────────
 
-async function getSettings(clinicId: string) {
+async function getSettings(clinicId: string): Promise<ChatbotSettings> {
+  // Try cache first
+  const cached = settingsCache.get(clinicId);
+  if (cached && cached.expiresAt > Date.now()) return cached.settings;
+
   const [settings] = await db
     .select()
     .from(chatbotSettingsTable)
     .where(eq(chatbotSettingsTable.clinicId, clinicId))
     .limit(1);
 
-  if (settings) return settings;
+  if (settings) {
+    settingsCache.set(clinicId, { settings, expiresAt: Date.now() + 60_000 });
+    return settings;
+  }
 
   const id = randomUUID();
   const [created] = await db
@@ -213,7 +262,10 @@ async function getSettings(clinicId: string) {
     .onConflictDoNothing()
     .returning();
 
-  if (created) return created;
+  if (created) {
+    settingsCache.set(clinicId, { settings: created, expiresAt: Date.now() + 60_000 });
+    return created;
+  }
 
   const [fetched] = await db
     .select()
@@ -286,6 +338,27 @@ async function createPatient(
   return patient!;
 }
 
+// ─── AI system prompt builder ────────────────────────────────────────────────
+
+function buildSystemPrompt(state: ChatbotState, settings: Awaited<ReturnType<typeof getSettings>>): string {
+  const base = `Ты — вежливый и профессиональный AI-ассистент стоматологической клиники 1Dent (Казахстан).
+Отвечай коротко и по делу. Используй простой, дружелюбный язык. Не ставь диагнозы.
+Отвечай на том языке, на котором пишет пациент (русский, казахский или английский).
+Не придумывай информацию о клинике — цены, адрес и расписание уточняй у администратора.`;
+
+  const statePrompts: Record<ChatbotState, string> = {
+    greeting: `${base}\n\nТвоя задача: поприветствовать пациента и спросить его имя. Используй шаблон: "${settings.greetingTemplate}"`,
+    collect_name: `${base}\n\nТы уже поприветствовал пациента. Сейчас жди имя или помоги его уточнить если пациент написал что-то непонятное.`,
+    collect_problem: `${base}\n\nТы знаешь имя пациента. Твоя задача: узнать с какой проблемой или за какой услугой обращается пациент. Задавай уточняющие вопросы если нужно.`,
+    suggest_doctor: `${base}\n\nТы подобрал врача на основе запроса пациента. Представь врача и предложи запись. Спроси подтверждение (Да/Нет).`,
+    confirm_appointment: `${base}\n\nПациент готов записаться. Попроси финальное подтверждение деталей записи.`,
+    done: `${base}\n\nЗапись подтверждена. Отвечай на вопросы о клинике или направляй к администратору.`,
+    human_takeover: `${base}\n\nСоединяй пациента с администратором.`,
+  };
+
+  return statePrompts[state] ?? base;
+}
+
 // ─── ChatbotService (main export) ───────────────────────────────────────────
 
 export class ChatbotService {
@@ -303,7 +376,6 @@ export class ChatbotService {
       return null;
     }
 
-    // Always persist the inbound message regardless of chatbot enabled state
     saveChatbotMessage(clinicId, phone, "inbound", text).catch(() => {});
 
     if (!settings.enabled) return null;
@@ -326,7 +398,7 @@ export class ChatbotService {
     const state = session.state;
     const data = { ...session.data };
 
-    // Parse ref code and click_id from any incoming message and persist in session
+    // Parse ref code and click_id from any incoming message
     const refCode = extractRefCode(text);
     if (refCode && !data.refCode) {
       try {
@@ -345,6 +417,7 @@ export class ChatbotService {
       data.clickId = clickId;
     }
 
+    // Operator request always takes priority
     if (isOperatorRequest(text)) {
       session.state = "human_takeover";
       session.data = data;
@@ -357,9 +430,6 @@ export class ChatbotService {
     }
 
     if (state === "done") {
-      // Only run red-alert detection here for UNKNOWN phones (no patient record in CRM).
-      // For known patients, MessagesService.handleInboundWebhook already handles red alerts
-      // on the stored message — deduplicating to avoid double notifications.
       if (!options?.skipRedAlert && isRedAlert(text)) {
         await triggerRedAlert(clinicId, phone, text, data.createdPatientId);
         const alertReply = "🚨 Мы видим вашу проблему и передаём её администратору. Ожидайте, пожалуйста.";
@@ -375,31 +445,113 @@ export class ChatbotService {
 
     let response: string | null = null;
 
+    // Build conversation history for AI context
+    const recentMessages = await this.getRecentHistory(clinicId, phone);
+
     switch (state) {
       case "greeting": {
+        // Send greeting immediately without AI (uses template)
         response = settings.greetingTemplate;
         session.state = "collect_name";
         break;
       }
 
       case "collect_name": {
-        data.patientName = text.trim().slice(0, 60);
-        response = `Приятно познакомиться, ${data.patientName}! 😊\nОпишите вашу проблему или какую процедуру вы хотели бы пройти (например: болит зуб, профилактика, брекеты и т.д.)`;
+        // Use AI to extract name from potentially complex input
+        if (isOpenRouterAvailable()) {
+          const classification = await classifyPatientRequest(text, recentMessages);
+          const extractedName = classification.extractedName ?? text.trim().slice(0, 60);
+          data.patientName = extractedName;
+
+          // If phone extracted too, save it
+          if (classification.extractedPhone) {
+            data.extractedPhone = classification.extractedPhone;
+          }
+
+          const systemPrompt = buildSystemPrompt("collect_name", settings);
+          const aiReply = await generateChatbotResponse(
+            systemPrompt,
+            recentMessages,
+            text,
+          );
+          response = aiReply ?? `Приятно познакомиться, ${extractedName}! 😊\nОпишите вашу проблему или какую процедуру вы хотели бы пройти.`;
+        } else {
+          data.patientName = text.trim().slice(0, 60);
+          response = `Приятно познакомиться, ${data.patientName}! 😊\nОпишите вашу проблему или какую процедуру вы хотели бы пройти.`;
+        }
         session.state = "collect_problem";
         session.data = data;
         break;
       }
 
       case "collect_problem": {
-        data.problemDescription = text.trim().slice(0, 200);
-        const doctor = await pickBestDoctorViaKpi(clinicId);
-        if (doctor) {
-          data.suggestedDoctorId = doctor.id;
-          data.suggestedDoctorName = doctor.name;
-          response = `Понял! Исходя из вашего запроса, рекомендую врача *${doctor.name}*.\n\nЗаписать вас к нему? (Ответьте «Да» или «Нет»)`;
-          session.state = "suggest_doctor";
+        if (isOpenRouterAvailable()) {
+          // AI classifies the request
+          const classification = await classifyPatientRequest(text, recentMessages);
+          data.problemDescription = text.trim().slice(0, 200);
+          data.serviceType = classification.serviceType;
+          data.urgency = classification.urgency;
+          data.patientType = classification.patientType;
+          data.aiConfidence = classification.confidence;
+
+          logger.info(
+            { clinicId, phone, classification },
+            "[ChatbotService] AI classified patient request",
+          );
+
+          // Pick best doctor with advanced scoring
+          const scoringOpts: AdvancedScoringOptions = {
+            serviceType: classification.serviceType,
+            urgency: classification.urgency,
+            patientType: classification.patientType,
+          };
+          const doctor = await pickBestDoctorAdvanced(clinicId, scoringOpts);
+
+          if (doctor) {
+            data.suggestedDoctorId = doctor.id;
+            data.suggestedDoctorName = doctor.name;
+
+            const urgencyNote =
+              classification.urgency === "urgent"
+                ? " Вижу, что ситуация срочная — постараемся записать вас как можно скорее! 🚨"
+                : "";
+
+            if (classification.confidence === "high") {
+              const systemPrompt = buildSystemPrompt("suggest_doctor", settings);
+              const context = `Пациент описал: ${classification.summary}. Рекомендуемый врач: ${doctor.name}. Предложи запись к этому врачу.`;
+              const aiReply = await generateChatbotResponse(systemPrompt, recentMessages, context);
+              response = aiReply ?? `Понял! Рекомендую врача *${doctor.name}*.${urgencyNote}\n\nЗаписать вас к нему? (Ответьте «Да» или «Нет»)`;
+            } else {
+              // Low confidence — AI asks clarifying question
+              const systemPrompt = buildSystemPrompt("collect_problem", settings);
+              const context = `Пациент написал: "${text}". Уточни что именно беспокоит, чтобы подобрать подходящего специалиста.`;
+              const aiReply = await generateChatbotResponse(systemPrompt, recentMessages, context);
+              response = aiReply ?? `Чтобы подобрать лучшего специалиста, уточните: что именно вас беспокоит?`;
+              // Don't advance state yet if confidence is low — re-ask
+              session.data = data;
+              await saveSession(session);
+              if (response) {
+                saveChatbotMessage(clinicId, phone, "outbound", response).catch(() => {});
+                sendToPatient(clinicId, phone, response).catch(() => {});
+              }
+              return response;
+            }
+            session.state = "suggest_doctor";
+          } else {
+            response = `Понял! К сожалению, сейчас нет доступных врачей. Напишите «оператор», чтобы связаться с администратором.`;
+          }
         } else {
-          response = `Понял! К сожалению, сейчас нет доступных врачей. Напишите «оператор», чтобы связаться с администратором.`;
+          // Fallback — no AI, use old logic
+          data.problemDescription = text.trim().slice(0, 200);
+          const doctor = await pickBestDoctorAdvanced(clinicId);
+          if (doctor) {
+            data.suggestedDoctorId = doctor.id;
+            data.suggestedDoctorName = doctor.name;
+            response = `Понял! Исходя из вашего запроса, рекомендую врача *${doctor.name}*.\n\nЗаписать вас к нему? (Ответьте «Да» или «Нет»)`;
+            session.state = "suggest_doctor";
+          } else {
+            response = `Понял! К сожалению, сейчас нет доступных врачей. Напишите «оператор», чтобы связаться с администратором.`;
+          }
         }
         session.data = data;
         break;
@@ -408,22 +560,46 @@ export class ChatbotService {
       case "suggest_doctor": {
         if (isYes(text)) {
           data.confusedCount = 0;
-          response = `Отлично! Подтверждаете запись к ${data.suggestedDoctorName ?? "врачу"}? (Да / Нет)`;
+
+          if (isOpenRouterAvailable()) {
+            const systemPrompt = buildSystemPrompt("confirm_appointment", settings);
+            const context = `Пациент согласен записаться к ${data.suggestedDoctorName ?? "врачу"}. Попроси подтвердить запись.`;
+            const aiReply = await generateChatbotResponse(systemPrompt, recentMessages, context);
+            response = aiReply ?? `Отлично! Подтверждаете запись к ${data.suggestedDoctorName ?? "врачу"}? (Да / Нет)`;
+          } else {
+            response = `Отлично! Подтверждаете запись к ${data.suggestedDoctorName ?? "врачу"}? (Да / Нет)`;
+          }
           session.state = "confirm_appointment";
         } else if (isNo(text)) {
           data.confusedCount = 0;
           response = "Понял. Опишите снова, что вас беспокоит, и я помогу подобрать специалиста?";
           session.state = "collect_problem";
         } else {
-          const count = (Number(data.confusedCount) || 0) + 1;
-          data.confusedCount = count;
-          if (count >= 2) {
-            session.state = "human_takeover";
-            session.humanTakeover = true;
-            await this.notifyHumanTakeover(clinicId, phone, data.patientName);
-            response = "Похоже, я не могу вам помочь. Соединяю с администратором — ожидайте ответа.";
+          // Ambiguous — try AI interpretation
+          if (isOpenRouterAvailable()) {
+            const systemPrompt = buildSystemPrompt("suggest_doctor", settings);
+            const aiReply = await generateChatbotResponse(systemPrompt, recentMessages, text);
+            const count = (Number(data.confusedCount) || 0) + 1;
+            data.confusedCount = count;
+            if (count >= 3) {
+              session.state = "human_takeover";
+              session.humanTakeover = true;
+              await this.notifyHumanTakeover(clinicId, phone, data.patientName);
+              response = "Соединяю вас с администратором — ожидайте ответа.";
+            } else {
+              response = aiReply ?? `Пожалуйста, ответьте «Да» для записи к врачу или «Нет» для отмены.`;
+            }
           } else {
-            response = `Пожалуйста, ответьте «Да» для записи к врачу или «Нет» для отмены.`;
+            const count = (Number(data.confusedCount) || 0) + 1;
+            data.confusedCount = count;
+            if (count >= 2) {
+              session.state = "human_takeover";
+              session.humanTakeover = true;
+              await this.notifyHumanTakeover(clinicId, phone, data.patientName);
+              response = "Похоже, я не могу вам помочь. Соединяю с администратором — ожидайте ответа.";
+            } else {
+              response = `Пожалуйста, ответьте «Да» для записи к врачу или «Нет» для отмены.`;
+            }
           }
         }
         break;
@@ -435,23 +611,36 @@ export class ChatbotService {
           if (data.suggestedDoctorId && data.patientName) {
             try {
               const patientSource = data.refCode ? `ref:${data.refCode}` : "whatsapp";
-              const patient = await createPatient(clinicId, phone, data.patientName, data.suggestedDoctorId, patientSource);
+              const patient = await createPatient(
+                clinicId,
+                phone,
+                data.patientName,
+                data.suggestedDoctorId,
+                patientSource,
+              );
               data.createdPatientId = patient.id;
               session.data = data;
 
-              // Link click to patient (async, non-blocking)
               if (data.clickId) {
                 channelsRepo
                   .linkClickToPatient(data.clickId, patient.id)
-                  .catch((err) => logger.warn({ err, clickId: data.clickId }, "ChatbotService: failed to link click to patient"));
+                  .catch((err) =>
+                    logger.warn({ err, clickId: data.clickId }, "ChatbotService: failed to link click to patient"),
+                  );
               }
-              // Post-op BullMQ followup jobs (24h/72h/168h) are scheduled automatically
-              // via followup.queue.ts when the doctor marks the procedure as "completed".
             } catch (err) {
               logger.error({ err }, "ChatbotService: failed to create patient");
             }
           }
-          response = `✅ Запись подтверждена! Администратор свяжется с вами для уточнения времени визита.\n\nЕсли возникнут вопросы — пишите сюда. Мы на связи!`;
+
+          if (isOpenRouterAvailable()) {
+            const systemPrompt = buildSystemPrompt("done", settings);
+            const context = `Запись подтверждена к врачу ${data.suggestedDoctorName ?? ""}. Поздравь пациента и скажи что администратор свяжется для уточнения времени.`;
+            const aiReply = await generateChatbotResponse(systemPrompt, recentMessages, context);
+            response = aiReply ?? `✅ Запись подтверждена! Администратор свяжется с вами для уточнения времени визита.\n\nЕсли возникнут вопросы — пишите сюда. Мы на связи!`;
+          } else {
+            response = `✅ Запись подтверждена! Администратор свяжется с вами для уточнения времени визита.\n\nЕсли возникнут вопросы — пишите сюда. Мы на связи!`;
+          }
           session.state = "done";
         } else if (isNo(text)) {
           data.confusedCount = 0;
@@ -461,15 +650,30 @@ export class ChatbotService {
           response = `Хорошо, отменяем. Опишите снова, что вас беспокоит, и я помогу подобрать специалиста.`;
           session.state = "collect_problem";
         } else {
-          const count = (Number(data.confusedCount) || 0) + 1;
-          data.confusedCount = count;
-          if (count >= 2) {
-            session.state = "human_takeover";
-            session.humanTakeover = true;
-            await this.notifyHumanTakeover(clinicId, phone, data.patientName);
-            response = "Похоже, я не могу вам помочь. Соединяю с администратором — ожидайте ответа.";
+          if (isOpenRouterAvailable()) {
+            const systemPrompt = buildSystemPrompt("confirm_appointment", settings);
+            const aiReply = await generateChatbotResponse(systemPrompt, recentMessages, text);
+            const count = (Number(data.confusedCount) || 0) + 1;
+            data.confusedCount = count;
+            if (count >= 3) {
+              session.state = "human_takeover";
+              session.humanTakeover = true;
+              await this.notifyHumanTakeover(clinicId, phone, data.patientName);
+              response = "Соединяю вас с администратором — ожидайте ответа.";
+            } else {
+              response = aiReply ?? `Пожалуйста, ответьте «Да» для подтверждения записи или «Нет» для отмены.`;
+            }
           } else {
-            response = `Пожалуйста, ответьте «Да» для подтверждения записи или «Нет» для отмены.`;
+            const count = (Number(data.confusedCount) || 0) + 1;
+            data.confusedCount = count;
+            if (count >= 2) {
+              session.state = "human_takeover";
+              session.humanTakeover = true;
+              await this.notifyHumanTakeover(clinicId, phone, data.patientName);
+              response = "Похоже, я не могу вам помочь. Соединяю с администратором — ожидайте ответа.";
+            } else {
+              response = `Пожалуйста, ответьте «Да» для подтверждения записи или «Нет» для отмены.`;
+            }
           }
         }
         break;
@@ -490,6 +694,25 @@ export class ChatbotService {
     }
 
     return response;
+  }
+
+  /** Get recent chatbot message history for AI context */
+  private async getRecentHistory(clinicId: string, phone: string): Promise<ChatMessage[]> {
+    try {
+      const messages = await db
+        .select()
+        .from(chatbotMessagesTable)
+        .where(and(eq(chatbotMessagesTable.clinicId, clinicId), eq(chatbotMessagesTable.phone, phone)))
+        .orderBy(asc(chatbotMessagesTable.createdAt))
+        .limit(20);
+
+      return messages.map((m) => ({
+        role: m.direction === "inbound" ? "user" : "assistant",
+        content: m.content,
+      }));
+    } catch {
+      return [];
+    }
   }
 
   private async notifyHumanTakeover(clinicId: string, phone: string, patientName?: string) {
@@ -537,6 +760,8 @@ export class ChatbotService {
       .set({ ...updates, updatedAt: new Date() })
       .where(eq(chatbotSettingsTable.id, settings.id))
       .returning();
+    // Invalidate cache
+    settingsCache.delete(clinicId);
     return updated!;
   }
 
@@ -565,16 +790,13 @@ export class ChatbotService {
       .where(and(eq(chatbotSessionsTable.clinicId, clinicId), eq(chatbotSessionsTable.phone, phone)));
   }
 
-  /** Returns true if there is a non-expired chatbot session for this phone (any state). */
   async hasActiveSession(clinicId: string, phone: string): Promise<boolean> {
-    // Check Redis first
     if (redis) {
       try {
         const exists = await redis.exists(`${REDIS_KEY_PREFIX}${clinicId}:${phone}`);
         if (exists) return true;
       } catch (_) { /* fall through */ }
     }
-    // Fall back to DB
     const [row] = await db
       .select({ updatedAt: chatbotSessionsTable.updatedAt })
       .from(chatbotSessionsTable)

@@ -256,6 +256,13 @@ router.patch(
 
     analyticsRepo.invalidateClinicCache(clinicId).catch(() => {});
 
+    // Feedback loop: when a procedure is completed, the analytics cache is invalidated so
+    // the next call to getDoctorKpis() recomputes scores with this fresh data, which
+    // feeds back into pickBestDoctorAdvanced() for future routing decisions.
+    if (parsed.data.status === "completed" && procedure.doctorId) {
+      analyticsRepo.invalidateClinicCache(clinicId).catch(() => {});
+    }
+
     if ((parsed.data.status === "completed" || parsed.data.status === "pending_payment") && procedure.patientId) {
       const [existing] = await db
         .select({ id: postopFollowupsTable.id })

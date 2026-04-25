@@ -122,6 +122,92 @@ function computeDoctorScore(kpi: RawDoctorKpi, allKpis: RawDoctorKpi[]): number 
   return Math.round(Math.min(100, Math.max(0, score)));
 }
 
+// ─── Advanced multi-factor doctor scoring ────────────────────────────────────
+
+export type AdvancedScoringOptions = {
+  serviceType?: string;
+  urgency?: "urgent" | "soon" | "planned";
+  patientType?: "new" | "returning" | "vip";
+  returningPatientDoctorId?: string;
+};
+
+export interface AdvancedDoctorScore {
+  doctorId: string;
+  doctorName: string;
+  finalScore: number;
+  slotsUsedToday: number;
+  maxSlotsPerDay: number;
+  hasCapacity: boolean;
+}
+
+export function computeAdvancedScore(
+  kpi: RawDoctorKpi,
+  allKpis: RawDoctorKpi[],
+  opts: AdvancedScoringOptions = {},
+): number {
+  const { serviceType, urgency, patientType, returningPatientDoctorId } = opts;
+
+  // 1. base_score — normalized KPI composite (0–1)
+  const maxRevenue = Math.max(...allKpis.map((k) => k.revenueTotal), 1);
+  const maxProcedures = Math.max(...allKpis.map((k) => k.proceduresCount), 1);
+  const maxCheck = Math.max(...allKpis.map((k) => k.averageCheck), 1);
+  const conversionRaw = (kpi.proceduresCount + kpi.cancelledCount) > 0
+    ? kpi.proceduresCount / (kpi.proceduresCount + kpi.cancelledCount)
+    : 0;
+  const maxConversionRaw = Math.max(
+    ...allKpis.map((k) =>
+      (k.proceduresCount + k.cancelledCount) > 0
+        ? k.proceduresCount / (k.proceduresCount + k.cancelledCount) : 0,
+    ), 0.001,
+  );
+  const baseScore =
+    (kpi.revenueTotal / maxRevenue) * 0.35 +
+    (kpi.proceduresCount / maxProcedures) * 0.30 +
+    (kpi.averageCheck / maxCheck) * 0.20 +
+    (conversionRaw / maxConversionRaw) * 0.15;
+
+  // 2. quota_factor — load balancing: prefer doctors below their fair share
+  const totalPatients = allKpis.reduce((s, k) => s + k.patientsCount, 0);
+  const fairShare = totalPatients > 0 ? totalPatients / allKpis.length : 1;
+  const quotaFactor = kpi.patientsCount <= fairShare
+    ? 1.2
+    : Math.max(0.5, 1 - ((kpi.patientsCount - fairShare) / (fairShare + 1)) * 0.3);
+
+  // 3. load_factor — prefer doctors with more free capacity today
+  const capacityRatio = kpi.slotsUsedToday / Math.max(kpi.maxSlotsPerDay, 1);
+  const loadFactor = capacityRatio >= 1 ? 0.01 : 1 - capacityRatio * 0.6;
+
+  // 4. value_factor — expensive services (VIP) go to top performers
+  let valueFactor = 1.0;
+  const expensiveServices = ["orthopedics", "surgery", "implantation"];
+  if (patientType === "vip" || (serviceType && expensiveServices.includes(serviceType))) {
+    // Boost top-revenue doctors for expensive cases
+    valueFactor = 0.5 + (kpi.revenueTotal / maxRevenue) * 0.8;
+  } else if (serviceType === "hygiene" || serviceType === "consultation") {
+    // Spread simple cases more evenly
+    valueFactor = quotaFactor;
+  }
+
+  // 5. patient_fit_factor
+  let patientFitFactor = 1.0;
+  if (patientType === "returning" && returningPatientDoctorId) {
+    patientFitFactor = kpi.doctorId === returningPatientDoctorId ? 2.0 : 0.6;
+  } else if (patientType === "vip") {
+    patientFitFactor = 0.5 + (kpi.revenueTotal / maxRevenue);
+  } else {
+    // new patient — prefer high conversion doctors
+    patientFitFactor = 0.5 + (conversionRaw / maxConversionRaw) * 0.7;
+  }
+
+  // 6. exploration_factor — 60% exploit best, 40% random from top-3 (handled at selection level)
+  // We encode randomness here as a small noise so the caller can do top-3 selection
+  const explorationNoise = 1.0 + (Math.random() - 0.5) * 0.1;
+
+  const finalScore = baseScore * quotaFactor * loadFactor * valueFactor * patientFitFactor * explorationNoise;
+
+  return Math.max(0, finalScore);
+}
+
 function startOfMonth(): Date {
   const d = new Date();
   d.setDate(1);
@@ -489,7 +575,7 @@ export class AnalyticsRepository {
 
     if (!hasFilters) {
       const cacheKey = analyticsCache.key("doctor-detail", clinicId, doctorId);
-      await analyticsCache.set(cacheKey, result, 60);
+      await analyticsCache.set(cacheKey, result);
     }
     return result;
   }

@@ -17,4 +17,10 @@ export interface ChatbotSessionData {
   refCode?: string;
   channelId?: string;
   clickId?: string;
+  extractedPhone?: string;
+  // AI classification results
+  serviceType?: string;
+  urgency?: string;
+  patientType?: string;
+  aiConfidence?: string;
 }

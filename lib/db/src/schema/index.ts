@@ -9,3 +9,4 @@ export * from "./chatbot";
 export * from "./migration";
 export * from "./channels";
 export * from "./payroll";
+export * from "./handoffs";
