@@ -74,19 +74,8 @@ async function classifyWithRetry(
   history: ChatMessage[],
   attempt = 0,
 ): Promise<ClassificationResult> {
-  if (!openrouter) {
-    return {
-      serviceType: "unknown",
-      urgency: "planned",
-      confidence: "low",
-      patientType: "new",
-      summary: message.slice(0, 100),
-    };
-  }
-
   const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
     { role: "system", content: CLASSIFICATION_SYSTEM_PROMPT },
-    // Include recent history for context (last 4 messages)
     ...history.slice(-4).map((m) => ({ role: m.role, content: m.content })),
     { role: "user", content: message },
   ];
@@ -123,7 +112,7 @@ async function classifyWithRetry(
       return classifyWithRetry(message, history, attempt + 1);
     }
 
-    logger.error({ err }, "[AIClassifier] Classification failed after retries");
+    logger.error({ err }, "[AIClassifier] Classification failed after retries — returning low-confidence fallback");
     return {
       serviceType: "unknown",
       urgency: "planned",
@@ -148,8 +137,6 @@ export async function generateChatbotResponse(
   history: ChatMessage[],
   userMessage: string,
 ): Promise<string | null> {
-  if (!openrouter) return null;
-
   const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
     { role: "system", content: systemPrompt },
     ...history.slice(-10).map((m) => ({ role: m.role, content: m.content })),
@@ -165,7 +152,7 @@ export async function generateChatbotResponse(
     });
     return response.choices[0]?.message?.content ?? null;
   } catch (err) {
-    logger.error({ err }, "[AIClassifier] generateChatbotResponse failed");
+    logger.error({ err }, "[AIClassifier] generateChatbotResponse failed — using fallback text");
     return null;
   }
 }

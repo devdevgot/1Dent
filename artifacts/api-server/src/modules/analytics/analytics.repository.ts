@@ -6,7 +6,7 @@ import {
   notificationsTable,
   doctorCapacityTable,
 } from "@workspace/db";
-import { eq, and, gte, lte, count, sum, sql, isNotNull, SQL } from "drizzle-orm";
+import { eq, and, gte, lte, count, sum, sql, isNotNull, SQL, ne } from "drizzle-orm";
 import { analyticsCache } from "../../shared/analytics-cache";
 
 export interface DoctorAnalyticsFilters {
@@ -729,20 +729,23 @@ export class AnalyticsRepository {
                 eq(proceduresTable.status, "cancelled"),
               ),
             ),
+          // Today's load: non-cancelled procedures with scheduledAt today
           db
-            .select()
-            .from(patientsTable)
+            .select({ id: proceduresTable.id })
+            .from(proceduresTable)
             .where(
               and(
-                eq(patientsTable.clinicId, clinicId),
-                eq(patientsTable.doctorId, doc.id),
-                gte(patientsTable.createdAt, todayStart),
-                lte(patientsTable.createdAt, todayEnd),
+                eq(proceduresTable.clinicId, clinicId),
+                eq(proceduresTable.doctorId, doc.id),
+                ne(proceduresTable.status, "cancelled"),
+                gte(proceduresTable.scheduledAt, todayStart),
+                lte(proceduresTable.scheduledAt, todayEnd),
               ),
             ),
         ]);
         const revenueTotal = procedures.reduce((acc, p) => acc + (p.price ?? 0), 0);
         const averageCheck = procedures.length > 0 ? revenueTotal / procedures.length : 0;
+        const maxSlotsPerDay = capacityMap.get(doc.id) ?? 20;
         return {
           doctorId: doc.id,
           doctorName: doc.name,
@@ -753,8 +756,8 @@ export class AnalyticsRepository {
           averageCheck,
           nps: 0, // placeholder — will be populated from patient survey results (Task #28)
           slotsUsedToday: todayProcs.length,
-          maxSlotsPerDay: capacityMap.get(doc.id) ?? 20,
-          nearestSlotMinutes: computeNearestSlotMinutes(todayProcs.length, capacityMap.get(doc.id) ?? 20),
+          maxSlotsPerDay,
+          nearestSlotMinutes: computeNearestSlotMinutes(todayProcs.length, maxSlotsPerDay),
         };
       }),
     );
@@ -802,7 +805,8 @@ export class AnalyticsRepository {
           db.select().from(patientsTable).where(and(eq(patientsTable.clinicId, clinicId), eq(patientsTable.doctorId, doc.id))),
           db.select().from(proceduresTable).where(and(eq(proceduresTable.clinicId, clinicId), eq(proceduresTable.doctorId, doc.id), eq(proceduresTable.status, "completed"))),
           db.select().from(proceduresTable).where(and(eq(proceduresTable.clinicId, clinicId), eq(proceduresTable.doctorId, doc.id), eq(proceduresTable.status, "cancelled"))),
-          db.select().from(patientsTable).where(and(eq(patientsTable.clinicId, clinicId), eq(patientsTable.doctorId, doc.id), gte(patientsTable.createdAt, todayStart), lte(patientsTable.createdAt, todayEnd))),
+          // Today's scheduled load: non-cancelled procedures with scheduledAt today
+          db.select({ id: proceduresTable.id }).from(proceduresTable).where(and(eq(proceduresTable.clinicId, clinicId), eq(proceduresTable.doctorId, doc.id), ne(proceduresTable.status, "cancelled"), gte(proceduresTable.scheduledAt, todayStart), lte(proceduresTable.scheduledAt, todayEnd))),
         ]);
         const revenueTotal = procedures.reduce((acc, p) => acc + (p.price ?? 0), 0);
         const averageCheck = procedures.length > 0 ? revenueTotal / procedures.length : 0;

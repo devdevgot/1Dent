@@ -13,7 +13,3 @@ if (!apiKey) {
 export const openrouter = new OpenAI({ apiKey, baseURL });
 
 export const DEEPSEEK_MODEL = "deepseek/deepseek-chat-v3-0324";
-
-export function isOpenRouterAvailable(): boolean {
-  return true;
-}

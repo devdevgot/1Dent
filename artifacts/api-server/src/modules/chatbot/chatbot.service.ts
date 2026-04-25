@@ -472,11 +472,23 @@ export class ChatbotService {
           break;
         }
 
+        // Resolve returningPatientDoctorId: look up existing patient by phone to route back to same doctor
+        let returningPatientDoctorId: string | undefined;
+        if (classification.patientType === "returning") {
+          const [existingPatient] = await db
+            .select({ doctorId: patientsTable.doctorId })
+            .from(patientsTable)
+            .where(and(eq(patientsTable.clinicId, clinicId), eq(patientsTable.phone, phone)))
+            .limit(1);
+          returningPatientDoctorId = existingPatient?.doctorId ?? undefined;
+        }
+
         // High/medium confidence — pick best doctor with advanced scoring
         const scoringOpts: AdvancedScoringOptions = {
           serviceType: classification.serviceType,
           urgency: classification.urgency,
           patientType: classification.patientType,
+          returningPatientDoctorId,
         };
         const doctor = await pickBestDoctorAdvanced(clinicId, scoringOpts);
 
