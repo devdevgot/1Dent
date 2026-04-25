@@ -14,13 +14,52 @@ import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError, ForbiddenError } from "../../shared/errors";
 import type { ProcedureStatus, PaymentMethod } from "@workspace/db";
 import { scheduleFollowups } from "../followups/followup.queue";
+import { logger } from "../../lib/logger";
 import { scheduleAppointmentReminders, cancelAppointmentReminders } from "../followups/appointment-reminders.queue";
-import { db, postopFollowupsTable, patientsTable, usersTable, clinicsTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { db, postopFollowupsTable, patientsTable, usersTable, clinicsTable, doctorKpisTable } from "@workspace/db";
+import { eq, and, sql } from "drizzle-orm";
 
 const router: IRouter = Router();
 const repo = new ProceduresRepository();
 const inventoryRepo = new InventoryRepository();
+
+/**
+ * Incrementally update the doctor_kpis row for a given doctor + month.
+ * Called on procedure completion or payment to keep KPI data fresh between full recomputations.
+ */
+async function incrementDoctorKpi(opts: {
+  clinicId: string;
+  doctorId: string;
+  deltaRevenue: number;
+  deltaProcedures: number;
+}): Promise<void> {
+  const { clinicId, doctorId, deltaRevenue, deltaProcedures } = opts;
+  const month = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+  const id = `${doctorId}:${month}`;
+
+  await db
+    .insert(doctorKpisTable)
+    .values({
+      id,
+      clinicId,
+      doctorId,
+      month,
+      patientsCount: 0,
+      proceduresCount: deltaProcedures,
+      revenueTotal: deltaRevenue,
+      averageCheck: deltaRevenue > 0 && deltaProcedures > 0 ? deltaRevenue / deltaProcedures : 0,
+      nps: 0,
+    })
+    .onConflictDoUpdate({
+      target: doctorKpisTable.id,
+      set: {
+        proceduresCount: sql`${doctorKpisTable.proceduresCount} + ${deltaProcedures}`,
+        revenueTotal: sql`${doctorKpisTable.revenueTotal} + ${deltaRevenue}`,
+        averageCheck: sql`CASE WHEN ${doctorKpisTable.proceduresCount} + ${deltaProcedures} > 0 THEN (${doctorKpisTable.revenueTotal} + ${deltaRevenue}) / (${doctorKpisTable.proceduresCount} + ${deltaProcedures}) ELSE 0 END`,
+        computedAt: sql`NOW()`,
+      },
+    });
+}
 
 const procedureStatusValues = [
   "scheduled",
@@ -256,11 +295,15 @@ router.patch(
 
     analyticsRepo.invalidateClinicCache(clinicId).catch(() => {});
 
-    // Feedback loop: when a procedure is completed, the analytics cache is invalidated so
-    // the next call to getDoctorKpis() recomputes scores with this fresh data, which
-    // feeds back into pickBestDoctorAdvanced() for future routing decisions.
+    // Feedback loop: on completion, incrementally update doctor_kpis so the next
+    // chatbot routing call via pickBestDoctorAdvanced() sees fresh KPI data immediately.
     if (parsed.data.status === "completed" && procedure.doctorId) {
-      analyticsRepo.invalidateClinicCache(clinicId).catch(() => {});
+      incrementDoctorKpi({
+        clinicId,
+        doctorId: procedure.doctorId,
+        deltaRevenue: procedure.price ?? 0,
+        deltaProcedures: 1,
+      }).catch((err) => logger.error({ err }, "[Procedures] Failed to increment doctor KPI on completion"));
     }
 
     if ((parsed.data.status === "completed" || parsed.data.status === "pending_payment") && procedure.patientId) {
@@ -303,7 +346,20 @@ router.patch(
     const { clinicId } = req.user!;
     const procedure = await repo.updatePayment(id, clinicId, parsed.data.paymentMethod as PaymentMethod).catch(next);
     if (!procedure) return next(new NotFoundError("Procedure not found"));
+
     analyticsRepo.invalidateClinicCache(clinicId).catch(() => {});
+
+    // Feedback loop: payment confirmation — update revenue in doctor_kpis for the current month
+    // (procedure price may not have been counted yet if payment comes after status transition)
+    if (procedure.doctorId && procedure.price) {
+      incrementDoctorKpi({
+        clinicId,
+        doctorId: procedure.doctorId,
+        deltaRevenue: procedure.price,
+        deltaProcedures: 0,
+      }).catch((err) => logger.error({ err }, "[Procedures] Failed to increment doctor KPI on payment"));
+    }
+
     res.json({ success: true, data: { procedure } });
   },
 );

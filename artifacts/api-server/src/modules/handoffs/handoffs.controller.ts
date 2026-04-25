@@ -27,8 +27,14 @@ router.post(
     if (!parsed.success) {
       return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
     }
-    const { clinicId } = req.user!;
+    const { clinicId, userId, role } = req.user!;
     const { fromDoctorId, toDoctorId, procedureId, reason } = parsed.data;
+
+    // Doctors can only create handoffs where they are the sender (fromDoctorId must be themselves).
+    // Admins and owners can submit handoffs on behalf of any doctor.
+    if (role === "doctor" && fromDoctorId !== userId) {
+      return next(new ValidationError("Doctors can only initiate handoffs from their own account"));
+    }
 
     try {
       // Verify both doctors belong to the same clinic and have the 'doctor' role,
