@@ -32,9 +32,11 @@ async function incrementDoctorKpi(opts: {
   doctorId: string;
   deltaRevenue: number;
   deltaProcedures: number;
+  /** Event timestamp used for month attribution. Defaults to now if omitted. */
+  eventAt?: Date;
 }): Promise<void> {
-  const { clinicId, doctorId, deltaRevenue, deltaProcedures } = opts;
-  const month = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+  const { clinicId, doctorId, deltaRevenue, deltaProcedures, eventAt } = opts;
+  const month = (eventAt ?? new Date()).toISOString().slice(0, 7); // "YYYY-MM"
   const id = `${doctorId}:${month}`;
 
   await db
@@ -312,6 +314,8 @@ router.patch(
         doctorId: procedure.doctorId,
         deltaRevenue: procedure.price ?? 0,
         deltaProcedures: 1,
+        // Use completedAt for correct month attribution (procedure may be completed late)
+        eventAt: procedure.completedAt ? new Date(procedure.completedAt) : undefined,
       }).catch((err) => logger.error({ err }, "[Procedures] Failed to increment doctor KPI on completion"));
     }
 
@@ -371,12 +375,15 @@ router.patch(
 
     // Feedback loop: increment revenue only if not already counted at completion.
     // Also count proceduresCount if payment is the terminal step (status was pending_payment).
-    if (procedure.doctorId && procedure.price && !wasAlreadyCompleted) {
+    // Use procedure.price != null check (not truthiness) so zero-price procedures still count.
+    if (procedure.doctorId && procedure.price != null && !wasAlreadyCompleted) {
       incrementDoctorKpi({
         clinicId,
         doctorId: procedure.doctorId,
         deltaRevenue: procedure.price,
         deltaProcedures: prevPayment?.status === "pending_payment" ? 1 : 0,
+        // Attribute to today — payment events don't have their own timestamp in schema
+        eventAt: new Date(),
       }).catch((err) => logger.error({ err }, "[Procedures] Failed to increment doctor KPI on payment"));
     }
 
