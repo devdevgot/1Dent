@@ -8,8 +8,9 @@ import {
   patientsTable,
   notificationsTable,
   usersTable,
+  proceduresTable,
 } from "@workspace/db";
-import { eq, and, inArray, gte, asc } from "drizzle-orm";
+import { eq, and, inArray, gte, lte, ne, asc, sql } from "drizzle-orm";
 import { isRedAlert } from "../../shared/whatsapp";
 import { sendToPatient } from "../../shared/messaging";
 import { getAlertQueue } from "../../shared/alert-queue";
@@ -172,13 +173,37 @@ async function pickTherapist(clinicId: string): Promise<{ id: string; name: stri
 
   if (doctors.length === 0) return null;
 
+  // Prefer doctors with matching specialty
   const therapist = doctors.find(
     (d) => d.specialty && THERAPIST_SPECIALTIES.includes(d.specialty.toLowerCase()),
   );
   if (therapist) return { id: therapist.id, name: therapist.name };
 
-  // No specialty match — return the first available doctor (least loaded by default)
-  return { id: doctors[0]!.id, name: doctors[0]!.name };
+  // No specialty match — pick least-loaded doctor today using procedure count
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
+
+  const loads = await Promise.all(
+    doctors.map(async (doc) => {
+      const [result] = await db
+        .select({ count: sql<number>`cast(count(*) as int)` })
+        .from(proceduresTable)
+        .where(
+          and(
+            eq(proceduresTable.clinicId, clinicId),
+            eq(proceduresTable.doctorId, doc.id),
+            ne(proceduresTable.status, "cancelled"),
+            gte(proceduresTable.scheduledAt, todayStart),
+            lte(proceduresTable.scheduledAt, todayEnd),
+          ),
+        );
+      return { id: doc.id, name: doc.name, load: result?.count ?? 0 };
+    }),
+  );
+
+  // Sort by ascending load — pick least busy doctor
+  loads.sort((a, b) => a.load - b.load);
+  return { id: loads[0]!.id, name: loads[0]!.name };
 }
 
 const channelsRepo = new ChannelsRepository();

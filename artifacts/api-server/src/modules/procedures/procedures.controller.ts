@@ -16,7 +16,7 @@ import type { ProcedureStatus, PaymentMethod } from "@workspace/db";
 import { scheduleFollowups } from "../followups/followup.queue";
 import { logger } from "../../lib/logger";
 import { scheduleAppointmentReminders, cancelAppointmentReminders } from "../followups/appointment-reminders.queue";
-import { db, postopFollowupsTable, patientsTable, usersTable, clinicsTable, doctorKpisTable } from "@workspace/db";
+import { db, postopFollowupsTable, patientsTable, usersTable, clinicsTable, doctorKpisTable, proceduresTable } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
 
 const router: IRouter = Router();
@@ -287,6 +287,14 @@ router.patch(
     const authorized = await assertDoctorOwnership(id, clinicId, userId, role, next);
     if (!authorized) return;
 
+    // Read the old status before updating to compute KPI deltas idempotently
+    const [prevProcedure] = await db
+      .select({ status: proceduresTable.status, price: proceduresTable.price, doctorId: proceduresTable.doctorId })
+      .from(proceduresTable)
+      .where(and(eq(proceduresTable.id, id), eq(proceduresTable.clinicId, clinicId)))
+      .limit(1);
+    const previousStatus = prevProcedure?.status;
+
     const statusUpdate = parsed.data.status as ProcedureStatus;
     const procedure = await repo
       .updateStatus(id, clinicId, statusUpdate, parsed.data.notes)
@@ -295,9 +303,10 @@ router.patch(
 
     analyticsRepo.invalidateClinicCache(clinicId).catch(() => {});
 
-    // Feedback loop: on completion, incrementally update doctor_kpis so the next
-    // chatbot routing call via pickBestDoctorAdvanced() sees fresh KPI data immediately.
-    if (parsed.data.status === "completed" && procedure.doctorId) {
+    // Feedback loop: on first transition to "completed", increment proceduresCount + revenue once.
+    // Gated on previousStatus to prevent double-counting if status is set to "completed" twice.
+    const isFirstCompletion = parsed.data.status === "completed" && previousStatus !== "completed";
+    if (isFirstCompletion && procedure.doctorId) {
       incrementDoctorKpi({
         clinicId,
         doctorId: procedure.doctorId,
@@ -344,19 +353,30 @@ router.patch(
     }
     const id = String(req.params["id"]);
     const { clinicId } = req.user!;
+
+    // Read current status before payment update to determine if revenue was already counted.
+    // If the procedure was already "completed", revenue was counted at status transition.
+    // If it was "pending_payment" or other, revenue must be counted here.
+    const [prevPayment] = await db
+      .select({ status: proceduresTable.status, doctorId: proceduresTable.doctorId, price: proceduresTable.price })
+      .from(proceduresTable)
+      .where(and(eq(proceduresTable.id, id), eq(proceduresTable.clinicId, clinicId)))
+      .limit(1);
+    const wasAlreadyCompleted = prevPayment?.status === "completed";
+
     const procedure = await repo.updatePayment(id, clinicId, parsed.data.paymentMethod as PaymentMethod).catch(next);
     if (!procedure) return next(new NotFoundError("Procedure not found"));
 
     analyticsRepo.invalidateClinicCache(clinicId).catch(() => {});
 
-    // Feedback loop: payment confirmation — update revenue in doctor_kpis for the current month
-    // (procedure price may not have been counted yet if payment comes after status transition)
-    if (procedure.doctorId && procedure.price) {
+    // Feedback loop: increment revenue only if not already counted at completion.
+    // Also count proceduresCount if payment is the terminal step (status was pending_payment).
+    if (procedure.doctorId && procedure.price && !wasAlreadyCompleted) {
       incrementDoctorKpi({
         clinicId,
         doctorId: procedure.doctorId,
         deltaRevenue: procedure.price,
-        deltaProcedures: 0,
+        deltaProcedures: prevPayment?.status === "pending_payment" ? 1 : 0,
       }).catch((err) => logger.error({ err }, "[Procedures] Failed to increment doctor KPI on payment"));
     }
 
