@@ -17,7 +17,6 @@ import { logger } from "../../lib/logger";
 import { pickBestDoctorAdvanced, type AdvancedScoringOptions } from "../analytics/analytics.repository";
 import { ChannelsRepository } from "../channels/channels.repository";
 import { classifyPatientRequest, generateChatbotResponse, type ChatMessage } from "./ai-classifier";
-import { isOpenRouterAvailable } from "../../lib/openrouter-client";
 import type { ChatbotState, ChatbotSessionData } from "./chatbot.types";
 import type { ChatbotSettings } from "@workspace/db";
 
@@ -158,6 +157,29 @@ async function saveChatbotMessage(
 }
 
 // ─── Analytics-based doctor routing ─────────────────────────────────────────
+
+/**
+ * Pick the most general/entry-level doctor for low-confidence AI routing.
+ * Prefers doctors with specialty matching "therapist"/"general"/"терапевт"/"терапия".
+ * Falls back to the doctor with the lowest current load.
+ */
+async function pickTherapist(clinicId: string): Promise<{ id: string; name: string } | null> {
+  const THERAPIST_SPECIALTIES = ["therapist", "general", "терапевт", "терапия", "дантист", "dentist"];
+  const doctors = await db
+    .select({ id: usersTable.id, name: usersTable.name, specialty: usersTable.specialty })
+    .from(usersTable)
+    .where(and(eq(usersTable.clinicId, clinicId), eq(usersTable.role, "doctor")));
+
+  if (doctors.length === 0) return null;
+
+  const therapist = doctors.find(
+    (d) => d.specialty && THERAPIST_SPECIALTIES.includes(d.specialty.toLowerCase()),
+  );
+  if (therapist) return { id: therapist.id, name: therapist.name };
+
+  // No specialty match — return the first available doctor (least loaded by default)
+  return { id: doctors[0]!.id, name: doctors[0]!.name };
+}
 
 const channelsRepo = new ChannelsRepository();
 
@@ -397,101 +419,85 @@ export class ChatbotService {
 
       case "collect_name": {
         // Use AI to extract name from potentially complex input
-        if (isOpenRouterAvailable()) {
-          const classification = await classifyPatientRequest(text, recentMessages);
-          const extractedName = classification.extractedName ?? text.trim().slice(0, 60);
-          data.patientName = extractedName;
-
-          // If phone extracted too, save it
-          if (classification.extractedPhone) {
-            data.extractedPhone = classification.extractedPhone;
-          }
-
-          const systemPrompt = buildSystemPrompt("collect_name", settings);
-          const aiReply = await generateChatbotResponse(
-            systemPrompt,
-            recentMessages,
-            text,
-          );
-          response = aiReply ?? `Приятно познакомиться, ${extractedName}! 😊\nОпишите вашу проблему или какую процедуру вы хотели бы пройти.`;
-        } else {
-          data.patientName = text.trim().slice(0, 60);
-          response = `Приятно познакомиться, ${data.patientName}! 😊\nОпишите вашу проблему или какую процедуру вы хотели бы пройти.`;
+        const classification0 = await classifyPatientRequest(text, recentMessages);
+        const extractedName = classification0.extractedName ?? text.trim().slice(0, 60);
+        data.patientName = extractedName;
+        if (classification0.extractedPhone) {
+          data.extractedPhone = classification0.extractedPhone;
         }
+        const aiReply0 = await generateChatbotResponse(
+          buildSystemPrompt("collect_name", settings),
+          recentMessages,
+          text,
+        );
+        response = aiReply0 ?? `Приятно познакомиться, ${extractedName}! 😊\nОпишите вашу проблему или какую процедуру вы хотели бы пройти.`;
         session.state = "collect_problem";
         session.data = data;
         break;
       }
 
       case "collect_problem": {
-        if (isOpenRouterAvailable()) {
-          // AI classifies the request
-          const classification = await classifyPatientRequest(text, recentMessages);
-          data.problemDescription = text.trim().slice(0, 200);
-          data.serviceType = classification.serviceType;
-          data.urgency = classification.urgency;
-          data.patientType = classification.patientType;
-          data.aiConfidence = classification.confidence;
+        // AI classifies the request
+        const classification = await classifyPatientRequest(text, recentMessages);
+        data.problemDescription = text.trim().slice(0, 200);
+        data.serviceType = classification.serviceType;
+        data.urgency = classification.urgency;
+        data.patientType = classification.patientType;
+        data.aiConfidence = classification.confidence;
 
-          logger.info(
-            { clinicId, phone, classification },
-            "[ChatbotService] AI classified patient request",
-          );
+        logger.info(
+          { clinicId, phone, classification },
+          "[ChatbotService] AI classified patient request",
+        );
 
-          // Pick best doctor with advanced scoring
-          const scoringOpts: AdvancedScoringOptions = {
-            serviceType: classification.serviceType,
-            urgency: classification.urgency,
-            patientType: classification.patientType,
-          };
-          const doctor = await pickBestDoctorAdvanced(clinicId, scoringOpts);
-
-          if (doctor) {
-            data.suggestedDoctorId = doctor.id;
-            data.suggestedDoctorName = doctor.name;
-
-            const urgencyNote =
-              classification.urgency === "urgent"
-                ? " Вижу, что ситуация срочная — постараемся записать вас как можно скорее! 🚨"
-                : "";
-
-            if (classification.confidence === "high") {
-              const systemPrompt = buildSystemPrompt("suggest_doctor", settings);
-              const context = `Пациент описал: ${classification.summary}. Рекомендуемый врач: ${doctor.name}. Предложи запись к этому врачу.`;
-              const aiReply = await generateChatbotResponse(systemPrompt, recentMessages, context);
-              response = aiReply ?? `Понял! Рекомендую врача *${doctor.name}*.${urgencyNote}\n\nЗаписать вас к нему? (Ответьте «Да» или «Нет»)`;
-            } else {
-              // Low confidence — AI asks clarifying question
-              const systemPrompt = buildSystemPrompt("collect_problem", settings);
-              const context = `Пациент написал: "${text}". Уточни что именно беспокоит, чтобы подобрать подходящего специалиста.`;
-              const aiReply = await generateChatbotResponse(systemPrompt, recentMessages, context);
-              response = aiReply ?? `Чтобы подобрать лучшего специалиста, уточните: что именно вас беспокоит?`;
-              // Don't advance state yet if confidence is low — re-ask
-              session.data = data;
-              await saveSession(session);
-              if (response) {
-                saveChatbotMessage(clinicId, phone, "outbound", response).catch(() => {});
-                sendToPatient(clinicId, phone, response).catch(() => {});
-              }
-              return response;
-            }
+        if (classification.confidence === "low") {
+          // Low confidence → route to therapist (most general doctor in clinic)
+          // Therapist = doctor with specialty matching "therapist"/"general"/"терапевт", else least loaded
+          const therapist = await pickTherapist(clinicId);
+          if (therapist) {
+            data.suggestedDoctorId = therapist.id;
+            data.suggestedDoctorName = therapist.name;
+            const aiReply = await generateChatbotResponse(
+              buildSystemPrompt("suggest_doctor", settings),
+              recentMessages,
+              `Пациент написал что-то неясное: "${text}". Мягко предложи запись к терапевту ${therapist.name} для первичного осмотра.`,
+            );
+            response = aiReply ?? `Понял! Для начала рекомендую записаться на консультацию к врачу *${therapist.name}* — он определит, какое лечение вам нужно.\n\nЗаписать вас? (Да / Нет)`;
             session.state = "suggest_doctor";
           } else {
-            response = `Понял! К сожалению, сейчас нет доступных врачей. Напишите «оператор», чтобы связаться с администратором.`;
+            // No doctors at all — ask to clarify once more then escalate
+            response = `Чтобы подобрать специалиста, уточните: что именно вас беспокоит?`;
           }
-        } else {
-          // Fallback — no AI, use old logic
-          data.problemDescription = text.trim().slice(0, 200);
-          const doctor = await pickBestDoctorAdvanced(clinicId);
-          if (doctor) {
-            data.suggestedDoctorId = doctor.id;
-            data.suggestedDoctorName = doctor.name;
-            response = `Понял! Исходя из вашего запроса, рекомендую врача *${doctor.name}*.\n\nЗаписать вас к нему? (Ответьте «Да» или «Нет»)`;
-            session.state = "suggest_doctor";
-          } else {
-            response = `Понял! К сожалению, сейчас нет доступных врачей. Напишите «оператор», чтобы связаться с администратором.`;
-          }
+          session.data = data;
+          break;
         }
+
+        // High/medium confidence — pick best doctor with advanced scoring
+        const scoringOpts: AdvancedScoringOptions = {
+          serviceType: classification.serviceType,
+          urgency: classification.urgency,
+          patientType: classification.patientType,
+        };
+        const doctor = await pickBestDoctorAdvanced(clinicId, scoringOpts);
+
+        if (doctor) {
+          data.suggestedDoctorId = doctor.id;
+          data.suggestedDoctorName = doctor.name;
+
+          const urgencyNote =
+            classification.urgency === "urgent"
+              ? " Вижу, что ситуация срочная — постараемся записать вас как можно скорее! 🚨"
+              : "";
+
+          const systemPrompt = buildSystemPrompt("suggest_doctor", settings);
+          const context = `Пациент описал: ${classification.summary ?? text}. Рекомендуемый врач: ${doctor.name}. Предложи запись к этому врачу.`;
+          const aiReply = await generateChatbotResponse(systemPrompt, recentMessages, context);
+          response = aiReply ?? `Понял! Рекомендую врача *${doctor.name}*.${urgencyNote}\n\nЗаписать вас к нему? (Ответьте «Да» или «Нет»)`;
+          session.state = "suggest_doctor";
+        } else {
+          response = `К сожалению, сейчас нет доступных врачей. Напишите «оператор», чтобы связаться с администратором.`;
+        }
+
         session.data = data;
         break;
       }
@@ -499,46 +505,33 @@ export class ChatbotService {
       case "suggest_doctor": {
         if (isYes(text)) {
           data.confusedCount = 0;
-
-          if (isOpenRouterAvailable()) {
-            const systemPrompt = buildSystemPrompt("confirm_appointment", settings);
-            const context = `Пациент согласен записаться к ${data.suggestedDoctorName ?? "врачу"}. Попроси подтвердить запись.`;
-            const aiReply = await generateChatbotResponse(systemPrompt, recentMessages, context);
-            response = aiReply ?? `Отлично! Подтверждаете запись к ${data.suggestedDoctorName ?? "врачу"}? (Да / Нет)`;
-          } else {
-            response = `Отлично! Подтверждаете запись к ${data.suggestedDoctorName ?? "врачу"}? (Да / Нет)`;
-          }
+          const aiReply1 = await generateChatbotResponse(
+            buildSystemPrompt("confirm_appointment", settings),
+            recentMessages,
+            `Пациент согласен записаться к ${data.suggestedDoctorName ?? "врачу"}. Попроси подтвердить запись.`,
+          );
+          response = aiReply1 ?? `Отлично! Подтверждаете запись к ${data.suggestedDoctorName ?? "врачу"}? (Да / Нет)`;
           session.state = "confirm_appointment";
         } else if (isNo(text)) {
           data.confusedCount = 0;
           response = "Понял. Опишите снова, что вас беспокоит, и я помогу подобрать специалиста?";
           session.state = "collect_problem";
         } else {
-          // Ambiguous — try AI interpretation
-          if (isOpenRouterAvailable()) {
-            const systemPrompt = buildSystemPrompt("suggest_doctor", settings);
-            const aiReply = await generateChatbotResponse(systemPrompt, recentMessages, text);
-            const count = (Number(data.confusedCount) || 0) + 1;
-            data.confusedCount = count;
-            if (count >= 3) {
-              session.state = "human_takeover";
-              session.humanTakeover = true;
-              await this.notifyHumanTakeover(clinicId, phone, data.patientName);
-              response = "Соединяю вас с администратором — ожидайте ответа.";
-            } else {
-              response = aiReply ?? `Пожалуйста, ответьте «Да» для записи к врачу или «Нет» для отмены.`;
-            }
+          // Ambiguous — AI interpretation with confusion counter
+          const aiReply2 = await generateChatbotResponse(
+            buildSystemPrompt("suggest_doctor", settings),
+            recentMessages,
+            text,
+          );
+          const count = (Number(data.confusedCount) || 0) + 1;
+          data.confusedCount = count;
+          if (count >= 3) {
+            session.state = "human_takeover";
+            session.humanTakeover = true;
+            await this.notifyHumanTakeover(clinicId, phone, data.patientName);
+            response = "Соединяю вас с администратором — ожидайте ответа.";
           } else {
-            const count = (Number(data.confusedCount) || 0) + 1;
-            data.confusedCount = count;
-            if (count >= 2) {
-              session.state = "human_takeover";
-              session.humanTakeover = true;
-              await this.notifyHumanTakeover(clinicId, phone, data.patientName);
-              response = "Похоже, я не могу вам помочь. Соединяю с администратором — ожидайте ответа.";
-            } else {
-              response = `Пожалуйста, ответьте «Да» для записи к врачу или «Нет» для отмены.`;
-            }
+            response = aiReply2 ?? `Пожалуйста, ответьте «Да» для записи к врачу или «Нет» для отмены.`;
           }
         }
         break;
@@ -572,14 +565,12 @@ export class ChatbotService {
             }
           }
 
-          if (isOpenRouterAvailable()) {
-            const systemPrompt = buildSystemPrompt("done", settings);
-            const context = `Запись подтверждена к врачу ${data.suggestedDoctorName ?? ""}. Поздравь пациента и скажи что администратор свяжется для уточнения времени.`;
-            const aiReply = await generateChatbotResponse(systemPrompt, recentMessages, context);
-            response = aiReply ?? `✅ Запись подтверждена! Администратор свяжется с вами для уточнения времени визита.\n\nЕсли возникнут вопросы — пишите сюда. Мы на связи!`;
-          } else {
-            response = `✅ Запись подтверждена! Администратор свяжется с вами для уточнения времени визита.\n\nЕсли возникнут вопросы — пишите сюда. Мы на связи!`;
-          }
+          const aiReply3 = await generateChatbotResponse(
+            buildSystemPrompt("done", settings),
+            recentMessages,
+            `Запись подтверждена к врачу ${data.suggestedDoctorName ?? ""}. Поздравь пациента и скажи что администратор свяжется для уточнения времени.`,
+          );
+          response = aiReply3 ?? `✅ Запись подтверждена! Администратор свяжется с вами для уточнения времени визита.\n\nЕсли возникнут вопросы — пишите сюда. Мы на связи!`;
           session.state = "done";
         } else if (isNo(text)) {
           data.confusedCount = 0;
@@ -589,30 +580,20 @@ export class ChatbotService {
           response = `Хорошо, отменяем. Опишите снова, что вас беспокоит, и я помогу подобрать специалиста.`;
           session.state = "collect_problem";
         } else {
-          if (isOpenRouterAvailable()) {
-            const systemPrompt = buildSystemPrompt("confirm_appointment", settings);
-            const aiReply = await generateChatbotResponse(systemPrompt, recentMessages, text);
-            const count = (Number(data.confusedCount) || 0) + 1;
-            data.confusedCount = count;
-            if (count >= 3) {
-              session.state = "human_takeover";
-              session.humanTakeover = true;
-              await this.notifyHumanTakeover(clinicId, phone, data.patientName);
-              response = "Соединяю вас с администратором — ожидайте ответа.";
-            } else {
-              response = aiReply ?? `Пожалуйста, ответьте «Да» для подтверждения записи или «Нет» для отмены.`;
-            }
+          const aiReply4 = await generateChatbotResponse(
+            buildSystemPrompt("confirm_appointment", settings),
+            recentMessages,
+            text,
+          );
+          const count = (Number(data.confusedCount) || 0) + 1;
+          data.confusedCount = count;
+          if (count >= 3) {
+            session.state = "human_takeover";
+            session.humanTakeover = true;
+            await this.notifyHumanTakeover(clinicId, phone, data.patientName);
+            response = "Соединяю вас с администратором — ожидайте ответа.";
           } else {
-            const count = (Number(data.confusedCount) || 0) + 1;
-            data.confusedCount = count;
-            if (count >= 2) {
-              session.state = "human_takeover";
-              session.humanTakeover = true;
-              await this.notifyHumanTakeover(clinicId, phone, data.patientName);
-              response = "Похоже, я не могу вам помочь. Соединяю с администратором — ожидайте ответа.";
-            } else {
-              response = `Пожалуйста, ответьте «Да» для подтверждения записи или «Нет» для отмены.`;
-            }
+            response = aiReply4 ?? `Пожалуйста, ответьте «Да» для подтверждения записи или «Нет» для отмены.`;
           }
         }
         break;

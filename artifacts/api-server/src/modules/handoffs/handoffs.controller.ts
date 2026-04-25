@@ -2,8 +2,7 @@ import { Router, type IRouter, type Request, type Response, type NextFunction } 
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { db } from "@workspace/db";
-import { doctorHandoffsTable } from "@workspace/db";
-import { usersTable } from "@workspace/db";
+import { doctorHandoffsTable, usersTable, proceduresTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
@@ -32,37 +31,45 @@ router.post(
     const { fromDoctorId, toDoctorId, procedureId, reason } = parsed.data;
 
     try {
-      // Verify both doctors belong to the same clinic and have the 'doctor' role
-      const [fromDoctor, toDoctor] = await Promise.all([
+      // Verify both doctors belong to the same clinic and have the 'doctor' role,
+      // and optionally verify that procedureId belongs to this clinic.
+      const verifications: Promise<unknown>[] = [
         db
           .select({ id: usersTable.id })
           .from(usersTable)
-          .where(
-            and(
-              eq(usersTable.id, fromDoctorId),
-              eq(usersTable.clinicId, clinicId),
-              eq(usersTable.role, "doctor"),
-            ),
-          )
+          .where(and(eq(usersTable.id, fromDoctorId), eq(usersTable.clinicId, clinicId), eq(usersTable.role, "doctor")))
           .limit(1),
         db
           .select({ id: usersTable.id })
           .from(usersTable)
-          .where(
-            and(
-              eq(usersTable.id, toDoctorId),
-              eq(usersTable.clinicId, clinicId),
-              eq(usersTable.role, "doctor"),
-            ),
-          )
+          .where(and(eq(usersTable.id, toDoctorId), eq(usersTable.clinicId, clinicId), eq(usersTable.role, "doctor")))
           .limit(1),
-      ]);
+      ];
 
-      if (!fromDoctor[0]) {
+      if (procedureId) {
+        verifications.push(
+          db
+            .select({ id: proceduresTable.id })
+            .from(proceduresTable)
+            .where(and(eq(proceduresTable.id, procedureId), eq(proceduresTable.clinicId, clinicId)))
+            .limit(1),
+        );
+      }
+
+      const [fromDoctorRows, toDoctorRows, procedureRows] = await Promise.all(verifications) as [
+        Array<{ id: string }>,
+        Array<{ id: string }>,
+        Array<{ id: string }> | undefined,
+      ];
+
+      if (!(fromDoctorRows as Array<{ id: string }>)[0]) {
         return next(new NotFoundError("fromDoctorId not found in this clinic or is not a doctor"));
       }
-      if (!toDoctor[0]) {
+      if (!(toDoctorRows as Array<{ id: string }>)[0]) {
         return next(new NotFoundError("toDoctorId not found in this clinic or is not a doctor"));
+      }
+      if (procedureId && !procedureRows?.[0]) {
+        return next(new NotFoundError("procedureId not found in this clinic"));
       }
 
       const [handoff] = await db
