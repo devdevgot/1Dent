@@ -14,7 +14,7 @@ import { isRedAlert } from "../../shared/whatsapp";
 import { sendToPatient } from "../../shared/messaging";
 import { getAlertQueue } from "../../shared/alert-queue";
 import { logger } from "../../lib/logger";
-import { AnalyticsRepository, computeAdvancedScore, type AdvancedScoringOptions } from "../analytics/analytics.repository";
+import { pickBestDoctorAdvanced, type AdvancedScoringOptions } from "../analytics/analytics.repository";
 import { ChannelsRepository } from "../channels/channels.repository";
 import { classifyPatientRequest, generateChatbotResponse, type ChatMessage } from "./ai-classifier";
 import { isOpenRouterAvailable } from "../../lib/openrouter-client";
@@ -159,7 +159,6 @@ async function saveChatbotMessage(
 
 // ─── Analytics-based doctor routing ─────────────────────────────────────────
 
-const analyticsRepo = new AnalyticsRepository();
 const channelsRepo = new ChannelsRepository();
 
 // Simple settings cache (60s TTL) to avoid DB on every message
@@ -175,67 +174,7 @@ function extractClickId(text: string): string | null {
   return match ? match[1]!.toLowerCase() : null;
 }
 
-/**
- * Pick the best doctor using the advanced multi-factor scoring algorithm.
- * For urgent cases, picks doctor with most remaining capacity today.
- */
-async function pickBestDoctorAdvanced(
-  clinicId: string,
-  opts: AdvancedScoringOptions = {},
-): Promise<{ id: string; name: string } | null> {
-  const kpis = await analyticsRepo.getDoctorKpis(clinicId);
-  if (kpis.length === 0) return null;
 
-  // Raw KPI shape for scoring (reconstruct cancelledCount from available data)
-  const rawKpis = kpis.map((k) => ({
-    doctorId: k.doctorId,
-    doctorName: k.doctorName,
-    patientsCount: k.patientsCount,
-    proceduresCount: k.proceduresCount,
-    cancelledCount: 0, // Not stored directly in DoctorKpi — conversion uses proceduresCount
-    revenueTotal: k.revenueTotal,
-    averageCheck: k.averageCheck,
-    nps: k.nps,
-    slotsUsedToday: k.slotsUsedToday,
-    maxSlotsPerDay: k.maxSlotsPerDay,
-  }));
-
-  // For urgent cases — skip scoring, pick whoever has most remaining capacity
-  if (opts.urgency === "urgent") {
-    const withCapacity = rawKpis
-      .filter((k) => k.slotsUsedToday < k.maxSlotsPerDay)
-      .sort((a, b) => (a.slotsUsedToday / a.maxSlotsPerDay) - (b.slotsUsedToday / b.maxSlotsPerDay));
-
-    if (withCapacity.length > 0) {
-      return { id: withCapacity[0]!.doctorId, name: withCapacity[0]!.doctorName };
-    }
-    // All full — pick least loaded
-    const sorted = [...rawKpis].sort((a, b) => a.slotsUsedToday - b.slotsUsedToday);
-    return { id: sorted[0]!.doctorId, name: sorted[0]!.doctorName };
-  }
-
-  // Score all doctors
-  const scored = rawKpis.map((kpi) => ({
-    doctorId: kpi.doctorId,
-    doctorName: kpi.doctorName,
-    score: computeAdvancedScore(kpi, rawKpis, opts),
-    slotsUsedToday: kpi.slotsUsedToday,
-    maxSlotsPerDay: kpi.maxSlotsPerDay,
-  }));
-
-  // Prefer doctors with remaining capacity
-  const withCapacity = scored.filter((s) => s.slotsUsedToday < s.maxSlotsPerDay);
-  const pool = withCapacity.length > 0 ? withCapacity : scored;
-
-  // Sort by score desc
-  pool.sort((a, b) => b.score - a.score);
-
-  // exploration_factor: 60% best, 40% random from top-3
-  const top3 = pool.slice(0, Math.min(3, pool.length));
-  const pick = Math.random() < 0.6 ? top3[0]! : top3[Math.floor(Math.random() * top3.length)]!;
-
-  return { id: pick.doctorId, name: pick.doctorName };
-}
 
 // ─── Settings helpers ────────────────────────────────────────────────────────
 

@@ -94,6 +94,8 @@ interface RawDoctorKpi {
   nps: number;
   slotsUsedToday: number;
   maxSlotsPerDay: number;
+  /** Minutes until the doctor's next free slot today (0 = available now, null = no schedule data) */
+  nearestSlotMinutes: number | null;
 }
 
 function computeDoctorScore(kpi: RawDoctorKpi, allKpis: RawDoctorKpi[]): number {
@@ -199,13 +201,94 @@ export function computeAdvancedScore(
     patientFitFactor = 0.5 + (conversionRaw / maxConversionRaw) * 0.7;
   }
 
-  // 6. exploration_factor — 60% exploit best, 40% random from top-3 (handled at selection level)
-  // We encode randomness here as a small noise so the caller can do top-3 selection
+  // 6. time_factor — prefer doctors with nearest available slot
+  // nearestSlotMinutes=0 means available now, null means no slot data (neutral)
+  let timeFactor = 1.0;
+  const maxSlotMinutes = Math.max(
+    ...allKpis.map((k) => k.nearestSlotMinutes ?? 0),
+    1,
+  );
+  if (kpi.nearestSlotMinutes !== null && maxSlotMinutes > 0) {
+    // Lower minutes → higher factor; fully booked doctor → 0.4
+    timeFactor = 0.4 + 0.6 * (1 - kpi.nearestSlotMinutes / maxSlotMinutes);
+  }
+
+  // 7. exploration_factor — 60% exploit best, 40% random from top-3 (handled at selection level)
+  // We encode a small noise here so the caller can do top-3 selection
   const explorationNoise = 1.0 + (Math.random() - 0.5) * 0.1;
 
-  const finalScore = baseScore * quotaFactor * loadFactor * valueFactor * patientFitFactor * explorationNoise;
+  const finalScore =
+    baseScore * quotaFactor * loadFactor * valueFactor * patientFitFactor * timeFactor * explorationNoise;
 
   return Math.max(0, finalScore);
+}
+
+/** Pick the best doctor for chatbot routing using 7-factor advanced scoring. */
+export async function pickBestDoctorAdvanced(
+  clinicId: string,
+  opts: AdvancedScoringOptions = {},
+): Promise<{ id: string; name: string } | null> {
+  // getDoctorKpisRaw is a standalone DB query — no repo state needed
+  const repo = new AnalyticsRepository();
+  const kpis = await repo.getDoctorKpisRaw(clinicId);
+  if (kpis.length === 0) return null;
+
+  // For urgent cases — skip scoring, pick whoever has nearest available slot / most free capacity
+  if (opts.urgency === "urgent") {
+    // Sort by nearestSlotMinutes ascending (nulls last), then by remaining capacity
+    const withCapacity = [...kpis]
+      .filter((k) => k.slotsUsedToday < k.maxSlotsPerDay)
+      .sort((a, b) => {
+        const aMin = a.nearestSlotMinutes ?? 9999;
+        const bMin = b.nearestSlotMinutes ?? 9999;
+        if (aMin !== bMin) return aMin - bMin;
+        return (a.slotsUsedToday / a.maxSlotsPerDay) - (b.slotsUsedToday / b.maxSlotsPerDay);
+      });
+
+    if (withCapacity.length > 0) {
+      return { id: withCapacity[0]!.doctorId, name: withCapacity[0]!.doctorName };
+    }
+    // All full — pick least loaded
+    const sorted = [...kpis].sort((a, b) => a.slotsUsedToday - b.slotsUsedToday);
+    return { id: sorted[0]!.doctorId, name: sorted[0]!.doctorName };
+  }
+
+  // Score all doctors using 7-factor algorithm
+  const scored = kpis.map((kpi) => ({
+    doctorId: kpi.doctorId,
+    doctorName: kpi.doctorName,
+    score: computeAdvancedScore(kpi, kpis, opts),
+    slotsUsedToday: kpi.slotsUsedToday,
+    maxSlotsPerDay: kpi.maxSlotsPerDay,
+  }));
+
+  // Prefer doctors with remaining capacity
+  const withCapacity = scored.filter((s) => s.slotsUsedToday < s.maxSlotsPerDay);
+  const pool = withCapacity.length > 0 ? withCapacity : scored;
+
+  // Sort by score desc
+  pool.sort((a, b) => b.score - a.score);
+
+  // exploration_factor: 60% best, 40% random from top-3
+  const top3 = pool.slice(0, Math.min(3, pool.length));
+  const pick = Math.random() < 0.6 ? top3[0]! : top3[Math.floor(Math.random() * top3.length)]!;
+
+  return { id: pick.doctorId, name: pick.doctorName };
+}
+
+/**
+ * Estimates minutes until a doctor's nearest free slot today.
+ * Uses a linear model: 8-hour workday split evenly by maxSlotsPerDay.
+ * Returns 0 if available now, null if fully booked.
+ */
+function computeNearestSlotMinutes(slotsUsedToday: number, maxSlotsPerDay: number): number | null {
+  if (slotsUsedToday >= maxSlotsPerDay) return null;
+  const workdayMinutes = 8 * 60;
+  const slotDurationMinutes = Math.floor(workdayMinutes / maxSlotsPerDay);
+  const nextSlotStartMinute = slotsUsedToday * slotDurationMinutes; // offset from 09:00
+  const workdayStartMs = new Date().setHours(9, 0, 0, 0);
+  const nextSlotMs = workdayStartMs + nextSlotStartMinute * 60_000;
+  return Math.max(0, Math.round((nextSlotMs - Date.now()) / 60_000));
 }
 
 function startOfMonth(): Date {
@@ -671,6 +754,7 @@ export class AnalyticsRepository {
           nps: 0, // placeholder — will be populated from patient survey results (Task #28)
           slotsUsedToday: todayProcs.length,
           maxSlotsPerDay: capacityMap.get(doc.id) ?? 20,
+          nearestSlotMinutes: computeNearestSlotMinutes(todayProcs.length, capacityMap.get(doc.id) ?? 20),
         };
       }),
     );
@@ -690,5 +774,59 @@ export class AnalyticsRepository {
 
     await analyticsCache.set(cacheKey, kpis);
     return kpis;
+  }
+
+  /** Returns raw (internal) KPI records for advanced scoring — bypasses public DoctorKpi shape. */
+  async getDoctorKpisRaw(clinicId: string): Promise<RawDoctorKpi[]> {
+    // Leverage the getDoctorKpis cache path to build rawKpis fresh each call
+    // (the public method caches DoctorKpi which omits cancelledCount & nearestSlotMinutes)
+    const doctors = await db
+      .select()
+      .from(usersTable)
+      .where(and(eq(usersTable.clinicId, clinicId), eq(usersTable.role, "doctor")));
+
+    if (doctors.length === 0) return [];
+
+    const capacities = await db
+      .select()
+      .from(doctorCapacityTable)
+      .where(eq(doctorCapacityTable.clinicId, clinicId));
+    const capacityMap = new Map(capacities.map((c) => [c.doctorId, c.maxPatientsPerDay]));
+
+    const todayStart = startOfDay();
+    const todayEnd = endOfDay();
+
+    const rawKpis = await Promise.all(
+      doctors.map(async (doc) => {
+        const [patients, procedures, cancelledProcs, todayProcs] = await Promise.all([
+          db.select().from(patientsTable).where(and(eq(patientsTable.clinicId, clinicId), eq(patientsTable.doctorId, doc.id))),
+          db.select().from(proceduresTable).where(and(eq(proceduresTable.clinicId, clinicId), eq(proceduresTable.doctorId, doc.id), eq(proceduresTable.status, "completed"))),
+          db.select().from(proceduresTable).where(and(eq(proceduresTable.clinicId, clinicId), eq(proceduresTable.doctorId, doc.id), eq(proceduresTable.status, "cancelled"))),
+          db.select().from(patientsTable).where(and(eq(patientsTable.clinicId, clinicId), eq(patientsTable.doctorId, doc.id), gte(patientsTable.createdAt, todayStart), lte(patientsTable.createdAt, todayEnd))),
+        ]);
+        const revenueTotal = procedures.reduce((acc, p) => acc + (p.price ?? 0), 0);
+        const averageCheck = procedures.length > 0 ? revenueTotal / procedures.length : 0;
+        const maxSlotsPerDay = capacityMap.get(doc.id) ?? 20;
+        const slotsUsedToday = todayProcs.length;
+
+        const nearestSlotMinutes = computeNearestSlotMinutes(slotsUsedToday, maxSlotsPerDay);
+
+        return {
+          doctorId: doc.id,
+          doctorName: doc.name,
+          patientsCount: patients.length,
+          proceduresCount: procedures.length,
+          cancelledCount: cancelledProcs.length,
+          revenueTotal,
+          averageCheck,
+          nps: 0,
+          slotsUsedToday,
+          maxSlotsPerDay,
+          nearestSlotMinutes,
+        };
+      }),
+    );
+
+    return rawKpis;
   }
 }

@@ -3,9 +3,10 @@ import { z } from "zod";
 import { randomUUID } from "crypto";
 import { db } from "@workspace/db";
 import { doctorHandoffsTable } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { usersTable } from "@workspace/db";
+import { eq, and, desc } from "drizzle-orm";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
-import { ValidationError } from "../../shared/errors";
+import { ValidationError, NotFoundError } from "../../shared/errors";
 
 const router: IRouter = Router();
 
@@ -31,6 +32,39 @@ router.post(
     const { fromDoctorId, toDoctorId, procedureId, reason } = parsed.data;
 
     try {
+      // Verify both doctors belong to the same clinic and have the 'doctor' role
+      const [fromDoctor, toDoctor] = await Promise.all([
+        db
+          .select({ id: usersTable.id })
+          .from(usersTable)
+          .where(
+            and(
+              eq(usersTable.id, fromDoctorId),
+              eq(usersTable.clinicId, clinicId),
+              eq(usersTable.role, "doctor"),
+            ),
+          )
+          .limit(1),
+        db
+          .select({ id: usersTable.id })
+          .from(usersTable)
+          .where(
+            and(
+              eq(usersTable.id, toDoctorId),
+              eq(usersTable.clinicId, clinicId),
+              eq(usersTable.role, "doctor"),
+            ),
+          )
+          .limit(1),
+      ]);
+
+      if (!fromDoctor[0]) {
+        return next(new NotFoundError("fromDoctorId not found in this clinic or is not a doctor"));
+      }
+      if (!toDoctor[0]) {
+        return next(new NotFoundError("toDoctorId not found in this clinic or is not a doctor"));
+      }
+
       const [handoff] = await db
         .insert(doctorHandoffsTable)
         .values({
