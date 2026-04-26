@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import { db, dentalBroadcastRunsTable, dentalAiAnalysesTable, patientsTable, clinicsTable } from "@workspace/db";
-import { eq, and, isNotNull, ne } from "drizzle-orm";
+import { eq, and, isNotNull, ne, sql } from "drizzle-orm";
 import { openrouter } from "../../lib/openrouter-client";
 import { sendToPatient } from "../../shared/messaging";
 import { logger } from "../../lib/logger";
@@ -12,6 +12,21 @@ function todayDateString(): string {
 }
 
 type PatientRow = { id: string; phone: string | null; reportText: string };
+
+async function countPatientsForBroadcast(clinicId: string): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(dentalAiAnalysesTable)
+    .innerJoin(patientsTable, eq(patientsTable.id, dentalAiAnalysesTable.patientId))
+    .where(
+      and(
+        eq(dentalAiAnalysesTable.clinicId, clinicId),
+        isNotNull(patientsTable.phone),
+        ne(patientsTable.phone, ""),
+      ),
+    );
+  return row?.count ?? 0;
+}
 
 async function fetchPatientsForBroadcast(clinicId: string): Promise<PatientRow[]> {
   return db
@@ -31,7 +46,7 @@ async function fetchPatientsForBroadcast(clinicId: string): Promise<PatientRow[]
     );
 }
 
-async function createBroadcastRun(
+async function insertBroadcastRun(
   clinicId: string,
   totalPatients: number,
 ): Promise<typeof dentalBroadcastRunsTable.$inferSelect> {
@@ -51,11 +66,14 @@ async function createBroadcastRun(
   return run!;
 }
 
-async function executeBroadcastRun(
-  runId: string,
-  clinicId: string,
-  patients: PatientRow[],
-): Promise<void> {
+async function executeBroadcastRun(runId: string, clinicId: string): Promise<void> {
+  const patients = await fetchPatientsForBroadcast(clinicId);
+
+  await db
+    .update(dentalBroadcastRunsTable)
+    .set({ totalPatients: patients.length })
+    .where(eq(dentalBroadcastRunsTable.id, runId));
+
   logger.info({ clinicId, runId, totalPatients: patients.length }, "[DentalBroadcast] Run started");
 
   let messagesSent = 0;
@@ -130,10 +148,10 @@ async function executeBroadcastRun(
 export async function runDentalBroadcastForClinic(
   clinicId: string,
 ): Promise<typeof dentalBroadcastRunsTable.$inferSelect> {
-  const patients = await fetchPatientsForBroadcast(clinicId);
-  const run = await createBroadcastRun(clinicId, patients.length);
+  const totalPatients = await countPatientsForBroadcast(clinicId);
+  const run = await insertBroadcastRun(clinicId, totalPatients);
 
-  executeBroadcastRun(run.id, clinicId, patients).catch((err) => {
+  executeBroadcastRun(run.id, clinicId).catch((err) => {
     logger.error({ err, clinicId, runId: run.id }, "[DentalBroadcast] Background execution error");
     db.update(dentalBroadcastRunsTable)
       .set({ status: "failed", completedAt: new Date() })
