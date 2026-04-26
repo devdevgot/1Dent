@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Bot,
@@ -55,13 +55,17 @@ const STATE_COLORS: Record<string, string> = {
   human_takeover: "bg-red-50 text-red-700 border-red-100",
 };
 
-const STEP_INSTRUCTION_FIELDS: { key: keyof NonNullable<ChatbotSettingsUpdate["stepInstructions"]>; label: string; hint: string }[] = [
-  { key: "general", label: "Общие инструкции", hint: "Применяются ко всем этапам диалога" },
-  { key: "greeting", label: "Приветствие", hint: "Как бот приветствует пациента" },
-  { key: "collectName", label: "Сбор имени", hint: "Как бот запрашивает имя" },
-  { key: "collectProblem", label: "Описание проблемы", hint: "Как бот уточняет запрос пациента" },
-  { key: "suggestDoctor", label: "Предложение врача", hint: "Как бот представляет врача" },
-  { key: "confirm", label: "Подтверждение записи", hint: "Как бот подтверждает запись" },
+const STEP_INSTRUCTION_KEYS: Array<{
+  key: keyof NonNullable<ChatbotSettingsUpdate["stepInstructions"]>;
+  labelKey: string;
+  hintKey: string;
+}> = [
+  { key: "general",        labelKey: "chatbot.settings.stepFields.general.label",        hintKey: "chatbot.settings.stepFields.general.hint" },
+  { key: "greeting",       labelKey: "chatbot.settings.stepFields.greeting.label",       hintKey: "chatbot.settings.stepFields.greeting.hint" },
+  { key: "collectName",    labelKey: "chatbot.settings.stepFields.collectName.label",    hintKey: "chatbot.settings.stepFields.collectName.hint" },
+  { key: "collectProblem", labelKey: "chatbot.settings.stepFields.collectProblem.label", hintKey: "chatbot.settings.stepFields.collectProblem.hint" },
+  { key: "suggestDoctor",  labelKey: "chatbot.settings.stepFields.suggestDoctor.label",  hintKey: "chatbot.settings.stepFields.suggestDoctor.hint" },
+  { key: "confirm",        labelKey: "chatbot.settings.stepFields.confirm.label",        hintKey: "chatbot.settings.stepFields.confirm.hint" },
 ];
 
 function formatRelative(dateStr: string) {
@@ -117,11 +121,10 @@ function SessionChat({ phone, onBack }: { phone: string; onBack: () => void }) {
 
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1 bg-muted/20">
         {isLoading ? (
-          <div className="flex items-center justify-center h-full text-sm text-muted-foreground">Загрузка...</div>
+          <div className="flex items-center justify-center h-full text-sm text-muted-foreground">{/* loading */}</div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-2">
             <MessageSquare className="h-8 w-8 text-muted-foreground/30" />
-            <p className="text-sm text-muted-foreground">Сообщений пока нет</p>
           </div>
         ) : (
           messages.map((msg) => {
@@ -166,6 +169,7 @@ function SessionChat({ phone, onBack }: { phone: string; onBack: () => void }) {
 // ─── Manager Style tab ────────────────────────────────────────────────────────
 
 function ManagerStyleTab() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const { data: examplesRes, isLoading, refetch } = useListManagerExamples();
   const createExample = useCreateManagerExample();
@@ -233,36 +237,38 @@ function ManagerStyleTab() {
     <div className="space-y-4 max-w-2xl">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-foreground">Примеры стиля менеджера</p>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Бот будет имитировать этот стиль общения при ответах
-          </p>
+          <p className="text-sm font-medium text-foreground">{t("chatbot.managerStyle.title")}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{t("chatbot.managerStyle.subtitle")}</p>
         </div>
         {examples.length > 0 && (
           <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-100">
-            {examples.length} {examples.length === 1 ? "пример" : examples.length < 5 ? "примера" : "примеров"}
+            {examples.length} {t("chatbot.managerStyle.countLabel")}
           </span>
         )}
       </div>
 
       <div className="rounded-xl border border-border/50 bg-card p-4 space-y-3">
-        <p className="text-xs font-medium text-foreground">Добавить пример</p>
+        <p className="text-xs font-medium text-foreground">{t("chatbot.managerStyle.addTitle")}</p>
         <div className="space-y-2">
           <div>
-            <label className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Сообщение пациента</label>
+            <label className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">
+              {t("chatbot.managerStyle.userLabel")}
+            </label>
             <textarea
               rows={2}
-              placeholder="Например: Хочу записаться на чистку зубов"
+              placeholder={t("chatbot.managerStyle.userPlaceholder")}
               value={newUser}
               onChange={(e) => setNewUser(e.target.value)}
               className="mt-1 w-full text-sm border border-border/50 rounded-lg px-3 py-2 bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </div>
           <div>
-            <label className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Ответ менеджера</label>
+            <label className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">
+              {t("chatbot.managerStyle.managerLabel")}
+            </label>
             <textarea
               rows={3}
-              placeholder="Например: Здравствуйте! Рады записать вас на профессиональную чистку зубов. Позвольте уточнить несколько деталей..."
+              placeholder={t("chatbot.managerStyle.managerPlaceholder")}
               value={newManager}
               onChange={(e) => setNewManager(e.target.value)}
               className="mt-1 w-full text-sm border border-border/50 rounded-lg px-3 py-2 bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -274,20 +280,18 @@ function ManagerStyleTab() {
             className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-medium disabled:opacity-50 hover:bg-primary/90 transition-colors"
           >
             <Plus className="h-3.5 w-3.5" />
-            {createExample.isPending ? "Добавление..." : "Добавить пример"}
+            {createExample.isPending ? t("chatbot.managerStyle.addingBtn") : t("chatbot.managerStyle.addBtn")}
           </button>
         </div>
       </div>
 
       {isLoading ? (
-        <div className="p-6 text-center text-sm text-muted-foreground">Загрузка...</div>
+        <div className="p-6 text-center text-sm text-muted-foreground">{t("common.loading")}</div>
       ) : examples.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border/50 p-8 text-center">
           <BookOpen className="h-7 w-7 text-muted-foreground/30 mx-auto mb-2" />
-          <p className="text-sm text-muted-foreground">Примеры не добавлены</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Добавьте примеры — бот будет отвечать в том же стиле
-          </p>
+          <p className="text-sm text-muted-foreground">{t("chatbot.managerStyle.emptyTitle")}</p>
+          <p className="text-xs text-muted-foreground mt-1">{t("chatbot.managerStyle.emptyDesc")}</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -299,11 +303,15 @@ function ManagerStyleTab() {
                 </span>
                 <div className="flex-1 space-y-1.5 min-w-0">
                   <div className="rounded-lg bg-muted/40 px-2.5 py-1.5">
-                    <span className="text-[10px] font-medium text-muted-foreground">👤 Пациент: </span>
+                    <span className="text-[10px] font-medium text-muted-foreground">
+                      👤 {t("chatbot.managerStyle.patientTag")}:{" "}
+                    </span>
                     <span className="text-xs text-foreground">{ex.userMessage}</span>
                   </div>
                   <div className="rounded-lg bg-violet-50 border border-violet-100 px-2.5 py-1.5">
-                    <span className="text-[10px] font-medium text-violet-600">🤖 Менеджер: </span>
+                    <span className="text-[10px] font-medium text-violet-600">
+                      🤖 {t("chatbot.managerStyle.managerTag")}:{" "}
+                    </span>
                     <span className="text-xs text-foreground">{ex.managerResponse}</span>
                   </div>
                 </div>
@@ -338,7 +346,7 @@ function ManagerStyleTab() {
               className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
             >
               <RefreshCw className="h-3 w-3" />
-              Обновить
+              {t("common.refresh")}
             </button>
           </div>
         </div>
@@ -347,29 +355,27 @@ function ManagerStyleTab() {
       <div className="rounded-xl border border-border/50 bg-card p-4 space-y-3">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-violet-500" />
-          <p className="text-sm font-medium text-foreground">Тест AI-ответа</p>
+          <p className="text-sm font-medium text-foreground">{t("chatbot.managerStyle.testTitle")}</p>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Проверьте как бот ответит с текущими инструкциями и примерами стиля
-        </p>
+        <p className="text-xs text-muted-foreground">{t("chatbot.managerStyle.testDesc")}</p>
         <div className="flex items-center gap-2">
           <select
             value={testState}
             onChange={(e) => setTestState(e.target.value)}
             className="text-xs border border-border/50 rounded-lg px-2 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 shrink-0"
           >
-            <option value="greeting">Приветствие</option>
-            <option value="collect_name">Сбор имени</option>
-            <option value="collect_problem">Описание проблемы</option>
-            <option value="suggest_doctor">Предложение врача</option>
-            <option value="confirm_appointment">Подтверждение</option>
+            <option value="greeting">{t("chatbot.managerStyle.stateGreeting")}</option>
+            <option value="collect_name">{t("chatbot.managerStyle.stateCollectName")}</option>
+            <option value="collect_problem">{t("chatbot.managerStyle.stateCollectProblem")}</option>
+            <option value="suggest_doctor">{t("chatbot.managerStyle.stateSuggestDoctor")}</option>
+            <option value="confirm_appointment">{t("chatbot.managerStyle.stateConfirm")}</option>
           </select>
-          <span className="text-xs text-muted-foreground shrink-0">этап</span>
+          <span className="text-xs text-muted-foreground shrink-0">{t("chatbot.managerStyle.stageLabel")}</span>
         </div>
         <div className="flex gap-2">
           <input
             type="text"
-            placeholder="Введите тестовое сообщение пациента..."
+            placeholder={t("chatbot.managerStyle.testPlaceholder")}
             value={testInput}
             onChange={(e) => setTestInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") handleTest(); }}
@@ -385,19 +391,19 @@ function ManagerStyleTab() {
             ) : (
               <Send className="h-3.5 w-3.5" />
             )}
-            Тест
+            {t("chatbot.managerStyle.testBtn")}
           </button>
         </div>
 
         {testReply !== null && (
           <div className="rounded-lg bg-violet-50 border border-violet-100 p-3">
-            <p className="text-[10px] font-medium text-violet-600 mb-1">🤖 Ответ бота:</p>
+            <p className="text-[10px] font-medium text-violet-600 mb-1">🤖 {t("chatbot.managerStyle.replyLabel")}</p>
             <p className="text-xs text-foreground whitespace-pre-wrap leading-relaxed">{testReply}</p>
             <button
               onClick={() => setTestReply(null)}
               className="mt-2 text-[10px] text-muted-foreground hover:text-foreground"
             >
-              Закрыть
+              {t("chatbot.managerStyle.replyClose")}
             </button>
           </div>
         )}
@@ -407,8 +413,8 @@ function ManagerStyleTab() {
         open={!!confirmDeleteId}
         onConfirm={() => { if (confirmDeleteId) handleDelete(confirmDeleteId); setConfirmDeleteId(null); }}
         onCancel={() => setConfirmDeleteId(null)}
-        title="Удалить пример?"
-        description="Этот пример стиля будет удалён. Бот перестанет его использовать."
+        title={t("chatbot.managerStyle.deleteTitle")}
+        description={t("chatbot.managerStyle.deleteDesc")}
       />
     </div>
   );
@@ -421,8 +427,9 @@ export default function ChatbotPage() {
   const [tab, setTab] = useState<"sessions" | "settings" | "manager-style">("sessions");
   const [confirmResetPhone, setConfirmResetPhone] = useState<string | null>(null);
   const [localSettings, setLocalSettings] = useState<ChatbotSettingsUpdate>({});
-  const [saved, setSaved] = useState(false);
+  const [autosaveStatus, setAutosaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data: settingsRes, refetch: refetchSettings } = useGetChatbotSettings();
   const { data: sessionsRes, refetch: refetchSessions, isLoading: sessionsLoading } = useListChatbotSessions();
@@ -441,15 +448,47 @@ export default function ChatbotPage() {
     stepInstructions: localSettings.stepInstructions ?? settings?.stepInstructions ?? {},
   };
 
-  const handleSave = () => {
-    updateSettings.mutate({ data: localSettings }, {
-      onSuccess: () => {
-        setSaved(true);
-        setLocalSettings({});
-        refetchSettings();
-        setTimeout(() => setSaved(false), 2000);
+  // Debounced autosave: fires 1500ms after the last local change
+  useEffect(() => {
+    if (Object.keys(localSettings).length === 0) return;
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(() => {
+      setAutosaveStatus("saving");
+      updateSettings.mutate(
+        { data: localSettings },
+        {
+          onSuccess: () => {
+            setLocalSettings({});
+            refetchSettings();
+            setAutosaveStatus("saved");
+            setTimeout(() => setAutosaveStatus("idle"), 2000);
+          },
+          onError: () => setAutosaveStatus("idle"),
+        },
+      );
+    }, 1500);
+    return () => {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localSettings]);
+
+  const handleSaveNow = () => {
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    if (Object.keys(localSettings).length === 0) return;
+    setAutosaveStatus("saving");
+    updateSettings.mutate(
+      { data: localSettings },
+      {
+        onSuccess: () => {
+          setLocalSettings({});
+          refetchSettings();
+          setAutosaveStatus("saved");
+          setTimeout(() => setAutosaveStatus("idle"), 2000);
+        },
+        onError: () => setAutosaveStatus("idle"),
       },
-    });
+    );
   };
 
   const handleResetSession = (phone: string) => {
@@ -668,15 +707,15 @@ export default function ChatbotPage() {
                 {t("chatbot.settings.aiInstructionsDesc")}
               </p>
 
-              {STEP_INSTRUCTION_FIELDS.map(({ key, label, hint }) => (
+              {STEP_INSTRUCTION_KEYS.map(({ key, labelKey, hintKey }) => (
                 <div key={key} className="space-y-1.5">
                   <div>
-                    <label className="text-xs font-medium text-foreground">{label}</label>
-                    <p className="text-[11px] text-muted-foreground">{hint}</p>
+                    <label className="text-xs font-medium text-foreground">{t(labelKey)}</label>
+                    <p className="text-[11px] text-muted-foreground">{t(hintKey)}</p>
                   </div>
                   <textarea
                     rows={3}
-                    placeholder="Оставьте пустым для использования стандартных инструкций..."
+                    placeholder={t("chatbot.settings.stepFields.placeholder")}
                     value={(effectiveSettings.stepInstructions as Record<string, string>)?.[key] ?? ""}
                     onChange={(e) => setStepInstruction(key, e.target.value)}
                     className="w-full text-sm border border-border/50 rounded-lg px-3 py-2 bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -687,15 +726,24 @@ export default function ChatbotPage() {
 
             <div className="flex items-center gap-3">
               <button
-                onClick={handleSave}
-                disabled={!isDirty || updateSettings.isPending}
+                onClick={handleSaveNow}
+                disabled={!isDirty || autosaveStatus === "saving"}
                 className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-primary/90 transition-colors"
               >
                 <Save className="h-3.5 w-3.5" />
-                {updateSettings.isPending ? t("common.saving") : t("common.save")}
+                {autosaveStatus === "saving" ? t("common.saving") : t("common.save")}
               </button>
-              {saved && (
+              {autosaveStatus === "saving" && (
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <RefreshCw className="h-3 w-3 animate-spin" />
+                  {t("common.saving")}
+                </span>
+              )}
+              {autosaveStatus === "saved" && (
                 <span className="text-xs text-emerald-600 font-medium">{t("common.saved")}</span>
+              )}
+              {isDirty && autosaveStatus === "idle" && (
+                <span className="text-xs text-muted-foreground">{t("common.unsaved") || "Несохранённые изменения"}</span>
               )}
             </div>
           </div>
@@ -708,7 +756,7 @@ export default function ChatbotPage() {
         open={!!confirmResetPhone}
         onConfirm={() => { if (confirmResetPhone) { handleResetSession(confirmResetPhone); } setConfirmResetPhone(null); }}
         onCancel={() => setConfirmResetPhone(null)}
-        title="Сбросить сессию?"
+        title={t("chatbot.resetSession")}
         description="Состояние чат-бота для этого номера будет сброшено. Пациент снова получит приветственное сообщение."
       />
     </div>

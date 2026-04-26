@@ -482,8 +482,19 @@ export class ChatbotService {
 
     switch (state) {
       case "greeting": {
-        // Send greeting immediately without AI (uses template)
-        response = settings.greetingTemplate;
+        const greetingInstruction = (settings.stepInstructions as StepInstructions)?.greeting;
+        if (greetingInstruction) {
+          // Custom greeting instruction → use AI so the instruction takes effect
+          const aiGreeting = await generateChatbotResponse(
+            buildSystemPrompt("greeting", settings),
+            [],
+            "Пациент впервые написал в чат. Поприветствуй его согласно инструкциям.",
+            managerExamples,
+          );
+          response = aiGreeting ?? settings.greetingTemplate;
+        } else {
+          response = settings.greetingTemplate;
+        }
         session.state = "collect_name";
         break;
       }
