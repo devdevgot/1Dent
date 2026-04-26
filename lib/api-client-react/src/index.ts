@@ -794,8 +794,8 @@ export interface TriggerDentalBroadcastResponse {
   data: { run: DentalBroadcastRun | null };
 }
 
-export const listDentalBroadcastRunsQueryKey = () =>
-  ["/api/dental-broadcast/runs"] as const;
+export const listDentalBroadcastRunsQueryKey = (limit = 20) =>
+  ["/api/dental-broadcast/runs", limit] as const;
 
 export const listDentalBroadcastRuns = (
   limit = 20,
@@ -811,7 +811,7 @@ export const useListDentalBroadcastRuns = <TError = unknown>(
   options?: { query?: UseQueryOptions<ListDentalBroadcastRunsResponse, TError> },
 ) =>
   useQuery<ListDentalBroadcastRunsResponse, TError>({
-    queryKey: listDentalBroadcastRunsQueryKey(),
+    queryKey: listDentalBroadcastRunsQueryKey(limit),
     queryFn: ({ signal }) => listDentalBroadcastRuns(limit, { signal }),
     refetchInterval: (query) =>
       query.state.data?.data?.runs?.some((r) => r.status === "running") ? 2000 : false,

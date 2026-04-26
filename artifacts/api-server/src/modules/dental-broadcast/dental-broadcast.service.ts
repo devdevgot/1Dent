@@ -11,7 +11,9 @@ function todayDateString(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-async function fetchPatientsForBroadcast(clinicId: string) {
+type PatientRow = { id: string; phone: string | null; reportText: string };
+
+async function fetchPatientsForBroadcast(clinicId: string): Promise<PatientRow[]> {
   return db
     .select({
       id: patientsTable.id,
@@ -29,31 +31,31 @@ async function fetchPatientsForBroadcast(clinicId: string) {
     );
 }
 
-export async function createBroadcastRun(clinicId: string): Promise<typeof dentalBroadcastRunsTable.$inferSelect> {
-  const patients = await fetchPatientsForBroadcast(clinicId);
-  const runId = randomUUID();
-  const runDate = todayDateString();
-
+async function createBroadcastRun(
+  clinicId: string,
+  totalPatients: number,
+): Promise<typeof dentalBroadcastRunsTable.$inferSelect> {
   const [run] = await db
     .insert(dentalBroadcastRunsTable)
     .values({
-      id: runId,
+      id: randomUUID(),
       clinicId,
-      runDate,
+      runDate: todayDateString(),
       status: "running",
-      totalPatients: patients.length,
+      totalPatients,
       processedPatients: 0,
       messagesSent: 0,
       errorsCount: 0,
     })
     .returning();
-
   return run!;
 }
 
-export async function executeBroadcastRun(runId: string, clinicId: string): Promise<void> {
-  const patients = await fetchPatientsForBroadcast(clinicId);
-
+async function executeBroadcastRun(
+  runId: string,
+  clinicId: string,
+  patients: PatientRow[],
+): Promise<void> {
   logger.info({ clinicId, runId, totalPatients: patients.length }, "[DentalBroadcast] Run started");
 
   let messagesSent = 0;
@@ -125,15 +127,20 @@ export async function executeBroadcastRun(runId: string, clinicId: string): Prom
   logger.info({ clinicId, runId, messagesSent, errorsCount }, "[DentalBroadcast] Run completed");
 }
 
-export async function runDentalBroadcastForClinic(clinicId: string): Promise<typeof dentalBroadcastRunsTable.$inferSelect> {
-  const run = await createBroadcastRun(clinicId);
-  executeBroadcastRun(run.id, clinicId).catch((err) => {
+export async function runDentalBroadcastForClinic(
+  clinicId: string,
+): Promise<typeof dentalBroadcastRunsTable.$inferSelect> {
+  const patients = await fetchPatientsForBroadcast(clinicId);
+  const run = await createBroadcastRun(clinicId, patients.length);
+
+  executeBroadcastRun(run.id, clinicId, patients).catch((err) => {
     logger.error({ err, clinicId, runId: run.id }, "[DentalBroadcast] Background execution error");
     db.update(dentalBroadcastRunsTable)
       .set({ status: "failed", completedAt: new Date() })
       .where(eq(dentalBroadcastRunsTable.id, run.id))
       .catch(() => {});
   });
+
   return run;
 }
 

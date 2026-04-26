@@ -36,6 +36,7 @@ import {
   reorderManagerExample,
   useListDentalBroadcastRuns,
   useTriggerDentalBroadcast,
+  listDentalBroadcastRunsQueryKey,
 } from "@workspace/api-client-react";
 import type { ChatbotSettingsUpdate, DentalBroadcastRun } from "@workspace/api-client-react";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
@@ -457,7 +458,7 @@ function AiBroadcastTab() {
   const trigger = useTriggerDentalBroadcast({
     mutation: {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["/api/dental-broadcast/runs"] });
+        queryClient.invalidateQueries({ queryKey: listDentalBroadcastRunsQueryKey() });
         setShowConfirm(false);
       },
     },
