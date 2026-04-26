@@ -47,7 +47,7 @@ function formatReportText(text: string): JSX.Element[] {
 }
 
 export function DentalAiAnalysisPanel({ patientId }: Props) {
-  const { data, isLoading, isFetching, refetch } = useGetDentalAiAnalysis(patientId, {
+  const { data, isLoading, isFetching } = useGetDentalAiAnalysis(patientId, {
     query: {
       refetchInterval: (query) => {
         const result = query.state.data;
@@ -75,7 +75,7 @@ export function DentalAiAnalysisPanel({ patientId }: Props) {
         <div>
           <p className="font-semibold text-gray-800 text-sm">Анализ ещё не готов</p>
           <p className="text-xs text-gray-400 mt-1 max-w-[220px]">
-            Сохраните диагноз во вкладке «Зубная карта» — ИИ автоматически проанализирует состояние и&nbsp;даст рекомендации
+            Проведите диагностику зубов для получения анализа
           </p>
         </div>
         {isFetching && (
@@ -104,27 +104,17 @@ export function DentalAiAnalysisPanel({ patientId }: Props) {
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         <div className="px-6 py-5">
           {/* Header */}
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                <Brain className="w-4 h-4 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-900">ИИ-анализ зубной карты</p>
-                <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
-                  <Clock className="w-3 h-3" />
-                  {formattedDate}, {formattedTime}
-                </p>
-              </div>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <Brain className="w-4 h-4 text-primary" />
             </div>
-            <button
-              onClick={() => refetch()}
-              disabled={isFetching}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-colors disabled:opacity-40"
-              title="Обновить анализ"
-            >
-              <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
-            </button>
+            <div>
+              <p className="text-sm font-semibold text-gray-900">ИИ-анализ зубной карты</p>
+              <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                <Clock className="w-3 h-3" />
+                {formattedDate}, {formattedTime}
+              </p>
+            </div>
           </div>
 
           {/* Report */}
