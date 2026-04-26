@@ -362,8 +362,8 @@ function buildSystemPrompt(state: ChatbotState, settings: Awaited<ReturnType<typ
 Не придумывай информацию о клинике — цены, адрес и расписание уточняй у администратора.${generalExtra}`;
 
   const defaults: Record<ChatbotState, string> = {
-    greeting: `${base}\n\nТвоя задача: поприветствовать пациента и попросить его ввести ИИН (12 цифр) или имя если обращается впервые. Используй шаблон: "${settings.greetingTemplate}"`,
-    collect_iin: `${base}\n\nТы уже поприветствовал пациента. Ожидаешь ИИН (12 цифр) или имя. Если пациент написал что-то непонятное — мягко уточни.`,
+    greeting: `${base}\n\nТвоя задача: поприветствовать пациента и попросить ввести ИИН (12 цифр) — это обязательный шаг для идентификации. Используй шаблон: "${settings.greetingTemplate}"`,
+    collect_iin: `${base}\n\nТы уже поприветствовал пациента и попросил ввести ИИН. ИИН — это 12 цифр и является обязательным для идентификации. Если пациент написал что-то кроме 12 цифр — вежливо попроси ввести именно ИИН.`,
     collect_name: `${base}\n\nТы уже поприветствовал пациента. Сейчас жди имя или помоги его уточнить если пациент написал что-то непонятное.`,
     collect_problem: `${base}\n\nТы знаешь имя пациента. Твоя задача: узнать с какой проблемой или за какой услугой обращается пациент. Задавай уточняющие вопросы если нужно.`,
     suggest_doctor: `${base}\n\nТы подобрал врача на основе запроса пациента. Представь врача и предложи запись. Спроси подтверждение (Да/Нет).`,
@@ -497,8 +497,8 @@ export class ChatbotService {
         } else {
           response = settings.greetingTemplate;
         }
-        // Append IIN identification hint to the greeting
-        response += "\n\nЕсли вы уже были у нас — введите ваш ИИН (12 цифр) для быстрой идентификации. Если обращаетесь впервые — напишите ваше имя.";
+        // IIN is the primary identifier — always required before proceeding
+        response += "\n\nДля начала, пожалуйста, введите ваш ИИН (12 цифр).";
         session.state = "collect_iin";
         break;
       }
@@ -532,19 +532,9 @@ export class ChatbotService {
             session.state = "collect_name";
           }
         } else {
-          // Not 12 digits — treat as name, same logic as collect_name
-          const cls = await classifyPatientRequest(text, recentMessages);
-          const extractedName = cls.extractedName ?? text.trim().slice(0, 60);
-          data.patientName = extractedName;
-          if (cls.extractedPhone) data.extractedPhone = cls.extractedPhone;
-          const aiReply = await generateChatbotResponse(
-            buildSystemPrompt("collect_name", settings),
-            recentMessages,
-            text,
-            managerExamples,
-          );
-          response = aiReply ?? `Приятно познакомиться, ${extractedName}! 😊\nОпишите вашу проблему или какую процедуру вы хотели бы пройти.`;
-          session.state = "collect_problem";
+          // Not 12 digits — IIN is required, ask again
+          response = "Пожалуйста, введите ваш ИИН — это 12 цифр (например: 123456789012). ИИН необходим для вашей идентификации.";
+          // Stay in collect_iin state
         }
         session.data = data;
         break;
