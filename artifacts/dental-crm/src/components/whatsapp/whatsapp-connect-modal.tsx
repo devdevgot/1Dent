@@ -126,18 +126,27 @@ export function WhatsAppConnectModal({
   const pollInitStatus = useCallback(async () => {
     const data = await fetchStatus();
     if (!data) return;
-    if (data.connected) {
-      // Already authorized — skip QR phase
+
+    const stop = () => {
       if (waitIntervalRef.current) clearInterval(waitIntervalRef.current);
       if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
       setWaitingForInit(false);
+    };
+
+    if (data.connected) {
+      // Already authorized — skip QR phase
+      stop();
+      return;
+    }
+    if (data.stateInstance === "error") {
+      // Auth failure — stop waiting and surface an error to the user
+      stop();
+      setProvisionError("Ошибка авторизации инстанса. Попробуйте создать заново или обратитесь в поддержку.");
       return;
     }
     if (data.stateInstance && data.stateInstance !== "initializing") {
-      // Instance is ready (notAuthorized) — move to QR phase
-      if (waitIntervalRef.current) clearInterval(waitIntervalRef.current);
-      if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
-      setWaitingForInit(false);
+      // Instance is ready (notAuthorized or similar) — move to QR phase
+      stop();
       setConfigured(true);
       void fetchQr();
     }
@@ -163,10 +172,17 @@ export function WhatsAppConnectModal({
     if (startAtSetup) {
       setStep("setup");
       setInitialLoading(true);
-      Promise.all([fetchQr(), fetchStatus()]).finally(() => {
-        setInitialLoading(false);
-        setConfigured(true);
-      });
+      // Only enter QR mode if the clinic actually has credentials configured.
+      // If not, show the provision CTA instead of bouncing into QR/error state.
+      fetchStatus()
+        .then(data => {
+          if (data?.configured) {
+            setConfigured(true);
+            void fetchQr();
+          }
+          // else: configured remains false → provision button will be shown
+        })
+        .finally(() => setInitialLoading(false));
     }
   }, [open, startAtSetup, forceSetup, fetchQr, fetchStatus]);
 

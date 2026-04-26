@@ -391,9 +391,13 @@ router.get(
       state = await getGreenApiState(clinic.greenApiInstanceId, clinic.greenApiToken);
     } catch (err) {
       logger.warn({ err, instanceId: clinic.greenApiInstanceId }, "Green API getStateInstance failed — instance may still be initializing");
-      // New partner-provisioned instances take up to 5 minutes to initialize.
-      // Return "initializing" so the frontend shows appropriate progress UI instead of an error.
-      return res.json({ success: true, data: { configured: true, connected: false, phone: null, stateInstance: "initializing" } });
+      const msg = err instanceof Error ? err.message : String(err);
+      // Distinguish auth failures (bad credentials) from initialization-in-progress (404/timeout).
+      // Auth errors should surface as "error" so the UI doesn't spin forever.
+      const isAuthError = msg.includes(": 401") || msg.includes(": 403") ||
+        msg.toLowerCase().includes("unauthorized") || msg.toLowerCase().includes("forbidden");
+      const derivedState = isAuthError ? "error" : "initializing";
+      return res.json({ success: true, data: { configured: true, connected: false, phone: null, stateInstance: derivedState } });
     }
     const connected = state.stateInstance === "authorized";
 

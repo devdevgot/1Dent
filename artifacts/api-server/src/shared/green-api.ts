@@ -315,6 +315,27 @@ export async function deletePartnerInstance(instanceId: string, partnerToken: st
   }
 }
 
+export interface PartnerInstance {
+  idInstance: number;
+  apiTokenInstance: string;
+  typeInstance?: string;
+  stateInstance?: string;
+}
+
+/**
+ * Get all instances for this partner account.
+ * Docs: https://green-api.com/docs/partners/getInstances/
+ */
+export async function getPartnerInstances(partnerToken: string): Promise<PartnerInstance[]> {
+  const url = `${BASE_URL}/partner/getInstances/${partnerToken}`;
+  const res = await fetch(url, { signal: greenApiSignal(30_000) });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Green API getInstances failed: ${res.status} ${body}`);
+  }
+  return res.json() as Promise<PartnerInstance[]>;
+}
+
 export function parseGreenApiWebhook(body: unknown): ParsedWebhook | null {
   try {
     const b = body as Record<string, unknown>;
