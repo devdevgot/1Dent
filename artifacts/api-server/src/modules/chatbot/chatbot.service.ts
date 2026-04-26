@@ -5,23 +5,26 @@ import {
   chatbotSettingsTable,
   chatbotSessionsTable,
   chatbotMessagesTable,
+  chatbotManagerExamplesTable,
   patientsTable,
   notificationsTable,
   usersTable,
   proceduresTable,
 } from "@workspace/db";
-import { eq, and, inArray, gte, lte, ne, asc, sql } from "drizzle-orm";
+import type { StepInstructions } from "@workspace/db";
+import { eq, and, inArray, gte, lte, ne, asc, desc, sql } from "drizzle-orm";
 import { isRedAlert } from "../../shared/whatsapp";
 import { sendToPatient } from "../../shared/messaging";
 import { getAlertQueue } from "../../shared/alert-queue";
 import { logger } from "../../lib/logger";
 import { pickBestDoctorAdvanced, type AdvancedScoringOptions } from "../analytics/analytics.repository";
 import { ChannelsRepository } from "../channels/channels.repository";
-import { classifyPatientRequest, generateChatbotResponse, type ChatMessage } from "./ai-classifier";
+import { classifyPatientRequest, generateChatbotResponse, type ChatMessage, type ManagerExample } from "./ai-classifier";
 import type { ChatbotState, ChatbotSessionData } from "./chatbot.types";
 import type { ChatbotSettings } from "@workspace/db";
 
 type CachedSettings = { settings: ChatbotSettings; expiresAt: number };
+type CachedExamples = { examples: ManagerExample[]; expiresAt: number };
 
 const SESSION_TTL_SECONDS = 24 * 60 * 60;
 const REDIS_KEY_PREFIX = "chatbot:session:";
@@ -211,6 +214,27 @@ const channelsRepo = new ChannelsRepository();
 // Simple settings cache (60s TTL) to avoid DB on every message
 const settingsCache = new Map<string, CachedSettings>();
 
+// Manager examples cache (60s TTL) — shared across sessions
+const examplesCache = new Map<string, CachedExamples>();
+
+async function getManagerExamples(clinicId: string): Promise<ManagerExample[]> {
+  const cached = examplesCache.get(clinicId);
+  if (cached && cached.expiresAt > Date.now()) return cached.examples;
+
+  const rows = await db
+    .select({
+      userMessage: chatbotManagerExamplesTable.userMessage,
+      managerResponse: chatbotManagerExamplesTable.managerResponse,
+    })
+    .from(chatbotManagerExamplesTable)
+    .where(eq(chatbotManagerExamplesTable.clinicId, clinicId))
+    .orderBy(asc(chatbotManagerExamplesTable.sortOrder), asc(chatbotManagerExamplesTable.createdAt))
+    .limit(20);
+
+  examplesCache.set(clinicId, { examples: rows, expiresAt: Date.now() + 60_000 });
+  return rows;
+}
+
 function extractRefCode(text: string): string | null {
   const match = text.match(/ref:([a-f0-9]{4,8})/i);
   return match ? match[1]!.toLowerCase() : null;
@@ -327,12 +351,16 @@ async function createPatient(
 // ─── AI system prompt builder ────────────────────────────────────────────────
 
 function buildSystemPrompt(state: ChatbotState, settings: Awaited<ReturnType<typeof getSettings>>): string {
+  const si = (settings.stepInstructions ?? {}) as StepInstructions;
+
+  const generalExtra = si.general ? `\n\nДополнительные инструкции клиники:\n${si.general}` : "";
+
   const base = `Ты — вежливый и профессиональный AI-ассистент стоматологической клиники 1Dent (Казахстан).
 Отвечай коротко и по делу. Используй простой, дружелюбный язык. Не ставь диагнозы.
 Отвечай на том языке, на котором пишет пациент (русский, казахский или английский).
-Не придумывай информацию о клинике — цены, адрес и расписание уточняй у администратора.`;
+Не придумывай информацию о клинике — цены, адрес и расписание уточняй у администратора.${generalExtra}`;
 
-  const statePrompts: Record<ChatbotState, string> = {
+  const defaults: Record<ChatbotState, string> = {
     greeting: `${base}\n\nТвоя задача: поприветствовать пациента и спросить его имя. Используй шаблон: "${settings.greetingTemplate}"`,
     collect_name: `${base}\n\nТы уже поприветствовал пациента. Сейчас жди имя или помоги его уточнить если пациент написал что-то непонятное.`,
     collect_problem: `${base}\n\nТы знаешь имя пациента. Твоя задача: узнать с какой проблемой или за какой услугой обращается пациент. Задавай уточняющие вопросы если нужно.`,
@@ -342,7 +370,21 @@ function buildSystemPrompt(state: ChatbotState, settings: Awaited<ReturnType<typ
     human_takeover: `${base}\n\nСоединяй пациента с администратором.`,
   };
 
-  return statePrompts[state] ?? base;
+  // State-specific custom instruction overrides base defaults if set
+  const stateInstructionMap: Record<ChatbotState, keyof StepInstructions | null> = {
+    greeting: "greeting",
+    collect_name: "collectName",
+    collect_problem: "collectProblem",
+    suggest_doctor: "suggestDoctor",
+    confirm_appointment: "confirm",
+    done: null,
+    human_takeover: null,
+  };
+  const stateKey = stateInstructionMap[state];
+  const customInstruction = stateKey ? si[stateKey] : undefined;
+
+  const defaultPrompt = defaults[state] ?? base;
+  return customInstruction ? `${base}\n\nИнструкции для этого этапа:\n${customInstruction}` : defaultPrompt;
 }
 
 // ─── ChatbotService (main export) ───────────────────────────────────────────
@@ -355,8 +397,12 @@ export class ChatbotService {
     options?: { skipRedAlert?: boolean },
   ): Promise<string | null> {
     let settings: Awaited<ReturnType<typeof getSettings>>;
+    let managerExamples: ManagerExample[];
     try {
-      settings = await getSettings(clinicId);
+      [settings, managerExamples] = await Promise.all([
+        getSettings(clinicId),
+        getManagerExamples(clinicId),
+      ]);
     } catch (err) {
       logger.error({ err }, "ChatbotService: failed to load settings");
       return null;
@@ -454,6 +500,7 @@ export class ChatbotService {
           buildSystemPrompt("collect_name", settings),
           recentMessages,
           text,
+          managerExamples,
         );
         response = aiReply0 ?? `Приятно познакомиться, ${extractedName}! 😊\nОпишите вашу проблему или какую процедуру вы хотели бы пройти.`;
         session.state = "collect_problem";
@@ -486,6 +533,7 @@ export class ChatbotService {
               buildSystemPrompt("suggest_doctor", settings),
               recentMessages,
               `Пациент написал что-то неясное: "${text}". Мягко предложи запись к терапевту ${therapist.name} для первичного осмотра.`,
+              managerExamples,
             );
             response = aiReply ?? `Понял! Для начала рекомендую записаться на консультацию к врачу *${therapist.name}* — он определит, какое лечение вам нужно.\n\nЗаписать вас? (Да / Нет)`;
             session.state = "suggest_doctor";
@@ -528,7 +576,7 @@ export class ChatbotService {
 
           const systemPrompt = buildSystemPrompt("suggest_doctor", settings);
           const context = `Пациент описал: ${classification.summary ?? text}. Рекомендуемый врач: ${doctor.name}. Предложи запись к этому врачу.`;
-          const aiReply = await generateChatbotResponse(systemPrompt, recentMessages, context);
+          const aiReply = await generateChatbotResponse(systemPrompt, recentMessages, context, managerExamples);
           response = aiReply ?? `Понял! Рекомендую врача *${doctor.name}*.${urgencyNote}\n\nЗаписать вас к нему? (Ответьте «Да» или «Нет»)`;
           session.state = "suggest_doctor";
         } else {
@@ -546,6 +594,7 @@ export class ChatbotService {
             buildSystemPrompt("confirm_appointment", settings),
             recentMessages,
             `Пациент согласен записаться к ${data.suggestedDoctorName ?? "врачу"}. Попроси подтвердить запись.`,
+            managerExamples,
           );
           response = aiReply1 ?? `Отлично! Подтверждаете запись к ${data.suggestedDoctorName ?? "врачу"}? (Да / Нет)`;
           session.state = "confirm_appointment";
@@ -559,6 +608,7 @@ export class ChatbotService {
             buildSystemPrompt("suggest_doctor", settings),
             recentMessages,
             text,
+            managerExamples,
           );
           const count = (Number(data.confusedCount) || 0) + 1;
           data.confusedCount = count;
@@ -606,6 +656,7 @@ export class ChatbotService {
             buildSystemPrompt("done", settings),
             recentMessages,
             `Запись подтверждена к врачу ${data.suggestedDoctorName ?? ""}. Поздравь пациента и скажи что администратор свяжется для уточнения времени.`,
+            managerExamples,
           );
           response = aiReply3 ?? `✅ Запись подтверждена! Администратор свяжется с вами для уточнения времени визита.\n\nЕсли возникнут вопросы — пишите сюда. Мы на связи!`;
           session.state = "done";
@@ -621,6 +672,7 @@ export class ChatbotService {
             buildSystemPrompt("confirm_appointment", settings),
             recentMessages,
             text,
+            managerExamples,
           );
           const count = (Number(data.confusedCount) || 0) + 1;
           data.confusedCount = count;
@@ -709,6 +761,7 @@ export class ChatbotService {
       followup24hTemplate?: string;
       followup72hTemplate?: string;
       followup168hTemplate?: string;
+      stepInstructions?: StepInstructions;
     },
   ) {
     const settings = await getSettings(clinicId);
@@ -720,6 +773,73 @@ export class ChatbotService {
     // Invalidate cache
     settingsCache.delete(clinicId);
     return updated!;
+  }
+
+  // ─── Manager Examples CRUD ────────────────────────────────────────────────
+
+  async listManagerExamples(clinicId: string) {
+    return db
+      .select()
+      .from(chatbotManagerExamplesTable)
+      .where(eq(chatbotManagerExamplesTable.clinicId, clinicId))
+      .orderBy(asc(chatbotManagerExamplesTable.sortOrder), asc(chatbotManagerExamplesTable.createdAt));
+  }
+
+  async createManagerExample(clinicId: string, userMessage: string, managerResponse: string) {
+    const [maxOrder] = await db
+      .select({ max: sql<number>`COALESCE(MAX(sort_order), -1)` })
+      .from(chatbotManagerExamplesTable)
+      .where(eq(chatbotManagerExamplesTable.clinicId, clinicId));
+    const sortOrder = ((maxOrder?.max ?? -1) as number) + 1;
+    const [row] = await db
+      .insert(chatbotManagerExamplesTable)
+      .values({ id: randomUUID(), clinicId, userMessage, managerResponse, sortOrder })
+      .returning();
+    examplesCache.delete(clinicId);
+    return row!;
+  }
+
+  async updateManagerExample(
+    clinicId: string,
+    id: string,
+    updates: { userMessage?: string; managerResponse?: string },
+  ) {
+    const [row] = await db
+      .update(chatbotManagerExamplesTable)
+      .set(updates)
+      .where(and(eq(chatbotManagerExamplesTable.id, id), eq(chatbotManagerExamplesTable.clinicId, clinicId)))
+      .returning();
+    examplesCache.delete(clinicId);
+    return row ?? null;
+  }
+
+  async deleteManagerExample(clinicId: string, id: string) {
+    await db
+      .delete(chatbotManagerExamplesTable)
+      .where(and(eq(chatbotManagerExamplesTable.id, id), eq(chatbotManagerExamplesTable.clinicId, clinicId)));
+    examplesCache.delete(clinicId);
+  }
+
+  async reorderManagerExample(clinicId: string, id: string, newSortOrder: number) {
+    const [row] = await db
+      .update(chatbotManagerExamplesTable)
+      .set({ sortOrder: newSortOrder })
+      .where(and(eq(chatbotManagerExamplesTable.id, id), eq(chatbotManagerExamplesTable.clinicId, clinicId)))
+      .returning();
+    examplesCache.delete(clinicId);
+    return row ?? null;
+  }
+
+  // ─── Test message (preview AI response with current settings) ─────────────
+
+  async testMessage(clinicId: string, userMessage: string, state: ChatbotState = "collect_problem") {
+    const [settings, managerExamples] = await Promise.all([
+      getSettings(clinicId),
+      getManagerExamples(clinicId),
+    ]);
+    const systemPrompt = buildSystemPrompt(state, settings);
+    const reply = await generateChatbotResponse(systemPrompt, [], userMessage, managerExamples);
+    return reply ?? "AI не ответил. Проверьте API-ключ.";
   }
 
   async listSessions(clinicId: string) {

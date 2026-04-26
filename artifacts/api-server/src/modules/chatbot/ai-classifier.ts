@@ -132,13 +132,29 @@ export async function classifyPatientRequest(
 
 // ─── AI response generator ───────────────────────────────────────────────────
 
+export interface ManagerExample {
+  userMessage: string;
+  managerResponse: string;
+}
+
 export async function generateChatbotResponse(
   systemPrompt: string,
   history: ChatMessage[],
   userMessage: string,
+  fewShotExamples?: ManagerExample[],
 ): Promise<string | null> {
+  // Build few-shot block from manager style examples (inserted before real history)
+  const fewShot: Array<{ role: "user" | "assistant"; content: string }> = [];
+  if (fewShotExamples && fewShotExamples.length > 0) {
+    for (const ex of fewShotExamples.slice(0, 10)) {
+      fewShot.push({ role: "user", content: ex.userMessage });
+      fewShot.push({ role: "assistant", content: ex.managerResponse });
+    }
+  }
+
   const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
     { role: "system", content: systemPrompt },
+    ...fewShot,
     ...history.slice(-10).map((m) => ({ role: m.role, content: m.content })),
     { role: "user", content: userMessage },
   ];

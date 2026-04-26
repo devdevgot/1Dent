@@ -1,15 +1,39 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Bot, Settings, MessageSquare, Trash2, RefreshCw, Power, Save, ChevronLeft, ArrowLeft, Phone } from "lucide-react";
+import {
+  Bot,
+  Settings,
+  MessageSquare,
+  Trash2,
+  RefreshCw,
+  Power,
+  Save,
+  ChevronLeft,
+  ArrowLeft,
+  Phone,
+  Plus,
+  Send,
+  Sparkles,
+  BookOpen,
+  X,
+  ChevronUp,
+  ChevronDown,
+} from "lucide-react";
 import {
   useGetChatbotSettings,
   useUpdateChatbotSettings,
   useListChatbotSessions,
   useDeleteChatbotSession,
   useGetChatbotSessionMessages,
+  useListManagerExamples,
+  useCreateManagerExample,
+  useDeleteManagerExample,
+  useTestChatbotMessage,
+  reorderManagerExample,
 } from "@workspace/api-client-react";
 import type { ChatbotSettingsUpdate } from "@workspace/api-client-react";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { useQueryClient } from "@tanstack/react-query";
 
 const STATE_LABELS: Record<string, string> = {
   greeting: "Приветствие",
@@ -30,6 +54,15 @@ const STATE_COLORS: Record<string, string> = {
   done: "bg-emerald-50 text-emerald-700 border-emerald-100",
   human_takeover: "bg-red-50 text-red-700 border-red-100",
 };
+
+const STEP_INSTRUCTION_FIELDS: { key: keyof NonNullable<ChatbotSettingsUpdate["stepInstructions"]>; label: string; hint: string }[] = [
+  { key: "general", label: "Общие инструкции", hint: "Применяются ко всем этапам диалога" },
+  { key: "greeting", label: "Приветствие", hint: "Как бот приветствует пациента" },
+  { key: "collectName", label: "Сбор имени", hint: "Как бот запрашивает имя" },
+  { key: "collectProblem", label: "Описание проблемы", hint: "Как бот уточняет запрос пациента" },
+  { key: "suggestDoctor", label: "Предложение врача", hint: "Как бот представляет врача" },
+  { key: "confirm", label: "Подтверждение записи", hint: "Как бот подтверждает запись" },
+];
 
 function formatRelative(dateStr: string) {
   const date = new Date(dateStr);
@@ -106,7 +139,7 @@ function SessionChat({ phone, onBack }: { phone: string; onBack: () => void }) {
                   </div>
                 )}
                 <div className={`flex ${isBot ? "justify-start" : "justify-end"} mb-1`}>
-                  <div className={`max-w-[80%] group`}>
+                  <div className="max-w-[80%] group">
                     <div
                       className={`px-3 py-2 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
                         isBot
@@ -130,11 +163,262 @@ function SessionChat({ phone, onBack }: { phone: string; onBack: () => void }) {
   );
 }
 
-// ─── Main page ───────────────────────────────────────────────────────────────
+// ─── Manager Style tab ────────────────────────────────────────────────────────
+
+function ManagerStyleTab() {
+  const qc = useQueryClient();
+  const { data: examplesRes, isLoading, refetch } = useListManagerExamples();
+  const createExample = useCreateManagerExample();
+  const deleteExample = useDeleteManagerExample();
+  const testMessage = useTestChatbotMessage();
+
+  const examples = examplesRes?.data?.examples ?? [];
+
+  const [newUser, setNewUser] = useState("");
+  const [newManager, setNewManager] = useState("");
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [testInput, setTestInput] = useState("");
+  const [testState, setTestState] = useState("collect_problem");
+  const [testReply, setTestReply] = useState<string | null>(null);
+  const [reordering, setReordering] = useState<string | null>(null);
+
+  const handleAdd = () => {
+    if (!newUser.trim() || !newManager.trim()) return;
+    createExample.mutate(
+      { userMessage: newUser.trim(), managerResponse: newManager.trim() },
+      {
+        onSuccess: () => {
+          setNewUser("");
+          setNewManager("");
+          qc.invalidateQueries({ queryKey: ["/api/chatbot/manager-examples"] });
+        },
+      },
+    );
+  };
+
+  const handleDelete = (id: string) => {
+    deleteExample.mutate(id, {
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["/api/chatbot/manager-examples"] }),
+    });
+  };
+
+  const handleReorder = async (id: string, direction: "up" | "down") => {
+    const idx = examples.findIndex((e) => e.id === id);
+    if (idx === -1) return;
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= examples.length) return;
+    setReordering(id);
+    try {
+      const swapItem = examples[swapIdx]!;
+      const currentItem = examples[idx]!;
+      await Promise.all([
+        reorderManagerExample(id, swapItem.sortOrder),
+        reorderManagerExample(swapItem.id, currentItem.sortOrder),
+      ]);
+      qc.invalidateQueries({ queryKey: ["/api/chatbot/manager-examples"] });
+    } finally {
+      setReordering(null);
+    }
+  };
+
+  const handleTest = () => {
+    if (!testInput.trim()) return;
+    testMessage.mutate(
+      { userMessage: testInput.trim(), state: testState },
+      { onSuccess: (res) => setTestReply(res.data?.reply ?? null) },
+    );
+  };
+
+  return (
+    <div className="space-y-4 max-w-2xl">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-foreground">Примеры стиля менеджера</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Бот будет имитировать этот стиль общения при ответах
+          </p>
+        </div>
+        {examples.length > 0 && (
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-100">
+            {examples.length} {examples.length === 1 ? "пример" : examples.length < 5 ? "примера" : "примеров"}
+          </span>
+        )}
+      </div>
+
+      <div className="rounded-xl border border-border/50 bg-card p-4 space-y-3">
+        <p className="text-xs font-medium text-foreground">Добавить пример</p>
+        <div className="space-y-2">
+          <div>
+            <label className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Сообщение пациента</label>
+            <textarea
+              rows={2}
+              placeholder="Например: Хочу записаться на чистку зубов"
+              value={newUser}
+              onChange={(e) => setNewUser(e.target.value)}
+              className="mt-1 w-full text-sm border border-border/50 rounded-lg px-3 py-2 bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+          <div>
+            <label className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Ответ менеджера</label>
+            <textarea
+              rows={3}
+              placeholder="Например: Здравствуйте! Рады записать вас на профессиональную чистку зубов. Позвольте уточнить несколько деталей..."
+              value={newManager}
+              onChange={(e) => setNewManager(e.target.value)}
+              className="mt-1 w-full text-sm border border-border/50 rounded-lg px-3 py-2 bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+          <button
+            onClick={handleAdd}
+            disabled={!newUser.trim() || !newManager.trim() || createExample.isPending}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-medium disabled:opacity-50 hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            {createExample.isPending ? "Добавление..." : "Добавить пример"}
+          </button>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="p-6 text-center text-sm text-muted-foreground">Загрузка...</div>
+      ) : examples.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border/50 p-8 text-center">
+          <BookOpen className="h-7 w-7 text-muted-foreground/30 mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">Примеры не добавлены</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Добавьте примеры — бот будет отвечать в том же стиле
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {examples.map((ex, idx) => (
+            <div key={ex.id} className="rounded-xl border border-border/50 bg-card p-3 space-y-2">
+              <div className="flex items-start gap-2">
+                <span className="text-[10px] font-bold text-muted-foreground/60 mt-0.5 tabular-nums w-4 shrink-0">
+                  {idx + 1}.
+                </span>
+                <div className="flex-1 space-y-1.5 min-w-0">
+                  <div className="rounded-lg bg-muted/40 px-2.5 py-1.5">
+                    <span className="text-[10px] font-medium text-muted-foreground">👤 Пациент: </span>
+                    <span className="text-xs text-foreground">{ex.userMessage}</span>
+                  </div>
+                  <div className="rounded-lg bg-violet-50 border border-violet-100 px-2.5 py-1.5">
+                    <span className="text-[10px] font-medium text-violet-600">🤖 Менеджер: </span>
+                    <span className="text-xs text-foreground">{ex.managerResponse}</span>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-0.5 shrink-0">
+                  <button
+                    onClick={() => handleReorder(ex.id, "up")}
+                    disabled={idx === 0 || reordering === ex.id}
+                    className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 transition-colors"
+                  >
+                    <ChevronUp className="h-3 w-3" />
+                  </button>
+                  <button
+                    onClick={() => handleReorder(ex.id, "down")}
+                    disabled={idx === examples.length - 1 || reordering === ex.id}
+                    className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 transition-colors"
+                  >
+                    <ChevronDown className="h-3 w-3" />
+                  </button>
+                  <button
+                    onClick={() => setConfirmDeleteId(ex.id)}
+                    className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+          <div className="pt-1 flex justify-end">
+            <button
+              onClick={() => refetch()}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <RefreshCw className="h-3 w-3" />
+              Обновить
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="rounded-xl border border-border/50 bg-card p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-violet-500" />
+          <p className="text-sm font-medium text-foreground">Тест AI-ответа</p>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Проверьте как бот ответит с текущими инструкциями и примерами стиля
+        </p>
+        <div className="flex items-center gap-2">
+          <select
+            value={testState}
+            onChange={(e) => setTestState(e.target.value)}
+            className="text-xs border border-border/50 rounded-lg px-2 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 shrink-0"
+          >
+            <option value="greeting">Приветствие</option>
+            <option value="collect_name">Сбор имени</option>
+            <option value="collect_problem">Описание проблемы</option>
+            <option value="suggest_doctor">Предложение врача</option>
+            <option value="confirm_appointment">Подтверждение</option>
+          </select>
+          <span className="text-xs text-muted-foreground shrink-0">этап</span>
+        </div>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            placeholder="Введите тестовое сообщение пациента..."
+            value={testInput}
+            onChange={(e) => setTestInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") handleTest(); }}
+            className="flex-1 text-sm border border-border/50 rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
+          />
+          <button
+            onClick={handleTest}
+            disabled={!testInput.trim() || testMessage.isPending}
+            className="flex items-center gap-1.5 px-3 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-medium disabled:opacity-50 hover:bg-primary/90 transition-colors shrink-0"
+          >
+            {testMessage.isPending ? (
+              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Send className="h-3.5 w-3.5" />
+            )}
+            Тест
+          </button>
+        </div>
+
+        {testReply !== null && (
+          <div className="rounded-lg bg-violet-50 border border-violet-100 p-3">
+            <p className="text-[10px] font-medium text-violet-600 mb-1">🤖 Ответ бота:</p>
+            <p className="text-xs text-foreground whitespace-pre-wrap leading-relaxed">{testReply}</p>
+            <button
+              onClick={() => setTestReply(null)}
+              className="mt-2 text-[10px] text-muted-foreground hover:text-foreground"
+            >
+              Закрыть
+            </button>
+          </div>
+        )}
+      </div>
+
+      <ConfirmDeleteDialog
+        open={!!confirmDeleteId}
+        onConfirm={() => { if (confirmDeleteId) handleDelete(confirmDeleteId); setConfirmDeleteId(null); }}
+        onCancel={() => setConfirmDeleteId(null)}
+        title="Удалить пример?"
+        description="Этот пример стиля будет удалён. Бот перестанет его использовать."
+      />
+    </div>
+  );
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function ChatbotPage() {
   const { t } = useTranslation();
-  const [tab, setTab] = useState<"sessions" | "settings">("sessions");
+  const [tab, setTab] = useState<"sessions" | "settings" | "manager-style">("sessions");
   const [confirmResetPhone, setConfirmResetPhone] = useState<string | null>(null);
   const [localSettings, setLocalSettings] = useState<ChatbotSettingsUpdate>({});
   const [saved, setSaved] = useState(false);
@@ -154,6 +438,7 @@ export default function ChatbotPage() {
     followup24hTemplate: localSettings.followup24hTemplate ?? settings?.followup24hTemplate ?? "",
     followup72hTemplate: localSettings.followup72hTemplate ?? settings?.followup72hTemplate ?? "",
     followup168hTemplate: localSettings.followup168hTemplate ?? settings?.followup168hTemplate ?? "",
+    stepInstructions: localSettings.stepInstructions ?? settings?.stepInstructions ?? {},
   };
 
   const handleSave = () => {
@@ -171,9 +456,18 @@ export default function ChatbotPage() {
     deleteSession.mutate({ phone }, { onSuccess: () => refetchSessions() });
   };
 
+  const setStepInstruction = (key: string, value: string) => {
+    setLocalSettings((p) => ({
+      ...p,
+      stepInstructions: {
+        ...(p.stepInstructions ?? effectiveSettings.stepInstructions),
+        [key]: value,
+      },
+    }));
+  };
+
   const isDirty = Object.keys(localSettings).length > 0;
 
-  // Show conversation view when a session is selected
   if (selectedPhone) {
     return <SessionChat phone={selectedPhone} onBack={() => setSelectedPhone(null)} />;
   }
@@ -207,24 +501,34 @@ export default function ChatbotPage() {
           </div>
         </div>
 
-        <div className="flex gap-1 mt-3">
-          {(["sessions", "settings"] as const).map((t_) => (
-            <button
-              key={t_}
-              onClick={() => setTab(t_)}
-              className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${
-                tab === t_
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted"
-              }`}
-            >
-              {t_ === "sessions" ? (
-                <><MessageSquare className="h-3.5 w-3.5" />{t("chatbot.tab.sessions")}</>
-              ) : (
-                <><Settings className="h-3.5 w-3.5" />{t("chatbot.tab.settings")}</>
-              )}
-            </button>
-          ))}
+        <div className="flex gap-1 mt-3 overflow-x-auto pb-0.5">
+          <button
+            onClick={() => setTab("sessions")}
+            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md font-medium transition-colors shrink-0 ${
+              tab === "sessions" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            <MessageSquare className="h-3.5 w-3.5" />
+            {t("chatbot.tab.sessions")}
+          </button>
+          <button
+            onClick={() => setTab("settings")}
+            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md font-medium transition-colors shrink-0 ${
+              tab === "settings" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            <Settings className="h-3.5 w-3.5" />
+            {t("chatbot.tab.settings")}
+          </button>
+          <button
+            onClick={() => setTab("manager-style")}
+            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md font-medium transition-colors shrink-0 ${
+              tab === "manager-style" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            {t("chatbot.tab.managerStyle")}
+          </button>
         </div>
       </div>
 
@@ -355,6 +659,32 @@ export default function ChatbotPage() {
               ))}
             </div>
 
+            <div className="rounded-xl border border-border/50 bg-card p-4 space-y-4">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-violet-500" />
+                <h3 className="text-sm font-semibold text-foreground">{t("chatbot.settings.aiInstructions")}</h3>
+              </div>
+              <p className="text-xs text-muted-foreground -mt-2">
+                {t("chatbot.settings.aiInstructionsDesc")}
+              </p>
+
+              {STEP_INSTRUCTION_FIELDS.map(({ key, label, hint }) => (
+                <div key={key} className="space-y-1.5">
+                  <div>
+                    <label className="text-xs font-medium text-foreground">{label}</label>
+                    <p className="text-[11px] text-muted-foreground">{hint}</p>
+                  </div>
+                  <textarea
+                    rows={3}
+                    placeholder="Оставьте пустым для использования стандартных инструкций..."
+                    value={(effectiveSettings.stepInstructions as Record<string, string>)?.[key] ?? ""}
+                    onChange={(e) => setStepInstruction(key, e.target.value)}
+                    className="w-full text-sm border border-border/50 rounded-lg px-3 py-2 bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+              ))}
+            </div>
+
             <div className="flex items-center gap-3">
               <button
                 onClick={handleSave}
@@ -370,7 +700,10 @@ export default function ChatbotPage() {
             </div>
           </div>
         )}
+
+        {tab === "manager-style" && <ManagerStyleTab />}
       </div>
+
       <ConfirmDeleteDialog
         open={!!confirmResetPhone}
         onConfirm={() => { if (confirmResetPhone) { handleResetSession(confirmResetPhone); } setConfirmResetPhone(null); }}

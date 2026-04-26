@@ -791,6 +791,15 @@ export interface ProcedureMaterialLineItem {
   quantity: number;
 }
 
+export interface ChatbotStepInstructions {
+  general?: string;
+  greeting?: string;
+  collectName?: string;
+  collectProblem?: string;
+  suggestDoctor?: string;
+  confirm?: string;
+}
+
 export interface ChatbotSettings {
   id: string;
   clinicId: string;
@@ -799,6 +808,7 @@ export interface ChatbotSettings {
   followup24hTemplate: string;
   followup72hTemplate: string;
   followup168hTemplate: string;
+  stepInstructions?: ChatbotStepInstructions;
   createdAt: string;
   updatedAt: string;
 }
@@ -809,6 +819,7 @@ export interface ChatbotSettingsUpdate {
   followup24hTemplate?: string;
   followup72hTemplate?: string;
   followup168hTemplate?: string;
+  stepInstructions?: ChatbotStepInstructions;
 }
 
 export type ChatbotSessionData = { [key: string]: unknown };

@@ -85,6 +85,119 @@ export const useGetChatbotSessionMessages = <TError = unknown>(
     ...options?.query,
   });
 
+// ─── Custom: chatbot manager examples ────────────────────────────────────────
+
+export interface ChatbotManagerExample {
+  id: string;
+  clinicId: string;
+  userMessage: string;
+  managerResponse: string;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface StepInstructions {
+  general?: string;
+  greeting?: string;
+  collectName?: string;
+  collectProblem?: string;
+  suggestDoctor?: string;
+  confirm?: string;
+}
+
+export interface ListManagerExamplesResponse {
+  success: boolean;
+  data: { examples: ChatbotManagerExample[] };
+}
+
+export interface ManagerExampleResponse {
+  success: boolean;
+  data: { example: ChatbotManagerExample };
+}
+
+export const listManagerExamples = (options?: RequestInit): Promise<ListManagerExamplesResponse> =>
+  customFetch<ListManagerExamplesResponse>("/api/chatbot/manager-examples", { method: "GET", ...options });
+
+export const useListManagerExamples = <TError = unknown>(
+  options?: { query?: UseQueryOptions<ListManagerExamplesResponse, TError> },
+) =>
+  useQuery<ListManagerExamplesResponse, TError>({
+    queryKey: ["/api/chatbot/manager-examples"],
+    queryFn: ({ signal }) => listManagerExamples({ signal }),
+    ...options?.query,
+  });
+
+export const createManagerExample = (data: {
+  userMessage: string;
+  managerResponse: string;
+}): Promise<ManagerExampleResponse> =>
+  customFetch<ManagerExampleResponse>("/api/chatbot/manager-examples", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+
+export const useCreateManagerExample = <TError = unknown>(options?: {
+  mutation?: UseMutationOptions<ManagerExampleResponse, TError, { userMessage: string; managerResponse: string }>;
+}) =>
+  useMutation<ManagerExampleResponse, TError, { userMessage: string; managerResponse: string }>({
+    mutationFn: (data) => createManagerExample(data),
+    ...options?.mutation,
+  });
+
+export const updateManagerExample = (
+  id: string,
+  data: { userMessage?: string; managerResponse?: string },
+): Promise<ManagerExampleResponse> =>
+  customFetch<ManagerExampleResponse>(`/api/chatbot/manager-examples/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+
+export const deleteManagerExample = (id: string): Promise<{ success: boolean }> =>
+  customFetch<{ success: boolean }>(`/api/chatbot/manager-examples/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+
+export const useDeleteManagerExample = <TError = unknown>(options?: {
+  mutation?: UseMutationOptions<{ success: boolean }, TError, string>;
+}) =>
+  useMutation<{ success: boolean }, TError, string>({
+    mutationFn: (id) => deleteManagerExample(id),
+    ...options?.mutation,
+  });
+
+export const reorderManagerExample = (id: string, sortOrder: number): Promise<ManagerExampleResponse> =>
+  customFetch<ManagerExampleResponse>(`/api/chatbot/manager-examples/${encodeURIComponent(id)}/reorder`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sortOrder }),
+  });
+
+export interface TestMessageResponse {
+  success: boolean;
+  data: { reply: string };
+}
+
+export const testChatbotMessage = (data: {
+  userMessage: string;
+  state?: string;
+}): Promise<TestMessageResponse> =>
+  customFetch<TestMessageResponse>("/api/chatbot/test-message", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+
+export const useTestChatbotMessage = <TError = unknown>(options?: {
+  mutation?: UseMutationOptions<TestMessageResponse, TError, { userMessage: string; state?: string }>;
+}) =>
+  useMutation<TestMessageResponse, TError, { userMessage: string; state?: string }>({
+    mutationFn: (data) => testChatbotMessage(data),
+    ...options?.mutation,
+  });
+
 // ─── Custom: payroll ──────────────────────────────────────────────────────────
 
 export type SalaryType = "fixed" | "commission" | "fixed_plus_commission";
