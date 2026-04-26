@@ -5,6 +5,7 @@ import {
   type DragStartEvent,
   DragOverlay,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   closestCorners,
@@ -36,7 +37,12 @@ export default function KanbanPage() {
   const [activeDragPatient, setActiveDragPatient] = useState<Patient | null>(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 200, tolerance: 8 },
+    }),
   );
 
   const { data, isLoading, error } = useListPatients({

@@ -30,6 +30,7 @@ export function PatientCard({ patient }: PatientCardProps) {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    touchAction: "none" as const,
   };
 
   const sourceLabel = SOURCE_LABELS[patient.source] ?? patient.source;
