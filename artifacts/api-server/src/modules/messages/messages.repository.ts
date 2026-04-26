@@ -18,6 +18,17 @@ export class MessagesRepository {
     return patient ?? null;
   }
 
+  async findPatientByIin(iin: string, clinicId: string) {
+    const normalizedIin = iin.replace(/\D/g, "");
+    if (normalizedIin.length !== 12) return null;
+    const [patient] = await db
+      .select()
+      .from(patientsTable)
+      .where(and(eq(patientsTable.clinicId, clinicId), eq(patientsTable.iin, normalizedIin)))
+      .limit(1);
+    return patient ?? null;
+  }
+
   async findPatientByPhone(rawPhone: string, clinicId: string) {
     const all = await db
       .select()

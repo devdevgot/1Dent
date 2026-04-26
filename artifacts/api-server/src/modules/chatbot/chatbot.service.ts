@@ -339,11 +339,12 @@ async function createPatient(
   name: string,
   doctorId: string,
   source?: string,
+  iin?: string,
 ) {
   const id = randomUUID();
   const [patient] = await db
     .insert(patientsTable)
-    .values({ id, clinicId, name, phone, source: source ?? "whatsapp", status: "new_request", doctorId })
+    .values({ id, clinicId, name, phone, iin: iin ?? null, source: source ?? "whatsapp", status: "new_request", doctorId })
     .returning();
   return patient!;
 }
@@ -361,7 +362,8 @@ function buildSystemPrompt(state: ChatbotState, settings: Awaited<ReturnType<typ
 Не придумывай информацию о клинике — цены, адрес и расписание уточняй у администратора.${generalExtra}`;
 
   const defaults: Record<ChatbotState, string> = {
-    greeting: `${base}\n\nТвоя задача: поприветствовать пациента и спросить его имя. Используй шаблон: "${settings.greetingTemplate}"`,
+    greeting: `${base}\n\nТвоя задача: поприветствовать пациента и попросить его ввести ИИН (12 цифр) или имя если обращается впервые. Используй шаблон: "${settings.greetingTemplate}"`,
+    collect_iin: `${base}\n\nТы уже поприветствовал пациента. Ожидаешь ИИН (12 цифр) или имя. Если пациент написал что-то непонятное — мягко уточни.`,
     collect_name: `${base}\n\nТы уже поприветствовал пациента. Сейчас жди имя или помоги его уточнить если пациент написал что-то непонятное.`,
     collect_problem: `${base}\n\nТы знаешь имя пациента. Твоя задача: узнать с какой проблемой или за какой услугой обращается пациент. Задавай уточняющие вопросы если нужно.`,
     suggest_doctor: `${base}\n\nТы подобрал врача на основе запроса пациента. Представь врача и предложи запись. Спроси подтверждение (Да/Нет).`,
@@ -373,6 +375,7 @@ function buildSystemPrompt(state: ChatbotState, settings: Awaited<ReturnType<typ
   // State-specific custom instruction overrides base defaults if set
   const stateInstructionMap: Record<ChatbotState, keyof StepInstructions | null> = {
     greeting: "greeting",
+    collect_iin: null,
     collect_name: "collectName",
     collect_problem: "collectProblem",
     suggest_doctor: "suggestDoctor",
@@ -484,7 +487,6 @@ export class ChatbotService {
       case "greeting": {
         const greetingInstruction = (settings.stepInstructions as StepInstructions)?.greeting;
         if (greetingInstruction) {
-          // Custom greeting instruction → use AI so the instruction takes effect
           const aiGreeting = await generateChatbotResponse(
             buildSystemPrompt("greeting", settings),
             [],
@@ -495,7 +497,56 @@ export class ChatbotService {
         } else {
           response = settings.greetingTemplate;
         }
-        session.state = "collect_name";
+        // Append IIN identification hint to the greeting
+        response += "\n\nЕсли вы уже были у нас — введите ваш ИИН (12 цифр) для быстрой идентификации. Если обращаетесь впервые — напишите ваше имя.";
+        session.state = "collect_iin";
+        break;
+      }
+
+      case "collect_iin": {
+        const digits = text.replace(/\D/g, "");
+        if (digits.length === 12) {
+          // Input looks like an IIN — try to find existing patient
+          const [iinMatch] = await db
+            .select()
+            .from(patientsTable)
+            .where(and(eq(patientsTable.clinicId, clinicId), eq(patientsTable.iin, digits)))
+            .limit(1);
+
+          if (iinMatch) {
+            // Patient identified by IIN — greet by name and jump straight to collect_problem
+            data.existingPatientId = iinMatch.id;
+            data.patientName = iinMatch.name;
+            const aiReply = await generateChatbotResponse(
+              buildSystemPrompt("collect_problem", settings),
+              recentMessages,
+              `Пациент успешно идентифицирован по ИИН. Его зовут ${iinMatch.name}. Поприветствуй его как вернувшегося пациента и спроси с чем обращается сегодня.`,
+              managerExamples,
+            );
+            response = aiReply ?? `Рады снова вас видеть, ${iinMatch.name}! 😊\nС чем вы обращаетесь сегодня?`;
+            session.state = "collect_problem";
+          } else {
+            // IIN not in DB — save it for later creation, ask for name
+            data.collectedIin = digits;
+            response = "К сожалению, по этому ИИН запись не найдена. Пожалуйста, напишите ваше имя — мы создадим новую запись.";
+            session.state = "collect_name";
+          }
+        } else {
+          // Not 12 digits — treat as name, same logic as collect_name
+          const cls = await classifyPatientRequest(text, recentMessages);
+          const extractedName = cls.extractedName ?? text.trim().slice(0, 60);
+          data.patientName = extractedName;
+          if (cls.extractedPhone) data.extractedPhone = cls.extractedPhone;
+          const aiReply = await generateChatbotResponse(
+            buildSystemPrompt("collect_name", settings),
+            recentMessages,
+            text,
+            managerExamples,
+          );
+          response = aiReply ?? `Приятно познакомиться, ${extractedName}! 😊\nОпишите вашу проблему или какую процедуру вы хотели бы пройти.`;
+          session.state = "collect_problem";
+        }
+        session.data = data;
         break;
       }
 
@@ -640,26 +691,51 @@ export class ChatbotService {
           data.confusedCount = 0;
           if (data.suggestedDoctorId && data.patientName) {
             try {
-              const patientSource = data.refCode ? `ref:${data.refCode}` : "whatsapp";
-              const patient = await createPatient(
-                clinicId,
-                phone,
-                data.patientName,
-                data.suggestedDoctorId,
-                patientSource,
-              );
-              data.createdPatientId = patient.id;
-              session.data = data;
-
-              if (data.clickId) {
-                channelsRepo
-                  .linkClickToPatient(data.clickId, patient.id)
-                  .catch((err) =>
-                    logger.warn({ err, clickId: data.clickId }, "ChatbotService: failed to link click to patient"),
+              if (data.existingPatientId) {
+                // Patient was identified by IIN — update existing record
+                await db
+                  .update(patientsTable)
+                  .set({
+                    phone,
+                    doctorId: data.suggestedDoctorId,
+                    status: "new_request",
+                    updatedAt: new Date(),
+                  })
+                  .where(
+                    and(
+                      eq(patientsTable.id, data.existingPatientId),
+                      eq(patientsTable.clinicId, clinicId),
+                    ),
                   );
+                data.createdPatientId = data.existingPatientId;
+                logger.info(
+                  { patientId: data.existingPatientId },
+                  "ChatbotService: updated existing patient identified by IIN",
+                );
+              } else {
+                // New patient — create record, optionally saving collected IIN
+                const patientSource = data.refCode ? `ref:${data.refCode}` : "whatsapp";
+                const patient = await createPatient(
+                  clinicId,
+                  phone,
+                  data.patientName,
+                  data.suggestedDoctorId,
+                  patientSource,
+                  data.collectedIin,
+                );
+                data.createdPatientId = patient.id;
+
+                if (data.clickId) {
+                  channelsRepo
+                    .linkClickToPatient(data.clickId, patient.id)
+                    .catch((err) =>
+                      logger.warn({ err, clickId: data.clickId }, "ChatbotService: failed to link click to patient"),
+                    );
+                }
               }
+              session.data = data;
             } catch (err) {
-              logger.error({ err }, "ChatbotService: failed to create patient");
+              logger.error({ err }, "ChatbotService: failed to create/update patient");
             }
           }
 

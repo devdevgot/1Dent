@@ -1,5 +1,6 @@
 export type ChatbotState =
   | "greeting"
+  | "collect_iin"
   | "collect_name"
   | "collect_problem"
   | "suggest_doctor"
@@ -18,6 +19,8 @@ export interface ChatbotSessionData {
   channelId?: string;
   clickId?: string;
   extractedPhone?: string;
+  existingPatientId?: string;
+  collectedIin?: string;
   // AI classification results
   serviceType?: string;
   urgency?: string;
