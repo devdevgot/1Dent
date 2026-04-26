@@ -5,9 +5,9 @@ const INTERVAL_MS = 30 * 60 * 1000;
 
 function isScheduledDay(): boolean {
   const now = new Date();
-  const day = now.getDate();
-  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  return day === 15 || day === lastDay;
+  const utcDay = now.getUTCDate();
+  const utcLastDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0)).getUTCDate();
+  return utcDay === 15 || utcDay === utcLastDay;
 }
 
 async function tick(): Promise<void> {
