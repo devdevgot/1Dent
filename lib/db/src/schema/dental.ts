@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, integer, pgEnum, real, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, integer, pgEnum, real, boolean, uniqueIndex } from "drizzle-orm/pg-core";
 import { clinicsTable } from "./clinics";
 import { usersTable } from "./users";
 import { patientsTable } from "./patients";
@@ -214,3 +214,22 @@ export type TreatmentPlanStatus = (typeof treatmentPlanStatusEnum.enumValues)[nu
 export type TreatmentPlanItem = typeof treatmentPlanItemsTable.$inferSelect;
 export type InsertTreatmentPlanItem = typeof treatmentPlanItemsTable.$inferInsert;
 export type TreatmentPlanItemStatus = (typeof treatmentPlanItemStatusEnum.enumValues)[number];
+
+export const dentalAiAnalysesTable = pgTable(
+  "dental_ai_analyses",
+  {
+    id: text("id").primaryKey(),
+    clinicId: text("clinic_id")
+      .notNull()
+      .references(() => clinicsTable.id, { onDelete: "cascade" }),
+    patientId: text("patient_id")
+      .notNull()
+      .references(() => patientsTable.id, { onDelete: "cascade" }),
+    reportText: text("report_text").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex("dental_ai_analyses_clinic_patient_uidx").on(t.clinicId, t.patientId)],
+);
+
+export type DentalAiAnalysis = typeof dentalAiAnalysesTable.$inferSelect;

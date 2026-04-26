@@ -78,6 +78,13 @@
       "when": 1745701200000,
       "tag": "0010_chatbot_ai_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1745787600000,
+      "tag": "0011_dental_ai_analyses",
+      "breakpoints": true
     }
   ]
 }

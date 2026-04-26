@@ -27,7 +27,9 @@ import {
   getGetActiveTreatmentPlanQueryKey,
   getListTreatmentPlansQueryKey,
   getListProcedureTemplatesQueryKey,
+  getDentalAiAnalysisQueryKey,
 } from "@workspace/api-client-react";
+import { DentalAiAnalysisPanel } from "./dental-ai-analysis-panel";
 import type { ToothRecord, ToothTreatment, ProcedureTemplate } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -1233,7 +1235,11 @@ export function PatientDetailPanel() {
     setShowSummaryModal(false);
     setPlanViewToothFdi(null);
     toast({ title: t("patient.diagnosisSaved") });
-  }, [selectedPatientId, diagnosisMap, diagnosisNotesMap, diagnosisServicesMap, teethMap, updateToothMutation, createPlanMutation, refetchTeeth, toast, t]);
+
+    // Invalidate AI analysis cache and switch to the AI tab
+    void queryClient.invalidateQueries({ queryKey: getDentalAiAnalysisQueryKey(selectedPatientId) });
+    setActiveTab("ai_analysis");
+  }, [selectedPatientId, diagnosisMap, diagnosisNotesMap, diagnosisServicesMap, teethMap, updateToothMutation, createPlanMutation, refetchTeeth, toast, t, queryClient, setActiveTab]);
 
   const diagnosisSummaryEntries = useMemo((): DiagnosisSummaryEntry[] => {
     const allFdis = new Set([...diagnosisMap.keys(), ...teethMap.keys()]);
@@ -1301,8 +1307,9 @@ export function PatientDetailPanel() {
   const sourceColor = patient ? (SOURCE_COLORS[patient.source] ?? "bg-slate-100 text-slate-600") : "";
 
   const tabs = [
-    { id: "info"   as const, label: "Информация" },
-    { id: "dental" as const, label: t("patient.tabDental") },
+    { id: "info"        as const, label: "Информация" },
+    { id: "dental"      as const, label: t("patient.tabDental") },
+    { id: "ai_analysis" as const, label: "ИИ анализ" },
   ];
 
   const doctorUser = patient?.doctorId ? allUsers.find((u) => u.id === patient.doctorId) : null;
@@ -2526,6 +2533,11 @@ export function PatientDetailPanel() {
                   )}
                 </div>
               </div>
+            )}
+
+            {/* AI Analysis Tab */}
+            {activeTab === "ai_analysis" && (
+              <DentalAiAnalysisPanel patientId={selectedPatientId} />
             )}
 
           </>

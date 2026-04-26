@@ -11,6 +11,8 @@ import { DentalRepository } from "./dental.repository";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 import { PatientsRepository } from "../patients/patients.repository";
+import { triggerDentalAiAnalysis, getLatestDentalAnalysis } from "./dental-ai";
+import { logger } from "../../lib/logger";
 
 const router: IRouter = Router({ mergeParams: true });
 const repo = new DentalRepository();
@@ -90,6 +92,21 @@ router.put("/:toothFdi", writeRoles, async (req: Request, res: Response, next: N
     .catch(next);
   if (!tooth) return;
   res.json({ success: true, data: { tooth } });
+
+  // Fire-and-forget AI analysis after every tooth update
+  triggerDentalAiAnalysis(req.user!.clinicId, patientId).catch((err) =>
+    logger.warn({ err }, "[DentalAI] Background analysis error"),
+  );
+});
+
+// GET /patients/:id/teeth/ai-analysis
+router.get("/ai-analysis", readRoles, async (req: Request, res: Response, next: NextFunction) => {
+  const patientId = String(req.params["id"]);
+  const ok = await assertPatientAccess(patientId, req.user!.clinicId, next).catch(next);
+  if (!ok) return;
+  const analysis = await getLatestDentalAnalysis(req.user!.clinicId, patientId).catch(next);
+  if (analysis === undefined) return;
+  res.json({ success: true, data: analysis ?? null });
 });
 
 // GET /patients/:id/teeth/:toothFdi/treatments

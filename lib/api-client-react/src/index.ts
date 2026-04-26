@@ -733,3 +733,38 @@ export const useGetPatientMetrics = <TError = unknown>(
     queryFn: ({ signal }) => getPatientMetrics(params, { signal }),
     ...options?.query,
   });
+
+// ─── Dental AI Analysis ────────────────────────────────────────────────────────
+
+export interface DentalAiAnalysisData {
+  reportText: string;
+  updatedAt: string;
+}
+
+export interface GetDentalAiAnalysisResponse {
+  success: boolean;
+  data: DentalAiAnalysisData | null;
+}
+
+export const getDentalAiAnalysis = (
+  patientId: string,
+  options?: RequestInit,
+): Promise<GetDentalAiAnalysisResponse> =>
+  customFetch<GetDentalAiAnalysisResponse>(`/api/patients/${patientId}/teeth/ai-analysis`, {
+    method: "GET",
+    ...options,
+  });
+
+export const getDentalAiAnalysisQueryKey = (patientId: string) =>
+  [`/api/patients/${patientId}/teeth/ai-analysis`] as const;
+
+export const useGetDentalAiAnalysis = <TError = unknown>(
+  patientId: string,
+  options?: { query?: UseQueryOptions<GetDentalAiAnalysisResponse, TError> },
+) =>
+  useQuery<GetDentalAiAnalysisResponse, TError>({
+    queryKey: getDentalAiAnalysisQueryKey(patientId),
+    queryFn: ({ signal }) => getDentalAiAnalysis(patientId, { signal }),
+    enabled: !!patientId,
+    ...options?.query,
+  });
