@@ -17,7 +17,7 @@ router.get(
       const clinicId = req.user!.clinicId;
       const rawLimit = req.query["limit"];
       const limit =
-        typeof rawLimit === "string" ? Math.min(parseInt(rawLimit, 10) || 20, 100) : 20;
+        typeof rawLimit === "string" ? Math.max(1, Math.min(parseInt(rawLimit, 10) || 20, 100)) : 20;
 
       const runs = await db
         .select()

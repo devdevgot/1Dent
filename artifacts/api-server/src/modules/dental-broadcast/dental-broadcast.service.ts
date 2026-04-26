@@ -145,6 +145,8 @@ export async function runDentalBroadcastForAllClinics(): Promise<void> {
       and(
         isNotNull(clinicsTable.greenApiInstanceId),
         ne(clinicsTable.greenApiInstanceId, ""),
+        isNotNull(clinicsTable.greenApiToken),
+        ne(clinicsTable.greenApiToken, ""),
       ),
     );
 

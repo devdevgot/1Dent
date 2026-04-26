@@ -17,5 +17,5 @@ CREATE TABLE IF NOT EXISTS "dental_broadcast_runs" (
   "completed_at" timestamptz
 );
 
-CREATE INDEX IF NOT EXISTS "dental_broadcast_runs_clinic_date_idx"
+CREATE UNIQUE INDEX IF NOT EXISTS "dental_broadcast_runs_clinic_date_uidx"
   ON "dental_broadcast_runs" ("clinic_id", "run_date");
