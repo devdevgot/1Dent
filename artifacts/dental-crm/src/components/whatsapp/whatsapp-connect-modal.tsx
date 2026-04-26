@@ -172,19 +172,25 @@ export function WhatsAppConnectModal({
     if (startAtSetup) {
       setStep("setup");
       setInitialLoading(true);
-      // Only enter QR mode if the clinic actually has credentials configured.
-      // If not, show the provision CTA instead of bouncing into QR/error state.
       fetchStatus()
         .then(data => {
-          if (data?.configured) {
+          if (!data) return;
+          if (data.connected) {
+            // Already authorized — status polling will pick this up
+          } else if (data.configured && data.stateInstance === "initializing") {
+            // Instance exists but is still starting up — resume waiting UI
+            setWaitingForInit(true);
+            startElapsedTimer();
+          } else if (data.configured) {
+            // Instance ready — proceed to QR
             setConfigured(true);
             void fetchQr();
           }
-          // else: configured remains false → provision button will be shown
+          // else: not configured → provision button shown (configured stays false)
         })
         .finally(() => setInitialLoading(false));
     }
-  }, [open, startAtSetup, forceSetup, fetchQr, fetchStatus]);
+  }, [open, startAtSetup, forceSetup, fetchQr, fetchStatus, startElapsedTimer]);
 
   // ── QR + status polling once instance is configured ──
   useEffect(() => {
@@ -209,6 +215,20 @@ export function WhatsAppConnectModal({
       if (waitIntervalRef.current) clearInterval(waitIntervalRef.current);
     };
   }, [waitingForInit, pollInitStatus]);
+
+  // ── 5-minute hard timeout for initialization ──
+  useEffect(() => {
+    if (!waitingForInit) return;
+    if (elapsedSeconds < 300) return;
+    // Stop all timers and show timeout error
+    if (waitIntervalRef.current) clearInterval(waitIntervalRef.current);
+    if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
+    setWaitingForInit(false);
+    setProvisionError(
+      "Инстанс не инициализировался за 5 минут. Возможно, произошла ошибка на стороне Green API. " +
+      "Попробуйте нажать «Активировать WhatsApp» снова или обратитесь в поддержку."
+    );
+  }, [waitingForInit, elapsedSeconds]);
 
   // ── Reset on close ──
   useEffect(() => {
@@ -262,14 +282,24 @@ export function WhatsAppConnectModal({
         { method: "POST" },
       );
       if (res.data.isExisting) {
-        // Instance already exists — go straight to QR
-        setConfigured(true);
-        void Promise.all([fetchQr(), fetchStatus()]);
+        // Instance already exists — check its current state before deciding next step
+        const currentStatus = await fetchStatus();
+        if (currentStatus?.connected) {
+          // Already connected — status effect will update UI
+        } else if (!currentStatus || currentStatus.stateInstance === "initializing") {
+          // Still initializing — (re)enter waiting mode
+          setWaitingForInit(true);
+          startElapsedTimer();
+          setTimeout(() => void pollInitStatus(), 3_000);
+        } else {
+          // Ready (notAuthorized or similar) — go to QR
+          setConfigured(true);
+          void fetchQr();
+        }
       } else {
-        // New instance created — need to wait for initialization
+        // New instance created — need to wait for initialization (up to 5 min)
         setWaitingForInit(true);
         startElapsedTimer();
-        // Kick off the first status poll immediately after a short delay
         setTimeout(() => void pollInitStatus(), 3_000);
       }
     } catch (err) {
