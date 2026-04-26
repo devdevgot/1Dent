@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Calendar, User, AlertTriangle } from "lucide-react";
@@ -27,6 +28,28 @@ export function PatientCard({ patient }: PatientCardProps) {
     isDragging,
   } = useSortable({ id: patient.id });
 
+  const [isPressed, setIsPressed] = useState(false);
+
+  const mergedListeners = {
+    ...listeners,
+    onPointerDown: (e: React.PointerEvent) => {
+      setIsPressed(true);
+      listeners?.onPointerDown?.(e as never);
+    },
+    onPointerUp: (e: React.PointerEvent) => {
+      setIsPressed(false);
+      listeners?.onPointerUp?.(e as never);
+    },
+    onPointerLeave: (e: React.PointerEvent) => {
+      setIsPressed(false);
+      listeners?.onPointerLeave?.(e as never);
+    },
+    onPointerCancel: (e: React.PointerEvent) => {
+      setIsPressed(false);
+      listeners?.onPointerCancel?.(e as never);
+    },
+  };
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -49,18 +72,25 @@ export function PatientCard({ patient }: PatientCardProps) {
 
   const maskedIIN = patient.iin ? maskIIN(patient.iin) : null;
 
+  const isLifted = isPressed || isDragging;
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...listeners}
+      {...mergedListeners}
       onClick={() => setSelectedPatientId(patient.id)}
       className={`
         bg-white rounded-xl border p-3.5 cursor-grab active:cursor-grabbing
-        shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200
         select-none group
-        ${isDragging ? "opacity-50 rotate-1 shadow-xl" : ""}
+        transition-all duration-150
+        ${isDragging
+          ? "opacity-40 scale-95"
+          : isLifted
+          ? "rotate-2 scale-[1.03] shadow-2xl -translate-y-1 z-10"
+          : "shadow-sm hover:shadow-md hover:-translate-y-0.5"
+        }
         ${hasRedAlert ? "border-red-400 bg-red-50/40" : "border-border/60"}
       `}
     >
