@@ -11,7 +11,7 @@ import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 import { db, clinicsTable, channelTypes } from "@workspace/db";
 import { and, eq, isNull } from "drizzle-orm";
-import { getGreenApiQrCode, getGreenApiState, setGreenApiWebhookUrl, getServerBaseUrl, logoutGreenApiInstance, clearGreenApiStateCache, getGreenApiWaSettings, shouldRegisterWebhook, getGreenApiPairingCode, extractPhoneFromWaSettings } from "../../shared/green-api";
+import { getGreenApiQrCode, getGreenApiState, setGreenApiWebhookUrl, getServerBaseUrl, logoutGreenApiInstance, clearGreenApiStateCache, getGreenApiWaSettings, shouldRegisterWebhook, getGreenApiPairingCode, extractPhoneFromWaSettings, createPartnerInstance, deletePartnerInstance } from "../../shared/green-api";
 import { logger } from "../../lib/logger";
 
 const router: IRouter = Router();
@@ -143,6 +143,60 @@ router.patch(
   },
 );
 
+// POST /clinic/green-api/provision — auto-create a Green API instance via Partner API.
+// If the clinic already has an instance, returns it without creating a new one.
+router.post(
+  "/clinic/green-api/provision",
+  roleGuard("owner", "admin"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const partnerToken = process.env["GREEN_API_PARTNER_TOKEN"];
+    if (!partnerToken) {
+      return res.status(503).json({
+        success: false,
+        error: "Partner API не настроен. Обратитесь в поддержку.",
+      });
+    }
+
+    const [current] = await db
+      .select({ greenApiInstanceId: clinicsTable.greenApiInstanceId, greenApiToken: clinicsTable.greenApiToken })
+      .from(clinicsTable)
+      .where(eq(clinicsTable.id, req.user!.clinicId))
+      .limit(1)
+      .catch(next) ?? [];
+    if (current === undefined) return;
+
+    // If instance already provisioned — return existing without creating another
+    if (current.greenApiInstanceId && current.greenApiToken) {
+      logger.info({ instanceId: current.greenApiInstanceId, clinicId: req.user!.clinicId }, "Green API instance already provisioned — returning existing");
+      return res.json({ success: true, data: { idInstance: current.greenApiInstanceId, isExisting: true } });
+    }
+
+    // Create new instance via Partner API
+    let result;
+    try {
+      result = await createPartnerInstance(partnerToken);
+    } catch (err) {
+      logger.error({ err, clinicId: req.user!.clinicId }, "Green API createInstance (Partner API) failed");
+      const msg = err instanceof Error ? err.message : String(err);
+      return res.status(502).json({ success: false, error: `Не удалось создать инстанс: ${msg}` });
+    }
+
+    const instanceId = String(result.idInstance);
+    const token = result.apiTokenInstance;
+
+    // Persist to DB
+    await db
+      .update(clinicsTable)
+      .set({ greenApiInstanceId: instanceId, greenApiToken: token })
+      .where(eq(clinicsTable.id, req.user!.clinicId))
+      .catch(next);
+
+    clearGreenApiStateCache(instanceId);
+    logger.info({ instanceId, clinicId: req.user!.clinicId }, "Green API instance provisioned via Partner API");
+    res.json({ success: true, data: { idInstance: instanceId, isExisting: false } });
+  },
+);
+
 router.delete(
   "/clinic/green-api",
   roleGuard("owner", "admin"),
@@ -156,9 +210,7 @@ router.delete(
       .catch(next) ?? [];
     if (!current) return;
 
-    // Call Green API logout — await it so the device is actually unlinked before we clear credentials.
-    // This removes the linked device from WhatsApp on the owner's phone and sets the instance
-    // to "notAuthorized" in Green API dashboard.
+    // Call Green API logout to unlink the device from WhatsApp
     let greenApiLogoutOk = false;
     if (current.greenApiInstanceId && current.greenApiToken) {
       clearGreenApiStateCache(current.greenApiInstanceId);
@@ -179,12 +231,21 @@ router.delete(
       .returning({ id: clinicsTable.id })
       .catch(next);
     if (!rows || rows.length === 0) return;
+
+    // Delete the partner-provisioned instance from Green API (fire-and-forget)
+    const partnerToken = process.env["GREEN_API_PARTNER_TOKEN"];
+    if (partnerToken && current.greenApiInstanceId) {
+      deletePartnerInstance(current.greenApiInstanceId, partnerToken)
+        .then(() => logger.info({ instanceId: current.greenApiInstanceId }, "Partner instance deleted from Green API"))
+        .catch((err) => logger.warn({ err, instanceId: current.greenApiInstanceId }, "Failed to delete partner instance — it may remain active in Green API dashboard"));
+    }
+
     res.json({
       success: true,
       data: {
         greenApiLogoutOk,
         message: greenApiLogoutOk
-          ? "WhatsApp отключён — устройство удалено из телефона и из Green API"
+          ? "WhatsApp отключён — устройство удалено из телефона и инстанс удалён из Green API"
           : "Данные удалены из CRM, но отключить Green API не удалось — выйдите вручную через green-api.com",
       },
     });
@@ -329,8 +390,10 @@ router.get(
     try {
       state = await getGreenApiState(clinic.greenApiInstanceId, clinic.greenApiToken);
     } catch (err) {
-      logger.warn({ err, instanceId: clinic.greenApiInstanceId }, "Green API getStateInstance failed — returning not-connected");
-      return res.json({ success: true, data: { configured: true, connected: false, phone: null } });
+      logger.warn({ err, instanceId: clinic.greenApiInstanceId }, "Green API getStateInstance failed — instance may still be initializing");
+      // New partner-provisioned instances take up to 5 minutes to initialize.
+      // Return "initializing" so the frontend shows appropriate progress UI instead of an error.
+      return res.json({ success: true, data: { configured: true, connected: false, phone: null, stateInstance: "initializing" } });
     }
     const connected = state.stateInstance === "authorized";
 
@@ -377,7 +440,7 @@ router.get(
 
     // Disable ETag/304 caching — state can change at any moment (QR scan)
     res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
-    res.json({ success: true, data: { configured: true, connected, phone: finalPhone } });
+    res.json({ success: true, data: { configured: true, connected, phone: finalPhone, stateInstance: state.stateInstance } });
   },
 );
 

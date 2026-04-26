@@ -265,6 +265,56 @@ export async function logoutGreenApiInstance(
   }
 }
 
+// ─── Partner API ─────────────────────────────────────────────────────────────
+
+export interface PartnerCreateInstanceResult {
+  idInstance: number;
+  apiTokenInstance: string;
+}
+
+/**
+ * Create a new WhatsApp instance via Green API Partner API.
+ * Docs: https://green-api.com/docs/partners/createInstance/
+ * The instance takes up to 5 minutes to initialize after creation.
+ */
+export async function createPartnerInstance(partnerToken: string): Promise<PartnerCreateInstanceResult> {
+  const url = `${BASE_URL}/partner/createInstance/${partnerToken}`;
+  const res = await fetch(url, {
+    method: "POST",
+    signal: greenApiSignal(30_000),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      stateWebhook: "yes",
+      incomingWebhook: "yes",
+      outgoingWebhook: "yes",
+      outgoingAPIMessageWebhook: "yes",
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Green API createInstance failed: ${res.status} ${body}`);
+  }
+  return res.json() as Promise<PartnerCreateInstanceResult>;
+}
+
+/**
+ * Delete a partner-provisioned instance via Green API Partner API.
+ * Docs: https://green-api.com/docs/partners/deleteInstanceAccount/
+ */
+export async function deletePartnerInstance(instanceId: string, partnerToken: string): Promise<void> {
+  const url = `${BASE_URL}/partner/deleteInstanceAccount/${partnerToken}`;
+  const res = await fetch(url, {
+    method: "DELETE",
+    signal: greenApiSignal(30_000),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ idInstance: parseInt(instanceId, 10) }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Green API deleteInstance failed: ${res.status} ${body}`);
+  }
+}
+
 export function parseGreenApiWebhook(body: unknown): ParsedWebhook | null {
   try {
     const b = body as Record<string, unknown>;

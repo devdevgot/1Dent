@@ -1,11 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { customFetch } from "@workspace/api-client-react";
-import { X, Check, Copy, CheckCircle2, Loader2, AlertTriangle, RefreshCw } from "lucide-react";
+import { X, CheckCircle2, Loader2, AlertTriangle, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 function extractApiErrorMessage(err: unknown): string {
   if (err && typeof err === "object") {
-    // ApiError has a .data field with the parsed API response
     const data = (err as { data?: unknown }).data;
     if (data && typeof data === "object") {
       const errorField = (data as Record<string, unknown>).error;
@@ -34,11 +33,19 @@ export interface WaStatus {
   configured: boolean;
   connected: boolean;
   phone: string | null;
+  stateInstance?: string;
 }
 
 interface WaQr {
   type: string;
   message: string;
+}
+
+function formatElapsed(seconds: number): string {
+  if (seconds < 60) return `${seconds} сек`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m} мин ${s} сек`;
 }
 
 export function WhatsAppConnectModal({
@@ -55,33 +62,33 @@ export function WhatsAppConnectModal({
   forceSetup?: boolean;
 }) {
   const { toast } = useToast();
-  // Steps: intro → phone (enter real number) → setup (Green API credentials + QR)
+
+  // Steps: intro → phone (enter real number) → setup (auto-provision + QR)
   const [step, setStep] = useState<"intro" | "phone" | "setup">(
     forceSetup ? "phone" : startAtSetup ? "setup" : "intro"
   );
-  const [instanceId, setInstanceId] = useState("");
-  const [token, setToken] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [configured, setConfigured] = useState(false);
 
-  // Real clinic WhatsApp phone (step 1 — independent of Green API)
+  // Phone step
   const [clinicPhone, setClinicPhone] = useState("");
   const [clinicPhoneSaving, setClinicPhoneSaving] = useState(false);
 
-  // QR state
+  // Provision state
+  const [provisioning, setProvisioning] = useState(false);
+  const [provisionError, setProvisionError] = useState<string | null>(null);
+  // True after provision returns, while waiting for instance to initialize (up to 5 min)
+  const [waitingForInit, setWaitingForInit] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const elapsedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // QR + status
+  const [configured, setConfigured] = useState(false);
   const [qr, setQr] = useState<WaQr | null>(null);
   const [qrError, setQrError] = useState<string | null>(null);
-
   const [status, setStatus] = useState<WaStatus | null>(null);
-  const [copied, setCopied] = useState(false);
   const [initialLoading, setInitialLoading] = useState(false);
   const qrIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const statusIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // Saving credentials progress
-  const [saveProgress, setSaveProgress] = useState(0);
-  const [saveStage, setSaveStage] = useState("");
-  const saveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const waitIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -92,8 +99,10 @@ export function WhatsAppConnectModal({
       if (res.data.connected) {
         onConnected(res.data.phone);
       }
+      return res.data;
     } catch {
       setStatus(null);
+      return null;
     }
   }, [onConnected]);
 
@@ -104,7 +113,6 @@ export function WhatsAppConnectModal({
       );
       setQrError(null);
       setQr(res.data);
-      setConfigured(true);
       if (res.data.type === "alreadyLogged") {
         await fetchStatus();
       }
@@ -114,6 +122,38 @@ export function WhatsAppConnectModal({
     }
   }, [fetchStatus]);
 
+  // Poll status during "waitingForInit" phase — transition to QR once instance is ready
+  const pollInitStatus = useCallback(async () => {
+    const data = await fetchStatus();
+    if (!data) return;
+    if (data.connected) {
+      // Already authorized — skip QR phase
+      if (waitIntervalRef.current) clearInterval(waitIntervalRef.current);
+      if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
+      setWaitingForInit(false);
+      return;
+    }
+    if (data.stateInstance && data.stateInstance !== "initializing") {
+      // Instance is ready (notAuthorized) — move to QR phase
+      if (waitIntervalRef.current) clearInterval(waitIntervalRef.current);
+      if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
+      setWaitingForInit(false);
+      setConfigured(true);
+      void fetchQr();
+    }
+    // else stateInstance === "initializing" → keep waiting
+  }, [fetchStatus, fetchQr]);
+
+  // Start elapsed timer
+  const startElapsedTimer = useCallback(() => {
+    setElapsedSeconds(0);
+    if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
+    elapsedTimerRef.current = setInterval(() => {
+      setElapsedSeconds(prev => prev + 1);
+    }, 1_000);
+  }, []);
+
+  // ── Initial load when modal opens at setup step ──
   useEffect(() => {
     if (!open) return;
     if (forceSetup) {
@@ -125,16 +165,18 @@ export function WhatsAppConnectModal({
       setInitialLoading(true);
       Promise.all([fetchQr(), fetchStatus()]).finally(() => {
         setInitialLoading(false);
+        setConfigured(true);
       });
     }
   }, [open, startAtSetup, forceSetup, fetchQr, fetchStatus]);
 
+  // ── QR + status polling once instance is configured ──
   useEffect(() => {
     if (qrIntervalRef.current) clearInterval(qrIntervalRef.current);
     if (statusIntervalRef.current) clearInterval(statusIntervalRef.current);
     if (!configured || status?.connected) return;
-    qrIntervalRef.current = setInterval(fetchQr, 20_000);
-    // Poll every 5s so the UI reacts within seconds after QR scan
+    // Green API docs: poll QR every 2s so client always has the freshest QR
+    qrIntervalRef.current = setInterval(fetchQr, 2_000);
     statusIntervalRef.current = setInterval(fetchStatus, 5_000);
     return () => {
       if (qrIntervalRef.current) clearInterval(qrIntervalRef.current);
@@ -142,21 +184,35 @@ export function WhatsAppConnectModal({
     };
   }, [configured, status?.connected, fetchQr, fetchStatus]);
 
+  // ── Waiting-for-init polling ──
+  useEffect(() => {
+    if (waitIntervalRef.current) clearInterval(waitIntervalRef.current);
+    if (!waitingForInit) return;
+    waitIntervalRef.current = setInterval(pollInitStatus, 5_000);
+    return () => {
+      if (waitIntervalRef.current) clearInterval(waitIntervalRef.current);
+    };
+  }, [waitingForInit, pollInitStatus]);
+
+  // ── Reset on close ──
   useEffect(() => {
     if (!open) {
       setStep(forceSetup ? "phone" : startAtSetup ? "setup" : "intro");
-      setInstanceId("");
-      setToken("");
-      setSaving(false);
-      setConfigured(false);
       setClinicPhone("");
       setClinicPhoneSaving(false);
+      setProvisioning(false);
+      setProvisionError(null);
+      setWaitingForInit(false);
+      setElapsedSeconds(0);
+      setConfigured(false);
       setQr(null);
       setQrError(null);
       setStatus(null);
       setInitialLoading(false);
       if (qrIntervalRef.current) clearInterval(qrIntervalRef.current);
       if (statusIntervalRef.current) clearInterval(statusIntervalRef.current);
+      if (waitIntervalRef.current) clearInterval(waitIntervalRef.current);
+      if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
     }
   }, [open, startAtSetup, forceSetup]);
 
@@ -181,59 +237,30 @@ export function WhatsAppConnectModal({
     }
   };
 
-  const SAVE_STAGES = [
-    { threshold: 0,  label: "Сохраняем данные инстанса..." },
-    { threshold: 40, label: "Проверяем подключение к Green API..." },
-    { threshold: 72, label: "Запрашиваем QR-код..." },
-  ];
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!instanceId.trim() || !token.trim()) return;
-    setSaving(true);
-    setSaveProgress(0);
-    setSaveStage(SAVE_STAGES[0].label);
-
-    const startMs = Date.now();
-    const TOTAL_MS = 5_000;
-    saveTimerRef.current = setInterval(() => {
-      const pct = Math.min(85, Math.floor(((Date.now() - startMs) / TOTAL_MS) * 85));
-      setSaveProgress(pct);
-      const stage = [...SAVE_STAGES].reverse().find(s => pct >= s.threshold);
-      setSaveStage(stage?.label ?? "");
-    }, 100);
-
+  const handleProvision = async () => {
+    setProvisionError(null);
+    setProvisioning(true);
     try {
-      await customFetch("/api/clinic/green-api", {
-        method: "PATCH",
-        body: JSON.stringify({ greenApiInstanceId: instanceId.trim(), greenApiToken: token.trim() }),
-      });
-      setSaveProgress(100);
-      setSaveStage("Данные сохранены!");
-      await new Promise(r => setTimeout(r, 500));
-
-      setStatus(null);
-      setConfigured(true);
-      setQr(null);
-      void Promise.all([fetchQr(), fetchStatus()]);
-    } catch {
-      setSaveProgress(100);
-      setSaveStage("Ошибка сохранения");
-      await new Promise(r => setTimeout(r, 400));
-      toast({ title: "Ошибка сохранения", variant: "destructive" });
+      const res = await customFetch<{ success: boolean; data: { idInstance: string; isExisting: boolean } }>(
+        "/api/clinic/green-api/provision",
+        { method: "POST" },
+      );
+      if (res.data.isExisting) {
+        // Instance already exists — go straight to QR
+        setConfigured(true);
+        void Promise.all([fetchQr(), fetchStatus()]);
+      } else {
+        // New instance created — need to wait for initialization
+        setWaitingForInit(true);
+        startElapsedTimer();
+        // Kick off the first status poll immediately after a short delay
+        setTimeout(() => void pollInitStatus(), 3_000);
+      }
+    } catch (err) {
+      setProvisionError(extractApiErrorMessage(err));
     } finally {
-      if (saveTimerRef.current) clearInterval(saveTimerRef.current);
-      setSaving(false);
-      setSaveProgress(0);
-      setSaveStage("");
+      setProvisioning(false);
     }
-  };
-
-  const copyInstanceId = () => {
-    navigator.clipboard.writeText(instanceId).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
   };
 
   if (!open) return null;
@@ -256,6 +283,7 @@ export function WhatsAppConnectModal({
           </button>
         )}
 
+        {/* ── Intro ── */}
         {step === "intro" && (
           <div className="flex flex-col items-center px-8 py-10 text-center">
             <button
@@ -278,7 +306,7 @@ export function WhatsAppConnectModal({
             <div className="w-full space-y-3 text-left mb-7">
               {[
                 "Укажите номер WhatsApp вашей клиники",
-                "Введите данные вашего Green API инстанса",
+                "Инстанс создаётся автоматически — вручную ничего вводить не нужно",
                 "Отсканируйте QR-код на телефоне клиники",
               ].map((s, i) => (
                 <div key={i} className="flex items-start gap-3">
@@ -302,6 +330,7 @@ export function WhatsAppConnectModal({
           </div>
         )}
 
+        {/* ── Phone step ── */}
         {step === "phone" && (
           <div className="p-6">
             <button
@@ -357,6 +386,7 @@ export function WhatsAppConnectModal({
           </div>
         )}
 
+        {/* ── Setup step ── */}
         {step === "setup" && (
           <div className="p-6">
             <div className="flex items-center gap-2.5 mb-5">
@@ -368,18 +398,29 @@ export function WhatsAppConnectModal({
               </div>
               <div>
                 <h2 className="text-base font-bold text-gray-900 leading-tight">
-                  {initialLoading ? "Загрузка..." : isConnected ? "WhatsApp подключён" : "Данные Green API"}
+                  {initialLoading ? "Загрузка..." :
+                    isConnected ? "WhatsApp подключён" :
+                    waitingForInit ? "Инициализация инстанса..." :
+                    provisioning ? "Создание инстанса..." :
+                    configured ? "Сканирование QR" :
+                    "Подключение WhatsApp"}
                 </h2>
-                <p className="text-xs text-gray-400">{isConnected ? "Подключён" : "Шаг 2 из 2"}</p>
+                <p className="text-xs text-gray-400">
+                  {isConnected ? "Подключён" : "Шаг 2 из 2"}
+                </p>
               </div>
             </div>
 
-            {initialLoading ? (
+            {/* Loading initial state */}
+            {initialLoading && (
               <div className="flex flex-col items-center justify-center py-10 gap-3">
                 <Loader2 className="w-8 h-8 animate-spin text-gray-300" />
                 <p className="text-sm text-gray-400">Проверка статуса...</p>
               </div>
-            ) : isConnected ? (
+            )}
+
+            {/* Connected success */}
+            {!initialLoading && isConnected && (
               <div className="text-center py-4">
                 <CheckCircle2 className="w-14 h-14 mx-auto mb-3 text-green-500" />
                 <p className="font-semibold text-gray-800 text-base mb-1">WhatsApp успешно подключён!</p>
@@ -397,183 +438,138 @@ export function WhatsAppConnectModal({
                   Готово
                 </button>
               </div>
-            ) : (
+            )}
+
+            {/* Provisioning spinner */}
+            {!initialLoading && !isConnected && provisioning && (
+              <div className="flex flex-col items-center py-8 gap-4">
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ backgroundColor: "#25D366" + "18" }}>
+                  <WhatsAppIcon size={36} color="#25D366" />
+                </div>
+                <Loader2 className="w-8 h-8 animate-spin" style={{ color: BRAND }} />
+                <div className="text-center">
+                  <p className="text-sm font-semibold text-gray-800">Создаём инстанс в Green API</p>
+                  <p className="text-xs text-gray-400 mt-1">Обычно занимает несколько секунд...</p>
+                </div>
+              </div>
+            )}
+
+            {/* Waiting for initialization */}
+            {!initialLoading && !isConnected && !provisioning && waitingForInit && (
+              <div className="flex flex-col items-center py-6 gap-4 text-center">
+                <div className="relative">
+                  <div
+                    className="w-20 h-20 rounded-3xl flex items-center justify-center"
+                    style={{ backgroundColor: "#25D366" + "15" }}
+                  >
+                    <WhatsAppIcon size={40} color="#25D366" />
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-white flex items-center justify-center shadow">
+                    <Loader2 className="w-4 h-4 animate-spin" style={{ color: BRAND }} />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">Инстанс создан, ожидаем готовности</p>
+                  <p className="text-xs text-gray-400 mt-1 leading-relaxed max-w-xs">
+                    Инициализация занимает до 5 минут. Пожалуйста, не закрывайте это окно.
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-gray-400 bg-gray-50 rounded-lg px-4 py-2">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <span>Прошло: {formatElapsed(elapsedSeconds)}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Provision button + error */}
+            {!initialLoading && !isConnected && !provisioning && !waitingForInit && !configured && (
+              <div className="flex flex-col gap-4">
+                <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-500 leading-relaxed">
+                  Нажмите кнопку ниже — система автоматически создаст WhatsApp инстанс
+                  и покажет QR-код для сканирования с телефона клиники.
+                </div>
+
+                {provisionError && (
+                  <div className="flex items-start gap-2.5 bg-red-50 rounded-xl p-3 text-xs text-red-600">
+                    <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>{provisionError}</span>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => void handleProvision()}
+                  className="w-full h-11 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-[0.98]"
+                  style={{ backgroundColor: "#25D366" }}
+                >
+                  <WhatsAppIcon size={18} color="white" />
+                  Активировать WhatsApp
+                </button>
+              </div>
+            )}
+
+            {/* QR section */}
+            {!initialLoading && !isConnected && configured && (
               <>
-                {!configured && (
-                  <>
-                    {/* ── Saving progress (shown while credentials are being saved) ── */}
-                    {saving && (
-                      <div className="flex flex-col items-center py-6 gap-5">
-                        <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ backgroundColor: "#25D366" + "18" }}>
-                          <WhatsAppIcon size={36} color="#25D366" />
-                        </div>
-                        <div className="text-center">
-                          <p className="text-sm font-bold text-gray-900 mb-1">Подключение к Green API</p>
-                          <p className="text-xs text-gray-400 min-h-[16px]">{saveStage}</p>
-                        </div>
-                        <div className="text-5xl font-bold tabular-nums transition-all duration-150"
-                          style={{ color: saveProgress === 100 ? "#22c55e" : BRAND }}>
-                          {saveProgress}%
-                        </div>
-                        <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                          <div
-                            className="h-full rounded-full transition-all duration-150 ease-linear"
-                            style={{
-                              width: `${saveProgress}%`,
-                              backgroundColor: saveProgress === 100 ? "#22c55e" : BRAND,
-                            }}
+                {!qr && !qrError && (
+                  <div className="flex flex-col items-center justify-center py-8 gap-3">
+                    <Loader2 className="w-8 h-8 animate-spin text-gray-300" />
+                    <p className="text-sm text-gray-400">Запрашиваем QR-код у Green API...</p>
+                  </div>
+                )}
+
+                {!qr && qrError && (
+                  <div className="flex flex-col items-center justify-center py-6 gap-3 text-center">
+                    <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
+                      <AlertTriangle className="w-6 h-6 text-red-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-700 mb-1">Не удалось получить QR-код</p>
+                      <p className="text-xs text-gray-400 leading-relaxed max-w-xs">{qrError}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setQrError(null); void fetchQr(); }}
+                      className="flex items-center gap-1.5 h-9 px-4 rounded-lg text-xs font-semibold text-white transition-colors"
+                      style={{ backgroundColor: BRAND }}
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      Попробовать снова
+                    </button>
+                  </div>
+                )}
+
+                {qr && (
+                  <div className="text-center">
+                    {qr.type === "qrCode" ? (
+                      <>
+                        <p className="text-xs text-gray-500 mb-3">
+                          Отсканируйте QR с телефона → WhatsApp → Привязанные устройства
+                        </p>
+                        <div className="flex justify-center mb-3">
+                          <img
+                            src={`data:image/png;base64,${qr.message}`}
+                            alt="WhatsApp QR"
+                            className="w-48 h-48 rounded-xl border border-border shadow-sm"
                           />
                         </div>
-                      </div>
-                    )}
-
-                    {/* Credentials form — hidden while saving */}
-                    {!saving && (
-                      <>
-                        <form onSubmit={handleSave} className="space-y-3 mb-4">
-                          <div>
-                            <label className="block text-xs font-medium text-gray-500 mb-1">
-                              ID инстанса (idInstance)
-                            </label>
-                            <div className="relative">
-                              <input
-                                type="text"
-                                value={instanceId}
-                                onChange={(e) => setInstanceId(e.target.value)}
-                                placeholder="1234567890"
-                                className="w-full h-9 rounded-lg border border-border bg-white px-3 pr-9 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#98cc1c]/30"
-                              />
-                              {instanceId && (
-                                <button
-                                  type="button"
-                                  onClick={copyInstanceId}
-                                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                                >
-                                  {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-gray-500 mb-1">
-                              API токен (apiTokenInstance)
-                            </label>
-                            <input
-                              type="password"
-                              value={token}
-                              onChange={(e) => setToken(e.target.value)}
-                              placeholder="••••••••••••••••••••••"
-                              className="w-full h-9 rounded-lg border border-border bg-white px-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#98cc1c]/30"
-                            />
-                          </div>
-                          <p className="text-xs text-gray-400">
-                            Данные из личного кабинета{" "}
-                            <a
-                              href="https://green-api.com"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-[#98cc1c] hover:underline"
-                            >
-                              green-api.com
-                            </a>
-                          </p>
-                          <button
-                            type="submit"
-                            disabled={!instanceId.trim() || !token.trim()}
-                            className="w-full h-10 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
-                            style={{ backgroundColor: BRAND }}
-                          >
-                            Сохранить и получить QR
-                          </button>
-                        </form>
+                        <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Ожидание сканирования...
+                        </div>
                       </>
+                    ) : qr.type === "alreadyLogged" ? (
+                      <div className="py-2">
+                        <CheckCircle2 className="w-10 h-10 mx-auto mb-2 text-green-500" />
+                        <p className="text-sm font-semibold text-gray-700">WhatsApp уже подключён</p>
+                      </div>
+                    ) : (
+                      <div className="py-2">
+                        <p className="text-sm text-gray-500">{qr.type}: {qr.message}</p>
+                      </div>
                     )}
-                  </>
+                  </div>
                 )}
-
-                {/* ── QR ── */}
-                {configured && (
-                  <>
-                    {!qr && !qrError && (
-                      <div className="flex flex-col items-center justify-center py-8 gap-3">
-                        <Loader2 className="w-8 h-8 animate-spin text-gray-300" />
-                        <p className="text-sm text-gray-400">Запрашиваем QR-код у Green API...</p>
-                      </div>
-                    )}
-
-                    {!qr && qrError && (
-                      <div className="flex flex-col items-center justify-center py-6 gap-3 text-center">
-                        <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
-                          <AlertTriangle className="w-6 h-6 text-red-400" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-gray-700 mb-1">Не удалось получить QR-код</p>
-                          <p className="text-xs text-gray-400 leading-relaxed max-w-xs">
-                            {qrError}
-                          </p>
-                        </div>
-                        <div className="flex gap-2 mt-1">
-                          <button
-                            type="button"
-                            onClick={() => { setConfigured(false); setQrError(null); setQr(null); setStatus(null); }}
-                            className="flex items-center gap-1.5 h-9 px-4 rounded-lg border border-border text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
-                          >
-                            Изменить данные
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => { setQrError(null); void fetchQr(); }}
-                            className="flex items-center gap-1.5 h-9 px-4 rounded-lg text-xs font-semibold text-white transition-colors"
-                            style={{ backgroundColor: BRAND }}
-                          >
-                            <RefreshCw className="w-3.5 h-3.5" />
-                            Попробовать снова
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {qr && (
-                      <div className="text-center">
-                        {qr.type === "qrCode" ? (
-                          <>
-                            <p className="text-xs text-gray-500 mb-3">
-                              Отсканируйте QR с телефона → WhatsApp → Привязанные устройства
-                            </p>
-                            <div className="flex justify-center mb-3">
-                              <img
-                                src={`data:image/png;base64,${qr.message}`}
-                                alt="WhatsApp QR"
-                                className="w-48 h-48 rounded-xl border border-border shadow-sm"
-                              />
-                            </div>
-                            <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400">
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                              Ожидание сканирования...
-                            </div>
-                          </>
-                        ) : qr.type === "alreadyLogged" ? (
-                          <div className="py-2">
-                            <CheckCircle2 className="w-10 h-10 mx-auto mb-2 text-green-500" />
-                            <p className="text-sm font-semibold text-gray-700">WhatsApp уже подключён</p>
-                          </div>
-                        ) : (
-                          <div className="py-2">
-                            <p className="text-sm text-gray-500">{qr.type}: {qr.message}</p>
-                          </div>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => { setConfigured(false); setQr(null); setStatus(null); }}
-                          className="mt-4 text-xs text-gray-400 hover:text-gray-600 underline"
-                        >
-                          Изменить данные
-                        </button>
-                      </div>
-                    )}
-                  </>
-                )}
-
               </>
             )}
           </div>
