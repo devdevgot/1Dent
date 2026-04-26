@@ -3,6 +3,9 @@ import { runDentalBroadcastForAllClinics } from "./dental-broadcast.service";
 
 const INTERVAL_MS = 30 * 60 * 1000;
 
+// Dates are evaluated in UTC throughout (scheduler and runDate storage use toISOString().slice(0,10)).
+// UTC+5 (Kazakhstan Standard Time) means midnight UTC = 5:00 AM local, so the 30-min tick window
+// starting at 00:00 UTC on the 15th/last-day will fire within the correct calendar day locally.
 function isScheduledDay(): boolean {
   const now = new Date();
   const utcDay = now.getUTCDate();
