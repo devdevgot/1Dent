@@ -4,7 +4,6 @@ import { eq, and, desc } from "drizzle-orm";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { runDentalBroadcastForClinic } from "./dental-broadcast.service";
 import { ValidationError } from "../../shared/errors";
-import { logger } from "../../lib/logger";
 
 const router = Router();
 const ownerAdmin = roleGuard("owner", "admin");
@@ -57,20 +56,9 @@ router.post(
         return next(new ValidationError("Рассылка уже выполняется"));
       }
 
-      runDentalBroadcastForClinic(clinicId).catch((err) => {
-        logger.error({ err, clinicId }, "[DentalBroadcast] Trigger fire-and-forget error");
-      });
+      const run = await runDentalBroadcastForClinic(clinicId);
 
-      await new Promise((resolve) => setTimeout(resolve, 200));
-
-      const [latestRun] = await db
-        .select()
-        .from(dentalBroadcastRunsTable)
-        .where(eq(dentalBroadcastRunsTable.clinicId, clinicId))
-        .orderBy(desc(dentalBroadcastRunsTable.startedAt))
-        .limit(1);
-
-      res.status(201).json({ success: true, data: { run: latestRun ?? null } });
+      res.status(201).json({ success: true, data: { run } });
     } catch (err) {
       next(err);
     }
