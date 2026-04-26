@@ -5,6 +5,7 @@ import { db } from "@workspace/db";
 import app from "./app";
 import { logger } from "./lib/logger";
 import { startAlertWorker } from "./shared/alert-queue";
+import { startDentalBroadcastScheduler } from "./modules/dental-broadcast/dental-broadcast.scheduler";
 import { getServerBaseUrl } from "./shared/green-api";
 import { seedAllClinics } from "./seeds/procedure-templates.seed";
 
@@ -80,6 +81,12 @@ app.listen(port, (err) => {
     logger.warn(
       "WHATSAPP_APP_SECRET not set in production — inbound webhook POST requests will be rejected (fail-closed). Set this secret to enable inbound WhatsApp.",
     );
+  }
+
+  try {
+    startDentalBroadcastScheduler();
+  } catch (err) {
+    logger.warn({ err }, "Dental broadcast scheduler failed to start");
   }
 
   // Start BullMQ worker only if Redis is configured

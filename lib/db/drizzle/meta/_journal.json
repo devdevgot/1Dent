@@ -85,6 +85,13 @@
       "when": 1745787600000,
       "tag": "0011_dental_ai_analyses",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1745874000000,
+      "tag": "0012_dental_broadcast_runs",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, integer, pgEnum, real, boolean, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, integer, pgEnum, real, boolean, uniqueIndex, date } from "drizzle-orm/pg-core";
 import { clinicsTable } from "./clinics";
 import { usersTable } from "./users";
 import { patientsTable } from "./patients";
@@ -233,3 +233,27 @@ export const dentalAiAnalysesTable = pgTable(
 );
 
 export type DentalAiAnalysis = typeof dentalAiAnalysesTable.$inferSelect;
+
+export const broadcastStatusEnum = pgEnum("broadcast_status", [
+  "pending",
+  "running",
+  "completed",
+  "failed",
+]);
+
+export const dentalBroadcastRunsTable = pgTable("dental_broadcast_runs", {
+  id: text("id").primaryKey(),
+  clinicId: text("clinic_id")
+    .notNull()
+    .references(() => clinicsTable.id, { onDelete: "cascade" }),
+  runDate: date("run_date").notNull(),
+  status: broadcastStatusEnum("status").notNull().default("pending"),
+  totalPatients: integer("total_patients").notNull().default(0),
+  processedPatients: integer("processed_patients").notNull().default(0),
+  messagesSent: integer("messages_sent").notNull().default(0),
+  errorsCount: integer("errors_count").notNull().default(0),
+  startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+});
+
+export type DentalBroadcastRun = typeof dentalBroadcastRunsTable.$inferSelect;

@@ -768,3 +768,68 @@ export const useGetDentalAiAnalysis = <TError = unknown>(
     enabled: !!patientId,
     ...options?.query,
   });
+
+// ─── Dental Broadcast ────────────────────────────────────────────────────────
+
+export interface DentalBroadcastRun {
+  id: string;
+  clinicId: string;
+  runDate: string;
+  status: "pending" | "running" | "completed" | "failed";
+  totalPatients: number;
+  processedPatients: number;
+  messagesSent: number;
+  errorsCount: number;
+  startedAt: string;
+  completedAt: string | null;
+}
+
+export interface ListDentalBroadcastRunsResponse {
+  success: boolean;
+  data: { runs: DentalBroadcastRun[] };
+}
+
+export interface TriggerDentalBroadcastResponse {
+  success: boolean;
+  data: { run: DentalBroadcastRun | null };
+}
+
+export const listDentalBroadcastRunsQueryKey = () =>
+  ["/api/dental-broadcast/runs"] as const;
+
+export const listDentalBroadcastRuns = (
+  limit = 20,
+  options?: RequestInit,
+): Promise<ListDentalBroadcastRunsResponse> =>
+  customFetch<ListDentalBroadcastRunsResponse>(
+    `/api/dental-broadcast/runs?limit=${limit}`,
+    { method: "GET", ...options },
+  );
+
+export const useListDentalBroadcastRuns = <TError = unknown>(
+  limit = 20,
+  options?: { query?: UseQueryOptions<ListDentalBroadcastRunsResponse, TError> },
+) =>
+  useQuery<ListDentalBroadcastRunsResponse, TError>({
+    queryKey: listDentalBroadcastRunsQueryKey(),
+    queryFn: ({ signal }) => listDentalBroadcastRuns(limit, { signal }),
+    refetchInterval: (query) =>
+      query.state.data?.data?.runs?.some((r) => r.status === "running") ? 2000 : false,
+    ...options?.query,
+  });
+
+export const triggerDentalBroadcast = (
+  options?: RequestInit,
+): Promise<TriggerDentalBroadcastResponse> =>
+  customFetch<TriggerDentalBroadcastResponse>("/api/dental-broadcast/trigger", {
+    method: "POST",
+    ...options,
+  });
+
+export const useTriggerDentalBroadcast = <TError = unknown>(
+  options?: { mutation?: UseMutationOptions<TriggerDentalBroadcastResponse, TError, void> },
+) =>
+  useMutation<TriggerDentalBroadcastResponse, TError, void>({
+    mutationFn: () => triggerDentalBroadcast(),
+    ...options?.mutation,
+  });
