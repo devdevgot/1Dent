@@ -270,8 +270,12 @@ export default function UsersPage() {
           name: formData.name,
           role: formData.role,
           phone: formData.phone || null,
-          position: formData.position || null,
-          specialty: formData.specialty || null,
+          position: formData.role === "doctor"
+            ? (formData.specialties[0] || null)
+            : (formData.position || null),
+          specialty: formData.role === "doctor"
+            ? (formData.specialties.join(", ") || null)
+            : null,
           hireDate: formData.hireDate || null,
           password: formData.password || undefined,
         },
@@ -303,8 +307,12 @@ export default function UsersPage() {
           password: formData.password,
           role: formData.role,
           phone: formData.phone || undefined,
-          position: formData.position || undefined,
-          specialty: formData.specialty || undefined,
+          position: formData.role === "doctor"
+            ? (formData.specialties[0] || undefined)
+            : (formData.position || undefined),
+          specialty: formData.role === "doctor"
+            ? (formData.specialties.join(", ") || undefined)
+            : undefined,
           hireDate: formData.hireDate || undefined,
           maxPatientsPerDay: formData.maxPatientsPerDay,
         },
