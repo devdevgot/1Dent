@@ -263,7 +263,7 @@ function Router() {
 
       {/* Users management */}
       <Route path="/users">
-        <ProtectedRoute component={UsersPage} allowedRoles={['owner', 'admin']} />
+        <ProtectedRoute component={UsersPage} allowedRoles={['owner']} />
       </Route>
 
       {/* Chatbot management */}

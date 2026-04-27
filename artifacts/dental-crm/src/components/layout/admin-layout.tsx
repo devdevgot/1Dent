@@ -16,7 +16,6 @@ import {
   ChevronRight,
   LogOut,
   UserCircle,
-  UserCog,
   PlusCircle,
   Menu,
   X,
@@ -35,7 +34,6 @@ const ADMIN_NAV_ITEMS = [
   { nameKey: "nav.services",             href: "/services",                icon: Stethoscope,     badge: null },
   { nameKey: "nav.chat",                 href: "/chat",                    icon: FaWhatsapp,      badge: null },
   { nameKey: "nav.inventory",            href: "/inventory",               icon: Package,         badge: null },
-  { nameKey: "nav.users",                href: "/users",                   icon: UserCog,         badge: null },
   { nameKey: "nav.chatbot",              href: "/chatbot",                 icon: Bot,             badge: null },
   { nameKey: "nav.settings",             href: "/settings",                icon: Settings,        badge: null },
 ];

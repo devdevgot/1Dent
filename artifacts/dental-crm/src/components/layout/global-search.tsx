@@ -57,7 +57,7 @@ const PAGE_ITEMS: {
   { label: "Финансы",    href: "/financials",      roles: ["owner","accountant"],                             Icon: Wallet,          iconBg: "bg-emerald-100",iconColor: "text-emerald-600" },
   { label: "Инвентарь",  href: "/inventory",       roles: ["owner","admin","warehouse"],                      Icon: Package,         iconBg: "bg-amber-100",  iconColor: "text-amber-600" },
   { label: "WhatsApp",   href: "/chat",            roles: ["owner","admin","doctor"],                         Icon: FaWhatsapp,      iconBg: "bg-green-100",  iconColor: "text-green-600" },
-  { label: "Сотрудники", href: "/users",           roles: ["owner","admin"],                                  Icon: UserCog,         iconBg: "bg-slate-100",  iconColor: "text-slate-600" },
+  { label: "Сотрудники", href: "/users",           roles: ["owner"],                                          Icon: UserCog,         iconBg: "bg-slate-100",  iconColor: "text-slate-600" },
   { label: "Чат-бот",   href: "/chatbot",          roles: ["owner","admin"],                                  Icon: Bot,             iconBg: "bg-purple-100", iconColor: "text-purple-600" },
 ];
 
