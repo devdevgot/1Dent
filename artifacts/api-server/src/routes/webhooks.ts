@@ -91,8 +91,10 @@ router.post(
             .then(() => logger.info({ clinicId, instanceId: clinic.greenApiInstanceId }, "[GreenAPI Webhook] Partner instance deleted after logout"))
             .catch((err) => logger.warn({ err, clinicId }, "[GreenAPI Webhook] Failed to delete partner instance after logout (will be ignored)"));
         }
+        // Do NOT clear whatsappPhone — it was entered by the user and is used for display
+        // and referral links. The user can update it manually if needed.
         await db.update(clinicsTable)
-          .set({ greenApiInstanceId: null, greenApiToken: null, greenApiUrl: null, whatsappPhone: null })
+          .set({ greenApiInstanceId: null, greenApiToken: null, greenApiUrl: null })
           .where(eq(clinicsTable.id, clinicId))
           .catch((err) => logger.warn({ err, clinicId }, "[GreenAPI Webhook] Failed to clear credentials after logout"));
         logger.info({ clinicId }, "[GreenAPI Webhook] WhatsApp logged out — credentials cleared, instance deleted");

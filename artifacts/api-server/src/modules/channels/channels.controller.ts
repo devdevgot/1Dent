@@ -184,8 +184,10 @@ router.post(
             deletePartnerInstance(current.greenApiInstanceId, partnerToken)
               .catch((err) => logger.warn({ err }, "Failed to delete stale notAuthorized partner instance"));
           }
+          // Do NOT clear whatsappPhone — user may have entered it in step 1 of the connect flow.
+          // Keeping it ensures the phone survives the reprovision and displays correctly after reconnect.
           await db.update(clinicsTable)
-            .set({ greenApiInstanceId: null, greenApiToken: null, greenApiUrl: null, whatsappPhone: null })
+            .set({ greenApiInstanceId: null, greenApiToken: null, greenApiUrl: null })
             .where(eq(clinicsTable.id, req.user!.clinicId))
             .catch(() => {});
         }
