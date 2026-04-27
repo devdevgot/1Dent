@@ -302,6 +302,10 @@ export async function createPartnerInstance(partnerToken: string): Promise<Partn
   } catch {
     throw new Error(`Green API createInstance: invalid JSON response: ${rawText}`);
   }
+  // Green API sometimes returns HTTP 200 with an error payload: {"code":401,"description":"Unauthorized"}
+  if (parsed["code"] && !parsed["idInstance"] && !parsed["instanceId"]) {
+    throw new Error(`Green API createInstance error ${parsed["code"]}: ${parsed["description"] ?? rawText}`);
+  }
   // Green API may return idInstance or instanceId depending on API version/token type
   const idInstance = (parsed["idInstance"] ?? parsed["instanceId"]) as number | undefined;
   const apiTokenInstance = (parsed["apiTokenInstance"] ?? parsed["token"]) as string | undefined;

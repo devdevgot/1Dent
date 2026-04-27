@@ -194,7 +194,11 @@ router.post(
     } catch (err) {
       logger.error({ err, clinicId: req.user!.clinicId }, "Green API createInstance (Partner API) failed");
       const msg = err instanceof Error ? err.message : String(err);
-      return res.status(502).json({ success: false, error: `Не удалось создать инстанс: ${msg}` });
+      const isAuth = msg.includes("401") || msg.toLowerCase().includes("unauthorized");
+      const userMsg = isAuth
+        ? "Ошибка авторизации Green API (401 Unauthorized). Партнёрский токен недействителен или истёк — проверьте переменную GREEN_API_PARTNER_TOKEN в настройках сервера."
+        : `Не удалось создать инстанс: ${msg}`;
+      return res.status(502).json({ success: false, error: userMsg });
     }
 
     const instanceId = String(result.idInstance);
