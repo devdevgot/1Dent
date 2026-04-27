@@ -11,7 +11,7 @@ import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 import { db, clinicsTable, channelTypes } from "@workspace/db";
 import { and, eq, isNull } from "drizzle-orm";
-import { getGreenApiQrCode, getGreenApiState, setGreenApiWebhookUrl, getServerBaseUrl, logoutGreenApiInstance, clearGreenApiStateCache, getGreenApiWaSettings, shouldRegisterWebhook, getGreenApiPairingCode, extractPhoneFromWaSettings, createPartnerInstance, deletePartnerInstance } from "../../shared/green-api";
+import { getGreenApiQrCode, getGreenApiState, setGreenApiWebhookUrl, getServerBaseUrl, logoutGreenApiInstance, clearGreenApiStateCache, getGreenApiWaSettings, shouldRegisterWebhook, getGreenApiPairingCode, extractPhoneFromWaSettings, createPartnerInstance, deletePartnerInstance, isInstanceDeleted } from "../../shared/green-api";
 import { logger } from "../../lib/logger";
 
 const router: IRouter = Router();
@@ -165,10 +165,26 @@ router.post(
       .catch(next) ?? [];
     if (current === undefined) return;
 
-    // If instance already provisioned — return existing without creating another
+    // If instance already provisioned — verify it still exists in Green API before returning it
     if (current.greenApiInstanceId && current.greenApiToken) {
-      logger.info({ instanceId: current.greenApiInstanceId, clinicId: req.user!.clinicId }, "Green API instance already provisioned — returning existing");
-      return res.json({ success: true, data: { idInstance: current.greenApiInstanceId, isExisting: true } });
+      let staleInstance = false;
+      try {
+        await getGreenApiState(current.greenApiInstanceId, current.greenApiToken);
+      } catch (err) {
+        if (isInstanceDeleted(err)) {
+          staleInstance = true;
+          logger.warn({ instanceId: current.greenApiInstanceId, clinicId: req.user!.clinicId }, "Green API instance is deleted — clearing stale credentials and reprovisioning");
+          clearGreenApiStateCache(current.greenApiInstanceId);
+          await db.update(clinicsTable)
+            .set({ greenApiInstanceId: null, greenApiToken: null })
+            .where(eq(clinicsTable.id, req.user!.clinicId))
+            .catch(() => {});
+        }
+      }
+      if (!staleInstance) {
+        logger.info({ instanceId: current.greenApiInstanceId, clinicId: req.user!.clinicId }, "Green API instance already provisioned — returning existing");
+        return res.json({ success: true, data: { idInstance: current.greenApiInstanceId, isExisting: true } });
+      }
     }
 
     // Create new instance via Partner API
@@ -391,6 +407,16 @@ router.get(
       state = await getGreenApiState(clinic.greenApiInstanceId, clinic.greenApiToken);
     } catch (err) {
       logger.warn({ err, instanceId: clinic.greenApiInstanceId }, "Green API getStateInstance failed — instance may still be initializing");
+      // If the instance was deleted in Green API, clear stale DB credentials so the UI shows provision button
+      if (isInstanceDeleted(err)) {
+        logger.warn({ instanceId: clinic.greenApiInstanceId, clinicId: req.user!.clinicId }, "Instance deleted in Green API — clearing stale credentials from DB");
+        clearGreenApiStateCache(clinic.greenApiInstanceId);
+        await db.update(clinicsTable)
+          .set({ greenApiInstanceId: null, greenApiToken: null })
+          .where(eq(clinicsTable.id, req.user!.clinicId))
+          .catch(() => {});
+        return res.json({ success: true, data: { configured: false, connected: false, phone: clinic.whatsappPhone ?? null, stateInstance: "deleted" } });
+      }
       const msg = err instanceof Error ? err.message : String(err);
       // Distinguish auth failures (bad credentials) from initialization-in-progress (404/timeout).
       // Auth errors should surface as "error" so the UI doesn't spin forever.

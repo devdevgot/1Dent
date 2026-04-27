@@ -265,6 +265,12 @@ export async function logoutGreenApiInstance(
   }
 }
 
+/** Returns true if the error message indicates the instance was deleted in Green API */
+export function isInstanceDeleted(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return msg.includes("Instance is deleted") || msg.includes("instance is deleted") || msg.includes(": 404");
+}
+
 // ─── Partner API ─────────────────────────────────────────────────────────────
 
 export interface PartnerCreateInstanceResult {
@@ -285,11 +291,24 @@ export async function createPartnerInstance(partnerToken: string): Promise<Partn
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({}),
   });
+  const rawText = await res.text().catch(() => "");
+  logger.info({ status: res.status, rawBody: rawText }, "Green API createInstance raw response");
   if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`Green API createInstance failed: ${res.status} ${body}`);
+    throw new Error(`Green API createInstance failed: ${res.status} ${rawText}`);
   }
-  return res.json() as Promise<PartnerCreateInstanceResult>;
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(rawText) as Record<string, unknown>;
+  } catch {
+    throw new Error(`Green API createInstance: invalid JSON response: ${rawText}`);
+  }
+  // Green API may return idInstance or instanceId depending on API version/token type
+  const idInstance = (parsed["idInstance"] ?? parsed["instanceId"]) as number | undefined;
+  const apiTokenInstance = (parsed["apiTokenInstance"] ?? parsed["token"]) as string | undefined;
+  if (!idInstance || !apiTokenInstance) {
+    throw new Error(`Green API createInstance: unexpected response shape: ${rawText}`);
+  }
+  return { idInstance, apiTokenInstance };
 }
 
 /**
