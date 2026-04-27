@@ -97,7 +97,13 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(form);
+    if (activeTab === "personal") {
+      setActiveTab("position");
+    } else if (activeTab === "position") {
+      setActiveTab("salary");
+    } else {
+      onSave(form);
+    }
   };
 
   if (!open) return null;
