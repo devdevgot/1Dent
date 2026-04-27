@@ -171,14 +171,28 @@ router.post(
       try {
         await getGreenApiState(current.greenApiInstanceId, current.greenApiToken, current.greenApiUrl);
       } catch (err) {
-        if (isInstanceDeleted(err)) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        // Instance is deleted → reprovision
+        const deleted = isInstanceDeleted(err);
+        // 401/403 from getStateInstance almost always means the stored apiUrl is wrong
+        // (instances created before the apiUrl fix have greenApiUrl=null → wrong base URL → 401).
+        // Treat these as stale so the clinic gets a working new instance.
+        const authFail = errMsg.includes(": 401") || errMsg.includes(": 403") || errMsg.toLowerCase().includes("unauthorized");
+        if (deleted || authFail) {
           staleInstance = true;
-          logger.warn({ instanceId: current.greenApiInstanceId, clinicId: req.user!.clinicId }, "Green API instance is deleted — clearing stale credentials and reprovisioning");
+          logger.warn(
+            { instanceId: current.greenApiInstanceId, clinicId: req.user!.clinicId, reason: deleted ? "deleted" : "auth_fail" },
+            "Green API instance is stale — clearing credentials and reprovisioning",
+          );
           clearGreenApiStateCache(current.greenApiInstanceId);
           await db.update(clinicsTable)
             .set({ greenApiInstanceId: null, greenApiToken: null, greenApiUrl: null })
             .where(eq(clinicsTable.id, req.user!.clinicId))
             .catch(() => {});
+        } else {
+          // Any other error (timeout, 500, network) → instance exists but may be initializing.
+          // Return it as existing so the frontend can poll /status and wait.
+          logger.warn({ instanceId: current.greenApiInstanceId, err: errMsg }, "Green API getStateInstance errored during provision check — returning existing");
         }
       }
       if (!staleInstance) {

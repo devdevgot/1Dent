@@ -122,6 +122,25 @@ export function WhatsAppConnectModal({
     }
   }, [fetchStatus]);
 
+  // Silent QR probe — used during init polling. Returns true on success, false on any error.
+  // Does NOT set qrError so the waiting-for-init UI stays clean.
+  const probeQr = useCallback(async (): Promise<boolean> => {
+    try {
+      const res = await customFetch<{ success: boolean; data: WaQr }>(
+        "/api/clinic/green-api/qr",
+      );
+      setQrError(null);
+      setQr(res.data);
+      if (res.data.type === "alreadyLogged") {
+        await fetchStatus();
+      }
+      return true;
+    } catch {
+      // Instance may still be initializing on Green API side — keep waiting
+      return false;
+    }
+  }, [fetchStatus]);
+
   // Poll status during "waitingForInit" phase — transition to QR once instance is ready
   const pollInitStatus = useCallback(async () => {
     const data = await fetchStatus();
@@ -145,13 +164,17 @@ export function WhatsAppConnectModal({
       return;
     }
     if (data.stateInstance && data.stateInstance !== "initializing") {
-      // Instance is ready (notAuthorized or similar) — move to QR phase
-      stop();
-      setConfigured(true);
-      void fetchQr();
+      // State looks ready — but Green API may still be setting up the QR endpoint.
+      // Probe QR silently; only transition if QR is actually available.
+      const qrReady = await probeQr();
+      if (qrReady) {
+        stop();
+        setConfigured(true);
+      }
+      // else: QR not ready yet — keep polling until it is or timeout fires
     }
     // else stateInstance === "initializing" → keep waiting
-  }, [fetchStatus, fetchQr]);
+  }, [fetchStatus, probeQr]);
 
   // Start elapsed timer
   const startElapsedTimer = useCallback(() => {
@@ -173,7 +196,7 @@ export function WhatsAppConnectModal({
       setStep("setup");
       setInitialLoading(true);
       fetchStatus()
-        .then(data => {
+        .then(async data => {
           if (!data) return;
           if (data.connected) {
             // Already authorized — status polling will pick this up
@@ -182,15 +205,21 @@ export function WhatsAppConnectModal({
             setWaitingForInit(true);
             startElapsedTimer();
           } else if (data.configured) {
-            // Instance ready — proceed to QR
-            setConfigured(true);
-            void fetchQr();
+            // Instance ready — probe QR silently first before declaring configured
+            const qrReady = await probeQr();
+            if (qrReady) {
+              setConfigured(true);
+            } else {
+              // QR not available yet — enter waiting mode
+              setWaitingForInit(true);
+              startElapsedTimer();
+            }
           }
           // else: not configured → provision button shown (configured stays false)
         })
         .finally(() => setInitialLoading(false));
     }
-  }, [open, startAtSetup, forceSetup, fetchQr, fetchStatus, startElapsedTimer]);
+  }, [open, startAtSetup, forceSetup, fetchQr, fetchStatus, startElapsedTimer, probeQr]);
 
   // ── QR + status polling once instance is configured ──
   useEffect(() => {
@@ -292,9 +321,16 @@ export function WhatsAppConnectModal({
           startElapsedTimer();
           setTimeout(() => void pollInitStatus(), 3_000);
         } else {
-          // Ready (notAuthorized or similar) — go to QR
-          setConfigured(true);
-          void fetchQr();
+          // State looks ready — but Green API may not have QR available yet.
+          // Probe silently; if QR fails, fall back to waiting mode.
+          const qrReady = await probeQr();
+          if (qrReady) {
+            setConfigured(true);
+          } else {
+            setWaitingForInit(true);
+            startElapsedTimer();
+            setTimeout(() => void pollInitStatus(), 3_000);
+          }
         }
       } else {
         // New instance created — need to wait for initialization (up to 5 min)
