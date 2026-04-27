@@ -5,6 +5,7 @@ export type ChatbotState =
   | "collect_problem"
   | "suggest_doctor"
   | "confirm_appointment"
+  | "dental_qa"
   | "done"
   | "human_takeover";
 

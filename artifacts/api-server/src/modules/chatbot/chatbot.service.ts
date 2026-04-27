@@ -10,6 +10,10 @@ import {
   notificationsTable,
   usersTable,
   proceduresTable,
+  toothRecordsTable,
+  toothTreatmentsTable,
+  treatmentPlansTable,
+  treatmentPlanItemsTable,
 } from "@workspace/db";
 import type { StepInstructions } from "@workspace/db";
 import { eq, and, inArray, gte, lte, ne, asc, desc, sql } from "drizzle-orm";
@@ -351,6 +355,151 @@ async function createPatient(
 
 // ─── AI system prompt builder ────────────────────────────────────────────────
 
+/**
+ * Loads a patient's dental card as structured text for the AI.
+ * Only returns teeth with non-healthy conditions, recent treatments, and active plans.
+ */
+async function loadPatientDentalContext(clinicId: string, patientId: string): Promise<string> {
+  const conditionNames: Record<string, string> = {
+    healthy: "здоровый",
+    cavity: "кариес",
+    treated: "пролеченный",
+    crown: "коронка",
+    root_canal: "корневой канал (эндодонтия)",
+    implant: "имплант",
+    missing: "отсутствует",
+    extraction_needed: "требует удаления",
+  };
+
+  const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+
+  const [records, treatments, activePlans] = await Promise.all([
+    db
+      .select()
+      .from(toothRecordsTable)
+      .where(
+        and(
+          eq(toothRecordsTable.clinicId, clinicId),
+          eq(toothRecordsTable.patientId, patientId),
+          ne(toothRecordsTable.condition, "healthy"),
+        ),
+      )
+      .orderBy(asc(toothRecordsTable.toothFdi)),
+
+    db
+      .select()
+      .from(toothTreatmentsTable)
+      .where(
+        and(
+          eq(toothTreatmentsTable.clinicId, clinicId),
+          eq(toothTreatmentsTable.patientId, patientId),
+          gte(toothTreatmentsTable.performedAt, oneYearAgo),
+        ),
+      )
+      .orderBy(desc(toothTreatmentsTable.performedAt))
+      .limit(10),
+
+    db
+      .select()
+      .from(treatmentPlansTable)
+      .where(
+        and(
+          eq(treatmentPlansTable.clinicId, clinicId),
+          eq(treatmentPlansTable.patientId, patientId),
+          inArray(treatmentPlansTable.status, ["draft", "approved", "in_progress"]),
+        ),
+      )
+      .orderBy(desc(treatmentPlansTable.createdAt))
+      .limit(3),
+  ]);
+
+  let context = "📋 КАРТА ЗУБОВ ПАЦИЕНТА:\n";
+  if (records.length === 0) {
+    context += "— нет записей о проблемных зубах (все зубы здоровы или карта не заполнена)\n";
+  } else {
+    for (const r of records) {
+      const cond = conditionNames[r.condition] ?? r.condition;
+      const note = r.notes ? ` — ${r.notes}` : "";
+      context += `— Зуб ${r.toothFdi} (FDI): ${cond}${note}\n`;
+    }
+  }
+
+  if (treatments.length > 0) {
+    context += "\n🔧 ПОСЛЕДНИЕ ПРОЦЕДУРЫ (за 12 мес.):\n";
+    for (const t of treatments) {
+      const d = new Date(t.performedAt).toLocaleDateString("ru-KZ", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      });
+      const typeLabel = t.type === "extraction" ? "удаление" : "лечение";
+      const statusLabel = t.status === "done" ? " ✓" : " (в процессе)";
+      context += `— ${d}: Зуб ${t.toothFdi} — ${t.description} [${typeLabel}]${statusLabel}\n`;
+    }
+  }
+
+  if (activePlans.length > 0) {
+    const planStatusMap: Record<string, string> = {
+      draft: "черновик",
+      approved: "одобрен",
+      in_progress: "в процессе",
+      completed: "завершён",
+      cancelled: "отменён",
+    };
+    context += "\n📑 АКТИВНЫЕ ПЛАНЫ ЛЕЧЕНИЯ:\n";
+    for (const plan of activePlans) {
+      const items = await db
+        .select()
+        .from(treatmentPlanItemsTable)
+        .where(
+          and(
+            eq(treatmentPlanItemsTable.planId, plan.id),
+            ne(treatmentPlanItemsTable.status, "cancelled"),
+          ),
+        )
+        .orderBy(asc(treatmentPlanItemsTable.sortOrder))
+        .limit(15);
+
+      const totalStr = plan.totalCost.toLocaleString("ru") + " ₸";
+      context += `— План №${plan.planNumber} (${planStatusMap[plan.status] ?? plan.status}), итого: ${totalStr}\n`;
+      for (const item of items) {
+        const done = item.status === "completed" ? " ✓" : "";
+        const tooth = item.toothFdi ? ` (зуб ${item.toothFdi})` : "";
+        context += `   • ${item.title}${tooth}: ${item.price.toLocaleString("ru")} ₸${done}\n`;
+      }
+    }
+  }
+
+  return context;
+}
+
+/**
+ * Builds the system prompt for the dental_qa state.
+ * Includes the patient's dental card data so the AI can answer specific questions.
+ */
+function buildDentalQaSystemPrompt(
+  settings: Awaited<ReturnType<typeof getSettings>>,
+  patientName: string,
+  dentalContext: string,
+): string {
+  const si = (settings.stepInstructions ?? {}) as StepInstructions;
+  const generalExtra = si.general ? `\n\nДополнительные инструкции клиники:\n${si.general}` : "";
+
+  return `Ты — вежливый и профессиональный AI-ассистент стоматологической клиники 1Dent (Казахстан).
+Пациент уже идентифицирован: его зовут ${patientName}.
+Ты имеешь доступ к его карте зубов и истории лечения (см. ниже).
+Отвечай коротко и понятно. Не ставь диагнозы. Используй фактическую информацию из карты.
+Отвечай на том языке, на котором пишет пациент (русский, казахский или английский).${generalExtra}
+
+${dentalContext}
+
+ПРАВИЛА:
+1. Отвечай на вопросы о состоянии зубов, планах лечения и процедурах, используя данные из карты.
+2. Если пациент хочет записаться — уточни дату/время и предложи связаться с администратором.
+3. Если вопрос выходит за рамки твоих данных или ты не можешь дать точный ответ — ответь ТОЛЬКО текстом: OPERATOR_NEEDED
+4. Не придумывай цены, расписание или процедуры, которых нет в карте.`;
+}
+
 function buildSystemPrompt(state: ChatbotState, settings: Awaited<ReturnType<typeof getSettings>>): string {
   const si = (settings.stepInstructions ?? {}) as StepInstructions;
 
@@ -368,6 +517,7 @@ function buildSystemPrompt(state: ChatbotState, settings: Awaited<ReturnType<typ
     collect_problem: `${base}\n\nТы знаешь имя пациента. Твоя задача: узнать с какой проблемой или за какой услугой обращается пациент. Задавай уточняющие вопросы если нужно.`,
     suggest_doctor: `${base}\n\nТы подобрал врача на основе запроса пациента. Представь врача и предложи запись. Спроси подтверждение (Да/Нет).`,
     confirm_appointment: `${base}\n\nПациент готов записаться. Попроси финальное подтверждение деталей записи.`,
+    dental_qa: `${base}\n\nПациент идентифицирован. Отвечай на вопросы о состоянии его зубов и лечении по данным карты. Если вопрос вне твоих данных — ответь: OPERATOR_NEEDED`,
     done: `${base}\n\nЗапись подтверждена. Отвечай на вопросы о клинике или направляй к администратору.`,
     human_takeover: `${base}\n\nСоединяй пациента с администратором.`,
   };
@@ -380,6 +530,7 @@ function buildSystemPrompt(state: ChatbotState, settings: Awaited<ReturnType<typ
     collect_problem: "collectProblem",
     suggest_doctor: "suggestDoctor",
     confirm_appointment: "confirm",
+    dental_qa: null,
     done: null,
     human_takeover: null,
   };
@@ -461,6 +612,7 @@ export class ChatbotService {
       await this.notifyHumanTakeover(clinicId, phone, data.patientName);
       const takoverReply = "Соединяю вас с администратором. Пожалуйста, ожидайте — вам ответят в ближайшее время.";
       saveChatbotMessage(clinicId, phone, "outbound", takoverReply).catch(() => {});
+      sendToPatient(clinicId, phone, takoverReply).catch(() => {});
       return takoverReply;
     }
 
@@ -517,17 +669,18 @@ export class ChatbotService {
             .limit(1);
 
           if (iinMatch) {
-            // Patient identified by IIN — greet by name and jump straight to collect_problem
+            // Existing patient identified — load their dental card and enter Q&A mode
             data.existingPatientId = iinMatch.id;
             data.patientName = iinMatch.name;
+            const dentalCtx = await loadPatientDentalContext(clinicId, iinMatch.id).catch(() => "");
             const aiReply = await generateChatbotResponse(
-              buildSystemPrompt("collect_problem", settings),
-              recentMessages,
-              `Пациент успешно идентифицирован по ИИН. Его зовут ${iinMatch.name}. Поприветствуй его как вернувшегося пациента и спроси с чем обращается сегодня.`,
+              buildDentalQaSystemPrompt(settings, iinMatch.name, dentalCtx),
+              [],
+              `Пациент ${iinMatch.name} только что подтвердил личность по ИИН. Поприветствуй его по имени и предложи помочь с вопросами о лечении, карте зубов или записи. Будь кратким.`,
               managerExamples,
             );
-            response = aiReply ?? `Рады снова вас видеть, ${iinMatch.name}! 😊\nС чем вы обращаетесь сегодня?`;
-            session.state = "collect_problem";
+            response = aiReply ?? `Добро пожаловать, ${iinMatch.name}! 😊\nЯ вижу вашу карту зубов. Задайте любой вопрос о вашем состоянии, плане лечения или записи — постараюсь помочь.`;
+            session.state = "dental_qa";
           } else {
             // IIN not in DB — save it for later creation, ask for name
             data.collectedIin = digits;
@@ -765,6 +918,57 @@ export class ChatbotService {
             response = aiReply4 ?? `Пожалуйста, ответьте «Да» для подтверждения записи или «Нет» для отмены.`;
           }
         }
+        break;
+      }
+
+      case "dental_qa": {
+        // Known patient in Q&A mode: load their dental card and answer with AI
+        const qaPatientId = data.existingPatientId;
+        if (!qaPatientId) {
+          // Session inconsistency — hand off to operator
+          session.state = "human_takeover";
+          session.humanTakeover = true;
+          await saveSession(session);
+          await this.notifyHumanTakeover(clinicId, phone, data.patientName);
+          sendTypingToPatient(clinicId, phone, false).catch(() => {});
+          const fallbackReply = "Соединяю вас с администратором. Пожалуйста, ожидайте.";
+          saveChatbotMessage(clinicId, phone, "outbound", fallbackReply).catch(() => {});
+          sendToPatient(clinicId, phone, fallbackReply).catch(() => {});
+          return fallbackReply;
+        }
+
+        const [qaPatient] = await db
+          .select({ name: patientsTable.name })
+          .from(patientsTable)
+          .where(and(eq(patientsTable.clinicId, clinicId), eq(patientsTable.id, qaPatientId)))
+          .limit(1);
+
+        const qaName = qaPatient?.name ?? data.patientName ?? "пациент";
+        const dentalContext = await loadPatientDentalContext(clinicId, qaPatientId).catch(() => "");
+
+        const qaReply = await generateChatbotResponse(
+          buildDentalQaSystemPrompt(settings, qaName, dentalContext),
+          recentMessages,
+          text,
+          managerExamples,
+        );
+
+        if (!qaReply || qaReply.trim().startsWith("OPERATOR_NEEDED")) {
+          // AI signals it can't handle this — transfer to human operator
+          session.state = "human_takeover";
+          session.humanTakeover = true;
+          session.data = data;
+          await saveSession(session);
+          await this.notifyHumanTakeover(clinicId, phone, qaName);
+          sendTypingToPatient(clinicId, phone, false).catch(() => {});
+          const handoffReply = "Передаю вас администратору — ожидайте, ответят в ближайшее время. 🙏";
+          saveChatbotMessage(clinicId, phone, "outbound", handoffReply).catch(() => {});
+          sendToPatient(clinicId, phone, handoffReply).catch(() => {});
+          return handoffReply;
+        }
+
+        response = qaReply;
+        // Stay in dental_qa for follow-up questions
         break;
       }
 

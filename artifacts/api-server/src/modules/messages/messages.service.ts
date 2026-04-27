@@ -138,22 +138,14 @@ export class MessagesService {
     // Resolve phone → patient (may be null for new/unknown contacts)
     const patient = await this.repo.findPatientByPhone(senderPhone, clinicId);
 
-    // Invoke chatbot FSM only for:
-    //  (a) unknown phone numbers — start an onboarding conversation, OR
-    //  (b) known patients who already have an active chatbot session
-    //      (e.g., mid-booking flow or human_takeover state)
-    // This avoids injecting automated replies into ongoing clinical chats.
-    const hasChatbotSession = patient
-      ? await this.chatbot.hasActiveSession(clinicId, senderPhone)
-      : true; // unknown phone always gets the chatbot
-
-    if (hasChatbotSession) {
-      // Pass skipRedAlert=true for known patients so MessagesService handles
-      // the alert on the stored message (avoids duplicate notifications).
-      this.chatbot.processMessage(clinicId, senderPhone, content, { skipRedAlert: !!patient }).catch((err) =>
-        logger.error({ err }, "ChatbotService.processMessage failed"),
-      );
-    }
+    // Always route inbound messages through the chatbot FSM.
+    // For unknown phones: starts an onboarding/registration conversation.
+    // For known patients: starts a dental Q&A session (IIN verification → dental card access).
+    // The human_takeover state inside the FSM ensures the chatbot stays silent
+    // after an operator has taken over a conversation.
+    this.chatbot.processMessage(clinicId, senderPhone, content, { skipRedAlert: !!patient }).catch((err) =>
+      logger.error({ err }, "ChatbotService.processMessage failed"),
+    );
 
     if (!patient) {
       logger.info(
