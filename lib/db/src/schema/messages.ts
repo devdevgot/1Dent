@@ -33,6 +33,7 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "appointment",
   "system",
   "appointment_reminder",
+  "pending_payment",
 ]);
 
 export const messagesTable = pgTable("messages", {

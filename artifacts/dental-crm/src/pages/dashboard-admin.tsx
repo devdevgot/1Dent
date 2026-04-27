@@ -106,11 +106,13 @@ export default function AdminDashboard() {
 
   const activeTasks = procedures.filter((p) => p.status === "in_progress");
 
-  const pendingPaymentQueue = procedures.filter((p) => {
-    if (p.status !== "pending_payment") return false;
-    const d = p.scheduledAt ? parseISO(p.scheduledAt) : null;
-    return d ? d >= todayStart && d <= todayEnd : true;
-  });
+  const pendingPaymentQueue = procedures
+    .filter((p) => p.status === "pending_payment")
+    .sort((a, b) => {
+      const ta = a.scheduledAt ? parseISO(a.scheduledAt).getTime() : 0;
+      const tb = b.scheduledAt ? parseISO(b.scheduledAt).getTime() : 0;
+      return ta - tb;
+    });
 
   const formatMoney = (v: number) => v.toLocaleString("ru-RU") + " ₸";
 
@@ -288,7 +290,7 @@ export default function AdminDashboard() {
         <div className="bg-white rounded-2xl border border-orange-200 shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-orange-100 flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-orange-500" />
-            <h3 className="text-base font-bold text-gray-900">Ожидают оплаты сегодня</h3>
+            <h3 className="text-base font-bold text-gray-900">Ожидают оплаты</h3>
             <span className="ml-1 text-xs font-bold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">
               {pendingPaymentQueue.length}
             </span>
@@ -319,6 +321,11 @@ export default function AdminDashboard() {
                       {proc.doctorName && ` · ${proc.doctorName}`}
                       {proc.price ? ` · ${formatMoney(proc.price)}` : ""}
                     </p>
+                    {proc.scheduledAt && (
+                      <p className="text-[10px] text-orange-500 mt-0.5">
+                        {format(parseISO(proc.scheduledAt), "d MMM, HH:mm")}
+                      </p>
+                    )}
                   </div>
                   {isSelecting ? (
                     <div className="flex flex-wrap gap-1.5 justify-end">

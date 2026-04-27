@@ -1,4 +1,4 @@
-import { Bell, AlertTriangle, CheckCheck, ChevronRight, Calendar } from "lucide-react";
+import { Bell, AlertTriangle, CheckCheck, ChevronRight, Calendar, Wallet } from "lucide-react";
 import { useUnreadCount, useNotifications, useMarkRead, useMarkAllRead } from "@/hooks/use-notifications";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +22,7 @@ function NotificationItem({
 }) {
   const isRedAlert = notification.type === "red_alert";
   const isAppointmentReminder = notification.type === "appointment_reminder";
+  const isPendingPayment = notification.type === "pending_payment";
 
   return (
     <button
@@ -31,15 +32,30 @@ function NotificationItem({
         notification.read ? "opacity-60" : "bg-white hover:bg-slate-50",
         isRedAlert && !notification.read && "bg-red-50 hover:bg-red-100",
         isAppointmentReminder && !notification.read && "bg-blue-50 hover:bg-blue-100",
+        isPendingPayment && !notification.read && "bg-orange-50 hover:bg-orange-100",
       )}
     >
       <div
         className={cn(
           "mt-0.5 w-8 h-8 rounded-full flex items-center justify-center shrink-0",
-          isRedAlert ? "bg-red-100 text-red-600" : isAppointmentReminder ? "bg-primary/10 text-primary" : "bg-blue-100 text-blue-600",
+          isRedAlert
+            ? "bg-red-100 text-red-600"
+            : isAppointmentReminder
+            ? "bg-primary/10 text-primary"
+            : isPendingPayment
+            ? "bg-orange-100 text-orange-600"
+            : "bg-blue-100 text-blue-600",
         )}
       >
-        {isRedAlert ? <AlertTriangle className="w-4 h-4" /> : isAppointmentReminder ? <Calendar className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
+        {isRedAlert ? (
+          <AlertTriangle className="w-4 h-4" />
+        ) : isAppointmentReminder ? (
+          <Calendar className="w-4 h-4" />
+        ) : isPendingPayment ? (
+          <Wallet className="w-4 h-4" />
+        ) : (
+          <Bell className="w-4 h-4" />
+        )}
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-xs text-foreground leading-relaxed">{notification.message}</p>
@@ -71,6 +87,7 @@ export function NotificationBell() {
   const count = countData?.data?.count ?? 0;
   const notifications = notificationsData?.data?.notifications ?? [];
   const unreadRedAlerts = notifications.filter((n) => n.type === "red_alert" && !n.read).length;
+  const unreadPendingPayments = notifications.filter((n) => n.type === "pending_payment" && !n.read).length;
 
   return (
     <Popover>
@@ -81,7 +98,11 @@ export function NotificationBell() {
             <span
               className={cn(
                 "absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full text-[10px] font-bold flex items-center justify-center text-white px-1",
-                unreadRedAlerts > 0 ? "bg-red-500 animate-pulse" : "bg-primary",
+                unreadRedAlerts > 0
+                  ? "bg-red-500 animate-pulse"
+                  : unreadPendingPayments > 0
+                  ? "bg-orange-500 animate-pulse"
+                  : "bg-primary",
               )}
             >
               {count > 99 ? "99+" : count}
@@ -96,6 +117,11 @@ export function NotificationBell() {
             {unreadRedAlerts > 0 && (
               <Badge variant="destructive" className="text-[10px] py-0">
                 {t("notifications.redAlerts", { count: unreadRedAlerts })}
+              </Badge>
+            )}
+            {unreadPendingPayments > 0 && (
+              <Badge className="text-[10px] py-0 bg-orange-500 hover:bg-orange-600">
+                {unreadPendingPayments} оплата
               </Badge>
             )}
           </div>
@@ -128,6 +154,24 @@ export function NotificationBell() {
               <p className="text-xs text-red-500">{t("dashboard.redAlertDesc")}</p>
             </div>
             <ChevronRight className="w-4 h-4 text-red-400 shrink-0" />
+          </button>
+        )}
+
+        {unreadPendingPayments > 0 && (
+          <button
+            onClick={() => navigate("/admin/finance")}
+            className="w-full bg-orange-50 border-b border-orange-100 p-3.5 flex items-center gap-3 text-left hover:bg-orange-100 transition-colors"
+          >
+            <div className="w-9 h-9 bg-orange-500 rounded-xl flex items-center justify-center shrink-0">
+              <Wallet className="w-4 h-4 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-orange-700">
+                {unreadPendingPayments} {unreadPendingPayments === 1 ? "процедура ожидает" : "процедур ожидают"} оплаты
+              </p>
+              <p className="text-xs text-orange-500">Перейти в раздел финансов</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-orange-400 shrink-0" />
           </button>
         )}
 

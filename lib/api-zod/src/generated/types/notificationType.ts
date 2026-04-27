@@ -15,4 +15,5 @@ export const NotificationType = {
   appointment: "appointment",
   system: "system",
   appointment_reminder: "appointment_reminder",
+  pending_payment: "pending_payment",
 } as const;

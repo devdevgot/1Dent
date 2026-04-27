@@ -16,8 +16,8 @@ import type { ProcedureStatus, PaymentMethod } from "@workspace/db";
 import { scheduleFollowups } from "../followups/followup.queue";
 import { logger } from "../../lib/logger";
 import { scheduleAppointmentReminders, cancelAppointmentReminders } from "../followups/appointment-reminders.queue";
-import { db, postopFollowupsTable, patientsTable, usersTable, clinicsTable, doctorKpisTable, proceduresTable } from "@workspace/db";
-import { eq, and, sql } from "drizzle-orm";
+import { db, postopFollowupsTable, patientsTable, usersTable, clinicsTable, doctorKpisTable, proceduresTable, notificationsTable } from "@workspace/db";
+import { eq, and, sql, inArray } from "drizzle-orm";
 
 const router: IRouter = Router();
 const repo = new ProceduresRepository();
@@ -338,6 +338,49 @@ router.patch(
           procedureId: procedure.id,
         }).catch(() => {});
       }
+    }
+
+    // Notify admins/owners when a procedure moves to pending_payment for the first time
+    const isFirstPendingPayment =
+      parsed.data.status === "pending_payment" && previousStatus !== "pending_payment";
+    if (isFirstPendingPayment) {
+      (async () => {
+        try {
+          const [patientRow] = await db
+            .select({ name: patientsTable.name })
+            .from(patientsTable)
+            .where(eq(patientsTable.id, procedure.patientId!))
+            .limit(1);
+          const patientName = patientRow?.name ?? "Пациент";
+
+          const recipients = await db
+            .select({ id: usersTable.id })
+            .from(usersTable)
+            .where(
+              and(
+                eq(usersTable.clinicId, clinicId),
+                inArray(usersTable.role, ["owner", "admin"]),
+              ),
+            );
+          if (recipients.length === 0) return;
+
+          const doctorDisplayName = procedure.doctorName ? ` (${procedure.doctorName})` : "";
+          const notifMsg = `💳 Ожидает оплаты: ${procedure.name} — ${patientName}${doctorDisplayName}`;
+          await db.insert(notificationsTable).values(
+            recipients.map((r) => ({
+              id: randomUUID(),
+              clinicId,
+              userId: r.id,
+              type: "pending_payment" as const,
+              message: notifMsg,
+              read: false,
+              patientId: procedure.patientId,
+            })),
+          );
+        } catch (err) {
+          logger.error({ err }, "[Procedures] Failed to write pending_payment notification");
+        }
+      })();
     }
 
     res.json({ success: true, data: { procedure } });
