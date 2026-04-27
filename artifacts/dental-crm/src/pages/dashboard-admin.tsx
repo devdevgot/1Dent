@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useAuthStore } from "@/hooks/use-auth";
 import {
   useListProcedures,
   useListPatients,
+  useListUsers,
+  useListProcedureTemplates,
   useGetDoctorKpis,
   getGetDoctorKpisQueryKey,
   useUpdateProcedurePayment,
@@ -17,6 +19,8 @@ import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
 import { format, parseISO, startOfDay, endOfDay } from "date-fns";
+import { AppointmentModal, type ProcedureItem } from "@/components/appointment-modal";
+import { useAppointmentSave } from "@/hooks/use-appointment-save";
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   kaspi_transfer: "Kaspi Transfer",
@@ -34,10 +38,13 @@ export default function AdminDashboard() {
   const { user, clinic } = useAuthStore();
   const [, navigate] = useLocation();
   const [selectingPayment, setSelectingPayment] = useState<string | null>(null);
+  const [showApptModal, setShowApptModal] = useState(false);
   const qc = useQueryClient();
 
   const { data: proceduresData } = useListProcedures();
   const { data: patientsData } = useListPatients();
+  const { data: usersData } = useListUsers();
+  const { data: templateData } = useListProcedureTemplates();
   const { data: kpiData } = useGetDoctorKpis({
     query: { queryKey: getGetDoctorKpisQueryKey() },
   });
@@ -52,8 +59,34 @@ export default function AdminDashboard() {
   });
 
   const procedures = proceduresData?.data?.procedures ?? [];
-  const patients = patientsData?.data?.patients ?? [];
+  const rawPatients = patientsData?.data?.patients ?? [];
+  const patients = rawPatients;
   const doctorKpis = kpiData?.data?.kpis ?? [];
+
+  /* Data for the appointment modal */
+  const modalPatients = useMemo(
+    () => rawPatients.map((p) => ({
+      id: p.id,
+      name: p.name,
+      phone: (p as any).phone ?? "",
+      iin: (p as any).iin ?? null,
+      doctorId: null as string | null,
+    })),
+    [rawPatients],
+  );
+  const modalDoctors = useMemo(
+    () =>
+      (usersData?.data?.users ?? [])
+        .filter((u) => u.role === "doctor")
+        .map((u) => ({ id: u.id, name: u.name })),
+    [usersData],
+  );
+  const modalTemplates = useMemo(
+    () => (templateData?.data?.templates ?? []) as any[],
+    [templateData],
+  );
+
+  const apptSave = useAppointmentSave({ onDone: () => setShowApptModal(false) });
 
   const now = new Date();
   const todayStart = startOfDay(now);
@@ -101,7 +134,7 @@ export default function AdminDashboard() {
           </p>
         </div>
         <button
-          onClick={() => navigate("/admin/appointments/new")}
+          onClick={() => setShowApptModal(true)}
           className="px-5 py-2.5 bg-primary text-white font-semibold rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all"
         >
           {t("adminNav.newAppointment")}
@@ -347,6 +380,19 @@ export default function AdminDashboard() {
           ))}
         </div>
       </div>
+
+      {showApptModal && (
+        <AppointmentModal
+          date={new Date()}
+          procedure={null}
+          patients={modalPatients}
+          doctors={modalDoctors}
+          templates={modalTemplates}
+          onSave={(data) => apptSave.save(data, null)}
+          onClose={() => setShowApptModal(false)}
+          isSaving={apptSave.isSaving}
+        />
+      )}
     </div>
   );
 }
