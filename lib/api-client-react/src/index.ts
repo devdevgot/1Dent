@@ -13,6 +13,7 @@ import { customFetch } from "./custom-fetch";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type { UseMutationOptions, UseQueryOptions } from "@tanstack/react-query";
 import type { MySalaryResponse, UpdateUserStatusRequest, UsersListResponse } from "./generated/api.schemas";
+import type { Patient } from "@workspace/api-zod";
 
 export interface UpdateProfileRequest {
   name?: string;
@@ -440,6 +441,33 @@ export const useApprovePayrollPeriod = <TError = unknown>(options?: {
   useMutation<ApprovePeriodPayrollResponse, TError, ApprovePeriodPayrollRequest>({
     mutationFn: (data) => approvePeriodPayroll(data),
     ...options?.mutation,
+  });
+
+// ─── Custom: find patient by IIN ──────────────────────────────────────────────
+
+export interface FindPatientByIINResponse {
+  success: boolean;
+  data: { patient: Patient | null };
+}
+
+export const findPatientByIIN = (
+  iin: string,
+  options?: RequestInit,
+): Promise<FindPatientByIINResponse> =>
+  customFetch<FindPatientByIINResponse>(
+    `/api/patients/by-iin/${encodeURIComponent(iin)}`,
+    { method: "GET", ...options },
+  );
+
+export const useFindPatientByIIN = <TError = unknown>(
+  iin: string,
+  options?: { query?: UseQueryOptions<FindPatientByIINResponse, TError> },
+) =>
+  useQuery<FindPatientByIINResponse, TError>({
+    queryKey: ["/api/patients/by-iin", iin],
+    queryFn: ({ signal }) => findPatientByIIN(iin, { signal }),
+    enabled: /^\d{12}$/.test(iin),
+    ...options?.query,
   });
 
 // ─── Custom: list users with includeInactive option ───────────────────────────

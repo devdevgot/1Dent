@@ -50,6 +50,7 @@ import {
 } from "date-fns";
 import { ru } from "date-fns/locale";
 import type { ProcedureTemplate, PaymentMethod } from "@workspace/api-client-react";
+import { parseIIN, isIINError } from "@workspace/api-zod";
 
 const PAYMENT_METHODS: { value: PaymentMethod; labelRu: string }[] = [
   { value: "cash",           labelRu: "Наличные" },
@@ -187,7 +188,7 @@ function ServicePicker({ name, setName, price, setPrice, templates }: ServicePic
 }
 
 /* ─── Patient Picker (existing patients search) ─── */
-interface PatientEntry { id: string; name: string; phone?: string; doctorId?: string | null }
+interface PatientEntry { id: string; name: string; phone?: string; iin?: string | null; doctorId?: string | null }
 interface PatientPickerProps {
   patients: PatientEntry[];
   selectedId: string;
@@ -224,7 +225,12 @@ function PatientPicker({
     if (!query.trim()) return patients.slice(0, 10);
     const q = query.toLowerCase();
     return patients
-      .filter((p) => p.name.toLowerCase().includes(q) || (p.phone ?? "").includes(q))
+      .filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          (p.phone ?? "").includes(q) ||
+          (p.iin ?? "").includes(q),
+      )
       .slice(0, 10);
   }, [query, patients]);
 
@@ -253,7 +259,7 @@ function PatientPicker({
           onChange={(e) => handleInput(e.target.value)}
           onFocus={() => setOpen(true)}
           disabled={disabled}
-          placeholder="Введите имя или телефон пациента..."
+          placeholder="Введите имя, телефон или ИИН..."
           className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:bg-gray-50 disabled:text-gray-600"
         />
       </div>
@@ -268,7 +274,12 @@ function PatientPicker({
               className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 flex flex-col gap-0.5 border-b border-gray-50 last:border-0"
             >
               <span className="font-medium text-gray-800">{p.name}</span>
-              {p.phone && <span className="text-xs text-gray-400 font-mono">{p.phone}</span>}
+              <div className="flex items-center gap-2">
+                {p.phone && <span className="text-xs text-gray-400 font-mono">{p.phone}</span>}
+                {p.iin && (
+                  <span className="text-xs text-gray-400 font-mono">ИИН: {p.iin}</span>
+                )}
+              </div>
             </button>
           ))}
         </div>
@@ -293,7 +304,7 @@ interface AppointmentModalProps {
     notes?: string;
     status?: string;
     paymentMethod?: PaymentMethod;
-    newPatient?: { name: string; phone: string };
+    newPatient?: { name: string; phone: string; iin?: string; dateOfBirth?: string; gender?: string };
   }) => void;
   onDelete?: () => void;
   onClose: () => void;
@@ -334,13 +345,40 @@ function AppointmentModal({
     procedure ? (patients.find((p) => p.id === procedure.patientId)?.name ?? "") : "",
   );
   const [newPatientPhone, setNewPatientPhone] = useState("");
+  const [iinInput, setIINInput] = useState("");
+
+  /* IIN parsing & lookup */
+  const parsedIIN = useMemo(() => {
+    if (iinInput.length !== 12) return null;
+    return parseIIN(iinInput);
+  }, [iinInput]);
+
+  const iinValid = parsedIIN !== null && !isIINError(parsedIIN);
+  const iinError = iinInput.length === 12 && parsedIIN !== null && isIINError(parsedIIN)
+    ? (parsedIIN as { error: string }).error
+    : null;
+
+  /* When a valid IIN is entered, try to find this patient in the loaded list */
+  const iinMatchedPatient = useMemo(() => {
+    if (!iinValid || !iinInput) return null;
+    return patients.find((p) => p.iin === iinInput) ?? null;
+  }, [iinValid, iinInput, patients]);
+
+  /* Auto-select when IIN matches an existing patient */
+  useEffect(() => {
+    if (iinMatchedPatient && !patientId) {
+      setPatientId(iinMatchedPatient.id);
+      setPatientSearch(iinMatchedPatient.name);
+      if (iinMatchedPatient.doctorId) setDoctorId(iinMatchedPatient.doctorId);
+    }
+  }, [iinMatchedPatient]);
 
   /* Smart: no matches in DB → treat as new patient */
   const dbMatches = useMemo(() => {
     if (!patientSearch.trim()) return [];
     const q = patientSearch.toLowerCase();
     return patients.filter(
-      (p) => p.name.toLowerCase().includes(q) || (p.phone ?? "").includes(q),
+      (p) => p.name.toLowerCase().includes(q) || (p.phone ?? "").includes(q) || (p.iin ?? "").includes(q),
     );
   }, [patients, patientSearch]);
 
@@ -364,7 +402,17 @@ function AppointmentModal({
       notes: notes || undefined,
       status,
       paymentMethod: paymentMethod || undefined,
-      newPatient: isNewPatient ? { name: patientSearch.trim(), phone: newPatientPhone.trim() } : undefined,
+      newPatient: isNewPatient ? {
+        name: patientSearch.trim(),
+        phone: newPatientPhone.trim(),
+        iin: iinValid && iinInput.length === 12 ? iinInput : undefined,
+        dateOfBirth: iinValid && !isIINError(parsedIIN!)
+          ? format((parsedIIN as { dateOfBirth: Date }).dateOfBirth, "yyyy-MM-dd")
+          : undefined,
+        gender: iinValid && !isIINError(parsedIIN!)
+          ? (parsedIIN as { gender: string }).gender
+          : undefined,
+      } : undefined,
     });
   }
 
@@ -458,35 +506,80 @@ function AppointmentModal({
                   <p className="text-sm font-semibold text-gray-900 truncate">
                     {patients.find((p) => p.id === patientId)?.name}
                   </p>
-                  <p className="text-xs text-gray-400">
-                    {patients.find((p) => p.id === patientId)?.phone}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-gray-400">
+                      {patients.find((p) => p.id === patientId)?.phone}
+                    </p>
+                    {patients.find((p) => p.id === patientId)?.iin && (
+                      <p className="text-xs text-gray-400 font-mono">
+                        ИИН: {patients.find((p) => p.id === patientId)?.iin}
+                      </p>
+                    )}
+                  </div>
                 </div>
                 <button
                   type="button"
-                  onClick={() => { setPatientId(""); setPatientSearch(""); setNewPatientPhone(""); }}
+                  onClick={() => { setPatientId(""); setPatientSearch(""); setNewPatientPhone(""); setIINInput(""); }}
                   className="text-primary/50 hover:text-primary transition-colors"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
             ) : (
-              /* Smart search input */
-              <PatientPicker
-                patients={patients}
-                selectedId={patientId}
-                disabled={false}
-                onSelect={(pid, did) => {
-                  setPatientId(pid);
-                  setPatientSearch(patients.find((p) => p.id === pid)?.name ?? "");
-                  if (did) setDoctorId(did);
-                }}
-                searchValue={patientSearch}
-                onSearchChange={(v) => {
-                  setPatientSearch(v);
-                  if (patientId) setPatientId("");
-                }}
-              />
+              <>
+                {/* IIN lookup row */}
+                <div className="space-y-1">
+                  <div className="relative">
+                    <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      value={iinInput}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, "").slice(0, 12);
+                        setIINInput(val);
+                      }}
+                      placeholder="ИИН (12 цифр) — необязательно"
+                      maxLength={12}
+                      className={cn(
+                        "w-full pl-9 pr-3 py-2.5 rounded-xl border text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary",
+                        iinError ? "border-red-300 bg-red-50" : "border-gray-200",
+                        iinValid && iinInput.length === 12 && !iinMatchedPatient
+                          ? "border-green-300 bg-green-50"
+                          : "",
+                      )}
+                    />
+                  </div>
+                  {iinError && (
+                    <p className="text-xs text-red-500 pl-1">{iinError}</p>
+                  )}
+                  {iinValid && iinMatchedPatient && (
+                    <p className="text-xs text-primary pl-1 font-medium">
+                      Пациент найден и выбран автоматически
+                    </p>
+                  )}
+                  {iinValid && !iinMatchedPatient && iinInput.length === 12 && (
+                    <p className="text-xs text-gray-400 pl-1">
+                      Пациент с таким ИИН не найден — заполните форму ниже
+                    </p>
+                  )}
+                </div>
+
+                {/* Smart search input */}
+                <PatientPicker
+                  patients={patients}
+                  selectedId={patientId}
+                  disabled={false}
+                  onSelect={(pid, did) => {
+                    setPatientId(pid);
+                    setPatientSearch(patients.find((p) => p.id === pid)?.name ?? "");
+                    if (did) setDoctorId(did);
+                  }}
+                  searchValue={patientSearch}
+                  onSearchChange={(v) => {
+                    setPatientSearch(v);
+                    if (patientId) setPatientId("");
+                  }}
+                />
+              </>
             )}
 
             {/* New patient phone field */}
@@ -505,6 +598,19 @@ function AppointmentModal({
                     className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   />
                 </div>
+                {/* Show auto-filled DOB/gender from IIN */}
+                {iinValid && !isIINError(parsedIIN!) && (
+                  <div className="flex items-center gap-3 text-xs text-primary/70 bg-primary/5 rounded-lg px-2 py-1.5">
+                    <span>
+                      Дата рождения: <strong>{format((parsedIIN as { dateOfBirth: Date }).dateOfBirth, "dd.MM.yyyy")}</strong>
+                    </span>
+                    <span>
+                      Пол: <strong>
+                        {(parsedIIN as { gender: string }).gender === "male" ? "Мужской" : "Женский"}
+                      </strong>
+                    </span>
+                  </div>
+                )}
                 <p className="text-xs text-primary/60">
                   Будет создан новый пациент «{patientSearch.trim()}»
                 </p>
@@ -785,6 +891,7 @@ export default function AdminCalendar() {
         id: p.id,
         name: p.name,
         phone: (p as any).phone ?? "",
+        iin: (p as any).iin ?? null,
         doctorId: lastProc?.doctorId ?? null,
       };
     }),
@@ -873,7 +980,7 @@ export default function AdminCalendar() {
     notes?: string;
     status?: string;
     paymentMethod?: PaymentMethod;
-    newPatient?: { name: string; phone: string };
+    newPatient?: { name: string; phone: string; iin?: string; dateOfBirth?: string; gender?: string };
   }) {
     if (editingProcedure) {
       await updateMutation.mutateAsync({
@@ -902,6 +1009,9 @@ export default function AdminCalendar() {
             name: data.newPatient.name,
             phone: data.newPatient.phone,
             source: "other",
+            ...(data.newPatient.iin ? { iin: data.newPatient.iin } : {}),
+            ...(data.newPatient.dateOfBirth ? { dateOfBirth: data.newPatient.dateOfBirth } : {}),
+            ...(data.newPatient.gender ? { gender: data.newPatient.gender as "male" | "female" | "other" } : {}),
           },
         });
         const newId = (createdPatient?.data as any)?.patient?.id ?? (createdPatient?.data as any)?.id;
