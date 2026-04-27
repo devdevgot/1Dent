@@ -106,6 +106,15 @@ router.get("/ai-analysis", readRoles, async (req: Request, res: Response, next: 
   if (!ok) return;
   const analysis = await getLatestDentalAnalysis(req.user!.clinicId, patientId).catch(next);
   if (analysis === undefined) return;
+
+  // If no cached analysis exists yet, kick off background generation immediately
+  // so the polling on the frontend picks it up within seconds instead of waiting for a tooth update
+  if (!analysis) {
+    triggerDentalAiAnalysis(req.user!.clinicId, patientId).catch((err) =>
+      logger.warn({ err }, "[DentalAI] Background analysis error on tab open"),
+    );
+  }
+
   res.json({ success: true, data: analysis ?? null });
 });
 

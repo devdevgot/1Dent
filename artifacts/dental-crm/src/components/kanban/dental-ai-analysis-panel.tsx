@@ -49,6 +49,9 @@ function formatReportText(text: string): JSX.Element[] {
 export function DentalAiAnalysisPanel({ patientId }: Props) {
   const { data, isLoading, isFetching } = useGetDentalAiAnalysis(patientId, {
     query: {
+      // Keep cached data fresh for 5 min — if we already have a result it shows instantly
+      staleTime: 5 * 60 * 1000,
+      // Poll every 4 s only while no analysis is ready yet
       refetchInterval: (query) => {
         const result = query.state.data;
         return !result?.data ? 4000 : false;
