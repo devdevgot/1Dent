@@ -76,7 +76,7 @@ function KpiCard({
 
 export default function AdminFinancePage() {
   const { t } = useTranslation();
-  const [period, setPeriod] = useState<Period>("month");
+  const [period, setPeriod] = useState<Period>("day");
   const [customFrom, setCustomFrom] = useState(format(startOfMonth(new Date()), "yyyy-MM-dd"));
   const [customTo, setCustomTo] = useState(format(new Date(), "yyyy-MM-dd"));
   const [filterDoctorId, setFilterDoctorId] = useState("");
