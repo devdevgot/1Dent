@@ -283,13 +283,7 @@ export async function createPartnerInstance(partnerToken: string): Promise<Partn
     method: "POST",
     signal: greenApiSignal(30_000),
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      typeInstance: "WA",
-      stateWebhook: "yes",
-      incomingWebhook: "yes",
-      outgoingWebhook: "yes",
-      outgoingAPIMessageWebhook: "yes",
-    }),
+    body: JSON.stringify({}),
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
