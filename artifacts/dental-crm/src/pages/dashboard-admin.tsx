@@ -11,7 +11,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   Users, Calendar,
   KanbanSquare, Stethoscope, ChevronRight,
-  Clock, Package, Wallet, PlusCircle, CheckCircle2,
+  Clock, Wallet, PlusCircle, CheckCircle2,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
@@ -332,7 +332,7 @@ export default function AdminDashboard() {
             { label: t("adminNav.finance"),        icon: Wallet,     path: "/admin/finance" },
             { label: t("patients.tabKanban"),      icon: KanbanSquare, path: "/patients?view=kanban" },
             { label: t("nav.patients"),            icon: Users,      path: "/patients" },
-            { label: t("nav.inventory"),           icon: Package,    path: "/inventory" },
+            { label: t("nav.services"),            icon: Stethoscope, path: "/services" },
           ].map((item) => (
             <button
               key={item.path}

@@ -55,7 +55,7 @@ const PAGE_ITEMS: {
   { label: "Аналитика",  href: "/analytics",       roles: ["owner"],                                          Icon: BarChart3,       iconBg: "bg-pink-100",   iconColor: "text-pink-600" },
   { label: "Аналитика врача", href: "/doctor-analytics", roles: ["doctor"],                                   Icon: BarChart3,       iconBg: "bg-pink-100",   iconColor: "text-pink-600" },
   { label: "Финансы",    href: "/financials",      roles: ["owner","accountant"],                             Icon: Wallet,          iconBg: "bg-emerald-100",iconColor: "text-emerald-600" },
-  { label: "Инвентарь",  href: "/inventory",       roles: ["owner","admin","warehouse"],                      Icon: Package,         iconBg: "bg-amber-100",  iconColor: "text-amber-600" },
+  { label: "Инвентарь",  href: "/inventory",       roles: ["owner"],                                          Icon: Package,         iconBg: "bg-amber-100",  iconColor: "text-amber-600" },
   { label: "WhatsApp",   href: "/chat",            roles: ["owner","admin","doctor"],                         Icon: FaWhatsapp,      iconBg: "bg-green-100",  iconColor: "text-green-600" },
   { label: "Сотрудники", href: "/users",           roles: ["owner"],                                          Icon: UserCog,         iconBg: "bg-slate-100",  iconColor: "text-slate-600" },
   { label: "Чат-бот",   href: "/chatbot",          roles: ["owner"],                                          Icon: Bot,             iconBg: "bg-purple-100", iconColor: "text-purple-600" },
@@ -90,7 +90,7 @@ export function GlobalSearch() {
 
   const canSeePatients  = ["owner","admin","doctor"].includes(role);
   const canSeeUsers     = ["owner","admin"].includes(role);
-  const canSeeInventory = ["owner","admin","warehouse"].includes(role);
+  const canSeeInventory = ["owner"].includes(role);
   const canSeeProcedures= ["owner","admin","accountant"].includes(role);
 
   const { data: patientsData }   = useListPatients({ query: { enabled: canSeePatients } });

@@ -10,7 +10,6 @@ import {
   Settings,
   Calendar,
   Wallet,
-  Package,
   ChevronLeft,
   ChevronRight,
   LogOut,
@@ -30,7 +29,6 @@ const ADMIN_NAV_ITEMS = [
   { nameKey: "nav.patients",             href: "/patients",                icon: Users,           badge: null },
   { nameKey: "nav.services",             href: "/services",                icon: Stethoscope,     badge: null },
   { nameKey: "nav.chat",                 href: "/chat",                    icon: FaWhatsapp,      badge: null },
-  { nameKey: "nav.inventory",            href: "/inventory",               icon: Package,         badge: null },
   { nameKey: "nav.settings",             href: "/settings",                icon: Settings,        badge: null },
 ];
 
