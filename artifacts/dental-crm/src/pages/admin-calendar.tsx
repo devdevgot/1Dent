@@ -1219,7 +1219,6 @@ export default function AdminCalendar() {
                           setDraggingId(p.id);
                         }}
                         onDragEnd={() => setDraggingId(null)}
-                        onClick={(e) => { e.stopPropagation(); openEditModal(p); }}
                         className={cn(
                           "flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[11px] font-medium truncate cursor-pointer transition-opacity",
                           STATUS_PILL[p.status ?? "scheduled"],
