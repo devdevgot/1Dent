@@ -1,7 +1,7 @@
 import { randomBytes, createHmac } from "crypto";
 import path from "path";
-import { migrate } from "drizzle-orm/node-postgres/migrator";
-import { db } from "@workspace/db";
+import fs from "fs/promises";
+import { db, pool } from "@workspace/db";
 import app from "./app";
 import { logger } from "./lib/logger";
 import { startAlertWorker } from "./shared/alert-queue";
@@ -31,6 +31,74 @@ if (!process.env["JWT_SECRET"]) {
 
 const port = parseInt(process.env["PORT"] ?? "8080", 10);
 
+// Resilient migration runner — handles "already exists" errors per-statement
+// so a db:push-bootstrapped production DB (empty __drizzle_migrations) never
+// breaks on CREATE TYPE / CREATE TABLE that the schema already has.
+async function runMigrations(migrationsFolder: string): Promise<void> {
+  // Ensure the tracking table exists (matches Drizzle's own schema)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS "__drizzle_migrations" (
+      id SERIAL PRIMARY KEY,
+      hash TEXT NOT NULL,
+      created_at BIGINT
+    )
+  `);
+
+  // Read journal to get ordered list of migrations
+  const journalPath = path.join(migrationsFolder, "meta", "_journal.json");
+  const journal = JSON.parse(await fs.readFile(journalPath, "utf8")) as {
+    entries: Array<{ idx: number; tag: string; when: number }>;
+  };
+
+  // Find already-applied migrations
+  const { rows: applied } = await pool.query<{ hash: string }>(
+    `SELECT hash FROM "__drizzle_migrations"`
+  );
+  const appliedTags = new Set(applied.map((r) => r.hash));
+
+  let applied_count = 0;
+  for (const entry of journal.entries) {
+    if (appliedTags.has(entry.tag)) continue;
+
+    const sqlPath = path.join(migrationsFolder, `${entry.tag}.sql`);
+    const sql = await fs.readFile(sqlPath, "utf8");
+
+    // Split on Drizzle's statement-breakpoint marker and run each statement
+    const statements = sql
+      .split("--> statement-breakpoint")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    for (const stmt of statements) {
+      try {
+        await pool.query(stmt);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        // Treat "already exists" errors as no-ops — the schema is already there
+        if (msg.includes("already exists")) {
+          logger.debug({ tag: entry.tag, msg }, "[Migration] Skipping idempotent statement");
+        } else {
+          throw err;
+        }
+      }
+    }
+
+    // Record migration as applied
+    await pool.query(
+      `INSERT INTO "__drizzle_migrations" (hash, created_at) VALUES ($1, $2)`,
+      [entry.tag, entry.when]
+    );
+    applied_count++;
+    logger.info({ tag: entry.tag }, "[Migration] Applied");
+  }
+
+  if (applied_count === 0) {
+    logger.info("[Migration] All migrations already up-to-date");
+  } else {
+    logger.info({ applied_count }, "[Migration] Migrations complete");
+  }
+}
+
 // Run DB migrations before starting the server
 if (process.env["DATABASE_URL"]) {
   try {
@@ -38,7 +106,7 @@ if (process.env["DATABASE_URL"]) {
       path.dirname(new URL(import.meta.url).pathname),
       "../../../lib/db/drizzle"
     );
-    await migrate(db, { migrationsFolder });
+    await runMigrations(migrationsFolder);
     logger.info("Database migrations applied successfully");
   } catch (err) {
     logger.warn({ err }, "Database migration error — continuing server startup");
