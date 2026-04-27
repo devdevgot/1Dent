@@ -115,6 +115,9 @@ router.get("/ai-analysis", readRoles, async (req: Request, res: Response, next: 
     );
   }
 
+  // Must not be cached by the browser — the polling frontend needs fresh data every 4 s.
+  // Without this, Express's default ETag causes 304 responses that serve a stale null body forever.
+  res.set("Cache-Control", "no-store");
   res.json({ success: true, data: analysis ?? null });
 });
 
