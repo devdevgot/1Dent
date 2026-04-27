@@ -287,7 +287,7 @@ export async function createPartnerInstance(partnerToken: string): Promise<Partn
   const url = `${BASE_URL}/partner/createInstance/${partnerToken}`;
   const res = await fetch(url, {
     method: "POST",
-    signal: greenApiSignal(30_000),
+    signal: greenApiSignal(120_000),
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({}),
   });

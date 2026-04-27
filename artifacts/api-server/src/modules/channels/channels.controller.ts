@@ -187,33 +187,69 @@ router.post(
       }
     }
 
-    // Create new instance via Partner API
-    let result;
+    const clinicId = req.user!.clinicId;
+
+    // Helper: save the provisioned instance to DB and log
+    const saveInstance = async (r: { idInstance: number; apiTokenInstance: string }) => {
+      const instanceId = String(r.idInstance);
+      await db
+        .update(clinicsTable)
+        .set({ greenApiInstanceId: instanceId, greenApiToken: r.apiTokenInstance })
+        .where(eq(clinicsTable.id, clinicId));
+      clearGreenApiStateCache(instanceId);
+      logger.info({ instanceId, clinicId }, "Green API instance provisioned via Partner API");
+    };
+
+    // Start the Green API call immediately
+    const provisionPromise = createPartnerInstance(partnerToken);
+
+    // Try to get a result within 20 s so we can respond before any proxy cuts the connection.
+    // If Green API takes longer we return "provisioning" immediately and finish in the background —
+    // the frontend polls /status every 5 s and will pick up the instance once it appears in the DB.
+    const EARLY_RESPONSE_MS = 20_000;
+    let earlyResult: { idInstance: number; apiTokenInstance: string } | null = null;
+    let timedOut = false;
+
     try {
-      result = await createPartnerInstance(partnerToken);
+      earlyResult = await Promise.race([
+        provisionPromise,
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("PROVISION_TIMEOUT")), EARLY_RESPONSE_MS),
+        ),
+      ]);
     } catch (err) {
-      logger.error({ err, clinicId: req.user!.clinicId }, "Green API createInstance (Partner API) failed");
       const msg = err instanceof Error ? err.message : String(err);
-      const isAuth = msg.includes("401") || msg.toLowerCase().includes("unauthorized");
-      const userMsg = isAuth
-        ? "Ошибка авторизации Green API (401 Unauthorized). Партнёрский токен недействителен или истёк — проверьте переменную GREEN_API_PARTNER_TOKEN в настройках сервера."
-        : `Не удалось создать инстанс: ${msg}`;
-      return res.status(502).json({ success: false, error: userMsg });
+      if (msg === "PROVISION_TIMEOUT") {
+        timedOut = true;
+        // Background: keep waiting for Green API and save when ready
+        provisionPromise
+          .then(saveInstance)
+          .catch((bgErr) => logger.error({ err: bgErr, clinicId }, "Green API background provisioning failed"));
+        logger.info({ clinicId }, "Green API createInstance taking >20 s — responding early, saving in background");
+      } else {
+        logger.error({ err, clinicId }, "Green API createInstance (Partner API) failed");
+        const isAuth = msg.includes("401") || msg.toLowerCase().includes("unauthorized");
+        const userMsg = isAuth
+          ? "Ошибка авторизации Green API (401 Unauthorized). Партнёрский токен недействителен или истёк — проверьте переменную GREEN_API_PARTNER_TOKEN в настройках сервера."
+          : `Не удалось создать инстанс: ${msg}`;
+        return res.status(502).json({ success: false, error: userMsg });
+      }
     }
 
-    const instanceId = String(result.idInstance);
-    const token = result.apiTokenInstance;
+    if (timedOut) {
+      // Let the frontend know provisioning is in progress; it will poll /status
+      return res.json({ success: true, data: { idInstance: null, isExisting: false, provisioning: true } });
+    }
 
-    // Persist to DB
-    await db
-      .update(clinicsTable)
-      .set({ greenApiInstanceId: instanceId, greenApiToken: token })
-      .where(eq(clinicsTable.id, req.user!.clinicId))
-      .catch(next);
+    // Got a result quickly — save synchronously so the client can use it right away
+    try {
+      await saveInstance(earlyResult!);
+    } catch (dbErr) {
+      logger.error({ err: dbErr, clinicId }, "Failed to persist Green API instance to DB");
+      return next(dbErr);
+    }
 
-    clearGreenApiStateCache(instanceId);
-    logger.info({ instanceId, clinicId: req.user!.clinicId }, "Green API instance provisioned via Partner API");
-    res.json({ success: true, data: { idInstance: instanceId, isExisting: false } });
+    res.json({ success: true, data: { idInstance: String(earlyResult!.idInstance), isExisting: false } });
   },
 );
 
