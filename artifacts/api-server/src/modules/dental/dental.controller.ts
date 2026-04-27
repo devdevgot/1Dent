@@ -11,7 +11,7 @@ import { DentalRepository } from "./dental.repository";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 import { PatientsRepository } from "../patients/patients.repository";
-import { triggerDentalAiAnalysis, getLatestDentalAnalysis } from "./dental-ai";
+import { triggerDentalAiAnalysis, getLatestDentalAnalysis, deleteLatestDentalAnalysis } from "./dental-ai";
 import { logger } from "../../lib/logger";
 
 const router: IRouter = Router({ mergeParams: true });
@@ -116,6 +116,27 @@ router.get("/ai-analysis", readRoles, async (req: Request, res: Response, next: 
   }
 
   res.json({ success: true, data: analysis ?? null });
+});
+
+// POST /patients/:id/teeth/trigger-ai-analysis
+// Called once after a full diagnosis save to kick off a fresh AI analysis.
+// Deletes the stale result so the frontend polls from a clean state.
+router.post("/trigger-ai-analysis", writeRoles, async (req: Request, res: Response, next: NextFunction) => {
+  const patientId = String(req.params["id"]);
+  const ok = await assertPatientAccess(patientId, req.user!.clinicId, next).catch(next);
+  if (!ok) return;
+
+  // Clear the stale result so GET returns null → frontend polling starts fresh
+  await deleteLatestDentalAnalysis(req.user!.clinicId, patientId).catch((err) =>
+    logger.warn({ err }, "[DentalAI] Could not delete stale analysis before re-trigger"),
+  );
+
+  // Fire-and-forget — runs after all teeth have been saved by the time this endpoint is called
+  triggerDentalAiAnalysis(req.user!.clinicId, patientId).catch((err) =>
+    logger.warn({ err }, "[DentalAI] Background analysis error from trigger endpoint"),
+  );
+
+  res.status(202).json({ success: true });
 });
 
 // GET /patients/:id/teeth/:toothFdi/treatments

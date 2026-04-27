@@ -20,6 +20,7 @@ import {
   useUpdateTreatmentPlanItem,
   useCompleteTreatmentPlanItem,
   useListProcedureTemplates,
+  useTriggerDentalAiAnalysis,
   getListPatientsQueryKey,
   getGetPatientQueryKey,
   getListTeethQueryKey,
@@ -1147,6 +1148,8 @@ export function PatientDetailPanel() {
     },
   });
 
+  const triggerAnalysisMutation = useTriggerDentalAiAnalysis();
+
   const statusMutation = useUpdatePatientStatus({
     mutation: {
       onSuccess: () => {
@@ -1225,6 +1228,10 @@ export function PatientDetailPanel() {
       }
     }
 
+    // 3. Trigger a single fresh AI analysis now that ALL teeth are persisted.
+    //    Fire-and-forget — we don't need to wait for the AI result here.
+    void triggerAnalysisMutation.mutateAsync(selectedPatientId);
+
     await refetchTeeth();
     setDiagnosisMap(new Map());
     setDiagnosisNotesMap(new Map());
@@ -1236,10 +1243,11 @@ export function PatientDetailPanel() {
     setPlanViewToothFdi(null);
     toast({ title: t("patient.diagnosisSaved") });
 
-    // Invalidate AI analysis cache and switch to the AI tab
-    void queryClient.invalidateQueries({ queryKey: getDentalAiAnalysisQueryKey(selectedPatientId) });
+    // Remove the stale cache entirely so the panel re-enters the "polling" state
+    // (invalidateQueries would leave the old data visible and stop refetchInterval early)
+    queryClient.removeQueries({ queryKey: getDentalAiAnalysisQueryKey(selectedPatientId) });
     setActiveTab("ai_analysis");
-  }, [selectedPatientId, diagnosisMap, diagnosisNotesMap, diagnosisServicesMap, teethMap, updateToothMutation, createPlanMutation, refetchTeeth, toast, t, queryClient, setActiveTab]);
+  }, [selectedPatientId, diagnosisMap, diagnosisNotesMap, diagnosisServicesMap, teethMap, updateToothMutation, triggerAnalysisMutation, createPlanMutation, refetchTeeth, toast, t, queryClient, setActiveTab]);
 
   const diagnosisSummaryEntries = useMemo((): DiagnosisSummaryEntry[] => {
     const allFdis = new Set([...diagnosisMap.keys(), ...teethMap.keys()]);

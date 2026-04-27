@@ -127,6 +127,17 @@ export async function triggerDentalAiAnalysis(clinicId: string, patientId: strin
   }
 }
 
+export async function deleteLatestDentalAnalysis(clinicId: string, patientId: string): Promise<void> {
+  await db
+    .delete(dentalAiAnalysesTable)
+    .where(
+      and(
+        eq(dentalAiAnalysesTable.clinicId, clinicId),
+        eq(dentalAiAnalysesTable.patientId, patientId),
+      ),
+    );
+}
+
 export async function getLatestDentalAnalysis(
   clinicId: string,
   patientId: string,
