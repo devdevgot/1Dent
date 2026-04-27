@@ -34,7 +34,7 @@ const ALL_NAV_ITEMS = [
   { nameKey: "nav.inventory",    href: "/inventory",          icon: Package,         roles: ["owner","admin","warehouse"] },
   { nameKey: "nav.services",     href: "/services",           icon: ClipboardList,   roles: ["owner","admin","doctor","accountant"] },
   { nameKey: "nav.users",        href: "/users",              icon: Settings,        roles: ["owner"] },
-  { nameKey: "nav.chatbot",      href: "/chatbot",            icon: Bot,             roles: ["owner","admin"] },
+  { nameKey: "nav.chatbot",      href: "/chatbot",            icon: Bot,             roles: ["owner"] },
   { nameKey: "nav.channels",     href: "/channels",           icon: Radio,           roles: ["owner","admin"] },
 ];
 
