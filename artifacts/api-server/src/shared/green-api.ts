@@ -26,12 +26,18 @@ export function getServerBaseUrl(): string | null {
   return null;
 }
 
+/** Resolves the correct base URL for an instance. Partner instances have their own subdomain. */
+export function resolveInstanceBaseUrl(apiBaseUrl?: string | null): string {
+  return apiBaseUrl ? apiBaseUrl.replace(/\/$/, "") : BASE_URL;
+}
+
 export async function setGreenApiWebhookUrl(
   instanceId: string,
   token: string,
   webhookUrl: string,
+  apiBaseUrl?: string | null,
 ): Promise<void> {
-  const url = `${BASE_URL}/waInstance${instanceId}/setSettings/${token}`;
+  const url = `${resolveInstanceBaseUrl(apiBaseUrl)}/waInstance${instanceId}/setSettings/${token}`;
   const res = await fetch(url, {
     method: "POST",
     signal: greenApiSignal(),
@@ -64,10 +70,11 @@ export async function getGreenApiPairingCode(
   instanceId: string,
   token: string,
   phoneNumber: string,
+  apiBaseUrl?: string | null,
 ): Promise<GreenApiPairingCodeResult> {
   // Strip non-digits so the user can enter phone in any format
   const digits = phoneNumber.replace(/\D/g, "");
-  const url = `${BASE_URL}/waInstance${instanceId}/getAuthorizationCode/${token}`;
+  const url = `${resolveInstanceBaseUrl(apiBaseUrl)}/waInstance${instanceId}/getAuthorizationCode/${token}`;
   const res = await fetch(url, {
     method: "POST",
     signal: greenApiSignal(),
@@ -102,8 +109,9 @@ export async function sendGreenApiMessage(
   token: string,
   phone: string,
   text: string,
+  apiBaseUrl?: string | null,
 ): Promise<GreenApiSendResult> {
-  const url = `${BASE_URL}/waInstance${instanceId}/sendMessage/${token}`;
+  const url = `${resolveInstanceBaseUrl(apiBaseUrl)}/waInstance${instanceId}/sendMessage/${token}`;
   const chatId = phone.includes("@") ? phone : `${phone}@c.us`;
 
   const res = await fetch(url, {
@@ -124,8 +132,9 @@ export async function sendGreenApiMessage(
 export async function getGreenApiQrCode(
   instanceId: string,
   token: string,
+  apiBaseUrl?: string | null,
 ): Promise<GreenApiQrResult> {
-  const url = `${BASE_URL}/waInstance${instanceId}/qr/${token}`;
+  const url = `${resolveInstanceBaseUrl(apiBaseUrl)}/waInstance${instanceId}/qr/${token}`;
   const res = await fetch(url, { signal: greenApiSignal() });
 
   if (!res.ok) {
@@ -159,6 +168,7 @@ export function shouldRegisterWebhook(instanceId: string): boolean {
 export async function getGreenApiState(
   instanceId: string,
   token: string,
+  apiBaseUrl?: string | null,
 ): Promise<GreenApiStateResult> {
   const cacheKey = instanceId;
   const cached = stateCache.get(cacheKey);
@@ -166,7 +176,7 @@ export async function getGreenApiState(
     return cached.result;
   }
 
-  const url = `${BASE_URL}/waInstance${instanceId}/getStateInstance/${token}`;
+  const url = `${resolveInstanceBaseUrl(apiBaseUrl)}/waInstance${instanceId}/getStateInstance/${token}`;
   const res = await fetch(url, { signal: greenApiSignal(10_000) });
 
   if (res.status === 429) {
@@ -200,8 +210,9 @@ export interface GreenApiWaSettingsResult {
 export async function getGreenApiWaSettings(
   instanceId: string,
   token: string,
+  apiBaseUrl?: string | null,
 ): Promise<GreenApiWaSettingsResult | null> {
-  const url = `${BASE_URL}/waInstance${instanceId}/getWaSettings/${token}`;
+  const url = `${resolveInstanceBaseUrl(apiBaseUrl)}/waInstance${instanceId}/getWaSettings/${token}`;
   const res = await fetch(url, { signal: greenApiSignal() });
   if (!res.ok) return null;
   return res.json() as Promise<GreenApiWaSettingsResult>;
@@ -253,10 +264,11 @@ export function extractPhoneFromWaSettings(
 export async function logoutGreenApiInstance(
   instanceId: string,
   token: string,
+  apiBaseUrl?: string | null,
 ): Promise<void> {
   // Green API: Logout is a GET endpoint (not POST). POSTing returns 404 "Cannot POST".
   // Docs: https://green-api.com/en/docs/api/account/Logout/
-  const url = `${BASE_URL}/waInstance${instanceId}/logout/${token}`;
+  const url = `${resolveInstanceBaseUrl(apiBaseUrl)}/waInstance${instanceId}/logout/${token}`;
   const signal = AbortSignal.timeout(15_000);
   const res = await fetch(url, { method: "GET", signal });
   if (!res.ok) {
@@ -276,6 +288,7 @@ export function isInstanceDeleted(err: unknown): boolean {
 export interface PartnerCreateInstanceResult {
   idInstance: number;
   apiTokenInstance: string;
+  apiUrl: string;
 }
 
 /**
@@ -309,10 +322,12 @@ export async function createPartnerInstance(partnerToken: string): Promise<Partn
   // Green API may return idInstance or instanceId depending on API version/token type
   const idInstance = (parsed["idInstance"] ?? parsed["instanceId"]) as number | undefined;
   const apiTokenInstance = (parsed["apiTokenInstance"] ?? parsed["token"]) as string | undefined;
+  // Partner instances use a per-instance subdomain URL, not the standard api.green-api.com
+  const apiUrl = (parsed["apiUrl"] as string | undefined) ?? BASE_URL;
   if (!idInstance || !apiTokenInstance) {
     throw new Error(`Green API createInstance: unexpected response shape: ${rawText}`);
   }
-  return { idInstance, apiTokenInstance };
+  return { idInstance, apiTokenInstance, apiUrl };
 }
 
 /**

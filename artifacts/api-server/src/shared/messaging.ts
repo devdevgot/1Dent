@@ -17,6 +17,7 @@ export async function sendToPatient(
     .select({
       greenApiInstanceId: clinicsTable.greenApiInstanceId,
       greenApiToken: clinicsTable.greenApiToken,
+      greenApiUrl: clinicsTable.greenApiUrl,
     })
     .from(clinicsTable)
     .where(eq(clinicsTable.id, clinicId))
@@ -28,6 +29,7 @@ export async function sendToPatient(
       clinic.greenApiToken,
       phone,
       text,
+      clinic.greenApiUrl,
     );
     return result.idMessage;
   }

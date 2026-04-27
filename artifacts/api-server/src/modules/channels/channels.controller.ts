@@ -158,7 +158,7 @@ router.post(
     }
 
     const [current] = await db
-      .select({ greenApiInstanceId: clinicsTable.greenApiInstanceId, greenApiToken: clinicsTable.greenApiToken })
+      .select({ greenApiInstanceId: clinicsTable.greenApiInstanceId, greenApiToken: clinicsTable.greenApiToken, greenApiUrl: clinicsTable.greenApiUrl })
       .from(clinicsTable)
       .where(eq(clinicsTable.id, req.user!.clinicId))
       .limit(1)
@@ -169,14 +169,14 @@ router.post(
     if (current.greenApiInstanceId && current.greenApiToken) {
       let staleInstance = false;
       try {
-        await getGreenApiState(current.greenApiInstanceId, current.greenApiToken);
+        await getGreenApiState(current.greenApiInstanceId, current.greenApiToken, current.greenApiUrl);
       } catch (err) {
         if (isInstanceDeleted(err)) {
           staleInstance = true;
           logger.warn({ instanceId: current.greenApiInstanceId, clinicId: req.user!.clinicId }, "Green API instance is deleted — clearing stale credentials and reprovisioning");
           clearGreenApiStateCache(current.greenApiInstanceId);
           await db.update(clinicsTable)
-            .set({ greenApiInstanceId: null, greenApiToken: null })
+            .set({ greenApiInstanceId: null, greenApiToken: null, greenApiUrl: null })
             .where(eq(clinicsTable.id, req.user!.clinicId))
             .catch(() => {});
         }
@@ -190,11 +190,11 @@ router.post(
     const clinicId = req.user!.clinicId;
 
     // Helper: save the provisioned instance to DB and log
-    const saveInstance = async (r: { idInstance: number; apiTokenInstance: string }) => {
+    const saveInstance = async (r: { idInstance: number; apiTokenInstance: string; apiUrl: string }) => {
       const instanceId = String(r.idInstance);
       await db
         .update(clinicsTable)
-        .set({ greenApiInstanceId: instanceId, greenApiToken: r.apiTokenInstance })
+        .set({ greenApiInstanceId: instanceId, greenApiToken: r.apiTokenInstance, greenApiUrl: r.apiUrl })
         .where(eq(clinicsTable.id, clinicId));
       clearGreenApiStateCache(instanceId);
       logger.info({ instanceId, clinicId }, "Green API instance provisioned via Partner API");
@@ -259,7 +259,7 @@ router.delete(
   async (req: Request, res: Response, next: NextFunction) => {
     // Read current credentials before clearing them
     const [current] = await db
-      .select({ greenApiInstanceId: clinicsTable.greenApiInstanceId, greenApiToken: clinicsTable.greenApiToken })
+      .select({ greenApiInstanceId: clinicsTable.greenApiInstanceId, greenApiToken: clinicsTable.greenApiToken, greenApiUrl: clinicsTable.greenApiUrl })
       .from(clinicsTable)
       .where(eq(clinicsTable.id, req.user!.clinicId))
       .limit(1)
@@ -271,7 +271,7 @@ router.delete(
     if (current.greenApiInstanceId && current.greenApiToken) {
       clearGreenApiStateCache(current.greenApiInstanceId);
       try {
-        await logoutGreenApiInstance(current.greenApiInstanceId, current.greenApiToken);
+        await logoutGreenApiInstance(current.greenApiInstanceId, current.greenApiToken, current.greenApiUrl);
         greenApiLogoutOk = true;
         logger.info({ instanceId: current.greenApiInstanceId }, "Green API logout succeeded — device unlinked");
       } catch (err) {
@@ -282,7 +282,7 @@ router.delete(
     // Clear credentials from DB regardless of Green API logout success
     const rows = await db
       .update(clinicsTable)
-      .set({ greenApiInstanceId: null, greenApiToken: null, whatsappPhone: null })
+      .set({ greenApiInstanceId: null, greenApiToken: null, greenApiUrl: null, whatsappPhone: null })
       .where(eq(clinicsTable.id, req.user!.clinicId))
       .returning({ id: clinicsTable.id })
       .catch(next);
@@ -313,7 +313,7 @@ router.get(
   roleGuard("owner", "admin"),
   async (req: Request, res: Response, next: NextFunction) => {
     const [clinic] = await db
-      .select({ greenApiInstanceId: clinicsTable.greenApiInstanceId, greenApiToken: clinicsTable.greenApiToken })
+      .select({ greenApiInstanceId: clinicsTable.greenApiInstanceId, greenApiToken: clinicsTable.greenApiToken, greenApiUrl: clinicsTable.greenApiUrl })
       .from(clinicsTable)
       .where(eq(clinicsTable.id, req.user!.clinicId))
       .limit(1)
@@ -324,7 +324,7 @@ router.get(
     }
     let qrResult;
     try {
-      qrResult = await getGreenApiQrCode(clinic.greenApiInstanceId, clinic.greenApiToken);
+      qrResult = await getGreenApiQrCode(clinic.greenApiInstanceId, clinic.greenApiToken, clinic.greenApiUrl);
       logger.info({ instanceId: clinic.greenApiInstanceId, type: qrResult.type }, "Green API QR fetched");
     } catch (err) {
       logger.error({ err, instanceId: clinic.greenApiInstanceId }, "Green API QR fetch failed");
@@ -361,7 +361,7 @@ router.post(
     const { phoneNumber } = parsed.data;
 
     const [clinic] = await db
-      .select({ greenApiInstanceId: clinicsTable.greenApiInstanceId, greenApiToken: clinicsTable.greenApiToken })
+      .select({ greenApiInstanceId: clinicsTable.greenApiInstanceId, greenApiToken: clinicsTable.greenApiToken, greenApiUrl: clinicsTable.greenApiUrl })
       .from(clinicsTable)
       .where(eq(clinicsTable.id, req.user!.clinicId))
       .limit(1)
@@ -373,7 +373,7 @@ router.post(
 
     let result;
     try {
-      result = await getGreenApiPairingCode(clinic.greenApiInstanceId, clinic.greenApiToken, phoneNumber);
+      result = await getGreenApiPairingCode(clinic.greenApiInstanceId, clinic.greenApiToken, phoneNumber, clinic.greenApiUrl);
       logger.info({ instanceId: clinic.greenApiInstanceId, status: result.status }, "Green API pairing code fetched");
     } catch (err) {
       logger.error({ err, instanceId: clinic.greenApiInstanceId }, "Green API pairing code fetch failed");
@@ -432,6 +432,7 @@ router.get(
       .select({
         greenApiInstanceId: clinicsTable.greenApiInstanceId,
         greenApiToken: clinicsTable.greenApiToken,
+        greenApiUrl: clinicsTable.greenApiUrl,
         whatsappPhone: clinicsTable.whatsappPhone,
       })
       .from(clinicsTable)
@@ -444,7 +445,7 @@ router.get(
     }
     let state: Awaited<ReturnType<typeof getGreenApiState>>;
     try {
-      state = await getGreenApiState(clinic.greenApiInstanceId, clinic.greenApiToken);
+      state = await getGreenApiState(clinic.greenApiInstanceId, clinic.greenApiToken, clinic.greenApiUrl);
     } catch (err) {
       logger.warn({ err, instanceId: clinic.greenApiInstanceId }, "Green API getStateInstance failed — instance may still be initializing");
       // If the instance was deleted in Green API, clear stale DB credentials so the UI shows provision button
@@ -452,7 +453,7 @@ router.get(
         logger.warn({ instanceId: clinic.greenApiInstanceId, clinicId: req.user!.clinicId }, "Instance deleted in Green API — clearing stale credentials from DB");
         clearGreenApiStateCache(clinic.greenApiInstanceId);
         await db.update(clinicsTable)
-          .set({ greenApiInstanceId: null, greenApiToken: null })
+          .set({ greenApiInstanceId: null, greenApiToken: null, greenApiUrl: null })
           .where(eq(clinicsTable.id, req.user!.clinicId))
           .catch(() => {});
         return res.json({ success: true, data: { configured: false, connected: false, phone: clinic.whatsappPhone ?? null, stateInstance: "deleted" } });
@@ -475,7 +476,7 @@ router.get(
       // Green API uses different field names across plan tiers (wid / chatId / phone / phoneNumber).
       // extractPhoneFromWaSettings() handles all variants.
       if (!phone) {
-        const waSettings = await getGreenApiWaSettings(clinic.greenApiInstanceId, clinic.greenApiToken).catch(() => null);
+        const waSettings = await getGreenApiWaSettings(clinic.greenApiInstanceId, clinic.greenApiToken, clinic.greenApiUrl).catch(() => null);
         phone = extractPhoneFromWaSettings(waSettings);
         logger.info({ instanceId: clinic.greenApiInstanceId, waSettingsKeys: waSettings ? Object.keys(waSettings) : null, resolvedPhone: phone ? phone.slice(0, 5) + "***" : null }, "Green API WaSettings phone extraction");
       }
@@ -497,7 +498,7 @@ router.get(
       if (baseUrl && shouldRegisterWebhook(clinic.greenApiInstanceId)) {
         const webhookUrl = `${baseUrl}/api/webhook/greenapi/${req.user!.clinicId}`;
         logger.info({ webhookUrl, clinicId: req.user!.clinicId }, "Registering Green API webhook URL");
-        setGreenApiWebhookUrl(clinic.greenApiInstanceId, clinic.greenApiToken, webhookUrl)
+        setGreenApiWebhookUrl(clinic.greenApiInstanceId, clinic.greenApiToken, webhookUrl, clinic.greenApiUrl)
           .then(() => logger.info({ webhookUrl }, "Green API webhook URL registered successfully"))
           .catch((err) => logger.warn({ err }, "Failed to set Green API webhook URL — messages may not be delivered"));
       } else if (!baseUrl) {

@@ -12,6 +12,7 @@ export const clinicsTable = pgTable("clinics", {
   whatsappPhone: text("whatsapp_phone"),
   greenApiInstanceId: text("green_api_instance_id"),
   greenApiToken: text("green_api_token"),
+  greenApiUrl: text("green_api_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

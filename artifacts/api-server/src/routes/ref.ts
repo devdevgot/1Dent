@@ -76,6 +76,7 @@ async function handleRefCode(
           whatsappPhone: clinicsTable.whatsappPhone,
           greenApiInstanceId: clinicsTable.greenApiInstanceId,
           greenApiToken: clinicsTable.greenApiToken,
+          greenApiUrl: clinicsTable.greenApiUrl,
         })
         .from(clinicsTable)
         .where(eq(clinicsTable.id, channel.clinicId))
@@ -89,7 +90,7 @@ async function handleRefCode(
       if (!phone && clinic?.greenApiInstanceId && clinic?.greenApiToken) {
         try {
           // Try getStateInstance first — it often contains wid
-          const state = await getGreenApiState(clinic.greenApiInstanceId, clinic.greenApiToken);
+          const state = await getGreenApiState(clinic.greenApiInstanceId, clinic.greenApiToken, clinic.greenApiUrl);
           logger.info({ clinicId: channel.clinicId, stateInstance: state.stateInstance, hasWidInState: !!state.wid }, "[ref] Green API state checked");
 
           if (state.stateInstance === "authorized") {
@@ -98,7 +99,7 @@ async function handleRefCode(
             if (!resolvedPhone) {
               // Try getWaSettings as secondary source.
               // extractPhoneFromWaSettings() handles all field name variants across Green API plan tiers.
-              const waSettings = await getGreenApiWaSettings(clinic.greenApiInstanceId, clinic.greenApiToken).catch((err) => {
+              const waSettings = await getGreenApiWaSettings(clinic.greenApiInstanceId, clinic.greenApiToken, clinic.greenApiUrl).catch((err) => {
                 logger.warn({ err, clinicId: channel.clinicId }, "[ref] getWaSettings threw");
                 return null;
               });

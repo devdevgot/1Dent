@@ -25,7 +25,7 @@ router.post(
     logger.info({ clinicId, typeWebhook, payload: JSON.stringify(rawBody).slice(0, 300) }, "[GreenAPI Webhook] received");
 
     const [clinic] = await db
-      .select({ greenApiInstanceId: clinicsTable.greenApiInstanceId, greenApiToken: clinicsTable.greenApiToken })
+      .select({ greenApiInstanceId: clinicsTable.greenApiInstanceId, greenApiToken: clinicsTable.greenApiToken, greenApiUrl: clinicsTable.greenApiUrl })
       .from(clinicsTable)
       .where(eq(clinicsTable.id, clinicId))
       .limit(1)
@@ -63,7 +63,7 @@ router.post(
 
         // If not in payload, fetch from getWaSettings
         if (!phone && clinic.greenApiToken) {
-          const waSettings = await getGreenApiWaSettings(clinic.greenApiInstanceId, clinic.greenApiToken).catch(() => null);
+          const waSettings = await getGreenApiWaSettings(clinic.greenApiInstanceId, clinic.greenApiToken, clinic.greenApiUrl).catch(() => null);
           phone = extractPhoneFromWaSettings(waSettings);
         }
 
