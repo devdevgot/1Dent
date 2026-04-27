@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTheme } from "@/hooks/use-theme";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/hooks/use-auth";
 import {
@@ -8,10 +7,9 @@ import {
   useGetConditionPrices,
   useUpdateConditionPrices,
   getGetConditionPricesQueryKey,
-  customFetch,
 } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
-import { User, Shield, Palette, Globe, Eye, EyeOff, DollarSign, Radio, Settings2, ChevronLeft, MessageCircle, Copy, Check } from "lucide-react";
+import { User, Shield, Globe, Eye, EyeOff, DollarSign, Radio, Settings2, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ChannelsSettings } from "@/components/channels/channels-settings";
 
@@ -171,218 +169,9 @@ function ConditionPricesSection() {
   );
 }
 
-interface GreenApiStatus {
-  connected: boolean;
-  phone: string | null;
-}
-
-interface GreenApiQr {
-  type: string;
-  message: string;
-}
-
-function WhatsAppGreenApiSettings({ clinicId }: { clinicId: string }) {
-  const { toast } = useToast();
-  const [instanceId, setInstanceId] = useState("");
-  const [token, setToken] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [status, setStatus] = useState<GreenApiStatus | null>(null);
-  const [qr, setQr] = useState<GreenApiQr | null>(null);
-  const [configured, setConfigured] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const qrIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const statusIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const webhookUrl = `${window.location.origin}/api/webhook/greenapi/${clinicId}`;
-
-  const fetchStatus = useCallback(async () => {
-    try {
-      const res = await customFetch<{ success: boolean; data: GreenApiStatus }>(
-        "/api/clinic/green-api/status",
-      );
-      setStatus(res.data);
-    } catch {
-      setStatus(null);
-    }
-  }, []);
-
-  const fetchQr = useCallback(async () => {
-    try {
-      const res = await customFetch<{ success: boolean; data: GreenApiQr }>(
-        "/api/clinic/green-api/qr",
-      );
-      setQr(res.data);
-      setConfigured(true);
-      if (res.data.type === "alreadyLogged") {
-        fetchStatus();
-      }
-    } catch {
-      setQr(null);
-      setConfigured(false);
-    }
-  }, [fetchStatus]);
-
-  // On mount: always probe status and try to fetch QR.
-  // fetchQr will succeed if credentials are already stored in DB (page reload case)
-  // and fail silently (404) if no credentials are configured yet.
-  useEffect(() => {
-    fetchStatus();
-    fetchQr();
-  }, [fetchStatus, fetchQr]);
-
-  // Start auto-refresh polling whenever credentials are configured and not yet connected
-  useEffect(() => {
-    if (qrIntervalRef.current) clearInterval(qrIntervalRef.current);
-    if (statusIntervalRef.current) clearInterval(statusIntervalRef.current);
-
-    if (!configured || status?.connected) {
-      return;
-    }
-
-    qrIntervalRef.current = setInterval(fetchQr, 20_000);
-    statusIntervalRef.current = setInterval(fetchStatus, 10_000);
-
-    return () => {
-      if (qrIntervalRef.current) clearInterval(qrIntervalRef.current);
-      if (statusIntervalRef.current) clearInterval(statusIntervalRef.current);
-    };
-  }, [configured, status?.connected, fetchQr, fetchStatus]);
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!instanceId || !token) return;
-    setSaving(true);
-    try {
-      await customFetch("/api/clinic/green-api", {
-        method: "PATCH",
-        body: JSON.stringify({ greenApiInstanceId: instanceId, greenApiToken: token }),
-      });
-      toast({ title: "Данные сохранены. Сканируйте QR-код." });
-      // fetchQr will set configured=true and start the polling useEffect
-      await fetchQr();
-      await fetchStatus();
-    } catch {
-      toast({ title: "Ошибка сохранения", variant: "destructive" });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDisconnect = async () => {
-    try {
-      await customFetch("/api/clinic/green-api", { method: "DELETE" });
-      setStatus(null);
-      setQr(null);
-      setConfigured(false);
-      setInstanceId("");
-      setToken("");
-      toast({ title: "WhatsApp отключён" });
-    } catch {
-      toast({ title: "Ошибка отключения", variant: "destructive" });
-    }
-  };
-
-  const copyWebhook = () => {
-    navigator.clipboard.writeText(webhookUrl).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
-
-  return (
-    <div className="space-y-4">
-      <form onSubmit={handleSave} className="space-y-3">
-        <div>
-          <label className="block text-xs font-medium text-muted-foreground mb-1">
-            ID инстанса (idInstance)
-          </label>
-          <input
-            type="text"
-            value={instanceId}
-            onChange={(e) => setInstanceId(e.target.value)}
-            placeholder="1234567890"
-            className="w-full h-10 rounded-xl border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-muted-foreground mb-1">
-            Токен (apiTokenInstance)
-          </label>
-          <input
-            type="text"
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            placeholder="d75b3a66374942c5b3c6e3d6..."
-            className="w-full h-10 rounded-xl border border-border bg-background px-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/40"
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={saving || !instanceId || !token}
-          className="w-full h-10 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-60"
-        >
-          {saving ? "Сохранение..." : "Сохранить и показать QR-код"}
-        </button>
-      </form>
-
-      {status?.connected ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 space-y-3">
-          <div className="flex items-center gap-2 text-emerald-700 font-semibold text-sm">
-            <span className="text-base">✅</span>
-            <span>WhatsApp подключён</span>
-            {status.phone && (
-              <span className="ml-auto text-xs text-emerald-600 font-mono">+{status.phone}</span>
-            )}
-          </div>
-          <button
-            onClick={handleDisconnect}
-            className="w-full h-9 rounded-xl border border-red-200 text-red-600 text-sm font-medium hover:bg-red-50 transition-colors"
-          >
-            Отключить
-          </button>
-        </div>
-      ) : qr?.type === "qrCode" ? (
-        <div className="rounded-xl border border-border p-4 space-y-3">
-          <p className="text-xs text-muted-foreground text-center">
-            Откройте WhatsApp → Привязанные устройства → Привязать устройство
-          </p>
-          <div className="flex justify-center">
-            <img
-              src={`data:image/png;base64,${qr.message}`}
-              alt="WhatsApp QR Code"
-              className="w-48 h-48 rounded-xl border border-border"
-            />
-          </div>
-          <p className="text-[10px] text-muted-foreground text-center">QR обновляется каждые 20 сек</p>
-        </div>
-      ) : null}
-
-      <div className="space-y-1">
-        <p className="text-xs font-medium text-muted-foreground">URL вебхука для Green API</p>
-        <div className="flex items-center gap-2">
-          <code className="flex-1 text-[11px] bg-muted rounded-lg px-3 py-2 overflow-x-auto text-muted-foreground font-mono whitespace-nowrap">
-            {webhookUrl}
-          </code>
-          <button
-            onClick={copyWebhook}
-            className="shrink-0 h-9 w-9 flex items-center justify-center rounded-xl border border-border bg-background hover:bg-muted transition-colors"
-            title="Скопировать"
-          >
-            {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4 text-muted-foreground" />}
-          </button>
-        </div>
-        <p className="text-[10px] text-muted-foreground">
-          Вставьте этот URL в настройки вебхука вашего инстанса на green-api.com
-        </p>
-      </div>
-    </div>
-  );
-}
-
 export default function SettingsPage() {
   const { t, i18n } = useTranslation();
-  const { user, clinic } = useAuthStore();
-  const { theme, setTheme } = useTheme();
+  const { user } = useAuthStore();
   const { toast } = useToast();
 
   const [currentPassword, setCurrentPassword] = useState("");
@@ -427,12 +216,6 @@ export default function SettingsPage() {
       },
     );
   };
-
-  const themes = [
-    { value: "light", label: t("settingsPage.themeLight"), icon: "☀️" },
-    { value: "system", label: t("settingsPage.themeSystem"), icon: "🖥" },
-    { value: "dark", label: t("settingsPage.themeDark"), icon: "🌙" },
-  ] as const;
 
   const languages = [
     { code: "ru", label: "RU" },
@@ -536,27 +319,6 @@ export default function SettingsPage() {
         </form>
       </Section>
 
-      {/* Appearance */}
-      <Section icon={<Palette className="w-5 h-5" />} title={t("settingsPage.appearance")}>
-        <div className="flex gap-2">
-          {themes.map((t_) => (
-            <button
-              key={t_.value}
-              onClick={() => setTheme(t_.value)}
-              className={cn(
-                "flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl border text-xs font-medium transition-all",
-                theme === t_.value
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border bg-background text-muted-foreground hover:border-primary/40",
-              )}
-            >
-              <span className="text-lg">{t_.icon}</span>
-              <span>{t_.label}</span>
-            </button>
-          ))}
-        </div>
-      </Section>
-
       {/* Language */}
       <Section icon={<Globe className="w-5 h-5" />} title={t("settingsPage.language")}>
         <div className="flex gap-2">
@@ -592,15 +354,6 @@ export default function SettingsPage() {
         </Section>
       )}
 
-      {/* WhatsApp (Green API) — owner/admin only */}
-      {(user?.role === "owner" || user?.role === "admin") && clinic?.id && (
-        <Section icon={<MessageCircle className="w-5 h-5" />} title="WhatsApp (Green API)">
-          <p className="text-xs text-muted-foreground mb-4">
-            Подключите WhatsApp через Green API с QR-кодом. Каждая клиника использует свой инстанс.
-          </p>
-          <WhatsAppGreenApiSettings clinicId={clinic.id} />
-        </Section>
-      )}
       </div>
     </div>
   );
