@@ -159,8 +159,8 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-              <div className="px-5 py-4 space-y-4">
+            <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
                 <AnimatePresence mode="wait">
                   {/* ─── Tab: Personal ───────────────────────────────── */}
                   {activeTab === "personal" && (
@@ -342,11 +342,15 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                               {t("employees.maxPatients", "Макс. пациентов в день")}
                             </label>
                             <input
-                              type="number"
-                              min={1}
-                              max={50}
-                              value={form.maxPatientsPerDay}
-                              onChange={(e) => setMaxPatients(Number(e.target.value))}
+                              type="text"
+                              inputMode="numeric"
+                              placeholder="15"
+                              value={form.maxPatientsPerDay === 15 && !form.maxPatientsChanged ? "" : form.maxPatientsPerDay || ""}
+                              onChange={(e) => {
+                                const v = e.target.value.replace(/\D/g, "");
+                                const n = v === "" ? 15 : Math.min(50, Math.max(1, Number(v)));
+                                setMaxPatients(n);
+                              }}
                               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/30"
                             />
                           </div>
@@ -416,11 +420,14 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                           </label>
                           <div className="relative">
                             <input
-                              type="number"
-                              min={0}
-                              step={1000}
-                              value={form.fixedAmount}
-                              onChange={(e) => set("fixedAmount", Number(e.target.value))}
+                              type="text"
+                              inputMode="numeric"
+                              placeholder="0"
+                              value={form.fixedAmount || ""}
+                              onChange={(e) => {
+                                const v = e.target.value.replace(/\D/g, "");
+                                set("fixedAmount", v === "" ? 0 : Number(v));
+                              }}
                               className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-8 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/30"
                             />
                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">₸</span>
@@ -435,12 +442,17 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                           </label>
                           <div className="relative">
                             <input
-                              type="number"
-                              min={0}
-                              max={100}
-                              step={0.5}
-                              value={form.commissionPercent}
-                              onChange={(e) => set("commissionPercent", Number(e.target.value))}
+                              type="text"
+                              inputMode="decimal"
+                              placeholder="0"
+                              value={form.commissionPercent || ""}
+                              onChange={(e) => {
+                                const v = e.target.value.replace(/[^0-9.]/g, "");
+                                const parts = v.split(".");
+                                const clean = parts.length > 2 ? parts[0] + "." + parts.slice(1).join("") : v;
+                                const n = parseFloat(clean);
+                                set("commissionPercent", clean === "" || isNaN(n) ? 0 : Math.min(100, n));
+                              }}
                               className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-8 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/30"
                             />
                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">%</span>
