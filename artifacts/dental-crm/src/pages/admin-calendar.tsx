@@ -14,6 +14,7 @@ import {
   X,
   Clock,
   User,
+  Stethoscope,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -42,13 +43,64 @@ import {
 } from "@/components/appointment-modal";
 import { useAppointmentSave } from "@/hooks/use-appointment-save";
 
+/* ─── Appointment Group ─────────────────────────────────────────────────────
+   Multiple procedures belonging to the same patient at the same time slot
+   are collapsed into a single "appointment" entry for display.
+   ─────────────────────────────────────────────────────────────────────────── */
+interface AppointmentGroup {
+  key: string;
+  patientId: string;
+  patientName: string;
+  doctorId: string | null;
+  doctorName: string | null;
+  timeLabel: string | null;
+  status: string;
+  procedures: ProcedureItem[];
+}
+
+function buildGroups(
+  procedures: ProcedureItem[],
+  patients: PatientEntry[],
+  doctors: { id: string; name: string }[],
+): AppointmentGroup[] {
+  const map = new Map<string, AppointmentGroup>();
+
+  for (const proc of procedures) {
+    const timeLabel = proc.scheduledAt
+      ? format(parseISO(proc.scheduledAt), "HH:mm")
+      : null;
+    const key = `${proc.patientId ?? "unknown"}-${timeLabel ?? "notime"}`;
+
+    if (!map.has(key)) {
+      const patient = patients.find((p) => p.id === proc.patientId);
+      const doctor = proc.doctorId
+        ? doctors.find((d) => d.id === proc.doctorId) ?? null
+        : null;
+      map.set(key, {
+        key,
+        patientId: proc.patientId ?? "",
+        patientName: patient?.name ?? "—",
+        doctorId: proc.doctorId ?? null,
+        doctorName: doctor?.name ?? null,
+        timeLabel,
+        status: proc.status ?? "scheduled",
+        procedures: [],
+      });
+    }
+    map.get(key)!.procedures.push(proc);
+  }
+
+  return Array.from(map.values()).sort((a, b) => {
+    if (!a.timeLabel) return 1;
+    if (!b.timeLabel) return -1;
+    return a.timeLabel.localeCompare(b.timeLabel);
+  });
+}
 
 /* ─── Day Appointments List Modal ─── */
 interface DayAppointmentsModalProps {
   day: Date;
-  procedures: ProcedureItem[];
-  patients: PatientEntry[];
-  doctors: { id: string; name: string }[];
+  groups: AppointmentGroup[];
   onNewAppointment: () => void;
   onEditAppointment: (proc: ProcedureItem) => void;
   onClose: () => void;
@@ -56,20 +108,13 @@ interface DayAppointmentsModalProps {
 
 function DayAppointmentsModal({
   day,
-  procedures,
-  patients,
-  doctors,
+  groups,
   onNewAppointment,
   onEditAppointment,
   onClose,
 }: DayAppointmentsModalProps) {
-  const sorted = [...procedures].sort((a, b) => {
-    if (!a.scheduledAt) return 1;
-    if (!b.scheduledAt) return -1;
-    return new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime();
-  });
-
   const dayLabel = format(day, "d MMMM yyyy, EEEE", { locale: ru });
+  const totalPatients = groups.length;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
@@ -79,7 +124,9 @@ function DayAppointmentsModal({
           <div>
             <h2 className="text-lg font-bold text-gray-900 capitalize">{dayLabel}</h2>
             <p className="text-sm text-gray-500 mt-0.5">
-              {sorted.length === 0 ? "Нет записей" : `${sorted.length} запис${sorted.length === 1 ? "ь" : sorted.length < 5 ? "и" : "ей"}`}
+              {totalPatients === 0
+                ? "Нет записей"
+                : `${totalPatients} пациент${totalPatients === 1 ? "" : totalPatients < 5 ? "а" : "ов"}`}
             </p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
@@ -89,53 +136,56 @@ function DayAppointmentsModal({
 
         {/* List */}
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
-          {sorted.length === 0 ? (
+          {groups.length === 0 ? (
             <div className="text-center py-10 text-gray-400 text-sm">
               Записей на этот день нет
             </div>
           ) : (
-            sorted.map((proc) => {
-              const patient = patients.find((p) => p.id === proc.patientId);
-              const doctor = doctors.find((d) => d.id === proc.doctorId);
-              return (
-                <button
-                  key={proc.id}
-                  type="button"
-                  onClick={() => onEditAppointment(proc)}
-                  className="w-full text-left px-4 py-3 rounded-xl border border-gray-100 hover:border-primary/30 hover:bg-primary/5 transition-all flex items-start gap-3"
-                >
-                  <span
-                    className={cn(
-                      "w-2.5 h-2.5 rounded-full flex-none mt-1.5",
-                      STATUS_DOT[proc.status ?? "scheduled"],
-                    )}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <span className="text-sm font-semibold text-gray-900 truncate">
-                        {patient?.name ?? "—"}
+            groups.map((group) => (
+              <button
+                key={group.key}
+                type="button"
+                onClick={() => onEditAppointment(group.procedures[0])}
+                className="w-full text-left px-4 py-3 rounded-xl border border-gray-100 hover:border-primary/30 hover:bg-primary/5 transition-all flex items-start gap-3"
+              >
+                <span
+                  className={cn(
+                    "w-2.5 h-2.5 rounded-full flex-none mt-1.5",
+                    STATUS_DOT[group.status ?? "scheduled"],
+                  )}
+                />
+                <div className="flex-1 min-w-0">
+                  {/* Patient name + time */}
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="text-sm font-semibold text-gray-900 truncate">
+                      {group.patientName}
+                    </span>
+                    {group.timeLabel && (
+                      <span className="flex items-center gap-1 text-xs text-gray-500 shrink-0">
+                        <Clock className="w-3 h-3" />
+                        {group.timeLabel}
                       </span>
-                      {proc.scheduledAt && (
-                        <span className="flex items-center gap-1 text-xs text-gray-500 shrink-0">
-                          <Clock className="w-3 h-3" />
-                          {format(parseISO(proc.scheduledAt), "HH:mm")}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-500 truncate mt-0.5">{proc.name}</p>
-                    {doctor && (
-                      <p className="text-xs text-gray-400 truncate mt-0.5 flex items-center gap-1">
-                        <User className="w-3 h-3" />
-                        {doctor.name}
-                      </p>
                     )}
                   </div>
-                  <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded-full border self-center shrink-0", STATUS_PILL[proc.status ?? "scheduled"])}>
-                    {STATUS_OPTIONS.find((s) => s.value === proc.status)?.label ?? proc.status}
-                  </span>
-                </button>
-              );
-            })
+                  {/* Doctor */}
+                  {group.doctorName && (
+                    <p className="text-xs text-gray-500 truncate mt-0.5 flex items-center gap-1">
+                      <User className="w-3 h-3" />
+                      {group.doctorName}
+                    </p>
+                  )}
+                  {/* Procedures list */}
+                  {group.procedures.length > 0 && (
+                    <p className="text-xs text-gray-400 truncate mt-0.5">
+                      {group.procedures.map((p) => p.name).join(", ")}
+                    </p>
+                  )}
+                </div>
+                <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded-full border self-center shrink-0", STATUS_PILL[group.status ?? "scheduled"])}>
+                  {STATUS_OPTIONS.find((s) => s.value === group.status)?.label ?? group.status}
+                </span>
+              </button>
+            ))
           )}
         </div>
 
@@ -169,7 +219,7 @@ export default function AdminCalendar() {
   const [dayViewDate, setDayViewDate] = useState<Date | null>(null);
   const [modalDate, setModalDate] = useState<Date | null>(null);
   const [editingProcedure, setEditingProcedure] = useState<ProcedureItem | null>(null);
-  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [draggingKey, setDraggingKey] = useState<string | null>(null);
 
   const { data: procedureData } = useListProcedures();
   const { data: patientData }   = useListPatients();
@@ -208,7 +258,6 @@ export default function AdminCalendar() {
   );
 
   const apptSave = useAppointmentSave({ onDone: closeModal });
-  /* Separate mutation just for drag-and-drop rescheduling */
   const dropMutation = useUpdateProcedure({
     mutation: { onSuccess: () => qc.invalidateQueries({ queryKey: ["/procedures"] }) },
   });
@@ -226,11 +275,12 @@ export default function AdminCalendar() {
     });
   }, [allProcedures, filterDoctorId]);
 
-  function getProceduresForDay(day: Date) {
-    return filteredProcedures.filter((p) => {
+  function getGroupsForDay(day: Date): AppointmentGroup[] {
+    const procs = filteredProcedures.filter((p) => {
       if (!p.scheduledAt) return false;
       return isSameDay(parseISO(p.scheduledAt), day);
     });
+    return buildGroups(procs, patients, doctors);
   }
 
   function openDayView(day: Date) {
@@ -256,16 +306,18 @@ export default function AdminCalendar() {
     setEditingProcedure(null);
   }
 
-  async function handleDrop(procId: string, day: Date) {
-    const proc = allProcedures.find((p) => p.id === procId);
-    if (!proc) return;
-    const old = proc.scheduledAt ? parseISO(proc.scheduledAt) : new Date();
-    const newDate = new Date(day);
-    newDate.setHours(old.getHours(), old.getMinutes(), 0, 0);
-    await dropMutation.mutateAsync({
-      id: procId,
-      data: { scheduledAt: newDate.toISOString() },
-    });
+  async function handleDrop(procIds: string[], day: Date) {
+    for (const procId of procIds) {
+      const proc = allProcedures.find((p) => p.id === procId);
+      if (!proc) continue;
+      const old = proc.scheduledAt ? parseISO(proc.scheduledAt) : new Date();
+      const newDate = new Date(day);
+      newDate.setHours(old.getHours(), old.getMinutes(), 0, 0);
+      await dropMutation.mutateAsync({
+        id: procId,
+        data: { scheduledAt: newDate.toISOString() },
+      });
+    }
   }
 
   const isSaving = apptSave.isSaving;
@@ -350,7 +402,7 @@ export default function AdminCalendar() {
           {/* Grid rows */}
           <div className="grid grid-cols-7">
             {gridDays.map((day, idx) => {
-              const procs = getProceduresForDay(day);
+              const groups = getGroupsForDay(day);
               const inMonth = isSameMonth(day, currentDate);
               const today = isToday(day);
               const isWeekend = idx % 7 >= 5;
@@ -362,8 +414,13 @@ export default function AdminCalendar() {
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={(e) => {
                     e.preventDefault();
-                    const id = e.dataTransfer.getData("procedureId");
-                    if (id) handleDrop(id, day);
+                    const raw = e.dataTransfer.getData("groupProcIds");
+                    if (raw) {
+                      try {
+                        const ids = JSON.parse(raw) as string[];
+                        handleDrop(ids, day);
+                      } catch {}
+                    }
                   }}
                   className={cn(
                     "min-h-[80px] p-2 border-b border-r border-gray-100 cursor-pointer transition-colors",
@@ -387,49 +444,45 @@ export default function AdminCalendar() {
                     >
                       {format(day, "d")}
                     </span>
-                    {procs.length > 0 && (
-                      <span className="text-[10px] text-gray-400 font-medium">{procs.length}</span>
+                    {groups.length > 0 && (
+                      <span className="text-[10px] text-gray-400 font-medium">{groups.length}</span>
                     )}
                   </div>
 
-                  {/* Appointment pills */}
+                  {/* Appointment pills — one per patient visit */}
                   <div className="space-y-0.5">
-                    {procs.slice(0, 3).map((p) => {
-                      const patientName = patients.find((pt) => pt.id === p.patientId)?.name;
-                      return (
+                    {groups.slice(0, 3).map((group) => (
                       <div
-                        key={p.id}
+                        key={group.key}
                         draggable
                         onDragStart={(e) => {
-                          e.dataTransfer.setData("procedureId", p.id);
-                          setDraggingId(p.id);
+                          e.stopPropagation();
+                          e.dataTransfer.setData("groupProcIds", JSON.stringify(group.procedures.map((p) => p.id)));
+                          setDraggingKey(group.key);
                         }}
-                        onDragEnd={() => setDraggingId(null)}
+                        onDragEnd={() => setDraggingKey(null)}
                         className={cn(
                           "flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[11px] font-medium truncate cursor-pointer transition-opacity",
-                          STATUS_PILL[p.status ?? "scheduled"],
-                          draggingId === p.id && "opacity-50",
+                          STATUS_PILL[group.status ?? "scheduled"],
+                          draggingKey === group.key && "opacity-50",
                         )}
-                        title={`${patientName ? patientName + " · " : ""}${p.name} — ${p.scheduledAt ? format(parseISO(p.scheduledAt), "HH:mm") : ""}`}
+                        title={`${group.patientName}${group.doctorName ? " · " + group.doctorName : ""}${group.timeLabel ? " — " + group.timeLabel : ""}`}
                       >
                         <span
                           className={cn(
                             "w-1.5 h-1.5 rounded-full flex-none",
-                            STATUS_DOT[p.status ?? "scheduled"],
+                            STATUS_DOT[group.status ?? "scheduled"],
                           )}
                         />
-                        <span className="truncate">{patientName ? `${patientName} · ${p.name}` : p.name}</span>
-                        {p.scheduledAt && (
-                          <span className="opacity-60 shrink-0">
-                            {format(parseISO(p.scheduledAt), "HH:mm")}
-                          </span>
+                        <span className="truncate flex-1">{group.patientName}</span>
+                        {group.timeLabel && (
+                          <span className="opacity-60 shrink-0">{group.timeLabel}</span>
                         )}
                       </div>
-                      );
-                    })}
-                    {procs.length > 3 && (
+                    ))}
+                    {groups.length > 3 && (
                       <div className="text-[10px] text-gray-400 pl-1">
-                        +{procs.length - 3} ещё
+                        +{groups.length - 3} ещё
                       </div>
                     )}
                   </div>
@@ -454,9 +507,7 @@ export default function AdminCalendar() {
       {dayViewDate && !modalDate && (
         <DayAppointmentsModal
           day={dayViewDate}
-          procedures={getProceduresForDay(dayViewDate)}
-          patients={patients}
-          doctors={doctors}
+          groups={getGroupsForDay(dayViewDate)}
           onNewAppointment={() => openCreateModal(dayViewDate)}
           onEditAppointment={(proc) => openEditModal(proc)}
           onClose={() => setDayViewDate(null)}
