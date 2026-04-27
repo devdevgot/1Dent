@@ -207,7 +207,9 @@ export default function UsersPage() {
         }
       },
       onError: (err: unknown) => {
-        const status = (err as { response?: { status?: number } })?.response?.status;
+        const status =
+          (err as { status?: number })?.status ??
+          (err as { response?: { status?: number } })?.response?.status;
         const msg = status === 409 ? t("users.emailAlreadyInUse") : t("users.createError");
         toast.error(t("users.createErrorTitle"), { description: msg });
       },

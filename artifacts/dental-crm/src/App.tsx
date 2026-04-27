@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
+import { Toaster as SonnerToaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 import { useGetMe, getGetMeQueryKey, setUnauthorizedHandler } from "@workspace/api-client-react";
@@ -330,6 +331,7 @@ function App() {
           </AuthProvider>
         </WouterRouter>
         <Toaster />
+        <SonnerToaster position="top-right" richColors />
       </TooltipProvider>
     </QueryClientProvider>
   );
