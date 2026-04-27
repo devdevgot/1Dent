@@ -382,12 +382,13 @@ function AppointmentModal({
     );
   }, [patients, patientSearch]);
 
-  const isNewPatient = !procedure && !patientId && patientSearch.trim().length >= 2 && dbMatches.length === 0;
+  /* New patient = no existing patient selected + name typed + phone typed */
+  const isNewPatient = !procedure && !patientId && patientSearch.trim().length >= 2;
 
   const canSave = name.trim() && (
     (!!procedure && !!patientId) ||
     (!procedure && patientId) ||
-    (isNewPatient && newPatientPhone.trim().length >= 5)
+    (!procedure && !patientId && patientSearch.trim().length >= 2 && newPatientPhone.trim().length >= 5)
   );
 
   function handleSave() {
@@ -506,7 +507,7 @@ function AppointmentModal({
                   <p className="text-sm font-semibold text-gray-900 truncate">
                     {patients.find((p) => p.id === patientId)?.name}
                   </p>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-xs text-gray-400">
                       {patients.find((p) => p.id === patientId)?.phone}
                     </p>
@@ -526,9 +527,18 @@ function AppointmentModal({
                 </button>
               </div>
             ) : (
-              <>
-                {/* IIN lookup row */}
+              /* Create mode: IIN → Name → Phone, always visible */
+              <div className="rounded-xl border border-gray-200 p-3 space-y-3">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  <UserPlus className="w-3.5 h-3.5" />
+                  Данные пациента
+                </div>
+
+                {/* 1. ИИН (first) */}
                 <div className="space-y-1">
+                  <label className="block text-xs font-medium text-gray-500">
+                    ИИН <span className="text-gray-400 font-normal">(12 цифр, необязательно)</span>
+                  </label>
                   <div className="relative">
                     <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
@@ -537,7 +547,7 @@ function AppointmentModal({
                         const val = e.target.value.replace(/\D/g, "").slice(0, 12);
                         setIINInput(val);
                       }}
-                      placeholder="ИИН (12 цифр) — необязательно"
+                      placeholder="000000000000"
                       maxLength={12}
                       className={cn(
                         "w-full pl-9 pr-3 py-2.5 rounded-xl border text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary",
@@ -549,71 +559,74 @@ function AppointmentModal({
                     />
                   </div>
                   {iinError && (
-                    <p className="text-xs text-red-500 pl-1">{iinError}</p>
+                    <p className="text-xs text-red-500">{iinError}</p>
                   )}
                   {iinValid && iinMatchedPatient && (
-                    <p className="text-xs text-primary pl-1 font-medium">
+                    <p className="text-xs text-primary font-medium">
                       Пациент найден и выбран автоматически
                     </p>
                   )}
                   {iinValid && !iinMatchedPatient && iinInput.length === 12 && (
-                    <p className="text-xs text-gray-400 pl-1">
-                      Пациент с таким ИИН не найден — заполните форму ниже
+                    <div className="flex items-center gap-3 text-xs text-primary/70 bg-primary/5 rounded-lg px-2 py-1.5">
+                      <span>
+                        ДР: <strong>{format((parsedIIN as { dateOfBirth: Date }).dateOfBirth, "dd.MM.yyyy")}</strong>
+                      </span>
+                      <span>
+                        Пол: <strong>
+                          {(parsedIIN as { gender: string }).gender === "male" ? "Муж." : "Жен."}
+                        </strong>
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Имя (second) — PatientPicker for autocomplete */}
+                <div className="space-y-1">
+                  <label className="block text-xs font-medium text-gray-500">
+                    Имя пациента <span className="text-red-400">*</span>
+                  </label>
+                  <PatientPicker
+                    patients={patients}
+                    selectedId={patientId}
+                    disabled={false}
+                    onSelect={(pid, did) => {
+                      setPatientId(pid);
+                      setPatientSearch(patients.find((p) => p.id === pid)?.name ?? "");
+                      if (did) setDoctorId(did);
+                    }}
+                    searchValue={patientSearch}
+                    onSearchChange={(v) => {
+                      setPatientSearch(v);
+                      if (patientId) setPatientId("");
+                    }}
+                  />
+                  {patientSearch.trim().length >= 2 && dbMatches.length === 0 && (
+                    <p className="text-xs text-primary/70">
+                      Новый пациент — будет создан при сохранении
+                    </p>
+                  )}
+                  {patientSearch.trim().length >= 2 && dbMatches.length > 0 && (
+                    <p className="text-xs text-gray-400">
+                      Выберите из списка или введите другое имя для нового пациента
                     </p>
                   )}
                 </div>
 
-                {/* Smart search input */}
-                <PatientPicker
-                  patients={patients}
-                  selectedId={patientId}
-                  disabled={false}
-                  onSelect={(pid, did) => {
-                    setPatientId(pid);
-                    setPatientSearch(patients.find((p) => p.id === pid)?.name ?? "");
-                    if (did) setDoctorId(did);
-                  }}
-                  searchValue={patientSearch}
-                  onSearchChange={(v) => {
-                    setPatientSearch(v);
-                    if (patientId) setPatientId("");
-                  }}
-                />
-              </>
-            )}
-
-            {/* New patient phone field */}
-            {isNewPatient && (
-              <div className="rounded-xl border border-primary/20 bg-primary/3 p-3 space-y-2">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
-                  <UserPlus className="w-3.5 h-3.5" />
-                  Новый пациент — введите телефон
-                </div>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    value={newPatientPhone}
-                    onChange={(e) => setNewPatientPhone(e.target.value)}
-                    placeholder="+7 (___) ___-__-__"
-                    className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                  />
-                </div>
-                {/* Show auto-filled DOB/gender from IIN */}
-                {iinValid && !isIINError(parsedIIN!) && (
-                  <div className="flex items-center gap-3 text-xs text-primary/70 bg-primary/5 rounded-lg px-2 py-1.5">
-                    <span>
-                      Дата рождения: <strong>{format((parsedIIN as { dateOfBirth: Date }).dateOfBirth, "dd.MM.yyyy")}</strong>
-                    </span>
-                    <span>
-                      Пол: <strong>
-                        {(parsedIIN as { gender: string }).gender === "male" ? "Мужской" : "Женский"}
-                      </strong>
-                    </span>
+                {/* 3. Телефон (third) — always shown */}
+                <div className="space-y-1">
+                  <label className="block text-xs font-medium text-gray-500">
+                    Телефон <span className="text-red-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      value={newPatientPhone}
+                      onChange={(e) => setNewPatientPhone(e.target.value)}
+                      placeholder="+7 (___) ___-__-__"
+                      className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                    />
                   </div>
-                )}
-                <p className="text-xs text-primary/60">
-                  Будет создан новый пациент «{patientSearch.trim()}»
-                </p>
+                </div>
               </div>
             )}
           </div>
