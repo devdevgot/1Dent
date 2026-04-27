@@ -169,7 +169,26 @@ router.post(
     if (current.greenApiInstanceId && current.greenApiToken) {
       let staleInstance = false;
       try {
-        await getGreenApiState(current.greenApiInstanceId, current.greenApiToken, current.greenApiUrl);
+        const state = await getGreenApiState(current.greenApiInstanceId, current.greenApiToken, current.greenApiUrl);
+        if (state.stateInstance === "notAuthorized") {
+          // Instance exists in Green API but WhatsApp is not connected.
+          // Could be: (a) never connected after provisioning, or (b) user just logged out.
+          // Either way: delete this instance so the user gets a fresh one on provision.
+          staleInstance = true;
+          clearGreenApiStateCache(current.greenApiInstanceId);
+          logger.warn(
+            { instanceId: current.greenApiInstanceId, clinicId: req.user!.clinicId },
+            "Green API instance is not authorized — deleting unused/logged-out instance and reprovisioning",
+          );
+          if (partnerToken) {
+            deletePartnerInstance(current.greenApiInstanceId, partnerToken)
+              .catch((err) => logger.warn({ err }, "Failed to delete stale notAuthorized partner instance"));
+          }
+          await db.update(clinicsTable)
+            .set({ greenApiInstanceId: null, greenApiToken: null, greenApiUrl: null, whatsappPhone: null })
+            .where(eq(clinicsTable.id, req.user!.clinicId))
+            .catch(() => {});
+        }
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err);
         // Instance is deleted → reprovision

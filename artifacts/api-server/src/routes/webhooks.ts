@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { db, clinicsTable } from "@workspace/db";
 import { and, eq, isNull } from "drizzle-orm";
-import { parseGreenApiWebhook, clearGreenApiStateCache, getGreenApiWaSettings, extractPhoneFromWaSettings } from "../shared/green-api";
+import { parseGreenApiWebhook, clearGreenApiStateCache, getGreenApiWaSettings, extractPhoneFromWaSettings, deletePartnerInstance } from "../shared/green-api";
 import { MessagesService } from "../modules/messages/messages.service";
 import { logger } from "../lib/logger";
 
@@ -25,7 +25,12 @@ router.post(
     logger.info({ clinicId, typeWebhook, payload: JSON.stringify(rawBody).slice(0, 300) }, "[GreenAPI Webhook] received");
 
     const [clinic] = await db
-      .select({ greenApiInstanceId: clinicsTable.greenApiInstanceId, greenApiToken: clinicsTable.greenApiToken, greenApiUrl: clinicsTable.greenApiUrl })
+      .select({
+        greenApiInstanceId: clinicsTable.greenApiInstanceId,
+        greenApiToken: clinicsTable.greenApiToken,
+        greenApiUrl: clinicsTable.greenApiUrl,
+        whatsappPhone: clinicsTable.whatsappPhone,
+      })
       .from(clinicsTable)
       .where(eq(clinicsTable.id, clinicId))
       .limit(1)
@@ -77,6 +82,20 @@ router.post(
         } else {
           logger.warn({ clinicId }, "[GreenAPI Webhook] WhatsApp authorized but phone not resolved yet");
         }
+      } else if (newState === "notAuthorized") {
+        // WhatsApp was disconnected (user logged out from phone or revoked linked device).
+        // Delete the partner instance from Green API and clear all credentials.
+        const partnerToken = process.env["GREEN_API_PARTNER_TOKEN"];
+        if (partnerToken && clinic.greenApiInstanceId) {
+          deletePartnerInstance(clinic.greenApiInstanceId, partnerToken)
+            .then(() => logger.info({ clinicId, instanceId: clinic.greenApiInstanceId }, "[GreenAPI Webhook] Partner instance deleted after logout"))
+            .catch((err) => logger.warn({ err, clinicId }, "[GreenAPI Webhook] Failed to delete partner instance after logout (will be ignored)"));
+        }
+        await db.update(clinicsTable)
+          .set({ greenApiInstanceId: null, greenApiToken: null, greenApiUrl: null, whatsappPhone: null })
+          .where(eq(clinicsTable.id, clinicId))
+          .catch((err) => logger.warn({ err, clinicId }, "[GreenAPI Webhook] Failed to clear credentials after logout"));
+        logger.info({ clinicId }, "[GreenAPI Webhook] WhatsApp logged out — credentials cleared, instance deleted");
       }
       return;
     }
