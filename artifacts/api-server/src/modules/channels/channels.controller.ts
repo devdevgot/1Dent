@@ -193,10 +193,11 @@ router.post(
         const errMsg = err instanceof Error ? err.message : String(err);
         // Instance is deleted → reprovision
         const deleted = isInstanceDeleted(err);
-        // 401/403 from getStateInstance almost always means the stored apiUrl is wrong
-        // (instances created before the apiUrl fix have greenApiUrl=null → wrong base URL → 401).
-        // Treat these as stale so the clinic gets a working new instance.
-        const authFail = errMsg.includes(": 401") || errMsg.includes(": 403") || errMsg.toLowerCase().includes("unauthorized");
+        // 401/403 with greenApiUrl=null means the stored URL is wrong (old instance before apiUrl fix).
+        // 401/403 with greenApiUrl set means Green API is still booting the instance — NOT a credential error.
+        // Only treat as stale when URL is null so fresh instances are not incorrectly deleted.
+        const is401 = errMsg.includes(": 401") || errMsg.includes(": 403") || errMsg.toLowerCase().includes("unauthorized");
+        const authFail = is401 && !current.greenApiUrl;
         if (deleted || authFail) {
           staleInstance = true;
           logger.warn(
@@ -492,10 +493,14 @@ router.get(
         return res.json({ success: true, data: { configured: false, connected: false, phone: clinic.whatsappPhone ?? null, stateInstance: "deleted" } });
       }
       const msg = err instanceof Error ? err.message : String(err);
-      // Distinguish auth failures (bad credentials) from initialization-in-progress (404/timeout).
-      // Auth errors should surface as "error" so the UI doesn't spin forever.
-      const isAuthError = msg.includes(": 401") || msg.includes(": 403") ||
+      // A 401/403 immediately after instance creation means Green API's infrastructure is still
+      // booting the instance (~30-60s). This looks identical to a real auth error but isn't.
+      // Distinguish by checking greenApiUrl:
+      //   - greenApiUrl is set   → instance was created by current code with a valid URL; 401 = still initializing
+      //   - greenApiUrl is null  → old instance with wrong base URL; 401 = real auth failure
+      const is401 = msg.includes(": 401") || msg.includes(": 403") ||
         msg.toLowerCase().includes("unauthorized") || msg.toLowerCase().includes("forbidden");
+      const isAuthError = is401 && !clinic.greenApiUrl;
       const derivedState = isAuthError ? "error" : "initializing";
       return res.json({ success: true, data: { configured: true, connected: false, phone: null, stateInstance: derivedState } });
     }
