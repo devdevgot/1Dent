@@ -95,15 +95,8 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
   const setMaxPatients = (value: number) =>
     setForm((prev) => ({ ...prev, maxPatientsPerDay: value, maxPatientsChanged: true }));
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (activeTab === "personal") {
-      setActiveTab("position");
-    } else if (activeTab === "position") {
-      setActiveTab("salary");
-    } else {
-      onSave(form);
-    }
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+    if (e.key === "Enter") e.preventDefault();
   };
 
   if (!open) return null;
@@ -165,7 +158,7 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
+            <form onSubmit={(e) => e.preventDefault()} onKeyDown={handleKeyDown} className="flex-1 flex flex-col overflow-hidden">
               <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
                 <AnimatePresence mode="wait">
                   {/* ─── Tab: Personal ───────────────────────────────── */}
@@ -500,8 +493,9 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                     </button>
                   ) : (
                     <button
-                      type="submit"
+                      type="button"
                       disabled={isSaving}
+                      onClick={() => onSave(form)}
                       className="flex-1 py-3.5 rounded-2xl text-sm font-bold text-white disabled:opacity-60"
                       style={{ backgroundColor: "#98cc1c" }}
                     >
