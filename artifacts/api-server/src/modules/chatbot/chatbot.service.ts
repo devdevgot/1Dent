@@ -14,7 +14,7 @@ import {
 import type { StepInstructions } from "@workspace/db";
 import { eq, and, inArray, gte, lte, ne, asc, desc, sql } from "drizzle-orm";
 import { isRedAlert } from "../../shared/whatsapp";
-import { sendToPatient } from "../../shared/messaging";
+import { sendToPatient, sendTypingToPatient } from "../../shared/messaging";
 import { getAlertQueue } from "../../shared/alert-queue";
 import { logger } from "../../lib/logger";
 import { pickBestDoctorAdvanced, type AdvancedScoringOptions } from "../analytics/analytics.repository";
@@ -480,6 +480,9 @@ export class ChatbotService {
 
     let response: string | null = null;
 
+    // Show typing indicator while AI processes — fire-and-forget so it never blocks
+    sendTypingToPatient(clinicId, phone, true).catch(() => {});
+
     // Build conversation history for AI context
     const recentMessages = await this.getRecentHistory(clinicId, phone);
 
@@ -771,6 +774,9 @@ export class ChatbotService {
 
     session.data = data;
     await saveSession(session);
+
+    // Stop typing indicator before sending (or when there is nothing to send)
+    sendTypingToPatient(clinicId, phone, false).catch(() => {});
 
     if (response) {
       saveChatbotMessage(clinicId, phone, "outbound", response).catch(() => {});

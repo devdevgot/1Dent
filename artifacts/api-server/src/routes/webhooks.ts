@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { db, clinicsTable } from "@workspace/db";
 import { and, eq, isNull } from "drizzle-orm";
-import { parseGreenApiWebhook, clearGreenApiStateCache, getGreenApiWaSettings, extractPhoneFromWaSettings, deletePartnerInstance } from "../shared/green-api";
+import { parseGreenApiWebhook, clearGreenApiStateCache, getGreenApiWaSettings, extractPhoneFromWaSettings } from "../shared/green-api";
 import { MessagesService } from "../modules/messages/messages.service";
 import { logger } from "../lib/logger";
 
@@ -83,28 +83,31 @@ router.post(
           logger.warn({ clinicId }, "[GreenAPI Webhook] WhatsApp authorized but phone not resolved yet");
         }
       } else if (newState === "notAuthorized") {
-        // WhatsApp was disconnected (user logged out from phone or revoked linked device).
-        // Delete the partner instance from Green API and clear all credentials.
-        const partnerToken = process.env["GREEN_API_PARTNER_TOKEN"];
-        if (partnerToken && clinic.greenApiInstanceId) {
-          deletePartnerInstance(clinic.greenApiInstanceId, partnerToken)
-            .then(() => logger.info({ clinicId, instanceId: clinic.greenApiInstanceId }, "[GreenAPI Webhook] Partner instance deleted after logout"))
-            .catch((err) => logger.warn({ err, clinicId }, "[GreenAPI Webhook] Failed to delete partner instance after logout (will be ignored)"));
-        }
-        // Do NOT clear whatsappPhone — it was entered by the user and is used for display
-        // and referral links. The user can update it manually if needed.
-        await db.update(clinicsTable)
-          .set({ greenApiInstanceId: null, greenApiToken: null, greenApiUrl: null })
-          .where(eq(clinicsTable.id, clinicId))
-          .catch((err) => logger.warn({ err, clinicId }, "[GreenAPI Webhook] Failed to clear credentials after logout"));
-        logger.info({ clinicId }, "[GreenAPI Webhook] WhatsApp logged out — credentials cleared, instance deleted");
+        // Green API fires notAuthorized both for genuine user logouts AND for
+        // temporary disconnects (phone offline, sleep, brief network drop).
+        // Immediately deleting the instance on this signal caused live instances
+        // to be wiped during normal reconnect cycles.
+        //
+        // Safe approach: just clear the in-memory state cache (already done above)
+        // so the next status poll reflects the current state and the UI shows
+        // "disconnected". Credentials stay in the DB so the status endpoint can
+        // still monitor the instance. Cleanup of the partner instance happens in
+        // the provision endpoint when the user explicitly re-provisions.
+        logger.info({ clinicId }, "[GreenAPI Webhook] WhatsApp notAuthorized — state cache cleared, credentials retained for monitoring");
       }
       return;
     }
 
     const parsed = parseGreenApiWebhook(req.body);
     if (!parsed) {
-      logger.info({ clinicId, typeWebhook }, "[GreenAPI Webhook] not an incoming text message, skipped");
+      if (typeWebhook === "incomingMessageReceived") {
+        // Message was received but is not a plain text message (image, audio, sticker, etc.)
+        const messageData = (rawBody["messageData"] as Record<string, unknown> | undefined) ?? {};
+        const messageType = String(messageData["typeMessage"] ?? "unknown");
+        logger.info({ clinicId, typeWebhook, messageType }, "[GreenAPI Webhook] incomingMessageReceived but not a text message — skipped");
+      } else {
+        logger.info({ clinicId, typeWebhook }, "[GreenAPI Webhook] non-message webhook type — skipped");
+      }
       return;
     }
 

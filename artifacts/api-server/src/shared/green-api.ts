@@ -104,6 +104,33 @@ export interface ParsedWebhook {
   messageId: string;
 }
 
+/**
+ * Show or hide the typing indicator in a WhatsApp chat.
+ * Green API: POST /waInstance{id}/showTyping/{token}
+ * `participate: true` = start typing, `false` = stop.
+ * Fire-and-forget — failures are intentionally ignored so they never block replies.
+ */
+export async function showGreenApiTyping(
+  instanceId: string,
+  token: string,
+  phone: string,
+  participate: boolean,
+  apiBaseUrl?: string | null,
+): Promise<void> {
+  const url = `${resolveInstanceBaseUrl(apiBaseUrl)}/waInstance${instanceId}/showTyping/${token}`;
+  const chatId = phone.includes("@") ? phone : `${phone}@c.us`;
+  try {
+    await fetch(url, {
+      method: "POST",
+      signal: greenApiSignal(5_000),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chatId, participate }),
+    });
+  } catch {
+    // Non-critical: typing indicator failure must never block message delivery
+  }
+}
+
 export async function sendGreenApiMessage(
   instanceId: string,
   token: string,
@@ -386,8 +413,15 @@ export function parseGreenApiWebhook(body: unknown): ParsedWebhook | null {
 
     const senderPhone = sender.replace("@c.us", "").replace("@g.us", "");
 
+    // textMessageData — plain text messages
     const textMessageData = messageData["textMessageData"] as Record<string, unknown> | undefined;
-    const text = textMessageData?.["textMessage"] as string | undefined;
+    // extendedTextMessageData — text messages with link previews
+    const extendedMessageData = messageData["extendedTextMessageData"] as Record<string, unknown> | undefined;
+
+    const text =
+      (textMessageData?.["textMessage"] as string | undefined) ||
+      (extendedMessageData?.["text"] as string | undefined) ||
+      undefined;
 
     if (!text) return null;
 
