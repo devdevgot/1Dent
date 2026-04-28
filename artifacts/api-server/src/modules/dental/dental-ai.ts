@@ -58,7 +58,7 @@ async function callOpenRouter(prompt: string, model: string): Promise<string> {
 ## Профилактика
 [2-4 конкретных совета по профилактике для данного пациента]
 
-Важно: не упоминай имя пациента, не давай диагнозов по общим заболеваниям, оставайся в рамках стоматологии. Пиши чётко и профессионально.`,
+Важно: не упоминай имя пациента, не давай диагнозов по общим заболеваниям, оставайся в рамках стоматологии. Пиши чётко и профессионально. Не используй markdown-разметку жирного текста (**слово**) и курсива (*слово*) — только обычный текст и заголовки ## .`,
       },
       {
         role: "user",
@@ -68,7 +68,8 @@ async function callOpenRouter(prompt: string, model: string): Promise<string> {
   });
   const text = response.choices[0]?.message?.content;
   if (!text) throw new Error("Empty response from AI");
-  return text;
+  // Strip markdown bold/italic markers that would appear as raw asterisks in plain-text rendering
+  return text.replace(/\*\*(.+?)\*\*/g, "$1").replace(/\*(.+?)\*/g, "$1");
 }
 
 export async function triggerDentalAiAnalysis(clinicId: string, patientId: string): Promise<void> {
