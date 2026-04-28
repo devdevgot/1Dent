@@ -367,66 +367,6 @@ export default function OwnerDashboard() {
         )}
       </div>
 
-      {/* ─── KPI Tiles ─── */}
-      <div className="mx-4 mt-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-gray-900">{t("dashboard.kpiTitle")}</h3>
-          <button
-            onClick={() => navigate("/analytics")}
-            className="text-xs text-primary font-semibold flex items-center gap-0.5"
-          >
-            {t("dashboard.viewAll")} <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            {
-              icon: TrendingUp,
-              label: t("dashboard.revenue"),
-              value: isLoading ? "—" : fmtShort(revenueThisMonth) + " ₸",
-              sub: t("dashboard.monthly"),
-              color: "bg-emerald-50 text-emerald-600",
-            },
-            {
-              icon: Activity,
-              label: t("dashboard.monthlyProcedures"),
-              value: isLoading ? "—" : String(completedProcedures),
-              sub: t("dashboard.monthly"),
-              color: "bg-violet-50 text-violet-600",
-            },
-            {
-              icon: UserPlus,
-              label: t("dashboard.newPatients"),
-              value: isLoading ? "—" : String(newPatientsThisMonth),
-              sub: t("dashboard.monthly"),
-              color: "bg-blue-50 text-blue-600",
-            },
-            {
-              icon: Layers,
-              label: t("dashboard.totalPatients"),
-              value: isLoading ? "—" : String(totalPatients),
-              sub: t("dashboard.allTime"),
-              color: "bg-orange-50 text-orange-600",
-            },
-          ].map((item, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.06 }}
-              className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm"
-            >
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-3 ${item.color}`}>
-                <item.icon className="w-4 h-4" />
-              </div>
-              <p className="text-2xl font-bold text-gray-900 leading-none">{item.value}</p>
-              <p className="text-xs text-gray-500 mt-1.5 font-medium">{item.label}</p>
-              <p className="text-[11px] text-gray-300 mt-0.5">{item.sub}</p>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-
       {/* ─── Today's Admin Tasks ─── */}
       <div className="mx-4 mt-4 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="px-4 pt-4 pb-3 flex items-center justify-between border-b border-gray-50">
