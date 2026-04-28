@@ -184,6 +184,9 @@ function MessageBubble({ message, isOutbound }: { message: Message; isOutbound: 
         }
       >
         {isOutbound ? <BubbleTailOut /> : <BubbleTailIn alert={isAlert} />}
+        {isOutbound && message.senderId === null && (
+          <div className="text-[10px] opacity-60 mb-0.5 font-medium">🤖 Бот</div>
+        )}
         {isAlert && (
           <div className="flex items-center gap-1 text-red-600 mb-1 text-xs font-semibold">
             <AlertTriangle className="w-3 h-3" />

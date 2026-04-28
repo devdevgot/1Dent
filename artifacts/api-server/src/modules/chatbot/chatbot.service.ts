@@ -6,6 +6,7 @@ import {
   chatbotSessionsTable,
   chatbotMessagesTable,
   chatbotManagerExamplesTable,
+  messagesTable,
   patientsTable,
   notificationsTable,
   usersTable,
@@ -162,6 +163,32 @@ async function saveChatbotMessage(
     .insert(chatbotMessagesTable)
     .values({ id: randomUUID(), clinicId, phone, direction, content })
     .catch((err) => logger.error({ err }, "[ChatbotService] Failed to save chatbot message"));
+
+  // For outbound replies, also save to the main messages table so they
+  // appear in the internal chat panel alongside inbound patient messages.
+  if (direction === "outbound") {
+    const [patient] = await db
+      .select({ id: patientsTable.id })
+      .from(patientsTable)
+      .where(and(eq(patientsTable.clinicId, clinicId), eq(patientsTable.phone, phone)))
+      .limit(1);
+
+    if (patient) {
+      await db
+        .insert(messagesTable)
+        .values({
+          id: randomUUID(),
+          clinicId,
+          patientId: patient.id,
+          direction: "outbound",
+          senderId: null,
+          content,
+          whatsappMessageId: null,
+          isRedAlert: false,
+        })
+        .catch((err) => logger.error({ err }, "[ChatbotService] Failed to mirror outbound message to messages table"));
+    }
+  }
 }
 
 // ─── Analytics-based doctor routing ─────────────────────────────────────────
