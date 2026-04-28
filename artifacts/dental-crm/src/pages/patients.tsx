@@ -62,33 +62,6 @@ const ALL_SOURCES: PatientSource[] = [
   "instagram", "referral", "walk_in", "website", "whatsapp", "other",
 ];
 
-/* ─── Tab bar ─────────────────────────────────────────────────────────────── */
-function TabBtn({
-  active,
-  onClick,
-  icon: Icon,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ElementType;
-  label: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "flex items-center gap-1.5 px-4 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap",
-        active
-          ? "border-primary text-primary"
-          : "border-transparent text-gray-500 hover:text-gray-700",
-      )}
-    >
-      <Icon className="w-4 h-4" />
-      {label}
-    </button>
-  );
-}
 
 /* ─── List view ───────────────────────────────────────────────────────────── */
 function PatientsListView({
@@ -524,15 +497,40 @@ export default function PatientsPage() {
   return (
     <div className="flex flex-col h-full bg-gray-50 overflow-hidden">
       {/* Page header */}
-      <div className="bg-white border-b border-gray-100 px-4 pt-4 pb-0 shrink-0">
-        <div className="flex items-center gap-3 pb-2">
-          <h1 className="text-lg font-bold text-gray-900 flex-1">{t("nav.patients")}</h1>
+      <div className="bg-white border-b border-gray-100 px-4 py-3 shrink-0">
+        <div className="flex items-center gap-2">
+          <h1 className="text-lg font-bold text-gray-900">{t("nav.patients")}</h1>
           <span className="bg-primary/10 text-primary text-xs font-semibold px-2 py-0.5 rounded-full">
             {allPatients.length}
           </span>
+
+          {/* Segmented view switcher */}
+          <div className="flex items-center bg-gray-100 rounded-lg p-0.5 ml-2">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setView(tab.key)}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 whitespace-nowrap",
+                    view === tab.key
+                      ? "bg-white text-gray-900 shadow-sm"
+                      : "text-gray-400 hover:text-gray-700",
+                  )}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <span className="flex-1" />
+
           <button
             onClick={() => queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() })}
-            className="text-gray-400 hover:text-primary transition-colors"
+            className="text-gray-400 hover:text-primary transition-colors p-1"
             title={t("kanban.refresh")}
           >
             <RefreshCw className="w-4 h-4" />
@@ -540,14 +538,14 @@ export default function PatientsPage() {
           <button
             onClick={() => setShowFilters((v) => !v)}
             className={cn(
-              "relative transition-colors",
+              "relative transition-colors p-1",
               showFilters || hasActiveFilter ? "text-primary" : "text-gray-400 hover:text-primary",
             )}
             title="Фильтры"
           >
             <SlidersHorizontal className="w-4 h-4" />
             {hasActiveFilter && (
-              <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full" />
+              <span className="absolute top-0 right-0 w-2 h-2 bg-primary rounded-full" />
             )}
           </button>
           {canCreate && (
@@ -560,7 +558,7 @@ export default function PatientsPage() {
 
         {/* Filter panel */}
         {showFilters && (
-          <div className="pb-3 space-y-2 border-t border-gray-100 pt-3">
+          <div className="mt-3 space-y-2 border-t border-gray-100 pt-3">
             <div className="flex flex-wrap gap-2">
               <div className="relative flex-1 min-w-[180px] max-w-xs">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -612,19 +610,6 @@ export default function PatientsPage() {
             </div>
           </div>
         )}
-
-        {/* Tab bar */}
-        <div className="flex gap-0 overflow-x-auto">
-          {tabs.map((tab) => (
-            <TabBtn
-              key={tab.key}
-              active={view === tab.key}
-              onClick={() => setView(tab.key)}
-              icon={tab.icon}
-              label={tab.label}
-            />
-          ))}
-        </div>
       </div>
 
       {/* Content */}
