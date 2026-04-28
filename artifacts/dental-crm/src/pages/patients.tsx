@@ -22,7 +22,7 @@ import {
   closestCorners,
 } from "@dnd-kit/core";
 import {
-  Users, KanbanSquare, ClipboardList,
+  Users, KanbanSquare,
   Plus, RefreshCw, Search, Trash2,
   ChevronUp, ChevronDown, ChevronsUpDown, SlidersHorizontal,
 } from "lucide-react";
@@ -41,11 +41,10 @@ import {
   SOURCE_LABELS,
   SOURCE_COLORS,
 } from "@/lib/patient-utils";
-import { ProceduresContent } from "@/pages/procedures";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
-type PatientView = "list" | "kanban" | "procedures";
+type PatientView = "list" | "kanban";
 type SortKey = "name" | "phone" | "dateOfBirth" | "status" | "source" | "createdAt" | "doctor";
 type SortDir = "asc" | "desc";
 
@@ -510,26 +509,16 @@ export default function PatientsPage() {
 
   const hasActiveFilter = filterSearch.length > 0 || statusFilter !== "all" || sourceFilter !== "all";
 
-  const isAccountant = user?.role === "accountant";
   const canCreate = user?.role === "owner" || user?.role === "admin";
 
   const viewParam = new URLSearchParams(urlSearch).get("view") as PatientView | null;
-  const allowedViews: PatientView[] = isAccountant
-    ? ["procedures"]
-    : ["list", "kanban", "procedures"];
-  const view: PatientView =
-    viewParam && allowedViews.includes(viewParam) ? viewParam : allowedViews[0];
+  const view: PatientView = viewParam === "kanban" ? "kanban" : "list";
 
   const setView = (v: PatientView) => navigate(`/patients?view=${v}`, { replace: true });
 
-  const tabs = [
-    ...(!isAccountant
-      ? [
-          { key: "list"   as PatientView, icon: Users,        label: t("patients.tabList") },
-          { key: "kanban" as PatientView, icon: KanbanSquare, label: t("patients.tabKanban") },
-        ]
-      : []),
-    { key: "procedures" as PatientView, icon: ClipboardList, label: t("patients.tabProcedures") },
+  const tabs: { key: PatientView; icon: React.ElementType; label: string }[] = [
+    { key: "list",   icon: Users,        label: t("patients.tabList") },
+    { key: "kanban", icon: KanbanSquare, label: t("patients.tabKanban") },
   ];
 
   return (
@@ -640,13 +629,8 @@ export default function PatientsPage() {
 
       {/* Content */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        {view === "list"       && <PatientsListView search={filterSearch} statusFilter={statusFilter} sourceFilter={sourceFilter} />}
-        {view === "kanban"     && <PatientsKanbanView search={filterSearch} statusFilter={statusFilter} sourceFilter={sourceFilter} />}
-        {view === "procedures" && (
-          <div className="h-full overflow-y-auto bg-[#f2f2f7]">
-            <ProceduresContent />
-          </div>
-        )}
+        {view === "list"   && <PatientsListView search={filterSearch} statusFilter={statusFilter} sourceFilter={sourceFilter} />}
+        {view === "kanban" && <PatientsKanbanView search={filterSearch} statusFilter={statusFilter} sourceFilter={sourceFilter} />}
       </div>
 
       {isCreateOpen && <CreatePatientDialog onClose={() => setIsCreateOpen(false)} />}

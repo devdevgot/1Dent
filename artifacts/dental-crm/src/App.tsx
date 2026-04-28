@@ -144,7 +144,7 @@ function KanbanRedirect() {
 
 function ProceduresRedirect() {
   const [, setLocation] = useLocation();
-  useEffect(() => { setLocation("/patients?view=procedures", { replace: true }); }, [setLocation]);
+  useEffect(() => { setLocation("/patients", { replace: true }); }, [setLocation]);
   return null;
 }
 
