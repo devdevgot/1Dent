@@ -46,7 +46,6 @@ import { useAuthStore } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import {
   KANBAN_COLUMNS,
-  INTERACTION_TYPE_ICONS,
   SOURCE_LABELS,
   SOURCE_COLORS,
 } from "@/lib/patient-utils";
@@ -931,6 +930,7 @@ export function PatientDetailPanel() {
   const [editItemTitle, setEditItemTitle] = useState("");
   const [editItemPrice, setEditItemPrice] = useState("");
   const [historyExpanded, setHistoryExpanded] = useState(false);
+  const [interactionHistoryCollapsed, setInteractionHistoryCollapsed] = useState(true);
   const [planSectionCollapsed, setPlanSectionCollapsed] = useState(false);
   const [expandedPlanId, setExpandedPlanId] = useState<string | null>(null);
 
@@ -1629,41 +1629,56 @@ export function PatientDetailPanel() {
 
                   {/* Interaction history */}
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 block">
-                      {t("patient.tabHistory")} ({interactions.length})
-                    </label>
-                    <div className="space-y-2.5">
-                      {interactions.length === 0 ? (
-                        <p className="text-sm text-muted-foreground italic">{t("patient.noInteractions")}</p>
-                      ) : (
-                        [...interactions]
-                          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                          .map((interaction) => (
-                            <div
-                              key={interaction.id}
-                              className="bg-slate-50 rounded-xl p-3.5 border border-border/30"
-                            >
-                              <div className="flex items-center justify-between mb-1.5">
-                                <span className="text-xs font-semibold text-foreground flex items-center gap-1">
-                                  <span>{INTERACTION_TYPE_ICONS[interaction.type]}</span>
-                                  <span>{t(`interaction.${interaction.type}`)}</span>
-                                </span>
-                                <span className="text-[11px] text-muted-foreground">
-                                  {new Date(interaction.createdAt).toLocaleDateString(undefined, {
-                                    day: "2-digit",
-                                    month: "short",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  })}
-                                </span>
-                              </div>
-                              <p className="text-sm text-muted-foreground leading-relaxed">
-                                {interaction.content}
-                              </p>
-                            </div>
-                          ))
-                      )}
-                    </div>
+                    <button
+                      onClick={() => setInteractionHistoryCollapsed((v) => !v)}
+                      className="w-full flex items-center justify-between mb-3 group"
+                    >
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        {t("patient.tabHistory")} ({interactions.length})
+                      </span>
+                      <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-150 ${interactionHistoryCollapsed ? "" : "rotate-180"}`} />
+                    </button>
+                    {!interactionHistoryCollapsed && (
+                      <div className="space-y-2.5">
+                        {interactions.length === 0 ? (
+                          <p className="text-sm text-muted-foreground italic">{t("patient.noInteractions")}</p>
+                        ) : (
+                          [...interactions]
+                            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                            .map((interaction) => {
+                              const isStatusChange = interaction.type === "status_change";
+                              const formattedContent = isStatusChange
+                                ? interaction.content.split(" → ").map((s) =>
+                                    KANBAN_COLUMNS.find((c) => c.id === s.trim())?.label ?? s.trim()
+                                  ).join(" → ")
+                                : interaction.content;
+                              return (
+                                <div
+                                  key={interaction.id}
+                                  className="bg-slate-50 rounded-xl p-3.5 border border-border/30"
+                                >
+                                  <div className="flex items-center justify-between mb-1.5">
+                                    <span className="text-xs font-semibold text-foreground">
+                                      {t(`interaction.${interaction.type}`)}
+                                    </span>
+                                    <span className="text-[11px] text-muted-foreground">
+                                      {new Date(interaction.createdAt).toLocaleDateString("ru", {
+                                        day: "2-digit",
+                                        month: "short",
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-muted-foreground leading-relaxed">
+                                    {formattedContent}
+                                  </p>
+                                </div>
+                              );
+                            })
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
