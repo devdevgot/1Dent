@@ -35,7 +35,7 @@ import type { ToothRecord, ToothTreatment, ProcedureTemplate } from "@workspace/
 import { useQueryClient } from "@tanstack/react-query";
 import {
   X, ChevronDown, CheckCircle2, Clock, ArrowUpRight,
-  Phone, User, Calendar, CreditCard, Stethoscope, TrendingUp, Copy, Save, IdCard,
+  Phone, User, Calendar, CreditCard, Stethoscope, Copy, Save, IdCard,
   ClipboardList, Plus, BadgeCheck, Circle, ArrowLeft, Square, CheckSquare, Loader2,
   Scissors, Crown, Wrench, Baby, Sparkles, Activity, ScanLine, Paintbrush, Search, GripVertical,
 } from "lucide-react";
@@ -1553,8 +1553,7 @@ export function PatientDetailPanel() {
                         onClick={() => setFinancialCollapsed((v) => !v)}
                         className="w-full flex items-center justify-between group"
                       >
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
-                          <TrendingUp className="w-3.5 h-3.5" />
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                           Финансы
                         </span>
                         <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-150 ${financialCollapsed ? "" : "rotate-180"}`} />
