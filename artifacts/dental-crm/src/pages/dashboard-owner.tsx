@@ -3,6 +3,8 @@ import { useAuthStore } from "@/hooks/use-auth";
 import {
   useGetOwnerAnalytics,
   useGetDoctorKpis,
+  useListProcedures,
+  useListPatients,
   getGetOwnerAnalyticsQueryKey,
   getGetDoctorKpisQueryKey,
 } from "@workspace/api-client-react";
@@ -11,13 +13,14 @@ import {
   ChevronRight, UserCog, Users, Bell, X, ChevronLeft,
   Activity, Stethoscope, Send, Banknote, QrCode, CreditCard,
   Clock, Wallet, CalendarDays, SlidersHorizontal, UserPlus, Layers,
-  TrendingUp,
+  TrendingUp, CheckCircle2, AlertCircle, Circle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { format, parseISO, startOfDay, endOfDay } from "date-fns";
 
 const PAYMENT_ICONS: Record<string, React.ElementType> = {
   kaspi_transfer: Send,
@@ -121,6 +124,41 @@ export default function OwnerDashboard() {
   const { data: kpiData } = useGetDoctorKpis({
     query: { queryKey: getGetDoctorKpisQueryKey() },
   });
+  const { data: proceduresData } = useListProcedures();
+  const { data: patientsData } = useListPatients();
+
+  const allProcedures = proceduresData?.data?.procedures ?? [];
+  const allPatients   = patientsData?.data?.patients ?? [];
+
+  const nowDate = new Date();
+  const todayStart = startOfDay(nowDate);
+  const todayEnd   = endOfDay(nowDate);
+
+  const todayScheduled = useMemo(() =>
+    allProcedures
+      .filter((p) => {
+        if (!p.scheduledAt) return false;
+        const d = parseISO(p.scheduledAt);
+        return d >= todayStart && d <= todayEnd && p.status === "scheduled";
+      })
+      .sort((a, b) => parseISO(a.scheduledAt!).getTime() - parseISO(b.scheduledAt!).getTime()),
+  [allProcedures]);
+
+  const inProgress = useMemo(() =>
+    allProcedures.filter((p) => p.status === "in_progress"),
+  [allProcedures]);
+
+  const pendingPayment = useMemo(() =>
+    allProcedures
+      .filter((p) => p.status === "pending_payment")
+      .sort((a, b) => {
+        const ta = a.scheduledAt ? parseISO(a.scheduledAt).getTime() : 0;
+        const tb = b.scheduledAt ? parseISO(b.scheduledAt).getTime() : 0;
+        return ta - tb;
+      }),
+  [allProcedures]);
+
+  const allClear = todayScheduled.length === 0 && inProgress.length === 0 && pendingPayment.length === 0;
 
   const rawAnalytics = (analyticsData?.data?.analytics ?? {}) as Record<string, unknown>;
   const rawKpis = kpiData?.data?.kpis ?? [];
@@ -387,6 +425,152 @@ export default function OwnerDashboard() {
             </motion.div>
           ))}
         </div>
+      </div>
+
+      {/* ─── Today's Admin Tasks ─── */}
+      <div className="mx-4 mt-4 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-4 pt-4 pb-3 flex items-center justify-between border-b border-gray-50">
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-primary" />
+            <span className="text-sm font-bold text-gray-900">Задачи за сегодня</span>
+            {!allClear && (
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                {todayScheduled.length + inProgress.length + pendingPayment.length}
+              </span>
+            )}
+          </div>
+          {allClear && (
+            <div className="flex items-center gap-1 text-xs font-semibold text-emerald-600">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Всё закрыто
+            </div>
+          )}
+        </div>
+
+        {allClear ? (
+          <div className="flex flex-col items-center justify-center py-6 gap-1.5">
+            <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+            <p className="text-sm font-medium text-gray-500">Нет открытых задач на сегодня</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-50">
+
+            {/* Pending payment */}
+            {pendingPayment.length > 0 && (
+              <div className="px-4 py-3">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
+                  <span className="text-xs font-bold text-rose-600 uppercase tracking-wide">
+                    Ожидают оплату
+                  </span>
+                  <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-600 ml-auto">
+                    {pendingPayment.length}
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  {pendingPayment.slice(0, 4).map((proc) => {
+                    const patient = allPatients.find((p) => p.id === proc.patientId);
+                    return (
+                      <div key={proc.id} className="flex items-center gap-2.5 p-2 rounded-xl bg-rose-50 border border-rose-100">
+                        <div className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-gray-900 truncate">{proc.name}</p>
+                          <p className="text-[10px] text-gray-500 truncate">
+                            {patient?.name ?? "—"}{proc.doctorName ? ` · ${proc.doctorName}` : ""}
+                          </p>
+                        </div>
+                        {proc.price != null && proc.price > 0 && (
+                          <span className="text-xs font-bold text-rose-700 shrink-0">
+                            {proc.price.toLocaleString("ru-RU")} ₸
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {pendingPayment.length > 4 && (
+                    <p className="text-[11px] text-gray-400 text-center pt-0.5">
+                      + ещё {pendingPayment.length - 4}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* In progress */}
+            {inProgress.length > 0 && (
+              <div className="px-4 py-3">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Circle className="w-3.5 h-3.5 text-amber-500" />
+                  <span className="text-xs font-bold text-amber-600 uppercase tracking-wide">
+                    В работе
+                  </span>
+                  <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 ml-auto">
+                    {inProgress.length}
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  {inProgress.slice(0, 4).map((proc) => {
+                    const patient = allPatients.find((p) => p.id === proc.patientId);
+                    return (
+                      <div key={proc.id} className="flex items-center gap-2.5 p-2 rounded-xl bg-amber-50 border border-amber-100">
+                        <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-gray-900 truncate">{proc.name}</p>
+                          <p className="text-[10px] text-gray-500 truncate">
+                            {patient?.name ?? "—"}{proc.doctorName ? ` · ${proc.doctorName}` : ""}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {inProgress.length > 4 && (
+                    <p className="text-[11px] text-gray-400 text-center pt-0.5">
+                      + ещё {inProgress.length - 4}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Scheduled today */}
+            {todayScheduled.length > 0 && (
+              <div className="px-4 py-3">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <CalendarDays className="w-3.5 h-3.5 text-blue-500" />
+                  <span className="text-xs font-bold text-blue-600 uppercase tracking-wide">
+                    Расписание на сегодня
+                  </span>
+                  <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-600 ml-auto">
+                    {todayScheduled.length}
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  {todayScheduled.slice(0, 5).map((proc) => {
+                    const patient = allPatients.find((p) => p.id === proc.patientId);
+                    const timeStr = proc.scheduledAt ? format(parseISO(proc.scheduledAt), "HH:mm") : "—";
+                    return (
+                      <div key={proc.id} className="flex items-center gap-2.5 p-2 rounded-xl bg-blue-50 border border-blue-100">
+                        <span className="text-xs font-bold text-blue-700 w-10 shrink-0">{timeStr}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-gray-900 truncate">{proc.name}</p>
+                          <p className="text-[10px] text-gray-500 truncate">
+                            {patient?.name ?? "—"}{proc.doctorName ? ` · ${proc.doctorName}` : ""}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {todayScheduled.length > 5 && (
+                    <p className="text-[11px] text-gray-400 text-center pt-0.5">
+                      + ещё {todayScheduled.length - 5}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+          </div>
+        )}
       </div>
 
       {/* ─── Quick Actions ─── */}
