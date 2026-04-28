@@ -931,6 +931,8 @@ export function PatientDetailPanel() {
   const [editItemPrice, setEditItemPrice] = useState("");
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const [interactionHistoryCollapsed, setInteractionHistoryCollapsed] = useState(true);
+  const [financialCollapsed, setFinancialCollapsed] = useState(true);
+  const [proceduresCollapsed, setProceduresCollapsed] = useState(true);
   const [planSectionCollapsed, setPlanSectionCollapsed] = useState(false);
   const [expandedPlanId, setExpandedPlanId] = useState<string | null>(null);
 
@@ -1547,42 +1549,52 @@ export function PatientDetailPanel() {
                   {/* Financial summary — hidden for doctors */}
                   {!isDoctor && (
                     <div className="space-y-3">
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
-                        <TrendingUp className="w-3.5 h-3.5" />
-                        Финансы
-                      </p>
+                      <button
+                        onClick={() => setFinancialCollapsed((v) => !v)}
+                        className="w-full flex items-center justify-between group"
+                      >
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+                          <TrendingUp className="w-3.5 h-3.5" />
+                          Финансы
+                        </span>
+                        <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-150 ${financialCollapsed ? "" : "rotate-180"}`} />
+                      </button>
 
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="bg-primary/5 rounded-2xl p-3.5 text-center">
-                          <p className="text-xl font-bold text-primary">
-                            {financials.paid.toLocaleString("ru-RU")} ₸
-                          </p>
-                          <p className="text-xs text-gray-500 mt-0.5">Оплачено</p>
-                        </div>
-                        <div className="bg-gray-50 rounded-2xl p-3.5 text-center">
-                          <p className="text-xl font-bold text-gray-700">
-                            {patientProcedures.length}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-0.5">Процедур</p>
-                        </div>
-                      </div>
-
-                      {Object.keys(financials.methodCounts).length > 0 && (
-                        <div className="bg-gray-50 rounded-2xl p-4 space-y-2">
-                          <p className="text-xs font-semibold text-gray-500 mb-1">Способы оплаты</p>
-                          {Object.entries(financials.methodCounts).map(([method, data]) => (
-                            <div key={method} className="flex items-center justify-between text-sm">
-                              <div className="flex items-center gap-2">
-                                <CreditCard className="w-3.5 h-3.5 text-gray-400" />
-                                <span className="text-gray-600">{PAYMENT_LABELS[method] ?? method}</span>
-                                <span className="text-xs text-gray-400">×{data.count}</span>
-                              </div>
-                              <span className="font-semibold text-gray-800">
-                                {data.sum.toLocaleString("ru-RU")} ₸
-                              </span>
+                      {!financialCollapsed && (
+                        <>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="bg-primary/5 rounded-2xl p-3.5 text-center">
+                              <p className="text-xl font-bold text-primary">
+                                {financials.paid.toLocaleString("ru-RU")} ₸
+                              </p>
+                              <p className="text-xs text-gray-500 mt-0.5">Оплачено</p>
                             </div>
-                          ))}
-                        </div>
+                            <div className="bg-gray-50 rounded-2xl p-3.5 text-center">
+                              <p className="text-xl font-bold text-gray-700">
+                                {patientProcedures.length}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-0.5">Процедур</p>
+                            </div>
+                          </div>
+
+                          {Object.keys(financials.methodCounts).length > 0 && (
+                            <div className="bg-gray-50 rounded-2xl p-4 space-y-2">
+                              <p className="text-xs font-semibold text-gray-500 mb-1">Способы оплаты</p>
+                              {Object.entries(financials.methodCounts).map(([method, data]) => (
+                                <div key={method} className="flex items-center justify-between text-sm">
+                                  <div className="flex items-center gap-2">
+                                    <CreditCard className="w-3.5 h-3.5 text-gray-400" />
+                                    <span className="text-gray-600">{PAYMENT_LABELS[method] ?? method}</span>
+                                    <span className="text-xs text-gray-400">×{data.count}</span>
+                                  </div>
+                                  <span className="font-semibold text-gray-800">
+                                    {data.sum.toLocaleString("ru-RU")} ₸
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   )}
@@ -1590,40 +1602,49 @@ export function PatientDetailPanel() {
                   {/* Procedures list — hidden for doctors */}
                   {!isDoctor && patientProcedures.length > 0 && (
                     <div className="space-y-3">
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                        История процедур ({patientProcedures.length})
-                      </p>
-                      <div className="space-y-2">
-                        {[...patientProcedures]
-                          .sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime())
-                          .slice(0, 10)
-                          .map((proc) => {
-                            const docName = proc.doctorId
-                              ? (allUsers.find((u) => u.id === proc.doctorId)?.name ?? "—")
-                              : "—";
-                            const payLabel = PAYMENT_LABELS[(proc as any).paymentMethod ?? ""] ?? "—";
-                            return (
-                              <div key={proc.id} className="bg-white rounded-xl border border-gray-100 p-3 space-y-1.5">
-                                <div className="flex items-start justify-between gap-2">
-                                  <p className="text-sm font-medium text-gray-800 flex-1 leading-tight">{proc.name}</p>
-                                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0 ${STATUS_COLORS[proc.status ?? "scheduled"]}`}>
-                                    {STATUS_LABELS[proc.status ?? "scheduled"]}
-                                  </span>
+                      <button
+                        onClick={() => setProceduresCollapsed((v) => !v)}
+                        className="w-full flex items-center justify-between group"
+                      >
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                          История процедур ({patientProcedures.length})
+                        </span>
+                        <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-150 ${proceduresCollapsed ? "" : "rotate-180"}`} />
+                      </button>
+
+                      {!proceduresCollapsed && (
+                        <div className="space-y-2">
+                          {[...patientProcedures]
+                            .sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime())
+                            .slice(0, 10)
+                            .map((proc) => {
+                              const docName = proc.doctorId
+                                ? (allUsers.find((u) => u.id === proc.doctorId)?.name ?? "—")
+                                : "—";
+                              const payLabel = PAYMENT_LABELS[(proc as any).paymentMethod ?? ""] ?? "—";
+                              return (
+                                <div key={proc.id} className="bg-white rounded-xl border border-gray-100 p-3 space-y-1.5">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <p className="text-sm font-medium text-gray-800 flex-1 leading-tight">{proc.name}</p>
+                                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0 ${STATUS_COLORS[proc.status ?? "scheduled"]}`}>
+                                      {STATUS_LABELS[proc.status ?? "scheduled"]}
+                                    </span>
+                                  </div>
+                                  <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-gray-500">
+                                    {proc.scheduledAt && (
+                                      <span>{new Date(proc.scheduledAt).toLocaleDateString("ru", { day: "2-digit", month: "short", year: "numeric" })}</span>
+                                    )}
+                                    {proc.doctorId && <span>👨‍⚕️ {docName}</span>}
+                                    {(proc as any).paymentMethod && <span>💳 {payLabel}</span>}
+                                    {proc.price != null && proc.price > 0 && (
+                                      <span className="font-semibold text-gray-700">{proc.price.toLocaleString("ru-RU")} ₸</span>
+                                    )}
+                                  </div>
                                 </div>
-                                <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-gray-500">
-                                  {proc.scheduledAt && (
-                                    <span>{new Date(proc.scheduledAt).toLocaleDateString("ru", { day: "2-digit", month: "short", year: "numeric" })}</span>
-                                  )}
-                                  {proc.doctorId && <span>👨‍⚕️ {docName}</span>}
-                                  {(proc as any).paymentMethod && <span>💳 {payLabel}</span>}
-                                  {proc.price != null && proc.price > 0 && (
-                                    <span className="font-semibold text-gray-700">{proc.price.toLocaleString("ru-RU")} ₸</span>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
-                      </div>
+                              );
+                            })}
+                        </div>
+                      )}
                     </div>
                   )}
 
