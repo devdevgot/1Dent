@@ -1544,49 +1544,51 @@ export function PatientDetailPanel() {
                     </div>
                   )}
 
-                  {/* Financial summary */}
-                  <div className="space-y-3">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
-                      <TrendingUp className="w-3.5 h-3.5" />
-                      Финансы
-                    </p>
+                  {/* Financial summary — hidden for doctors */}
+                  {!isDoctor && (
+                    <div className="space-y-3">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+                        <TrendingUp className="w-3.5 h-3.5" />
+                        Финансы
+                      </p>
 
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-primary/5 rounded-2xl p-3.5 text-center">
-                        <p className="text-xl font-bold text-primary">
-                          {financials.paid.toLocaleString("ru-RU")} ₸
-                        </p>
-                        <p className="text-xs text-gray-500 mt-0.5">Оплачено</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="bg-primary/5 rounded-2xl p-3.5 text-center">
+                          <p className="text-xl font-bold text-primary">
+                            {financials.paid.toLocaleString("ru-RU")} ₸
+                          </p>
+                          <p className="text-xs text-gray-500 mt-0.5">Оплачено</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-2xl p-3.5 text-center">
+                          <p className="text-xl font-bold text-gray-700">
+                            {patientProcedures.length}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-0.5">Процедур</p>
+                        </div>
                       </div>
-                      <div className="bg-gray-50 rounded-2xl p-3.5 text-center">
-                        <p className="text-xl font-bold text-gray-700">
-                          {patientProcedures.length}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-0.5">Процедур</p>
-                      </div>
-                    </div>
 
-                    {Object.keys(financials.methodCounts).length > 0 && (
-                      <div className="bg-gray-50 rounded-2xl p-4 space-y-2">
-                        <p className="text-xs font-semibold text-gray-500 mb-1">Способы оплаты</p>
-                        {Object.entries(financials.methodCounts).map(([method, data]) => (
-                          <div key={method} className="flex items-center justify-between text-sm">
-                            <div className="flex items-center gap-2">
-                              <CreditCard className="w-3.5 h-3.5 text-gray-400" />
-                              <span className="text-gray-600">{PAYMENT_LABELS[method] ?? method}</span>
-                              <span className="text-xs text-gray-400">×{data.count}</span>
+                      {Object.keys(financials.methodCounts).length > 0 && (
+                        <div className="bg-gray-50 rounded-2xl p-4 space-y-2">
+                          <p className="text-xs font-semibold text-gray-500 mb-1">Способы оплаты</p>
+                          {Object.entries(financials.methodCounts).map(([method, data]) => (
+                            <div key={method} className="flex items-center justify-between text-sm">
+                              <div className="flex items-center gap-2">
+                                <CreditCard className="w-3.5 h-3.5 text-gray-400" />
+                                <span className="text-gray-600">{PAYMENT_LABELS[method] ?? method}</span>
+                                <span className="text-xs text-gray-400">×{data.count}</span>
+                              </div>
+                              <span className="font-semibold text-gray-800">
+                                {data.sum.toLocaleString("ru-RU")} ₸
+                              </span>
                             </div>
-                            <span className="font-semibold text-gray-800">
-                              {data.sum.toLocaleString("ru-RU")} ₸
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-                  {/* Procedures list */}
-                  {patientProcedures.length > 0 && (
+                  {/* Procedures list — hidden for doctors */}
+                  {!isDoctor && patientProcedures.length > 0 && (
                     <div className="space-y-3">
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                         История процедур ({patientProcedures.length})
