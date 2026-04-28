@@ -95,7 +95,7 @@ function TabBtn({
 function PatientsListView() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const { setSelectedPatientId, isCreateOpen, setIsCreateOpen } = useKanbanStore();
+  const { setSelectedPatientId } = useKanbanStore();
   const { user } = useAuthStore();
   const { toast } = useToast();
 
@@ -178,7 +178,6 @@ function PatientsListView() {
   }, [allPatients, search, statusFilter, sourceFilter, sortKey, sortDir, doctorMap]);
 
   const canDelete = user?.role === "owner" || user?.role === "admin";
-  const canCreate = user?.role === "owner" || user?.role === "admin";
 
   const SortIcon = ({ col }: { col: SortKey }) => {
     if (sortKey !== col) return <ChevronsUpDown className="w-3 h-3 text-gray-300" />;
@@ -242,12 +241,6 @@ function PatientsListView() {
               <option key={s} value={s}>{SOURCE_LABELS[s]}</option>
             ))}
           </select>
-          {canCreate && (
-            <Button onClick={() => setIsCreateOpen(true)} className="gap-2 ml-auto">
-              <Plus className="w-4 h-4" />
-              {t("kanban.newPatient")}
-            </Button>
-          )}
         </div>
 
         {/* Status stat pills */}
@@ -406,7 +399,6 @@ function PatientsListView() {
       )}
 
       <PatientDetailPanel />
-      {isCreateOpen && <CreatePatientDialog onClose={() => setIsCreateOpen(false)} />}
       <ConfirmDeleteDialog
         open={!!deleteConfirm}
         onConfirm={() => { deleteMutation.mutate({ id: deleteConfirm! }); setDeleteConfirm(null); }}
@@ -419,10 +411,7 @@ function PatientsListView() {
 /* ─── Kanban view ─────────────────────────────────────────────────────────── */
 function PatientsKanbanView() {
   const { t } = useTranslation();
-  const { user } = useAuthStore();
-  const canCreate = user?.role === "owner" || user?.role === "admin";
   const queryClient = useQueryClient();
-  const { isCreateOpen, setIsCreateOpen } = useKanbanStore();
   const [activeDragPatient, setActiveDragPatient] = useState<Patient | null>(null);
 
   const sensors = useSensors(
@@ -505,12 +494,6 @@ function PatientsKanbanView() {
         >
           <RefreshCw className="w-4 h-4" />
         </Button>
-        {canCreate && (
-          <Button onClick={() => setIsCreateOpen(true)} className="gap-2" size="sm">
-            <Plus className="w-4 h-4" />
-            {t("kanban.newPatient")}
-          </Button>
-        )}
       </div>
 
       <div className="flex flex-col flex-1 overflow-hidden gap-4 p-4">
@@ -551,7 +534,6 @@ function PatientsKanbanView() {
         )}
 
         <PatientDetailPanel />
-        {isCreateOpen && <CreatePatientDialog onClose={() => setIsCreateOpen(false)} />}
       </div>
     </div>
   );
@@ -564,11 +546,13 @@ export default function PatientsPage() {
   const search = useSearch();
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
+  const { isCreateOpen, setIsCreateOpen } = useKanbanStore();
 
   const { data } = useListPatients({ query: { queryKey: getListPatientsQueryKey() } });
   const allPatients: Patient[] = data?.data?.patients ?? [];
 
   const isAccountant = user?.role === "accountant";
+  const canCreate = user?.role === "owner" || user?.role === "admin";
 
   const viewParam = new URLSearchParams(search).get("view") as PatientView | null;
   const allowedViews: PatientView[] = isAccountant
@@ -605,6 +589,12 @@ export default function PatientsPage() {
           >
             <RefreshCw className="w-4 h-4" />
           </button>
+          {canCreate && (
+            <Button onClick={() => setIsCreateOpen(true)} className="gap-2 h-8 text-xs px-3">
+              <Plus className="w-3.5 h-3.5" />
+              {t("kanban.newPatient")}
+            </Button>
+          )}
         </div>
 
         {/* Tab bar */}
@@ -631,6 +621,8 @@ export default function PatientsPage() {
           </div>
         )}
       </div>
+
+      {isCreateOpen && <CreatePatientDialog onClose={() => setIsCreateOpen(false)} />}
     </div>
   );
 }
