@@ -952,16 +952,16 @@ export class ChatbotService {
         // Known patient in Q&A mode: load their dental card and answer with AI
         const qaPatientId = data.existingPatientId;
         if (!qaPatientId) {
-          // Session inconsistency — hand off to operator
-          session.state = "human_takeover";
-          session.humanTakeover = true;
+          // Session inconsistency — reset to greeting so patient can re-identify
+          session.state = "greeting";
+          session.data = {};
+          session.humanTakeover = false;
           await saveSession(session);
-          await this.notifyHumanTakeover(clinicId, phone, data.patientName);
           sendTypingToPatient(clinicId, phone, false).catch(() => {});
-          const fallbackReply = "Соединяю вас с администратором. Пожалуйста, ожидайте.";
-          saveChatbotMessage(clinicId, phone, "outbound", fallbackReply).catch(() => {});
-          sendToPatient(clinicId, phone, fallbackReply).catch(() => {});
-          return fallbackReply;
+          const resetReply = "Произошла ошибка сессии. Пожалуйста, начните заново — введите ваш ИИН (12 цифр).";
+          saveChatbotMessage(clinicId, phone, "outbound", resetReply).catch(() => {});
+          sendToPatient(clinicId, phone, resetReply).catch(() => {});
+          return resetReply;
         }
 
         const [qaPatient] = await db
@@ -981,14 +981,15 @@ export class ChatbotService {
         );
 
         if (!qaReply || qaReply.trim().startsWith("OPERATOR_NEEDED")) {
-          // AI signals it can't handle this — transfer to human operator
-          session.state = "human_takeover";
-          session.humanTakeover = true;
+          // AI signals it can't answer this question — notify admin but keep chatbot active
+          // so the patient can still ask other questions about their dental card.
+          // Do NOT set humanTakeover = true here — that would permanently lock the chatbot.
           session.data = data;
           await saveSession(session);
           await this.notifyHumanTakeover(clinicId, phone, qaName);
           sendTypingToPatient(clinicId, phone, false).catch(() => {});
-          const handoffReply = "Передаю вас администратору — ожидайте, ответят в ближайшее время. 🙏";
+          const handoffReply =
+            "Этот вопрос я передал администратору — он ответит в ближайшее время. 🙏\n\nЕсли у вас есть другие вопросы о вашей карте зубов или лечении — спрашивайте, я помогу!";
           saveChatbotMessage(clinicId, phone, "outbound", handoffReply).catch(() => {});
           sendToPatient(clinicId, phone, handoffReply).catch(() => {});
           return handoffReply;

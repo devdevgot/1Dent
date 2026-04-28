@@ -119,6 +119,22 @@ if (process.env["DATABASE_URL"]) {
   } catch (err) {
     logger.warn({ err }, "Procedure template seed failed — continuing server startup");
   }
+
+  // One-time fix: reset chatbot sessions stuck in human_takeover state due to
+  // OPERATOR_NEEDED from dental_qa permanently locking patients out of the chatbot.
+  // After this fix the chatbot no longer sets humanTakeover on OPERATOR_NEEDED,
+  // so these sessions can safely be reset to let patients interact again.
+  try {
+    const resetResult = await pool.query(
+      `UPDATE chatbot_sessions SET state = 'greeting', human_takeover = false, data = '{}', updated_at = NOW()
+       WHERE human_takeover = true AND state = 'human_takeover'`
+    );
+    if ((resetResult.rowCount ?? 0) > 0) {
+      logger.info({ count: resetResult.rowCount }, "[ChatbotFix] Reset stuck human_takeover sessions");
+    }
+  } catch (err) {
+    logger.warn({ err }, "[ChatbotFix] Could not reset stuck sessions — continuing");
+  }
 } else {
   logger.warn("DATABASE_URL not set — skipping migrations");
 }
