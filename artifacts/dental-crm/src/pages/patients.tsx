@@ -24,7 +24,7 @@ import {
 import {
   Users, KanbanSquare, ClipboardList,
   Plus, RefreshCw, Search, Trash2,
-  ChevronUp, ChevronDown, ChevronsUpDown,
+  ChevronUp, ChevronDown, ChevronsUpDown, SlidersHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { KanbanColumn } from "@/components/kanban/kanban-column";
@@ -92,16 +92,21 @@ function TabBtn({
 }
 
 /* ─── List view ───────────────────────────────────────────────────────────── */
-function PatientsListView() {
+function PatientsListView({
+  search,
+  statusFilter,
+  sourceFilter,
+}: {
+  search: string;
+  statusFilter: PatientStatus | "all";
+  sourceFilter: PatientSource | "all";
+}) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { setSelectedPatientId } = useKanbanStore();
   const { user } = useAuthStore();
   const { toast } = useToast();
 
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<PatientStatus | "all">("all");
-  const [sourceFilter, setSourceFilter] = useState<PatientSource | "all">("all");
   const [sortKey, setSortKey] = useState<SortKey>("createdAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -198,69 +203,8 @@ function PatientsListView() {
     </th>
   );
 
-  const statusCounts = useMemo(() => {
-    const counts: Partial<Record<PatientStatus, number>> = {};
-    allPatients.forEach((p) => { counts[p.status] = (counts[p.status] ?? 0) + 1; });
-    return counts;
-  }, [allPatients]);
-
   return (
     <div className="flex flex-col h-full bg-gray-50">
-      {/* Filters bar */}
-      <div className="bg-white border-b border-gray-100 px-4 py-3 shrink-0 space-y-2">
-        <div className="flex flex-wrap gap-2">
-          <div className="relative flex-1 min-w-[180px] max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t("patients.searchPlaceholder")}
-              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 bg-gray-50"
-            />
-          </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as PatientStatus | "all")}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-gray-700"
-          >
-            <option value="all">{t("patients.allStatuses")}</option>
-            {KANBAN_COLUMNS.map((col) => (
-              <option key={col.id} value={col.id}>
-                {col.label} {statusCounts[col.id] ? `(${statusCounts[col.id]})` : ""}
-              </option>
-            ))}
-          </select>
-          <select
-            value={sourceFilter}
-            onChange={(e) => setSourceFilter(e.target.value as PatientSource | "all")}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-gray-700"
-          >
-            <option value="all">{t("patients.allSources")}</option>
-            {ALL_SOURCES.map((s) => (
-              <option key={s} value={s}>{SOURCE_LABELS[s]}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Status stat pills */}
-        <div className="flex flex-wrap gap-1.5">
-          {KANBAN_COLUMNS.map((col) => {
-            const count = statusCounts[col.id] ?? 0;
-            if (count === 0) return null;
-            return (
-              <button
-                key={col.id}
-                onClick={() => setStatusFilter(statusFilter === col.id ? "all" : col.id)}
-                className={`text-xs px-2.5 py-0.5 rounded-full font-medium transition-all ${COLUMN_HEADER_COLOR[col.id]} ${statusFilter === col.id ? "ring-2 ring-offset-1 ring-current" : "opacity-80 hover:opacity-100"}`}
-              >
-                {col.label}: {count}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
       {/* Table */}
       <div className="flex-1 overflow-auto custom-scrollbar">
         {isLoading ? (
@@ -409,7 +353,15 @@ function PatientsListView() {
 }
 
 /* ─── Kanban view ─────────────────────────────────────────────────────────── */
-function PatientsKanbanView() {
+function PatientsKanbanView({
+  search,
+  statusFilter,
+  sourceFilter,
+}: {
+  search: string;
+  statusFilter: PatientStatus | "all";
+  sourceFilter: PatientSource | "all";
+}) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [activeDragPatient, setActiveDragPatient] = useState<Patient | null>(null);
@@ -423,6 +375,16 @@ function PatientsKanbanView() {
   });
 
   const patients: Patient[] = data?.data?.patients ?? [];
+
+  const visiblePatients = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    return patients.filter((p) => {
+      if (statusFilter !== "all" && p.status !== statusFilter) return false;
+      if (sourceFilter !== "all" && p.source !== sourceFilter) return false;
+      if (q && !p.name.toLowerCase().includes(q) && !p.phone.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [patients, search, statusFilter, sourceFilter]);
 
   const statusMutation = useUpdatePatientStatus({
     mutation: {
@@ -476,26 +438,10 @@ function PatientsKanbanView() {
   };
 
   const patientsByColumn = (columnId: PatientStatus) =>
-    patients.filter((p) => p.status === columnId);
+    visiblePatients.filter((p) => p.status === columnId);
 
   return (
     <div className="flex flex-col h-full bg-[#f2f2f7]">
-      {/* Kanban action row */}
-      <div className="bg-white px-4 py-2.5 flex items-center gap-3 border-b border-gray-100 shrink-0">
-        <span className="text-xs text-muted-foreground flex-1">
-          {t("kanban.totalPatients", { count: patients.length })}
-        </span>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() })}
-          className="w-8 h-8 text-gray-500"
-          title={t("kanban.refresh")}
-        >
-          <RefreshCw className="w-4 h-4" />
-        </Button>
-      </div>
-
       <div className="flex flex-col flex-1 overflow-hidden gap-4 p-4">
         {isLoading ? (
           <div className="flex-1 flex items-center justify-center">
@@ -543,18 +489,31 @@ function PatientsKanbanView() {
 export default function PatientsPage() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
-  const search = useSearch();
+  const urlSearch = useSearch();
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const { isCreateOpen, setIsCreateOpen } = useKanbanStore();
 
+  const [filterSearch, setFilterSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<PatientStatus | "all">("all");
+  const [sourceFilter, setSourceFilter] = useState<PatientSource | "all">("all");
+  const [showFilters, setShowFilters] = useState(false);
+
   const { data } = useListPatients({ query: { queryKey: getListPatientsQueryKey() } });
   const allPatients: Patient[] = data?.data?.patients ?? [];
+
+  const statusCounts = useMemo(() => {
+    const counts: Partial<Record<PatientStatus, number>> = {};
+    allPatients.forEach((p) => { counts[p.status] = (counts[p.status] ?? 0) + 1; });
+    return counts;
+  }, [allPatients]);
+
+  const hasActiveFilter = filterSearch.length > 0 || statusFilter !== "all" || sourceFilter !== "all";
 
   const isAccountant = user?.role === "accountant";
   const canCreate = user?.role === "owner" || user?.role === "admin";
 
-  const viewParam = new URLSearchParams(search).get("view") as PatientView | null;
+  const viewParam = new URLSearchParams(urlSearch).get("view") as PatientView | null;
   const allowedViews: PatientView[] = isAccountant
     ? ["procedures"]
     : ["list", "kanban", "procedures"];
@@ -589,6 +548,19 @@ export default function PatientsPage() {
           >
             <RefreshCw className="w-4 h-4" />
           </button>
+          <button
+            onClick={() => setShowFilters((v) => !v)}
+            className={cn(
+              "relative transition-colors",
+              showFilters || hasActiveFilter ? "text-primary" : "text-gray-400 hover:text-primary",
+            )}
+            title="Фильтры"
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+            {hasActiveFilter && (
+              <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full" />
+            )}
+          </button>
           {canCreate && (
             <Button onClick={() => setIsCreateOpen(true)} className="gap-2 h-8 text-xs px-3">
               <Plus className="w-3.5 h-3.5" />
@@ -596,6 +568,61 @@ export default function PatientsPage() {
             </Button>
           )}
         </div>
+
+        {/* Filter panel */}
+        {showFilters && (
+          <div className="pb-3 space-y-2 border-t border-gray-100 pt-3">
+            <div className="flex flex-wrap gap-2">
+              <div className="relative flex-1 min-w-[180px] max-w-xs">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={filterSearch}
+                  onChange={(e) => setFilterSearch(e.target.value)}
+                  placeholder={t("patients.searchPlaceholder")}
+                  className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 bg-gray-50"
+                />
+              </div>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as PatientStatus | "all")}
+                className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-gray-700"
+              >
+                <option value="all">{t("patients.allStatuses")}</option>
+                {KANBAN_COLUMNS.map((col) => (
+                  <option key={col.id} value={col.id}>
+                    {col.label} {statusCounts[col.id] ? `(${statusCounts[col.id]})` : ""}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={sourceFilter}
+                onChange={(e) => setSourceFilter(e.target.value as PatientSource | "all")}
+                className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-gray-700"
+              >
+                <option value="all">{t("patients.allSources")}</option>
+                {ALL_SOURCES.map((s) => (
+                  <option key={s} value={s}>{SOURCE_LABELS[s]}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {KANBAN_COLUMNS.map((col) => {
+                const count = statusCounts[col.id] ?? 0;
+                if (count === 0) return null;
+                return (
+                  <button
+                    key={col.id}
+                    onClick={() => setStatusFilter(statusFilter === col.id ? "all" : col.id)}
+                    className={`text-xs px-2.5 py-0.5 rounded-full font-medium transition-all ${COLUMN_HEADER_COLOR[col.id]} ${statusFilter === col.id ? "ring-2 ring-offset-1 ring-current" : "opacity-80 hover:opacity-100"}`}
+                  >
+                    {col.label}: {count}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Tab bar */}
         <div className="flex gap-0 overflow-x-auto">
@@ -613,8 +640,8 @@ export default function PatientsPage() {
 
       {/* Content */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        {view === "list"       && <PatientsListView />}
-        {view === "kanban"     && <PatientsKanbanView />}
+        {view === "list"       && <PatientsListView search={filterSearch} statusFilter={statusFilter} sourceFilter={sourceFilter} />}
+        {view === "kanban"     && <PatientsKanbanView search={filterSearch} statusFilter={statusFilter} sourceFilter={sourceFilter} />}
         {view === "procedures" && (
           <div className="h-full overflow-y-auto bg-[#f2f2f7]">
             <ProceduresContent />
