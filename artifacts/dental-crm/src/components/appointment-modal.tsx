@@ -85,6 +85,8 @@ export interface AppointmentModalProps {
   isSaving?: boolean;
 }
 
+const INPUT = "w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30";
+
 export function AppointmentModal({
   date,
   procedure,
@@ -111,13 +113,13 @@ export function AppointmentModal({
   const [selectedPatientId, setSelectedPatientId] = useState(procedure?.patientId ?? "");
 
   /* appointment */
-  const [doctorId, setDoctorId]         = useState(procedure?.doctorId ?? "");
-  const [notes, setNotes]               = useState(procedure?.notes ?? "");
-  const [apptDate, setApptDate]         = useState(
+  const [doctorId, setDoctorId]       = useState(procedure?.doctorId ?? "");
+  const [notes, setNotes]             = useState(procedure?.notes ?? "");
+  const [apptDate, setApptDate]       = useState(
     procedure?.scheduledAt ? format(parseISO(procedure.scheduledAt), "yyyy-MM-dd") : defaultDate,
   );
-  const [apptTime, setApptTime]         = useState(defaultTime);
-  const [status, setStatus]             = useState(procedure?.status ?? "scheduled");
+  const [apptTime, setApptTime]       = useState(defaultTime);
+  const [status, setStatus]           = useState(procedure?.status ?? "scheduled");
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   /* IIN */
@@ -150,11 +152,8 @@ export function AppointmentModal({
     return patients.find((p) => p.iin === iin) ?? null;
   }, [iin, iinError, patients]);
 
-  const genderLabel = (g: string) => {
-    if (g === "male") return "Мужской";
-    if (g === "female") return "Женский";
-    return "Другой";
-  };
+  const genderLabel = (g: string) =>
+    g === "male" ? "Мужской" : g === "female" ? "Женский" : "Другой";
 
   const resetPatient = () => {
     setSelectedPatientId("");
@@ -184,118 +183,32 @@ export function AppointmentModal({
       notes: notes || undefined,
       status,
       newPatient: !selectedPatientId
-        ? {
-            name: patientName.trim(),
-            phone: phone.trim(),
-            iin: iin || undefined,
-            dateOfBirth: dateOfBirth || undefined,
-            gender: gender || undefined,
-            source: source || undefined,
-          }
+        ? { name: patientName.trim(), phone: phone.trim(), iin: iin || undefined,
+            dateOfBirth: dateOfBirth || undefined, gender: gender || undefined, source: source || undefined }
         : undefined,
     });
   }
 
   return (
     <div className="fixed inset-0 z-50">
+      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Mobile: bottom sheet */}
-      <div className="absolute bottom-0 left-0 right-0 sm:hidden bg-white rounded-t-2xl shadow-2xl flex flex-col max-h-[90dvh] z-10">
-        {/* inner — mobile */}
-        <MobileOrDesktopContent
-          procedure={procedure}
-          patients={patients}
-          doctors={doctors}
-          iin={iin}
-          iinError={iinError}
-          dateOfBirth={dateOfBirth}
-          gender={gender}
-          patientName={patientName}
-          phone={phone}
-          source={source}
-          selectedPatientId={selectedPatientId}
-          doctorId={doctorId}
-          notes={notes}
-          apptDate={apptDate}
-          apptTime={apptTime}
-          status={status}
-          confirmDelete={confirmDelete}
-          isSaving={isSaving}
-          foundPatient={foundPatient}
-          genderLabel={genderLabel}
-          onIINChange={handleIINChange}
-          onSelectPatient={(id, dId) => { setSelectedPatientId(id); if (dId) setDoctorId(dId); }}
-          onResetPatient={resetPatient}
-          onClearIIN={() => { setIin(""); setIinError(null); setDateOfBirth(""); setGender(""); }}
-          setPatientName={setPatientName}
-          setPhone={setPhone}
-          setSource={setSource}
-          setDoctorId={setDoctorId}
-          setNotes={setNotes}
-          setApptDate={setApptDate}
-          setApptTime={setApptTime}
-          setStatus={setStatus}
-          setConfirmDelete={setConfirmDelete}
-          canSave={canSave}
-          onSave={handleSave}
-          onDelete={onDelete}
-          onClose={onClose}
-          showDragHandle
-        />
-      </div>
+      {/* Panel — снизу на мобилке, фиксировано по верху на десктопе */}
+      <div className={cn(
+        "absolute z-10 bg-white shadow-2xl flex flex-col",
+        /* mobile: bottom sheet */
+        "bottom-0 left-0 right-0 rounded-t-2xl max-h-[90dvh]",
+        /* desktop: fixed position from top, centered */
+        "sm:bottom-auto sm:top-[8%] sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-md sm:rounded-2xl",
+      )}>
 
-      {/* Desktop: fixed top-center */}
-      <div className="absolute top-[8%] left-1/2 -translate-x-1/2 hidden sm:flex w-full max-w-md bg-white rounded-2xl shadow-2xl flex-col max-h-[90dvh] z-10">
-        <MobileOrDesktopContent
-          procedure={procedure}
-          patients={patients}
-          doctors={doctors}
-          iin={iin}
-          iinError={iinError}
-          dateOfBirth={dateOfBirth}
-          gender={gender}
-          patientName={patientName}
-          phone={phone}
-          source={source}
-          selectedPatientId={selectedPatientId}
-          doctorId={doctorId}
-          notes={notes}
-          apptDate={apptDate}
-          apptTime={apptTime}
-          status={status}
-          confirmDelete={confirmDelete}
-          isSaving={isSaving}
-          foundPatient={foundPatient}
-          genderLabel={genderLabel}
-          onIINChange={handleIINChange}
-          onSelectPatient={(id, dId) => { setSelectedPatientId(id); if (dId) setDoctorId(dId); }}
-          onResetPatient={resetPatient}
-          onClearIIN={() => { setIin(""); setIinError(null); setDateOfBirth(""); setGender(""); }}
-          setPatientName={setPatientName}
-          setPhone={setPhone}
-          setSource={setSource}
-          setDoctorId={setDoctorId}
-          setNotes={setNotes}
-          setApptDate={setApptDate}
-          setApptTime={setApptTime}
-          setStatus={setStatus}
-          setConfirmDelete={setConfirmDelete}
-          canSave={canSave}
-          onSave={handleSave}
-          onDelete={onDelete}
-          onClose={onClose}
-          showDragHandle={false}
-        />
-      </div>
-    </div>
-
-        {/* Drag handle */}
+        {/* Drag handle — только мобилка */}
         <div className="flex justify-center pt-3 pb-1 sm:hidden shrink-0">
           <div className="w-10 h-1 rounded-full bg-gray-200" />
         </div>
 
-        {/* Header */}
+        {/* Заголовок */}
         <div className="flex items-center justify-between px-6 py-4 shrink-0 border-b border-gray-100">
           <h2 className="text-lg font-bold">
             {procedure ? "Редактировать запись" : "Новая запись"}
@@ -305,12 +218,12 @@ export function AppointmentModal({
           </button>
         </div>
 
-        {/* Scrollable body */}
-        <div className="overflow-y-auto flex-1 custom-scrollbar" style={{ scrollbarGutter: "stable" }}>
+        {/* Скроллируемое тело — overflow-y-scroll чтобы скроллбар всегда резервировал место */}
+        <div className="overflow-y-scroll flex-1 custom-scrollbar">
           <div className="space-y-4 px-6 py-5">
 
             {procedure ? (
-              /* ── Edit mode ── */
+              /* ── Режим редактирования ── */
               <>
                 <div>
                   <label className="text-sm font-medium text-foreground mb-1 block">Пациент</label>
@@ -322,15 +235,9 @@ export function AppointmentModal({
                 {doctors.length > 0 && (
                   <div>
                     <label className="text-sm font-medium text-foreground mb-1 block">Врач</label>
-                    <select
-                      value={doctorId}
-                      onChange={(e) => setDoctorId(e.target.value)}
-                      className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
-                    >
+                    <select value={doctorId} onChange={(e) => setDoctorId(e.target.value)} className={INPUT + " bg-white"}>
                       <option value="">Не назначен</option>
-                      {doctors.map((d) => (
-                        <option key={d.id} value={d.id}>{d.name}</option>
-                      ))}
+                      {doctors.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                     </select>
                   </div>
                 )}
@@ -339,17 +246,9 @@ export function AppointmentModal({
                   <label className="text-sm font-medium text-foreground mb-1 block">Статус</label>
                   <div className="flex flex-wrap gap-2">
                     {STATUS_OPTIONS.map((s) => (
-                      <button
-                        key={s.value}
-                        type="button"
-                        onClick={() => setStatus(s.value)}
-                        className={cn(
-                          "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all",
-                          status === s.value
-                            ? STATUS_PILL[s.value]
-                            : "border-gray-200 text-gray-500 hover:border-gray-300",
-                        )}
-                      >
+                      <button key={s.value} type="button" onClick={() => setStatus(s.value)}
+                        className={cn("px-3 py-1.5 rounded-lg text-xs font-medium border transition-all",
+                          status === s.value ? STATUS_PILL[s.value] : "border-gray-200 text-gray-500 hover:border-gray-300")}>
                         {s.label}
                       </button>
                     ))}
@@ -358,41 +257,24 @@ export function AppointmentModal({
 
                 <div>
                   <label className="text-sm font-medium text-foreground mb-1 block">Заметки</label>
-                  <textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    rows={2}
-                    className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
-                    placeholder="Дополнительная информация..."
-                  />
+                  <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2}
+                    className={INPUT + " resize-none"} placeholder="Дополнительная информация..." />
                 </div>
               </>
             ) : (
-              /* ── Create mode — скопировано из модалки пациентов ── */
+              /* ── Режим создания (паттерн из модалки пациентов) ── */
               <>
                 {/* ИИН */}
                 <div>
                   <label className="text-sm font-medium text-foreground mb-1 block">ИИН</label>
-                  <input
-                    type="text"
-                    value={iin}
-                    onChange={(e) => handleIINChange(e.target.value)}
-                    maxLength={12}
-                    inputMode="numeric"
-                    className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono ${
-                      iinError
-                        ? "border-red-400 bg-red-50"
-                        : foundPatient
-                          ? "border-green-400 bg-green-50"
-                          : "border-border"
-                    }`}
-                    placeholder="000000000000"
-                  />
+                  <input type="text" value={iin} onChange={(e) => handleIINChange(e.target.value)}
+                    maxLength={12} inputMode="numeric"
+                    className={cn(INPUT, "font-mono",
+                      iinError ? "border-red-400 bg-red-50" : foundPatient ? "border-green-400 bg-green-50" : "")}
+                    placeholder="000000000000" />
                   {iinError && <p className="text-xs text-red-500 mt-1">{iinError}</p>}
                   {!iinError && iin.length === 0 && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Введите ИИН для автозаполнения даты рождения и пола
-                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">Введите ИИН для автозаполнения даты рождения и пола</p>
                   )}
                 </div>
 
@@ -405,33 +287,16 @@ export function AppointmentModal({
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm font-medium text-gray-900">{foundPatient.name}</p>
-                      {foundPatient.phone && (
-                        <p className="text-xs text-gray-500">{foundPatient.phone}</p>
-                      )}
+                      {foundPatient.phone && <p className="text-xs text-gray-500">{foundPatient.phone}</p>}
                     </div>
                     <p className="text-xs text-green-700">Выберите пациента или введите другой ИИН</p>
                     <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm"
-                        onClick={() => {
-                          setSelectedPatientId(foundPatient.id);
-                          if (foundPatient.doctorId) setDoctorId(foundPatient.doctorId);
-                        }}
-                      >
+                      <Button type="button" className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm"
+                        onClick={() => { setSelectedPatientId(foundPatient.id); if (foundPatient.doctorId) setDoctorId(foundPatient.doctorId); }}>
                         Выбрать пациента
                       </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="flex-1 text-sm"
-                        onClick={() => {
-                          setIin("");
-                          setIinError(null);
-                          setDateOfBirth("");
-                          setGender("");
-                        }}
-                      >
+                      <Button type="button" variant="outline" className="flex-1 text-sm"
+                        onClick={() => { setIin(""); setIinError(null); setDateOfBirth(""); setGender(""); }}>
                         Другой ИИН
                       </Button>
                     </div>
@@ -442,18 +307,10 @@ export function AppointmentModal({
                 {selectedPatientId && (
                   <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-semibold text-gray-900">
-                        {patients.find((p) => p.id === selectedPatientId)?.name}
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        {patients.find((p) => p.id === selectedPatientId)?.phone}
-                      </p>
+                      <p className="text-sm font-semibold text-gray-900">{patients.find((p) => p.id === selectedPatientId)?.name}</p>
+                      <p className="text-xs text-gray-400">{patients.find((p) => p.id === selectedPatientId)?.phone}</p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={resetPatient}
-                      className="text-primary/50 hover:text-primary transition-colors"
-                    >
+                    <button type="button" onClick={resetPatient} className="text-primary/50 hover:text-primary transition-colors">
                       <X className="w-4 h-4" />
                     </button>
                   </div>
@@ -463,69 +320,39 @@ export function AppointmentModal({
                 {!foundPatient && !selectedPatientId && (
                   <>
                     <div>
-                      <label className="text-sm font-medium text-foreground mb-1 block">
-                        Имя пациента <span className="text-red-400">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={patientName}
-                        onChange={(e) => setPatientName(e.target.value)}
-                        minLength={2}
-                        className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                        placeholder="Фамилия Имя Отчество"
-                      />
+                      <label className="text-sm font-medium text-foreground mb-1 block">Имя пациента <span className="text-red-400">*</span></label>
+                      <input type="text" value={patientName} onChange={(e) => setPatientName(e.target.value)}
+                        className={INPUT} placeholder="Фамилия Имя Отчество" />
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium text-foreground mb-1 block">
-                        Телефон <span className="text-red-400">*</span>
-                      </label>
-                      <input
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        minLength={5}
-                        className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                        placeholder="+7 (___) ___-__-__"
-                      />
+                      <label className="text-sm font-medium text-foreground mb-1 block">Телефон <span className="text-red-400">*</span></label>
+                      <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
+                        className={INPUT} placeholder="+7 (___) ___-__-__" />
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="text-sm font-medium text-foreground mb-1 block">Дата рождения</label>
-                        <div className={`w-full border rounded-lg px-3 py-2 text-sm min-h-[38px] flex items-center ${
-                          dateOfBirth
-                            ? "border-primary/30 bg-primary/5 text-gray-800"
-                            : "border-border bg-gray-50 text-gray-400"
-                        }`}>
+                        <div className={cn("w-full border rounded-lg px-3 py-2 text-sm min-h-[38px] flex items-center",
+                          dateOfBirth ? "border-primary/30 bg-primary/5 text-gray-800" : "border-border bg-gray-50")}>
                           {dateOfBirth
-                            ? new Date(dateOfBirth).toLocaleDateString("ru-RU", {
-                                day: "2-digit", month: "2-digit", year: "numeric",
-                              })
+                            ? new Date(dateOfBirth).toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" })
                             : <span className="text-gray-300">из ИИН</span>}
                         </div>
                       </div>
                       <div>
                         <label className="text-sm font-medium text-foreground mb-1 block">Пол</label>
-                        <div className={`w-full border rounded-lg px-3 py-2 text-sm min-h-[38px] flex items-center ${
-                          gender
-                            ? "border-primary/30 bg-primary/5 text-gray-800"
-                            : "border-border bg-gray-50 text-gray-400"
-                        }`}>
-                          {gender
-                            ? genderLabel(gender)
-                            : <span className="text-gray-300">из ИИН</span>}
+                        <div className={cn("w-full border rounded-lg px-3 py-2 text-sm min-h-[38px] flex items-center",
+                          gender ? "border-primary/30 bg-primary/5 text-gray-800" : "border-border bg-gray-50")}>
+                          {gender ? genderLabel(gender) : <span className="text-gray-300">из ИИН</span>}
                         </div>
                       </div>
                     </div>
 
                     <div>
                       <label className="text-sm font-medium text-foreground mb-1 block">Источник</label>
-                      <select
-                        value={source}
-                        onChange={(e) => setSource(e.target.value)}
-                        className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
-                      >
+                      <select value={source} onChange={(e) => setSource(e.target.value)} className={INPUT + " bg-white"}>
                         <option value="walk_in">Самостоятельно</option>
                         <option value="referral">Рекомендация</option>
                       </select>
@@ -537,15 +364,9 @@ export function AppointmentModal({
                 {doctors.length > 0 && (
                   <div>
                     <label className="text-sm font-medium text-foreground mb-1 block">Врач</label>
-                    <select
-                      value={doctorId}
-                      onChange={(e) => setDoctorId(e.target.value)}
-                      className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
-                    >
+                    <select value={doctorId} onChange={(e) => setDoctorId(e.target.value)} className={INPUT + " bg-white"}>
                       <option value="">Не назначен</option>
-                      {doctors.map((d) => (
-                        <option key={d.id} value={d.id}>{d.name}</option>
-                      ))}
+                      {doctors.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                     </select>
                   </div>
                 )}
@@ -553,13 +374,8 @@ export function AppointmentModal({
                 {/* Заметки */}
                 <div>
                   <label className="text-sm font-medium text-foreground mb-1 block">Заметки</label>
-                  <textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    rows={2}
-                    className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
-                    placeholder="Дополнительная информация..."
-                  />
+                  <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2}
+                    className={INPUT + " resize-none"} placeholder="Дополнительная информация..." />
                 </div>
               </>
             )}
@@ -567,70 +383,44 @@ export function AppointmentModal({
             {/* Дата */}
             <div>
               <label className="text-sm font-medium text-foreground mb-1 block">Дата</label>
-              <input
-                type="date"
-                value={apptDate}
-                onChange={(e) => setApptDate(e.target.value)}
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
+              <input type="date" value={apptDate} onChange={(e) => setApptDate(e.target.value)} className={INPUT} />
             </div>
 
             {/* Время */}
             <div>
-              <label className="text-sm font-medium text-foreground mb-1 block">
-                <span className="flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5" />
-                  Время
-                </span>
+              <label className="text-sm font-medium text-foreground mb-1 flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5" /> Время
               </label>
-              <input
-                type="time"
-                value={apptTime}
-                onChange={(e) => setApptTime(e.target.value)}
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
+              <input type="time" value={apptTime} onChange={(e) => setApptTime(e.target.value)} className={INPUT} />
             </div>
 
           </div>
         </div>
 
-        {/* Footer */}
+        {/* Подвал */}
         <div className="px-6 py-4 border-t border-gray-100 shrink-0 flex gap-3 bg-white rounded-b-2xl">
           {confirmDelete ? (
             <>
               <span className="text-sm text-red-600 flex-1 flex items-center">Удалить запись?</span>
-              <button
-                onClick={() => setConfirmDelete(false)}
-                className="px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50"
-              >
+              <button onClick={() => setConfirmDelete(false)}
+                className="px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">
                 Нет
               </button>
-              <button
-                onClick={onDelete}
-                className="px-4 py-2 rounded-xl bg-red-500 text-white text-sm font-medium hover:bg-red-600"
-              >
+              <button onClick={onDelete}
+                className="px-4 py-2 rounded-xl bg-red-500 text-white text-sm font-medium hover:bg-red-600">
                 Удалить
               </button>
             </>
           ) : (
             <>
               {onDelete && (
-                <button
-                  onClick={() => setConfirmDelete(true)}
-                  className="p-2 rounded-xl border border-red-200 text-red-400 hover:bg-red-50 transition-colors"
-                >
+                <button onClick={() => setConfirmDelete(true)}
+                  className="p-2 rounded-xl border border-red-200 text-red-400 hover:bg-red-50 transition-colors">
                   <Trash2 className="w-4 h-4" />
                 </button>
               )}
-              <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
-                Отмена
-              </Button>
-              <Button
-                type="button"
-                className="flex-1"
-                onClick={handleSave}
-                disabled={!canSave || isSaving}
-              >
+              <Button type="button" variant="outline" className="flex-1" onClick={onClose}>Отмена</Button>
+              <Button type="button" className="flex-1" onClick={handleSave} disabled={!canSave || isSaving}>
                 {isSaving ? "Сохранение..." : "Сохранить"}
               </Button>
             </>
