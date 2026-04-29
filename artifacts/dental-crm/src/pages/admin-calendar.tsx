@@ -399,11 +399,10 @@ export default function AdminCalendar() {
             {/* New appointment */}
             <Button
               onClick={() => openCreateModal(new Date())}
-              className="gap-2"
               size="sm"
+              className="w-9 h-9 p-0 shrink-0"
             >
-              <Plus className="w-4 h-4" />
-              Новая запись
+              <Plus className="w-5 h-5" />
             </Button>
           </div>
         </div>
