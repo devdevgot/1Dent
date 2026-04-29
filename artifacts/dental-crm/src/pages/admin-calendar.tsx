@@ -333,7 +333,8 @@ export default function AdminCalendar() {
       <div className="flex-none bg-white border-b border-gray-100 px-4 py-3">
         <div className="flex items-center gap-2">
 
-          {/* Left: month navigation */}
+          {/* Left: title + month navigation */}
+          <h1 className="text-base font-bold text-gray-900 mr-1">Календарь</h1>
           <div className="flex items-center gap-1">
             <button
               onClick={() => setCurrentDate((d) => subMonths(d, 1))}
