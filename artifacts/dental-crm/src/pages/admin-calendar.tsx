@@ -102,7 +102,6 @@ function buildGroups(
 interface DayAppointmentsModalProps {
   day: Date;
   groups: AppointmentGroup[];
-  onNewAppointment: () => void;
   onEditAppointment: (proc: ProcedureItem) => void;
   onClose: () => void;
 }
@@ -110,7 +109,6 @@ interface DayAppointmentsModalProps {
 function DayAppointmentsModal({
   day,
   groups,
-  onNewAppointment,
   onEditAppointment,
   onClose,
 }: DayAppointmentsModalProps) {
@@ -191,19 +189,12 @@ function DayAppointmentsModal({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 flex-none flex items-center justify-between gap-3">
+        <div className="px-6 py-4 border-t border-gray-100 flex-none flex justify-end">
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
           >
             Закрыть
-          </button>
-          <button
-            onClick={onNewAppointment}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Новая запись
           </button>
         </div>
       </div>
@@ -533,7 +524,6 @@ export default function AdminCalendar() {
         <DayAppointmentsModal
           day={dayViewDate}
           groups={getGroupsForDay(dayViewDate)}
-          onNewAppointment={() => openCreateModal(dayViewDate)}
           onEditAppointment={(proc) => openEditModal(proc)}
           onClose={() => setDayViewDate(null)}
         />
