@@ -183,3 +183,12 @@ Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHea
 ### `scripts` (`@workspace/scripts`)
 
 Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
+
+## Pending Features / Backlog
+
+### Registration use-case selection → Admin panel
+During clinic registration (Step 2 of the multi-step register flow), the user selects one or more intended use-cases for the platform (CRM, Расписание, WhatsApp, Финансы, Аналитика, Маркетинг).
+**TODO**: These selections must be:
+1. Saved to the database on the clinic record (e.g. a `useCases: text[]` or `jsonb` column on the `clinics` table)
+2. Sent from the frontend as part of the register API payload
+3. Visible and editable in the owner/admin panel (e.g. in clinic settings or a dedicated admin analytics section)
