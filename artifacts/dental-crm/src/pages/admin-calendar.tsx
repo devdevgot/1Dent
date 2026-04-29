@@ -351,7 +351,9 @@ export default function AdminCalendar() {
                 )}
               >
                 <SlidersHorizontal className="w-4 h-4" />
-                <span>{filterDoctorId ? doctors.find((d) => d.id === filterDoctorId)?.name ?? "Фильтр" : "Все врачи"}</span>
+                {filterDoctorId && (
+                  <span>{doctors.find((d) => d.id === filterDoctorId)?.name ?? "Фильтр"}</span>
+                )}
                 <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", filterOpen && "rotate-180")} />
               </button>
 
