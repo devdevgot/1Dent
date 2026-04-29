@@ -8,12 +8,34 @@ import { useAuthStore } from "@/hooks/use-auth";
 import { saveAuthToken } from "@/lib/auth-token";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Building2, Eye, EyeOff, ShieldCheck, UserRound } from "lucide-react";
+import {
+  ArrowLeft,
+  BarChart2,
+  Building2,
+  CalendarDays,
+  Eye,
+  EyeOff,
+  MessageCircle,
+  ShieldCheck,
+  Sparkles,
+  UserRound,
+  Wallet,
+  Megaphone,
+} from "lucide-react";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
 import { useTranslation } from "react-i18next";
 
 const STEPS = [0, 1, 2] as const;
 type Step = (typeof STEPS)[number];
+
+const USE_CASES = [
+  { id: "crm", label: "CRM", sub: "Управление пациентами", icon: UserRound },
+  { id: "schedule", label: "Расписание", sub: "Онлайн-запись", icon: CalendarDays },
+  { id: "whatsapp", label: "WhatsApp", sub: "Чат с пациентами", icon: MessageCircle },
+  { id: "finance", label: "Финансы", sub: "Учёт платежей", icon: Wallet },
+  { id: "analytics", label: "Аналитика", sub: "Отчёты и метрики", icon: BarChart2 },
+  { id: "marketing", label: "Маркетинг", sub: "Привлечение пациентов", icon: Megaphone },
+] as const;
 
 function InputField({
   label,
@@ -74,6 +96,12 @@ export default function Register() {
   const [step, setStep] = useState<Step>(0);
   const [dir, setDir] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
+  const [selectedUseCases, setSelectedUseCases] = useState<string[]>([]);
+
+  const toggleUseCase = (id: string) =>
+    setSelectedUseCases((prev) =>
+      prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]
+    );
 
   const registerSchema = useMemo(() => createRegisterSchema(), [t]);
 
@@ -296,7 +324,7 @@ export default function Register() {
                 </div>
               </div>
 
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-2.5">
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
                 <InputField label={t("register.clinicName")} error={errors.clinicName?.message}>
                   <input
                     {...register("clinicName")}
@@ -307,10 +335,61 @@ export default function Register() {
                   />
                 </InputField>
 
+                {/* Use-case multi-select */}
+                <div>
+                  <div className="flex items-center gap-1.5 mb-2.5">
+                    <Sparkles className="w-3.5 h-3.5 text-primary" />
+                    <p className="text-xs font-semibold text-gray-500">
+                      Для чего планируете использовать?
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {USE_CASES.map(({ id, label, sub, icon: Icon }) => {
+                      const selected = selectedUseCases.includes(id);
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => toggleUseCase(id)}
+                          className={`
+                            flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-2 text-left
+                            transition-all duration-150 active:scale-[0.97]
+                            ${selected
+                              ? "border-primary bg-primary/5"
+                              : "border-gray-100 bg-gray-50 hover:border-gray-200"}
+                          `}
+                        >
+                          <div
+                            className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                              selected ? "bg-primary/15" : "bg-white"
+                            }`}
+                          >
+                            <Icon
+                              className={`w-3.5 h-3.5 transition-colors ${
+                                selected ? "text-primary" : "text-gray-400"
+                              }`}
+                            />
+                          </div>
+                          <div className="min-w-0">
+                            <p
+                              className={`text-xs font-semibold leading-tight truncate ${
+                                selected ? "text-gray-900" : "text-gray-600"
+                              }`}
+                            >
+                              {label}
+                            </p>
+                            <p className="text-[10px] text-gray-400 leading-tight truncate">{sub}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <button
                   type="submit"
                   disabled={registerMutation.isPending}
-                  className="w-full py-3 rounded-xl text-sm font-bold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.98] mt-1"
+                  className="w-full py-3 rounded-xl text-sm font-bold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.98]"
                   style={{ backgroundColor: "#98cc1c", color: "#1a2204" }}
                 >
                   {registerMutation.isPending ? t("register.submitting") : "Создать клинику"}
