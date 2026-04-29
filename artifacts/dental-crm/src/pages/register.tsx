@@ -317,9 +317,6 @@ export default function Register() {
                 </button>
               </form>
 
-              <p className="text-xs text-center text-gray-400 mt-4 leading-relaxed">
-                {t("users.registrationNote")}
-              </p>
             </motion.div>
           )}
         </AnimatePresence>
