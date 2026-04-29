@@ -1702,6 +1702,7 @@ export function PatientDetailPanel() {
                   </div>
                 </div>
               </div>
+              </div>
             )}
 
             {/* Dental Chart + Treatment Plan Tab */}
