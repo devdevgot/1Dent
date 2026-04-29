@@ -22,7 +22,7 @@ export interface AppointmentSaveData {
   notes?: string;
   status?: string;
   paymentMethod?: PaymentMethod;
-  newPatient?: { name: string; phone: string; iin?: string; dateOfBirth?: string; gender?: string };
+  newPatient?: { name: string; phone: string; iin?: string; dateOfBirth?: string; gender?: string; source?: string };
 }
 
 export function useAppointmentSave({ onDone }: { onDone: () => void }) {
@@ -68,7 +68,7 @@ export function useAppointmentSave({ onDone }: { onDone: () => void }) {
           data: {
             name: data.newPatient.name,
             phone: data.newPatient.phone,
-            source: "other",
+            source: (data.newPatient.source as Parameters<typeof createPatientMutation.mutateAsync>[0]["data"]["source"]) || "other",
             ...(data.newPatient.iin ? { iin: data.newPatient.iin } : {}),
             ...(data.newPatient.dateOfBirth ? { dateOfBirth: data.newPatient.dateOfBirth } : {}),
             ...(data.newPatient.gender ? { gender: data.newPatient.gender as "male" | "female" | "other" } : {}),

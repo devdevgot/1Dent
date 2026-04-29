@@ -266,7 +266,7 @@ export interface AppointmentModalProps {
     notes?: string;
     status?: string;
     paymentMethod?: PaymentMethod;
-    newPatient?: { name: string; phone: string; iin?: string; dateOfBirth?: string; gender?: string };
+    newPatient?: { name: string; phone: string; iin?: string; dateOfBirth?: string; gender?: string; source?: string };
   }) => void;
   onDelete?: () => void;
   onClose: () => void;
@@ -307,6 +307,7 @@ export function AppointmentModal({
     procedure ? (patients.find((p) => p.id === procedure.patientId)?.name ?? "") : "",
   );
   const [newPatientPhone, setNewPatientPhone] = useState("");
+  const [newPatientSource, setNewPatientSource] = useState("walk_in");
   const [iinInput, setIINInput] = useState("");
 
   /* IIN parsing & lookup */
@@ -374,6 +375,7 @@ export function AppointmentModal({
         gender: iinValid && !isIINError(parsedIIN!)
           ? (parsedIIN as { gender: string }).gender
           : undefined,
+        source: newPatientSource || undefined,
       } : undefined,
     });
   }
@@ -536,18 +538,36 @@ export function AppointmentModal({
                       Пациент найден и выбран автоматически
                     </p>
                   )}
-                  {iinValid && !iinMatchedPatient && iinInput.length === 12 && (
-                    <div className="flex items-center gap-3 text-xs text-primary/70 bg-primary/5 rounded-lg px-2 py-1.5">
-                      <span>
-                        ДР: <strong>{format((parsedIIN as { dateOfBirth: Date }).dateOfBirth, "dd.MM.yyyy")}</strong>
-                      </span>
-                      <span>
-                        Пол: <strong>
-                          {(parsedIIN as { gender: string }).gender === "male" ? "Муж." : "Жен."}
-                        </strong>
-                      </span>
+                </div>
+
+                {/* Дата рождения + Пол — read-only из ИИН */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <label className="block text-xs font-medium text-gray-500">Дата рождения</label>
+                    <div className={cn(
+                      "w-full border rounded-xl px-3 py-2.5 text-sm min-h-[40px] flex items-center",
+                      iinValid && iinInput.length === 12 && !isIINError(parsedIIN!)
+                        ? "border-primary/30 bg-primary/5 text-gray-800"
+                        : "border-gray-200 bg-gray-50 text-gray-400",
+                    )}>
+                      {iinValid && iinInput.length === 12 && !isIINError(parsedIIN!)
+                        ? format((parsedIIN as { dateOfBirth: Date }).dateOfBirth, "dd.MM.yyyy")
+                        : <span className="text-gray-300">из ИИН</span>}
                     </div>
-                  )}
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-xs font-medium text-gray-500">Пол</label>
+                    <div className={cn(
+                      "w-full border rounded-xl px-3 py-2.5 text-sm min-h-[40px] flex items-center",
+                      iinValid && iinInput.length === 12 && !isIINError(parsedIIN!)
+                        ? "border-primary/30 bg-primary/5 text-gray-800"
+                        : "border-gray-200 bg-gray-50 text-gray-400",
+                    )}>
+                      {iinValid && iinInput.length === 12 && !isIINError(parsedIIN!)
+                        ? ((parsedIIN as { gender: string }).gender === "male" ? "Мужской" : "Женский")
+                        : <span className="text-gray-300">из ИИН</span>}
+                    </div>
+                  </div>
                 </div>
 
                 {/* 2. Имя пациента */}
@@ -596,6 +616,19 @@ export function AppointmentModal({
                       className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                     />
                   </div>
+                </div>
+
+                {/* 4. Источник */}
+                <div className="space-y-1">
+                  <label className="block text-xs font-medium text-gray-500">Источник</label>
+                  <select
+                    value={newPatientSource}
+                    onChange={(e) => setNewPatientSource(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white"
+                  >
+                    <option value="walk_in">Самостоятельно</option>
+                    <option value="referral">Рекомендация</option>
+                  </select>
                 </div>
               </div>
             )}
