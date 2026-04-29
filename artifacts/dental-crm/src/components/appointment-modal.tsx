@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import {
-  X, Trash2, Clock, User, UserPlus, Phone, Stethoscope,
-  Search, CreditCard, DollarSign, ChevronDown,
+  X, Trash2, Clock, User, UserPlus, Phone,
+  Search, CreditCard, ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
@@ -347,17 +347,16 @@ export function AppointmentModal({
   /* IIN is required for new patients (not yet in DB) */
   const iinReadyForNew = iinInput.length === 12 && iinValid;
 
-  const canSave = name.trim() && (
+  const canSave =
     (!!procedure && !!patientId) ||
     (!procedure && patientId) ||
-    (!procedure && !patientId && patientSearch.trim().length >= 2 && newPatientPhone.trim().length >= 5 && iinReadyForNew)
-  );
+    (!procedure && !patientId && patientSearch.trim().length >= 2 && newPatientPhone.trim().length >= 5 && iinReadyForNew);
 
   function handleSave() {
     if (!canSave) return;
     const scheduledAt = new Date(`${apptDate}T${apptTime}`).toISOString();
     onSave({
-      name,
+      name: name.trim() || "Запись",
       price: parseFloat(price) || 0,
       patientId,
       doctorId: doctorId || undefined,
@@ -405,61 +404,6 @@ export function AppointmentModal({
 
         {/* Form */}
         <div className="px-6 py-5 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
-          {/* Service */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              <div className="flex items-center gap-1.5">
-                <Stethoscope className="w-4 h-4 text-primary" />
-                Услуга *
-              </div>
-            </label>
-            <ServicePicker
-              name={name}
-              setName={setName}
-              price={price}
-              setPrice={setPrice}
-              templates={templates}
-            />
-          </div>
-
-          {/* Price */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              <div className="flex items-center gap-1.5">
-                <DollarSign className="w-4 h-4 text-primary" />
-                Стоимость (₸)
-              </div>
-            </label>
-            <input
-              type="number"
-              min="0"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              placeholder="0"
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-            />
-          </div>
-
-          {/* Payment method */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              <div className="flex items-center gap-1.5">
-                <CreditCard className="w-4 h-4 text-primary" />
-                Способ оплаты
-              </div>
-            </label>
-            <select
-              value={paymentMethod}
-              onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod | "")}
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white"
-            >
-              <option value="">— Не указан —</option>
-              {PAYMENT_METHODS.map((pm) => (
-                <option key={pm.value} value={pm.value}>{pm.labelRu}</option>
-              ))}
-            </select>
-          </div>
-
           {/* Patient section */}
           <div className="space-y-2.5">
             <div className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
