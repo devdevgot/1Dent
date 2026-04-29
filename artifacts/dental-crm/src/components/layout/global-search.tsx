@@ -3,7 +3,6 @@ import { useLocation } from "wouter";
 import { useAuthStore } from "@/hooks/use-auth";
 import {
   useListPatients,
-  useListInventory,
   useListProcedures,
   useListUsers,
 } from "@workspace/api-client-react";
@@ -11,7 +10,6 @@ import {
   Search,
   X,
   Users,
-  Package,
   Stethoscope,
   LayoutDashboard,
   ChevronRight,
@@ -54,7 +52,6 @@ const PAGE_ITEMS: {
   { label: "Аналитика",  href: "/analytics",       roles: ["owner"],                                          Icon: BarChart3,       iconBg: "bg-pink-100",   iconColor: "text-pink-600" },
   { label: "Аналитика врача", href: "/doctor-analytics", roles: ["doctor"],                                   Icon: BarChart3,       iconBg: "bg-pink-100",   iconColor: "text-pink-600" },
   { label: "Финансы",    href: "/financials",      roles: ["owner","accountant"],                             Icon: Wallet,          iconBg: "bg-emerald-100",iconColor: "text-emerald-600" },
-  { label: "Инвентарь",  href: "/inventory",       roles: ["owner"],                                          Icon: Package,         iconBg: "bg-amber-100",  iconColor: "text-amber-600" },
   { label: "WhatsApp",   href: "/chat",            roles: ["owner","admin","doctor"],                         Icon: FaWhatsapp,      iconBg: "bg-green-100",  iconColor: "text-green-600" },
   { label: "Сотрудники", href: "/users",           roles: ["owner"],                                          Icon: UserCog,         iconBg: "bg-slate-100",  iconColor: "text-slate-600" },
   { label: "Чат-бот",   href: "/chatbot",          roles: ["owner"],                                          Icon: Bot,             iconBg: "bg-purple-100", iconColor: "text-purple-600" },
@@ -89,12 +86,10 @@ export function GlobalSearch() {
 
   const canSeePatients  = ["owner","admin","doctor"].includes(role);
   const canSeeUsers     = ["owner","admin"].includes(role);
-  const canSeeInventory = ["owner"].includes(role);
   const canSeeProcedures= ["owner","admin","accountant"].includes(role);
 
   const { data: patientsData }   = useListPatients({ query: { enabled: canSeePatients } });
   const { data: usersData }      = useListUsers({ query: { enabled: canSeeUsers } });
-  const { data: inventoryData }  = useListInventory({ query: { enabled: canSeeInventory } });
   const { data: proceduresData } = useListProcedures({ query: { enabled: canSeeProcedures } });
 
   useEffect(() => {
@@ -167,24 +162,6 @@ export function GlobalSearch() {
       if (procs.length) result.push({ category: "Процедуры", results: procs });
     }
 
-    // Inventory
-    if (canSeeInventory) {
-      const list = (inventoryData as { data?: { items?: { id: string; name: string; category: string; quantity: number; unit: string }[] } })?.data?.items ?? [];
-      const items = list
-        .filter((i) => matches(i.name, q) || matches(i.category, q))
-        .slice(0, 5)
-        .map((i) => ({
-          id: i.id,
-          label: i.name,
-          subtitle: `${i.quantity} ${i.unit} · ${i.category}`,
-          href: "/inventory",
-          Icon: Package,
-          iconBg: "bg-amber-100",
-          iconColor: "text-amber-600",
-        }));
-      if (items.length) result.push({ category: "Инвентарь", results: items });
-    }
-
     // Users/Staff
     if (canSeeUsers) {
       const list = (usersData as { data?: { users?: { id: string; name: string; role: string; email: string }[] } })?.data?.users ?? [];
@@ -204,7 +181,7 @@ export function GlobalSearch() {
     }
 
     return result;
-  }, [query, role, patientsData, usersData, inventoryData, proceduresData, canSeePatients, canSeeUsers, canSeeInventory, canSeeProcedures, dashboardHref]);
+  }, [query, role, patientsData, usersData, proceduresData, canSeePatients, canSeeUsers, canSeeProcedures, dashboardHref]);
 
   function navigate(href: string) {
     setIsOpen(false);
