@@ -10,7 +10,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   Plus,
   X,
   Clock,
@@ -331,82 +330,76 @@ export default function AdminCalendar() {
   return (
     <div className="flex flex-col h-full overflow-hidden bg-gray-50">
       {/* Top bar */}
-      <div className="flex-none bg-white border-b border-gray-100 px-6 py-4">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="flex-1">
-            <h1 className="text-xl font-bold text-gray-900">Календарь клиники</h1>
-            <p className="text-sm text-gray-500 mt-0.5 capitalize">{periodLabel}</p>
-          </div>
+      <div className="flex-none bg-white border-b border-gray-100 px-4 py-3">
+        <div className="flex items-center gap-2">
 
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Doctor filter button */}
-            <div className="relative">
-              <button
-                onClick={() => setFilterOpen((v) => !v)}
-                className={cn(
-                  "flex items-center gap-2 text-sm px-3 py-2 rounded-xl border transition-colors",
-                  filterDoctorId
-                    ? "border-primary bg-primary/5 text-primary font-medium"
-                    : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50",
-                )}
-              >
-                <SlidersHorizontal className="w-4 h-4" />
-                {filterDoctorId && (
-                  <span>{doctors.find((d) => d.id === filterDoctorId)?.name ?? "Фильтр"}</span>
-                )}
-                <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", filterOpen && "rotate-180")} />
-              </button>
-
-              {filterOpen && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setFilterOpen(false)} />
-                  <div className="absolute left-0 top-full mt-1.5 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 min-w-[180px]">
-                    {[{ id: "", name: "Все врачи" }, ...doctors].map((d) => (
-                      <button
-                        key={d.id}
-                        onClick={() => { setFilterDoctorId(d.id); setFilterOpen(false); }}
-                        className="w-full flex items-center justify-between gap-3 px-4 py-2 text-sm hover:bg-gray-50 transition-colors text-left"
-                      >
-                        <span className={d.id === filterDoctorId ? "font-medium text-primary" : "text-gray-700"}>{d.name}</span>
-                        {d.id === filterDoctorId && <Check className="w-4 h-4 text-primary shrink-0" />}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Navigation */}
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setCurrentDate((d) => subMonths(d, 1))}
-                className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4 text-gray-600" />
-              </button>
-              <button
-                onClick={() => setCurrentDate(new Date())}
-                className="px-3 py-2 text-sm font-medium text-gray-700 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors min-w-[90px] capitalize"
-              >
-                {format(currentDate, "LLLL", { locale: ru })}
-              </button>
-              <button
-                onClick={() => setCurrentDate((d) => addMonths(d, 1))}
-                className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors"
-              >
-                <ChevronRight className="w-4 h-4 text-gray-600" />
-              </button>
-            </div>
-
-            {/* New appointment */}
-            <Button
-              onClick={() => openCreateModal(new Date())}
-              size="sm"
-              className="w-9 h-9 p-0 shrink-0"
+          {/* Left: month navigation */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setCurrentDate((d) => subMonths(d, 1))}
+              className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors"
             >
-              <Plus className="w-5 h-5" />
-            </Button>
+              <ChevronLeft className="w-4 h-4 text-gray-600" />
+            </button>
+            <button
+              onClick={() => setCurrentDate(new Date())}
+              className="px-3 py-2 text-sm font-medium text-gray-700 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors min-w-[90px] capitalize"
+            >
+              {format(currentDate, "LLLL", { locale: ru })}
+            </button>
+            <button
+              onClick={() => setCurrentDate((d) => addMonths(d, 1))}
+              className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors"
+            >
+              <ChevronRight className="w-4 h-4 text-gray-600" />
+            </button>
           </div>
+
+          <div className="flex-1" />
+
+          {/* Right: filter icon + new appointment */}
+          <div className="relative">
+            <button
+              onClick={() => setFilterOpen((v) => !v)}
+              className={cn(
+                "relative p-1.5 transition-colors",
+                filterDoctorId ? "text-primary" : "text-gray-400 hover:text-primary",
+              )}
+              title="Фильтр по врачу"
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              {filterDoctorId && (
+                <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-primary rounded-full" />
+              )}
+            </button>
+
+            {filterOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setFilterOpen(false)} />
+                <div className="absolute right-0 top-full mt-1.5 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 min-w-[180px]">
+                  {[{ id: "", name: "Все врачи" }, ...doctors].map((d) => (
+                    <button
+                      key={d.id}
+                      onClick={() => { setFilterDoctorId(d.id); setFilterOpen(false); }}
+                      className="w-full flex items-center justify-between gap-3 px-4 py-2 text-sm hover:bg-gray-50 transition-colors text-left"
+                    >
+                      <span className={d.id === filterDoctorId ? "font-medium text-primary" : "text-gray-700"}>{d.name}</span>
+                      {d.id === filterDoctorId && <Check className="w-4 h-4 text-primary shrink-0" />}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          <Button
+            onClick={() => openCreateModal(new Date())}
+            size="sm"
+            className="w-9 h-9 p-0 shrink-0"
+          >
+            <Plus className="w-5 h-5" />
+          </Button>
+
         </div>
       </div>
 
