@@ -382,25 +382,25 @@ export function AppointmentModal({
 
             {/* Дата */}
             <div>
-              <label className="text-sm font-semibold text-foreground mb-2 block">Дата</label>
+              <label className="text-sm font-medium text-foreground mb-1 block">Дата</label>
               <input
                 type="date"
                 value={apptDate}
                 onChange={(e) => setApptDate(e.target.value)}
-                className="w-full bg-white border border-border rounded-xl px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className={INPUT}
               />
             </div>
 
             {/* Время */}
             <div>
-              <label className="text-sm font-semibold text-foreground mb-2 block">Время</label>
+              <label className="text-sm font-medium text-foreground mb-1 block">Время</label>
               <div className="relative">
-                <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 <input
                   type="time"
                   value={apptTime}
                   onChange={(e) => setApptTime(e.target.value)}
-                  className="w-full bg-white border border-border rounded-xl pl-11 pr-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className={INPUT + " pl-9"}
                 />
               </div>
             </div>
