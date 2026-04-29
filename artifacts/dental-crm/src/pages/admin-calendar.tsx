@@ -427,8 +427,9 @@ export default function AdminCalendar() {
             ))}
           </div>
 
-          {/* Grid rows — fills remaining height, always 6 rows */}
-          <div className="flex-1 grid grid-cols-7 grid-rows-6">
+          {/* Grid rows — inner scroll, outer stays fixed */}
+          <div className="flex-1 overflow-auto custom-scrollbar">
+          <div className="grid grid-cols-7">
             {gridDays.map((day, idx) => {
               const groups = getGroupsForDay(day);
               const inMonth = isSameMonth(day, currentDate);
@@ -451,7 +452,7 @@ export default function AdminCalendar() {
                     }
                   }}
                   className={cn(
-                    "overflow-hidden p-2 border-b border-r border-gray-100 cursor-pointer transition-colors",
+                    "min-h-[80px] p-2 border-b border-r border-gray-100 cursor-pointer transition-colors",
                     "hover:bg-primary/5",
                     !inMonth && "bg-gray-50/60",
                     isWeekend && inMonth && "bg-red-50/30",
@@ -517,6 +518,7 @@ export default function AdminCalendar() {
                 </div>
               );
             })}
+          </div>
           </div>
         </div>
 
