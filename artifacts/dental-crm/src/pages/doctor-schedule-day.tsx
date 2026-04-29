@@ -1,13 +1,19 @@
 import { useMemo, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useListProcedures, useListPatients } from "@workspace/api-client-react";
+import {
+  useListProcedures, useListPatients,
+  useListUsers, useListProcedureTemplates,
+} from "@workspace/api-client-react";
 import type { Procedure, ProcedureStatus } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useLocation, useParams } from "wouter";
 import {
   ChevronLeft, ChevronRight,
-  Clock, CheckCircle2, PlayCircle, XCircle, Calendar,
+  Clock, CheckCircle2, PlayCircle, XCircle, Calendar, Plus,
 } from "lucide-react";
+import { AppointmentModal } from "@/components/appointment-modal";
+import { useAppointmentSave } from "@/hooks/use-appointment-save";
+import type { ProcedureTemplate } from "@/components/appointment-modal";
 
 /* ─── Constants ─────────────────────────────────────────────────────────────── */
 const HOUR_H  = 64;   // px per hour
@@ -77,6 +83,9 @@ export default function DoctorScheduleDayPage() {
   const weekDays = getWeek(selDate);
   const todayStr = toStr(new Date());
 
+  /* Modal state */
+  const [showModal, setShowModal] = useState(false);
+
   /* Live clock */
   const [nowDate, setNowDate] = useState(new Date());
   useEffect(() => {
@@ -98,8 +107,10 @@ export default function DoctorScheduleDayPage() {
   }, [dateStr]);
 
   /* Data */
-  const { data: pData } = useListProcedures();
-  const { data: ptData } = useListPatients();
+  const { data: pData }        = useListProcedures();
+  const { data: ptData }       = useListPatients();
+  const { data: userData }     = useListUsers();
+  const { data: templateData } = useListProcedureTemplates();
 
   const patients = useMemo(() => {
     const m = new Map<string, string>();
@@ -114,6 +125,28 @@ export default function DoctorScheduleDayPage() {
       .filter(p => p.scheduledAt && toStr(new Date(p.scheduledAt)) === dateStr)
       .sort((a, b) => new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime());
   }, [pData, user?.id, dateStr]);
+
+  /* Modal data */
+  const patientsForModal = useMemo(
+    () => (ptData?.data?.patients ?? []).map((p) => ({
+      id: p.id, name: p.name,
+      phone: (p as any).phone ?? "",
+      iin:   (p as any).iin   ?? null,
+      doctorId: (p as any).doctorId ?? null,
+    })),
+    [ptData],
+  );
+  const doctorsForModal = useMemo(
+    () => (userData?.data?.users ?? [])
+      .filter((u) => u.role === "doctor")
+      .map((u) => ({ id: u.id, name: u.name })),
+    [userData],
+  );
+  const templatesForModal: ProcedureTemplate[] = useMemo(
+    () => (templateData?.data?.templates ?? []) as ProcedureTemplate[],
+    [templateData],
+  );
+  const apptSave = useAppointmentSave({ onDone: () => setShowModal(false) });
 
   const hours = Array.from({ length: END_H - START_H + 1 }, (_, i) => START_H + i);
   const totalH = (END_H - START_H) * HOUR_H;
@@ -186,15 +219,24 @@ export default function DoctorScheduleDayPage() {
         </div>
 
         {/* Date label */}
-        <div className="px-4 py-2 border-t border-border/50 bg-secondary/40">
-          <p className="text-[13px] font-bold text-foreground">
-            {DOW_FULL[selDate.getDay()]} — {selDate.getDate()} {MONTH_GEN[selDate.getMonth()]} {selDate.getFullYear()} г.
-          </p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
-            {dayProcs.length > 0
-              ? `${dayProcs.length} ${dayProcs.length === 1 ? "приём" : dayProcs.length < 5 ? "приёма" : "приёмов"}`
-              : "Нет приёмов"}
-          </p>
+        <div className="px-4 py-2 border-t border-border/50 bg-secondary/40 flex items-center justify-between">
+          <div>
+            <p className="text-[13px] font-bold text-foreground">
+              {DOW_FULL[selDate.getDay()]} — {selDate.getDate()} {MONTH_GEN[selDate.getMonth()]} {selDate.getFullYear()} г.
+            </p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              {dayProcs.length > 0
+                ? `${dayProcs.length} ${dayProcs.length === 1 ? "приём" : dayProcs.length < 5 ? "приёма" : "приёмов"}`
+                : "Нет приёмов"}
+            </p>
+          </div>
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-white text-xs font-semibold hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Новая запись
+          </button>
         </div>
       </div>
 
@@ -295,6 +337,21 @@ export default function DoctorScheduleDayPage() {
           )}
         </div>
       </div>
+
+      {/* ── Appointment modal ── */}
+      {showModal && (
+        <AppointmentModal
+          date={selDate}
+          procedure={null}
+          patients={patientsForModal}
+          doctors={doctorsForModal}
+          templates={templatesForModal}
+          defaultDoctorId={user?.id}
+          onSave={(data) => apptSave.save(data, null)}
+          onClose={() => setShowModal(false)}
+          isSaving={apptSave.isSaving}
+        />
+      )}
     </div>
   );
 }

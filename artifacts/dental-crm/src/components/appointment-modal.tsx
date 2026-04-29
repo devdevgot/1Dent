@@ -62,6 +62,7 @@ export interface AppointmentModalProps {
   patients: PatientEntry[];
   doctors: { id: string; name: string }[];
   templates: ProcedureTemplate[];
+  defaultDoctorId?: string;
   onSave: (data: {
     name: string;
     price: number;
@@ -286,6 +287,7 @@ export function AppointmentModal({
   procedure,
   patients,
   doctors,
+  defaultDoctorId,
   onSave,
   onDelete,
   onClose,
@@ -307,7 +309,7 @@ export function AppointmentModal({
   const [selectedPatientId, setSelectedPatientId] = useState(procedure?.patientId ?? "");
 
   /* appointment */
-  const [doctorId, setDoctorId]       = useState(procedure?.doctorId ?? "");
+  const [doctorId, setDoctorId]       = useState(procedure?.doctorId ?? defaultDoctorId ?? "");
   const [notes, setNotes]             = useState(procedure?.notes ?? "");
   const [apptDate, setApptDate]       = useState(
     procedure?.scheduledAt ? format(parseISO(procedure.scheduledAt), "yyyy-MM-dd") : defaultDate,
@@ -528,6 +530,7 @@ export function AppointmentModal({
                         <select value={source} onChange={(e) => setSource(e.target.value)} className={INPUT + " bg-white"}>
                           <option value="walk_in">Самостоятельно</option>
                           <option value="referral">Рекомендация</option>
+                          <option value="doctor_referred">Записан врачом</option>
                         </select>
                       </div>
                     </>

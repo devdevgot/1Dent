@@ -1,10 +1,18 @@
 import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useListProcedures } from "@workspace/api-client-react";
+import {
+  useListProcedures,
+  useListPatients,
+  useListUsers,
+  useListProcedureTemplates,
+} from "@workspace/api-client-react";
 import type { Procedure, ProcedureStatus } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
-import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, Plus } from "lucide-react";
+import { AppointmentModal } from "@/components/appointment-modal";
+import { useAppointmentSave } from "@/hooks/use-appointment-save";
+import type { ProcedureTemplate } from "@/components/appointment-modal";
 
 /* ─── Status colours ────────────────────────────────────────────────────────── */
 const STATUS_PILL: Record<ProcedureStatus, string> = {
@@ -43,8 +51,34 @@ export default function DoctorSchedulePage() {
   const now = new Date();
   const [year,  setYear]  = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
+  const [modalDate, setModalDate] = useState<Date | null>(null);
 
   const { data, isLoading } = useListProcedures();
+  const { data: patientData }  = useListPatients();
+  const { data: userData }     = useListUsers();
+  const { data: templateData } = useListProcedureTemplates();
+
+  const patients = useMemo(
+    () => (patientData?.data?.patients ?? []).map((p) => ({
+      id: p.id, name: p.name,
+      phone: (p as any).phone ?? "",
+      iin:   (p as any).iin   ?? null,
+      doctorId: (p as any).doctorId ?? null,
+    })),
+    [patientData],
+  );
+  const doctors = useMemo(
+    () => (userData?.data?.users ?? [])
+      .filter((u) => u.role === "doctor")
+      .map((u) => ({ id: u.id, name: u.name })),
+    [userData],
+  );
+  const templates: ProcedureTemplate[] = useMemo(
+    () => (templateData?.data?.templates ?? []) as ProcedureTemplate[],
+    [templateData],
+  );
+
+  const apptSave = useAppointmentSave({ onDone: () => setModalDate(null) });
 
   /* Group procedures by local date — completed hidden from calendar */
   const byDate = useMemo(() => {
@@ -107,6 +141,12 @@ export default function DoctorSchedulePage() {
               className="w-8 h-8 rounded-xl flex items-center justify-center text-muted-foreground hover:bg-secondary transition-colors"
             >
               <ChevronRight className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setModalDate(now)}
+              className="w-8 h-8 rounded-xl flex items-center justify-center bg-primary text-white hover:bg-primary/90 transition-colors ml-1"
+            >
+              <Plus className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -204,6 +244,21 @@ export default function DoctorSchedulePage() {
           ))}
         </div>
       </div>
+
+      {/* ── Appointment modal ── */}
+      {modalDate && (
+        <AppointmentModal
+          date={modalDate}
+          procedure={null}
+          patients={patients}
+          doctors={doctors}
+          templates={templates}
+          defaultDoctorId={user?.id}
+          onSave={(data) => apptSave.save(data, null)}
+          onClose={() => setModalDate(null)}
+          isSaving={apptSave.isSaving}
+        />
+      )}
     </div>
   );
 }
