@@ -384,9 +384,9 @@ export default function AdminCalendar() {
               </button>
               <button
                 onClick={() => setCurrentDate(new Date())}
-                className="px-3 py-2 text-sm font-medium text-gray-600 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors"
+                className="px-3 py-2 text-sm font-medium text-gray-700 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors min-w-[90px] capitalize"
               >
-                Сегодня
+                {format(currentDate, "LLLL", { locale: ru })}
               </button>
               <button
                 onClick={() => setCurrentDate((d) => addMonths(d, 1))}
