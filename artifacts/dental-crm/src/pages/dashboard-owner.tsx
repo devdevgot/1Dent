@@ -11,7 +11,7 @@ import {
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import {
   ChevronRight, UserCog, Users, Bell, X, ChevronLeft,
-  Activity, Stethoscope, Send, Banknote, QrCode, CreditCard,
+  Stethoscope, Send, Banknote, QrCode, CreditCard,
   Clock, Wallet, CalendarDays, SlidersHorizontal, UserPlus, Layers,
   TrendingUp, CheckCircle2, AlertCircle, Circle,
 } from "lucide-react";
@@ -522,7 +522,6 @@ export default function OwnerDashboard() {
           {[
             { label: t("ownerDashboard.manageStaff"), icon: UserCog,    path: "/users",      color: "bg-slate-50 text-slate-600" },
             { label: t("nav.patients"),               icon: Users,       path: "/patients",   color: "bg-blue-50 text-blue-600" },
-            { label: t("nav.inventory"),              icon: Activity,    path: "/inventory",  color: "bg-amber-50 text-amber-600" },
             { label: t("nav.procedures"),             icon: Stethoscope, path: "/procedures", color: "bg-violet-50 text-violet-600" },
           ].map((item) => (
             <button

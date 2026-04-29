@@ -251,7 +251,6 @@ export default function Dashboard() {
             {[
               { label: t("dashboard.openKanban"),     icon: Calendar, path: "/kanban" },
               { label: t("dashboard.openDentalChart"), icon: Activity,  path: "/dental-chart" },
-              { label: t("dashboard.openInventory"),  icon: TrendingUp, path: "/inventory" },
               { label: t("dashboard.openProcedures"), icon: Stethoscope, path: "/procedures" },
             ].map((item) => (
               <button
