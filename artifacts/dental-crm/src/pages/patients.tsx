@@ -24,7 +24,7 @@ import {
 import {
   Users, KanbanSquare,
   Plus, RefreshCw, Search, Trash2,
-  ChevronUp, ChevronDown, ChevronsUpDown, SlidersHorizontal,
+  ChevronUp, ChevronDown, ChevronsUpDown, SlidersHorizontal, ArrowLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { KanbanColumn } from "@/components/kanban/kanban-column";
@@ -501,6 +501,12 @@ export default function PatientsPage() {
 
         {/* Row 1: title + icon actions */}
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => window.history.back()}
+            className="p-1.5 -ml-1 text-gray-400 hover:text-gray-700 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
           <h1 className="text-lg font-bold text-gray-900">{t("nav.patients")}</h1>
           <span className="bg-primary/10 text-primary text-xs font-semibold px-2 py-0.5 rounded-full">
             {allPatients.length}
