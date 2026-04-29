@@ -10,11 +10,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Plus,
   X,
   Clock,
   User,
-  Stethoscope,
+  Check,
+  SlidersHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -216,6 +218,7 @@ export default function AdminCalendar() {
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [filterDoctorId, setFilterDoctorId] = useState("");
+  const [filterOpen, setFilterOpen] = useState(false);
   const [dayViewDate, setDayViewDate] = useState<Date | null>(null);
   const [modalDate, setModalDate] = useState<Date | null>(null);
   const [editingProcedure, setEditingProcedure] = useState<ProcedureItem | null>(null);
@@ -336,15 +339,40 @@ export default function AdminCalendar() {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Doctor filter */}
-            <select
-              value={filterDoctorId}
-              onChange={(e) => setFilterDoctorId(e.target.value)}
-              className="text-sm px-3 py-2 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
-            >
-              <option value="">Все врачи</option>
-              {doctors.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-            </select>
+            {/* Doctor filter button */}
+            <div className="relative">
+              <button
+                onClick={() => setFilterOpen((v) => !v)}
+                className={cn(
+                  "flex items-center gap-2 text-sm px-3 py-2 rounded-xl border transition-colors",
+                  filterDoctorId
+                    ? "border-primary bg-primary/5 text-primary font-medium"
+                    : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50",
+                )}
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                <span>{filterDoctorId ? doctors.find((d) => d.id === filterDoctorId)?.name ?? "Фильтр" : "Все врачи"}</span>
+                <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", filterOpen && "rotate-180")} />
+              </button>
+
+              {filterOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setFilterOpen(false)} />
+                  <div className="absolute left-0 top-full mt-1.5 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 min-w-[180px]">
+                    {[{ id: "", name: "Все врачи" }, ...doctors].map((d) => (
+                      <button
+                        key={d.id}
+                        onClick={() => { setFilterDoctorId(d.id); setFilterOpen(false); }}
+                        className="w-full flex items-center justify-between gap-3 px-4 py-2 text-sm hover:bg-gray-50 transition-colors text-left"
+                      >
+                        <span className={d.id === filterDoctorId ? "font-medium text-primary" : "text-gray-700"}>{d.name}</span>
+                        {d.id === filterDoctorId && <Check className="w-4 h-4 text-primary shrink-0" />}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
 
             {/* Navigation */}
             <div className="flex items-center gap-1">
@@ -382,15 +410,15 @@ export default function AdminCalendar() {
       </div>
 
       {/* Calendar */}
-      <div className="flex-1 overflow-auto p-4">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="flex-1 overflow-hidden p-3 sm:p-4 flex flex-col gap-2">
+        <div className="flex-1 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
           {/* Day-of-week header */}
-          <div className="grid grid-cols-7 border-b border-gray-100">
+          <div className="flex-none grid grid-cols-7 border-b border-gray-100">
             {DOW_LABELS.map((label, i) => (
               <div
                 key={label}
                 className={cn(
-                  "py-3 text-center text-xs font-semibold uppercase tracking-wide",
+                  "py-2.5 text-center text-xs font-semibold uppercase tracking-wide",
                   i >= 5 ? "text-red-400" : "text-gray-500",
                 )}
               >
@@ -399,8 +427,8 @@ export default function AdminCalendar() {
             ))}
           </div>
 
-          {/* Grid rows */}
-          <div className="grid grid-cols-7">
+          {/* Grid rows — fills remaining height, always 6 rows */}
+          <div className="flex-1 grid grid-cols-7 grid-rows-6">
             {gridDays.map((day, idx) => {
               const groups = getGroupsForDay(day);
               const inMonth = isSameMonth(day, currentDate);
@@ -423,7 +451,7 @@ export default function AdminCalendar() {
                     }
                   }}
                   className={cn(
-                    "min-h-[80px] p-2 border-b border-r border-gray-100 cursor-pointer transition-colors",
+                    "overflow-hidden p-2 border-b border-r border-gray-100 cursor-pointer transition-colors",
                     "hover:bg-primary/5",
                     !inMonth && "bg-gray-50/60",
                     isWeekend && inMonth && "bg-red-50/30",
@@ -493,7 +521,7 @@ export default function AdminCalendar() {
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-4 mt-3 px-1">
+        <div className="flex items-center gap-4 flex-wrap px-1 flex-none">
           {STATUS_OPTIONS.map((s) => (
             <div key={s.value} className="flex items-center gap-1.5">
               <span className={cn("w-2 h-2 rounded-full", STATUS_DOT[s.value])} />
