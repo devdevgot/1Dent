@@ -97,21 +97,25 @@ export function CreatePatientDialog({ onClose, onExistingPatient }: CreatePatien
     const cleaned = value.replace(/\D/g, "").slice(0, 12);
     setIin(cleaned);
 
-    if (cleaned.length === 0) { setIinError(null); return; }
-    if (cleaned.length < 12) { setIinError(null); return; }
+    if (cleaned.length < 12) {
+      setIinError(null);
+      setDateOfBirth("");
+      setGender("");
+      return;
+    }
 
     const result = parseIIN(cleaned);
     if (isIINError(result)) {
       setIinError(result.error);
+      setDateOfBirth("");
+      setGender("");
     } else {
       setIinError(null);
-      if (!dateOfBirth) {
-        const d = result.dateOfBirth;
-        setDateOfBirth(
-          `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
-        );
-      }
-      if (!gender) setGender(result.gender);
+      const d = result.dateOfBirth;
+      setDateOfBirth(
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+      );
+      setGender(result.gender);
     }
   };
 
@@ -252,28 +256,24 @@ export function CreatePatientDialog({ onClose, onExistingPatient }: CreatePatien
                   />
                 </div>
 
-                <div className="grid grid-cols-[5fr_7fr] gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.dateOfBirth")}</label>
-                    <input
-                      type="date"
-                      value={dateOfBirth}
-                      onChange={(e) => setDateOfBirth(e.target.value)}
-                      className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    />
+                    <div className={`w-full border rounded-lg px-3 py-2 text-sm min-h-[38px] flex items-center ${
+                      dateOfBirth ? "border-primary/30 bg-primary/5 text-gray-800" : "border-border bg-gray-50 text-gray-400"
+                    }`}>
+                      {dateOfBirth
+                        ? new Date(dateOfBirth).toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" })
+                        : <span className="text-gray-300">из ИИН</span>}
+                    </div>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.gender")}</label>
-                    <select
-                      value={gender}
-                      onChange={(e) => setGender(e.target.value as "male" | "female" | "other" | "")}
-                      className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
-                    >
-                      <option value="">{t("gender.notSpecified")}</option>
-                      <option value="male">{t("gender.male")}</option>
-                      <option value="female">{t("gender.female")}</option>
-                      <option value="other">{t("gender.other")}</option>
-                    </select>
+                    <div className={`w-full border rounded-lg px-3 py-2 text-sm min-h-[38px] flex items-center ${
+                      gender ? "border-primary/30 bg-primary/5 text-gray-800" : "border-border bg-gray-50 text-gray-400"
+                    }`}>
+                      {gender ? genderLabel(gender) : <span className="text-gray-300">из ИИН</span>}
+                    </div>
                   </div>
                 </div>
 
