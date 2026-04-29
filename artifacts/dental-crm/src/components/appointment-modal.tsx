@@ -197,7 +197,7 @@ export function AppointmentModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-start sm:justify-center sm:pt-[8vh]">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
 
       <div className="relative bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md sm:mx-4 z-10 flex flex-col max-h-[90dvh]">
@@ -218,7 +218,7 @@ export function AppointmentModal({
         </div>
 
         {/* Scrollable body */}
-        <div className="overflow-y-auto flex-1 custom-scrollbar">
+        <div className="overflow-y-auto flex-1 custom-scrollbar" style={{ scrollbarGutter: "stable" }}>
           <div className="space-y-4 px-6 py-5">
 
             {procedure ? (
