@@ -197,10 +197,98 @@ export function AppointmentModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-start sm:justify-center sm:pt-[8vh]">
+    <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="relative bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md sm:mx-4 z-10 flex flex-col max-h-[90dvh]">
+      {/* Mobile: bottom sheet */}
+      <div className="absolute bottom-0 left-0 right-0 sm:hidden bg-white rounded-t-2xl shadow-2xl flex flex-col max-h-[90dvh] z-10">
+        {/* inner — mobile */}
+        <MobileOrDesktopContent
+          procedure={procedure}
+          patients={patients}
+          doctors={doctors}
+          iin={iin}
+          iinError={iinError}
+          dateOfBirth={dateOfBirth}
+          gender={gender}
+          patientName={patientName}
+          phone={phone}
+          source={source}
+          selectedPatientId={selectedPatientId}
+          doctorId={doctorId}
+          notes={notes}
+          apptDate={apptDate}
+          apptTime={apptTime}
+          status={status}
+          confirmDelete={confirmDelete}
+          isSaving={isSaving}
+          foundPatient={foundPatient}
+          genderLabel={genderLabel}
+          onIINChange={handleIINChange}
+          onSelectPatient={(id, dId) => { setSelectedPatientId(id); if (dId) setDoctorId(dId); }}
+          onResetPatient={resetPatient}
+          onClearIIN={() => { setIin(""); setIinError(null); setDateOfBirth(""); setGender(""); }}
+          setPatientName={setPatientName}
+          setPhone={setPhone}
+          setSource={setSource}
+          setDoctorId={setDoctorId}
+          setNotes={setNotes}
+          setApptDate={setApptDate}
+          setApptTime={setApptTime}
+          setStatus={setStatus}
+          setConfirmDelete={setConfirmDelete}
+          canSave={canSave}
+          onSave={handleSave}
+          onDelete={onDelete}
+          onClose={onClose}
+          showDragHandle
+        />
+      </div>
+
+      {/* Desktop: fixed top-center */}
+      <div className="absolute top-[8%] left-1/2 -translate-x-1/2 hidden sm:flex w-full max-w-md bg-white rounded-2xl shadow-2xl flex-col max-h-[90dvh] z-10">
+        <MobileOrDesktopContent
+          procedure={procedure}
+          patients={patients}
+          doctors={doctors}
+          iin={iin}
+          iinError={iinError}
+          dateOfBirth={dateOfBirth}
+          gender={gender}
+          patientName={patientName}
+          phone={phone}
+          source={source}
+          selectedPatientId={selectedPatientId}
+          doctorId={doctorId}
+          notes={notes}
+          apptDate={apptDate}
+          apptTime={apptTime}
+          status={status}
+          confirmDelete={confirmDelete}
+          isSaving={isSaving}
+          foundPatient={foundPatient}
+          genderLabel={genderLabel}
+          onIINChange={handleIINChange}
+          onSelectPatient={(id, dId) => { setSelectedPatientId(id); if (dId) setDoctorId(dId); }}
+          onResetPatient={resetPatient}
+          onClearIIN={() => { setIin(""); setIinError(null); setDateOfBirth(""); setGender(""); }}
+          setPatientName={setPatientName}
+          setPhone={setPhone}
+          setSource={setSource}
+          setDoctorId={setDoctorId}
+          setNotes={setNotes}
+          setApptDate={setApptDate}
+          setApptTime={setApptTime}
+          setStatus={setStatus}
+          setConfirmDelete={setConfirmDelete}
+          canSave={canSave}
+          onSave={handleSave}
+          onDelete={onDelete}
+          onClose={onClose}
+          showDragHandle={false}
+        />
+      </div>
+    </div>
 
         {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-1 sm:hidden shrink-0">
