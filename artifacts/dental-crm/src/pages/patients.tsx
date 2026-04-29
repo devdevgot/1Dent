@@ -497,15 +497,17 @@ export default function PatientsPage() {
   return (
     <div className="flex flex-col h-full bg-gray-50 overflow-hidden">
       {/* Page header */}
-      <div className="bg-white border-b border-gray-100 px-4 py-3 shrink-0">
+      <div className="bg-white border-b border-gray-100 px-4 pt-3 pb-2.5 shrink-0">
+
+        {/* Row 1: title + icon actions */}
         <div className="flex items-center gap-2">
           <h1 className="text-lg font-bold text-gray-900">{t("nav.patients")}</h1>
           <span className="bg-primary/10 text-primary text-xs font-semibold px-2 py-0.5 rounded-full">
             {allPatients.length}
           </span>
 
-          {/* Segmented view switcher */}
-          <div className="flex items-center bg-gray-100 rounded-lg p-0.5 ml-2">
+          {/* View switcher — desktop only in this row */}
+          <div className="hidden sm:flex items-center bg-gray-100 rounded-lg p-0.5 ml-1">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
@@ -530,7 +532,7 @@ export default function PatientsPage() {
 
           <button
             onClick={() => queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() })}
-            className="text-gray-400 hover:text-primary transition-colors p-1"
+            className="text-gray-400 hover:text-primary transition-colors p-1.5"
             title={t("kanban.refresh")}
           >
             <RefreshCw className="w-4 h-4" />
@@ -538,29 +540,51 @@ export default function PatientsPage() {
           <button
             onClick={() => setShowFilters((v) => !v)}
             className={cn(
-              "relative transition-colors p-1",
+              "relative transition-colors p-1.5",
               showFilters || hasActiveFilter ? "text-primary" : "text-gray-400 hover:text-primary",
             )}
             title="Фильтры"
           >
             <SlidersHorizontal className="w-4 h-4" />
             {hasActiveFilter && (
-              <span className="absolute top-0 right-0 w-2 h-2 bg-primary rounded-full" />
+              <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-primary rounded-full" />
             )}
           </button>
           {canCreate && (
-            <Button onClick={() => setIsCreateOpen(true)} className="gap-2 h-8 text-xs px-3">
-              <Plus className="w-3.5 h-3.5" />
-              {t("kanban.newPatient")}
+            <Button onClick={() => setIsCreateOpen(true)} className="gap-1.5 h-8 text-xs px-2.5 sm:px-3">
+              <Plus className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden sm:inline">{t("kanban.newPatient")}</span>
             </Button>
           )}
         </div>
 
+        {/* View switcher — mobile only, second row */}
+        <div className="flex sm:hidden items-center bg-gray-100 rounded-lg p-0.5 mt-2.5">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setView(tab.key)}
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-semibold transition-all duration-150",
+                  view === tab.key
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-400",
+                )}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
         {/* Filter panel */}
         {showFilters && (
-          <div className="mt-3 space-y-2 border-t border-gray-100 pt-3">
+          <div className="mt-2.5 space-y-2 border-t border-gray-100 pt-2.5">
             <div className="flex flex-wrap gap-2">
-              <div className="relative flex-1 min-w-[180px] max-w-xs">
+              <div className="relative w-full sm:flex-1 sm:min-w-[180px] sm:max-w-xs">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
@@ -570,28 +594,30 @@ export default function PatientsPage() {
                   className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 bg-gray-50"
                 />
               </div>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as PatientStatus | "all")}
-                className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-gray-700"
-              >
-                <option value="all">{t("patients.allStatuses")}</option>
-                {KANBAN_COLUMNS.map((col) => (
-                  <option key={col.id} value={col.id}>
-                    {col.label} {statusCounts[col.id] ? `(${statusCounts[col.id]})` : ""}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={sourceFilter}
-                onChange={(e) => setSourceFilter(e.target.value as PatientSource | "all")}
-                className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-gray-700"
-              >
-                <option value="all">{t("patients.allSources")}</option>
-                {ALL_SOURCES.map((s) => (
-                  <option key={s} value={s}>{SOURCE_LABELS[s]}</option>
-                ))}
-              </select>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as PatientStatus | "all")}
+                  className="flex-1 sm:flex-none text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-gray-700"
+                >
+                  <option value="all">{t("patients.allStatuses")}</option>
+                  {KANBAN_COLUMNS.map((col) => (
+                    <option key={col.id} value={col.id}>
+                      {col.label} {statusCounts[col.id] ? `(${statusCounts[col.id]})` : ""}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={sourceFilter}
+                  onChange={(e) => setSourceFilter(e.target.value as PatientSource | "all")}
+                  className="flex-1 sm:flex-none text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-gray-700"
+                >
+                  <option value="all">{t("patients.allSources")}</option>
+                  {ALL_SOURCES.map((s) => (
+                    <option key={s} value={s}>{SOURCE_LABELS[s]}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div className="flex flex-wrap gap-1.5">
               {KANBAN_COLUMNS.map((col) => {
