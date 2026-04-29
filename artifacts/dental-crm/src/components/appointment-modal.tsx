@@ -387,7 +387,7 @@ export function AppointmentModal({
                 type="date"
                 value={apptDate}
                 onChange={(e) => setApptDate(e.target.value)}
-                className="w-full bg-white rounded-xl px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="w-full bg-white border border-border rounded-xl px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
             </div>
 
@@ -400,7 +400,7 @@ export function AppointmentModal({
                   type="time"
                   value={apptTime}
                   onChange={(e) => setApptTime(e.target.value)}
-                  className="w-full bg-white rounded-xl pl-11 pr-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className="w-full bg-white border border-border rounded-xl pl-11 pr-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
               </div>
             </div>
