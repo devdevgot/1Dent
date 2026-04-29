@@ -97,15 +97,8 @@ export function CreatePatientDialog({ onClose, onExistingPatient }: CreatePatien
     const cleaned = value.replace(/\D/g, "").slice(0, 12);
     setIin(cleaned);
 
-    if (cleaned.length === 0) {
-      setIinError(null);
-      return;
-    }
-
-    if (cleaned.length < 12) {
-      setIinError(null);
-      return;
-    }
+    if (cleaned.length === 0) { setIinError(null); return; }
+    if (cleaned.length < 12) { setIinError(null); return; }
 
     const result = parseIIN(cleaned);
     if (isIINError(result)) {
@@ -114,23 +107,18 @@ export function CreatePatientDialog({ onClose, onExistingPatient }: CreatePatien
       setIinError(null);
       if (!dateOfBirth) {
         const d = result.dateOfBirth;
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, "0");
-        const dd = String(d.getDate()).padStart(2, "0");
-        setDateOfBirth(`${yyyy}-${mm}-${dd}`);
+        setDateOfBirth(
+          `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+        );
       }
-      if (!gender) {
-        setGender(result.gender);
-      }
+      if (!gender) setGender(result.gender);
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
     if (iin && iinError) return;
     if (foundPatient) return;
-
     mutation.mutate({
       data: {
         name: name.trim(),
@@ -153,198 +141,211 @@ export function CreatePatientDialog({ onClose, onExistingPatient }: CreatePatien
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 z-10">
-        <div className="flex items-center justify-between mb-5">
+
+      {/* Panel */}
+      <div className="relative bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md sm:mx-4 z-10 flex flex-col max-h-[90dvh]">
+
+        {/* Drag handle (mobile only) */}
+        <div className="flex justify-center pt-3 pb-1 sm:hidden shrink-0">
+          <div className="w-10 h-1 rounded-full bg-gray-200" />
+        </div>
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 shrink-0 border-b border-gray-100">
           <h2 className="text-lg font-bold">{t("createPatient.title")}</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors p-1">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* ИИН — первое поле */}
-          <div>
-            <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.iin")}</label>
-            <input
-              type="text"
-              value={iin}
-              onChange={(e) => handleIINChange(e.target.value)}
-              maxLength={12}
-              inputMode="numeric"
-              className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono ${
-                iinError ? "border-red-400 bg-red-50" : foundPatient ? "border-green-400 bg-green-50" : "border-border"
-              }`}
-              placeholder={t("createPatient.iinPlaceholder")}
-            />
-            {iinError && (
-              <p className="text-xs text-red-500 mt-1">{iinError}</p>
-            )}
-            {!iinError && iin.length === 0 && (
-              <p className="text-xs text-muted-foreground mt-1">{t("createPatient.iinHint")}</p>
-            )}
-          </div>
+        {/* Scrollable body */}
+        <div className="overflow-y-auto flex-1 custom-scrollbar">
+          <form id="create-patient-form" onSubmit={handleSubmit} className="space-y-4 px-6 py-5">
 
-          {/* Карточка найденного пациента */}
-          {foundPatient && (
-            <div className="rounded-xl border border-green-200 bg-green-50 p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <UserCheck className="w-4 h-4 text-green-600 shrink-0" />
-                <p className="text-sm font-semibold text-green-800">{t("createPatient.foundPatientTitle")}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-gray-900">{foundPatient.name}</p>
-                <p className="text-xs text-gray-500">{foundPatient.phone}</p>
-                {foundPatient.dateOfBirth && (
-                  <p className="text-xs text-gray-500">{formatDob(foundPatient.dateOfBirth)}</p>
-                )}
-                {foundPatient.gender && (
-                  <p className="text-xs text-gray-500">{genderLabel(foundPatient.gender)}</p>
-                )}
-              </div>
-              <p className="text-xs text-green-700">{t("createPatient.foundPatientHint")}</p>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm"
-                  onClick={() => {
-                    onClose();
-                    onExistingPatient?.(foundPatient.id);
-                  }}
-                >
-                  {t("createPatient.foundPatientOpen")}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1 text-sm"
-                  onClick={() => {
-                    setIin("");
-                    setIinError(null);
-                    setDateOfBirth("");
-                    setGender("");
-                  }}
-                >
-                  {t("createPatient.foundPatientCreate")}
-                </Button>
-              </div>
+            {/* ИИН */}
+            <div>
+              <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.iin")}</label>
+              <input
+                type="text"
+                value={iin}
+                onChange={(e) => handleIINChange(e.target.value)}
+                maxLength={12}
+                inputMode="numeric"
+                className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono ${
+                  iinError ? "border-red-400 bg-red-50" : foundPatient ? "border-green-400 bg-green-50" : "border-border"
+                }`}
+                placeholder={t("createPatient.iinPlaceholder")}
+              />
+              {iinError && <p className="text-xs text-red-500 mt-1">{iinError}</p>}
+              {!iinError && iin.length === 0 && (
+                <p className="text-xs text-muted-foreground mt-1">{t("createPatient.iinHint")}</p>
+              )}
             </div>
-          )}
 
-          {/* Остальные поля скрыты если найден пациент */}
-          {!foundPatient && (
-            <>
-              <div>
-                <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.fullName")}</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  minLength={2}
-                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  placeholder={t("createPatient.fullNamePlaceholder")}
-                />
+            {/* Карточка найденного пациента */}
+            {foundPatient && (
+              <div className="rounded-xl border border-green-200 bg-green-50 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <UserCheck className="w-4 h-4 text-green-600 shrink-0" />
+                  <p className="text-sm font-semibold text-green-800">{t("createPatient.foundPatientTitle")}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-gray-900">{foundPatient.name}</p>
+                  <p className="text-xs text-gray-500">{foundPatient.phone}</p>
+                  {foundPatient.dateOfBirth && (
+                    <p className="text-xs text-gray-500">{formatDob(foundPatient.dateOfBirth)}</p>
+                  )}
+                  {foundPatient.gender && (
+                    <p className="text-xs text-gray-500">{genderLabel(foundPatient.gender)}</p>
+                  )}
+                </div>
+                <p className="text-xs text-green-700">{t("createPatient.foundPatientHint")}</p>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm"
+                    onClick={() => { onClose(); onExistingPatient?.(foundPatient.id); }}
+                  >
+                    {t("createPatient.foundPatientOpen")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1 text-sm"
+                    onClick={() => { setIin(""); setIinError(null); setDateOfBirth(""); setGender(""); }}
+                  >
+                    {t("createPatient.foundPatientCreate")}
+                  </Button>
+                </div>
               </div>
+            )}
 
-              <div>
-                <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.phone")}</label>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  required
-                  minLength={5}
-                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  placeholder={t("createPatient.phonePlaceholder")}
-                />
-              </div>
-
-              <div className="grid grid-cols-[5fr_7fr] gap-3">
+            {/* Остальные поля */}
+            {!foundPatient && (
+              <>
                 <div>
-                  <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.dateOfBirth")}</label>
+                  <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.fullName")}</label>
                   <input
-                    type="date"
-                    value={dateOfBirth}
-                    onChange={(e) => setDateOfBirth(e.target.value)}
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    minLength={2}
                     className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    placeholder={t("createPatient.fullNamePlaceholder")}
                   />
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.gender")}</label>
-                  <select
-                    value={gender}
-                    onChange={(e) => setGender(e.target.value as "male" | "female" | "other" | "")}
-                    className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
-                  >
-                    <option value="">{t("gender.notSpecified")}</option>
-                    <option value="male">{t("gender.male")}</option>
-                    <option value="female">{t("gender.female")}</option>
-                    <option value="other">{t("gender.other")}</option>
-                  </select>
+                  <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.phone")}</label>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    required
+                    minLength={5}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    placeholder={t("createPatient.phonePlaceholder")}
+                  />
                 </div>
-              </div>
 
-              <div>
-                <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.source")}</label>
-                <select
-                  value={source}
-                  onChange={(e) => setSource(e.target.value)}
-                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
-                >
-                  {SOURCE_KEYS.map((s) => (
-                    <option key={s} value={s}>{t(`source.${s}`)}</option>
-                  ))}
-                  {channels.length > 0 && (
-                    <optgroup label={t("channels.sectionTitle")}>
-                      {channels.map((c) => (
-                        <option key={c.id} value={`ref:${c.refCode}`}>{c.name}</option>
-                      ))}
-                    </optgroup>
-                  )}
-                </select>
-              </div>
+                <div className="grid grid-cols-[5fr_7fr] gap-3">
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.dateOfBirth")}</label>
+                    <input
+                      type="date"
+                      value={dateOfBirth}
+                      onChange={(e) => setDateOfBirth(e.target.value)}
+                      className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.gender")}</label>
+                    <select
+                      value={gender}
+                      onChange={(e) => setGender(e.target.value as "male" | "female" | "other" | "")}
+                      className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
+                    >
+                      <option value="">{t("gender.notSpecified")}</option>
+                      <option value="male">{t("gender.male")}</option>
+                      <option value="female">{t("gender.female")}</option>
+                      <option value="other">{t("gender.other")}</option>
+                    </select>
+                  </div>
+                </div>
 
-              {doctors.length > 0 && (
                 <div>
-                  <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.doctor")}</label>
+                  <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.source")}</label>
                   <select
-                    value={doctorId}
-                    onChange={(e) => setDoctorId(e.target.value)}
+                    value={source}
+                    onChange={(e) => setSource(e.target.value)}
                     className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
                   >
-                    <option value="">{t("createPatient.noDoctor")}</option>
-                    {doctors.map((d) => (
-                      <option key={d.id} value={d.id}>{d.name}</option>
+                    {SOURCE_KEYS.map((s) => (
+                      <option key={s} value={s}>{t(`source.${s}`)}</option>
                     ))}
+                    {channels.length > 0 && (
+                      <optgroup label={t("channels.sectionTitle")}>
+                        {channels.map((c) => (
+                          <option key={c.id} value={`ref:${c.refCode}`}>{c.name}</option>
+                        ))}
+                      </optgroup>
+                    )}
                   </select>
                 </div>
-              )}
 
-              <div>
-                <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.notes")}</label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={2}
-                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
-                  placeholder={t("createPatient.notesPlaceholder")}
-                />
-              </div>
+                {doctors.length > 0 && (
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.doctor")}</label>
+                    <select
+                      value={doctorId}
+                      onChange={(e) => setDoctorId(e.target.value)}
+                      className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
+                    >
+                      <option value="">{t("createPatient.noDoctor")}</option>
+                      {doctors.map((d) => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
-              <div className="flex gap-3 pt-1">
-                <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
-                  {t("createPatient.cancel")}
-                </Button>
-                <Button type="submit" className="flex-1" disabled={mutation.isPending || (iin.length > 0 && !!iinError)}>
-                  {mutation.isPending ? t("createPatient.submitting") : t("createPatient.submit")}
-                </Button>
-              </div>
-            </>
-          )}
-        </form>
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.notes")}</label>
+                  <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={2}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+                    placeholder={t("createPatient.notesPlaceholder")}
+                  />
+                </div>
+              </>
+            )}
+
+          </form>
+        </div>
+
+        {/* Sticky footer — action buttons (only when not showing found patient) */}
+        {!foundPatient && (
+          <div className="px-6 py-4 border-t border-gray-100 shrink-0 flex gap-3 bg-white rounded-b-2xl">
+            <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
+              {t("createPatient.cancel")}
+            </Button>
+            <Button
+              form="create-patient-form"
+              type="submit"
+              className="flex-1"
+              disabled={mutation.isPending || (iin.length > 0 && !!iinError)}
+            >
+              {mutation.isPending ? t("createPatient.submitting") : t("createPatient.submit")}
+            </Button>
+          </div>
+        )}
+
       </div>
     </div>
   );
