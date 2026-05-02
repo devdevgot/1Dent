@@ -322,6 +322,32 @@ function formatSlots(slots: Date[]): string {
     .join("\n");
 }
 
+interface DoctorWithSlots {
+  name: string;
+  specialty: string | null;
+  slots: Date[];
+}
+
+async function getClinicDoctorsWithSlots(clinicId: string): Promise<DoctorWithSlots[]> {
+  const doctors = await db
+    .select({ id: usersTable.id, name: usersTable.name, specialty: usersTable.specialty })
+    .from(usersTable)
+    .where(and(eq(usersTable.clinicId, clinicId), eq(usersTable.role, "doctor")))
+    .limit(10);
+
+  if (doctors.length === 0) return [];
+
+  const withSlots = await Promise.all(
+    doctors.map(async (doc) => ({
+      name: doc.name,
+      specialty: doc.specialty ?? null,
+      slots: await getAvailableSlots(clinicId, doc.id).catch(() => [] as Date[]),
+    })),
+  );
+
+  return withSlots;
+}
+
 // Simple settings cache (60s TTL) to avoid DB on every message
 const settingsCache = new Map<string, CachedSettings>();
 
@@ -608,7 +634,10 @@ ${dentalContext}
 4. Не придумывай цены, расписание или процедуры, которых нет в карте.`;
 }
 
-function buildPlaygroundPrompt(settings: Awaited<ReturnType<typeof getSettings>>): string {
+function buildPlaygroundPrompt(
+  settings: Awaited<ReturnType<typeof getSettings>>,
+  doctorsWithSlots?: DoctorWithSlots[],
+): string {
   const si = (settings.stepInstructions ?? {}) as StepInstructions;
   const generalExtra = si.general ? `\n\nДополнительные инструкции клиники:\n${si.general}` : "";
   const kazakhNote = `\nВАЖНО: Пациент может писать на казахском языке обычными кириллическими буквами. Понимай такой текст как казахский и отвечай на казахском, если пациент пишет на казахском.`;
@@ -630,16 +659,71 @@ function buildPlaygroundPrompt(settings: Awaited<ReturnType<typeof getSettings>>
   const now = new Date();
   const todayStr = now.toLocaleDateString("ru-KZ", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
+  // Build real doctors + slots section
+  let doctorsSection = "";
+  if (doctorsWithSlots && doctorsWithSlots.length > 0) {
+    doctorsSection = "\nВРАЧИ КЛИНИКИ (РЕАЛЬНЫЕ ДАННЫЕ — используй ТОЛЬКО этих врачей, не придумывай других):\n";
+    for (const doc of doctorsWithSlots) {
+      const spec = doc.specialty ? ` — ${doc.specialty}` : "";
+      doctorsSection += `• ${doc.name}${spec}\n`;
+      if (doc.slots.length > 0) {
+        const slotLine = doc.slots
+          .map((s) => {
+            const dayNames = ["вс", "пн", "вт", "ср", "чт", "пт", "сб"];
+            const day = dayNames[s.getDay()];
+            const date = s.toLocaleDateString("ru-KZ", { day: "numeric", month: "long" });
+            const time = s.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit" });
+            return `${day} ${date} в ${time}`;
+          })
+          .join(", ");
+        doctorsSection += `  Свободные слоты: ${slotLine}\n`;
+      } else {
+        doctorsSection += `  Свободные слоты: нет на ближайшие 7 дней\n`;
+      }
+    }
+  }
+
+  const hasDoctors = doctorsWithSlots && doctorsWithSlots.length > 0;
+
+  const step3 = hasDoctors
+    ? `ЭТАП 3 — ПРЕДЛОЖИТЬ ВРАЧА (проблема понятна):
+ВЫБЕРИ одного врача из списка ВРАЧИ КЛИНИКИ выше, исходя из проблемы пациента.
+- Боль / кариес / лечение → терапевт или стоматолог общей практики
+- Удаление → хирург
+- Брекеты / выравнивание → ортодонт
+- Имплант / протез → имплантолог / ортопед
+- Чистка / профилактика → гигиенист
+- Дети → детский стоматолог
+- Десны → пародонтолог
+Если нужного специалиста нет — выбери любого доступного врача из списка.
+Формат: "Для вас подойдёт [полное имя врача из списка]. Записать вас?"`
+    : `ЭТАП 3 — ПРЕДЛОЖИТЬ ВРАЧА (проблема понятна):
+СРАЗУ предложи конкретного специалиста, не жди дополнительных вопросов.
+Примеры: Боль/кариес → терапевт, Удаление → хирург, Брекеты → ортодонт, Имплант → имплантолог, Чистка → гигиенист.
+Формат: "Для решения этой проблемы вам нужен [специалист]. Записать вас?"`;
+
+  const step4 = hasDoctors
+    ? `ЭТАП 4 — ПОКАЗАТЬ СЛОТЫ И УТОЧНИТЬ ВРЕМЯ (согласился на запись):
+Покажи РЕАЛЬНЫЕ свободные слоты этого врача из списка ВРАЧИ КЛИНИКИ.
+Формат:
+"Отлично! Свободные слоты врача [имя]:
+• [слот 1]
+• [слот 2]
+• [слот 3]
+Какой вам удобен, или укажите своё время?"`
+    : `ЭТАП 4 — УТОЧНИТЬ ВРЕМЯ (согласился на запись):
+Спроси удобное время. Пример: "Когда вам удобно? Уточните день и примерное время."`;
+
   return `Ты — AI-ассистент стоматологической клиники 1Dent (Казахстан). Твоя главная задача — записать пациента на приём.
 
 ПРАВИЛА:
-- Отвечай коротко (1–3 предложения максимум)
+- Отвечай коротко (1–3 предложения максимум, кроме показа слотов)
 - Язык ответа = язык пациента (русский / казахский / английский)
 - Не ставь диагнозы. Не придумывай цены, адреса, расписание
 - Не нужно извиняться и долго сочувствовать — сразу переходи к помощи
 - Сегодня ${todayStr}
 ${kazakhNote}${generalExtra}${stepsExtra}
-
+${doctorsSection}
 СЦЕНАРИЙ ДИАЛОГА (следуй строго по этапам):
 
 ЭТАП 1 — ПРИВЕТСТВИЕ (первое сообщение или пустая история):
@@ -648,24 +732,12 @@ ${kazakhNote}${generalExtra}${stepsExtra}
 ЭТАП 2 — УЗНАТЬ ПРОБЛЕМУ (имя получено):
 Спроси с чем обращается. Пример: "Хорошо, [Имя]! С какой проблемой или за какой услугой вы обращаетесь?"
 
-ЭТАП 3 — ПРЕДЛОЖИТЬ ВРАЧА (проблема понятна):
-СРАЗУ предложи конкретного специалиста, не жди дополнительных вопросов.
-Примеры:
-- Боль / кариес / лечение зубов → терапевт
-- Удаление → хирург  
-- Брекеты / выравнивание → ортодонт
-- Имплант / протез → имплантолог / ортопед
-- Чистка / профилактика → гигиенист
-- Дети → детский стоматолог
-- Десны / пародонтит → пародонтолог
+${step3}
 
-Формат: "Для решения этой проблемы вам нужен [специалист]. Записать вас?"
-
-ЭТАП 4 — УТОЧНИТЬ ВРЕМЯ (согласился на запись):
-Спроси удобное время. Пример: "Когда вам удобно? Уточните день и примерное время."
+${step4}
 
 ЭТАП 5 — ПОДТВЕРЖДЕНИЕ:
-Подтверди детали записи: имя пациента, врач, дата и время. Скажи что запись создана и пациент ждёт в клинике. Пример: "✅ Запись создана! Врач: [имя], дата: [дата]. Ждём вас в клинике 1Dent!"
+Подтверди детали записи: имя пациента, врач, дата и время. Пример: "✅ Запись создана! Врач: [имя], дата: [дата]. Ждём вас в клинике 1Dent!"
 
 ВАЖНО: Если пациент описал проблему — ты УЖЕ на этапе 3. Не задавай лишних вопросов, сразу предлагай специалиста.`;
 }
@@ -1603,11 +1675,12 @@ export class ChatbotService {
     userMessage: string,
     history: Array<{ role: "user" | "assistant"; content: string }> = [],
   ) {
-    const [settings, managerExamples] = await Promise.all([
+    const [settings, managerExamples, doctorsWithSlots] = await Promise.all([
       getSettings(clinicId),
       getManagerExamples(clinicId),
+      getClinicDoctorsWithSlots(clinicId).catch(() => [] as DoctorWithSlots[]),
     ]);
-    const systemPrompt = buildPlaygroundPrompt(settings);
+    const systemPrompt = buildPlaygroundPrompt(settings, doctorsWithSlots);
     const chatHistory = history.map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
     const reply = await generateChatbotResponse(systemPrompt, chatHistory, userMessage, managerExamples);
     return reply ?? "AI не ответил. Проверьте API-ключ.";
