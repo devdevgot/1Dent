@@ -9,6 +9,7 @@ import { getAlertQueue } from "../../shared/alert-queue";
 import { NotFoundError, ForbiddenError } from "../../shared/errors";
 import { logger } from "../../lib/logger";
 import { ChatbotService } from "../chatbot/chatbot.service";
+import { debounceMessage } from "../../shared/message-debounce";
 import type { UserRole, Message, Notification } from "@workspace/db";
 
 export class MessagesService {
@@ -139,13 +140,14 @@ export class MessagesService {
     const patient = await this.repo.findPatientByPhone(senderPhone, clinicId);
 
     // Always route inbound messages through the chatbot FSM.
-    // For unknown phones: starts an onboarding/registration conversation.
-    // For known patients: starts a dental Q&A session (IIN verification → dental card access).
-    // The human_takeover state inside the FSM ensures the chatbot stays silent
-    // after an operator has taken over a conversation.
-    this.chatbot.processMessage(clinicId, senderPhone, content, { skipRedAlert: !!patient }).catch((err) =>
-      logger.error({ err }, "ChatbotService.processMessage failed"),
-    );
+    // Messages are debounced: if the same sender writes several short messages
+    // in quick succession (within 5 s) they are merged into one combined message
+    // before being processed. DB storage and alert detection still run per-message.
+    debounceMessage(clinicId, senderPhone, content, (combined) => {
+      this.chatbot.processMessage(clinicId, senderPhone, combined, { skipRedAlert: !!patient }).catch((err) =>
+        logger.error({ err }, "ChatbotService.processMessage failed"),
+      );
+    });
 
     if (!patient) {
       logger.info(

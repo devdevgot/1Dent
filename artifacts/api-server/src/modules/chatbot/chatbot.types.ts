@@ -2,8 +2,12 @@ export type ChatbotState =
   | "greeting"
   | "collect_iin"
   | "collect_name"
+  | "collect_phone"
   | "collect_problem"
   | "suggest_doctor"
+  | "manage_appointment"
+  | "show_slots"
+  | "collect_datetime"
   | "confirm_appointment"
   | "dental_qa"
   | "done"
@@ -22,6 +26,13 @@ export interface ChatbotSessionData {
   extractedPhone?: string;
   existingPatientId?: string;
   collectedIin?: string;
+  collectedPhone?: string;
+  preferredDatetime?: string;
+  // Existing appointment management
+  existingProcedureId?: string;
+  existingProcedureDate?: string;
+  existingProcedureDoctorName?: string;
+  isReschedule?: boolean;
   // AI classification results
   serviceType?: string;
   urgency?: string;

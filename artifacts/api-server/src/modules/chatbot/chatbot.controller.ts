@@ -39,7 +39,21 @@ const reorderSchema = z.object({
 const testMessageSchema = z.object({
   userMessage: z.string().min(1).max(500),
   state: z
-    .enum(["greeting", "collect_name", "collect_problem", "suggest_doctor", "confirm_appointment", "done", "human_takeover"])
+    .enum([
+      "greeting",
+      "collect_iin",
+      "collect_name",
+      "collect_phone",
+      "collect_problem",
+      "suggest_doctor",
+      "manage_appointment",
+      "show_slots",
+      "collect_datetime",
+      "confirm_appointment",
+      "dental_qa",
+      "done",
+      "human_takeover",
+    ])
     .optional(),
 });
 
