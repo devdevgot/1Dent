@@ -23,7 +23,7 @@ export const chatbotSettingsTable = pgTable("chatbot_settings", {
   followup24hTemplate: text("followup_24h_template")
     .notNull()
     .default(
-      "Дорогой пациент! Прошло 24 часа после вашей процедуры. Как вы себя чувствуете? Если есть вопросы — обращайтесь.",
+      "Дорогой пациент! Прошло 3 часа после вашей процедуры. Как вы себя чувствуете? Если есть вопросы — обращайтесь.",
     ),
   followup72hTemplate: text("followup_72h_template")
     .notNull()

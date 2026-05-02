@@ -56,6 +56,9 @@ const STATE_COLORS: Record<string, string> = {
   human_takeover: "bg-red-50 text-red-700 border-red-100",
 };
 
+const DEFAULT_FOLLOWUP_24H_TEMPLATE =
+  "Дорогой пациент! Прошло 3 часа после вашей процедуры. Как вы себя чувствуете? Если есть вопросы — обращайтесь.";
+
 const STEP_INSTRUCTION_KEYS: Array<{
   key: keyof NonNullable<ChatbotSettingsUpdate["stepInstructions"]>;
   labelKey: string;
@@ -669,7 +672,7 @@ export default function ChatbotPage() {
     );
     setAutosaveStatus("saving");
     updateSettings.mutate(
-      { data: { stepInstructions: emptyInstructions, followup24hTemplate: "" } },
+      { data: { stepInstructions: emptyInstructions, followup24hTemplate: DEFAULT_FOLLOWUP_24H_TEMPLATE } },
       {
         onSuccess: () => {
           setLocalSettings({});
@@ -908,7 +911,7 @@ export default function ChatbotPage() {
                   </div>
                   <textarea
                     rows={3}
-                    value={effectiveSettings.followup24hTemplate}
+                    value={effectiveSettings.followup24hTemplate || DEFAULT_FOLLOWUP_24H_TEMPLATE}
                     onChange={(e) => setLocalSettings((p) => ({ ...p, followup24hTemplate: e.target.value }))}
                     className="w-full text-sm border border-border/50 rounded-lg px-3 py-2 bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
