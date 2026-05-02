@@ -70,7 +70,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const bottomItems = navItems.slice(0, MAX_BOTTOM_TABS);
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-background overflow-hidden">
+    <div className="flex flex-col h-[100lvh] bg-background overflow-hidden">
       <AppointmentReminderModal />
 
       {/* Home page header */}
