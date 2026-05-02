@@ -607,6 +607,37 @@ ${dentalContext}
 4. Не придумывай цены, расписание или процедуры, которых нет в карте.`;
 }
 
+function buildPlaygroundPrompt(settings: Awaited<ReturnType<typeof getSettings>>): string {
+  const si = (settings.stepInstructions ?? {}) as StepInstructions;
+  const generalExtra = si.general ? `\n\nДополнительные инструкции клиники:\n${si.general}` : "";
+  const kazakhNote = `\nВАЖНО: Пациент может писать на казахском языке обычными кириллическими буквами. Понимай такой текст как казахский и отвечай на казахском, если пациент пишет на казахском.`;
+
+  const customInstructions = [
+    si.greeting ? `Приветствие: ${si.greeting}` : null,
+    si.collectName ? `Сбор имени: ${si.collectName}` : null,
+    si.collectProblem ? `Описание проблемы: ${si.collectProblem}` : null,
+    si.suggestDoctor ? `Предложение врача: ${si.suggestDoctor}` : null,
+    si.confirm ? `Подтверждение: ${si.confirm}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const stepsExtra = customInstructions
+    ? `\n\nПользовательские инструкции по этапам:\n${customInstructions}`
+    : "";
+
+  const now = new Date();
+  const todayStr = now.toLocaleDateString("ru-KZ", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+
+  return `Ты — вежливый и профессиональный AI-ассистент стоматологической клиники 1Dent (Казахстан).
+Отвечай коротко и по делу. Используй простой, дружелюбный язык. Не ставь диагнозы.
+Отвечай на том языке, на котором пишет пациент (русский, казахский или английский).
+Не придумывай информацию о клинике — цены, адрес и расписание уточняй у администратора.
+Сегодня ${todayStr}.${kazakhNote}${generalExtra}${stepsExtra}
+
+Веди диалог естественно: сначала поприветствуй пациента, затем узнай имя, проблему — и постепенно переходи к предложению записи. Определяй текущий этап разговора самостоятельно по контексту переписки.`;
+}
+
 function buildSystemPrompt(state: ChatbotState, settings: Awaited<ReturnType<typeof getSettings>>): string {
   const si = (settings.stepInstructions ?? {}) as StepInstructions;
 
@@ -1508,13 +1539,18 @@ export class ChatbotService {
 
   // ─── Test message (preview AI response with current settings) ─────────────
 
-  async testMessage(clinicId: string, userMessage: string, state: ChatbotState = "collect_problem") {
+  async testMessage(
+    clinicId: string,
+    userMessage: string,
+    history: Array<{ role: "user" | "assistant"; content: string }> = [],
+  ) {
     const [settings, managerExamples] = await Promise.all([
       getSettings(clinicId),
       getManagerExamples(clinicId),
     ]);
-    const systemPrompt = buildSystemPrompt(state, settings);
-    const reply = await generateChatbotResponse(systemPrompt, [], userMessage, managerExamples);
+    const systemPrompt = buildPlaygroundPrompt(settings);
+    const chatHistory = history.map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
+    const reply = await generateChatbotResponse(systemPrompt, chatHistory, userMessage, managerExamples);
     return reply ?? "AI не ответил. Проверьте API-ключ.";
   }
 

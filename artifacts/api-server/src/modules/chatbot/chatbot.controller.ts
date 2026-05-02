@@ -38,22 +38,9 @@ const reorderSchema = z.object({
 
 const testMessageSchema = z.object({
   userMessage: z.string().min(1).max(500),
-  state: z
-    .enum([
-      "greeting",
-      "collect_iin",
-      "collect_name",
-      "collect_phone",
-      "collect_problem",
-      "suggest_doctor",
-      "manage_appointment",
-      "show_slots",
-      "collect_datetime",
-      "confirm_appointment",
-      "dental_qa",
-      "done",
-      "human_takeover",
-    ])
+  history: z
+    .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() }))
+    .max(50)
     .optional(),
 });
 
@@ -203,7 +190,7 @@ router.post(
       return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
     }
     const reply = await service
-      .testMessage(req.user!.clinicId, parsed.data.userMessage, parsed.data.state)
+      .testMessage(req.user!.clinicId, parsed.data.userMessage, parsed.data.history)
       .catch(next);
     if (!reply) return;
     res.json({ success: true, data: { reply } });

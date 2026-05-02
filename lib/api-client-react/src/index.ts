@@ -183,7 +183,7 @@ export interface TestMessageResponse {
 
 export const testChatbotMessage = (data: {
   userMessage: string;
-  state?: string;
+  history?: Array<{ role: "user" | "assistant"; content: string }>;
 }): Promise<TestMessageResponse> =>
   customFetch<TestMessageResponse>("/api/chatbot/test-message", {
     method: "POST",
@@ -192,9 +192,9 @@ export const testChatbotMessage = (data: {
   });
 
 export const useTestChatbotMessage = <TError = unknown>(options?: {
-  mutation?: UseMutationOptions<TestMessageResponse, TError, { userMessage: string; state?: string }>;
+  mutation?: UseMutationOptions<TestMessageResponse, TError, { userMessage: string; history?: Array<{ role: "user" | "assistant"; content: string }> }>;
 }) =>
-  useMutation<TestMessageResponse, TError, { userMessage: string; state?: string }>({
+  useMutation<TestMessageResponse, TError, { userMessage: string; history?: Array<{ role: "user" | "assistant"; content: string }> }>({
     mutationFn: (data) => testChatbotMessage(data),
     ...options?.mutation,
   });

@@ -209,7 +209,6 @@ function PlaygroundTab() {
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
-  const [testState, setTestState] = useState("collect_problem");
   const [showWarning, setShowWarning] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -242,10 +241,15 @@ function PlaygroundTab() {
   const handleSend = () => {
     const text = input.trim();
     if (!text || testMessage.isPending) return;
-    setMessages((prev) => [...prev, { role: "user", text }]);
+    const updatedMessages = [...messages, { role: "user" as const, text }];
+    setMessages(updatedMessages);
     setInput("");
+    const history = updatedMessages.slice(0, -1).map((m) => ({
+      role: m.role === "user" ? ("user" as const) : ("assistant" as const),
+      content: m.text,
+    }));
     testMessage.mutate(
-      { userMessage: text, state: testState },
+      { userMessage: text, history },
       {
         onSuccess: (res) => {
           setMessages((prev) => [...prev, { role: "bot", text: res.data?.reply ?? "..." }]);
@@ -271,26 +275,14 @@ function PlaygroundTab() {
         </div>
       )}
 
-      <div className="shrink-0 flex items-center gap-2">
-        <span className="text-xs text-muted-foreground shrink-0">Этап FSM:</span>
-        <select
-          value={testState}
-          onChange={(e) => setTestState(e.target.value)}
-          className="text-xs border border-border/50 rounded-lg px-2 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 flex-1"
-        >
-          <option value="greeting">Приветствие</option>
-          <option value="collect_name">Сбор имени</option>
-          <option value="collect_problem">Описание проблемы</option>
-          <option value="suggest_doctor">Предложение врача</option>
-          <option value="confirm_appointment">Подтверждение</option>
-        </select>
+      <div className="shrink-0 flex items-center justify-end">
         <button
           onClick={() => { setMessages([]); setInput(""); }}
           disabled={messages.length === 0}
-          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-40 transition-colors shrink-0"
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-40 transition-colors"
         >
           <RefreshCw className="h-3.5 w-3.5" />
-          Сбросить
+          Новый диалог
         </button>
       </div>
 
@@ -303,7 +295,7 @@ function PlaygroundTab() {
               </div>
               <p className="text-sm font-medium text-foreground">Playground готов</p>
               <p className="text-xs text-muted-foreground mt-1 max-w-[220px]">
-                Напишите сообщение чтобы протестировать ответы бота с текущими инструкциями
+                Напишите сообщение — бот сам ведёт диалог от приветствия до записи
               </p>
             </div>
           )}
