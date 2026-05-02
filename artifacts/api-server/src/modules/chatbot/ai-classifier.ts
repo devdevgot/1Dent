@@ -146,6 +146,36 @@ export interface ManagerExample {
   managerResponse: string;
 }
 
+/**
+ * Detects patient language from conversation history (user messages only).
+ * Returns null when not enough signal (e.g. empty history or only digits/IIN).
+ */
+function detectPatientLanguage(messages: ChatMessage[]): "kz" | "en" | null {
+  const userText = messages
+    .filter((m) => m.role === "user")
+    .map((m) => m.content)
+    .join(" ");
+
+  if (!userText.trim() || /^\d+$/.test(userText.trim())) return null;
+
+  // Kazakh-specific Unicode chars (always conclusive)
+  if (/[әғқңөұүі]/.test(userText)) return "kz";
+
+  // Common Kazakh Cyrillic words written without special chars
+  if (
+    /\b(рахмет|ракмет|жарайды|болады|болат|маған|сізге|менің|бармын|жоқ|жок|иә|ия|қайда|каида|немене|немене|қашан|каша|жазылу|ауырады|ауру|тіс|тис|тазалоу|тазалав|жулу|суыру|салем|сәлем|каирлы|кешіріңіз|кеширинизи)\b/i.test(
+      userText,
+    )
+  )
+    return "kz";
+
+  // English signal
+  if (/\b(hello|hi|yes|no|please|thank|want|need|help|appointment|tooth|teeth|pain|doctor|clinic)\b/i.test(userText))
+    return "en";
+
+  return null;
+}
+
 export async function generateChatbotResponse(
   systemPrompt: string,
   history: ChatMessage[],
@@ -154,6 +184,21 @@ export async function generateChatbotResponse(
 ): Promise<string | null> {
   const extraSystemMessages: Array<{ role: "system"; content: string }> = [];
   const fewShot: Array<{ role: "user" | "assistant"; content: string }> = [];
+
+  // Detect patient language and enforce it strongly so the bot never switches
+  const detectedLang = detectPatientLanguage(history);
+  let finalSystemPrompt = systemPrompt;
+  if (detectedLang === "kz") {
+    finalSystemPrompt +=
+      "\n\n⚠️ КРИТИЧЕСКИ ВАЖНО: Пациент пишет на КАЗАХСКОМ языке. " +
+      "Отвечай ИСКЛЮЧИТЕЛЬНО на казахском языке на протяжении всего диалога. " +
+      "Не используй русский язык ни в одном слове. " +
+      "Пиши казахский текст кириллицей (можно без специальных букв: а вместо ә, г вместо ғ, к вместо қ и т.д.).";
+  } else if (detectedLang === "en") {
+    finalSystemPrompt +=
+      "\n\n⚠️ IMPORTANT: The patient is writing in ENGLISH. " +
+      "Respond EXCLUSIVELY in English throughout the entire conversation. Do not use Russian.";
+  }
 
   if (fewShotExamples && fewShotExamples.length > 0) {
     extraSystemMessages.push({
@@ -168,7 +213,7 @@ export async function generateChatbotResponse(
   }
 
   const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
-    { role: "system", content: systemPrompt },
+    { role: "system", content: finalSystemPrompt },
     ...extraSystemMessages,
     ...fewShot,
     ...history.slice(-10).map((m) => ({ role: m.role, content: m.content })),

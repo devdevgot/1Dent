@@ -906,11 +906,12 @@ export class ChatbotService {
 
     switch (state) {
       case "greeting": {
-        // Always generate greeting via AI so IIN request is natural and not duplicated.
+        // Pass the patient's first message as history so language detection works correctly.
         // buildSystemPrompt("greeting") already instructs AI to ask for IIN.
+        const firstMsgHistory = [{ role: "user" as const, content: text }];
         const aiGreeting = await generateChatbotResponse(
           buildSystemPrompt("greeting", settings),
-          [],
+          firstMsgHistory,
           "Пациент впервые написал в чат. Поприветствуй его и попроси ввести ИИН (12 цифр) для идентификации. Не спрашивай имя — только ИИН.",
           managerExamples,
         );
