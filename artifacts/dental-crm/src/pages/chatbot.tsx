@@ -335,7 +335,7 @@ function PlaygroundTab() {
           <button
             onClick={handleSend}
             disabled={!input.trim() || testMessage.isPending}
-            className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-violet-700 text-white shadow-md shadow-violet-200 disabled:opacity-40 shrink-0 transition-opacity"
+            className="flex items-center justify-center w-10 h-10 text-emerald-500 disabled:opacity-30 shrink-0 transition-opacity"
           >
             {testMessage.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
