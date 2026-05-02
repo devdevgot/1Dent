@@ -945,8 +945,7 @@ export default function ChatbotPage() {
                     </div>
                     <textarea
                       rows={3}
-                      placeholder={defaultText}
-                      value={(effectiveSettings.stepInstructions as Record<string, string>)?.[key] ?? ""}
+                      value={(effectiveSettings.stepInstructions as Record<string, string>)?.[key] ?? defaultText}
                       onChange={(e) => setStepInstruction(key, e.target.value)}
                       className="w-full text-sm border border-border/50 rounded-lg px-3 py-2 bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
