@@ -213,10 +213,31 @@ function PlaygroundTab() {
   const [showWarning, setShowWarning] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, testMessage.isPending]);
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      const keyboardOffset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      if (containerRef.current) {
+        containerRef.current.style.paddingBottom = keyboardOffset > 0 ? `${keyboardOffset}px` : "";
+      }
+      if (keyboardOffset > 0) {
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+      }
+    };
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, []);
 
   const handleSend = () => {
     const text = input.trim();
@@ -237,7 +258,7 @@ function PlaygroundTab() {
   };
 
   return (
-    <div className="h-full flex flex-col gap-3">
+    <div ref={containerRef} className="h-full flex flex-col gap-3">
       {showWarning && (
         <div className="shrink-0 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
           <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
