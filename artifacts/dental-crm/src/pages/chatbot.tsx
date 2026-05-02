@@ -276,18 +276,6 @@ function ManagerStyleTab() {
 
   return (
     <div className="space-y-4 max-w-2xl">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-foreground">{t("chatbot.managerStyle.title")}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">{t("chatbot.managerStyle.subtitle")}</p>
-        </div>
-        {examples.length > 0 && (
-          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-100">
-            {examples.length} {t("chatbot.managerStyle.countLabel")}
-          </span>
-        )}
-      </div>
-
       {isLoading ? (
         <div className="p-6 text-center text-sm text-muted-foreground">{t("common.loading")}</div>
       ) : examples.length === 0 ? (
