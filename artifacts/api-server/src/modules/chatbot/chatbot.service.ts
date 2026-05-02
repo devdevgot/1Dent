@@ -451,11 +451,12 @@ async function createPatient(
   doctorId: string,
   source?: string,
   iin?: string,
+  status: "new_request" | "initial_consultation" = "new_request",
 ) {
   const id = randomUUID();
   const [patient] = await db
     .insert(patientsTable)
-    .values({ id, clinicId, name, phone, iin: iin ?? null, source: source ?? "whatsapp", status: "new_request", doctorId })
+    .values({ id, clinicId, name, phone, iin: iin ?? null, source: source ?? "whatsapp", status, doctorId })
     .returning();
   return patient!;
 }
@@ -664,7 +665,7 @@ ${kazakhNote}${generalExtra}${stepsExtra}
 Спроси удобное время. Пример: "Когда вам удобно? Уточните день и примерное время."
 
 ЭТАП 5 — ПОДТВЕРЖДЕНИЕ:
-Подтверди детали и скажи что администратор свяжется для финального подтверждения.
+Подтверди детали записи: имя пациента, врач, дата и время. Скажи что запись создана и пациент ждёт в клинике. Пример: "✅ Запись создана! Врач: [имя], дата: [дата]. Ждём вас в клинике 1Dent!"
 
 ВАЖНО: Если пациент описал проблему — ты УЖЕ на этапе 3. Не задавай лишних вопросов, сразу предлагай специалиста.`;
 }
@@ -1217,6 +1218,7 @@ export class ChatbotService {
                   data.suggestedDoctorId,
                   patientSource,
                   data.collectedIin,
+                  "initial_consultation",
                 );
                 patientId = newPatient.id;
                 data.createdPatientId = newPatient.id;
@@ -1229,10 +1231,10 @@ export class ChatbotService {
                     );
                 }
               } else if (patientId && data.existingPatientId && data.suggestedDoctorId) {
-                // Existing patient booking — update their doctor and status
+                // Existing patient booking — update their doctor and kanban status
                 await db
                   .update(patientsTable)
-                  .set({ doctorId: data.suggestedDoctorId, status: "new_request", updatedAt: new Date() })
+                  .set({ doctorId: data.suggestedDoctorId, status: "initial_consultation", updatedAt: new Date() })
                   .where(and(eq(patientsTable.id, patientId), eq(patientsTable.clinicId, clinicId)));
               }
 
@@ -1247,8 +1249,9 @@ export class ChatbotService {
                       : "Консультация"
                     : "Консультация";
 
+                const procedureId = randomUUID();
                 await db.insert(proceduresTable).values({
-                  id: randomUUID(),
+                  id: procedureId,
                   clinicId,
                   patientId,
                   doctorId: data.suggestedDoctorId,
@@ -1261,6 +1264,30 @@ export class ChatbotService {
                   { patientId, doctorId: data.suggestedDoctorId, scheduledAt: extractedDate },
                   "ChatbotService: procedure created via chatbot",
                 );
+
+                // Notify clinic staff about the new auto-booked appointment
+                const staffRecipients = await db
+                  .select({ id: usersTable.id })
+                  .from(usersTable)
+                  .where(and(eq(usersTable.clinicId, clinicId), inArray(usersTable.role, ["owner", "admin"])));
+                if (staffRecipients.length > 0) {
+                  const apptDateStr = extractedDate.toLocaleDateString("ru-KZ", {
+                    weekday: "short", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+                  });
+                  const notifMsg = `📅 Новая запись через чатбот: ${data.patientName ?? phone} → ${data.suggestedDoctorName ?? "врач"} (${serviceLabel}), ${apptDateStr}`;
+                  await db.insert(notificationsTable).values(
+                    staffRecipients.map((r) => ({
+                      id: randomUUID(),
+                      clinicId,
+                      userId: r.id,
+                      type: "system" as const,
+                      message: notifMsg,
+                      read: false,
+                      patientId: patientId ?? null,
+                      messageId: null,
+                    })),
+                  ).catch((err) => logger.warn({ err }, "ChatbotService: failed to insert appointment notification"));
+                }
               }
             }
             session.data = data;
@@ -1309,40 +1336,41 @@ export class ChatbotService {
       }
 
       case "confirm_appointment": {
-        // Legacy state kept for backward compat — treat as collect_datetime
+        // Legacy state — when patient says yes, ask for datetime and create real procedure
         if (isYes(text)) {
           data.confusedCount = 0;
-          if (data.suggestedDoctorId && data.patientName) {
+          // Pre-create patient record so collect_datetime can attach the procedure
+          if (data.suggestedDoctorId && data.patientName && !data.existingPatientId && !data.createdPatientId) {
             try {
-              if (data.existingPatientId) {
-                await db
-                  .update(patientsTable)
-                  .set({ phone, doctorId: data.suggestedDoctorId, status: "new_request", updatedAt: new Date() })
-                  .where(and(eq(patientsTable.id, data.existingPatientId), eq(patientsTable.clinicId, clinicId)));
-                data.createdPatientId = data.existingPatientId;
-              } else {
-                const patientSource = data.refCode ? `ref:${data.refCode}` : "whatsapp";
-                const patient = await createPatient(clinicId, phone, data.patientName, data.suggestedDoctorId, patientSource, data.collectedIin);
-                data.createdPatientId = patient.id;
-                if (data.clickId) {
-                  channelsRepo.linkClickToPatient(data.clickId, patient.id).catch((err) =>
-                    logger.warn({ err, clickId: data.clickId }, "ChatbotService: failed to link click to patient"),
-                  );
-                }
+              const patientSource = data.refCode ? `ref:${data.refCode}` : "whatsapp";
+              const patient = await createPatient(clinicId, phone, data.patientName, data.suggestedDoctorId, patientSource, data.collectedIin, "initial_consultation");
+              data.createdPatientId = patient.id;
+              if (data.clickId) {
+                channelsRepo.linkClickToPatient(data.clickId, patient.id).catch((err) =>
+                  logger.warn({ err, clickId: data.clickId }, "ChatbotService: failed to link click to patient"),
+                );
               }
               session.data = data;
             } catch (err) {
-              logger.error({ err }, "ChatbotService: failed to create/update patient");
+              logger.error({ err }, "ChatbotService: failed to create patient in confirm_appointment");
+            }
+          }
+          // Ask for preferred time — collect_datetime will create the procedure
+          let slotsText = "";
+          if (data.suggestedDoctorId) {
+            const slots = await getAvailableSlots(clinicId, data.suggestedDoctorId).catch(() => [] as Date[]);
+            if (slots.length > 0) {
+              slotsText = `\n\nБлижайшие свободные слоты:\n${formatSlots(slots)}\n\nИли укажите своё удобное время.`;
             }
           }
           const aiReply3 = await generateChatbotResponse(
-            buildSystemPrompt("done", settings),
+            buildSystemPrompt("collect_datetime", settings),
             recentMessages,
-            `Запись подтверждена к врачу ${data.suggestedDoctorName ?? ""}. Поздравь пациента и скажи что администратор свяжется для уточнения времени.`,
+            `Пациент согласен записаться к ${data.suggestedDoctorName ?? "врачу"}. Спроси удобную дату и время визита.`,
             managerExamples,
           );
-          response = aiReply3 ?? `✅ Запись подтверждена! Администратор свяжется с вами для уточнения времени визита.\n\nЕсли возникнут вопросы — пишите сюда. Мы на связи!`;
-          session.state = "done";
+          response = (aiReply3 ?? `Отлично! Когда вам удобно прийти к врачу *${data.suggestedDoctorName ?? ""}*?`) + slotsText;
+          session.state = "collect_datetime";
         } else if (isNo(text)) {
           data.confusedCount = 0;
           data.suggestedDoctorId = undefined;
