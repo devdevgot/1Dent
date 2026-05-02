@@ -577,11 +577,12 @@ export default function ChatbotPage() {
   const [tab, setTab] = useState<"sessions" | "settings" | "manager-style" | "ai-broadcast">("sessions");
   const [confirmResetPhone, setConfirmResetPhone] = useState<string | null>(null);
   const [localSettings, setLocalSettings] = useState<ChatbotSettingsUpdate>({});
+  const [savedSettings, setSavedSettings] = useState<ChatbotSettingsUpdate>({});
   const [autosaveStatus, setAutosaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { data: settingsRes, refetch: refetchSettings } = useGetChatbotSettings();
+  const { data: settingsRes } = useGetChatbotSettings();
   const { data: sessionsRes, refetch: refetchSessions, isLoading: sessionsLoading } = useListChatbotSessions();
   const updateSettings = useUpdateChatbotSettings();
   const deleteSession = useDeleteChatbotSession();
@@ -595,21 +596,37 @@ export default function ChatbotPage() {
     followup24hTemplate: localSettings.followup24hTemplate ?? settings?.followup24hTemplate ?? "",
     followup72hTemplate: localSettings.followup72hTemplate ?? settings?.followup72hTemplate ?? "",
     followup168hTemplate: localSettings.followup168hTemplate ?? settings?.followup168hTemplate ?? "",
-    stepInstructions: localSettings.stepInstructions ?? settings?.stepInstructions ?? {},
+    stepInstructions: {
+      ...(settings?.stepInstructions ?? {}),
+      ...(localSettings.stepInstructions ?? {}),
+    },
   };
+
+  // isDirty: localSettings has values that differ from savedSettings
+  const isDirty = Object.keys(localSettings).some((k) => {
+    const key = k as keyof ChatbotSettingsUpdate;
+    return JSON.stringify((localSettings as Record<string, unknown>)[key]) !==
+      JSON.stringify((savedSettings as Record<string, unknown>)[key]);
+  });
 
   // Debounced autosave: fires 1500ms after the last local change
   useEffect(() => {
-    if (Object.keys(localSettings).length === 0) return;
+    if (!isDirty) return;
     if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
     autosaveTimer.current = setTimeout(() => {
+      const toSave = { ...localSettings };
       setAutosaveStatus("saving");
       updateSettings.mutate(
-        { data: localSettings },
+        { data: toSave },
         {
           onSuccess: () => {
-            setLocalSettings({});
-            refetchSettings();
+            setSavedSettings((prev) => ({
+              ...prev,
+              ...toSave,
+              stepInstructions: toSave.stepInstructions
+                ? { ...(prev.stepInstructions ?? {}), ...(toSave.stepInstructions as object) }
+                : prev.stepInstructions,
+            }));
             setAutosaveStatus("saved");
             setTimeout(() => setAutosaveStatus("idle"), 2000);
           },
@@ -621,18 +638,24 @@ export default function ChatbotPage() {
       if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [localSettings]);
+  }, [localSettings, isDirty]);
 
   const handleSaveNow = () => {
     if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
-    if (Object.keys(localSettings).length === 0) return;
+    if (!isDirty) return;
+    const toSave = { ...localSettings };
     setAutosaveStatus("saving");
     updateSettings.mutate(
-      { data: localSettings },
+      { data: toSave },
       {
         onSuccess: () => {
-          setLocalSettings({});
-          refetchSettings();
+          setSavedSettings((prev) => ({
+            ...prev,
+            ...toSave,
+            stepInstructions: toSave.stepInstructions
+              ? { ...(prev.stepInstructions ?? {}), ...(toSave.stepInstructions as object) }
+              : prev.stepInstructions,
+          }));
           setAutosaveStatus("saved");
           setTimeout(() => setAutosaveStatus("idle"), 2000);
         },
@@ -654,8 +677,6 @@ export default function ChatbotPage() {
       },
     }));
   };
-
-  const isDirty = Object.keys(localSettings).length > 0;
 
   if (selectedPhone) {
     return <SessionChat phone={selectedPhone} onBack={() => setSelectedPhone(null)} />;
