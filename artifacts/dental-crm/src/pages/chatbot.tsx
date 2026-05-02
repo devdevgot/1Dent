@@ -288,44 +288,6 @@ function ManagerStyleTab() {
         )}
       </div>
 
-      <div className="rounded-xl border border-border/50 bg-card p-4 space-y-3">
-        <p className="text-xs font-medium text-foreground">{t("chatbot.managerStyle.addTitle")}</p>
-        <div className="space-y-2">
-          <div>
-            <label className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">
-              {t("chatbot.managerStyle.userLabel")}
-            </label>
-            <textarea
-              rows={2}
-              placeholder={t("chatbot.managerStyle.userPlaceholder")}
-              value={newUser}
-              onChange={(e) => setNewUser(e.target.value)}
-              className="mt-1 w-full text-sm border border-border/50 rounded-lg px-3 py-2 bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
-          <div>
-            <label className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">
-              {t("chatbot.managerStyle.managerLabel")}
-            </label>
-            <textarea
-              rows={3}
-              placeholder={t("chatbot.managerStyle.managerPlaceholder")}
-              value={newManager}
-              onChange={(e) => setNewManager(e.target.value)}
-              className="mt-1 w-full text-sm border border-border/50 rounded-lg px-3 py-2 bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
-          <button
-            onClick={handleAdd}
-            disabled={!newUser.trim() || !newManager.trim() || createExample.isPending}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-medium disabled:opacity-50 hover:bg-primary/90 transition-colors"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            {createExample.isPending ? t("chatbot.managerStyle.addingBtn") : t("chatbot.managerStyle.addBtn")}
-          </button>
-        </div>
-      </div>
-
       {isLoading ? (
         <div className="p-6 text-center text-sm text-muted-foreground">{t("common.loading")}</div>
       ) : examples.length === 0 ? (
