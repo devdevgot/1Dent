@@ -66,13 +66,44 @@ const STEP_INSTRUCTION_KEYS: Array<{
   key: keyof NonNullable<ChatbotSettingsUpdate["stepInstructions"]>;
   labelKey: string;
   hintKey: string;
+  defaultText: string;
 }> = [
-  { key: "general",        labelKey: "chatbot.settings.stepFields.general.label",        hintKey: "chatbot.settings.stepFields.general.hint" },
-  { key: "greeting",       labelKey: "chatbot.settings.stepFields.greeting.label",       hintKey: "chatbot.settings.stepFields.greeting.hint" },
-  { key: "collectName",    labelKey: "chatbot.settings.stepFields.collectName.label",    hintKey: "chatbot.settings.stepFields.collectName.hint" },
-  { key: "collectProblem", labelKey: "chatbot.settings.stepFields.collectProblem.label", hintKey: "chatbot.settings.stepFields.collectProblem.hint" },
-  { key: "suggestDoctor",  labelKey: "chatbot.settings.stepFields.suggestDoctor.label",  hintKey: "chatbot.settings.stepFields.suggestDoctor.hint" },
-  { key: "confirm",        labelKey: "chatbot.settings.stepFields.confirm.label",        hintKey: "chatbot.settings.stepFields.confirm.hint" },
+  {
+    key: "general",
+    labelKey: "chatbot.settings.stepFields.general.label",
+    hintKey: "chatbot.settings.stepFields.general.hint",
+    defaultText: "Ты — вежливый и профессиональный AI-ассистент стоматологической клиники 1Dent (Казахстан). Отвечай коротко и по делу. Используй простой, дружелюбный язык. Не ставь диагнозы. Отвечай на том языке, на котором пишет пациент (русский, казахский или английский).",
+  },
+  {
+    key: "greeting",
+    labelKey: "chatbot.settings.stepFields.greeting.label",
+    hintKey: "chatbot.settings.stepFields.greeting.hint",
+    defaultText: "Поприветствуй пациента и попроси ввести ИИН (12 цифр) — это обязательный шаг для идентификации.",
+  },
+  {
+    key: "collectName",
+    labelKey: "chatbot.settings.stepFields.collectName.label",
+    hintKey: "chatbot.settings.stepFields.collectName.hint",
+    defaultText: "Пациент новый. Спроси его имя вежливо и жди ответа. Если написал что-то непонятное — мягко уточни.",
+  },
+  {
+    key: "collectProblem",
+    labelKey: "chatbot.settings.stepFields.collectProblem.label",
+    hintKey: "chatbot.settings.stepFields.collectProblem.hint",
+    defaultText: "Ты знаешь имя пациента. Узнай с какой проблемой или за какой услугой он обращается. Задавай уточняющие вопросы если нужно.",
+  },
+  {
+    key: "suggestDoctor",
+    labelKey: "chatbot.settings.stepFields.suggestDoctor.label",
+    hintKey: "chatbot.settings.stepFields.suggestDoctor.hint",
+    defaultText: "Ты подобрал врача на основе запроса пациента. Представь врача по имени и предложи запись к нему. Спроси подтверждение: «Да» или «Нет».",
+  },
+  {
+    key: "confirm",
+    labelKey: "chatbot.settings.stepFields.confirm.label",
+    hintKey: "chatbot.settings.stepFields.confirm.hint",
+    defaultText: "Пациент согласился на запись. Спроси удобную дату и время визита. Покажи ближайшие свободные слоты врача.",
+  },
 ];
 
 function formatRelative(dateStr: string) {
@@ -906,7 +937,7 @@ export default function ChatbotPage() {
               </p>
 
               <div className="border-t border-border/40 pt-4 space-y-4">
-                {STEP_INSTRUCTION_KEYS.map(({ key, labelKey, hintKey }) => (
+                {STEP_INSTRUCTION_KEYS.map(({ key, labelKey, hintKey, defaultText }) => (
                   <div key={key} className="space-y-1.5">
                     <div>
                       <label className="text-xs font-medium text-foreground">{t(labelKey)}</label>
@@ -914,7 +945,7 @@ export default function ChatbotPage() {
                     </div>
                     <textarea
                       rows={3}
-                      placeholder={t("chatbot.settings.stepFields.placeholder")}
+                      placeholder={defaultText}
                       value={(effectiveSettings.stepInstructions as Record<string, string>)?.[key] ?? ""}
                       onChange={(e) => setStepInstruction(key, e.target.value)}
                       className="w-full text-sm border border-border/50 rounded-lg px-3 py-2 bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
