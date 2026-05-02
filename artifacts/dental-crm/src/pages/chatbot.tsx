@@ -19,6 +19,7 @@ import {
   AlertCircle,
   Loader2,
   FlaskConical,
+  RotateCcw,
 } from "lucide-react";
 import {
   useGetChatbotSettings,
@@ -65,37 +66,37 @@ const STEP_INSTRUCTION_KEYS: Array<{
     key: "general",
     labelKey: "chatbot.settings.stepFields.general.label",
     hintKey: "chatbot.settings.stepFields.general.hint",
-    defaultText: "Ты — вежливый и профессиональный AI-ассистент стоматологической клиники 1Dent (Казахстан). Отвечай коротко и по делу. Используй простой, дружелюбный язык. Не ставь диагнозы. Отвечай на том языке, на котором пишет пациент (русский, казахский или английский).",
+    defaultText: "Ты — AI-ассистент стоматологической клиники. Твоя цель — записать пациента к врачу. Отвечай коротко (1–3 предложения). Не ставь диагнозы. Не придумывай цены и расписание. Не нужно долго сочувствовать — сразу переходи к помощи.",
   },
   {
     key: "greeting",
     labelKey: "chatbot.settings.stepFields.greeting.label",
     hintKey: "chatbot.settings.stepFields.greeting.hint",
-    defaultText: "Поприветствуй пациента и попроси ввести ИИН (12 цифр) — это обязательный шаг для идентификации.",
+    defaultText: "Поприветствуй пациента и спроси его имя. Пример: «Здравствуйте! Я помогу записать вас к врачу. Как вас зовут?»",
   },
   {
     key: "collectName",
     labelKey: "chatbot.settings.stepFields.collectName.label",
     hintKey: "chatbot.settings.stepFields.collectName.hint",
-    defaultText: "Пациент новый. Спроси его имя вежливо и жди ответа. Если написал что-то непонятное — мягко уточни.",
+    defaultText: "Имя получено. Спроси с какой проблемой или за какой услугой обращается пациент. Пример: «Хорошо, [Имя]! С чем обращаетесь?»",
   },
   {
     key: "collectProblem",
     labelKey: "chatbot.settings.stepFields.collectProblem.label",
     hintKey: "chatbot.settings.stepFields.collectProblem.hint",
-    defaultText: "Ты знаешь имя пациента. Узнай с какой проблемой или за какой услугой он обращается. Задавай уточняющие вопросы если нужно.",
+    defaultText: "Проблема понятна. Определи нужного специалиста и сразу предложи запись. Не задавай лишних вопросов. Боль/кариес→терапевт, удаление→хирург, брекеты→ортодонт, имплант→имплантолог, чистка→гигиенист. Пример: «Для этого вам нужен терапевт. Записать вас?»",
   },
   {
     key: "suggestDoctor",
     labelKey: "chatbot.settings.stepFields.suggestDoctor.label",
     hintKey: "chatbot.settings.stepFields.suggestDoctor.hint",
-    defaultText: "Ты подобрал врача на основе запроса пациента. Представь врача по имени и предложи запись к нему. Спроси подтверждение: «Да» или «Нет».",
+    defaultText: "Пациент ответил на предложение врача. Если согласен — спроси удобную дату и время визита. Если отказался — уточни запрос снова.",
   },
   {
     key: "confirm",
     labelKey: "chatbot.settings.stepFields.confirm.label",
     hintKey: "chatbot.settings.stepFields.confirm.hint",
-    defaultText: "Пациент согласился на запись. Спроси удобную дату и время визита. Покажи ближайшие свободные слоты врача.",
+    defaultText: "Пациент согласился на запись. Спроси удобную дату и время визита. Если есть свободные слоты — покажи их.",
   },
 ];
 
@@ -568,13 +569,14 @@ export default function ChatbotPage() {
   const { t } = useTranslation();
   const [tab, setTab] = useState<"sessions" | "settings" | "manager-style" | "ai-broadcast">("sessions");
   const [confirmResetPhone, setConfirmResetPhone] = useState<string | null>(null);
+  const [confirmResetDefaults, setConfirmResetDefaults] = useState(false);
   const [localSettings, setLocalSettings] = useState<ChatbotSettingsUpdate>({});
   const [savedSettings, setSavedSettings] = useState<ChatbotSettingsUpdate>({});
   const [autosaveStatus, setAutosaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { data: settingsRes } = useGetChatbotSettings();
+  const { data: settingsRes, refetch: refetchSettings } = useGetChatbotSettings();
   const { data: sessionsRes, refetch: refetchSessions, isLoading: sessionsLoading } = useListChatbotSessions();
   const updateSettings = useUpdateChatbotSettings();
   const deleteSession = useDeleteChatbotSession();
@@ -658,6 +660,31 @@ export default function ChatbotPage() {
 
   const handleResetSession = (phone: string) => {
     deleteSession.mutate({ phone }, { onSuccess: () => refetchSessions() });
+  };
+
+  const handleResetToDefaults = () => {
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    const emptyInstructions = Object.fromEntries(
+      STEP_INSTRUCTION_KEYS.map(({ key }) => [key, ""])
+    );
+    setAutosaveStatus("saving");
+    updateSettings.mutate(
+      { data: { stepInstructions: emptyInstructions, followup24hTemplate: "" } },
+      {
+        onSuccess: () => {
+          setLocalSettings({});
+          setSavedSettings({});
+          refetchSettings();
+          setAutosaveStatus("saved");
+          setTimeout(() => setAutosaveStatus("idle"), 2000);
+          setConfirmResetDefaults(false);
+        },
+        onError: () => {
+          setAutosaveStatus("idle");
+          setConfirmResetDefaults(false);
+        },
+      },
+    );
   };
 
   const setStepInstruction = (key: string, value: string) => {
@@ -867,7 +894,7 @@ export default function ChatbotPage() {
                     </div>
                     <textarea
                       rows={3}
-                      value={(effectiveSettings.stepInstructions as Record<string, string>)?.[key] ?? defaultText}
+                      value={(effectiveSettings.stepInstructions as Record<string, string>)?.[key] || defaultText}
                       onChange={(e) => setStepInstruction(key, e.target.value)}
                       className="w-full text-sm border border-border/50 rounded-lg px-3 py-2 bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
@@ -889,7 +916,7 @@ export default function ChatbotPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <button
                 onClick={handleSaveNow}
                 disabled={!isDirty || autosaveStatus === "saving"}
@@ -897,6 +924,14 @@ export default function ChatbotPage() {
               >
                 <Save className="h-3.5 w-3.5" />
                 {autosaveStatus === "saving" ? t("common.saving") : t("common.save")}
+              </button>
+              <button
+                onClick={() => setConfirmResetDefaults(true)}
+                disabled={autosaveStatus === "saving"}
+                className="flex items-center gap-2 px-4 py-2 border border-border/60 text-muted-foreground rounded-lg text-sm font-medium disabled:opacity-50 hover:border-destructive/50 hover:text-destructive transition-colors"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                Сбросить до стандартных
               </button>
               {autosaveStatus === "saving" && (
                 <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -925,6 +960,14 @@ export default function ChatbotPage() {
         onCancel={() => setConfirmResetPhone(null)}
         title={t("chatbot.resetSession")}
         description="Состояние чат-бота для этого номера будет сброшено. Пациент снова получит приветственное сообщение."
+      />
+
+      <ConfirmDeleteDialog
+        open={confirmResetDefaults}
+        onConfirm={handleResetToDefaults}
+        onCancel={() => setConfirmResetDefaults(false)}
+        title="Сбросить до стандартных настроек?"
+        description="Все инструкции по шагам и шаблоны сообщений будут заменены на стандартные. Ваши изменения будут удалены. Это действие нельзя отменить."
       />
     </div>
   );
