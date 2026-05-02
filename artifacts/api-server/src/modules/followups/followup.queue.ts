@@ -11,12 +11,10 @@ import { sendWhatsAppMessage } from "../../shared/whatsapp";
 import { logger } from "../../lib/logger";
 
 const QUEUE_NAME = "postop-followups";
-const FOLLOWUP_DELAYS_HOURS = [24, 72, 168] as const;
+const FOLLOWUP_DELAYS_HOURS = [3] as const;
 
-const DEFAULT_TEMPLATES: [string, string, string] = [
-  "Дорогой пациент! Прошло 24 часа после вашей процедуры. Как вы себя чувствуете? Если есть вопросы — обращайтесь.",
-  "Прошло 3 дня после процедуры. Надеемся, вы чувствуете себя хорошо. Помните о рекомендациях врача.",
-  "Прошла неделя после вашей процедуры. Не забудьте о плановом осмотре. Ждём вас в клинике!",
+const DEFAULT_TEMPLATES: [string] = [
+  "Дорогой пациент! Прошло 3 часа после вашей процедуры. Как вы себя чувствуете? Если есть вопросы или дискомфорт — обращайтесь, мы всегда на связи.",
 ];
 
 interface FollowupJobData {
@@ -27,7 +25,7 @@ interface FollowupJobData {
   messageTemplate: string;
 }
 
-async function getClinicTemplates(clinicId: string): Promise<[string, string, string]> {
+async function getClinicTemplates(clinicId: string): Promise<[string]> {
   const [settings] = await db
     .select()
     .from(chatbotSettingsTable)
@@ -35,11 +33,7 @@ async function getClinicTemplates(clinicId: string): Promise<[string, string, st
     .limit(1);
 
   if (settings) {
-    return [
-      settings.followup24hTemplate,
-      settings.followup72hTemplate,
-      settings.followup168hTemplate,
-    ];
+    return [settings.followup24hTemplate];
   }
   return DEFAULT_TEMPLATES;
 }
@@ -164,12 +158,12 @@ export async function scheduleFollowups(input: ScheduleFollowupsInput): Promise<
     }
     logger.info(
       { clinicId, patientId, procedureId, count: followups.length },
-      "[FollowupQueue] Scheduled post-op BullMQ followup jobs (24h/72h/168h)",
+      "[FollowupQueue] Scheduled post-op BullMQ followup job (3h)",
     );
   } else {
     logger.info(
       { clinicId, patientId, procedureId, count: followups.length },
-      "[FollowupQueue] Scheduled post-op followups in DB — will be sent by polling worker",
+      "[FollowupQueue] Scheduled post-op followup in DB — will be sent by polling worker",
     );
   }
 }

@@ -897,27 +897,6 @@ export default function ChatbotPage() {
             </div>
 
             <div className="rounded-xl border border-border/50 bg-card p-4 space-y-4">
-              <h3 className="text-sm font-semibold text-foreground">{t("chatbot.settings.templates")}</h3>
-
-              {[
-                { key: "greetingTemplate" as const, label: t("chatbot.settings.greetingTemplate") },
-                { key: "followup24hTemplate" as const, label: t("chatbot.settings.followup24h") },
-                { key: "followup72hTemplate" as const, label: t("chatbot.settings.followup72h") },
-                { key: "followup168hTemplate" as const, label: t("chatbot.settings.followup168h") },
-              ].map(({ key, label }) => (
-                <div key={key} className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground">{label}</label>
-                  <textarea
-                    rows={3}
-                    value={effectiveSettings[key]}
-                    onChange={(e) => setLocalSettings((p) => ({ ...p, [key]: e.target.value }))}
-                    className="w-full text-sm border border-border/50 rounded-lg px-3 py-2 bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  />
-                </div>
-              ))}
-            </div>
-
-            <div className="rounded-xl border border-border/50 bg-card p-4 space-y-4">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-violet-500" />
                 <h3 className="text-sm font-semibold text-foreground">{t("chatbot.settings.aiInstructions")}</h3>
@@ -926,21 +905,49 @@ export default function ChatbotPage() {
                 {t("chatbot.settings.aiInstructionsDesc")}
               </p>
 
-              {STEP_INSTRUCTION_KEYS.map(({ key, labelKey, hintKey }) => (
-                <div key={key} className="space-y-1.5">
-                  <div>
-                    <label className="text-xs font-medium text-foreground">{t(labelKey)}</label>
-                    <p className="text-[11px] text-muted-foreground">{t(hintKey)}</p>
-                  </div>
+              <div className="border-t border-border/40 pt-4 space-y-4">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("chatbot.settings.templates")}</p>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground">{t("chatbot.settings.greetingTemplate")}</label>
                   <textarea
                     rows={3}
-                    placeholder={t("chatbot.settings.stepFields.placeholder")}
-                    value={(effectiveSettings.stepInstructions as Record<string, string>)?.[key] ?? ""}
-                    onChange={(e) => setStepInstruction(key, e.target.value)}
+                    value={effectiveSettings.greetingTemplate}
+                    onChange={(e) => setLocalSettings((p) => ({ ...p, greetingTemplate: e.target.value }))}
                     className="w-full text-sm border border-border/50 rounded-lg px-3 py-2 bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
-              ))}
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground">{t("chatbot.settings.followup3h")}</label>
+                  <textarea
+                    rows={3}
+                    value={effectiveSettings.followup24hTemplate}
+                    onChange={(e) => setLocalSettings((p) => ({ ...p, followup24hTemplate: e.target.value }))}
+                    className="w-full text-sm border border-border/50 rounded-lg px-3 py-2 bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+              </div>
+
+              <div className="border-t border-border/40 pt-4 space-y-4">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("chatbot.settings.aiSteps")}</p>
+
+                {STEP_INSTRUCTION_KEYS.map(({ key, labelKey, hintKey }) => (
+                  <div key={key} className="space-y-1.5">
+                    <div>
+                      <label className="text-xs font-medium text-foreground">{t(labelKey)}</label>
+                      <p className="text-[11px] text-muted-foreground">{t(hintKey)}</p>
+                    </div>
+                    <textarea
+                      rows={3}
+                      placeholder={t("chatbot.settings.stepFields.placeholder")}
+                      value={(effectiveSettings.stepInstructions as Record<string, string>)?.[key] ?? ""}
+                      onChange={(e) => setStepInstruction(key, e.target.value)}
+                      className="w-full text-sm border border-border/50 rounded-lg px-3 py-2 bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="flex items-center gap-3">
