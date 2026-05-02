@@ -11,17 +11,14 @@ import {
   ChevronLeft,
   ArrowLeft,
   Phone,
-  Plus,
   Send,
   Sparkles,
-  BookOpen,
   X,
-  ChevronUp,
-  ChevronDown,
   Megaphone,
   CheckCircle2,
   AlertCircle,
   Loader2,
+  FlaskConical,
 } from "lucide-react";
 import {
   useGetChatbotSettings,
@@ -29,11 +26,7 @@ import {
   useListChatbotSessions,
   useDeleteChatbotSession,
   useGetChatbotSessionMessages,
-  useListManagerExamples,
-  useCreateManagerExample,
-  useDeleteManagerExample,
   useTestChatbotMessage,
-  reorderManagerExample,
   useListDentalBroadcastRuns,
   useTriggerDentalBroadcast,
   listDentalBroadcastRunsQueryKey,
@@ -207,139 +200,151 @@ function SessionChat({ phone, onBack }: { phone: string; onBack: () => void }) {
   );
 }
 
-// ─── Manager Style tab ────────────────────────────────────────────────────────
+// ─── Playground tab ───────────────────────────────────────────────────────────
 
-function ManagerStyleTab() {
-  const { t } = useTranslation();
-  const qc = useQueryClient();
-  const { data: examplesRes, isLoading, refetch } = useListManagerExamples();
-  const createExample = useCreateManagerExample();
-  const deleteExample = useDeleteManagerExample();
+type ChatMessage = { role: "user" | "bot"; text: string };
+
+function PlaygroundTab() {
   const testMessage = useTestChatbotMessage();
 
-  const examples = examplesRes?.data?.examples ?? [];
-
-  const [newUser, setNewUser] = useState("");
-  const [newManager, setNewManager] = useState("");
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [testInput, setTestInput] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState("");
   const [testState, setTestState] = useState("collect_problem");
-  const [testReply, setTestReply] = useState<string | null>(null);
-  const [reordering, setReordering] = useState<string | null>(null);
+  const [showWarning, setShowWarning] = useState(true);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleAdd = () => {
-    if (!newUser.trim() || !newManager.trim()) return;
-    createExample.mutate(
-      { userMessage: newUser.trim(), managerResponse: newManager.trim() },
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, testMessage.isPending]);
+
+  const handleSend = () => {
+    const text = input.trim();
+    if (!text || testMessage.isPending) return;
+    setMessages((prev) => [...prev, { role: "user", text }]);
+    setInput("");
+    testMessage.mutate(
+      { userMessage: text, state: testState },
       {
-        onSuccess: () => {
-          setNewUser("");
-          setNewManager("");
-          qc.invalidateQueries({ queryKey: ["/api/chatbot/manager-examples"] });
+        onSuccess: (res) => {
+          setMessages((prev) => [...prev, { role: "bot", text: res.data?.reply ?? "..." }]);
+        },
+        onError: () => {
+          setMessages((prev) => [...prev, { role: "bot", text: "Ошибка. Попробуйте ещё раз." }]);
         },
       },
     );
   };
 
-  const handleDelete = (id: string) => {
-    deleteExample.mutate(id, {
-      onSuccess: () => qc.invalidateQueries({ queryKey: ["/api/chatbot/manager-examples"] }),
-    });
-  };
-
-  const handleReorder = async (id: string, direction: "up" | "down") => {
-    const idx = examples.findIndex((e) => e.id === id);
-    if (idx === -1) return;
-    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
-    if (swapIdx < 0 || swapIdx >= examples.length) return;
-    setReordering(id);
-    try {
-      const swapItem = examples[swapIdx]!;
-      const currentItem = examples[idx]!;
-      await Promise.all([
-        reorderManagerExample(id, swapItem.sortOrder),
-        reorderManagerExample(swapItem.id, currentItem.sortOrder),
-      ]);
-      qc.invalidateQueries({ queryKey: ["/api/chatbot/manager-examples"] });
-    } finally {
-      setReordering(null);
-    }
-  };
-
-  const handleTest = () => {
-    if (!testInput.trim()) return;
-    testMessage.mutate(
-      { userMessage: testInput.trim(), state: testState },
-      { onSuccess: (res) => setTestReply(res.data?.reply ?? null) },
-    );
-  };
-
   return (
-    <div className="space-y-4 max-w-2xl">
-      <div className="rounded-xl border border-border/50 bg-card p-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-violet-500" />
-          <p className="text-sm font-medium text-foreground">{t("chatbot.managerStyle.testTitle")}</p>
-        </div>
-        <p className="text-xs text-muted-foreground">{t("chatbot.managerStyle.testDesc")}</p>
-        <div className="flex items-center gap-2">
-          <select
-            value={testState}
-            onChange={(e) => setTestState(e.target.value)}
-            className="text-xs border border-border/50 rounded-lg px-2 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 shrink-0"
-          >
-            <option value="greeting">{t("chatbot.managerStyle.stateGreeting")}</option>
-            <option value="collect_name">{t("chatbot.managerStyle.stateCollectName")}</option>
-            <option value="collect_problem">{t("chatbot.managerStyle.stateCollectProblem")}</option>
-            <option value="suggest_doctor">{t("chatbot.managerStyle.stateSuggestDoctor")}</option>
-            <option value="confirm_appointment">{t("chatbot.managerStyle.stateConfirm")}</option>
-          </select>
-          <span className="text-xs text-muted-foreground shrink-0">{t("chatbot.managerStyle.stageLabel")}</span>
-        </div>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            placeholder={t("chatbot.managerStyle.testPlaceholder")}
-            value={testInput}
-            onChange={(e) => setTestInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") handleTest(); }}
-            className="flex-1 text-sm border border-border/50 rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
-          />
-          <button
-            onClick={handleTest}
-            disabled={!testInput.trim() || testMessage.isPending}
-            className="flex items-center gap-1.5 px-3 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-medium disabled:opacity-50 hover:bg-primary/90 transition-colors shrink-0"
-          >
-            {testMessage.isPending ? (
-              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Send className="h-3.5 w-3.5" />
-            )}
-            {t("chatbot.managerStyle.testBtn")}
+    <div className="h-full flex flex-col gap-3">
+      {showWarning && (
+        <div className="shrink-0 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
+          <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-800 flex-1">
+            Каждое сообщение в Playground расходует кредиты AI-модели — так же как реальное сообщение от клиента.
+          </p>
+          <button onClick={() => setShowWarning(false)} className="text-amber-500 hover:text-amber-700 shrink-0 ml-1">
+            <X className="h-3.5 w-3.5" />
           </button>
         </div>
+      )}
 
-        {testReply !== null && (
-          <div className="rounded-lg bg-violet-50 border border-violet-100 p-3">
-            <p className="text-[10px] font-medium text-violet-600 mb-1">🤖 {t("chatbot.managerStyle.replyLabel")}</p>
-            <p className="text-xs text-foreground whitespace-pre-wrap leading-relaxed">{testReply}</p>
-            <button
-              onClick={() => setTestReply(null)}
-              className="mt-2 text-[10px] text-muted-foreground hover:text-foreground"
-            >
-              {t("chatbot.managerStyle.replyClose")}
-            </button>
-          </div>
-        )}
+      <div className="shrink-0 flex items-center gap-2">
+        <span className="text-xs text-muted-foreground shrink-0">Этап FSM:</span>
+        <select
+          value={testState}
+          onChange={(e) => setTestState(e.target.value)}
+          className="text-xs border border-border/50 rounded-lg px-2 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 flex-1"
+        >
+          <option value="greeting">Приветствие</option>
+          <option value="collect_name">Сбор имени</option>
+          <option value="collect_problem">Описание проблемы</option>
+          <option value="suggest_doctor">Предложение врача</option>
+          <option value="confirm_appointment">Подтверждение</option>
+        </select>
+        <button
+          onClick={() => { setMessages([]); setInput(""); }}
+          disabled={messages.length === 0}
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-40 transition-colors shrink-0"
+        >
+          <RefreshCw className="h-3.5 w-3.5" />
+          Сбросить
+        </button>
       </div>
 
-      <ConfirmDeleteDialog
-        open={!!confirmDeleteId}
-        onConfirm={() => { if (confirmDeleteId) handleDelete(confirmDeleteId); setConfirmDeleteId(null); }}
-        onCancel={() => setConfirmDeleteId(null)}
-        title={t("chatbot.managerStyle.deleteTitle")}
-        description={t("chatbot.managerStyle.deleteDesc")}
-      />
+      <div className="flex-1 min-h-0 rounded-xl border border-border/50 bg-muted/20 flex flex-col overflow-hidden">
+        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
+          {messages.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-full text-center py-10">
+              <div className="h-12 w-12 rounded-full bg-violet-100 flex items-center justify-center mb-3">
+                <Bot className="h-6 w-6 text-violet-500" />
+              </div>
+              <p className="text-sm font-medium text-foreground">Playground готов</p>
+              <p className="text-xs text-muted-foreground mt-1 max-w-[220px]">
+                Напишите сообщение чтобы протестировать ответы бота с текущими инструкциями
+              </p>
+            </div>
+          )}
+
+          {messages.map((msg, idx) => (
+            <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+              {msg.role === "bot" && (
+                <div className="h-6 w-6 rounded-full bg-violet-100 flex items-center justify-center shrink-0 mr-2 mt-1">
+                  <Bot className="h-3.5 w-3.5 text-violet-600" />
+                </div>
+              )}
+              <div
+                className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap leading-relaxed ${
+                  msg.role === "user"
+                    ? "bg-primary text-primary-foreground rounded-tr-sm"
+                    : "bg-white border border-border/50 text-foreground rounded-tl-sm"
+                }`}
+              >
+                {msg.text}
+              </div>
+            </div>
+          ))}
+
+          {testMessage.isPending && (
+            <div className="flex justify-start">
+              <div className="h-6 w-6 rounded-full bg-violet-100 flex items-center justify-center shrink-0 mr-2 mt-1">
+                <Bot className="h-3.5 w-3.5 text-violet-600" />
+              </div>
+              <div className="bg-white border border-border/50 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:0ms]" />
+                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:150ms]" />
+                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:300ms]" />
+              </div>
+            </div>
+          )}
+
+          <div ref={bottomRef} />
+        </div>
+
+        <div className="shrink-0 border-t border-border/50 bg-background px-3 py-2.5 flex gap-2">
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder="Напишите сообщение..."
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+            className="flex-1 text-sm border border-border/50 rounded-xl px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
+          />
+          <button
+            onClick={handleSend}
+            disabled={!input.trim() || testMessage.isPending}
+            className="flex items-center justify-center w-10 h-10 bg-primary text-primary-foreground rounded-xl disabled:opacity-50 hover:bg-primary/90 transition-colors shrink-0"
+          >
+            {testMessage.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -689,8 +694,8 @@ export default function ChatbotPage() {
               tab === "manager-style" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
             }`}
           >
-            <Sparkles className="h-3.5 w-3.5" />
-            {t("chatbot.tab.managerStyle")}
+            <FlaskConical className="h-3.5 w-3.5" />
+            Playground
           </button>
           <button
             onClick={() => setTab("ai-broadcast")}
@@ -704,7 +709,7 @@ export default function ChatbotPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className={`flex-1 p-4 min-h-0 ${tab === "manager-style" ? "overflow-hidden flex flex-col" : "overflow-y-auto"}`}>
         {tab === "sessions" && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -875,7 +880,7 @@ export default function ChatbotPage() {
           </div>
         )}
 
-        {tab === "manager-style" && <ManagerStyleTab />}
+        {tab === "manager-style" && <PlaygroundTab />}
 
         {tab === "ai-broadcast" && <AiBroadcastTab />}
       </div>
