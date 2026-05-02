@@ -726,8 +726,9 @@
       "templates": "Message templates",
       "greetingTemplate": "Greeting",
       "followup3h": "Post-op message (after 3 hours)",
-      "aiInstructions": "Settings & instructions",
-      "aiInstructionsDesc": "Message templates and additional AI instructions for each conversation stage.",
+      "followup3hHint": "Sent to the patient automatically 3 hours after the procedure is completed",
+      "aiInstructions": "AI instructions per step",
+      "aiInstructionsDesc": "Additional instructions for the AI at each conversation stage. Leave empty to use default behavior.",
       "aiSteps": "AI instructions per step",
       "stepFields": {
         "placeholder": "Leave empty to use default behavior...",

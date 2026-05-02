@@ -906,32 +906,6 @@ export default function ChatbotPage() {
               </p>
 
               <div className="border-t border-border/40 pt-4 space-y-4">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("chatbot.settings.templates")}</p>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground">{t("chatbot.settings.greetingTemplate")}</label>
-                  <textarea
-                    rows={3}
-                    value={effectiveSettings.greetingTemplate}
-                    onChange={(e) => setLocalSettings((p) => ({ ...p, greetingTemplate: e.target.value }))}
-                    className="w-full text-sm border border-border/50 rounded-lg px-3 py-2 bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground">{t("chatbot.settings.followup3h")}</label>
-                  <textarea
-                    rows={3}
-                    value={effectiveSettings.followup24hTemplate}
-                    onChange={(e) => setLocalSettings((p) => ({ ...p, followup24hTemplate: e.target.value }))}
-                    className="w-full text-sm border border-border/50 rounded-lg px-3 py-2 bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  />
-                </div>
-              </div>
-
-              <div className="border-t border-border/40 pt-4 space-y-4">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("chatbot.settings.aiSteps")}</p>
-
                 {STEP_INSTRUCTION_KEYS.map(({ key, labelKey, hintKey }) => (
                   <div key={key} className="space-y-1.5">
                     <div>
@@ -947,6 +921,19 @@ export default function ChatbotPage() {
                     />
                   </div>
                 ))}
+
+                <div className="space-y-1.5">
+                  <div>
+                    <label className="text-xs font-medium text-foreground">{t("chatbot.settings.followup3h")}</label>
+                    <p className="text-[11px] text-muted-foreground">{t("chatbot.settings.followup3hHint")}</p>
+                  </div>
+                  <textarea
+                    rows={3}
+                    value={effectiveSettings.followup24hTemplate}
+                    onChange={(e) => setLocalSettings((p) => ({ ...p, followup24hTemplate: e.target.value }))}
+                    className="w-full text-sm border border-border/50 rounded-lg px-3 py-2 bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
               </div>
             </div>
 
