@@ -889,20 +889,35 @@ export default function ChatbotPage() {
               </p>
 
               <div className="border-t border-border/40 pt-4 space-y-4">
-                {STEP_INSTRUCTION_KEYS.map(({ key, labelKey, hintKey, defaultText }) => (
-                  <div key={key} className="space-y-1.5">
-                    <div>
-                      <label className="text-xs font-medium text-foreground">{t(labelKey)}</label>
-                      <p className="text-[11px] text-muted-foreground">{t(hintKey)}</p>
+                <p className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  Пустое поле = бот использует встроенное поведение. Заполните поле, чтобы переопределить инструкцию для этого шага.
+                </p>
+                {STEP_INSTRUCTION_KEYS.map(({ key, labelKey, hintKey, defaultText }) => {
+                  const savedValue = (effectiveSettings.stepInstructions as Record<string, string>)?.[key] ?? "";
+                  const hasValue = savedValue.length > 0;
+                  return (
+                    <div key={key} className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <label className="text-xs font-medium text-foreground">{t(labelKey)}</label>
+                          <p className="text-[11px] text-muted-foreground">{t(hintKey)}</p>
+                        </div>
+                        {hasValue && (
+                          <span className="text-[10px] font-medium text-emerald-600 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5 shrink-0">
+                            Сохранено
+                          </span>
+                        )}
+                      </div>
+                      <textarea
+                        rows={3}
+                        value={savedValue}
+                        placeholder={defaultText}
+                        onChange={(e) => setStepInstruction(key, e.target.value)}
+                        className="w-full text-sm border border-border/50 rounded-lg px-3 py-2 bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/50 placeholder:italic"
+                      />
                     </div>
-                    <textarea
-                      rows={3}
-                      value={(effectiveSettings.stepInstructions as Record<string, string>)?.[key] || defaultText}
-                      onChange={(e) => setStepInstruction(key, e.target.value)}
-                      className="w-full text-sm border border-border/50 rounded-lg px-3 py-2 bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-                ))}
+                  );
+                })}
 
                 <div className="space-y-1.5">
                   <div>
