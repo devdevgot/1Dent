@@ -793,7 +793,14 @@ function buildSystemPrompt(state: ChatbotState, settings: Awaited<ReturnType<typ
   const customInstruction = stateKey ? si[stateKey] : undefined;
 
   const defaultPrompt = defaults[state] ?? base;
-  return customInstruction ? `${base}\n\nИнструкции для этого этапа:\n${customInstruction}` : defaultPrompt;
+  if (!customInstruction) return defaultPrompt;
+
+  // For greeting state, always enforce IIN requirement even when clinic overrides the instruction
+  const iinSuffix =
+    state === "greeting"
+      ? "\n\nОБЯЗАТЕЛЬНО: в конце сообщения попроси пациента ввести ИИН (12 цифр) для идентификации. Не спрашивай имя — только ИИН."
+      : "";
+  return `${base}\n\nИнструкции для этого этапа:\n${customInstruction}${iinSuffix}`;
 }
 
 // ─── ChatbotService (main export) ───────────────────────────────────────────
@@ -895,20 +902,15 @@ export class ChatbotService {
 
     switch (state) {
       case "greeting": {
-        const greetingInstruction = (settings.stepInstructions as StepInstructions)?.greeting;
-        if (greetingInstruction) {
-          const aiGreeting = await generateChatbotResponse(
-            buildSystemPrompt("greeting", settings),
-            [],
-            "Пациент впервые написал в чат. Поприветствуй его согласно инструкциям.",
-            managerExamples,
-          );
-          response = aiGreeting ?? settings.greetingTemplate;
-        } else {
-          response = settings.greetingTemplate;
-        }
-        // IIN is the primary identifier — always required before proceeding
-        response += "\n\nДля начала, пожалуйста, введите ваш ИИН (12 цифр).";
+        // Always generate greeting via AI so IIN request is natural and not duplicated.
+        // buildSystemPrompt("greeting") already instructs AI to ask for IIN.
+        const aiGreeting = await generateChatbotResponse(
+          buildSystemPrompt("greeting", settings),
+          [],
+          "Пациент впервые написал в чат. Поприветствуй его и попроси ввести ИИН (12 цифр) для идентификации. Не спрашивай имя — только ИИН.",
+          managerExamples,
+        );
+        response = aiGreeting ?? settings.greetingTemplate;
         session.state = "collect_iin";
         break;
       }

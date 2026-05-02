@@ -75,7 +75,7 @@ const STEP_INSTRUCTION_KEYS: Array<{
     key: "greeting",
     labelKey: "chatbot.settings.stepFields.greeting.label",
     hintKey: "chatbot.settings.stepFields.greeting.hint",
-    defaultText: "Поприветствуй пациента и спроси его имя. Пример: «Здравствуйте! Я помогу записать вас к врачу. Как вас зовут?»",
+    defaultText: "Поприветствуй пациента и попроси ввести ИИН (12 цифр) для идентификации. Пример: «Здравствуйте! Я AI-ассистент клиники. Для записи к врачу введите ваш ИИН (12 цифр).»",
   },
   {
     key: "collectName",

@@ -19,7 +19,7 @@ export const chatbotSettingsTable = pgTable("chatbot_settings", {
   enabled: boolean("enabled").default(true).notNull(),
   greetingTemplate: text("greeting_template")
     .notNull()
-    .default("Добро пожаловать! Я AI-ассистент клиники. Как вас зовут?"),
+    .default("Здравствуйте! Я AI-ассистент стоматологической клиники. Для записи к врачу введите ваш ИИН (12 цифр)."),
   followup24hTemplate: text("followup_24h_template")
     .notNull()
     .default(
