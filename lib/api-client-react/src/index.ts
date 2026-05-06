@@ -874,3 +874,58 @@ export const useTriggerDentalBroadcast = <TError = unknown>(
     mutationFn: () => triggerDentalBroadcast(),
     ...options?.mutation,
   });
+
+// ─── Custom: script blocks ────────────────────────────────────────────────────
+
+export interface ScriptBlock {
+  id: string;
+  title: string;
+  icon: string;
+  description: string;
+  content: string;
+  enabled: boolean;
+  order: number;
+}
+
+export interface GetStandardScriptBlocksResponse {
+  success: boolean;
+  data: { blocks: ScriptBlock[] };
+}
+
+export interface ParseScriptResponse {
+  success: boolean;
+  data: { blocks: ScriptBlock[] };
+}
+
+export const getStandardScriptBlocks = (
+  options?: RequestInit,
+): Promise<GetStandardScriptBlocksResponse> =>
+  customFetch<GetStandardScriptBlocksResponse>("/api/chatbot/script/standard", {
+    method: "GET",
+    ...options,
+  });
+
+export const useGetStandardScriptBlocks = <TError = unknown>(
+  options?: { query?: UseQueryOptions<GetStandardScriptBlocksResponse, TError> },
+) =>
+  useQuery<GetStandardScriptBlocksResponse, TError>({
+    queryKey: ["/api/chatbot/script/standard"],
+    queryFn: ({ signal }) => getStandardScriptBlocks({ signal }),
+    staleTime: Infinity,
+    ...options?.query,
+  });
+
+export const parseScript = (text: string): Promise<ParseScriptResponse> =>
+  customFetch<ParseScriptResponse>("/api/chatbot/script/parse", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+  });
+
+export const useParseScript = <TError = unknown>(options?: {
+  mutation?: UseMutationOptions<ParseScriptResponse, TError, string>;
+}) =>
+  useMutation<ParseScriptResponse, TError, string>({
+    mutationFn: (text) => parseScript(text),
+    ...options?.mutation,
+  });

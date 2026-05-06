@@ -10,6 +10,16 @@ export interface StepInstructions {
   confirm?: string;
 }
 
+export interface ScriptBlock {
+  id: string;
+  title: string;
+  icon: string;
+  description: string;
+  content: string;
+  enabled: boolean;
+  order: number;
+}
+
 export const chatbotSettingsTable = pgTable("chatbot_settings", {
   id: text("id").primaryKey(),
   clinicId: text("clinic_id")
@@ -36,6 +46,7 @@ export const chatbotSettingsTable = pgTable("chatbot_settings", {
       "Прошла неделя после вашей процедуры. Не забудьте о плановом осмотре. Ждём вас в клинике!",
     ),
   stepInstructions: jsonb("step_instructions").$type<StepInstructions>().default({}),
+  scriptBlocks: jsonb("script_blocks").$type<ScriptBlock[]>().default([]),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

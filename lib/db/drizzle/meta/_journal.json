@@ -99,6 +99,13 @@
       "when": 1745960400000,
       "tag": "0013_chat_sessions",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1746542400000,
+      "tag": "0014_chatbot_script_blocks",
+      "breakpoints": true
     }
   ]
 }

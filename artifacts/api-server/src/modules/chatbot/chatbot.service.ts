@@ -27,6 +27,8 @@ import { ChannelsRepository } from "../channels/channels.repository";
 import { classifyPatientRequest, generateChatbotResponse, extractDatetimeFromText, type ChatMessage, type ManagerExample } from "./ai-classifier";
 import type { ChatbotState, ChatbotSessionData } from "./chatbot.types";
 import type { ChatbotSettings } from "@workspace/db";
+import { STANDARD_SCRIPT_BLOCKS, type ScriptBlock } from "./script-templates";
+import { openrouter } from "../../lib/openrouter-client";
 
 type CachedSettings = { settings: ChatbotSettings; expiresAt: number };
 type CachedExamples = { examples: ManagerExample[]; expiresAt: number };
@@ -1598,6 +1600,46 @@ export class ChatbotService {
     return getSettings(clinicId);
   }
 
+  async parseScriptWithAI(rawText: string): Promise<ScriptBlock[]> {
+    const systemPrompt = `Ты — парсер скриптов чат-бота для стоматологической клиники.
+Твоя задача: разбить текст скрипта на логические блоки и вернуть JSON-массив.
+
+Каждый блок должен иметь поля:
+- id: строка на английском snake_case (например: "greeting", "mini_diagnosis", "services", "appointment", "followup", "reminders", "post_visit", "reactivation")
+- title: краткое название блока на русском (2–4 слова)
+- icon: один подходящий эмодзи
+- description: одна строка — что делает этот блок
+- content: полный текст этого раздела (сохраняй исходное форматирование, переносы строк, разделители)
+- enabled: true
+- order: порядковый номер начиная с 0
+
+Верни ТОЛЬКО валидный JSON-массив без пояснений, кода и markdown.`;
+
+    try {
+      const response = await openrouter.chat.completions.create({
+        model: "deepseek/deepseek-chat-v3-0324",
+        max_tokens: 6000,
+        temperature: 0.1,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Разбей этот скрипт на блоки:\n\n${rawText}` },
+        ],
+      });
+
+      const content = response.choices[0]?.message?.content ?? "[]";
+      const jsonMatch = content.match(/\[[\s\S]*\]/);
+      if (!jsonMatch) {
+        logger.warn("[ChatbotService] AI parse returned no JSON array — falling back to standard blocks");
+        return STANDARD_SCRIPT_BLOCKS;
+      }
+      const blocks = JSON.parse(jsonMatch[0]) as ScriptBlock[];
+      return blocks.map((b, i) => ({ ...b, order: i, enabled: b.enabled ?? true }));
+    } catch (err) {
+      logger.error({ err }, "[ChatbotService] parseScriptWithAI failed — returning standard blocks");
+      return STANDARD_SCRIPT_BLOCKS;
+    }
+  }
+
   async updateSettings(
     clinicId: string,
     updates: {
@@ -1607,6 +1649,7 @@ export class ChatbotService {
       followup72hTemplate?: string;
       followup168hTemplate?: string;
       stepInstructions?: StepInstructions;
+      scriptBlocks?: ScriptBlock[];
     },
   ) {
     const settings = await getSettings(clinicId);

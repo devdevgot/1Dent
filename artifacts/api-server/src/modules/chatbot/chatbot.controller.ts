@@ -3,6 +3,7 @@ import { z } from "zod";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError } from "../../shared/errors";
 import { ChatbotService } from "./chatbot.service";
+import { STANDARD_SCRIPT_BLOCKS } from "./script-templates";
 
 const router: IRouter = Router();
 const service = new ChatbotService();
@@ -18,6 +19,16 @@ const stepInstructionsSchema = z.object({
   confirm: z.string().max(2000).optional(),
 });
 
+const scriptBlockSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  icon: z.string(),
+  description: z.string(),
+  content: z.string().max(5000),
+  enabled: z.boolean(),
+  order: z.number().int(),
+});
+
 const settingsUpdateSchema = z.object({
   enabled: z.boolean().optional(),
   greetingTemplate: z.string().min(1).max(500).optional(),
@@ -25,6 +36,11 @@ const settingsUpdateSchema = z.object({
   followup72hTemplate: z.string().min(1).max(500).optional(),
   followup168hTemplate: z.string().min(1).max(500).optional(),
   stepInstructions: stepInstructionsSchema.optional(),
+  scriptBlocks: z.array(scriptBlockSchema).optional(),
+});
+
+const parseScriptSchema = z.object({
+  text: z.string().min(10).max(20000),
 });
 
 const managerExampleSchema = z.object({
@@ -176,6 +192,30 @@ router.patch(
       return;
     }
     res.json({ success: true, data: { example } });
+  },
+);
+
+// ─── Script blocks ────────────────────────────────────────────────────────────
+
+router.get(
+  "/script/standard",
+  roleGuard("owner", "admin"),
+  (_req: Request, res: Response) => {
+    res.json({ success: true, data: { blocks: STANDARD_SCRIPT_BLOCKS } });
+  },
+);
+
+router.post(
+  "/script/parse",
+  roleGuard("owner", "admin"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const parsed = parseScriptSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+    }
+    const blocks = await service.parseScriptWithAI(parsed.data.text).catch(next);
+    if (!blocks) return;
+    res.json({ success: true, data: { blocks } });
   },
 );
 
