@@ -666,6 +666,27 @@ function buildPlaygroundPrompt(
     }
   }
 
+  // Resolve placeholder values for script block content
+  const clinicName =
+    settings.greetingTemplate?.match(/«(.+?)»/)?.[1] ??
+    settings.greetingTemplate?.match(/"(.+?)"/)?.[1] ??
+    "клиники";
+  const now = new Date();
+  const todayDate = now.toLocaleDateString("ru-KZ", { day: "numeric", month: "long" });
+  const firstDoctor = doctorsWithSlots?.[0];
+  const exampleDoctorName = firstDoctor?.name ?? "врача";
+  const exampleTime =
+    firstDoctor?.slots?.[0]?.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit" }) ?? "10:00";
+  const exampleDate =
+    firstDoctor?.slots?.[0]?.toLocaleDateString("ru-KZ", { day: "numeric", month: "long" }) ?? todayDate;
+
+  const resolvePlaceholders = (text: string) =>
+    text
+      .replace(/\{\{clinic_name\}\}/g, clinicName)
+      .replace(/\{\{date\}\}/g, exampleDate)
+      .replace(/\{\{time\}\}/g, exampleTime)
+      .replace(/\{\{doctor_name\}\}/g, exampleDoctorName);
+
   // Script blocks: use saved ones, fall back to standard blocks (never stepInstructions in playground)
   const savedBlocks = (settings.scriptBlocks ?? []) as ScriptBlock[];
   const activeBlocks = savedBlocks.length > 0 ? savedBlocks : STANDARD_SCRIPT_BLOCKS;
@@ -673,7 +694,7 @@ function buildPlaygroundPrompt(
 
   let scriptContext = "\n\nСКРИПТ КЛИНИКИ (строго следуй этому скрипту):\n";
   for (const block of enabledBlocks) {
-    scriptContext += `\n--- ${block.title.toUpperCase()} ---\n${block.content}\n`;
+    scriptContext += `\n--- ${block.title.toUpperCase()} ---\n${resolvePlaceholders(block.content)}\n`;
   }
 
   return `Ты — AI-ассистент стоматологической клиники. Сейчас ТЕСТОВЫЙ РЕЖИМ (симуляция для проверки скрипта).
