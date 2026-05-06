@@ -640,9 +640,6 @@ function buildPlaygroundPrompt(
   settings: Awaited<ReturnType<typeof getSettings>>,
   doctorsWithSlots?: DoctorWithSlots[],
 ): string {
-  const si = (settings.stepInstructions ?? {}) as StepInstructions;
-  const scriptBlocks = ((settings as unknown) as Record<string, unknown>)["scriptBlocks"] as ScriptBlock[] | undefined;
-
   const kazakhNote = `ВАЖНО: Пациент может писать на казахском или русском. Отвечай строго на том языке, на котором пишет пациент.`;
 
   // Build doctors section
@@ -669,37 +666,25 @@ function buildPlaygroundPrompt(
     }
   }
 
-  // Script blocks take priority over stepInstructions
-  let scriptContext = "";
-  const enabledBlocks = scriptBlocks?.filter((b) => b.enabled).sort((a, b) => a.order - b.order) ?? [];
-  if (enabledBlocks.length > 0) {
-    scriptContext = "\n\nСКРИПТ КЛИНИКИ (строго следуй этому скрипту при ответах):\n";
-    for (const block of enabledBlocks) {
-      scriptContext += `\n--- ${block.title.toUpperCase()} ---\n${block.content}\n`;
-    }
-  } else {
-    // Fallback to stepInstructions
-    const fallback = [
-      si.greeting ? `Приветствие: ${si.greeting}` : null,
-      si.collectProblem ? `Сбор проблемы: ${si.collectProblem}` : null,
-      si.suggestDoctor ? `Предложение врача: ${si.suggestDoctor}` : null,
-      si.confirm ? `Подтверждение: ${si.confirm}` : null,
-    ]
-      .filter(Boolean)
-      .join("\n\n");
-    if (fallback) scriptContext = `\n\nИнструкции по этапам:\n${fallback}`;
-    if (si.general) scriptContext += `\n\nДоп. инструкции: ${si.general}`;
+  // Script blocks: use saved ones, fall back to standard blocks (never stepInstructions in playground)
+  const savedBlocks = (settings.scriptBlocks ?? []) as ScriptBlock[];
+  const activeBlocks = savedBlocks.length > 0 ? savedBlocks : STANDARD_SCRIPT_BLOCKS;
+  const enabledBlocks = activeBlocks.filter((b) => b.enabled).sort((a, b) => a.order - b.order);
+
+  let scriptContext = "\n\nСКРИПТ КЛИНИКИ (строго следуй этому скрипту):\n";
+  for (const block of enabledBlocks) {
+    scriptContext += `\n--- ${block.title.toUpperCase()} ---\n${block.content}\n`;
   }
 
   return `Ты — AI-ассистент стоматологической клиники. Сейчас ТЕСТОВЫЙ РЕЖИМ (симуляция для проверки скрипта).
-${kazakhNote}${doctorsSection}${scriptContext}
 
-ПРАВИЛА ТЕСТОВОГО РЕЖИМА:
-- НЕ спрашивай ИИН или удостоверение — пациент уже идентифицирован в симуляции
-- Отвечай точно по скрипту клиники — так же как в реальном диалоге
-- Если пациент согласился на запись и указал время — подтверди: "✅ Записал вас! (симуляция — реальная запись не создаётся)"
-- Отвечай коротко: 1–3 предложения максимум
-- Не придумывай информацию которой нет в скрипте или списке врачей`;
+⚠️ ЖЁСТКИЕ ПРАВИЛА ТЕСТОВОГО РЕЖИМА (приоритет выше скрипта):
+1. НИ ПРИ КАКИХ УСЛОВИЯХ не проси ИИН, удостоверение или любой идентификатор — пациент уже идентифицирован
+2. НЕ спрашивай имя или телефон в начале диалога — сразу узнай проблему
+3. Если пациент согласился на запись и назвал время — подтверди: "✅ Записал вас! (это симуляция — реальная запись не создаётся)"
+4. Отвечай коротко: 1–3 предложения максимум
+5. Не придумывай информацию которой нет в скрипте или списке врачей
+${kazakhNote}${doctorsSection}${scriptContext}`;
 }
 
 function buildSystemPrompt(state: ChatbotState, settings: Awaited<ReturnType<typeof getSettings>>): string {
