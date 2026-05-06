@@ -15,6 +15,7 @@ import {
   toothTreatmentsTable,
   treatmentPlansTable,
   treatmentPlanItemsTable,
+  clinicsTable,
 } from "@workspace/db";
 import type { StepInstructions } from "@workspace/db";
 import { eq, and, inArray, gte, lte, ne, asc, desc, sql } from "drizzle-orm";
@@ -639,6 +640,7 @@ ${dentalContext}
 function buildPlaygroundPrompt(
   settings: Awaited<ReturnType<typeof getSettings>>,
   doctorsWithSlots?: DoctorWithSlots[],
+  clinicName?: string,
 ): string {
   const kazakhNote = `ВАЖНО: Пациент может писать на казахском или русском. Отвечай строго на том языке, на котором пишет пациент.`;
 
@@ -667,22 +669,23 @@ function buildPlaygroundPrompt(
   }
 
   // Resolve placeholder values for script block content
-  const clinicName =
+  const resolvedClinicName =
+    clinicName ??
     settings.greetingTemplate?.match(/«(.+?)»/)?.[1] ??
     settings.greetingTemplate?.match(/"(.+?)"/)?.[1] ??
-    "клиники";
+    "нашу клинику";
   const now = new Date();
   const todayDate = now.toLocaleDateString("ru-KZ", { day: "numeric", month: "long" });
   const firstDoctor = doctorsWithSlots?.[0];
-  const exampleDoctorName = firstDoctor?.name ?? "врача";
+  const exampleDoctorName = firstDoctor?.name ?? "Иван Петров";
   const exampleTime =
-    firstDoctor?.slots?.[0]?.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit" }) ?? "10:00";
+    firstDoctor?.slots?.[0]?.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit" }) ?? "14:00";
   const exampleDate =
     firstDoctor?.slots?.[0]?.toLocaleDateString("ru-KZ", { day: "numeric", month: "long" }) ?? todayDate;
 
   const resolvePlaceholders = (text: string) =>
     text
-      .replace(/\{\{clinic_name\}\}/g, clinicName)
+      .replace(/\{\{clinic_name\}\}/g, resolvedClinicName)
       .replace(/\{\{date\}\}/g, exampleDate)
       .replace(/\{\{time\}\}/g, exampleTime)
       .replace(/\{\{doctor_name\}\}/g, exampleDoctorName);
@@ -1685,11 +1688,13 @@ export class ChatbotService {
     userMessage: string,
     history: Array<{ role: "user" | "assistant"; content: string }> = [],
   ) {
-    const [settings, managerExamples, doctorsWithSlots] = await Promise.all([
+    const [settings, managerExamples, doctorsWithSlots, clinicRow] = await Promise.all([
       getSettings(clinicId),
       getManagerExamples(clinicId),
       getClinicDoctorsWithSlots(clinicId).catch(() => [] as DoctorWithSlots[]),
+      db.select({ name: clinicsTable.name }).from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1).catch(() => []),
     ]);
+    const clinicName = clinicRow[0]?.name ?? undefined;
 
     // Auto-start: empty message + empty history → return greeting directly from script blocks
     if (!userMessage && history.length === 0) {
@@ -1698,13 +1703,13 @@ export class ChatbotService {
       if (greetingBlock?.content) {
         // Replace template placeholders with example values
         return greetingBlock.content
-          .replace(/\{\{clinic_name\}\}/g, settings.greetingTemplate?.match(/«(.+?)»/)?.[1] ?? "клиники")
+          .replace(/\{\{clinic_name\}\}/g, clinicName ?? settings.greetingTemplate?.match(/«(.+?)»/)?.[1] ?? "нашу клинику")
           .replace(/\{\{date\}\}/g, new Date().toLocaleDateString("ru-KZ", { day: "numeric", month: "long" }))
-          .replace(/\{\{time\}\}/g, "10:00")
-          .replace(/\{\{doctor_name\}\}/g, doctorsWithSlots[0]?.name ?? "врача");
+          .replace(/\{\{time\}\}/g, doctorsWithSlots[0]?.slots?.[0]?.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit" }) ?? "14:00")
+          .replace(/\{\{doctor_name\}\}/g, doctorsWithSlots[0]?.name ?? "Иван Петров");
       }
       // Fallback: generate greeting with AI
-      const systemPrompt = buildPlaygroundPrompt(settings, doctorsWithSlots);
+      const systemPrompt = buildPlaygroundPrompt(settings, doctorsWithSlots, clinicName);
       const reply = await generateChatbotResponse(
         systemPrompt,
         [],
@@ -1714,7 +1719,7 @@ export class ChatbotService {
       return reply ?? "Здравствуйте! Чем могу помочь?";
     }
 
-    const systemPrompt = buildPlaygroundPrompt(settings, doctorsWithSlots);
+    const systemPrompt = buildPlaygroundPrompt(settings, doctorsWithSlots, clinicName);
     const chatHistory = history.map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
     const reply = await generateChatbotResponse(systemPrompt, chatHistory, userMessage, managerExamples);
     return reply ?? "AI не ответил. Проверьте API-ключ.";
