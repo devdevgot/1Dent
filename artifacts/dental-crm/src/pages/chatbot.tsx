@@ -23,6 +23,14 @@ import {
   Wand2,
   FileText,
   ClipboardList,
+  Hand,
+  Search,
+  MessageCircle,
+  Calendar,
+  Bell,
+  Heart,
+  RotateCcw,
+  type LucideIcon,
 } from "lucide-react";
 import {
   useGetChatbotSettings,
@@ -41,6 +49,22 @@ import type { ChatbotSettingsUpdate, DentalBroadcastRun, ScriptBlock } from "@wo
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+
+const BLOCK_ICONS: Record<string, LucideIcon> = {
+  hand: Hand,
+  search: Search,
+  "message-circle": MessageCircle,
+  calendar: Calendar,
+  bell: Bell,
+  megaphone: Megaphone,
+  heart: Heart,
+  "refresh-cw": RefreshCw,
+};
+
+function BlockIcon({ name, className }: { name: string; className?: string }) {
+  const Icon = BLOCK_ICONS[name] ?? Bot;
+  return <Icon className={className ?? "h-4 w-4 text-violet-600"} />;
+}
 
 const STATE_LABELS: Record<string, string> = {
   greeting: "Приветствие",
@@ -524,7 +548,9 @@ function ScriptBlockCard({
   return (
     <div className={cn("rounded-xl border border-border/50 bg-card overflow-hidden transition-opacity", !block.enabled && "opacity-60")}>
       <div className="flex items-center gap-3 px-4 py-3">
-        <span className="text-xl shrink-0 leading-none">{block.icon}</span>
+        <div className="h-8 w-8 rounded-lg bg-violet-100 flex items-center justify-center shrink-0">
+          <BlockIcon name={block.icon} />
+        </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-foreground">{block.title}</p>
           <p className="text-xs text-muted-foreground truncate">{block.description}</p>
@@ -807,7 +833,9 @@ function CustomScriptModal({
               <div className="space-y-2">
                 {parsedBlocks.map((block) => (
                   <div key={block.id} className="flex items-start gap-3 rounded-xl border border-border/50 bg-card px-4 py-3">
-                    <span className="text-lg shrink-0 leading-none mt-0.5">{block.icon}</span>
+                    <div className="h-7 w-7 rounded-md bg-violet-100 flex items-center justify-center shrink-0 mt-0.5">
+                      <BlockIcon name={block.icon} className="h-3.5 w-3.5 text-violet-600" />
+                    </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground">{block.title}</p>
                       <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 whitespace-pre-line">
@@ -857,6 +885,7 @@ export default function ChatbotPage() {
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
   const [scriptBlocks, setScriptBlocks] = useState<ScriptBlock[]>([]);
   const [showCustomScriptModal, setShowCustomScriptModal] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [scriptSaveStatus, setScriptSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scriptSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -943,6 +972,12 @@ export default function ChatbotPage() {
   const handleApplyCustomScript = (blocks: ScriptBlock[]) => {
     setScriptBlocks(blocks);
     saveScriptBlocks(blocks);
+  };
+
+  const handleResetToStandard = () => {
+    if (standardBlocks.length === 0) return;
+    setScriptBlocks(standardBlocks);
+    saveScriptBlocks(standardBlocks);
   };
 
   const handleDeleteSession = (phone: string) => {
@@ -1107,16 +1142,44 @@ export default function ChatbotPage() {
             </div>
 
             {/* Script blocks header */}
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
                 <p className="text-sm font-semibold text-foreground">Скрипт диалога</p>
                 <p className="text-xs text-muted-foreground">{scriptBlocks.length} блоков · нажмите на блок чтобы изменить</p>
               </div>
-              {scriptSaveStatus !== "idle" && (
-                <span className={cn("text-xs font-medium", scriptSaveStatus === "saved" ? "text-emerald-600" : "text-muted-foreground")}>
-                  {scriptSaveStatus === "saving" ? "Сохранение…" : "Сохранено ✓"}
-                </span>
-              )}
+              <div className="flex items-center gap-2 shrink-0">
+                {scriptSaveStatus !== "idle" && (
+                  <span className={cn("text-xs font-medium", scriptSaveStatus === "saved" ? "text-emerald-600" : "text-muted-foreground")}>
+                    {scriptSaveStatus === "saving" ? "Сохранение…" : "Сохранено ✓"}
+                  </span>
+                )}
+                {showResetConfirm ? (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground">Сбросить?</span>
+                    <button
+                      onClick={() => { handleResetToStandard(); setShowResetConfirm(false); }}
+                      className="text-xs px-2 py-1 rounded-md font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors"
+                    >
+                      Да
+                    </button>
+                    <button
+                      onClick={() => setShowResetConfirm(false)}
+                      className="text-xs px-2 py-1 rounded-md font-medium text-muted-foreground hover:bg-muted transition-colors"
+                    >
+                      Нет
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowResetConfirm(true)}
+                    title="Сбросить до стандартного скрипта"
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted px-2 py-1 rounded-md transition-colors"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    Сбросить
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Block cards */}
