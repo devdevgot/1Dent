@@ -641,30 +641,14 @@ function buildPlaygroundPrompt(
   doctorsWithSlots?: DoctorWithSlots[],
 ): string {
   const si = (settings.stepInstructions ?? {}) as StepInstructions;
-  const generalExtra = si.general ? `\n\nДополнительные инструкции клиники:\n${si.general}` : "";
-  const kazakhNote = `\nВАЖНО: Пациент может писать на казахском языке обычными кириллическими буквами. Понимай такой текст как казахский и отвечай на казахском, если пациент пишет на казахском.`;
+  const scriptBlocks = ((settings as unknown) as Record<string, unknown>)["scriptBlocks"] as ScriptBlock[] | undefined;
 
-  const customInstructions = [
-    si.greeting ? `Приветствие: ${si.greeting}` : null,
-    si.collectName ? `Сбор имени: ${si.collectName}` : null,
-    si.collectProblem ? `Описание проблемы: ${si.collectProblem}` : null,
-    si.suggestDoctor ? `Предложение врача: ${si.suggestDoctor}` : null,
-    si.confirm ? `Подтверждение: ${si.confirm}` : null,
-  ]
-    .filter(Boolean)
-    .join("\n");
+  const kazakhNote = `ВАЖНО: Пациент может писать на казахском или русском. Отвечай строго на том языке, на котором пишет пациент.`;
 
-  const stepsExtra = customInstructions
-    ? `\n\nПользовательские инструкции по этапам:\n${customInstructions}`
-    : "";
-
-  const now = new Date();
-  const todayStr = now.toLocaleDateString("ru-KZ", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-
-  // Build real doctors + slots section
+  // Build doctors section
   let doctorsSection = "";
   if (doctorsWithSlots && doctorsWithSlots.length > 0) {
-    doctorsSection = "\nВРАЧИ КЛИНИКИ (РЕАЛЬНЫЕ ДАННЫЕ — используй ТОЛЬКО этих врачей, не придумывай других):\n";
+    doctorsSection = "\n\nВРАЧИ КЛИНИКИ (используй ТОЛЬКО этих врачей):\n";
     for (const doc of doctorsWithSlots) {
       const spec = doc.specialty ? ` — ${doc.specialty}` : "";
       doctorsSection += `• ${doc.name}${spec}\n`;
@@ -685,67 +669,37 @@ function buildPlaygroundPrompt(
     }
   }
 
-  const hasDoctors = doctorsWithSlots && doctorsWithSlots.length > 0;
+  // Script blocks take priority over stepInstructions
+  let scriptContext = "";
+  const enabledBlocks = scriptBlocks?.filter((b) => b.enabled).sort((a, b) => a.order - b.order) ?? [];
+  if (enabledBlocks.length > 0) {
+    scriptContext = "\n\nСКРИПТ КЛИНИКИ (строго следуй этому скрипту при ответах):\n";
+    for (const block of enabledBlocks) {
+      scriptContext += `\n--- ${block.title.toUpperCase()} ---\n${block.content}\n`;
+    }
+  } else {
+    // Fallback to stepInstructions
+    const fallback = [
+      si.greeting ? `Приветствие: ${si.greeting}` : null,
+      si.collectProblem ? `Сбор проблемы: ${si.collectProblem}` : null,
+      si.suggestDoctor ? `Предложение врача: ${si.suggestDoctor}` : null,
+      si.confirm ? `Подтверждение: ${si.confirm}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+    if (fallback) scriptContext = `\n\nИнструкции по этапам:\n${fallback}`;
+    if (si.general) scriptContext += `\n\nДоп. инструкции: ${si.general}`;
+  }
 
-  const step3 = hasDoctors
-    ? `ЭТАП 3 — ПРЕДЛОЖИТЬ ВРАЧА (проблема понятна):
-ВЫБЕРИ одного врача из списка ВРАЧИ КЛИНИКИ выше, исходя из проблемы пациента.
-- Боль / кариес / лечение → терапевт или стоматолог общей практики
-- Удаление → хирург
-- Брекеты / выравнивание → ортодонт
-- Имплант / протез → имплантолог / ортопед
-- Чистка / профилактика → гигиенист
-- Дети → детский стоматолог
-- Десны → пародонтолог
-Если нужного специалиста нет — выбери любого доступного врача из списка.
-Формат: "Для вас подойдёт [полное имя врача из списка]. Записать вас?"`
-    : `ЭТАП 3 — ПРЕДЛОЖИТЬ ВРАЧА (проблема понятна):
-СРАЗУ предложи конкретного специалиста, не жди дополнительных вопросов.
-Примеры: Боль/кариес → терапевт, Удаление → хирург, Брекеты → ортодонт, Имплант → имплантолог, Чистка → гигиенист.
-Формат: "Для решения этой проблемы вам нужен [специалист]. Записать вас?"`;
+  return `Ты — AI-ассистент стоматологической клиники. Сейчас ТЕСТОВЫЙ РЕЖИМ (симуляция для проверки скрипта).
+${kazakhNote}${doctorsSection}${scriptContext}
 
-  const step4 = hasDoctors
-    ? `ЭТАП 4 — ПОКАЗАТЬ СЛОТЫ И УТОЧНИТЬ ВРЕМЯ (согласился на запись):
-Покажи РЕАЛЬНЫЕ свободные слоты этого врача из списка ВРАЧИ КЛИНИКИ.
-Формат:
-"Отлично! Свободные слоты врача [имя]:
-• [слот 1]
-• [слот 2]
-• [слот 3]
-Какой вам удобен, или укажите своё время?"`
-    : `ЭТАП 4 — УТОЧНИТЬ ВРЕМЯ (согласился на запись):
-Спроси удобное время. Пример: "Когда вам удобно? Уточните день и примерное время."`;
-
-  const greetingInstruction = si.greeting
-    ? `Используй эту инструкцию: ${si.greeting}`
-    : `Поприветствуй и попроси ввести ИИН (12 цифр). Пример: "Здравствуйте! Для записи к врачу введите ваш ИИН (12 цифр)."`;
-
-  return `Ты — AI-ассистент стоматологической клиники 1Dent (Казахстан). Твоя главная задача — записать пациента на приём.
-
-ПРАВИЛА:
-- Отвечай коротко (1–3 предложения максимум, кроме показа слотов)
-- Язык ответа = язык пациента (русский / казахский / английский)
-- Не ставь диагнозы. Не придумывай цены, адреса, расписание
-- Не нужно извиняться и долго сочувствовать — сразу переходи к помощи
-- Сегодня ${todayStr}
-${kazakhNote}${generalExtra}
-${doctorsSection}
-СЦЕНАРИЙ ДИАЛОГА (следуй строго по этапам):
-
-ЭТАП 1 — ПРИВЕТСТВИЕ (первое сообщение или пустая история):
-${greetingInstruction}
-
-ЭТАП 2 — УЗНАТЬ ПРОБЛЕМУ (ИИН получен или пациент представился):
-${si.collectProblem ?? "Спроси с чем обращается. Пример: \"С какой проблемой или за какой услугой вы обращаетесь?\""}
-
-${step3}
-
-${step4}
-
-ЭТАП 5 — ПОДТВЕРЖДЕНИЕ:
-${si.confirm ?? "Подтверди детали записи: имя пациента, врач, дата и время. Пример: \"✅ Запись создана! Врач: [имя], дата: [дата]. Ждём вас в клинике!\""}
-
-ВАЖНО: Не задавай лишних вопросов. Если пациент описал проблему — сразу переходи к этапу 3.`;
+ПРАВИЛА ТЕСТОВОГО РЕЖИМА:
+- НЕ спрашивай ИИН или удостоверение — пациент уже идентифицирован в симуляции
+- Отвечай точно по скрипту клиники — так же как в реальном диалоге
+- Если пациент согласился на запись и указал время — подтверди: "✅ Записал вас! (симуляция — реальная запись не создаётся)"
+- Отвечай коротко: 1–3 предложения максимум
+- Не придумывай информацию которой нет в скрипте или списке врачей`;
 }
 
 function buildSystemPrompt(state: ChatbotState, settings: Awaited<ReturnType<typeof getSettings>>): string {
@@ -1730,6 +1684,30 @@ export class ChatbotService {
       getManagerExamples(clinicId),
       getClinicDoctorsWithSlots(clinicId).catch(() => [] as DoctorWithSlots[]),
     ]);
+
+    // Auto-start: empty message + empty history → return greeting directly from script blocks
+    if (!userMessage && history.length === 0) {
+      const scriptBlocks = ((settings as unknown) as Record<string, unknown>)["scriptBlocks"] as ScriptBlock[] | undefined;
+      const greetingBlock = scriptBlocks?.find((b) => b.id === "greeting" && b.enabled);
+      if (greetingBlock?.content) {
+        // Replace template placeholders with example values
+        return greetingBlock.content
+          .replace(/\{\{clinic_name\}\}/g, settings.greetingTemplate?.match(/«(.+?)»/)?.[1] ?? "клиники")
+          .replace(/\{\{date\}\}/g, new Date().toLocaleDateString("ru-KZ", { day: "numeric", month: "long" }))
+          .replace(/\{\{time\}\}/g, "10:00")
+          .replace(/\{\{doctor_name\}\}/g, doctorsWithSlots[0]?.name ?? "врача");
+      }
+      // Fallback: generate greeting with AI
+      const systemPrompt = buildPlaygroundPrompt(settings, doctorsWithSlots);
+      const reply = await generateChatbotResponse(
+        systemPrompt,
+        [],
+        "Начни диалог — отправь приветственное сообщение как если бы пациент только что написал в первый раз.",
+        managerExamples,
+      );
+      return reply ?? "Здравствуйте! Чем могу помочь?";
+    }
+
     const systemPrompt = buildPlaygroundPrompt(settings, doctorsWithSlots);
     const chatHistory = history.map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
     const reply = await generateChatbotResponse(systemPrompt, chatHistory, userMessage, managerExamples);

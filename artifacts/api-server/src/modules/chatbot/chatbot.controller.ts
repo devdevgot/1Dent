@@ -53,7 +53,7 @@ const reorderSchema = z.object({
 });
 
 const testMessageSchema = z.object({
-  userMessage: z.string().min(1).max(500),
+  userMessage: z.string().max(500).default(""),
   history: z
     .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() }))
     .max(50)

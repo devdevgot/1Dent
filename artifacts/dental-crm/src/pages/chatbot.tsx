@@ -192,10 +192,27 @@ function PlaygroundTab() {
   const testMessage = useTestChatbotMessage();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
-  const [showWarning, setShowWarning] = useState(true);
+  const [greetingLoaded, setGreetingLoaded] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const greetingFiredRef = useRef(false);
+
+  // Auto-start: load bot greeting on first render
+  useEffect(() => {
+    if (greetingFiredRef.current) return;
+    greetingFiredRef.current = true;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    testMessage.mutate({ userMessage: "", history: [] } as any, {
+      onSuccess: (res) => {
+        const reply = res.data?.reply;
+        if (reply) setMessages([{ role: "bot", text: reply }]);
+        setGreetingLoaded(true);
+      },
+      onError: () => setGreetingLoaded(true),
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -218,7 +235,7 @@ function PlaygroundTab() {
 
   const handleSend = () => {
     const text = input.trim();
-    if (!text || testMessage.isPending) return;
+    if (!text || testMessage.isPending || !greetingLoaded) return;
     const updatedMessages = [...messages, { role: "user" as const, text }];
     setMessages(updatedMessages);
     setInput("");
@@ -226,52 +243,66 @@ function PlaygroundTab() {
       role: m.role === "user" ? ("user" as const) : ("assistant" as const),
       content: m.text,
     }));
-    testMessage.mutate(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      { userMessage: text, history } as any,
-      {
-        onSuccess: (res) => setMessages((prev) => [...prev, { role: "bot", text: res.data?.reply ?? "..." }]),
-        onError: () => setMessages((prev) => [...prev, { role: "bot", text: "Ошибка. Попробуйте ещё раз." }]),
-      },
-    );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    testMessage.mutate({ userMessage: text, history } as any, {
+      onSuccess: (res) => setMessages((prev) => [...prev, { role: "bot", text: res.data?.reply ?? "..." }]),
+      onError: () => setMessages((prev) => [...prev, { role: "bot", text: "Ошибка. Попробуйте ещё раз." }]),
+    });
   };
+
+  const handleReset = () => {
+    setMessages([]);
+    setInput("");
+    setGreetingLoaded(false);
+    greetingFiredRef.current = false;
+    setTimeout(() => {
+      greetingFiredRef.current = true;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      testMessage.mutate({ userMessage: "", history: [] } as any, {
+        onSuccess: (res) => {
+          const reply = res.data?.reply;
+          if (reply) setMessages([{ role: "bot", text: reply }]);
+          setGreetingLoaded(true);
+        },
+        onError: () => setGreetingLoaded(true),
+      });
+    }, 0);
+  };
+
+  const isInitialLoading = !greetingLoaded && messages.length === 0;
 
   return (
     <div ref={containerRef} className="h-full flex flex-col gap-3">
-      {showWarning && (
-        <div className="shrink-0 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
-          <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-          <p className="text-xs text-amber-800 flex-1">
-            Каждое сообщение в Playground расходует кредиты AI-модели — так же как реальное сообщение от клиента.
-          </p>
-          <button onClick={() => setShowWarning(false)} className="text-amber-500 hover:text-amber-700 shrink-0 ml-1">
-            <X className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      )}
-
-      <div className="shrink-0 flex items-center justify-end">
+      {/* Simulation banner */}
+      <div className="shrink-0 flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2">
+        <FlaskConical className="h-3.5 w-3.5 text-violet-600 shrink-0" />
+        <p className="text-xs text-violet-800 flex-1">
+          <span className="font-semibold">Симуляция</span> — бот работает точно как в WhatsApp, но реальные записи не создаются
+        </p>
         <button
-          onClick={() => { setMessages([]); setInput(""); }}
-          disabled={messages.length === 0}
-          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-40 transition-colors"
+          onClick={handleReset}
+          disabled={testMessage.isPending}
+          className="flex items-center gap-1 text-xs text-violet-600 hover:text-violet-800 disabled:opacity-40 transition-colors shrink-0 ml-1"
         >
-          <RefreshCw className="h-3.5 w-3.5" />
-          Новый диалог
+          <RefreshCw className="h-3 w-3" />
+          Сбросить
         </button>
       </div>
 
       <div className="flex-1 min-h-0 rounded-xl border border-border/50 bg-muted/20 flex flex-col overflow-hidden">
         <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
-          {messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-full text-center py-10">
-              <div className="h-12 w-12 rounded-full bg-violet-100 flex items-center justify-center mb-3">
-                <Bot className="h-6 w-6 text-violet-500" />
+
+          {/* Initial loading state */}
+          {isInitialLoading && (
+            <div className="flex justify-start">
+              <div className="h-6 w-6 rounded-full bg-violet-100 flex items-center justify-center shrink-0 mr-2 mt-1">
+                <Bot className="h-3.5 w-3.5 text-violet-600" />
               </div>
-              <p className="text-sm font-medium text-foreground">Playground готов</p>
-              <p className="text-xs text-muted-foreground mt-1 max-w-[220px]">
-                Напишите сообщение — бот сам ведёт диалог от приветствия до записи
-              </p>
+              <div className="bg-white border border-border/50 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:0ms]" />
+                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:150ms]" />
+                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:300ms]" />
+              </div>
             </div>
           )}
 
@@ -294,7 +325,8 @@ function PlaygroundTab() {
             </div>
           ))}
 
-          {testMessage.isPending && (
+          {/* Bot typing indicator (after user sends message) */}
+          {testMessage.isPending && greetingLoaded && (
             <div className="flex justify-start">
               <div className="h-6 w-6 rounded-full bg-violet-100 flex items-center justify-center shrink-0 mr-2 mt-1">
                 <Bot className="h-3.5 w-3.5 text-violet-600" />
@@ -313,18 +345,19 @@ function PlaygroundTab() {
           <input
             ref={inputRef}
             type="text"
-            placeholder="Напишите сообщение..."
+            placeholder={isInitialLoading ? "Бот печатает приветствие..." : "Напишите как пациент..."}
             value={input}
+            disabled={!greetingLoaded}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-            className="flex-1 text-sm border border-border/50 rounded-xl px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="flex-1 text-sm border border-border/50 rounded-xl px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
           />
           <button
             onClick={handleSend}
-            disabled={!input.trim() || testMessage.isPending}
+            disabled={!input.trim() || testMessage.isPending || !greetingLoaded}
             className="flex items-center justify-center w-10 h-10 bg-primary text-primary-foreground rounded-xl disabled:opacity-50 hover:bg-primary/90 transition-colors shrink-0"
           >
-            {testMessage.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            {testMessage.isPending && greetingLoaded ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </button>
         </div>
       </div>
