@@ -1727,7 +1727,7 @@ export function PatientDetailPanel() {
             {activeTab === "dental" && (
               <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                 <div ref={dentalScrollRef} className="flex-1 overflow-y-auto custom-scrollbar">
-                  <div className="p-3">
+                  <div className="p-3 pb-6">
                     {/* Loading skeleton — wait for teeth + plans before rendering any state */}
                     {dentalLoading && !isDiagnosisMode && (
                       <div className="space-y-3 animate-pulse">
@@ -1944,49 +1944,6 @@ export function PatientDetailPanel() {
                             </span>
                           </div>
                         )}
-
-                        <div className="flex items-center justify-center gap-6 pt-1">
-                          {/* Отмена */}
-                          <div className="flex flex-col items-center gap-1.5">
-                            <button
-                              onClick={() => {
-                                setIsDiagnosisMode(false);
-                                setDiagnosisMap(new Map());
-                                setDiagnosisNotesMap(new Map());
-                                setDiagnosisToothFdi(null);
-                                setDiagnosisServicesMap(new Map());
-                                setPickerCategory(null);
-                              }}
-                              className="w-14 h-14 rounded-full border-2 border-border flex items-center justify-center text-muted-foreground hover:bg-slate-100 hover:border-slate-300 transition-colors"
-                            >
-                              <X className="w-6 h-6" />
-                            </button>
-                            <span className="text-[11px] text-muted-foreground">{t("tooth.cancel")}</span>
-                          </div>
-
-                          {/* Голосовая диагностика */}
-                          <div className="flex flex-col items-center gap-1.5">
-                            <button
-                              onClick={() => setShowVoiceModal(true)}
-                              className="w-14 h-14 rounded-full border-2 border-primary/40 bg-primary/5 flex items-center justify-center text-primary hover:bg-primary/15 hover:border-primary/60 transition-colors"
-                            >
-                              <Mic className="w-6 h-6" />
-                            </button>
-                            <span className="text-[11px] text-muted-foreground">Голос</span>
-                          </div>
-
-                          {/* Завершить диагностику */}
-                          <div className="flex flex-col items-center gap-1.5">
-                            <button
-                              disabled={updateToothMutation.isPending || (diagnosisMap.size === 0 && diagnosisNotesMap.size === 0)}
-                              onClick={handleFinishDiagnosis}
-                              className="w-14 h-14 rounded-full border-2 border-primary bg-primary flex items-center justify-center text-white hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                            >
-                              <CheckCircle2 className="w-6 h-6" />
-                            </button>
-                            <span className="text-[11px] text-muted-foreground">Завершить</span>
-                          </div>
-                        </div>
                       </div>
                     )}
 
@@ -2566,6 +2523,57 @@ export function PatientDetailPanel() {
                     </div>
                   )}
                 </div>
+
+              {/* ── Pinned bottom bar: diagnosis action buttons ── */}
+              {(isDiagnosisMode || (!dentalLoading && !hasDiagnosis)) && (
+                <div className="shrink-0 border-t border-border/30 bg-white/95 backdrop-blur-sm safe-area-bottom">
+                  <div className="flex items-center justify-center gap-8 py-3 px-6">
+
+                    {/* Отмена */}
+                    <div className="flex flex-col items-center gap-1.5">
+                      <button
+                        onClick={() => {
+                          setIsDiagnosisMode(false);
+                          setDiagnosisMap(new Map());
+                          setDiagnosisNotesMap(new Map());
+                          setDiagnosisToothFdi(null);
+                          setDiagnosisServicesMap(new Map());
+                          setPickerCategory(null);
+                        }}
+                        className="w-14 h-14 rounded-full border-2 border-border flex items-center justify-center text-muted-foreground hover:bg-slate-100 hover:border-slate-300 transition-colors"
+                      >
+                        <X className="w-6 h-6" />
+                      </button>
+                      <span className="text-[11px] text-muted-foreground">{t("tooth.cancel")}</span>
+                    </div>
+
+                    {/* Голосовая диагностика */}
+                    <div className="flex flex-col items-center gap-1.5">
+                      <button
+                        onClick={() => setShowVoiceModal(true)}
+                        className="w-14 h-14 rounded-full border-2 border-primary/40 bg-primary/5 flex items-center justify-center text-primary hover:bg-primary/15 hover:border-primary/60 transition-colors"
+                      >
+                        <Mic className="w-6 h-6" />
+                      </button>
+                      <span className="text-[11px] text-muted-foreground">Голос</span>
+                    </div>
+
+                    {/* Завершить диагностику */}
+                    <div className="flex flex-col items-center gap-1.5">
+                      <button
+                        disabled={updateToothMutation.isPending || (diagnosisMap.size === 0 && diagnosisNotesMap.size === 0)}
+                        onClick={handleFinishDiagnosis}
+                        className="w-14 h-14 rounded-full border-2 border-primary bg-primary flex items-center justify-center text-white hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <CheckCircle2 className="w-6 h-6" />
+                      </button>
+                      <span className="text-[11px] text-muted-foreground">Завершить</span>
+                    </div>
+
+                  </div>
+                </div>
+              )}
+
               </div>
             )}
 
