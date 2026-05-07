@@ -213,7 +213,7 @@ export function VoiceDiagnosisModal({ patientId, onClose, onApplied }: Props) {
             </div>
             <div>
               <h2 className="font-bold text-sm text-foreground">Голосовая диагностика</h2>
-              <p className="text-[11px] text-muted-foreground">Диктуйте состояние зубов на русском</p>
+              <p className="text-[11px] text-muted-foreground">Диктуйте на русском, казахском или английском</p>
             </div>
           </div>
           <button
