@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Mic, MicOff, X, Loader2, Check, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUpdateTooth, getListTeethQueryKey } from "@workspace/api-client-react";
@@ -26,6 +26,7 @@ export type VoiceDiagnosisEntry = {
   condition: string;
   notes: string;
   price: number;
+  mkb10Code?: string;
 };
 
 type Phase = "idle" | "recording" | "processing" | "review" | "applying";
@@ -46,10 +47,20 @@ export function VoiceDiagnosisModal({ patientId, onClose, onApplied }: Props) {
   const [transcriptOpen, setTranscriptOpen] = useState(false);
   const [entries, setEntries] = useState<VoiceDiagnosisEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
+
+  useEffect(() => {
+    if (phase !== "recording") {
+      setRecordingSeconds(0);
+      return;
+    }
+    const id = setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
+    return () => clearInterval(id);
+  }, [phase]);
 
   const startRecording = useCallback(async () => {
     setError(null);
@@ -217,7 +228,12 @@ export function VoiceDiagnosisModal({ patientId, onClose, onApplied }: Props) {
                       <Mic className="w-7 h-7 text-white" />
                     </div>
                   </div>
-                  <p className="text-sm font-medium text-red-600 animate-pulse">Запись идёт...</p>
+                  <div className="flex flex-col items-center gap-1">
+                    <p className="text-sm font-medium text-red-600 animate-pulse">Запись идёт...</p>
+                    <p className="text-lg font-mono font-bold text-red-700 tabular-nums">
+                      {String(Math.floor(recordingSeconds / 60)).padStart(2, "0")}:{String(recordingSeconds % 60).padStart(2, "0")}
+                    </p>
+                  </div>
                   <p className="text-xs text-muted-foreground">Говорите чётко, затем нажмите «Стоп»</p>
                 </div>
               )}

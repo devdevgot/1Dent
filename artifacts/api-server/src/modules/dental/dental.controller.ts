@@ -181,7 +181,6 @@ router.post(
       const form = new FormData();
       form.append("file", audioBlob, audioFilename);
       form.append("model", "openai/whisper-large-v3-turbo");
-      form.append("language", "ru");
 
       const whisperRes = await fetch("https://openrouter.ai/api/v1/audio/transcriptions", {
         method: "POST",
@@ -285,6 +284,7 @@ router.post(
       condition: d.condition,
       notes: d.notes,
       price: prices[d.condition]?.price ?? 0,
+      mkb10Code: prices[d.condition]?.mkb10 ?? "",
     }));
 
     logger.info(
