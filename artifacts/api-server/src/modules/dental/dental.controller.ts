@@ -13,6 +13,7 @@ import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 import { PatientsRepository } from "../patients/patients.repository";
 import { ClinicPricesRepository } from "../clinic/clinic-prices.repository";
+import { ProceduresRepository } from "../procedures/procedures.repository";
 import { triggerDentalAiAnalysis, getLatestDentalAnalysis, deleteLatestDentalAnalysis } from "./dental-ai";
 import { logger } from "../../lib/logger";
 import { openrouter, DEEPSEEK_MODEL } from "../../lib/openrouter-client";
@@ -21,6 +22,17 @@ const router: IRouter = Router({ mergeParams: true });
 const repo = new DentalRepository();
 const patientsRepo = new PatientsRepository();
 const pricesRepo = new ClinicPricesRepository();
+const procRepo = new ProceduresRepository();
+
+const CONDITION_TO_CATEGORY: Record<string, string | undefined> = {
+  cavity: "therapy",
+  treated: "therapy",
+  root_canal: "therapy",
+  crown: "orthopedics",
+  implant: "implantation",
+  extraction_needed: "surgery",
+  missing: "surgery",
+};
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -298,17 +310,30 @@ router.post(
       return next(err);
     }
 
-    // ── Step 3: Enrich with clinic prices ──
-    const prices = await pricesRepo.getConditionPrices(req.user!.clinicId).catch(next);
+    // ── Step 3: Enrich with clinic prices + suggested procedure templates ──
+    const [prices, allTemplates] = await Promise.all([
+      pricesRepo.getConditionPrices(req.user!.clinicId),
+      procRepo.listTemplates(req.user!.clinicId),
+    ]);
     if (!prices) return;
 
-    const enriched = diagnoses.map((d) => ({
-      fdi: d.fdi,
-      condition: d.condition,
-      notes: d.notes,
-      price: prices[d.condition]?.price ?? 0,
-      mkb10Code: prices[d.condition]?.mkb10 ?? "",
-    }));
+    const enriched = diagnoses.map((d) => {
+      const cat = CONDITION_TO_CATEGORY[d.condition];
+      const suggestedTemplates = cat
+        ? allTemplates
+            .filter((t) => t.category === cat && t.defaultPrice > 0)
+            .slice(0, 8)
+            .map((t) => ({ id: t.id, name: t.name, defaultPrice: t.defaultPrice }))
+        : [];
+      return {
+        fdi: d.fdi,
+        condition: d.condition,
+        notes: d.notes,
+        price: prices[d.condition]?.price ?? 0,
+        mkb10Code: prices[d.condition]?.mkb10 ?? "",
+        suggestedTemplates,
+      };
+    });
 
     logger.info(
       { patientId, clinicId: req.user!.clinicId, transcript: transcript.slice(0, 200), count: enriched.length },
