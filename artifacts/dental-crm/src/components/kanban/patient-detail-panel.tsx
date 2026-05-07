@@ -1721,33 +1721,8 @@ export function PatientDetailPanel() {
                         <div className="h-36 bg-slate-100 rounded-2xl" />
                       </div>
                     )}
-                    {/* No diagnosis yet */}
-                    {!dentalLoading && !hasDiagnosis && !isDiagnosisMode && (
-                      <div className="flex flex-col items-center justify-center py-12 gap-4">
-                        <p className="text-sm text-muted-foreground text-center px-4">
-                          {t("patient.noTeethData")}
-                        </p>
-                        <div className="flex flex-col sm:flex-row items-center gap-2">
-                          <Button
-                            onClick={() => setIsDiagnosisMode(true)}
-                            className="gap-2"
-                          >
-                            {t("patient.startDiagnosis")}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            onClick={() => setShowVoiceModal(true)}
-                            className="gap-2"
-                          >
-                            <Mic className="w-4 h-4" />
-                            Голосовая диагностика
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Diagnosis mode */}
-                    {isDiagnosisMode && (
+                    {/* Diagnosis mode (primary — no teeth yet, or manual re-diagnosis) */}
+                    {(isDiagnosisMode || (!dentalLoading && !hasDiagnosis)) && (
                       <div className="space-y-3">
                         <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
                           <p className="text-xs text-amber-800 font-medium">
@@ -2038,7 +2013,7 @@ export function PatientDetailPanel() {
                   </div>
 
                   {/* Treatment Plan section — below the dental chart */}
-                  {!dentalLoading && !isDiagnosisMode && (
+                  {!dentalLoading && !isDiagnosisMode && hasDiagnosis && (
                     <div className="border-t border-border/50">
                       {/* Section label */}
                       <button
