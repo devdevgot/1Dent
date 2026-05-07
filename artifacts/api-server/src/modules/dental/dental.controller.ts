@@ -176,7 +176,13 @@ router.post(
     try {
       const audioMime = req.file.mimetype || "audio/webm";
       const audioBlob = new Blob([req.file.buffer], { type: audioMime });
-      const audioFilename = req.file.originalname || `recording.${audioMime.includes("ogg") ? "ogg" : "webm"}`;
+
+      const getAudioExt = (mime: string): string => {
+        if (mime.includes("ogg")) return "ogg";
+        if (mime.includes("mp4") || mime.includes("m4a") || mime.includes("mpeg")) return "mp4";
+        return "webm";
+      };
+      const audioFilename = req.file.originalname || `recording.${getAudioExt(audioMime)}`;
 
       const form = new FormData();
       form.append("file", audioBlob, audioFilename);
@@ -192,8 +198,10 @@ router.post(
 
       if (!whisperRes.ok) {
         const errText = await whisperRes.text();
-        logger.error({ status: whisperRes.status, body: errText }, "[VoiceDiagnose] Whisper error");
-        return next(new ValidationError(`Transcription failed: ${whisperRes.status}`));
+        logger.error({ status: whisperRes.status, body: errText, audioMime, audioFilename }, "[VoiceDiagnose] Whisper error");
+        let detail = "";
+        try { detail = (JSON.parse(errText) as { error?: { message?: string }; message?: string })?.error?.message ?? ""; } catch { detail = errText.slice(0, 120); }
+        return next(new ValidationError(`Ошибка транскрипции (${whisperRes.status})${detail ? ": " + detail : ""}`));
       }
 
       const whisperData = (await whisperRes.json()) as { text?: string };

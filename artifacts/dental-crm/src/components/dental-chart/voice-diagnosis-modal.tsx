@@ -68,13 +68,24 @@ export function VoiceDiagnosisModal({ patientId, onClose, onApplied }: Props) {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
 
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : MediaRecorder.isTypeSupported("audio/webm")
-          ? "audio/webm"
-          : "audio/ogg";
+      const pickMimeType = (): string => {
+        const candidates = [
+          "audio/webm;codecs=opus",
+          "audio/webm",
+          "audio/mp4",
+          "audio/mp4;codecs=mp4a.40.2",
+          "audio/ogg;codecs=opus",
+          "audio/ogg",
+        ];
+        for (const t of candidates) {
+          if (MediaRecorder.isTypeSupported(t)) return t;
+        }
+        return "";
+      };
+      const mimeType = pickMimeType();
 
-      const mr = new MediaRecorder(stream, { mimeType });
+      const mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      const actualMime = mr.mimeType || mimeType || "audio/webm";
       mediaRecorderRef.current = mr;
       chunksRef.current = [];
 
@@ -85,8 +96,8 @@ export function VoiceDiagnosisModal({ patientId, onClose, onApplied }: Props) {
       mr.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
-        const blob = new Blob(chunksRef.current, { type: mimeType });
-        await sendAudio(blob, mimeType);
+        const blob = new Blob(chunksRef.current, { type: actualMime });
+        await sendAudio(blob, actualMime);
       };
 
       mr.start(250);
@@ -103,8 +114,14 @@ export function VoiceDiagnosisModal({ patientId, onClose, onApplied }: Props) {
     mediaRecorderRef.current?.stop();
   }, []);
 
+  const getAudioExt = (mime: string): string => {
+    if (mime.includes("ogg")) return "ogg";
+    if (mime.includes("mp4") || mime.includes("m4a") || mime.includes("mpeg")) return "mp4";
+    return "webm";
+  };
+
   const sendAudio = async (blob: Blob, mimeType: string) => {
-    const ext = mimeType.includes("ogg") ? "ogg" : "webm";
+    const ext = getAudioExt(mimeType);
     const formData = new FormData();
     formData.append("audio", blob, `recording.${ext}`);
 
