@@ -8,7 +8,6 @@ import {
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import multer from "multer";
-import FormDataNode from "form-data";
 import { DentalRepository } from "./dental.repository";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
@@ -172,53 +171,58 @@ router.post(
       return next(new ValidationError("OpenRouter API key is not configured"));
     }
 
-    // ── Step 1: Transcribe audio with Whisper (raw fetch — avoids SDK JSON-parse issues) ──
+    // ── Step 1: Transcribe audio via Gemini chat completions (OpenRouter doesn't support /audio/transcriptions) ──
     let transcript = "";
     try {
       const audioMime = req.file.mimetype || "audio/webm";
-      const getAudioExt = (mime: string): string => {
-        if (mime.includes("ogg")) return "ogg";
-        if (mime.includes("mp4") || mime.includes("m4a") || mime.includes("mpeg")) return "mp4";
-        return "webm";
-      };
-      const ext = getAudioExt(audioMime);
-      const audioFilename = req.file.originalname || `recording.${ext}`;
+      const base64Audio = req.file.buffer.toString("base64");
 
-      const formData = new FormDataNode();
-      formData.append("file", req.file.buffer, {
-        filename: audioFilename,
-        contentType: audioMime,
-        knownLength: req.file.buffer.length,
-      });
-      formData.append("model", "openai/whisper-large-v3-turbo");
-      formData.append("language", "ru");
-
-      const whisperRes = await fetch("https://openrouter.ai/api/v1/audio/transcriptions", {
+      const sttRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${apiKey}`,
-          ...formData.getHeaders(),
+          "Content-Type": "application/json",
         },
-        body: formData.getBuffer(),
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: "Transcribe the following audio recording verbatim. The speaker is a dentist describing teeth conditions in Russian (may include Kazakh or English words). Return ONLY the transcribed text, with no preamble, comments, or formatting.",
+                },
+                {
+                  type: "file",
+                  file: {
+                    filename: `recording.${audioMime.includes("mp4") ? "mp4" : audioMime.includes("ogg") ? "ogg" : "webm"}`,
+                    file_data: `data:${audioMime};base64,${base64Audio}`,
+                  },
+                },
+              ],
+            },
+          ],
+        }),
       });
 
-      const rawText = await whisperRes.text();
-      if (!whisperRes.ok) {
-        logger.error({ status: whisperRes.status, body: rawText }, "[VoiceDiagnose] Whisper API error");
-        return next(new Error(`Whisper error ${whisperRes.status}: ${rawText.slice(0, 200)}`));
+      const rawText = await sttRes.text();
+      if (!sttRes.ok) {
+        logger.error({ status: sttRes.status, body: rawText }, "[VoiceDiagnose] STT API error");
+        return next(new Error(`STT error ${sttRes.status}: ${rawText.slice(0, 300)}`));
       }
 
-      let whisperJson: { text?: string };
+      let sttJson: { choices?: Array<{ message?: { content?: string } }> };
       try {
-        whisperJson = JSON.parse(rawText);
+        sttJson = JSON.parse(rawText);
       } catch {
-        logger.error({ rawText }, "[VoiceDiagnose] Whisper response is not JSON");
-        return next(new Error("Whisper returned unexpected response"));
+        logger.error({ rawText }, "[VoiceDiagnose] STT response is not JSON");
+        return next(new Error("STT returned unexpected response"));
       }
 
-      transcript = whisperJson.text?.trim() ?? "";
+      transcript = sttJson.choices?.[0]?.message?.content?.trim() ?? "";
     } catch (err) {
-      logger.error({ err }, "[VoiceDiagnose] Whisper fetch error");
+      logger.error({ err }, "[VoiceDiagnose] STT fetch error");
       return next(err);
     }
 
