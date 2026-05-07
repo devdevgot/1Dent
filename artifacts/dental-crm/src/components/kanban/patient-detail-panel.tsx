@@ -1957,6 +1957,16 @@ export function PatientDetailPanel() {
                           </div>
                         )}
 
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full gap-2 border-primary/30 text-primary hover:bg-primary/10"
+                          onClick={() => setShowVoiceModal(true)}
+                        >
+                          <Mic className="w-4 h-4" />
+                          Голосовая диагностика
+                        </Button>
+
                         <div className="flex gap-2">
                           <Button
                             variant="outline"
