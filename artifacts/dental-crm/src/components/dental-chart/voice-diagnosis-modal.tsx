@@ -92,9 +92,11 @@ export function VoiceDiagnosisModal({ patientId, onClose, onApplied }: Props) {
       mr.start(250);
       setPhase("recording");
     } catch (err) {
-      setError("Не удалось получить доступ к микрофону. Проверьте разрешения браузера.");
+      const msg = "Не удалось получить доступ к микрофону. Проверьте разрешения браузера.";
+      setError(msg);
+      toast({ title: "Нет доступа к микрофону", description: msg, variant: "destructive" });
     }
-  }, []);
+  }, [toast]);
 
   const stopRecording = useCallback(() => {
     setPhase("processing");
@@ -117,8 +119,8 @@ export function VoiceDiagnosisModal({ patientId, onClose, onApplied }: Props) {
       });
 
       if (!res.ok) {
-        const json = (await res.json().catch(() => ({}))) as { message?: string };
-        throw new Error(json.message ?? `Ошибка сервера: ${res.status}`);
+        const json = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+        throw new Error(json.error ?? json.message ?? `Ошибка сервера: ${res.status}`);
       }
 
       const json = (await res.json()) as {
@@ -355,18 +357,14 @@ export function VoiceDiagnosisModal({ patientId, onClose, onApplied }: Props) {
                               </select>
                             </div>
 
-                            {/* Price */}
+                            {/* Price — read-only reference; clinic prices managed in Settings */}
                             <div className="space-y-1">
                               <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-                                Цена (₸)
+                                Ориентировочная цена
                               </label>
-                              <input
-                                type="number"
-                                min={0}
-                                value={entry.price}
-                                onChange={(e) => updateEntry(idx, { price: Number(e.target.value) })}
-                                className="w-full text-xs border border-border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
-                              />
+                              <div className="w-full text-xs border border-border/50 rounded-lg px-2 py-1.5 bg-slate-50 text-foreground/70">
+                                {entry.price > 0 ? `${entry.price.toLocaleString("ru-KZ")} ₸` : "—"}
+                              </div>
                             </div>
                           </div>
 
