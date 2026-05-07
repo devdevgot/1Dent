@@ -31,13 +31,14 @@ import {
   getDentalAiAnalysisQueryKey,
 } from "@workspace/api-client-react";
 import { DentalAiAnalysisPanel } from "./dental-ai-analysis-panel";
+import { VoiceDiagnosisModal } from "@/components/dental-chart/voice-diagnosis-modal";
 import type { ToothRecord, ToothTreatment, ProcedureTemplate } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   X, ChevronDown, CheckCircle2, Clock, ArrowUpRight,
   Phone, User, Calendar, CreditCard, Stethoscope, Copy, Save, IdCard,
   ClipboardList, Plus, BadgeCheck, Circle, ArrowLeft, Square, CheckSquare, Loader2,
-  Scissors, Crown, Wrench, Baby, Sparkles, Activity, ScanLine, Paintbrush, Search, GripVertical,
+  Scissors, Crown, Wrench, Baby, Sparkles, Activity, ScanLine, Paintbrush, Search, GripVertical, Mic,
 } from "lucide-react";
 import { calculateAge, formatDateOfBirth, maskIIN } from "@workspace/api-zod";
 import { Button } from "@/components/ui/button";
@@ -909,6 +910,7 @@ export function PatientDetailPanel() {
   const [isStatusOpen, setIsStatusOpen] = useState(false);
 
   const [isDiagnosisMode, setIsDiagnosisMode] = useState(false);
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [diagnosisMap, setDiagnosisMap] = useState<DiagnosisMap>(new Map());
   const [diagnosisNotesMap, setDiagnosisNotesMap] = useState<DiagnosisNotesMap>(new Map());
   const [diagnosisToothFdi, setDiagnosisToothFdi] = useState<number | null>(null);
@@ -1716,12 +1718,22 @@ export function PatientDetailPanel() {
                         <p className="text-sm text-muted-foreground text-center px-4">
                           {t("patient.noTeethData")}
                         </p>
-                        <Button
-                          onClick={() => setIsDiagnosisMode(true)}
-                          className="gap-2"
-                        >
-                          {t("patient.startDiagnosis")}
-                        </Button>
+                        <div className="flex flex-col sm:flex-row items-center gap-2">
+                          <Button
+                            onClick={() => setIsDiagnosisMode(true)}
+                            className="gap-2"
+                          >
+                            {t("patient.startDiagnosis")}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => setShowVoiceModal(true)}
+                            className="gap-2"
+                          >
+                            <Mic className="w-4 h-4" />
+                            Голосовая диагностика
+                          </Button>
+                        </div>
                       </div>
                     )}
 
@@ -1971,16 +1983,25 @@ export function PatientDetailPanel() {
                           <p className="text-[11px] text-muted-foreground">
                             {t("patient.clickTooth")}
                           </p>
-                          <button
-                            onClick={() => setIsDiagnosisMode(true)}
-                            className="flex items-center gap-1.5 text-[11px] font-medium text-primary hover:bg-primary/10 px-2.5 py-1 rounded-lg border border-primary/30 transition-colors shrink-0"
-                          >
-                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                              <path d="M3 3v5h5"/>
-                            </svg>
-                            Повторная диагностика
-                          </button>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              onClick={() => setShowVoiceModal(true)}
+                              className="flex items-center gap-1.5 text-[11px] font-medium text-primary hover:bg-primary/10 px-2.5 py-1 rounded-lg border border-primary/30 transition-colors"
+                            >
+                              <Mic className="w-3.5 h-3.5" />
+                              Голос
+                            </button>
+                            <button
+                              onClick={() => setIsDiagnosisMode(true)}
+                              className="flex items-center gap-1.5 text-[11px] font-medium text-primary hover:bg-primary/10 px-2.5 py-1 rounded-lg border border-primary/30 transition-colors"
+                            >
+                              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                                <path d="M3 3v5h5"/>
+                              </svg>
+                              Повторная диагностика
+                            </button>
+                          </div>
                         </div>
                         <FdiChart
                           teethData={teethMap}
@@ -2585,6 +2606,17 @@ export function PatientDetailPanel() {
           onTreatmentEnded={() => {
             setActiveToothFdi(null);
             setActiveTreatmentSnapshot(null);
+          }}
+        />
+      )}
+
+      {/* Voice diagnosis modal */}
+      {showVoiceModal && selectedPatientId && (
+        <VoiceDiagnosisModal
+          patientId={selectedPatientId}
+          onClose={() => setShowVoiceModal(false)}
+          onApplied={() => {
+            setShowVoiceModal(false);
           }}
         />
       )}

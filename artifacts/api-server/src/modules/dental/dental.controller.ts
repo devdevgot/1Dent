@@ -7,16 +7,25 @@ import {
 } from "express";
 import { z } from "zod";
 import { randomUUID } from "crypto";
+import multer from "multer";
 import { DentalRepository } from "./dental.repository";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 import { PatientsRepository } from "../patients/patients.repository";
+import { ClinicPricesRepository } from "../clinic/clinic-prices.repository";
 import { triggerDentalAiAnalysis, getLatestDentalAnalysis, deleteLatestDentalAnalysis } from "./dental-ai";
 import { logger } from "../../lib/logger";
+import { openrouter, DEEPSEEK_MODEL } from "../../lib/openrouter-client";
 
 const router: IRouter = Router({ mergeParams: true });
 const repo = new DentalRepository();
 const patientsRepo = new PatientsRepository();
+const pricesRepo = new ClinicPricesRepository();
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 25 * 1024 * 1024 },
+});
 
 const toothConditionValues = [
   "healthy",
@@ -141,6 +150,151 @@ router.post("/trigger-ai-analysis", writeRoles, async (req: Request, res: Respon
 
   res.status(202).json({ success: true });
 });
+
+// POST /patients/:id/teeth/voice-diagnose
+// Accepts multipart audio, transcribes via Whisper, parses into tooth diagnoses
+router.post(
+  "/voice-diagnose",
+  writeRoles,
+  upload.single("audio"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const patientId = String(req.params["id"]);
+    const ok = await assertPatientAccess(patientId, req.user!.clinicId, next).catch(next);
+    if (!ok) return;
+
+    if (!req.file) {
+      return next(new ValidationError("Audio file is required (field: audio)"));
+    }
+
+    const apiKey = process.env["OPENROUTER_API_KEY"];
+    if (!apiKey) {
+      return next(new ValidationError("OpenRouter API key is not configured"));
+    }
+
+    // ── Step 1: Transcribe audio with Whisper ──
+    let transcript = "";
+    try {
+      const audioMime = req.file.mimetype || "audio/webm";
+      const audioBlob = new Blob([req.file.buffer], { type: audioMime });
+      const audioFilename = req.file.originalname || `recording.${audioMime.includes("ogg") ? "ogg" : "webm"}`;
+
+      const form = new FormData();
+      form.append("file", audioBlob, audioFilename);
+      form.append("model", "openai/whisper-large-v3-turbo");
+      form.append("language", "ru");
+
+      const whisperRes = await fetch("https://openrouter.ai/api/v1/audio/transcriptions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: form,
+      });
+
+      if (!whisperRes.ok) {
+        const errText = await whisperRes.text();
+        logger.error({ status: whisperRes.status, body: errText }, "[VoiceDiagnose] Whisper error");
+        return next(new ValidationError(`Transcription failed: ${whisperRes.status}`));
+      }
+
+      const whisperData = (await whisperRes.json()) as { text?: string };
+      transcript = whisperData.text?.trim() ?? "";
+    } catch (err) {
+      logger.error({ err }, "[VoiceDiagnose] Whisper fetch error");
+      return next(err);
+    }
+
+    if (!transcript) {
+      return res.json({ success: true, data: { transcript: "", diagnoses: [] } });
+    }
+
+    // ── Step 2: Parse transcript into structured diagnoses ──
+    const systemPrompt = `Ты — стоматологический ассистент. Твоя задача — разобрать устный осмотр зубов на русском/казахском/английском языке и вернуть структурированный список диагнозов по зубам.
+
+Номера зубов в формате FDI: 11–18 (верхний правый), 21–28 (верхний левый), 31–38 (нижний левый), 41–48 (нижний правый).
+Допустимые условия (condition):
+- healthy — здоровый
+- cavity — кариес
+- treated — вылечен / пломба
+- crown — коронка
+- root_canal — корневой канал / пульпит / эндодонтия
+- implant — имплант
+- missing — отсутствует / удалён
+- extraction_needed — требует удаления / под удаление
+
+Правила:
+1. Если зуб упоминается по номеру — используй точный FDI номер.
+2. Если зуб упоминается как "верхний правый шестой" и т.п. — переведи в FDI (верхний правый 6й = 16).
+3. "Четвёрка" = 4-й зуб; уточни квадрант из контекста, если возможно.
+4. Игнорируй зубы с состоянием "healthy" — их не нужно включать в список (это норма).
+5. Верни ТОЛЬКО JSON массив, без пояснений.
+
+Формат ответа:
+[{"fdi": 16, "condition": "cavity", "notes": "глубокий кариес дистальной поверхности"}, ...]
+
+Если ничего не удалось разобрать — верни пустой массив [].`;
+
+    let diagnoses: Array<{ fdi: number; condition: string; notes: string }> = [];
+    try {
+      const chatRes = await openrouter.chat.completions.create({
+        model: DEEPSEEK_MODEL,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Осмотр: "${transcript}"` },
+        ],
+        temperature: 0.1,
+        max_tokens: 1000,
+      });
+
+      const raw = chatRes.choices[0]?.message?.content?.trim() ?? "[]";
+      const jsonMatch = raw.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]) as unknown[];
+        const validConditions = new Set([
+          "healthy", "cavity", "treated", "crown", "root_canal",
+          "implant", "missing", "extraction_needed",
+        ]);
+        diagnoses = (parsed as Array<Record<string, unknown>>)
+          .filter(
+            (d) =>
+              typeof d === "object" &&
+              d !== null &&
+              typeof d["fdi"] === "number" &&
+              (d["fdi"] as number) >= 11 &&
+              (d["fdi"] as number) <= 48 &&
+              typeof d["condition"] === "string" &&
+              validConditions.has(d["condition"] as string),
+          )
+          .map((d) => ({
+            fdi: d["fdi"] as number,
+            condition: d["condition"] as string,
+            notes: typeof d["notes"] === "string" ? (d["notes"] as string) : "",
+          }));
+      }
+    } catch (err) {
+      logger.error({ err }, "[VoiceDiagnose] LLM parse error");
+      return next(err);
+    }
+
+    // ── Step 3: Enrich with clinic prices ──
+    const prices = await pricesRepo.getConditionPrices(req.user!.clinicId).catch(next);
+    if (!prices) return;
+
+    const enriched = diagnoses.map((d) => ({
+      fdi: d.fdi,
+      condition: d.condition,
+      notes: d.notes,
+      price: prices[d.condition]?.price ?? 0,
+    }));
+
+    logger.info(
+      { patientId, clinicId: req.user!.clinicId, transcript: transcript.slice(0, 200), count: enriched.length },
+      "[VoiceDiagnose] Completed",
+    );
+
+    res.json({ success: true, data: { transcript, diagnoses: enriched } });
+  },
+);
 
 // GET /patients/:id/teeth/:toothFdi/treatments
 router.get("/:toothFdi/treatments", readRoles, async (req: Request, res: Response, next: NextFunction) => {
