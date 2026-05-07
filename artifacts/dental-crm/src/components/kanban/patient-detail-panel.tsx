@@ -980,7 +980,7 @@ export function PatientDetailPanel() {
     {
       query: {
         queryKey: getListProcedureTemplatesQueryKey(pickerCategory ? { category: pickerCategory } : undefined),
-        enabled: pickerCategory !== null && isDiagnosisMode,
+        enabled: pickerCategory !== null && (isDiagnosisMode || !hasDiagnosis),
         staleTime: 60_000,
       },
     },
