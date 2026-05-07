@@ -41,7 +41,8 @@ export class AuthService {
     email: string;
     password: string;
   }): Promise<AuthResult> {
-    const existing = await this.repo.findUserByEmail(data.email);
+    const normalizedEmail = data.email.toLowerCase();
+    const existing = await this.repo.findUserByEmail(normalizedEmail);
     if (existing) {
       throw new ConflictError("Email already in use");
     }
@@ -56,7 +57,7 @@ export class AuthService {
       id: randomUUID(),
       clinicId: clinic.id,
       name: data.name,
-      email: data.email,
+      email: normalizedEmail,
       passwordHash,
       role: "owner",
     });
@@ -67,7 +68,7 @@ export class AuthService {
   }
 
   async login(data: { email: string; password: string }): Promise<AuthResult> {
-    const user = await this.repo.findUserByEmail(data.email);
+    const user = await this.repo.findUserByEmail(data.email.toLowerCase());
     if (!user) {
       throw new UnauthorizedError("Invalid email or password");
     }
@@ -157,7 +158,7 @@ export class AuthService {
       throw new ForbiddenError("Only owners can create other owners");
     }
 
-    const existing = await this.repo.findUserByEmail(data.email);
+    const existing = await this.repo.findUserByEmail(data.email.toLowerCase());
     if (existing) throw new ConflictError("Email already in use");
 
     const passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
@@ -165,7 +166,7 @@ export class AuthService {
       id: randomUUID(),
       clinicId: data.clinicId,
       name: data.name,
-      email: data.email,
+      email: data.email.toLowerCase(),
       passwordHash,
       role: data.role,
       phone: data.phone ?? null,
