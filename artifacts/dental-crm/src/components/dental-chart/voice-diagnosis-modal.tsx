@@ -240,20 +240,37 @@ export function VoiceDiagnosisModal({ patientId, onClose, onApplied }: Props) {
               )}
 
               {phase === "recording" && (
-                <div className="flex flex-col items-center gap-3">
-                  <div className="relative">
-                    <span className="absolute inset-0 rounded-full bg-red-400/30 animate-ping" />
-                    <div className="relative w-16 h-16 rounded-full bg-red-500 flex items-center justify-center shadow-lg">
+                <div className="flex flex-col items-center gap-5 w-full">
+                  {/* Animated mic */}
+                  <div className="relative flex items-center justify-center">
+                    <span className="absolute w-24 h-24 rounded-full bg-primary/10 animate-ping" style={{ animationDuration: "1.4s" }} />
+                    <span className="absolute w-20 h-20 rounded-full bg-primary/15 animate-ping" style={{ animationDuration: "1.8s" }} />
+                    <div className="relative w-16 h-16 rounded-full bg-primary flex items-center justify-center shadow-lg">
                       <Mic className="w-7 h-7 text-white" />
                     </div>
                   </div>
+
+                  {/* Timer + label */}
                   <div className="flex flex-col items-center gap-1">
-                    <p className="text-sm font-medium text-red-600 animate-pulse">Запись идёт...</p>
-                    <p className="text-lg font-mono font-bold text-red-700 tabular-nums">
+                    <p className="text-lg font-mono font-bold tabular-nums text-foreground">
                       {String(Math.floor(recordingSeconds / 60)).padStart(2, "0")}:{String(recordingSeconds % 60).padStart(2, "0")}
                     </p>
+                    <p className="text-xs text-muted-foreground">Говорите чётко, затем нажмите «Готово»</p>
                   </div>
-                  <p className="text-xs text-muted-foreground">Говорите чётко, затем нажмите «Стоп»</p>
+
+                  {/* Sound bars */}
+                  <div className="flex items-end gap-[3px] h-7">
+                    {[0.4, 0.7, 1, 0.6, 0.9, 0.5, 0.8, 1, 0.6, 0.4, 0.75, 0.9].map((h, i) => (
+                      <span
+                        key={i}
+                        className="w-1 rounded-full bg-primary"
+                        style={{
+                          height: `${h * 100}%`,
+                          animation: `soundbar 0.9s ease-in-out ${(i * 0.07).toFixed(2)}s infinite alternate`,
+                        }}
+                      />
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -271,9 +288,9 @@ export function VoiceDiagnosisModal({ patientId, onClose, onApplied }: Props) {
                   </Button>
                 )}
                 {phase === "recording" && (
-                  <Button onClick={stopRecording} variant="destructive" className="gap-2 px-6">
-                    <MicOff className="w-4 h-4" />
-                    Стоп
+                  <Button onClick={stopRecording} className="gap-2 px-8 py-5 text-base font-semibold shadow-md">
+                    <Check className="w-5 h-5" />
+                    Готово
                   </Button>
                 )}
               </div>
