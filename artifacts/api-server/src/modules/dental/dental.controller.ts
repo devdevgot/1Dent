@@ -8,7 +8,7 @@ import {
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import multer from "multer";
-import OpenAI, { toFile } from "openai";
+import FormDataNode from "form-data";
 import { DentalRepository } from "./dental.repository";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
@@ -184,19 +184,22 @@ router.post(
       const ext = getAudioExt(audioMime);
       const audioFilename = req.file.originalname || `recording.${ext}`;
 
-      const formData = new FormData();
-      formData.append(
-        "file",
-        new Blob([req.file.buffer], { type: audioMime }),
-        audioFilename,
-      );
+      const formData = new FormDataNode();
+      formData.append("file", req.file.buffer, {
+        filename: audioFilename,
+        contentType: audioMime,
+        knownLength: req.file.buffer.length,
+      });
       formData.append("model", "openai/whisper-large-v3-turbo");
       formData.append("language", "ru");
 
       const whisperRes = await fetch("https://openrouter.ai/api/v1/audio/transcriptions", {
         method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}` },
-        body: formData,
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          ...formData.getHeaders(),
+        },
+        body: formData.getBuffer(),
       });
 
       const rawText = await whisperRes.text();
