@@ -172,7 +172,7 @@ router.post(
       return next(new ValidationError("OpenRouter API key is not configured"));
     }
 
-    // ── Step 1: Transcribe audio with Whisper ──
+    // ── Step 1: Transcribe audio with Whisper (raw fetch — avoids SDK JSON-parse issues) ──
     let transcript = "";
     try {
       const audioMime = req.file.mimetype || "audio/webm";
@@ -181,19 +181,39 @@ router.post(
         if (mime.includes("mp4") || mime.includes("m4a") || mime.includes("mpeg")) return "mp4";
         return "webm";
       };
-      const audioFilename = req.file.originalname || `recording.${getAudioExt(audioMime)}`;
+      const ext = getAudioExt(audioMime);
+      const audioFilename = req.file.originalname || `recording.${ext}`;
 
-      const openai = new OpenAI({
-        apiKey,
-        baseURL: "https://openrouter.ai/api/v1",
+      const formData = new FormData();
+      formData.append(
+        "file",
+        new Blob([req.file.buffer], { type: audioMime }),
+        audioFilename,
+      );
+      formData.append("model", "openai/whisper-large-v3-turbo");
+      formData.append("language", "ru");
+
+      const whisperRes = await fetch("https://openrouter.ai/api/v1/audio/transcriptions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}` },
+        body: formData,
       });
 
-      const whisperResult = await openai.audio.transcriptions.create({
-        file: await toFile(req.file.buffer, audioFilename, { type: audioMime }),
-        model: "openai/whisper-large-v3-turbo",
-      });
+      const rawText = await whisperRes.text();
+      if (!whisperRes.ok) {
+        logger.error({ status: whisperRes.status, body: rawText }, "[VoiceDiagnose] Whisper API error");
+        return next(new Error(`Whisper error ${whisperRes.status}: ${rawText.slice(0, 200)}`));
+      }
 
-      transcript = whisperResult.text?.trim() ?? "";
+      let whisperJson: { text?: string };
+      try {
+        whisperJson = JSON.parse(rawText);
+      } catch {
+        logger.error({ rawText }, "[VoiceDiagnose] Whisper response is not JSON");
+        return next(new Error("Whisper returned unexpected response"));
+      }
+
+      transcript = whisperJson.text?.trim() ?? "";
     } catch (err) {
       logger.error({ err }, "[VoiceDiagnose] Whisper fetch error");
       return next(err);
