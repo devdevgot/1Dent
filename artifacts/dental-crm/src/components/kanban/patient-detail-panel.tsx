@@ -958,7 +958,7 @@ export function PatientDetailPanel() {
   );
   const allUsers = usersData?.data?.users ?? [];
 
-  const { data: teethData, refetch: refetchTeeth } = useListTeeth(selectedPatientId ?? "", {
+  const { data: teethData, refetch: refetchTeeth, isLoading: teethLoading } = useListTeeth(selectedPatientId ?? "", {
     query: {
       queryKey: getListTeethQueryKey(selectedPatientId ?? ""),
       enabled: !!selectedPatientId && activeTab === "dental",
@@ -1035,7 +1035,7 @@ export function PatientDetailPanel() {
     );
   }, [conditionFilteredTemplates, pickerSearch]);
 
-  const { data: planData } = useGetActiveTreatmentPlan(selectedPatientId ?? "", {
+  const { data: planData, isLoading: planLoading } = useGetActiveTreatmentPlan(selectedPatientId ?? "", {
     query: {
       queryKey: getGetActiveTreatmentPlanQueryKey(selectedPatientId ?? ""),
       enabled: !!selectedPatientId && activeTab === "dental",
@@ -1047,12 +1047,13 @@ export function PatientDetailPanel() {
     return activePlan.items.filter((item) => planViewToothFdi === null || item.toothFdi === planViewToothFdi);
   }, [activePlan, planViewToothFdi]);
 
-  const { data: plansHistoryData } = useListTreatmentPlans(selectedPatientId ?? "", {
+  const { data: plansHistoryData, isLoading: plansLoading } = useListTreatmentPlans(selectedPatientId ?? "", {
     query: {
       queryKey: getListTreatmentPlansQueryKey(selectedPatientId ?? ""),
       enabled: !!selectedPatientId && activeTab === "dental",
     },
   });
+  const dentalLoading = teethLoading || planLoading || plansLoading;
 
   const allPlans = plansHistoryData?.data?.plans ?? [];
   const pastPlans = allPlans.filter(
@@ -1712,8 +1713,16 @@ export function PatientDetailPanel() {
               <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                 <div className="flex-1 overflow-y-auto custom-scrollbar">
                   <div className="p-3">
+                    {/* Loading skeleton — wait for teeth + plans before rendering any state */}
+                    {dentalLoading && !isDiagnosisMode && (
+                      <div className="space-y-3 animate-pulse">
+                        <div className="h-4 w-32 bg-slate-100 rounded" />
+                        <div className="h-36 bg-slate-100 rounded-2xl" />
+                        <div className="h-36 bg-slate-100 rounded-2xl" />
+                      </div>
+                    )}
                     {/* No diagnosis yet */}
-                    {!hasDiagnosis && !isDiagnosisMode && (
+                    {!dentalLoading && !hasDiagnosis && !isDiagnosisMode && (
                       <div className="flex flex-col items-center justify-center py-12 gap-4">
                         <p className="text-sm text-muted-foreground text-center px-4">
                           {t("patient.noTeethData")}
@@ -1977,7 +1986,7 @@ export function PatientDetailPanel() {
                     )}
 
                     {/* Normal mode — has diagnosis */}
-                    {hasDiagnosis && !isDiagnosisMode && (
+                    {!dentalLoading && hasDiagnosis && !isDiagnosisMode && (
                       <div className="space-y-3">
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-[11px] text-muted-foreground">
@@ -2021,7 +2030,7 @@ export function PatientDetailPanel() {
                   </div>
 
                   {/* Treatment Plan section — below the dental chart */}
-                  {!isDiagnosisMode && (
+                  {!dentalLoading && !isDiagnosisMode && (
                     <div className="border-t border-border/50">
                       {/* Section label */}
                       <button
