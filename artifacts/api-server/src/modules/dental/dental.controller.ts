@@ -8,7 +8,7 @@ import {
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import multer from "multer";
-import FormDataNode from "form-data";
+import OpenAI, { toFile } from "openai";
 import { DentalRepository } from "./dental.repository";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
@@ -183,33 +183,17 @@ router.post(
       };
       const audioFilename = req.file.originalname || `recording.${getAudioExt(audioMime)}`;
 
-      const form = new FormDataNode();
-      form.append("file", req.file.buffer, {
-        filename: audioFilename,
-        contentType: audioMime,
-        knownLength: req.file.buffer.length,
-      });
-      form.append("model", "openai/whisper-large-v3-turbo");
-
-      const whisperRes = await fetch("https://openrouter.ai/api/v1/audio/transcriptions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          ...form.getHeaders(),
-        },
-        body: form.getBuffer(),
+      const openai = new OpenAI({
+        apiKey,
+        baseURL: "https://openrouter.ai/api/v1",
       });
 
-      if (!whisperRes.ok) {
-        const errText = await whisperRes.text();
-        logger.error({ status: whisperRes.status, body: errText, audioMime, audioFilename }, "[VoiceDiagnose] Whisper error");
-        let detail = "";
-        try { detail = (JSON.parse(errText) as { error?: { message?: string }; message?: string })?.error?.message ?? ""; } catch { detail = errText.slice(0, 120); }
-        return next(new ValidationError(`Ошибка транскрипции (${whisperRes.status})${detail ? ": " + detail : ""}`));
-      }
+      const whisperResult = await openai.audio.transcriptions.create({
+        file: await toFile(req.file.buffer, audioFilename, { type: audioMime }),
+        model: "openai/whisper-large-v3-turbo",
+      });
 
-      const whisperData = (await whisperRes.json()) as { text?: string };
-      transcript = whisperData.text?.trim() ?? "";
+      transcript = whisperResult.text?.trim() ?? "";
     } catch (err) {
       logger.error({ err }, "[VoiceDiagnose] Whisper fetch error");
       return next(err);
