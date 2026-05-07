@@ -70,7 +70,7 @@ export default function Dashboard() {
 
   const { data: analyticsData, isLoading, refetch } = useGetAnalytics();
   const isOwnerOrAdmin = user?.role === "owner" || user?.role === "admin";
-  const { data: kpiData } = useGetDoctorKpis({
+  const { data: kpiData, isLoading: kpiLoading } = useGetDoctorKpis({
     query: { queryKey: getGetDoctorKpisQueryKey(), enabled: isOwnerOrAdmin },
   });
 
@@ -172,7 +172,12 @@ export default function Dashboard() {
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Doctor KPI Table — owner/admin only */}
-        {isOwnerOrAdmin && kpis.length > 0 ? (
+        {isOwnerOrAdmin && kpiLoading ? (
+          <div className="lg:col-span-2 bg-card rounded-2xl border border-border/50 p-6 shadow-sm space-y-3">
+            <div className="w-40 h-5 bg-slate-200 rounded animate-pulse" />
+            {[0,1,2,3].map(i => <div key={i} className="h-10 bg-slate-100 rounded-xl animate-pulse" />)}
+          </div>
+        ) : isOwnerOrAdmin && kpis.length > 0 ? (
           <div className="lg:col-span-2 bg-card rounded-2xl border border-border/50 p-6 shadow-sm">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-bold font-display flex items-center gap-2">

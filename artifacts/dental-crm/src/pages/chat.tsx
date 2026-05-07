@@ -578,7 +578,7 @@ export default function ChatPage() {
     }
   };
 
-  const { data } = useListPatients({
+  const { data, isLoading: patientsLoading } = useListPatients({
     query: { queryKey: getListPatientsQueryKey() },
   });
 
@@ -645,13 +645,20 @@ export default function ChatPage() {
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {filtered.length === 0 && (
+          {patientsLoading && (
+            <div className="p-3 space-y-2">
+              {[0,1,2,3,4].map(i => (
+                <div key={i} className="h-16 bg-slate-100 rounded-xl animate-pulse" />
+              ))}
+            </div>
+          )}
+          {!patientsLoading && filtered.length === 0 && (
             <div className="p-8 text-center">
               <MessageSquare className="w-8 h-8 mx-auto mb-2 text-muted-foreground/30" />
               <p className="text-sm text-muted-foreground">{t("chat.noPatients")}</p>
             </div>
           )}
-          {filtered.map((patient) => (
+          {!patientsLoading && filtered.map((patient) => (
             <PatientListItem
               key={patient.id}
               patient={patient}

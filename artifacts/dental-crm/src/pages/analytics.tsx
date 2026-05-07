@@ -32,7 +32,7 @@ function getPeriodDates(period: Period): { dateFrom: string; dateTo: string } {
 export default function AnalyticsPage() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
-  const { data: analyticsRes } = useGetAnalytics();
+  const { data: analyticsRes, isLoading: analyticsLoading } = useGetAnalytics();
   const analytics = analyticsRes?.data?.analytics as any;
 
   const [channelPeriod, setChannelPeriod] = useState<Period>("month");
@@ -94,8 +94,16 @@ export default function AnalyticsPage() {
         <div className="p-6 space-y-6">
           {/* KPI Cards Row 1 */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {analyticsLoading ? (
+              [0,1,2,3].map(i => (
+                <div key={i} className="bg-white rounded-xl border border-border/50 p-4 shadow-sm space-y-3 animate-pulse">
+                  <div className="w-24 h-3 bg-slate-200 rounded" />
+                  <div className="w-16 h-8 bg-slate-200 rounded" />
+                </div>
+              ))
+            ) : null}
             {/* Total Patients */}
-            {(analytics && "totalPatients" in analytics) && (
+            {!analyticsLoading && (analytics && "totalPatients" in analytics) && (
               <div className="bg-white rounded-xl border border-border/50 p-4 shadow-sm">
                 <div className="flex items-start justify-between">
                   <div>

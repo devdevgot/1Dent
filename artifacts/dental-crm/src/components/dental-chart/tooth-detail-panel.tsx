@@ -64,7 +64,7 @@ export function ToothDetailPanel({
   const [showAddTreatment, setShowAddTreatment] = useState(false);
   const [showDiagnosis, setShowDiagnosis] = useState(false);
 
-  const { data: teethData } = useListTeeth(patientId, {
+  const { data: teethData, isLoading: teethLoading } = useListTeeth(patientId, {
     query: { queryKey: getListTeethQueryKey(patientId) },
   });
 
@@ -176,8 +176,15 @@ export function ToothDetailPanel({
       ) : (
       <ScrollArea className="flex-1 min-h-0 overflow-hidden">
         <div className="p-4 space-y-5">
+          {teethLoading ? (
+            <div className="space-y-3 animate-pulse">
+              <div className="h-8 bg-slate-100 rounded-xl" />
+              <div className="h-20 bg-slate-100 rounded-xl" />
+              <div className="h-10 bg-slate-100 rounded-xl" />
+            </div>
+          ) : null}
           {/* Diagnosis button */}
-          {canWrite && (
+          {!teethLoading && canWrite && (
             <Button
               variant="outline"
               size="sm"
@@ -190,7 +197,7 @@ export function ToothDetailPanel({
           )}
 
           {/* Condition selector */}
-          {canWrite && (
+          {!teethLoading && canWrite && (
             <div>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                 {t("tooth.condition")}

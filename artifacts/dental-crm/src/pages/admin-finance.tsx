@@ -100,8 +100,9 @@ export default function AdminFinancePage() {
   });
 
   const { data: proceduresData, isLoading } = useListProcedures();
-  const { data: usersData } = useListUsers();
-  const { data: patientsData } = useListPatients();
+  const { data: usersData, isLoading: usersLoading } = useListUsers();
+  const { data: patientsData, isLoading: patientsLoading } = useListPatients();
+  const anyLoading = isLoading || usersLoading || patientsLoading;
 
   const allProcedures = proceduresData?.data?.procedures ?? [];
   const allUsers = usersData?.data?.users ?? [];
@@ -285,6 +286,16 @@ export default function AdminFinancePage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {anyLoading && [0,1,2,3].map(i => (
+          <div key={i} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm space-y-3 animate-pulse">
+            <div className="w-8 h-8 rounded-xl bg-slate-200" />
+            <div className="w-20 h-3 bg-slate-200 rounded" />
+            <div className="w-16 h-7 bg-slate-200 rounded" />
+          </div>
+        ))}
+      </div>
+      {anyLoading && <div className="h-48 bg-white rounded-2xl border border-gray-100 animate-pulse" />}
+      {!anyLoading && <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
           icon={TrendingUp}
           label={t("adminFinance.totalRevenue")}
@@ -326,7 +337,7 @@ export default function AdminFinancePage() {
           <p className="text-2xl font-bold text-red-600">{String(debtCount)}</p>
           <p className="text-xs text-gray-400 mt-1">{t("adminFinance.proceduresWithoutPrice")}</p>
         </button>
-      </div>
+      </div>}
 
       {/* Debts panel */}
       {showDebts && debtProcedures.length > 0 && (

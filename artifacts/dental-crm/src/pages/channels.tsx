@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, Radio, Lock } from "lucide-react";
+import { ChevronLeft, Radio, Lock, Loader2 } from "lucide-react";
 import { ChannelsSettings } from "@/components/channels/channels-settings";
 import { WhatsAppConnectModal, WhatsAppIcon, type WaStatus } from "@/components/whatsapp/whatsapp-connect-modal";
 import { customFetch } from "@workspace/api-client-react";
@@ -50,7 +50,11 @@ export default function ChannelsPage() {
       </div>
 
       <div className="px-4 relative">
-        {isBlocked ? (
+        {waLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          </div>
+        ) : isBlocked ? (
           <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
             <div
               className="w-20 h-20 rounded-3xl flex items-center justify-center shadow-lg mb-5"
@@ -88,6 +92,7 @@ export default function ChannelsPage() {
         ) : (
           <ChannelsSettings />
         )}
+        
       </div>
 
       {isOwner && (
