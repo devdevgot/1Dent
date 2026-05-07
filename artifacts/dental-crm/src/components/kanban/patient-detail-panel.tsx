@@ -917,6 +917,8 @@ export function PatientDetailPanel() {
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [pickerCategory, setPickerCategory] = useState<string | null>(null);
   const [pickerSearch, setPickerSearch] = useState("");
+  const dentalScrollRef = useRef<HTMLDivElement>(null);
+  const servicePickerRef = useRef<HTMLDivElement>(null);
   const [diagnosisServicesMap, setDiagnosisServicesMap] = useState<Map<number, ProcedureTemplate[]>>(new Map());
 
   const [modalToothFdi, setModalToothFdi] = useState<number | null>(null);
@@ -1034,6 +1036,19 @@ export function PatientDetailPanel() {
       (s) => s.name.toLowerCase().includes(q) || (s.code ?? "").toLowerCase().includes(q),
     );
   }, [conditionFilteredTemplates, pickerSearch]);
+
+  // Auto-scroll to service picker when a condition with a price category is selected
+  useEffect(() => {
+    if (!pickerCategory) return;
+    const frame = requestAnimationFrame(() => {
+      if (servicePickerRef.current) {
+        servicePickerRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else if (dentalScrollRef.current) {
+        dentalScrollRef.current.scrollTo({ top: dentalScrollRef.current.scrollHeight, behavior: "smooth" });
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [pickerCategory]);
 
   const { data: planData, isLoading: planLoading } = useGetActiveTreatmentPlan(selectedPatientId ?? "", {
     query: {
@@ -1711,7 +1726,7 @@ export function PatientDetailPanel() {
             {/* Dental Chart + Treatment Plan Tab */}
             {activeTab === "dental" && (
               <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-                <div className="flex-1 overflow-y-auto custom-scrollbar">
+                <div ref={dentalScrollRef} className="flex-1 overflow-y-auto custom-scrollbar">
                   <div className="p-3">
                     {/* Loading skeleton — wait for teeth + plans before rendering any state */}
                     {dentalLoading && !isDiagnosisMode && (
@@ -1774,10 +1789,8 @@ export function PatientDetailPanel() {
                                           cm.set(diagnosisToothFdi!, cond);
                                           setDiagnosisMap(cm);
                                           const autoCategory = CONDITION_TO_PICKER_CATEGORY[cond] ?? null;
-                                          if (autoCategory) {
-                                            setPickerCategory(autoCategory);
-                                            setPickerSearch("");
-                                          }
+                                          setPickerCategory(autoCategory);
+                                          setPickerSearch("");
                                         }}
                                         className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border text-left text-xs transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                                           isSelected
@@ -1798,7 +1811,7 @@ export function PatientDetailPanel() {
                               </div>
                             ) : (
                               /* Level 2 — Service list for selected condition */
-                              <div className="space-y-1.5">
+                              <div ref={servicePickerRef} className="space-y-1.5">
                                 <button
                                   onClick={() => { setPickerCategory(null); setPickerSearch(""); }}
                                   className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
