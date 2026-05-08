@@ -28,30 +28,16 @@ import {
   Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { ToothRecord } from "@workspace/api-client-react";
+import type { ToothRecord, TreatmentPlan, TreatmentPlanItem } from "@workspace/api-client-react";
 import { CONDITION_CONFIG } from "./fdi-chart";
 
-type TreatmentPlanItem = {
-  id: string;
-  toothFdi?: number | null;
-  condition?: string | null;
-  title: string;
-  price: number;
-  status: string;
-};
-
-type TreatmentPlan = {
-  id: string;
-  items: TreatmentPlanItem[];
-};
+// ── Stage definitions ────────────────────────────────────────────────────────
 
 interface StageConfig {
   id: string;
   label: string;
-  /** Tooth conditions that map into this stage */
+  /** Tooth conditions (from ToothCondition enum) that belong to this stage */
   conditions: string[];
-  /** Plan-item categories (from procedure template category) that map here */
-  planCategories?: string[];
   color: string;
   bgColor: string;
   borderColor: string;
@@ -64,7 +50,6 @@ const STAGE_CONFIGS: StageConfig[] = [
     id: "hygiene",
     label: "Гигиена",
     conditions: [],
-    planCategories: ["hygiene"],
     color: "#8b5cf6",
     bgColor: "#f5f3ff",
     borderColor: "#ddd6fe",
@@ -75,7 +60,6 @@ const STAGE_CONFIGS: StageConfig[] = [
     id: "therapy",
     label: "Кариес / Терапия",
     conditions: ["cavity", "treated"],
-    planCategories: ["therapy", "restoration", "periodontology", "radiology", "pediatric"],
     color: "#3b82f6",
     bgColor: "#eff6ff",
     borderColor: "#bfdbfe",
@@ -96,7 +80,6 @@ const STAGE_CONFIGS: StageConfig[] = [
     id: "orthopedics",
     label: "Коронки / Ортопедия",
     conditions: ["crown"],
-    planCategories: ["orthopedics"],
     color: "#d97706",
     bgColor: "#fffbeb",
     borderColor: "#fde68a",
@@ -107,7 +90,6 @@ const STAGE_CONFIGS: StageConfig[] = [
     id: "implantation",
     label: "Имплантация",
     conditions: ["implant"],
-    planCategories: ["implantation"],
     color: "#10b981",
     bgColor: "#f0fdf4",
     borderColor: "#a7f3d0",
@@ -118,7 +100,6 @@ const STAGE_CONFIGS: StageConfig[] = [
     id: "surgery",
     label: "Удаление",
     conditions: ["extraction_needed"],
-    planCategories: ["surgery"],
     color: "#ef4444",
     bgColor: "#fef2f2",
     borderColor: "#fecaca",
@@ -139,24 +120,44 @@ const STAGE_CONFIGS: StageConfig[] = [
 
 const DEFAULT_ORDER = STAGE_CONFIGS.map((s) => s.id);
 
-type StageData = { teeth: ToothRecord[]; planItems: TreatmentPlanItem[] };
+/**
+ * Russian keywords used to infer stage from a plan-item title when no
+ * condition is set on the item (e.g., manually added services).
+ * Keys must exactly match stage ids above.
+ */
+const STAGE_TITLE_KEYWORDS: Record<string, string[]> = {
+  hygiene:      ["гигиен", "чистк", "профилактик", "отбелива"],
+  therapy:      ["кариес", "пломб", "реставрац", "препарир", "герметик", "шлифовк", "полировк"],
+  root_canal:   ["канал", "пульп", "эндодонт", "штифт", "культ", "депульп", "апекс", "корнев"],
+  orthopedics:  ["коронк", "ортопед", "слепок", "примерк", "цементир", "вкладк", "протез", "люминир"],
+  implantation: ["имплант", "абатмент", "синус", "остеотом"],
+  surgery:      ["удален", "экстракц", "альвеол", "лунк", "кюретаж"],
+};
 
-/** Map each plan item's condition string → stage id */
-function conditionToStageId(condition: string): string | null {
+/** Map a tooth condition string → stage id. Returns null for "healthy" / unknown. */
+function conditionToStageId(condition: string | null | undefined): string | null {
+  if (!condition) return null;
   for (const stage of STAGE_CONFIGS) {
     if (stage.conditions.includes(condition)) return stage.id;
   }
   return null;
 }
 
-/** Map a plan-item category string → stage id via planCategories */
-function planCategoryToStageId(category: string | null | undefined): string | null {
-  if (!category) return null;
-  for (const stage of STAGE_CONFIGS) {
-    if (stage.planCategories?.includes(category)) return stage.id;
+/**
+ * Infer stage from plan-item title using keyword matching.
+ * Used as a fallback when condition and toothFdi are absent.
+ */
+function titleToStageId(title: string): string | null {
+  const lower = title.toLowerCase();
+  for (const [stageId, keywords] of Object.entries(STAGE_TITLE_KEYWORDS)) {
+    if (keywords.some((kw) => lower.includes(kw))) return stageId;
   }
   return null;
 }
+
+// ── Data grouping ─────────────────────────────────────────────────────────────
+
+type StageData = { teeth: ToothRecord[]; planItems: TreatmentPlanItem[] };
 
 function buildStageItems(
   teeth: ToothRecord[],
@@ -167,7 +168,7 @@ function buildStageItems(
     result.set(stage.id, { teeth: [], planItems: [] });
   }
 
-  // 1. Bucket teeth by condition
+  // 1. Bucket teeth by tooth condition → stage
   const toothToStageId = new Map<number, string>();
   for (const tooth of teeth) {
     const cond = tooth.condition ?? "healthy";
@@ -181,20 +182,18 @@ function buildStageItems(
 
   if (!activePlan) return result;
 
-  // 2. Bucket plan items
+  // 2. Bucket plan items using a clear priority chain
   for (const item of activePlan.items) {
     if (item.status === "cancelled") continue;
 
-    // Try item.condition first (set from tooth condition at creation time)
-    if (item.condition) {
-      const stageId = conditionToStageId(item.condition);
-      if (stageId) {
-        result.get(stageId)!.planItems.push(item);
-        continue;
-      }
+    // Priority 1: item.condition (set at creation time from tooth condition)
+    const stageByCondition = conditionToStageId(item.condition);
+    if (stageByCondition) {
+      result.get(stageByCondition)!.planItems.push(item);
+      continue;
     }
 
-    // Try linking via toothFdi → tooth's stage
+    // Priority 2: resolve via linked tooth's condition
     if (item.toothFdi != null) {
       const stageId = toothToStageId.get(item.toothFdi);
       if (stageId) {
@@ -203,23 +202,21 @@ function buildStageItems(
       }
     }
 
-    // Fallback: try to map via a "category" field if present on the item (some items carry it)
-    const itemAsAny = item as Record<string, unknown>;
-    const cat = (itemAsAny["category"] ?? itemAsAny["procedureCategory"]) as string | undefined;
-    if (cat) {
-      const stageId = planCategoryToStageId(cat);
-      if (stageId) {
-        result.get(stageId)!.planItems.push(item);
-        continue;
-      }
+    // Priority 3: keyword match on item title (e.g., manually added hygiene services)
+    const stageByTitle = titleToStageId(item.title);
+    if (stageByTitle) {
+      result.get(stageByTitle)!.planItems.push(item);
+      continue;
     }
 
-    // Ultimate fallback → "Прочее"
+    // Priority 4: ultimate fallback → "Прочее"
     result.get("other")!.planItems.push(item);
   }
 
   return result;
 }
+
+// ── SortableStageCard ─────────────────────────────────────────────────────────
 
 interface SortableStageCardProps {
   stage: StageConfig;
@@ -249,11 +246,13 @@ function SortableStageCard({
 
   const Icon = stage.Icon;
 
-  // Count: unique teeth + plan items that have no linked tooth in this stage
+  // Orphan items = plan items whose tooth is not represented in this stage's teeth list
   const toothFdiSet = new Set(teeth.map((t) => t.toothFdi));
   const orphanPlanItems = planItems.filter(
     (p) => p.toothFdi == null || !toothFdiSet.has(p.toothFdi),
   );
+
+  // Counter: unique teeth + orphan plan-item positions
   const totalCount = teeth.length + orphanPlanItems.length;
 
   const pendingItems = planItems.filter((p) => p.status === "pending");
@@ -290,7 +289,7 @@ function SortableStageCard({
           {stage.label}
         </span>
 
-        {/* Combined count badge: teeth + orphan items */}
+        {/* Combined count: teeth + orphan plan-item positions */}
         <span
           className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center"
           style={{ backgroundColor: stage.color + "25", color: stage.color }}
@@ -331,7 +330,7 @@ function SortableStageCard({
             <p className="text-[10px] text-muted-foreground text-center py-2">Нет данных</p>
           )}
 
-          {/* Teeth with their nested plan items */}
+          {/* Teeth with nested plan items */}
           {teeth.map((tooth) => {
             const condCfg = CONDITION_CONFIG[tooth.condition ?? "healthy"];
             const toothItems = planItems.filter((p) => p.toothFdi === tooth.toothFdi);
@@ -370,7 +369,7 @@ function SortableStageCard({
             );
           })}
 
-          {/* Plan items with no linked tooth in this stage */}
+          {/* Plan items with no linked tooth in this stage's teeth list */}
           {orphanPlanItems.map((item) => (
             <div
               key={item.id}
@@ -395,6 +394,8 @@ function SortableStageCard({
     </div>
   );
 }
+
+// ── TreatmentStagesBoard ──────────────────────────────────────────────────────
 
 interface TreatmentStagesBoardProps {
   patientId: string;
@@ -422,7 +423,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
 
   const stageItems = buildStageItems(teeth, activePlan);
 
-  // Only show stages that have teeth or plan items
+  // Only show stages that have at least one tooth or plan item
   const activeStages = order
     .map((id) => STAGE_CONFIGS.find((s) => s.id === id))
     .filter((stage): stage is StageConfig => {
