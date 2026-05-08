@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import * as XLSX from "xlsx";
+import Papa from "papaparse";
 import { db, patientsTable, migrationJobsTable, usersTable, proceduresTable, procedureTemplatesTable } from "@workspace/db";
 import { eq, and, or } from "drizzle-orm";
 import { logger } from "../../lib/logger";
@@ -142,29 +143,15 @@ function mapToPatientStatus(raw: string): string {
   return TRELLO_STATUS_MAP[lower] ?? "new_request";
 }
 
-function detectCsvSeparator(text: string): string {
-  const sample = text.slice(0, 2000);
-  const commas = (sample.match(/,/g) ?? []).length;
-  const semicolons = (sample.match(/;/g) ?? []).length;
-  const tabs = (sample.match(/\t/g) ?? []).length;
-  if (tabs > commas && tabs > semicolons) return "\t";
-  if (semicolons > commas) return ";";
-  return ",";
-}
-
 function parseCsvText(text: string): { headers: string[]; allRows: Record<string, string>[] } {
-  const sep = detectCsvSeparator(text);
-  const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n").filter(Boolean);
-  if (lines.length === 0) return { headers: [], allRows: [] };
-  const headers = lines[0]!.split(sep).map((h) => h.replace(/^["']|["']$/g, "").trim()).filter(Boolean);
-  const allRows: Record<string, string>[] = [];
-  for (let i = 1; i < lines.length; i++) {
-    const parts = lines[i]!.split(sep).map((c) => c.replace(/^["']|["']$/g, "").trim());
-    const row: Record<string, string> = {};
-    headers.forEach((h, idx) => { row[h] = parts[idx] ?? ""; });
-    allRows.push(row);
-  }
-  return { headers, allRows };
+  const result = Papa.parse<Record<string, string>>(text, {
+    header: true,
+    skipEmptyLines: true,
+    transformHeader: (h) => h.trim(),
+    transform: (v) => v.trim(),
+  });
+  const headers = result.meta.fields ?? [];
+  return { headers, allRows: result.data };
 }
 
 async function parsePdfToText(base64data: string): Promise<string> {
@@ -428,21 +415,30 @@ export class MigrationService {
     fileType: FileType,
     mapping: AiColumnMapping,
     detectedCategories: DetectedCategory[],
+    preExtractedRows?: Array<Record<string, string>>,
   ): Promise<MigrationJobStatusResponse> {
     let rows: Array<Record<string, string>>;
 
     if (fileType === "pdf") {
-      const rawText = await parsePdfToText(base64data);
-      const prompt = buildAnalyzePromptForPdf(rawText);
-      let pdfRows: Record<string, string>[] = [];
-      try {
-        const aiResponse = await callOpenRouterAi(prompt);
-        const parsed = JSON.parse(aiResponse) as { rows?: Record<string, string>[] };
-        if (Array.isArray(parsed.rows)) pdfRows = parsed.rows as Record<string, string>[];
-      } catch {
-        pdfRows = [];
+      // For PDF, always use pre-extracted rows from the analyze step to avoid
+      // non-deterministic re-extraction and to respect user-reviewed mapping.
+      if (preExtractedRows && preExtractedRows.length > 0) {
+        rows = preExtractedRows.slice(0, MAX_IMPORT_ROWS);
+      } else {
+        // Fallback: re-extract from PDF text (without calling AI again) using
+        // best-effort line splitting so import never hard-fails if rows omitted.
+        let rawText = "";
+        try {
+          rawText = await parsePdfToText(base64data);
+        } catch {
+          rawText = "";
+        }
+        if (!rawText.trim()) throw new Error("PDF has no extractable text and no pre-extracted rows were provided");
+        // Build synthetic rows from raw text lines using the provided mapping
+        const lines = rawText.split("\n").map((l) => l.trim()).filter(Boolean);
+        const firstMappedCol = Object.keys(mapping)[0] ?? "raw_text";
+        rows = lines.slice(0, MAX_IMPORT_ROWS).map((line) => ({ [firstMappedCol]: line }));
       }
-      rows = pdfRows.slice(0, MAX_IMPORT_ROWS);
     } else if (fileType === "xlsx") {
       const buffer = Buffer.from(base64data, "base64");
       const workbook = XLSX.read(buffer, { type: "buffer" });

@@ -1156,6 +1156,8 @@ export interface AiConfirmRequest {
   fileType: AiFileType;
   mapping: Record<string, string>;
   detectedCategories: AiDetectedCategory[];
+  /** Pre-extracted rows from the analyze step. Required for PDF to avoid re-running AI extraction. */
+  rows?: Record<string, string>[];
 }
 
 export type MigrationJobStatus =

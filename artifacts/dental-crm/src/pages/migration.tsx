@@ -283,6 +283,7 @@ function AiImportTab() {
         fileType,
         mapping,
         detectedCategories: analysis.detectedCategories,
+        rows: analysis.isPdf ? analysis.previewRows : undefined,
       });
       setJobId(res.data.job.id);
       setStep("import");

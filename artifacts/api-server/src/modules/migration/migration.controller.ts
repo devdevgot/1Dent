@@ -126,6 +126,7 @@ const aiConfirmSchema = z.object({
   fileType: z.enum(["xlsx", "csv", "pdf"]),
   mapping: z.record(z.string()),
   detectedCategories: z.array(z.enum(["patients", "procedures", "templates"])),
+  rows: z.array(z.record(z.string())).optional(),
 });
 
 router.post(
@@ -142,6 +143,7 @@ router.post(
         parsed.data.fileType,
         parsed.data.mapping as Record<string, "" | "name" | "phone" | "iin" | "dateOfBirth" | "gender" | "source" | "status" | "doctorName" | "notes" | "procedureName" | "procedurePrice" | "procedureStatus" | "scheduledAt" | "paymentMethod" | "procedureNotes" | "templateName" | "templatePrice" | "templateCategory">,
         parsed.data.detectedCategories,
+        parsed.data.rows,
       )
       .catch(next);
     if (!job) return;
