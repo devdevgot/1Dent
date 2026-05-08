@@ -278,6 +278,22 @@ export class MigrationService {
     };
   }
 
+  /** Finds the first sheet in a workbook that has at least one non-empty header row.
+   *  Falls back to SheetNames[0] if no sheet has data (so the normal "no headers" error fires). */
+  private _findFirstDataSheet(workbook: XLSX.WorkBook): { sheetName: string; sheet: XLSX.WorkSheet } {
+    for (const sheetName of workbook.SheetNames) {
+      const sheet = workbook.Sheets[sheetName];
+      if (!sheet) continue;
+      const rawRows = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1, defval: "" });
+      if (rawRows.length < 1) continue;
+      const headers = (rawRows[0] as string[]).map((h) => String(h ?? "").trim()).filter(Boolean);
+      if (headers.length > 0) return { sheetName, sheet };
+    }
+    // no sheet with data found — return first sheet so downstream throws the proper error
+    const sheetName = workbook.SheetNames[0] ?? "";
+    return { sheetName, sheet: workbook.Sheets[sheetName] ?? {} };
+  }
+
   parseCsv(base64data: string): ExcelPreviewResponse {
     const text = Buffer.from(base64data, "base64").toString("utf-8");
     const { headers, allRows } = parseCsvText(text);
@@ -301,9 +317,9 @@ export class MigrationService {
     if (fileType === "xlsx") {
       const buffer = Buffer.from(base64data, "base64");
       const workbook = XLSX.read(buffer, { type: "buffer" });
-      const sheetName = workbook.SheetNames[0];
-      if (!sheetName) throw new Error("Excel file has no sheets");
-      const sheet = workbook.Sheets[sheetName]!;
+      if (!workbook.SheetNames.length) throw new Error("Excel file has no sheets");
+      const { sheetName, sheet } = this._findFirstDataSheet(workbook);
+      logger.debug({ sheetName, totalSheets: workbook.SheetNames.length }, "[MigrationService] Using sheet for analysis");
       const rawRows = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1, defval: "" });
       if (rawRows.length < 1) throw new Error("File is empty");
       headers = (rawRows[0] as string[]).map((h) => String(h ?? "").trim()).filter(Boolean);
@@ -446,9 +462,9 @@ export class MigrationService {
     } else if (fileType === "xlsx") {
       const buffer = Buffer.from(base64data, "base64");
       const workbook = XLSX.read(buffer, { type: "buffer" });
-      const sheetName = workbook.SheetNames[0];
-      if (!sheetName) throw new Error("Excel file has no sheets");
-      const sheet = workbook.Sheets[sheetName]!;
+      if (!workbook.SheetNames.length) throw new Error("Excel file has no sheets");
+      const { sheetName, sheet } = this._findFirstDataSheet(workbook);
+      logger.debug({ sheetName, totalSheets: workbook.SheetNames.length }, "[MigrationService] Using sheet for import");
       const rawRows = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1, defval: "" });
       const headers = (rawRows[0] as string[]).map((h) => String(h ?? "").trim()).filter(Boolean);
       rows = rawRows.slice(1).slice(0, MAX_IMPORT_ROWS).map((rawRow) => {
