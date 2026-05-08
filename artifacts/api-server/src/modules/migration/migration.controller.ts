@@ -3,6 +3,7 @@ import { z } from "zod";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 import { migrationService } from "./migration.service";
+import type { AiColumnMapping } from "./migration.types";
 
 const router: IRouter = Router();
 
@@ -141,7 +142,7 @@ router.post(
         req.user!.clinicId,
         parsed.data.fileBase64,
         parsed.data.fileType,
-        parsed.data.mapping as Record<string, "" | "name" | "phone" | "iin" | "dateOfBirth" | "gender" | "source" | "status" | "doctorName" | "notes" | "procedureName" | "procedurePrice" | "procedureStatus" | "scheduledAt" | "paymentMethod" | "procedureNotes" | "templateName" | "templatePrice" | "templateCategory">,
+        parsed.data.mapping as AiColumnMapping,
         parsed.data.detectedCategories,
         parsed.data.rows,
       )

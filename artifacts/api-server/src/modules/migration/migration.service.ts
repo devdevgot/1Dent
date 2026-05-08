@@ -544,7 +544,7 @@ export class MigrationService {
     const includesProcedures = detectedCategories.includes("procedures");
     const includesTemplates  = detectedCategories.includes("templates");
 
-    // ── Phase 0: Pre-create doctor stubs for all unique doctor names ──────────
+    // Phase 0: pre-create doctor stubs for all unique doctor names
     const doctorCache = new Map<string, string | null>(); // name -> userId
     if (doctorCol) {
       const uniqueDoctorNames = [
@@ -582,7 +582,7 @@ export class MigrationService {
       }
     }
 
-    // ── Phase 1: Pre-populate patient lookup maps from existing patients ───────
+    // Phase 1: pre-populate patient lookup maps from existing patients
     // Maps phone -> patientId and iin -> patientId for fast dedup
     const patientPhoneMap = new Map<string, string>();
     const patientIinMap   = new Map<string, string>();
@@ -598,7 +598,7 @@ export class MigrationService {
       }
     }
 
-    // ── Phase 2: Pre-populate template lookup map ─────────────────────────────
+    // Phase 2: pre-populate template lookup map
     const templateNameMap = new Map<string, string>(); // name -> templateId
     if (includesTemplates) {
       const existingTemplates = await db
@@ -639,7 +639,7 @@ export class MigrationService {
           const rowNum = processedRows;
 
           try {
-            // ── Template upsert ───────────────────────────────────────────────
+            // Template upsert
             if (includesTemplates && templateNameCol) {
               const tName = (row[templateNameCol] ?? "").trim();
               if (tName && !templateNameMap.has(tName.toLowerCase())) {
@@ -661,7 +661,7 @@ export class MigrationService {
               }
             }
 
-            // ── Patient import / lookup ───────────────────────────────────────
+            // Patient import / lookup
             let patientId: string | undefined;
 
             if (includesPatients) {
@@ -760,7 +760,7 @@ export class MigrationService {
               }
             }
 
-            // ── Procedure import ──────────────────────────────────────────────
+            // Procedure import
             if (includesProcedures && procedureNameCol) {
               const procName = (row[procedureNameCol] ?? "").trim();
               if (procName) {
