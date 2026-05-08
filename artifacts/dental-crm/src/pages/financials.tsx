@@ -161,7 +161,7 @@ export default function FinancialsPage() {
 
   return (
     <div className="min-h-full bg-[#f2f2f7]">
-      <div className="bg-white px-4 pt-5 pb-4 flex items-center justify-between border-b border-gray-100">
+      <div className="bg-white px-4 py-4 flex items-center justify-between border-b border-gray-100">
         <div className="flex items-center gap-3">
           <button
             onClick={() => window.history.back()}
@@ -169,10 +169,7 @@ export default function FinancialsPage() {
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <div className="flex items-center gap-2">
-            <Wallet className="w-5 h-5 text-primary shrink-0" strokeWidth={1.8} />
-            <h1 className="text-[17px] font-semibold text-gray-900">{t("financials.title")}</h1>
-          </div>
+          <h1 className="text-[17px] font-semibold text-gray-900">{t("financials.title")}</h1>
         </div>
         <div className="flex items-center gap-2">
           <button

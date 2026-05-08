@@ -981,20 +981,17 @@ export default function ChatbotPage() {
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="shrink-0 px-4 pt-5 pb-3 border-b border-gray-100 bg-background">
-        <div className="flex items-center gap-2.5">
+      <div className="shrink-0 px-4 py-4 border-b border-gray-100 bg-white">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => window.history.back()}
             className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-500 shrink-0"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <div className="h-8 w-8 rounded-lg bg-violet-100 flex items-center justify-center">
-            <Bot className="h-4 w-4 text-violet-600" />
-          </div>
           <div>
-            <h1 className="text-base font-semibold text-foreground">{t("chatbot.title")}</h1>
-            <p className="text-xs text-muted-foreground">{t("chatbot.subtitle")}</p>
+            <h1 className="text-[17px] font-semibold text-gray-900">{t("chatbot.title")}</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">{t("chatbot.subtitle")}</p>
           </div>
           <div className="ml-auto flex items-center gap-2">
             <div className={cn(

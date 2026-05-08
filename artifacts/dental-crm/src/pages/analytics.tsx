@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { TrendingUp, Users, DollarSign, Zap, AlertCircle, CheckCircle, Radio, BarChart3, ChevronLeft, Repeat2, Heart, ClipboardCheck, Crown } from "lucide-react";
+import { TrendingUp, Users, DollarSign, Zap, AlertCircle, CheckCircle, Radio, ChevronLeft, Repeat2, Heart, ClipboardCheck, Crown } from "lucide-react";
 import { useGetAnalytics, useGetChannelStats, getGetChannelStatsQueryKey, useGetPatientMetrics, type ChannelStat } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 
@@ -73,7 +73,7 @@ export default function AnalyticsPage() {
   return (
     <div className="h-full flex flex-col overflow-hidden bg-background">
       {/* Header */}
-      <div className="shrink-0 px-4 pt-5 pb-4 border-b border-gray-100 bg-white flex items-center gap-3">
+      <div className="shrink-0 px-4 py-4 border-b border-gray-100 bg-white flex items-center gap-3">
         <button
           onClick={() => window.history.back()}
           className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-500 shrink-0"
@@ -81,10 +81,7 @@ export default function AnalyticsPage() {
           <ChevronLeft className="w-5 h-5" />
         </button>
         <div>
-          <div className="flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-primary shrink-0" strokeWidth={1.8} />
-            <h1 className="text-[17px] font-semibold text-gray-900">{t("analytics.title")}</h1>
-          </div>
+          <h1 className="text-[17px] font-semibold text-gray-900">{t("analytics.title")}</h1>
           <p className="text-xs text-muted-foreground mt-0.5">{t("analytics.subtitle")}</p>
         </div>
       </div>

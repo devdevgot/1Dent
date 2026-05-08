@@ -596,20 +596,16 @@ export default function MigrationPage() {
   return (
     <div className="min-h-screen bg-[#f5f5f7]">
       {/* Header */}
-      <div className="bg-white border-b border-gray-100 px-6 py-4 flex items-center gap-3">
+      <div className="bg-white border-b border-gray-100 px-4 py-4 flex items-center gap-3 shrink-0">
         <button
           onClick={() => setLocation("/menu")}
           className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-500 shrink-0"
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
-        <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-          style={{ background: "linear-gradient(135deg, #7c3aed, #a855f7)" }}>
-          <Sparkles className="w-4 h-4 text-white" />
-        </div>
         <div>
-          <h1 className="text-base font-bold text-gray-900 leading-tight">Миграция данных</h1>
-          <p className="text-xs text-gray-400">Excel, CSV или PDF — до 5 000 строк</p>
+          <h1 className="text-[17px] font-semibold text-gray-900">Миграция данных</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">Excel, CSV или PDF — до 5 000 строк</p>
         </div>
       </div>
 

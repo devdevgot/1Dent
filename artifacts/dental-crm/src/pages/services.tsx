@@ -155,7 +155,7 @@ export default function ServicesPage() {
     <div className="h-full flex flex-col bg-[#f2f2f7] overflow-hidden">
 
       {/* ── Header ─────────────────────────────────── */}
-      <div className="bg-white px-4 pt-5 pb-3 flex items-center gap-3 border-b border-gray-100 shrink-0">
+      <div className="bg-white px-4 py-4 flex items-center gap-3 border-b border-gray-100 shrink-0">
         <button
           onClick={() => window.history.back()}
           className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-500 shrink-0"
@@ -163,10 +163,7 @@ export default function ServicesPage() {
           <ChevronLeft className="w-5 h-5" />
         </button>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <ClipboardList className="w-5 h-5 text-primary shrink-0" strokeWidth={1.8} />
-            <h1 className="text-[17px] font-semibold text-gray-900">Прейскурант</h1>
-          </div>
+          <h1 className="text-[17px] font-semibold text-gray-900">Прейскурант</h1>
           <p className="text-xs text-muted-foreground mt-0.5">{templates.length} услуг в каталоге</p>
         </div>
         {isOwner && (
