@@ -10,7 +10,7 @@ import {
 } from "@dnd-kit/core";
 import {
   SortableContext,
-  horizontalListSortingStrategy,
+  verticalListSortingStrategy,
   useSortable,
   arrayMove,
 } from "@dnd-kit/sortable";
@@ -26,22 +26,24 @@ import {
   CheckCircle2,
   Sparkles,
   Layers,
+  CircleDot,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ToothRecord, TreatmentPlan, TreatmentPlanItem } from "@workspace/api-client-react";
 import { CONDITION_CONFIG } from "./fdi-chart";
 
-// ── Stage definitions ────────────────────────────────────────────────────────
+// ── Stage definitions ─────────────────────────────────────────────────────────
 
 interface StageConfig {
   id: string;
   label: string;
-  /** Tooth conditions (from ToothCondition enum) that belong to this stage */
   conditions: string[];
   color: string;
   bgColor: string;
   borderColor: string;
   textColor: string;
+  badgeBg: string;
   Icon: React.ComponentType<{ className?: string }>;
 }
 
@@ -50,20 +52,22 @@ const STAGE_CONFIGS: StageConfig[] = [
     id: "hygiene",
     label: "Гигиена",
     conditions: [],
-    color: "#8b5cf6",
-    bgColor: "#f5f3ff",
-    borderColor: "#ddd6fe",
+    color: "#7c3aed",
+    bgColor: "#faf5ff",
+    borderColor: "#7c3aed",
     textColor: "#6d28d9",
+    badgeBg: "#ede9fe",
     Icon: Sparkles,
   },
   {
     id: "therapy",
     label: "Кариес / Терапия",
     conditions: ["cavity", "treated"],
-    color: "#3b82f6",
+    color: "#2563eb",
     bgColor: "#eff6ff",
-    borderColor: "#bfdbfe",
+    borderColor: "#2563eb",
     textColor: "#1d4ed8",
+    badgeBg: "#dbeafe",
     Icon: Stethoscope,
   },
   {
@@ -72,8 +76,9 @@ const STAGE_CONFIGS: StageConfig[] = [
     conditions: ["root_canal"],
     color: "#ea580c",
     bgColor: "#fff7ed",
-    borderColor: "#fed7aa",
+    borderColor: "#ea580c",
     textColor: "#c2410c",
+    badgeBg: "#ffedd5",
     Icon: Activity,
   },
   {
@@ -82,28 +87,31 @@ const STAGE_CONFIGS: StageConfig[] = [
     conditions: ["crown"],
     color: "#d97706",
     bgColor: "#fffbeb",
-    borderColor: "#fde68a",
+    borderColor: "#d97706",
     textColor: "#b45309",
+    badgeBg: "#fef3c7",
     Icon: Crown,
   },
   {
     id: "implantation",
     label: "Имплантация",
     conditions: ["implant"],
-    color: "#10b981",
+    color: "#059669",
     bgColor: "#f0fdf4",
-    borderColor: "#a7f3d0",
+    borderColor: "#059669",
     textColor: "#047857",
+    badgeBg: "#d1fae5",
     Icon: Wrench,
   },
   {
     id: "surgery",
     label: "Удаление",
     conditions: ["extraction_needed"],
-    color: "#ef4444",
+    color: "#dc2626",
     bgColor: "#fef2f2",
-    borderColor: "#fecaca",
+    borderColor: "#dc2626",
     textColor: "#b91c1c",
+    badgeBg: "#fee2e2",
     Icon: Scissors,
   },
   {
@@ -112,19 +120,15 @@ const STAGE_CONFIGS: StageConfig[] = [
     conditions: ["missing"],
     color: "#6b7280",
     bgColor: "#f9fafb",
-    borderColor: "#e5e7eb",
+    borderColor: "#9ca3af",
     textColor: "#374151",
+    badgeBg: "#f3f4f6",
     Icon: Layers,
   },
 ];
 
 const DEFAULT_ORDER = STAGE_CONFIGS.map((s) => s.id);
 
-/**
- * Russian keywords used to infer stage from a plan-item title when no
- * condition is set on the item (e.g., manually added services).
- * Keys must exactly match stage ids above.
- */
 const STAGE_TITLE_KEYWORDS: Record<string, string[]> = {
   hygiene:      ["гигиен", "чистк", "профилактик", "отбелива"],
   therapy:      ["кариес", "пломб", "реставрац", "препарир", "герметик", "шлифовк", "полировк"],
@@ -134,7 +138,6 @@ const STAGE_TITLE_KEYWORDS: Record<string, string[]> = {
   surgery:      ["удален", "экстракц", "альвеол", "лунк", "кюретаж"],
 };
 
-/** Map a tooth condition string → stage id. Returns null for "healthy" / unknown. */
 function conditionToStageId(condition: string | null | undefined): string | null {
   if (!condition) return null;
   for (const stage of STAGE_CONFIGS) {
@@ -143,10 +146,6 @@ function conditionToStageId(condition: string | null | undefined): string | null
   return null;
 }
 
-/**
- * Infer stage from plan-item title using keyword matching.
- * Used as a fallback when condition and toothFdi are absent.
- */
 function titleToStageId(title: string): string | null {
   const lower = title.toLowerCase();
   for (const [stageId, keywords] of Object.entries(STAGE_TITLE_KEYWORDS)) {
@@ -168,7 +167,6 @@ function buildStageItems(
     result.set(stage.id, { teeth: [], planItems: [] });
   }
 
-  // 1. Bucket teeth by tooth condition → stage
   const toothToStageId = new Map<number, string>();
   for (const tooth of teeth) {
     const cond = tooth.condition ?? "healthy";
@@ -182,18 +180,14 @@ function buildStageItems(
 
   if (!activePlan) return result;
 
-  // 2. Bucket plan items using a clear priority chain
   for (const item of activePlan.items) {
     if (item.status === "cancelled") continue;
 
-    // Priority 1: item.condition (set at creation time from tooth condition)
     const stageByCondition = conditionToStageId(item.condition);
     if (stageByCondition) {
       result.get(stageByCondition)!.planItems.push(item);
       continue;
     }
-
-    // Priority 2: resolve via linked tooth's condition
     if (item.toothFdi != null) {
       const stageId = toothToStageId.get(item.toothFdi);
       if (stageId) {
@@ -201,24 +195,24 @@ function buildStageItems(
         continue;
       }
     }
-
-    // Priority 3: keyword match on item title (e.g., manually added hygiene services)
     const stageByTitle = titleToStageId(item.title);
     if (stageByTitle) {
       result.get(stageByTitle)!.planItems.push(item);
       continue;
     }
-
-    // Priority 4: ultimate fallback → "Прочее"
     result.get("other")!.planItems.push(item);
   }
 
   return result;
 }
 
-// ── SortableStageCard ─────────────────────────────────────────────────────────
+function formatPrice(price: number): string {
+  return price.toLocaleString("ru-KZ") + " ₸";
+}
 
-interface SortableStageCardProps {
+// ── SortableSection ───────────────────────────────────────────────────────────
+
+interface SortableSectionProps {
   stage: StageConfig;
   teeth: ToothRecord[];
   planItems: TreatmentPlanItem[];
@@ -226,170 +220,225 @@ interface SortableStageCardProps {
   onToggle: () => void;
 }
 
-function SortableStageCard({
+function SortableSection({
   stage,
   teeth,
   planItems,
   isExpanded,
   onToggle,
-}: SortableStageCardProps) {
+}: SortableSectionProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: stage.id });
 
-  const dndStyle: React.CSSProperties = {
+  const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.4 : 1,
     zIndex: isDragging ? 50 : undefined,
-    borderColor: stage.borderColor,
   };
 
   const Icon = stage.Icon;
 
-  // Orphan items = plan items whose tooth is not represented in this stage's teeth list
   const toothFdiSet = new Set(teeth.map((t) => t.toothFdi));
-  const orphanPlanItems = planItems.filter(
+  const orphanItems = planItems.filter(
     (p) => p.toothFdi == null || !toothFdiSet.has(p.toothFdi),
   );
 
-  // Counter: unique teeth + orphan plan-item positions
-  const totalCount = teeth.length + orphanPlanItems.length;
-
   const pendingItems = planItems.filter((p) => p.status === "pending");
   const completedItems = planItems.filter((p) => p.status === "completed");
+  const totalCount = teeth.length + orphanItems.length;
+
+  const sectionTotal = planItems.reduce((sum, item) => sum + item.price, 0);
 
   return (
     <div
       ref={setNodeRef}
-      style={dndStyle}
-      className="shrink-0 w-[172px] flex flex-col rounded-xl border overflow-hidden shadow-sm select-none bg-white"
+      style={style}
+      className="select-none"
     >
-      {/* Header */}
+      {/* Section card */}
       <div
-        className="flex items-center gap-1.5 px-2 py-2"
-        style={{ backgroundColor: stage.bgColor, borderBottom: `1px solid ${stage.borderColor}` }}
+        className={cn(
+          "rounded-xl border bg-white overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.06)] transition-shadow",
+          isDragging && "shadow-lg",
+        )}
       >
+        {/* Colored top accent line */}
+        <div className="h-0.5 w-full" style={{ backgroundColor: stage.color }} />
+
+        {/* Header row */}
         <button
-          {...attributes}
-          {...listeners}
-          className="touch-none cursor-grab active:cursor-grabbing shrink-0 text-gray-400 hover:text-gray-500 transition-colors p-0.5 rounded"
-          aria-label="Перетащить этап"
+          onClick={onToggle}
+          className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-gray-50/70 transition-colors text-left"
         >
-          <GripVertical className="w-3.5 h-3.5" />
+          {/* Drag handle */}
+          <span
+            {...attributes}
+            {...listeners}
+            onClick={(e) => e.stopPropagation()}
+            className="touch-none cursor-grab active:cursor-grabbing shrink-0 text-gray-300 hover:text-gray-400 transition-colors"
+            aria-label="Перетащить раздел"
+          >
+            <GripVertical className="w-4 h-4" />
+          </span>
+
+          {/* Icon */}
+          <span
+            className="shrink-0 flex items-center justify-center w-7 h-7 rounded-lg"
+            style={{ backgroundColor: stage.badgeBg, color: stage.color }}
+          >
+            <Icon className="w-3.5 h-3.5" />
+          </span>
+
+          {/* Label */}
+          <span className="flex-1 min-w-0">
+            <span className="block text-[13px] font-semibold text-gray-800 leading-tight">
+              {stage.label}
+            </span>
+            <span className="block text-[11px] text-gray-400 mt-0.5 leading-tight">
+              {pendingItems.length > 0
+                ? `${pendingItems.length} ожидает · ${completedItems.length} выполнено`
+                : completedItems.length > 0
+                ? `${completedItems.length} выполнено`
+                : "нет услуг"}
+            </span>
+          </span>
+
+          {/* Right side: count + price */}
+          <div className="flex items-center gap-2 shrink-0">
+            {sectionTotal > 0 && (
+              <span className="text-[11px] font-medium text-gray-500">
+                {formatPrice(sectionTotal)}
+              </span>
+            )}
+            <span
+              className="text-[11px] font-bold w-5 h-5 flex items-center justify-center rounded-full"
+              style={{ backgroundColor: stage.badgeBg, color: stage.color }}
+            >
+              {totalCount}
+            </span>
+            <ChevronDown
+              className={cn(
+                "w-4 h-4 text-gray-400 transition-transform duration-200",
+                isExpanded && "rotate-180",
+              )}
+            />
+          </div>
         </button>
 
-        <span className="shrink-0" style={{ color: stage.color }}>
-          <Icon className="w-3.5 h-3.5" />
-        </span>
-
-        <span
-          className="text-[11px] font-bold leading-tight flex-1 min-w-0 truncate"
-          style={{ color: stage.textColor }}
-        >
-          {stage.label}
-        </span>
-
-        {/* Combined count: teeth + orphan plan-item positions */}
-        <span
-          className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center"
-          style={{ backgroundColor: stage.color + "25", color: stage.color }}
-        >
-          {totalCount}
-        </span>
-      </div>
-
-      {/* Expand toggle */}
-      <button
-        onClick={onToggle}
-        className="w-full flex items-center justify-between px-2.5 py-1.5 bg-white hover:bg-gray-50/80 transition-colors"
-      >
-        <span className="text-[10px] text-muted-foreground leading-tight text-left">
-          {pendingItems.length > 0
-            ? `${pendingItems.length} услуг ожидает`
-            : completedItems.length > 0
-            ? `${completedItems.length} выполнено`
-            : teeth.length > 0
-            ? "нет услуг"
-            : "только позиции"}
-        </span>
-        <ChevronDown
-          className={cn(
-            "w-3 h-3 text-muted-foreground transition-transform shrink-0",
-            isExpanded && "rotate-180",
-          )}
-        />
-      </button>
-
-      {/* Expanded detail */}
-      {isExpanded && (
-        <div
-          className="border-t divide-y divide-border/20 max-h-52 overflow-y-auto"
-          style={{ borderColor: stage.borderColor }}
-        >
-          {teeth.length === 0 && planItems.length === 0 && (
-            <p className="text-[10px] text-muted-foreground text-center py-2">Нет данных</p>
-          )}
-
-          {/* Teeth with nested plan items */}
-          {teeth.map((tooth) => {
-            const condCfg = CONDITION_CONFIG[tooth.condition ?? "healthy"];
-            const toothItems = planItems.filter((p) => p.toothFdi === tooth.toothFdi);
-            return (
-              <div key={tooth.toothFdi} className="px-2.5 py-1.5 space-y-1">
-                <div className="flex items-center gap-1.5">
-                  <span
-                    className="w-2 h-2 rounded-sm shrink-0"
-                    style={{
-                      backgroundColor: condCfg?.crownFill,
-                      border: `1px solid ${condCfg?.stroke}`,
-                    }}
-                  />
-                  <span className="text-[11px] font-semibold text-gray-700">
-                    Зуб {tooth.toothFdi}
-                  </span>
-                  <span className="text-[9px] text-muted-foreground ml-auto">{condCfg?.label}</span>
-                </div>
-                {toothItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className={cn(
-                      "ml-3.5 flex items-start gap-1",
-                      item.status === "completed" && "opacity-50",
-                    )}
-                  >
-                    {item.status === "completed" ? (
-                      <CheckCircle2 className="w-2.5 h-2.5 text-green-500 mt-0.5 shrink-0" />
-                    ) : (
-                      <span className="w-2 h-2 rounded-full border border-gray-300 mt-0.5 shrink-0 inline-block" />
-                    )}
-                    <span className="text-[10px] text-gray-600 leading-tight">{item.title}</span>
+        {/* Expanded content */}
+        {isExpanded && (
+          <div className="border-t border-gray-100">
+            {/* Teeth with nested plan items */}
+            {teeth.map((tooth, idx) => {
+              const condCfg = CONDITION_CONFIG[tooth.condition ?? "healthy"];
+              const toothItems = planItems.filter((p) => p.toothFdi === tooth.toothFdi);
+              return (
+                <div
+                  key={tooth.toothFdi}
+                  className={cn(
+                    "px-3 py-2",
+                    idx < teeth.length - 1 || orphanItems.length > 0
+                      ? "border-b border-gray-50"
+                      : "",
+                  )}
+                >
+                  {/* Tooth row */}
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span
+                      className="w-2 h-2 rounded-sm shrink-0"
+                      style={{
+                        backgroundColor: condCfg?.crownFill ?? "#e5e7eb",
+                        border: `1.5px solid ${condCfg?.stroke ?? "#9ca3af"}`,
+                      }}
+                    />
+                    <span className="text-[12px] font-semibold text-gray-700">
+                      Зуб {tooth.toothFdi}
+                    </span>
+                    <span
+                      className="text-[10px] px-1.5 py-0.5 rounded-md font-medium"
+                      style={{
+                        backgroundColor: stage.badgeBg,
+                        color: stage.textColor,
+                      }}
+                    >
+                      {condCfg?.label ?? tooth.condition}
+                    </span>
                   </div>
+
+                  {/* Tooth plan items */}
+                  {toothItems.length > 0 ? (
+                    <div className="space-y-1 pl-4">
+                      {toothItems.map((item) => (
+                        <PlanItemRow key={item.id} item={item} />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="pl-4 text-[11px] text-gray-400 italic">нет позиций плана</p>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* Orphan plan items (no linked tooth in this stage) */}
+            {orphanItems.length > 0 && (
+              <div className="px-3 py-2 space-y-1">
+                {orphanItems.map((item) => (
+                  <PlanItemRow key={item.id} item={item} showTooth />
                 ))}
               </div>
-            );
-          })}
+            )}
 
-          {/* Plan items with no linked tooth in this stage's teeth list */}
-          {orphanPlanItems.map((item) => (
-            <div
-              key={item.id}
-              className={cn(
-                "px-2.5 py-1.5 flex items-start gap-1.5",
-                item.status === "completed" && "opacity-50",
-              )}
-            >
-              {item.status === "completed" ? (
-                <CheckCircle2 className="w-2.5 h-2.5 text-green-500 mt-0.5 shrink-0" />
-              ) : (
-                <span className="w-2 h-2 rounded-full border border-gray-300 mt-0.5 shrink-0 inline-block" />
-              )}
-              <span className="text-[10px] text-gray-600 leading-tight flex-1">{item.title}</span>
-              {item.toothFdi && (
-                <span className="text-[9px] text-muted-foreground shrink-0">з.{item.toothFdi}</span>
-              )}
-            </div>
-          ))}
-        </div>
+            {/* Empty state */}
+            {teeth.length === 0 && planItems.length === 0 && (
+              <p className="text-center text-[12px] text-gray-400 py-4">Нет данных</p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── PlanItemRow ───────────────────────────────────────────────────────────────
+
+function PlanItemRow({
+  item,
+  showTooth,
+}: {
+  item: TreatmentPlanItem;
+  showTooth?: boolean;
+}) {
+  const isDone = item.status === "completed";
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-2 py-0.5",
+        isDone && "opacity-55",
+      )}
+    >
+      {isDone ? (
+        <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
+      ) : (
+        <CircleDot className="w-3 h-3 text-gray-300 shrink-0" />
+      )}
+      <span
+        className={cn(
+          "flex-1 min-w-0 text-[12px] leading-tight text-gray-700",
+          isDone && "line-through text-gray-400",
+        )}
+      >
+        {item.title}
+      </span>
+      {showTooth && item.toothFdi && (
+        <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-medium shrink-0">
+          з.{item.toothFdi}
+        </span>
+      )}
+      {item.price > 0 && (
+        <span className="text-[11px] text-gray-500 font-medium shrink-0">
+          {formatPrice(item.price)}
+        </span>
       )}
     </div>
   );
@@ -408,7 +457,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
 
   const [order, setOrder] = useState<string[]>(() => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(`1dent:stages-order:${patientId}`);
       if (raw) {
         const parsed: string[] = JSON.parse(raw);
         const valid = parsed.filter((id) => DEFAULT_ORDER.includes(id));
@@ -421,8 +470,6 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
 
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
-  // When patientId changes (panel reuses component without unmounting),
-  // reload the saved order for the new patient and reset expand state.
   useEffect(() => {
     try {
       const raw = localStorage.getItem(`1dent:stages-order:${patientId}`);
@@ -442,7 +489,6 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
 
   const stageItems = buildStageItems(teeth, activePlan);
 
-  // Only show stages that have at least one tooth or plan item
   const activeStages = order
     .map((id) => STAGE_CONFIGS.find((s) => s.id === id))
     .filter((stage): stage is StageConfig => {
@@ -484,27 +530,56 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
 
   if (activeStages.length === 0) return null;
 
+  const totalItems = activePlan?.items.filter((i) => i.status !== "cancelled").length ?? 0;
+  const completedItems = activePlan?.items.filter((i) => i.status === "completed").length ?? 0;
+  const planTotal = activePlan?.totalCost ?? 0;
+  const progressPct = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+
   return (
-    <div className="mt-3 space-y-1.5">
-      <div className="flex items-center gap-2 px-0.5">
-        <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">
-          Этапы лечения
-        </span>
-        <span className="text-[10px] text-muted-foreground hidden sm:inline">
-          — перетащите для изменения порядка
-        </span>
+    <div className="mt-4 space-y-3">
+      {/* Plan header */}
+      <div className="flex items-center justify-between px-0.5">
+        <div className="flex items-center gap-2">
+          <ClipboardList className="w-4 h-4 text-gray-400" />
+          <span className="text-[13px] font-semibold text-gray-700">
+            {activePlan
+              ? `План лечения №${activePlan.planNumber}`
+              : "По зубной карте"}
+          </span>
+        </div>
+        {planTotal > 0 && (
+          <span className="text-[12px] font-semibold text-gray-600">
+            {formatPrice(planTotal)}
+          </span>
+        )}
       </div>
 
+      {/* Progress bar (only if there's a plan with items) */}
+      {totalItems > 0 && (
+        <div className="px-0.5">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[11px] text-gray-400">
+              Выполнено {completedItems} из {totalItems}
+            </span>
+            <span className="text-[11px] font-semibold text-gray-500">{progressPct}%</span>
+          </div>
+          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Stage sections */}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext
-          items={activeStages.map((s) => s.id)}
-          strategy={horizontalListSortingStrategy}
-        >
-          <div className="flex gap-2 overflow-x-auto pb-2">
+        <SortableContext items={activeStages.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+          <div className="space-y-2">
             {activeStages.map((stage) => {
               const items = stageItems.get(stage.id)!;
               return (
-                <SortableStageCard
+                <SortableSection
                   key={stage.id}
                   stage={stage}
                   teeth={items.teeth}
