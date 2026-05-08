@@ -299,7 +299,7 @@ function Router() {
 
       {/* Migration page */}
       <Route path="/migration">
-        <ProtectedRoute component={MigrationPage} allowedRoles={['owner', 'admin']} />
+        <ProtectedRoute component={MigrationPage} allowedRoles={['owner']} />
       </Route>
 
       {/* Settings page */}
