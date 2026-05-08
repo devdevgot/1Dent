@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect } from "react";
+import { useLocation } from "wouter";
 import {
   FileSpreadsheet,
+  ChevronLeft,
   Check,
   AlertTriangle,
   RefreshCw,
@@ -552,12 +554,22 @@ function JobHistory() {
 }
 
 export default function MigrationPage() {
+  const [, setLocation] = useLocation();
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-5xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Миграция данных</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <div className="flex items-center gap-2.5 mb-1">
+            <button
+              onClick={() => setLocation("/menu")}
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-500 shrink-0"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <h1 className="text-2xl font-bold text-gray-900">Миграция данных</h1>
+          </div>
+          <p className="text-sm text-gray-500 mt-1 pl-10">
             Импортируйте данные из Excel, CSV или PDF
           </p>
         </div>
