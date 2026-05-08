@@ -56,9 +56,11 @@ export type VoiceDiagnosisEntry = {
   fdi: number;
   condition: string;
   notes: string;
+  diagnosisText?: string;
   price: number;
   mkb10Code?: string;
   suggestedTemplates?: SuggestedTemplate[];
+  bestMatchId?: string;
 };
 
 type VoiceDraft = {
@@ -259,9 +261,17 @@ export function VoiceDiagnosisModal({ patientId, onClose, onApplied }: Props) {
         success: boolean;
         data: { transcript: string; diagnoses: VoiceDiagnosisEntry[] };
       };
+      const diagEntries = json.data.diagnoses ?? [];
       setTranscript(json.data.transcript ?? "");
-      setEntries(json.data.diagnoses ?? []);
-      setSelectedServiceIds({});
+      setEntries(diagEntries);
+      // Auto-select the best-matching template for each tooth
+      const autoSelected: Record<number, Set<string>> = {};
+      for (const d of diagEntries) {
+        if (d.bestMatchId) {
+          autoSelected[d.fdi] = new Set([d.bestMatchId]);
+        }
+      }
+      setSelectedServiceIds(autoSelected);
       setPhase("review");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка при обработке голоса");
@@ -414,6 +424,8 @@ export function VoiceDiagnosisModal({ patientId, onClose, onApplied }: Props) {
       [entry.suggestedTemplates],
     );
 
+    const bestMatchId = entry.bestMatchId;
+
     const selected = selectedServiceIds[fdi] ?? new Set<string>();
     const selectedCount = selected.size;
 
@@ -488,7 +500,12 @@ export function VoiceDiagnosisModal({ patientId, onClose, onApplied }: Props) {
                   <span className="flex-1 min-w-0">
                     <span className="flex items-center gap-1.5">
                       <span className="font-medium text-foreground leading-snug">{tpl.name}</span>
-                      {isSuggested && !browseCategory && (
+                      {tpl.id === bestMatchId && !browseCategory && (
+                        <span className="shrink-0 text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-medium">
+                          Подобрано
+                        </span>
+                      )}
+                      {isSuggested && tpl.id !== bestMatchId && !browseCategory && (
                         <span className="shrink-0 text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">
                           ИИ
                         </span>
@@ -702,18 +719,23 @@ export function VoiceDiagnosisModal({ patientId, onClose, onApplied }: Props) {
                           {/* Tooth header */}
                           <div className="p-3 space-y-2">
                             <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
                                 {cfg && (
                                   <span
                                     className="w-3 h-3 rounded border shrink-0"
                                     style={{ background: cfg.crownFill, borderColor: cfg.stroke }}
                                   />
                                 )}
-                                <span className="text-xs font-bold text-foreground">Зуб {entry.fdi}</span>
+                                <span className="text-xs font-bold text-foreground shrink-0">Зуб {entry.fdi}</span>
+                                {entry.diagnosisText && (
+                                  <span className="text-[10px] text-muted-foreground italic truncate">
+                                    {entry.diagnosisText}
+                                  </span>
+                                )}
                               </div>
                               <button
                                 onClick={() => removeEntry(idx)}
-                                className="p-1 text-muted-foreground hover:text-red-500 transition-colors"
+                                className="p-1 text-muted-foreground hover:text-red-500 transition-colors shrink-0"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
@@ -721,7 +743,7 @@ export function VoiceDiagnosisModal({ patientId, onClose, onApplied }: Props) {
 
                             <div className="grid grid-cols-2 gap-2">
                               <div className="space-y-1">
-                                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Диагноз</label>
+                                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Состояние</label>
                                 <select
                                   value={entry.condition}
                                   onChange={(e) => {
@@ -736,8 +758,15 @@ export function VoiceDiagnosisModal({ patientId, onClose, onApplied }: Props) {
                                 </select>
                               </div>
                               <div className="space-y-1">
-                                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Базовая цена</label>
-                                <div className="w-full text-xs border border-border/50 rounded-lg px-2 py-1.5 bg-slate-50 text-foreground/70">
+                                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                                  {entry.bestMatchId ? "Цена по прейскуранту" : "Базовая цена"}
+                                </label>
+                                <div className={cn(
+                                  "w-full text-xs border rounded-lg px-2 py-1.5",
+                                  entry.bestMatchId
+                                    ? "border-emerald-300 bg-emerald-50 text-emerald-800 font-semibold"
+                                    : "border-border/50 bg-slate-50 text-foreground/70",
+                                )}>
                                   {entry.price > 0 ? `${entry.price.toLocaleString("ru-KZ")} ₸` : "—"}
                                 </div>
                               </div>
@@ -772,7 +801,12 @@ export function VoiceDiagnosisModal({ patientId, onClose, onApplied }: Props) {
                                 <span className="text-xs font-medium text-foreground">
                                   Услуги из прейскуранта
                                 </span>
-                                {!isExpanded && hasSuggestions && (
+                                {!isExpanded && entry.bestMatchId && selectedCount === 0 && (
+                                  <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">
+                                    подобрано ИИ
+                                  </span>
+                                )}
+                                {!isExpanded && hasSuggestions && !entry.bestMatchId && (
                                   <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
                                     {entry.suggestedTemplates!.length} от ИИ
                                   </span>
