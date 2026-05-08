@@ -238,7 +238,7 @@ Analyze the text and return a JSON object with this structure:
 
 Rules:
 - "mapping" keys should be the labels/column names you detected in the text
-- "rows" should be up to 30 rows of structured data you extracted (use the same keys as "mapping")
+- "rows" should be ALL rows of structured data you extracted (up to 500 rows; use the same keys as "mapping")
 - "detectedCategories" should include only relevant categories
 - Respond only with valid JSON, no explanation`;
 }
@@ -386,15 +386,19 @@ export class MigrationService {
       }
 
       if (Array.isArray(parsed.rows) && parsed.rows.length > 0) {
-        previewRows = parsed.rows.slice(0, AI_PREVIEW_ROWS) as Record<string, string>[];
-        totalRows = parsed.rows.length;
+        // Keep ALL extracted rows (capped at MAX_IMPORT_ROWS) so confirm can import the full dataset.
+        previewRows = parsed.rows.slice(0, MAX_IMPORT_ROWS) as Record<string, string>[];
+        totalRows = previewRows.length;
       }
     } catch (err) {
       logger.warn({ err }, "[MigrationService] PDF AI analysis failed");
+      // Fallback: create one row per non-empty line mapped to the "notes" field
       headers = ["raw_text"];
       mapping = { raw_text: "notes" };
-      previewRows = [{ raw_text: rawText.slice(0, 200) }];
-      totalRows = 1;
+      const fallbackLines = rawText.split("\n").map((l) => l.trim()).filter(Boolean);
+      previewRows = fallbackLines.slice(0, MAX_IMPORT_ROWS).map((line) => ({ raw_text: line }));
+      totalRows = previewRows.length || 1;
+      if (previewRows.length === 0) previewRows = [{ raw_text: rawText.slice(0, 200) }];
     }
 
     const detectedCategories = detectCategories(mapping);
@@ -474,7 +478,10 @@ export class MigrationService {
       duplicateCount: 0,
     });
 
-    const payload: AiImportJobPayload = { jobId, clinicId, rows, mapping, detectedCategories };
+    // Always re-derive detectedCategories server-side from the final mapping so
+    // that user corrections to column assignments are fully honored.
+    const serverCategories = detectCategories(mapping);
+    const payload: AiImportJobPayload = { jobId, clinicId, rows, mapping, detectedCategories: serverCategories };
 
     const migrationQueue = getMigrationQueue();
     if (migrationQueue) {
@@ -721,11 +728,35 @@ export class MigrationService {
                 patientCount++;
               }
             } else if (includesProcedures && phoneCol) {
-              // Procedures-only import: resolve patient by phone
+              // Procedures-only import: find OR create patient so no procedure is lost.
               const rawPhone = (row[phoneCol] ?? "").trim();
               if (rawPhone) {
                 const phone = normalizePhone(rawPhone);
-                patientId = patientPhoneMap.get(phone);
+                if (patientPhoneMap.has(phone)) {
+                  patientId = patientPhoneMap.get(phone);
+                } else if (phone.length >= 10) {
+                  // Create a minimal patient stub so the procedure can be linked.
+                  const rawName    = nameCol ? (row[nameCol] ?? "").trim() : "";
+                  const stubName   = rawName.slice(0, 100) || `Пациент ${phone}`;
+                  const rawIin     = iinCol ? (row[iinCol] ?? "").trim().replace(/\D/g, "").slice(0, 12) : "";
+                  const iin        = rawIin || undefined;
+                  const rawDoctor  = doctorCol ? (row[doctorCol] ?? "").trim() : "";
+                  const doctorId   = rawDoctor ? (doctorCache.get(rawDoctor) ?? null) : null;
+                  const newPatientId = randomUUID();
+                  await db.insert(patientsTable).values({
+                    id: newPatientId,
+                    clinicId,
+                    name: stubName,
+                    phone,
+                    iin,
+                    doctorId: doctorId ?? undefined,
+                    status: "new_request",
+                  });
+                  patientPhoneMap.set(phone, newPatientId);
+                  if (iin) patientIinMap.set(iin, newPatientId);
+                  patientId = newPatientId;
+                  patientCount++;
+                }
               }
             }
 
