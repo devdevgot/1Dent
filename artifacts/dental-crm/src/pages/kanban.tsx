@@ -31,7 +31,7 @@ import { useAuthStore } from "@/hooks/use-auth";
 export default function KanbanPage() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
-  const canCreate = user?.role === "owner" || user?.role === "admin";
+  const canCreate = user?.role === "owner" || user?.role === "admin" || user?.role === "doctor";
   const queryClient = useQueryClient();
   const { isCreateOpen, setIsCreateOpen, setSelectedPatientId } = useKanbanStore();
   const [activeDragPatient, setActiveDragPatient] = useState<Patient | null>(null);

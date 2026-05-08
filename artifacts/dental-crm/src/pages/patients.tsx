@@ -482,7 +482,7 @@ export default function PatientsPage() {
 
   const hasActiveFilter = filterSearch.length > 0 || statusFilter !== "all" || sourceFilter !== "all";
 
-  const canCreate = user?.role === "owner" || user?.role === "admin";
+  const canCreate = user?.role === "owner" || user?.role === "admin" || user?.role === "doctor";
 
   const viewParam = new URLSearchParams(urlSearch).get("view") as PatientView | null;
   const view: PatientView = viewParam === "kanban" ? "kanban" : "list";
