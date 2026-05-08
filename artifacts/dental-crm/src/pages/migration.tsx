@@ -124,7 +124,7 @@ function JobCard({ job: initialJob }: { job: MigrationJob }) {
       } catch {
         // silent - keep polling
       }
-    }, 2500);
+    }, 2000);
     return () => clearInterval(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [job.id, isActive]);
