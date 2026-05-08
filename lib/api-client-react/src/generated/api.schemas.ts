@@ -1126,7 +1126,37 @@ export type MigrationJobType =
 export const MigrationJobType = {
   "excel-import": "excel-import",
   "trello-import": "trello-import",
+  "ai-smart-import": "ai-smart-import",
 } as const;
+
+export type AiFileType = "xlsx" | "csv" | "pdf";
+export type AiDetectedCategory = "patients" | "procedures" | "templates";
+
+export interface AiAnalyzeRequest {
+  fileBase64: string;
+  fileType: AiFileType;
+}
+
+export interface AiAnalyzeResponseData {
+  mapping: Record<string, string>;
+  detectedCategories: AiDetectedCategory[];
+  headers: string[];
+  previewRows: Record<string, string>[];
+  totalRows: number;
+  isPdf: boolean;
+}
+
+export interface AiAnalyzeResponse {
+  success: boolean;
+  data: AiAnalyzeResponseData;
+}
+
+export interface AiConfirmRequest {
+  fileBase64: string;
+  fileType: AiFileType;
+  mapping: Record<string, string>;
+  detectedCategories: AiDetectedCategory[];
+}
 
 export type MigrationJobStatus =
   (typeof MigrationJobStatus)[keyof typeof MigrationJobStatus];

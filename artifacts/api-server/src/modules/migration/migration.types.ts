@@ -1,5 +1,6 @@
-export type MigrationJobType = "excel-import" | "trello-import";
+export type MigrationJobType = "excel-import" | "trello-import" | "ai-smart-import";
 export type MigrationJobStatus = "pending" | "processing" | "done" | "failed";
+export type FileType = "xlsx" | "csv" | "pdf";
 
 export interface ColumnMapping {
   name?: string;
@@ -7,6 +8,36 @@ export interface ColumnMapping {
   age?: string;
   notes?: string;
   status?: string;
+}
+
+export type AiFieldKey =
+  | "name" | "phone" | "iin" | "dateOfBirth" | "gender" | "source" | "status"
+  | "doctorName" | "notes"
+  | "procedureName" | "procedurePrice" | "procedureStatus" | "scheduledAt"
+  | "paymentMethod" | "procedureNotes"
+  | "templateName" | "templatePrice" | "templateCategory";
+
+export interface AiColumnMapping {
+  [columnHeader: string]: AiFieldKey | "";
+}
+
+export type DetectedCategory = "patients" | "procedures" | "templates";
+
+export interface AiAnalyzeResponse {
+  mapping: AiColumnMapping;
+  detectedCategories: DetectedCategory[];
+  headers: string[];
+  previewRows: Record<string, string>[];
+  totalRows: number;
+  isPdf: boolean;
+}
+
+export interface AiImportJobPayload {
+  jobId: string;
+  clinicId: string;
+  rows: Array<Record<string, string>>;
+  mapping: AiColumnMapping;
+  detectedCategories: DetectedCategory[];
 }
 
 export interface ExcelPreviewResponse {

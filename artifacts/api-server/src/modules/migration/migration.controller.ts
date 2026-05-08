@@ -3,13 +3,13 @@ import { z } from "zod";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 import { migrationService } from "./migration.service";
+
 const router: IRouter = Router();
 
 router.use(authMiddleware);
 router.use(roleGuard("owner", "admin"));
 
 // POST /migration/excel/preview
-// Accepts base64-encoded Excel file + column mapping detection
 const excelPreviewSchema = z.object({
   fileBase64: z.string().min(10, "fileBase64 is required"),
 });
@@ -31,7 +31,6 @@ router.post(
 );
 
 // POST /migration/excel/confirm
-// Accepts full base64 file + mapping — server parses all rows (up to 5000)
 const excelConfirmSchema = z.object({
   fileBase64: z.string().min(10, "fileBase64 is required"),
   mapping: z.object({
@@ -93,6 +92,57 @@ router.post(
     }
     const job = await migrationService
       .startTrelloImport(req.user!.clinicId, parsed.data.apiKey, parsed.data.token, parsed.data.boardId)
+      .catch(next);
+    if (!job) return;
+    res.json({ success: true, data: { job } });
+  },
+);
+
+// POST /migration/ai/analyze
+const aiAnalyzeSchema = z.object({
+  fileBase64: z.string().min(10, "fileBase64 is required"),
+  fileType: z.enum(["xlsx", "csv", "pdf"]),
+});
+
+router.post(
+  "/ai/analyze",
+  async (req: Request, res: Response, next: NextFunction) => {
+    const parsed = aiAnalyzeSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+    }
+    try {
+      const result = await migrationService.analyzeFileWithAi(parsed.data.fileBase64, parsed.data.fileType);
+      res.json({ success: true, data: result });
+    } catch (err) {
+      next(new ValidationError((err as Error).message));
+    }
+  },
+);
+
+// POST /migration/ai/confirm
+const aiConfirmSchema = z.object({
+  fileBase64: z.string().min(10, "fileBase64 is required"),
+  fileType: z.enum(["xlsx", "csv", "pdf"]),
+  mapping: z.record(z.string()),
+  detectedCategories: z.array(z.enum(["patients", "procedures", "templates"])),
+});
+
+router.post(
+  "/ai/confirm",
+  async (req: Request, res: Response, next: NextFunction) => {
+    const parsed = aiConfirmSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+    }
+    const job = await migrationService
+      .startAiImport(
+        req.user!.clinicId,
+        parsed.data.fileBase64,
+        parsed.data.fileType,
+        parsed.data.mapping as Record<string, "" | "name" | "phone" | "iin" | "dateOfBirth" | "gender" | "source" | "status" | "doctorName" | "notes" | "procedureName" | "procedurePrice" | "procedureStatus" | "scheduledAt" | "paymentMethod" | "procedureNotes" | "templateName" | "templatePrice" | "templateCategory">,
+        parsed.data.detectedCategories,
+      )
       .catch(next);
     if (!job) return;
     res.json({ success: true, data: { job } });

@@ -4,6 +4,7 @@ import { clinicsTable } from "./clinics";
 export interface MigrationReport {
   errors: Array<{ row: number; message: string }>;
   duplicates: Array<{ phone: string; name?: string }>;
+  summary?: { patients: number; procedures: number; templates: number };
 }
 
 export const migrationJobsTable = pgTable("migration_jobs", {

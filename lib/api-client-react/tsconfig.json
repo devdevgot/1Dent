@@ -4,9 +4,13 @@
     "composite": true,
     "declarationMap": true,
     "emitDeclarationOnly": true,
+    "noEmitOnError": false,
     "outDir": "dist",
     "rootDir": "src",
     "lib": ["dom", "es2022"]
   },
-  "include": ["src"]
+  "include": ["src"],
+  "references": [
+    { "path": "../api-zod" }
+  ]
 }

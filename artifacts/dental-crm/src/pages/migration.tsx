@@ -14,6 +14,9 @@ import {
   CheckCircle2,
   XCircle,
   Info,
+  Sparkles,
+  FileText,
+  FileCog,
 } from "lucide-react";
 import {
   usePreviewExcelImport,
@@ -22,12 +25,44 @@ import {
   useStartTrelloImport,
   useListMigrationJobs,
   getMigrationJobStatus,
+  useAnalyzeFileWithAi,
+  useConfirmAiImport,
 } from "@workspace/api-client-react";
-import type { MigrationJob } from "@workspace/api-client-react";
+import type { MigrationJob, AiDetectedCategory } from "@workspace/api-client-react";
 
-type Tab = "excel" | "trello";
+type Tab = "excel" | "trello" | "ai";
 type ColumnKey = "name" | "phone" | "age" | "notes" | "status";
 const COLUMN_KEYS: ColumnKey[] = ["name", "phone", "age", "notes", "status"];
+
+const AI_FIELD_LABELS: Record<string, string> = {
+  "": "— не указано —",
+  name: "Имя пациента",
+  phone: "Телефон",
+  iin: "ИИН",
+  dateOfBirth: "Дата рождения",
+  gender: "Пол",
+  source: "Источник",
+  status: "Статус пациента",
+  doctorName: "Имя врача",
+  notes: "Заметки",
+  procedureName: "Название процедуры",
+  procedurePrice: "Стоимость процедуры",
+  procedureStatus: "Статус процедуры",
+  scheduledAt: "Дата приёма",
+  paymentMethod: "Способ оплаты",
+  procedureNotes: "Заметки к процедуре",
+  templateName: "Шаблон услуги",
+  templatePrice: "Цена шаблона",
+  templateCategory: "Категория шаблона",
+};
+
+const AI_FIELD_OPTIONS = Object.keys(AI_FIELD_LABELS);
+
+const CATEGORY_LABELS: Record<AiDetectedCategory, string> = {
+  patients: "Пациенты",
+  procedures: "Процедуры",
+  templates: "Шаблоны услуг",
+};
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -40,6 +75,14 @@ function fileToBase64(file: File): Promise<string> {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+function fileTypeFromFile(file: File): "xlsx" | "csv" | "pdf" | null {
+  const name = file.name.toLowerCase();
+  if (name.endsWith(".xlsx") || name.endsWith(".xls")) return "xlsx";
+  if (name.endsWith(".csv")) return "csv";
+  if (name.endsWith(".pdf")) return "pdf";
+  return null;
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -101,18 +144,23 @@ function JobCard({ job: initialJob }: { job: MigrationJob }) {
     ? (report!["errors"] as ReportError[])
     : [];
 
+  const jobType = job.type as string;
+  const jobTypeIcon =
+    jobType === "excel-import" ? <FileSpreadsheet className="w-4 h-4 text-emerald-600" /> :
+    jobType === "ai-smart-import" ? <Sparkles className="w-4 h-4 text-violet-500" /> :
+    <Trello className="w-4 h-4 text-blue-500" />;
+
+  const jobTypeLabel =
+    jobType === "excel-import" ? "Excel" :
+    jobType === "ai-smart-import" ? "ИИ-импорт" :
+    "Trello";
+
   return (
     <div className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          {job.type === "excel-import" ? (
-            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-          ) : (
-            <Trello className="w-4 h-4 text-blue-500" />
-          )}
-          <span className="text-sm font-medium text-gray-800">
-            {job.type === "excel-import" ? "Excel" : "Trello"}
-          </span>
+          {jobTypeIcon}
+          <span className="text-sm font-medium text-gray-800">{jobTypeLabel}</span>
         </div>
         <StatusBadge status={job.status} />
       </div>
@@ -163,6 +211,311 @@ function JobCard({ job: initialJob }: { job: MigrationJob }) {
         <Clock className="inline w-3 h-3 mr-1" />
         {new Date(job.createdAt).toLocaleString("ru")}
       </p>
+    </div>
+  );
+}
+
+function AiImportTab() {
+  type Step = "upload" | "analyze" | "import";
+  const [step, setStep] = useState<Step>("upload");
+  const [file, setFile] = useState<File | null>(null);
+  const [fileType, setFileType] = useState<"xlsx" | "csv" | "pdf" | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [analysis, setAnalysis] = useState<{
+    mapping: Record<string, string>;
+    detectedCategories: AiDetectedCategory[];
+    headers: string[];
+    previewRows: Record<string, string>[];
+    totalRows: number;
+    isPdf: boolean;
+  } | null>(null);
+  const [mapping, setMapping] = useState<Record<string, string>>({});
+
+  const [jobId, setJobId] = useState<string | null>(null);
+
+  const analyzeMutation = useAnalyzeFileWithAi();
+  const confirmMutation = useConfirmAiImport();
+
+  const processFile = useCallback(async (f: File) => {
+    const ft = fileTypeFromFile(f);
+    if (!ft) {
+      setError("Поддерживаются только форматы: .xlsx, .csv, .pdf");
+      return;
+    }
+    setFile(f);
+    setFileType(ft);
+    setError(null);
+    setAnalysis(null);
+    setJobId(null);
+    setStep("analyze");
+
+    try {
+      const base64 = await fileToBase64(f);
+      const res = await analyzeMutation.mutateAsync({ fileBase64: base64, fileType: ft });
+      setAnalysis(res.data);
+      setMapping(res.data.mapping);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Ошибка при анализе файла");
+      setStep("upload");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setDragging(false);
+      const f = e.dataTransfer.files[0];
+      if (f) processFile(f);
+    },
+    [processFile],
+  );
+
+  const handleImport = async () => {
+    if (!analysis || !file || !fileType) return;
+    setError(null);
+    try {
+      const base64 = await fileToBase64(file);
+      const res = await confirmMutation.mutateAsync({
+        fileBase64: base64,
+        fileType,
+        mapping,
+        detectedCategories: analysis.detectedCategories,
+      });
+      setJobId(res.data.job.id);
+      setStep("import");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Ошибка при запуске импорта");
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Format badges */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <span className="text-xs text-gray-500">Поддерживаемые форматы:</span>
+        {[
+          { icon: <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />, label: "Excel (.xlsx)" },
+          { icon: <FileCog className="w-3.5 h-3.5 text-blue-500" />, label: "CSV (.csv)" },
+          { icon: <FileText className="w-3.5 h-3.5 text-red-500" />, label: "PDF (.pdf)" },
+        ].map((f) => (
+          <span key={f.label} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 rounded-full text-xs text-gray-700 font-medium">
+            {f.icon} {f.label}
+          </span>
+        ))}
+      </div>
+
+      {/* Stepper */}
+      <div className="flex items-center gap-2 text-xs">
+        {(["upload", "analyze", "import"] as Step[]).map((s, i) => {
+          const labels = ["Загрузка", "Анализ ИИ", "Импорт"];
+          const isCurrent = step === s;
+          const isDone = (step === "analyze" && s === "upload") || (step === "import" && (s === "upload" || s === "analyze"));
+          return (
+            <div key={s} className="flex items-center gap-2">
+              {i > 0 && <div className={`w-6 h-px ${isDone || isCurrent ? "bg-indigo-400" : "bg-gray-200"}`} />}
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full font-medium transition-all ${
+                isCurrent ? "bg-indigo-600 text-white" :
+                isDone ? "bg-indigo-100 text-indigo-600" :
+                "bg-gray-100 text-gray-400"
+              }`}>
+                {isDone ? <Check className="w-3 h-3" /> : <span>{i + 1}</span>}
+                {labels[i]}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Step: upload */}
+      {step === "upload" && (
+        <div
+          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={handleDrop}
+          className={`relative border-2 border-dashed rounded-2xl p-10 text-center transition-all ${
+            dragging
+              ? "border-violet-400 bg-violet-50"
+              : "border-gray-200 bg-gray-50 hover:border-violet-300 hover:bg-violet-50/40"
+          }`}
+        >
+          <input
+            type="file"
+            accept=".xlsx,.xls,.csv,.pdf"
+            className="absolute inset-0 opacity-0 cursor-pointer"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) processFile(f); }}
+          />
+          <div className="flex flex-col items-center gap-3">
+            <Sparkles className="w-10 h-10 text-violet-400" />
+            <p className="text-sm font-medium text-gray-700">Перетащите файл или нажмите для выбора</p>
+            <p className="text-xs text-gray-400">Excel, CSV или PDF — до 5 000 строк</p>
+          </div>
+        </div>
+      )}
+
+      {/* Step: analyze (loading) */}
+      {step === "analyze" && analyzeMutation.isPending && (
+        <div className="flex flex-col items-center gap-4 py-12">
+          <div className="relative">
+            <Loader2 className="w-12 h-12 text-violet-400 animate-spin" />
+            <Sparkles className="w-5 h-5 text-violet-600 absolute -top-1 -right-1" />
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-medium text-gray-700">ИИ анализирует файл…</p>
+            <p className="text-xs text-gray-400 mt-1">Определяем структуру данных и сопоставляем колонки</p>
+          </div>
+          {file && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-full text-xs text-gray-600">
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              {file.name}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Step: analyze (results) */}
+      {step === "analyze" && analysis && !analyzeMutation.isPending && (
+        <>
+          {/* PDF warning */}
+          {analysis.isPdf && (
+            <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium">PDF: структура восстановлена ИИ</p>
+                <p className="text-xs text-amber-700 mt-0.5">Пожалуйста, внимательно проверьте сопоставление колонок перед импортом.</p>
+              </div>
+            </div>
+          )}
+
+          {/* Detected categories */}
+          {analysis.detectedCategories.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-gray-500">Обнаружено:</span>
+              {analysis.detectedCategories.map((cat) => (
+                <span
+                  key={cat}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-violet-50 border border-violet-200 rounded-full text-xs font-medium text-violet-700"
+                >
+                  <Check className="w-3 h-3" />
+                  {CATEGORY_LABELS[cat]}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Column mapping */}
+          <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+            <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+              <ChevronDown className="w-4 h-4 text-violet-500" />
+              Сопоставление колонок
+              <span className="ml-auto text-xs font-normal text-gray-400">
+                {analysis.totalRows} строк
+              </span>
+            </h3>
+            <div className="space-y-2">
+              {analysis.headers.map((header) => (
+                <div key={header} className="grid grid-cols-2 gap-3 items-center">
+                  <div className="text-sm text-gray-700 bg-gray-50 rounded-lg px-3 py-2 truncate" title={header}>
+                    {header}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={mapping[header] ?? ""}
+                      onChange={(e) => setMapping((m) => ({ ...m, [header]: e.target.value }))}
+                      className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-700 bg-white focus:ring-2 focus:ring-violet-300 focus:border-violet-400 outline-none"
+                    >
+                      {AI_FIELD_OPTIONS.map((opt) => (
+                        <option key={opt} value={opt}>{AI_FIELD_LABELS[opt]}</option>
+                      ))}
+                    </select>
+                    {mapping[header] && (
+                      <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Preview table */}
+          {analysis.previewRows.length > 0 && (
+            <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+              <div className="px-5 py-3 border-b border-gray-100">
+                <h3 className="text-sm font-semibold text-gray-700">Предпросмотр (первые строки)</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-xs">
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-gray-100">
+                      {analysis.headers.map((h) => (
+                        <th key={h} className="text-left px-4 py-2 text-gray-500 font-medium whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {analysis.previewRows.slice(0, 10).map((row, i) => (
+                      <tr key={i} className="border-b border-gray-50 hover:bg-gray-50/50">
+                        {analysis.headers.map((h) => (
+                          <td key={h} className="px-4 py-2 text-gray-600 whitespace-nowrap max-w-[160px] truncate">
+                            {row[h] ?? ""}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => { setStep("upload"); setAnalysis(null); setFile(null); }}
+              className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-sm hover:bg-gray-50 transition-colors"
+            >
+              Выбрать другой файл
+            </button>
+            <button
+              onClick={handleImport}
+              disabled={confirmMutation.isPending}
+              className="flex-1 flex items-center justify-center gap-2 px-6 py-2.5 bg-violet-600 text-white rounded-xl font-medium text-sm hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+            >
+              {confirmMutation.isPending ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Запуск импорта…</>
+              ) : (
+                <><Sparkles className="w-4 h-4" /> Импортировать {analysis.totalRows} строк</>
+              )}
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Step: import */}
+      {step === "import" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 p-4 bg-violet-50 border border-violet-200 rounded-xl text-sm text-violet-700">
+            <CheckCircle2 className="w-5 h-5" />
+            Импорт запущен! Следите за прогрессом в «Истории импортов» ниже.
+          </div>
+          <button
+            onClick={() => { setStep("upload"); setAnalysis(null); setFile(null); setJobId(null); }}
+            className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-sm hover:bg-gray-50 transition-colors"
+          >
+            Импортировать ещё один файл
+          </button>
+          {jobId && <p className="text-xs text-gray-400">ID задачи: {jobId}</p>}
+        </div>
+      )}
+
+      {/* Error */}
+      {error && (
+        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+          {error}
+        </div>
+      )}
     </div>
   );
 }
@@ -550,9 +903,14 @@ function JobHistory() {
 }
 
 export default function MigrationPage() {
-  const [tab, setTab] = useState<Tab>("excel");
+  const [tab, setTab] = useState<Tab>("ai");
 
   const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
+    {
+      key: "ai",
+      label: "ИИ-импорт",
+      icon: <Sparkles className="w-4 h-4" />,
+    },
     {
       key: "excel",
       label: "Excel / CSV",
@@ -571,7 +929,7 @@ export default function MigrationPage() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Миграция данных</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Импортируйте пациентов из Excel/CSV файла или с доски Trello
+            Импортируйте данные из Excel, CSV, PDF или подключите Trello
           </p>
         </div>
 
@@ -584,18 +942,26 @@ export default function MigrationPage() {
                   onClick={() => setTab(t.key)}
                   className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-all ${
                     tab === t.key
-                      ? "border-indigo-500 text-indigo-600 bg-indigo-50/30"
+                      ? t.key === "ai"
+                        ? "border-violet-500 text-violet-600 bg-violet-50/30"
+                        : "border-indigo-500 text-indigo-600 bg-indigo-50/30"
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50/50"
                   }`}
                 >
                   {t.icon}
                   {t.label}
+                  {t.key === "ai" && (
+                    <span className="ml-1 px-1.5 py-0.5 text-xs bg-violet-100 text-violet-700 rounded-full font-medium">
+                      Новое
+                    </span>
+                  )}
                 </button>
               ))}
             </nav>
           </div>
 
           <div className="p-6">
+            {tab === "ai" && <AiImportTab />}
             {tab === "excel" && <ExcelTab />}
             {tab === "trello" && <TrelloTab />}
           </div>

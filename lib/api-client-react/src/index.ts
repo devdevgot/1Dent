@@ -929,3 +929,45 @@ export const useParseScript = <TError = unknown>(options?: {
     mutationFn: (text) => parseScript(text),
     ...options?.mutation,
   });
+
+// ─── AI Migration ─────────────────────────────────────────────────────────────
+
+import type { AiAnalyzeRequest, AiAnalyzeResponse, AiConfirmRequest, MigrationJobResponse } from "./generated/api.schemas";
+
+export const analyzeFileWithAi = (
+  data: AiAnalyzeRequest,
+  options?: RequestInit,
+): Promise<AiAnalyzeResponse> =>
+  customFetch<AiAnalyzeResponse>("/api/migration/ai/analyze", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    ...options,
+  });
+
+export const useAnalyzeFileWithAi = <TError = unknown>(options?: {
+  mutation?: UseMutationOptions<AiAnalyzeResponse, TError, AiAnalyzeRequest>;
+}) =>
+  useMutation<AiAnalyzeResponse, TError, AiAnalyzeRequest>({
+    mutationFn: (data) => analyzeFileWithAi(data),
+    ...options?.mutation,
+  });
+
+export const confirmAiImport = (
+  data: AiConfirmRequest,
+  options?: RequestInit,
+): Promise<MigrationJobResponse> =>
+  customFetch<MigrationJobResponse>("/api/migration/ai/confirm", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    ...options,
+  });
+
+export const useConfirmAiImport = <TError = unknown>(options?: {
+  mutation?: UseMutationOptions<MigrationJobResponse, TError, AiConfirmRequest>;
+}) =>
+  useMutation<MigrationJobResponse, TError, AiConfirmRequest>({
+    mutationFn: (data) => confirmAiImport(data),
+    ...options?.mutation,
+  });
