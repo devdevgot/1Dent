@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import * as XLSX from "xlsx";
-import { db, patientsTable, migrationJobsTable, usersTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { db, patientsTable, migrationJobsTable, usersTable, proceduresTable, procedureTemplatesTable } from "@workspace/db";
+import { eq, and, or } from "drizzle-orm";
 import { logger } from "../../lib/logger";
 import type {
   ColumnMapping,
@@ -504,7 +504,9 @@ export class MigrationService {
       .set({ status: "processing", updatedAt: new Date() })
       .where(eq(migrationJobsTable.id, jobId));
 
-    let successCount = 0;
+    let patientCount = 0;
+    let procedureCount = 0;
+    let templateCount = 0;
     let errorCount = 0;
     let duplicateCount = 0;
     let processedRows = 0;
@@ -516,35 +518,114 @@ export class MigrationService {
       return undefined;
     };
 
-    const nameCol       = reverseMapping("name");
-    const phoneCol      = reverseMapping("phone");
-    const iinCol        = reverseMapping("iin");
-    const dobCol        = reverseMapping("dateOfBirth");
-    const genderCol     = reverseMapping("gender");
-    const sourceCol     = reverseMapping("source");
-    const statusCol     = reverseMapping("status");
-    const doctorCol     = reverseMapping("doctorName");
-    const notesCol      = reverseMapping("notes");
+    const nameCol           = reverseMapping("name");
+    const phoneCol          = reverseMapping("phone");
+    const iinCol            = reverseMapping("iin");
+    const dobCol            = reverseMapping("dateOfBirth");
+    const genderCol         = reverseMapping("gender");
+    const sourceCol         = reverseMapping("source");
+    const statusCol         = reverseMapping("status");
+    const doctorCol         = reverseMapping("doctorName");
+    const notesCol          = reverseMapping("notes");
+    const procedureNameCol  = reverseMapping("procedureName");
+    const procedurePriceCol = reverseMapping("procedurePrice");
+    const procStatusCol     = reverseMapping("procedureStatus");
+    const scheduledAtCol    = reverseMapping("scheduledAt");
+    const paymentMethodCol  = reverseMapping("paymentMethod");
+    const procNotesCol      = reverseMapping("procedureNotes");
+    const templateNameCol   = reverseMapping("templateName");
+    const templatePriceCol  = reverseMapping("templatePrice");
+    const templateCatCol    = reverseMapping("templateCategory");
 
-    const doctorCache = new Map<string, string | null>();
+    const includesPatients   = detectedCategories.includes("patients");
+    const includesProcedures = detectedCategories.includes("procedures");
+    const includesTemplates  = detectedCategories.includes("templates");
 
-    const findOrCreateDoctor = async (doctorName: string): Promise<string | null> => {
-      if (!doctorName) return null;
-      if (doctorCache.has(doctorName)) return doctorCache.get(doctorName)!;
-      const existing = await db
-        .select({ id: usersTable.id })
-        .from(usersTable)
-        .where(and(eq(usersTable.clinicId, clinicId), eq(usersTable.name, doctorName)))
-        .limit(1);
-      if (existing.length > 0) {
-        doctorCache.set(doctorName, existing[0]!.id);
-        return existing[0]!.id;
+    // ── Phase 0: Pre-create doctor stubs for all unique doctor names ──────────
+    const doctorCache = new Map<string, string | null>(); // name -> userId
+    if (doctorCol) {
+      const uniqueDoctorNames = [
+        ...new Set(rows.map((r) => (r[doctorCol] ?? "").trim()).filter(Boolean)),
+      ];
+      for (const doctorName of uniqueDoctorNames) {
+        const existing = await db
+          .select({ id: usersTable.id })
+          .from(usersTable)
+          .where(and(eq(usersTable.clinicId, clinicId), eq(usersTable.name, doctorName)))
+          .limit(1);
+        if (existing.length > 0) {
+          doctorCache.set(doctorName, existing[0]!.id);
+        } else {
+          const stubEmail = `migrated.${doctorName
+            .toLowerCase()
+            .replace(/\s+/g, ".")
+            .replace(/[^a-z0-9.]/g, "")}.${clinicId.slice(0, 8)}@stub.local`;
+          const newId = randomUUID();
+          try {
+            await db.insert(usersTable).values({
+              id: newId,
+              clinicId,
+              name: doctorName,
+              email: stubEmail,
+              passwordHash: "!!migrated-stub!!",
+              role: "doctor",
+            });
+            doctorCache.set(doctorName, newId);
+          } catch {
+            // If email collision or any error, skip stub creation
+            doctorCache.set(doctorName, null);
+          }
+        }
       }
-      doctorCache.set(doctorName, null);
-      return null;
+    }
+
+    // ── Phase 1: Pre-populate patient lookup maps from existing patients ───────
+    // Maps phone -> patientId and iin -> patientId for fast dedup
+    const patientPhoneMap = new Map<string, string>();
+    const patientIinMap   = new Map<string, string>();
+
+    if (includesPatients || includesProcedures) {
+      const existingPatients = await db
+        .select({ id: patientsTable.id, phone: patientsTable.phone, iin: patientsTable.iin })
+        .from(patientsTable)
+        .where(eq(patientsTable.clinicId, clinicId));
+      for (const p of existingPatients) {
+        patientPhoneMap.set(p.phone, p.id);
+        if (p.iin) patientIinMap.set(p.iin, p.id);
+      }
+    }
+
+    // ── Phase 2: Pre-populate template lookup map ─────────────────────────────
+    const templateNameMap = new Map<string, string>(); // name -> templateId
+    if (includesTemplates) {
+      const existingTemplates = await db
+        .select({ id: procedureTemplatesTable.id, name: procedureTemplatesTable.name })
+        .from(procedureTemplatesTable)
+        .where(eq(procedureTemplatesTable.clinicId, clinicId));
+      for (const t of existingTemplates) {
+        templateNameMap.set(t.name.toLowerCase(), t.id);
+      }
+    }
+
+    const PROC_STATUS_MAP: Record<string, string> = {
+      выполнено: "completed", completed: "completed", done: "completed",
+      "в процессе": "in_progress", in_progress: "in_progress", "в работе": "in_progress",
+      "ожидает оплаты": "pending_payment", pending_payment: "pending_payment",
+      отменено: "cancelled", cancelled: "cancelled",
+      запланировано: "scheduled", scheduled: "scheduled",
     };
 
-    const includesPatients = detectedCategories.includes("patients");
+    const PAYMENT_MAP: Record<string, string> = {
+      kaspi: "kaspi_transfer", "kaspi transfer": "kaspi_transfer", каспи: "kaspi_transfer",
+      "kaspi_transfer": "kaspi_transfer",
+      cash: "cash", наличные: "cash", нал: "cash",
+      "kaspi qr": "kaspi_qr", kaspi_qr: "kaspi_qr", qr: "kaspi_qr",
+      terminal: "terminal", терминал: "terminal", карта: "terminal",
+      "kaspi red": "kaspi_red", kaspi_red: "kaspi_red", рассрочка: "kaspi_red",
+      debt: "debt", долг: "debt",
+    };
+
+    const validSources = new Set(["instagram", "referral", "walk_in", "website", "whatsapp", "other"]);
 
     try {
       for (let batchStart = 0; batchStart < rows.length; batchStart += BATCH_SIZE) {
@@ -552,83 +633,166 @@ export class MigrationService {
 
         for (const row of batch) {
           processedRows++;
-          const rowNum = batchStart + processedRows;
-
-          const rawName  = nameCol  ? (row[nameCol]  ?? "") : "";
-          const rawPhone = phoneCol ? (row[phoneCol] ?? "") : "";
-          const rawIin   = iinCol   ? (row[iinCol]   ?? "") : "";
-          const rawNotes = notesCol ? (row[notesCol] ?? "") : "";
-
-          if (includesPatients && (!rawName || !rawPhone)) {
-            errors.push({ row: rowNum, message: `Пропущено имя или телефон: "${rawName}" / "${rawPhone}"` });
-            errorCount++;
-            continue;
-          }
-
-          const phone = rawPhone ? normalizePhone(rawPhone) : "";
-          if (includesPatients && phone.length < 10) {
-            errors.push({ row: rowNum, message: `Некорректный телефон: ${rawPhone}` });
-            errorCount++;
-            continue;
-          }
-
-          const iin = rawIin.trim().replace(/\D/g, "").slice(0, 12) || undefined;
-
-          const existing = await db
-            .select({ id: patientsTable.id })
-            .from(patientsTable)
-            .where(and(eq(patientsTable.clinicId, clinicId), eq(patientsTable.phone, phone)))
-            .limit(1);
-
-          if (existing.length > 0) {
-            duplicates.push({ phone, name: rawName });
-            duplicateCount++;
-            continue;
-          }
-
-          const rawStatus = statusCol ? (row[statusCol] ?? "") : "";
-          const patientStatus = rawStatus ? mapToPatientStatus(rawStatus) : "new_request";
-
-          const rawDoctor = doctorCol ? (row[doctorCol] ?? "") : "";
-          const doctorId  = rawDoctor ? await findOrCreateDoctor(rawDoctor) : null;
-
-          const rawGender = genderCol ? (row[genderCol] ?? "").toLowerCase().trim() : "";
-          const gender: "male" | "female" | "other" | undefined =
-            rawGender === "м" || rawGender === "male" || rawGender === "муж" ? "male" :
-            rawGender === "ж" || rawGender === "female" || rawGender === "жен" ? "female" :
-            rawGender ? "other" : undefined;
-
-          const rawDob = dobCol ? (row[dobCol] ?? "").trim() : "";
-          const dateOfBirth = rawDob || undefined;
-
-          const rawSource = sourceCol ? (row[sourceCol] ?? "").toLowerCase().trim() : "other";
-          const validSources = new Set(["instagram", "referral", "walk_in", "website", "whatsapp", "other"]);
-          const source = validSources.has(rawSource) ? rawSource : "other";
+          const rowNum = processedRows;
 
           try {
-            await db.insert(patientsTable).values({
-              id: randomUUID(),
-              clinicId,
-              doctorId: doctorId ?? undefined,
-              name: rawName.slice(0, 100),
-              phone,
-              iin,
-              dateOfBirth: dateOfBirth,
-              gender,
-              source,
-              status: patientStatus as "new_request",
-              notes: rawNotes.slice(0, 500) || undefined,
-            });
-            successCount++;
+            // ── Template upsert ───────────────────────────────────────────────
+            if (includesTemplates && templateNameCol) {
+              const tName = (row[templateNameCol] ?? "").trim();
+              if (tName && !templateNameMap.has(tName.toLowerCase())) {
+                const tPrice  = parseFloat(
+                  (templatePriceCol ? (row[templatePriceCol] ?? "0") : "0").replace(/[^\d.]/g, ""),
+                ) || 0;
+                const tCat    = (templateCatCol ? (row[templateCatCol] ?? "") : "").trim() || "other";
+                const newTplId = randomUUID();
+                await db.insert(procedureTemplatesTable).values({
+                  id: newTplId,
+                  clinicId,
+                  name: tName.slice(0, 200),
+                  defaultPrice: tPrice,
+                  category: tCat.slice(0, 100),
+                  materials: "[]",
+                });
+                templateNameMap.set(tName.toLowerCase(), newTplId);
+                templateCount++;
+              }
+            }
+
+            // ── Patient import / lookup ───────────────────────────────────────
+            let patientId: string | undefined;
+
+            if (includesPatients) {
+              const rawName  = nameCol  ? (row[nameCol]  ?? "").trim() : "";
+              const rawPhone = phoneCol ? (row[phoneCol] ?? "").trim() : "";
+
+              if (!rawName || !rawPhone) {
+                errors.push({ row: rowNum, message: `Пропущено имя или телефон: "${rawName}" / "${rawPhone}"` });
+                errorCount++;
+                continue;
+              }
+
+              const phone = normalizePhone(rawPhone);
+              if (phone.length < 10) {
+                errors.push({ row: rowNum, message: `Некорректный телефон: ${rawPhone}` });
+                errorCount++;
+                continue;
+              }
+
+              const rawIin     = iinCol ? (row[iinCol] ?? "").trim().replace(/\D/g, "").slice(0, 12) : "";
+              const iin        = rawIin || undefined;
+
+              // Dedup by phone first, then IIN
+              if (patientPhoneMap.has(phone)) {
+                patientId = patientPhoneMap.get(phone);
+                duplicates.push({ phone, name: rawName });
+                duplicateCount++;
+              } else if (iin && patientIinMap.has(iin)) {
+                patientId = patientIinMap.get(iin);
+                duplicates.push({ phone, name: rawName });
+                duplicateCount++;
+              } else {
+                const rawStatus   = statusCol ? (row[statusCol] ?? "") : "";
+                const patientStatus = rawStatus ? mapToPatientStatus(rawStatus) : "new_request";
+                const rawDoctor   = doctorCol ? (row[doctorCol] ?? "").trim() : "";
+                const doctorId    = rawDoctor ? (doctorCache.get(rawDoctor) ?? null) : null;
+                const rawGender   = genderCol ? (row[genderCol] ?? "").toLowerCase().trim() : "";
+                const gender: "male" | "female" | "other" | undefined =
+                  rawGender === "м" || rawGender === "male" || rawGender === "муж" ? "male" :
+                  rawGender === "ж" || rawGender === "female" || rawGender === "жен" ? "female" :
+                  rawGender ? "other" : undefined;
+                const rawDob    = dobCol ? (row[dobCol] ?? "").trim() : "";
+                const rawSource = sourceCol ? (row[sourceCol] ?? "").toLowerCase().trim() : "other";
+                const source    = validSources.has(rawSource) ? rawSource : "other";
+                const rawNotes  = notesCol ? (row[notesCol] ?? "") : "";
+
+                const newPatientId = randomUUID();
+                await db.insert(patientsTable).values({
+                  id: newPatientId,
+                  clinicId,
+                  doctorId: doctorId ?? undefined,
+                  name: rawName.slice(0, 100),
+                  phone,
+                  iin,
+                  dateOfBirth: rawDob || undefined,
+                  gender,
+                  source,
+                  status: patientStatus as "new_request",
+                  notes: rawNotes.slice(0, 500) || undefined,
+                });
+                patientPhoneMap.set(phone, newPatientId);
+                if (iin) patientIinMap.set(iin, newPatientId);
+                patientId = newPatientId;
+                patientCount++;
+              }
+            } else if (includesProcedures && phoneCol) {
+              // Procedures-only import: resolve patient by phone
+              const rawPhone = (row[phoneCol] ?? "").trim();
+              if (rawPhone) {
+                const phone = normalizePhone(rawPhone);
+                patientId = patientPhoneMap.get(phone);
+              }
+            }
+
+            // ── Procedure import ──────────────────────────────────────────────
+            if (includesProcedures && procedureNameCol) {
+              const procName = (row[procedureNameCol] ?? "").trim();
+              if (procName) {
+                if (!patientId) {
+                  errors.push({ row: rowNum, message: `Процедура "${procName.slice(0, 50)}" пропущена — не найден пациент` });
+                  errorCount++;
+                } else {
+                  const rawPrice   = procedurePriceCol
+                    ? (row[procedurePriceCol] ?? "0").replace(/[^\d.]/g, "")
+                    : "0";
+                  const price      = parseFloat(rawPrice) || 0;
+                  const rawPS      = procStatusCol ? (row[procStatusCol] ?? "").toLowerCase().trim() : "";
+                  const procStatus = (PROC_STATUS_MAP[rawPS] ?? "scheduled") as
+                    "scheduled" | "completed" | "in_progress" | "pending_payment" | "cancelled";
+                  const rawSched   = scheduledAtCol ? (row[scheduledAtCol] ?? "").trim() : "";
+                  let scheduledAt: Date | undefined;
+                  if (rawSched) {
+                    const parsed = new Date(rawSched);
+                    if (!isNaN(parsed.getTime())) scheduledAt = parsed;
+                  }
+                  const rawPay     = paymentMethodCol ? (row[paymentMethodCol] ?? "").toLowerCase().trim() : "";
+                  const paymentMethod = (PAYMENT_MAP[rawPay] ?? "cash") as
+                    "cash" | "kaspi_transfer" | "kaspi_qr" | "terminal" | "kaspi_red" | "debt";
+                  const rawDoctorName = doctorCol ? (row[doctorCol] ?? "").trim() : "";
+                  const procDoctorId  = rawDoctorName ? (doctorCache.get(rawDoctorName) ?? null) : null;
+                  const procNotes     = procNotesCol ? (row[procNotesCol] ?? "").slice(0, 500) : undefined;
+
+                  await db.insert(proceduresTable).values({
+                    id: randomUUID(),
+                    clinicId,
+                    patientId,
+                    doctorId: procDoctorId ?? undefined,
+                    name: procName.slice(0, 200),
+                    status: procStatus,
+                    price,
+                    paymentMethod,
+                    scheduledAt,
+                    notes: procNotes || undefined,
+                  });
+                  procedureCount++;
+                }
+              }
+            }
           } catch (err) {
-            errors.push({ row: rowNum, message: String((err as Error).message).slice(0, 100) });
+            errors.push({ row: rowNum, message: String((err as Error).message).slice(0, 150) });
             errorCount++;
           }
         }
 
+        // Progress update after each batch
         await db
           .update(migrationJobsTable)
-          .set({ processedRows, successCount, errorCount, duplicateCount, updatedAt: new Date() })
+          .set({
+            processedRows,
+            successCount: patientCount + procedureCount + templateCount,
+            errorCount,
+            duplicateCount,
+            updatedAt: new Date(),
+          })
           .where(eq(migrationJobsTable.id, jobId));
       }
 
@@ -637,23 +801,26 @@ export class MigrationService {
         .set({
           status: "done",
           processedRows,
-          successCount,
+          successCount: patientCount + procedureCount + templateCount,
           errorCount,
           duplicateCount,
           report: {
             errors: errors.slice(0, 100),
             duplicates: duplicates.slice(0, 100),
             summary: {
-              patients: successCount,
-              procedures: 0,
-              templates: 0,
+              patients: patientCount,
+              procedures: procedureCount,
+              templates: templateCount,
             },
           },
           updatedAt: new Date(),
         })
         .where(eq(migrationJobsTable.id, jobId));
 
-      logger.info({ jobId, clinicId, successCount, errorCount, duplicateCount }, "[MigrationService] AI import job done");
+      logger.info(
+        { jobId, clinicId, patientCount, procedureCount, templateCount, errorCount, duplicateCount },
+        "[MigrationService] AI import job done",
+      );
     } catch (err) {
       logger.error({ err, jobId }, "[MigrationService] AI import job failed");
       await db

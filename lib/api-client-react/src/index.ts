@@ -13,7 +13,21 @@ import { customFetch } from "./custom-fetch";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type { UseMutationOptions, UseQueryOptions } from "@tanstack/react-query";
 import type { MySalaryResponse, UpdateUserStatusRequest, UsersListResponse } from "./generated/api.schemas";
-import type { Patient } from "@workspace/api-zod";
+type Patient = {
+  id: string;
+  clinicId: string;
+  doctorId?: string | null;
+  name: string;
+  phone: string;
+  iin?: string | null;
+  dateOfBirth?: string | null;
+  gender?: string | null;
+  source: string;
+  status: string;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
 
 export interface UpdateProfileRequest {
   name?: string;
