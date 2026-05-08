@@ -3,72 +3,120 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   useListProcedureTemplates,
   useCreateProcedure,
-  getListProcedureTemplatesQueryKey,
   getListProceduresQueryKey,
 } from "@workspace/api-client-react";
 import type { ProcedureTemplate } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, CheckSquare, Square, Loader2, AlertCircle } from "lucide-react";
+import {
+  Search,
+  CheckSquare,
+  Square,
+  Loader2,
+  AlertCircle,
+  X,
+} from "lucide-react";
 import { useAuthStore } from "@/hooks/use-auth";
 
-const DIAGNOSIS_CATEGORIES: ReadonlyArray<{ key: string; label: string; icon: string }> = [
-  { key: "therapy",        label: "Терапия",        icon: "🦷" },
-  { key: "surgery",        label: "Хирургия",       icon: "🔪" },
-  { key: "orthopedics",    label: "Ортопедия",      icon: "👑" },
-  { key: "implantation",   label: "Имплантация",    icon: "🔩" },
-  { key: "pediatric",      label: "Детский прайс",  icon: "👶" },
-  { key: "hygiene",        label: "Гигиена",        icon: "✨" },
-  { key: "periodontology", label: "Пародонтология", icon: "🩺" },
-  { key: "radiology",      label: "Рентген",        icon: "📷" },
-  { key: "restoration",    label: "Реставрация",    icon: "💎" },
+// ── Categories ────────────────────────────────────────────────────────────────
+
+const CATEGORIES: ReadonlyArray<{ key: string; label: string }> = [
+  { key: "all",           label: "Все" },
+  { key: "therapy",       label: "Терапия" },
+  { key: "surgery",       label: "Хирургия" },
+  { key: "orthopedics",   label: "Ортопедия" },
+  { key: "implantation",  label: "Имплантация" },
+  { key: "hygiene",       label: "Гигиена" },
+  { key: "pediatric",     label: "Детский" },
+  { key: "periodontology",label: "Пародонтология" },
+  { key: "radiology",     label: "Рентген" },
+  { key: "restoration",   label: "Реставрация" },
+  { key: "other",         label: "Прочее" },
 ];
+
+const CATEGORY_LABEL_MAP = Object.fromEntries(CATEGORIES.map((c) => [c.key, c.label]));
+
+// ── Props ─────────────────────────────────────────────────────────────────────
 
 interface DiagnosisServicePickerProps {
   patientId: string;
   toothFdi: number;
+  /** Pre-select a category tab on open (e.g. "implantation" for missing teeth) */
+  defaultCategory?: string;
   onClose: () => void;
   onSuccess?: () => void;
 }
 
+// ── Component ─────────────────────────────────────────────────────────────────
+
 export function DiagnosisServicePicker({
   patientId,
   toothFdi,
+  defaultCategory,
   onClose,
   onSuccess,
 }: DiagnosisServicePickerProps) {
   const { user } = useAuthStore();
   const qc = useQueryClient();
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  const [activeCategory, setActiveCategory] = useState<string>(defaultCategory ?? "all");
+  const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [batchError, setBatchError] = useState<string | null>(null);
 
-  const { data: servicesData, isLoading: servicesLoading } = useListProcedureTemplates(
-    selectedCategory ? { category: selectedCategory } : undefined,
-    {
-      query: {
-        queryKey: getListProcedureTemplatesQueryKey(
-          selectedCategory ? { category: selectedCategory } : undefined,
-        ),
-        enabled: selectedCategory !== null,
-        staleTime: 60_000,
-      },
-    },
+  // Load all templates at once — no two-level navigation needed
+  const { data: servicesData, isLoading } = useListProcedureTemplates(undefined, {
+    query: { queryKey: ["procedure-templates-all"], staleTime: 60_000 },
+  });
+  const allTemplates: ProcedureTemplate[] = servicesData?.data?.templates ?? [];
+
+  // Count per category (for badge on tabs)
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: 0 };
+    for (const t of allTemplates) {
+      if ((t.defaultPrice ?? 0) <= 0) continue;
+      counts.all = (counts.all ?? 0) + 1;
+      if (t.category) counts[t.category] = (counts[t.category] ?? 0) + 1;
+    }
+    return counts;
+  }, [allTemplates]);
+
+  // Visible categories = "Все" + categories that have at least 1 template
+  const visibleCategories = useMemo(
+    () => CATEGORIES.filter((c) => c.key === "all" || (categoryCounts[c.key] ?? 0) > 0),
+    [categoryCounts],
   );
 
-  const services: ProcedureTemplate[] = servicesData?.data?.templates ?? [];
+  // Filtered service list
+  const filtered = useMemo(() => {
+    let list = allTemplates.filter((t) => (t.defaultPrice ?? 0) > 0);
+    if (activeCategory !== "all") {
+      list = list.filter((t) => t.category === activeCategory);
+    }
+    const q = search.trim().toLowerCase();
+    if (q) {
+      list = list.filter(
+        (t) =>
+          t.name.toLowerCase().includes(q) ||
+          (t.code ?? "").toLowerCase().includes(q),
+      );
+    }
+    return list;
+  }, [allTemplates, activeCategory, search]);
 
-  const selectedServices = useMemo(
-    () => services.filter((s) => selectedIds.has(s.id)),
-    [services, selectedIds],
+  const selectedTemplates = useMemo(
+    () => allTemplates.filter((t) => selectedIds.has(t.id)),
+    [allTemplates, selectedIds],
   );
 
   const total = useMemo(
-    () => selectedServices.reduce((sum, s) => sum + (s.defaultPrice ?? 0), 0),
-    [selectedServices],
+    () => selectedTemplates.reduce((sum, s) => sum + (s.defaultPrice ?? 0), 0),
+    [selectedTemplates],
   );
 
   const createMutation = useCreateProcedure();
+
+  // ── Handlers ────────────────────────────────────────────────────────────────
 
   const handleToggle = (id: string) => {
     setSelectedIds((prev) => {
@@ -79,14 +127,13 @@ export function DiagnosisServicePicker({
     });
   };
 
-  const handleAddToPlan = async () => {
-    if (selectedServices.length === 0) return;
+  const handleAdd = async () => {
+    if (selectedTemplates.length === 0) return;
     setBatchError(null);
-
     let successCount = 0;
     const failures: string[] = [];
 
-    for (const svc of selectedServices) {
+    for (const svc of selectedTemplates) {
       try {
         await createMutation.mutateAsync({
           data: {
@@ -108,9 +155,7 @@ export function DiagnosisServicePicker({
     }
 
     if (failures.length > 0) {
-      setBatchError(
-        `Не удалось добавить: ${failures.join(", ")}. Успешно добавлено: ${successCount}.`,
-      );
+      setBatchError(`Не удалось добавить: ${failures.join(", ")}.`);
       return;
     }
 
@@ -118,149 +163,196 @@ export function DiagnosisServicePicker({
     onClose();
   };
 
-  const handleBack = () => {
-    setSelectedCategory(null);
-    setSelectedIds(new Set());
-  };
-
-  const categoryLabel = DIAGNOSIS_CATEGORIES.find((c) => c.key === selectedCategory)?.label;
+  // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
     <div className="flex flex-col h-full">
-      {/* Picker header */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50 bg-slate-50 shrink-0">
-        {selectedCategory ? (
-          <button
-            onClick={handleBack}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Назад</span>
-          </button>
-        ) : (
-          <button
-            onClick={onClose}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Отмена</span>
-          </button>
-        )}
-        <span className="text-xs font-semibold text-foreground">
-          {selectedCategory ? categoryLabel : "Выберите категорию"}
-        </span>
+
+      {/* ── Search bar ─────────────────────────────────────────────────────── */}
+      <div className="px-3 pt-3 pb-2 shrink-0">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Поиск услуги по названию или коду..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            autoFocus
+            className="w-full text-[13px] pl-9 pr-9 py-2.5 border border-border rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/50"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Level 1 — category tiles */}
-      {!selectedCategory && (
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="grid grid-cols-2 gap-2">
-            {DIAGNOSIS_CATEGORIES.map((cat) => (
+      {/* ── Category tabs ──────────────────────────────────────────────────── */}
+      <div
+        className="flex gap-1.5 px-3 pb-2 overflow-x-auto shrink-0"
+        style={{ scrollbarWidth: "none" }}
+      >
+        {visibleCategories.map((cat) => {
+          const count = categoryCounts[cat.key] ?? 0;
+          const isActive = activeCategory === cat.key;
+          return (
+            <button
+              key={cat.key}
+              onClick={() => { setActiveCategory(cat.key); setSearch(""); }}
+              className={cn(
+                "flex items-center gap-1 shrink-0 text-[12px] font-medium px-3 py-1.5 rounded-full border transition-all duration-150",
+                isActive
+                  ? "bg-primary text-white border-primary shadow-sm"
+                  : "border-border/60 text-muted-foreground bg-white hover:border-primary/40 hover:text-foreground",
+              )}
+            >
+              <span>{cat.label}</span>
+              {cat.key !== "all" && count > 0 && (
+                <span
+                  className={cn(
+                    "text-[10px] font-bold rounded-full min-w-[16px] text-center",
+                    isActive ? "text-white/70" : "text-muted-foreground/60",
+                  )}
+                >
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── Service list ───────────────────────────────────────────────────── */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-3 pb-2 space-y-1">
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-12 gap-3">
+            <Loader2 className="w-5 h-5 animate-spin text-primary" />
+            <span className="text-xs text-muted-foreground">Загрузка прейскуранта...</span>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
+            <span className="text-2xl">🔍</span>
+            <p className="text-sm font-medium text-foreground">Ничего не найдено</p>
+            <p className="text-xs text-muted-foreground">
+              {search ? `По запросу «${search}» нет совпадений` : "В этой категории нет услуг"}
+            </p>
+            {search && (
               <button
-                key={cat.key}
-                onClick={() => setSelectedCategory(cat.key)}
+                onClick={() => setSearch("")}
+                className="text-xs text-primary hover:underline mt-1"
+              >
+                Сбросить поиск
+              </button>
+            )}
+          </div>
+        ) : (
+          filtered.map((svc) => {
+            const checked = selectedIds.has(svc.id);
+            return (
+              <button
+                key={svc.id}
+                onClick={() => handleToggle(svc.id)}
                 className={cn(
-                  "flex flex-col items-start gap-1 px-3 py-3 rounded-lg border border-border",
-                  "text-left text-xs transition-all hover:border-primary/60 hover:bg-primary/5",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-all duration-100",
+                  checked
+                    ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                    : "border-border/60 bg-white hover:border-primary/40 hover:bg-slate-50/80",
                 )}
               >
-                <span className="text-lg leading-none">{cat.icon}</span>
-                <span className="font-medium text-foreground leading-tight">{cat.label}</span>
+                {/* Checkbox */}
+                <span className="shrink-0">
+                  {checked ? (
+                    <CheckSquare className="w-4 h-4 text-primary" />
+                  ) : (
+                    <Square className="w-4 h-4 text-muted-foreground/50" />
+                  )}
+                </span>
+
+                {/* Name + category label */}
+                <span className="flex-1 min-w-0">
+                  <span className="flex items-baseline gap-1.5">
+                    {svc.code && (
+                      <span className="text-[11px] text-muted-foreground font-mono shrink-0">
+                        {svc.code}
+                      </span>
+                    )}
+                    <span className="text-[13px] font-medium text-foreground leading-snug">
+                      {svc.name}
+                    </span>
+                  </span>
+                  {activeCategory === "all" && svc.category && (
+                    <span className="block text-[11px] text-muted-foreground mt-0.5">
+                      {CATEGORY_LABEL_MAP[svc.category] ?? svc.category}
+                    </span>
+                  )}
+                </span>
+
+                {/* Price */}
+                <span
+                  className={cn(
+                    "shrink-0 text-[13px] font-bold tabular-nums",
+                    checked ? "text-primary" : "text-foreground/80",
+                  )}
+                >
+                  {svc.defaultPrice > 0
+                    ? `${svc.defaultPrice.toLocaleString("ru-KZ")} ₸`
+                    : "—"}
+                </span>
               </button>
-            ))}
-          </div>
-        </div>
-      )}
+            );
+          })
+        )}
+      </div>
 
-      {/* Level 2 — service tiles */}
-      {selectedCategory && (
-        <div className="flex-1 min-h-0 flex flex-col">
-          <div className="flex-1 overflow-y-auto p-4">
-            {servicesLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-              </div>
-            ) : services.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-8">
-                Услуги не найдены
-              </p>
-            ) : (
-              <div className="space-y-1.5">
-                {services.map((svc) => {
-                  const checked = selectedIds.has(svc.id);
-                  return (
-                    <button
-                      key={svc.id}
-                      onClick={() => handleToggle(svc.id)}
-                      className={cn(
-                        "w-full flex items-start gap-2.5 px-3 py-2.5 rounded-lg border text-left text-xs transition-all",
-                        checked
-                          ? "border-primary bg-primary/8 ring-1 ring-primary/30"
-                          : "border-border hover:border-primary/50 hover:bg-slate-50",
-                      )}
-                    >
-                      <span className="mt-0.5 shrink-0">
-                        {checked ? (
-                          <CheckSquare className="w-4 h-4 text-primary" />
-                        ) : (
-                          <Square className="w-4 h-4 text-muted-foreground" />
-                        )}
-                      </span>
-                      <span className="flex-1 min-w-0">
-                        <span className="block font-medium text-foreground leading-snug">
-                          {svc.code ? (
-                            <span className="text-muted-foreground mr-1">{svc.code}.</span>
-                          ) : null}
-                          {svc.name}
-                        </span>
-                        <span className="block mt-0.5 text-primary font-semibold">
-                          {svc.defaultPrice > 0
-                            ? `${svc.defaultPrice.toLocaleString("ru-KZ")} ₸`
-                            : "Бесплатно"}
-                        </span>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+      {/* ── Footer ─────────────────────────────────────────────────────────── */}
+      <div className="shrink-0 border-t border-border/50 bg-white px-3 py-3 space-y-2.5">
+        {batchError && (
+          <div className="flex items-start gap-2 rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2">
+            <AlertCircle className="w-3.5 h-3.5 text-destructive mt-0.5 shrink-0" />
+            <p className="text-xs text-destructive leading-snug">{batchError}</p>
           </div>
+        )}
 
-          {/* Total + submit */}
-          <div className="shrink-0 border-t border-border/50 bg-white px-4 py-3 space-y-2">
-            {batchError && (
-              <div className="flex items-start gap-2 rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2">
-                <AlertCircle className="w-3.5 h-3.5 text-destructive mt-0.5 shrink-0" />
-                <p className="text-xs text-destructive leading-snug">{batchError}</p>
-              </div>
-            )}
-            <div className="flex items-center justify-between">
+        {/* Summary row */}
+        <div className="flex items-center justify-between">
+          {selectedIds.size > 0 ? (
+            <>
               <span className="text-xs text-muted-foreground">
                 Выбрано: {selectedIds.size} услуг
               </span>
-              <span className="text-sm font-bold text-foreground">
-                Итого: {total > 0 ? `${total.toLocaleString("ru-KZ")} ₸` : "0 ₸"}
+              <span className="text-sm font-bold text-primary">
+                {total.toLocaleString("ru-KZ")} ₸
               </span>
-            </div>
-            <Button
-              size="sm"
-              className="w-full"
-              disabled={selectedIds.size === 0 || createMutation.isPending}
-              onClick={() => void handleAddToPlan()}
-            >
-              {createMutation.isPending ? (
-                <span className="flex items-center gap-1.5">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  Добавляем...
-                </span>
-              ) : (
-                "Добавить в план лечения"
-              )}
-            </Button>
-          </div>
+            </>
+          ) : (
+            <span className="text-xs text-muted-foreground">
+              Зуб {toothFdi} — выберите услуги из прейскуранта
+            </span>
+          )}
         </div>
-      )}
+
+        <Button
+          size="sm"
+          className="w-full h-9 text-sm"
+          disabled={selectedIds.size === 0 || createMutation.isPending}
+          onClick={() => void handleAdd()}
+        >
+          {createMutation.isPending ? (
+            <>
+              <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+              Добавляем...
+            </>
+          ) : selectedIds.size > 0 ? (
+            `Добавить ${selectedIds.size} ${selectedIds.size === 1 ? "услугу" : "услуги"} в план`
+          ) : (
+            "Добавить в план лечения"
+          )}
+        </Button>
+      </div>
     </div>
   );
 }

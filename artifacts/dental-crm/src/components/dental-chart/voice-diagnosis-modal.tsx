@@ -34,8 +34,12 @@ const CONDITION_TO_CATEGORY: Record<string, string | undefined> = {
   crown: "orthopedics",
   implant: "implantation",
   extraction_needed: "surgery",
-  missing: "surgery",
+  // missing tooth → show implantation options first (bridge/denture via orthopedics also relevant)
+  missing: "implantation",
 };
+
+/** For missing teeth, also pin these categories at the top of the tab list */
+const MISSING_PRIORITY_CATEGORIES = ["implantation", "orthopedics", "surgery"];
 
 const CATEGORY_LABELS: Record<string, string> = {
   therapy: "Терапия",
@@ -109,8 +113,8 @@ export function VoiceDiagnosisModal({ patientId, onClose, onApplied }: Props) {
   const [selectedServiceIds, setSelectedServiceIds] = useState<Record<number, Set<string>>>({});
   // Per-tooth: expanded service panel
   const [expandedFdi, setExpandedFdi] = useState<number | null>(null);
-  // Per-tooth expanded category browser
-  const [browseCategory, setBrowseCategory] = useState<string | null>(null);
+  // Per-tooth category browser (keyed by FDI number)
+  const [browseCategoryMap, setBrowseCategoryMap] = useState<Record<number, string | null>>({});
 
   // Draft state
   const DRAFT_KEY = `1dent:voice-draft:${patientId}`;
@@ -122,7 +126,7 @@ export function VoiceDiagnosisModal({ patientId, onClose, onApplied }: Props) {
 
   // Fetch all procedure templates for the service picker
   const { data: allTemplatesData } = useListProcedureTemplates(undefined, {
-    query: { staleTime: 60_000 },
+    query: { queryKey: ["procedure-templates-all"], staleTime: 60_000 },
   });
   const allTemplates: ProcedureTemplate[] = useMemo(
     () => allTemplatesData?.data?.templates ?? [],
@@ -408,8 +412,13 @@ export function VoiceDiagnosisModal({ patientId, onClose, onApplied }: Props) {
 
   const ServicePanel = ({ entry }: { entry: VoiceDiagnosisEntry }) => {
     const fdi = entry.fdi;
+    const isMissing = entry.condition === "missing";
     const defaultCat = CONDITION_TO_CATEGORY[entry.condition];
+    const browseCategory = browseCategoryMap[fdi] ?? null;
     const activeCat = browseCategory ?? defaultCat;
+
+    const setBrowseCategory = (cat: string | null) =>
+      setBrowseCategoryMap((prev) => ({ ...prev, [fdi]: cat }));
 
     const displayedTemplates = useMemo(
       () =>
@@ -425,54 +434,82 @@ export function VoiceDiagnosisModal({ patientId, onClose, onApplied }: Props) {
     );
 
     const bestMatchId = entry.bestMatchId;
-
     const selected = selectedServiceIds[fdi] ?? new Set<string>();
     const selectedCount = selected.size;
 
+    // Build ordered category tab list:
+    // – for missing teeth: pin implantation/orthopedics/surgery first, then rest
+    // – for others: defaultCat first, then remaining
     const allCategories = useMemo(
       () => [...new Set(allTemplates.map((t) => t.category))].filter(Boolean).sort(),
       [],
     );
 
+    const orderedCategories = useMemo(() => {
+      if (isMissing) {
+        const priority = MISSING_PRIORITY_CATEGORIES.filter((c) =>
+          allCategories.includes(c),
+        );
+        const rest = allCategories.filter((c) => !MISSING_PRIORITY_CATEGORIES.includes(c));
+        return [...priority, ...rest];
+      }
+      if (!defaultCat) return allCategories;
+      return [defaultCat, ...allCategories.filter((c) => c !== defaultCat)];
+    }, [allCategories, isMissing]);
+
     return (
       <div className="space-y-2">
+        {/* Missing-tooth hint banner */}
+        {isMissing && !browseCategory && (
+          <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-2">
+            <span className="text-base leading-none shrink-0">🦷</span>
+            <p className="text-[11px] text-amber-800 leading-snug">
+              <span className="font-semibold">Отсутствующий зуб.</span> Рассмотрите варианты
+              протезирования: имплант, коронка на имплант или мостовидный протез.
+            </p>
+          </div>
+        )}
+
         {/* Category tabs */}
         {allTemplates.length > 0 && (
           <div className="flex gap-1 flex-wrap">
-            {defaultCat && (
+            {/* "Suggested" tab (only when backend returned suggestions) */}
+            {(entry.suggestedTemplates?.length ?? 0) > 0 && defaultCat && (
               <button
                 onClick={() => setBrowseCategory(null)}
                 className={cn(
-                  "text-[10px] px-2 py-1 rounded-full border transition-colors",
+                  "text-[10px] px-2 py-1 rounded-full border transition-colors font-medium",
                   !browseCategory
                     ? "bg-primary text-white border-primary"
                     : "border-border text-muted-foreground hover:border-primary/50",
                 )}
               >
-                {CATEGORY_LABELS[defaultCat] ?? defaultCat}
+                {isMissing ? "Подобранные" : CATEGORY_LABELS[defaultCat] ?? defaultCat}
               </button>
             )}
-            {allCategories
-              .filter((c) => c !== defaultCat)
-              .map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setBrowseCategory(cat)}
-                  className={cn(
-                    "text-[10px] px-2 py-1 rounded-full border transition-colors",
-                    browseCategory === cat
-                      ? "bg-primary text-white border-primary"
-                      : "border-border text-muted-foreground hover:border-primary/50",
-                  )}
-                >
-                  {CATEGORY_LABELS[cat] ?? cat}
-                </button>
-              ))}
+
+            {/* Priority / ordered category tabs */}
+            {orderedCategories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setBrowseCategory(cat)}
+                className={cn(
+                  "text-[10px] px-2 py-1 rounded-full border transition-colors",
+                  browseCategory === cat
+                    ? "bg-primary text-white border-primary"
+                    : isMissing && MISSING_PRIORITY_CATEGORIES.includes(cat)
+                    ? "border-amber-300 text-amber-700 bg-amber-50 hover:border-primary/50 hover:text-primary hover:bg-primary/5"
+                    : "border-border text-muted-foreground hover:border-primary/50",
+                )}
+              >
+                {CATEGORY_LABELS[cat] ?? cat}
+              </button>
+            ))}
           </div>
         )}
 
         {/* Template list */}
-        <div className="space-y-1 max-h-48 overflow-y-auto custom-scrollbar pr-1">
+        <div className="space-y-1 max-h-52 overflow-y-auto custom-scrollbar pr-1">
           {displayedTemplates.length === 0 ? (
             <p className="text-[11px] text-muted-foreground py-2 text-center">
               Нет услуг в этой категории
@@ -498,11 +535,11 @@ export function VoiceDiagnosisModal({ patientId, onClose, onApplied }: Props) {
                       : <Square className="w-3.5 h-3.5 text-muted-foreground" />}
                   </span>
                   <span className="flex-1 min-w-0">
-                    <span className="flex items-center gap-1.5">
+                    <span className="flex items-center gap-1.5 flex-wrap">
                       <span className="font-medium text-foreground leading-snug">{tpl.name}</span>
                       {tpl.id === bestMatchId && !browseCategory && (
                         <span className="shrink-0 text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-medium">
-                          Подобрано
+                          Подобрано ИИ
                         </span>
                       )}
                       {isSuggested && tpl.id !== bestMatchId && !browseCategory && (
@@ -748,7 +785,11 @@ export function VoiceDiagnosisModal({ patientId, onClose, onApplied }: Props) {
                                   value={entry.condition}
                                   onChange={(e) => {
                                     updateEntry(idx, { condition: e.target.value });
-                                    setBrowseCategory(null);
+                                    setBrowseCategoryMap((prev) => {
+                                      const next = { ...prev };
+                                      delete next[entry.fdi];
+                                      return next;
+                                    });
                                   }}
                                   className="w-full text-xs border border-border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
                                 >
@@ -787,7 +828,14 @@ export function VoiceDiagnosisModal({ patientId, onClose, onApplied }: Props) {
                             <button
                               onClick={() => {
                                 setExpandedFdi(isExpanded ? null : entry.fdi);
-                                setBrowseCategory(null);
+                                // Reset only this tooth's browse category when collapsing
+                                if (isExpanded) {
+                                  setBrowseCategoryMap((prev) => {
+                                    const next = { ...prev };
+                                    delete next[entry.fdi];
+                                    return next;
+                                  });
+                                }
                               }}
                               className={cn(
                                 "w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg border text-left transition-all",
