@@ -36,12 +36,13 @@ app.use(cors({
 }));
 app.use(
   express.json({
+    limit: "25mb",
     verify: (req, _res, buf) => {
       (req as typeof req & { rawBody?: Buffer }).rawBody = buf;
     },
   }),
 );
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: "25mb" }));
 app.use(cookieParser());
 
 // Webhook routes MUST come before the main /api router.
