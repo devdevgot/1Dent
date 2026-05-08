@@ -1,14 +1,11 @@
 import { useState, useCallback, useEffect } from "react";
 import {
   FileSpreadsheet,
-  Upload,
   Check,
   AlertTriangle,
   RefreshCw,
   ChevronDown,
   Loader2,
-  Link,
-  ArrowRight,
   Clock,
   CheckCircle2,
   XCircle,
@@ -18,8 +15,6 @@ import {
   FileCog,
 } from "lucide-react";
 import {
-  usePreviewExcelImport,
-  useConfirmExcelImport,
   useListMigrationJobs,
   getMigrationJobStatus,
   useAnalyzeFileWithAi,
@@ -27,9 +22,6 @@ import {
 } from "@workspace/api-client-react";
 import type { MigrationJob, AiDetectedCategory } from "@workspace/api-client-react";
 
-type Tab = "excel" | "ai";
-type ColumnKey = "name" | "phone" | "age" | "notes" | "status";
-const COLUMN_KEYS: ColumnKey[] = ["name", "phone", "age", "notes", "status"];
 
 const AI_FIELD_LABELS: Record<string, string> = {
   "": "— не указано —",
@@ -518,210 +510,6 @@ function AiImportTab() {
   );
 }
 
-function ExcelTab() {
-  const [file, setFile] = useState<File | null>(null);
-  const [dragging, setDragging] = useState(false);
-  const [preview, setPreview] = useState<{
-    headers: string[];
-    rows: Record<string, string>[];
-    suggestedMapping: Record<string, string>;
-    totalRows: number;
-  } | null>(null);
-  const [mapping, setMapping] = useState<Record<string, string>>({});
-  const [jobId, setJobId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [parsingLoading, setParsingLoading] = useState(false);
-
-  const previewMutation = usePreviewExcelImport();
-  const confirmMutation = useConfirmExcelImport();
-
-  const processFile = useCallback(async (f: File) => {
-    setFile(f);
-    setError(null);
-    setPreview(null);
-    setParsingLoading(true);
-    try {
-      const base64 = await fileToBase64(f);
-      const res = await previewMutation.mutateAsync({ data: { fileBase64: base64 } });
-      const d = res.data;
-      setPreview({
-        headers: d.headers,
-        rows: d.rows as Record<string, string>[],
-        suggestedMapping: d.suggestedMapping as Record<string, string>,
-        totalRows: d.totalRows,
-      });
-      setMapping(d.suggestedMapping as Record<string, string>);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Ошибка при разборе файла");
-    } finally {
-      setParsingLoading(false);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setDragging(false);
-      const f = e.dataTransfer.files[0];
-      if (f) processFile(f);
-    },
-    [processFile],
-  );
-
-  const handleImport = async () => {
-    if (!preview || !file) return;
-    setError(null);
-    try {
-      const base64 = await fileToBase64(file);
-      const res = await confirmMutation.mutateAsync({
-        data: {
-          fileBase64: base64,
-          mapping: mapping as { name?: string; phone?: string; age?: string; notes?: string; status?: string },
-        },
-      });
-      setJobId(res.data.job.id);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Ошибка при импорте");
-    }
-  };
-
-  const labelOf: Record<ColumnKey, string> = {
-    name: "Имя пациента",
-    phone: "Телефон",
-    age: "Возраст",
-    notes: "Заметки",
-    status: "Статус",
-  };
-
-  return (
-    <div className="space-y-6">
-      <div
-        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={handleDrop}
-        className={`relative border-2 border-dashed rounded-2xl p-10 text-center transition-all ${
-          dragging
-            ? "border-indigo-400 bg-indigo-50"
-            : file
-            ? "border-emerald-300 bg-emerald-50"
-            : "border-gray-200 bg-gray-50 hover:border-indigo-300 hover:bg-indigo-50/40"
-        }`}
-      >
-        <input
-          type="file"
-          accept=".xlsx,.xls,.csv"
-          className="absolute inset-0 opacity-0 cursor-pointer"
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) processFile(f); }}
-        />
-        {parsingLoading ? (
-          <div className="flex flex-col items-center gap-2">
-            <Loader2 className="w-10 h-10 text-indigo-400 animate-spin" />
-            <p className="text-sm text-gray-500">Парсинг файла…</p>
-          </div>
-        ) : file ? (
-          <div className="flex flex-col items-center gap-2">
-            <Check className="w-10 h-10 text-emerald-500" />
-            <p className="text-sm font-medium text-emerald-700">{file.name}</p>
-            <p className="text-xs text-gray-400">Нажмите, чтобы выбрать другой файл</p>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-2">
-            <Upload className="w-10 h-10 text-gray-300" />
-            <p className="text-sm font-medium text-gray-600">Перетащите Excel/CSV файл</p>
-            <p className="text-xs text-gray-400">или нажмите, чтобы выбрать (max 5 000 строк)</p>
-          </div>
-        )}
-      </div>
-
-      {error && (
-        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
-          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-          {error}
-        </div>
-      )}
-
-      {preview && (
-        <>
-          <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-            <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-              <ChevronDown className="w-4 h-4 text-indigo-500" />
-              Сопоставление колонок
-              <span className="ml-auto text-xs font-normal text-gray-400">
-                {preview.totalRows} строк всего
-              </span>
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {COLUMN_KEYS.map((key) => (
-                <div key={key}>
-                  <label className="block text-xs text-gray-500 mb-1">{labelOf[key]}</label>
-                  <select
-                    value={mapping[key] ?? ""}
-                    onChange={(e) => setMapping((m) => ({ ...m, [key]: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 bg-white focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 outline-none"
-                  >
-                    <option value="">— не указано —</option>
-                    {preview.headers.map((h) => (
-                      <option key={h} value={h}>{h}</option>
-                    ))}
-                  </select>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
-            <div className="px-5 py-3 border-b border-gray-100">
-              <h3 className="text-sm font-semibold text-gray-700">Предпросмотр (первые 20 строк)</h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-xs">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-gray-100">
-                    {preview.headers.map((h) => (
-                      <th key={h} className="text-left px-4 py-2 text-gray-500 font-medium whitespace-nowrap">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {preview.rows.map((row, i) => (
-                    <tr key={i} className="border-b border-gray-50 hover:bg-gray-50/50">
-                      {preview.headers.map((h) => (
-                        <td key={h} className="px-4 py-2 text-gray-600 whitespace-nowrap max-w-[160px] truncate">
-                          {row[h] ?? ""}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {jobId ? (
-            <div className="flex items-center gap-2 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-sm text-emerald-700">
-              <CheckCircle2 className="w-5 h-5" />
-              Импорт запущен! Следите за прогрессом ниже.
-            </div>
-          ) : (
-            <button
-              onClick={handleImport}
-              disabled={confirmMutation.isPending || parsingLoading}
-              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium text-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
-            >
-              {confirmMutation.isPending ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Запуск импорта…</>
-              ) : (
-                <><ArrowRight className="w-4 h-4" /> Импортировать {preview.totalRows} пациентов</>
-              )}
-            </button>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
-
 function JobHistory() {
   const { data, refetch, isLoading } = useListMigrationJobs();
   const jobs = data?.data.jobs ?? [];
@@ -764,21 +552,6 @@ function JobHistory() {
 }
 
 export default function MigrationPage() {
-  const [tab, setTab] = useState<Tab>("ai");
-
-  const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
-    {
-      key: "ai",
-      label: "ИИ-импорт",
-      icon: <Sparkles className="w-4 h-4" />,
-    },
-    {
-      key: "excel",
-      label: "Excel / CSV",
-      icon: <FileSpreadsheet className="w-4 h-4" />,
-    },
-  ];
-
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-5xl mx-auto">
@@ -790,35 +563,8 @@ export default function MigrationPage() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="border-b border-gray-100">
-            <nav className="flex">
-              {tabs.map((t) => (
-                <button
-                  key={t.key}
-                  onClick={() => setTab(t.key)}
-                  className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-all ${
-                    tab === t.key
-                      ? t.key === "ai"
-                        ? "border-violet-500 text-violet-600 bg-violet-50/30"
-                        : "border-indigo-500 text-indigo-600 bg-indigo-50/30"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50/50"
-                  }`}
-                >
-                  {t.icon}
-                  {t.label}
-                  {t.key === "ai" && (
-                    <span className="ml-1 px-1.5 py-0.5 text-xs bg-violet-100 text-violet-700 rounded-full font-medium">
-                      Новое
-                    </span>
-                  )}
-                </button>
-              ))}
-            </nav>
-          </div>
-
           <div className="p-6">
-            {tab === "ai" && <AiImportTab />}
-            {tab === "excel" && <ExcelTab />}
+            <AiImportTab />
           </div>
         </div>
 
