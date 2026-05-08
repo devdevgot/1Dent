@@ -18,7 +18,7 @@ import {
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
-import { format, parseISO, startOfDay, endOfDay } from "date-fns";
+import { format, parseISO, startOfDay, endOfDay, isYesterday } from "date-fns";
 import { AppointmentModal, type ProcedureItem } from "@/components/appointment-modal";
 import { useAppointmentSave } from "@/hooks/use-appointment-save";
 
@@ -104,15 +104,40 @@ export default function AdminDashboard() {
     return da - db;
   });
 
-  const activeTasks = procedures.filter((p) => p.status === "in_progress");
+  const getRefDate = (p: typeof procedures[0]) =>
+    p.scheduledAt ? parseISO(p.scheduledAt) : parseISO(p.createdAt);
 
-  const pendingPaymentQueue = procedures
-    .filter((p) => p.status === "pending_payment")
-    .sort((a, b) => {
-      const ta = a.scheduledAt ? parseISO(a.scheduledAt).getTime() : 0;
-      const tb = b.scheduledAt ? parseISO(b.scheduledAt).getTime() : 0;
-      return ta - tb;
-    });
+  const fmtOverdueDate = (p: typeof procedures[0]) => {
+    const d = getRefDate(p);
+    if (isYesterday(d)) return "вчера";
+    return format(d, "d MMM");
+  };
+
+  const todayActiveTasks = procedures.filter((p) => {
+    if (p.status !== "in_progress") return false;
+    const d = getRefDate(p);
+    return d >= todayStart && d <= todayEnd;
+  });
+
+  const overdueActiveTasks = procedures
+    .filter((p) => p.status === "in_progress" && getRefDate(p) < todayStart)
+    .sort((a, b) => getRefDate(b).getTime() - getRefDate(a).getTime());
+
+  const activeTasks = [...todayActiveTasks, ...overdueActiveTasks];
+
+  const todayPendingPayment = procedures
+    .filter((p) => {
+      if ((p.status as string) !== "pending_payment") return false;
+      const d = getRefDate(p);
+      return d >= todayStart && d <= todayEnd;
+    })
+    .sort((a, b) => getRefDate(a).getTime() - getRefDate(b).getTime());
+
+  const overduePendingPayment = procedures
+    .filter((p) => (p.status as string) === "pending_payment" && getRefDate(p) < todayStart)
+    .sort((a, b) => getRefDate(b).getTime() - getRefDate(a).getTime());
+
+  const pendingPaymentQueue = [...todayPendingPayment, ...overduePendingPayment];
 
   const formatMoney = (v: number) => v.toLocaleString("ru-RU") + " ₸";
 
@@ -219,22 +244,50 @@ export default function AdminDashboard() {
             {activeTasks.length === 0 ? (
               <p className="text-sm text-gray-400 py-2">{t("adminDashboard.noActiveTasks")}</p>
             ) : (
-              <div className="space-y-2">
-                {activeTasks.slice(0, 4).map((proc) => {
-                  const patient = patients.find((p) => p.id === proc.patientId);
-                  return (
-                    <div key={proc.id} className="flex items-center gap-2 p-2 rounded-xl bg-amber-50 border border-amber-100">
-                      <div className="w-2 h-2 rounded-full bg-amber-400 shrink-0 animate-pulse" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-gray-900 truncate">{proc.name}</p>
-                        <p className="text-[10px] text-gray-500 truncate">
-                          {patient?.name ?? "—"}
-                          {proc.doctorName && ` · ${proc.doctorName}`}
-                        </p>
-                      </div>
+              <div className="space-y-3">
+                {todayActiveTasks.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wide mb-1.5">Сегодня</p>
+                    <div className="space-y-1.5">
+                      {todayActiveTasks.slice(0, 3).map((proc) => {
+                        const patient = patients.find((p) => p.id === proc.patientId);
+                        return (
+                          <div key={proc.id} className="flex items-center gap-2 p-2 rounded-xl bg-amber-50 border border-amber-100">
+                            <div className="w-2 h-2 rounded-full bg-amber-400 shrink-0 animate-pulse" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-semibold text-gray-900 truncate">{proc.name}</p>
+                              <p className="text-[10px] text-gray-500 truncate">
+                                {patient?.name ?? "—"}{proc.doctorName && ` · ${proc.doctorName}`}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
+                  </div>
+                )}
+                {overdueActiveTasks.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-bold text-orange-600 uppercase tracking-wide mb-1.5">Незакрытые</p>
+                    <div className="space-y-1.5">
+                      {overdueActiveTasks.slice(0, 3).map((proc) => {
+                        const patient = patients.find((p) => p.id === proc.patientId);
+                        return (
+                          <div key={proc.id} className="flex items-center gap-2 p-2 rounded-xl bg-orange-50 border border-orange-100">
+                            <div className="w-2 h-2 rounded-full bg-orange-400 shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-semibold text-gray-900 truncate">{proc.name}</p>
+                              <p className="text-[10px] text-gray-500 truncate">
+                                {patient?.name ?? "—"}{proc.doctorName && ` · ${proc.doctorName}`}
+                              </p>
+                            </div>
+                            <span className="text-[10px] text-orange-500 font-semibold shrink-0">{fmtOverdueDate(proc)}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -294,6 +347,11 @@ export default function AdminDashboard() {
             <span className="ml-1 text-xs font-bold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">
               {pendingPaymentQueue.length}
             </span>
+            {overduePendingPayment.length > 0 && (
+              <span className="text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
+                {overduePendingPayment.length} незакрытых
+              </span>
+            )}
             <button
               onClick={() => navigate("/admin/finance")}
               className="ml-auto text-sm text-primary font-semibold flex items-center gap-1 hover:underline"
@@ -306,13 +364,14 @@ export default function AdminDashboard() {
               const patient = patients.find((p) => p.id === proc.patientId);
               const isSelecting = selectingPayment === proc.id;
               const isSaving = updatePayment.isPending;
+              const isOverdue = overduePendingPayment.some((o) => o.id === proc.id);
               return (
                 <motion.div
                   key={proc.id}
                   initial={{ opacity: 0, x: -4 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.04 }}
-                  className="flex items-center gap-4 px-5 py-3"
+                  className={`flex items-center gap-4 px-5 py-3 ${isOverdue ? "bg-rose-50/40" : ""}`}
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-900 truncate">{proc.name}</p>
@@ -321,11 +380,13 @@ export default function AdminDashboard() {
                       {proc.doctorName && ` · ${proc.doctorName}`}
                       {proc.price ? ` · ${formatMoney(proc.price)}` : ""}
                     </p>
-                    {proc.scheduledAt && (
-                      <p className="text-[10px] text-orange-500 mt-0.5">
-                        {format(parseISO(proc.scheduledAt), "d MMM, HH:mm")}
-                      </p>
-                    )}
+                    <p className="text-[10px] mt-0.5">
+                      {isOverdue
+                        ? <span className="text-rose-500 font-semibold">Незакрыто · {fmtOverdueDate(proc)}</span>
+                        : proc.scheduledAt
+                          ? <span className="text-orange-500">{format(parseISO(proc.scheduledAt), "d MMM, HH:mm")}</span>
+                          : null}
+                    </p>
                   </div>
                   {isSelecting ? (
                     <div className="flex flex-wrap gap-1.5 justify-end">
