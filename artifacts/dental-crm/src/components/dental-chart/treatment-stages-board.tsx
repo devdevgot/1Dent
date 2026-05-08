@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   DndContext,
   closestCenter,
@@ -420,6 +420,25 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
   });
 
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  // When patientId changes (panel reuses component without unmounting),
+  // reload the saved order for the new patient and reset expand state.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(`1dent:stages-order:${patientId}`);
+      if (raw) {
+        const parsed: string[] = JSON.parse(raw);
+        const valid = parsed.filter((id) => DEFAULT_ORDER.includes(id));
+        const missing = DEFAULT_ORDER.filter((id) => !valid.includes(id));
+        setOrder([...valid, ...missing]);
+      } else {
+        setOrder(DEFAULT_ORDER);
+      }
+    } catch {
+      setOrder(DEFAULT_ORDER);
+    }
+    setExpandedIds(new Set());
+  }, [patientId]);
 
   const stageItems = buildStageItems(teeth, activePlan);
 
