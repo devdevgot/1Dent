@@ -19,6 +19,7 @@ import {
   Bell,
   Radio,
   ClipboardList,
+  DatabaseZap,
 } from "lucide-react";
 
 const SUPPORTED_LANGS = ["ru", "kz", "en"] as const;
@@ -34,6 +35,7 @@ const ALL_NAV_ITEMS = [
   { nameKey: "nav.users",        href: "/users",              icon: Settings,        roles: ["owner"] },
   { nameKey: "nav.chatbot",      href: "/chatbot",            icon: Bot,             roles: ["owner"] },
   { nameKey: "nav.channels",     href: "/channels",           icon: Radio,           roles: ["owner","admin"] },
+  { nameKey: "nav.migration",    href: "/migration",          icon: DatabaseZap,     roles: ["owner","admin"] },
 ];
 
 export default function MenuPage() {

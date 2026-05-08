@@ -44,6 +44,7 @@ import AccountEditProfilePage from "@/pages/account-edit-profile";
 import AccountChangeEmailPage from "@/pages/account-change-email";
 import AccountChangePasswordPage from "@/pages/account-change-password";
 import MenuPage from "@/pages/menu";
+import MigrationPage from "@/pages/migration";
 import ChannelsPage from "@/pages/channels";
 import NotFound from "@/pages/not-found";
 
@@ -294,6 +295,11 @@ function Router() {
       {/* Channels page */}
       <Route path="/channels">
         <ProtectedRoute component={ChannelsPage} allowedRoles={['owner', 'admin']} />
+      </Route>
+
+      {/* Migration page */}
+      <Route path="/migration">
+        <ProtectedRoute component={MigrationPage} allowedRoles={['owner', 'admin']} />
       </Route>
 
       {/* Settings page */}
