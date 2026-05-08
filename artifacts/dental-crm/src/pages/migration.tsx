@@ -7,7 +7,6 @@ import {
   RefreshCw,
   ChevronDown,
   Loader2,
-  Trello,
   Link,
   ArrowRight,
   Clock,
@@ -21,8 +20,6 @@ import {
 import {
   usePreviewExcelImport,
   useConfirmExcelImport,
-  useConnectTrello,
-  useStartTrelloImport,
   useListMigrationJobs,
   getMigrationJobStatus,
   useAnalyzeFileWithAi,
@@ -30,7 +27,7 @@ import {
 } from "@workspace/api-client-react";
 import type { MigrationJob, AiDetectedCategory } from "@workspace/api-client-react";
 
-type Tab = "excel" | "trello" | "ai";
+type Tab = "excel" | "ai";
 type ColumnKey = "name" | "phone" | "age" | "notes" | "status";
 const COLUMN_KEYS: ColumnKey[] = ["name", "phone", "age", "notes", "status"];
 
@@ -148,12 +145,12 @@ function JobCard({ job: initialJob }: { job: MigrationJob }) {
   const jobTypeIcon =
     jobType === "excel-import" ? <FileSpreadsheet className="w-4 h-4 text-emerald-600" /> :
     jobType === "ai-smart-import" ? <Sparkles className="w-4 h-4 text-violet-500" /> :
-    <Trello className="w-4 h-4 text-blue-500" />;
+    <FileSpreadsheet className="w-4 h-4 text-gray-400" />;
 
   const jobTypeLabel =
     jobType === "excel-import" ? "Excel" :
     jobType === "ai-smart-import" ? "ИИ-импорт" :
-    "Trello";
+    "Импорт";
 
   return (
     <div className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
@@ -725,143 +722,6 @@ function ExcelTab() {
   );
 }
 
-function TrelloTab() {
-  const [apiKey, setApiKey] = useState("");
-  const [token, setToken] = useState("");
-  const [boards, setBoards] = useState<{ id: string; name: string }[]>([]);
-  const [selectedBoard, setSelectedBoard] = useState("");
-  const [jobId, setJobId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const connectMutation = useConnectTrello();
-  const importMutation = useStartTrelloImport();
-
-  const handleConnect = async () => {
-    setError(null);
-    try {
-      const res = await connectMutation.mutateAsync({ data: { apiKey, token } });
-      setBoards(res.data.boards);
-      if (res.data.boards.length > 0) {
-        setSelectedBoard(res.data.boards[0]!.id);
-      }
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Ошибка подключения к Trello");
-    }
-  };
-
-  const handleImport = async () => {
-    if (!selectedBoard) return;
-    setError(null);
-    try {
-      const res = await importMutation.mutateAsync({ data: { apiKey, token, boardId: selectedBoard } });
-      setJobId(res.data.job.id);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Ошибка при запуске импорта");
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-700">
-        <p className="font-medium mb-1">Как получить Trello API Key и Token?</p>
-        <ol className="list-decimal list-inside space-y-1 text-blue-600 text-xs">
-          <li>Перейдите на <a href="https://trello.com/app-key" target="_blank" rel="noreferrer" className="underline">trello.com/app-key</a></li>
-          <li>Скопируйте <strong>API Key</strong></li>
-          <li>Нажмите «Token» → разрешите доступ → скопируйте токен</li>
-        </ol>
-      </div>
-
-      <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm space-y-4">
-        <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-          <Link className="w-4 h-4 text-blue-500" />
-          Подключение к Trello
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">API Key</label>
-            <input
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="Вставьте API Key"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:ring-2 focus:ring-blue-300 focus:border-blue-400 outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Token</label>
-            <input
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              type="password"
-              placeholder="Вставьте Token"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:ring-2 focus:ring-blue-300 focus:border-blue-400 outline-none"
-            />
-          </div>
-        </div>
-        <button
-          onClick={handleConnect}
-          disabled={!apiKey || !token || connectMutation.isPending}
-          className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {connectMutation.isPending ? (
-            <><Loader2 className="w-4 h-4 animate-spin" /> Подключение…</>
-          ) : (
-            <><Trello className="w-4 h-4" /> Подключить</>
-          )}
-        </button>
-      </div>
-
-      {error && (
-        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
-          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-          {error}
-        </div>
-      )}
-
-      {boards.length > 0 && (
-        <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm space-y-4">
-          <h3 className="text-sm font-semibold text-gray-700">Выберите доску Trello</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {boards.map((b) => (
-              <button
-                key={b.id}
-                onClick={() => setSelectedBoard(b.id)}
-                className={`flex items-center gap-3 p-3 rounded-xl border text-sm font-medium transition-all ${
-                  selectedBoard === b.id
-                    ? "border-blue-400 bg-blue-50 text-blue-700"
-                    : "border-gray-200 bg-gray-50 text-gray-600 hover:border-blue-200 hover:bg-blue-50/40"
-                }`}
-              >
-                <Trello className={`w-4 h-4 ${selectedBoard === b.id ? "text-blue-500" : "text-gray-400"}`} />
-                <span className="truncate">{b.name}</span>
-                {selectedBoard === b.id && <Check className="w-4 h-4 ml-auto flex-shrink-0" />}
-              </button>
-            ))}
-          </div>
-
-          {jobId ? (
-            <div className="flex items-center gap-2 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-sm text-emerald-700">
-              <CheckCircle2 className="w-5 h-5" />
-              Импорт запущен! Следите за прогрессом ниже.
-            </div>
-          ) : (
-            <button
-              onClick={handleImport}
-              disabled={!selectedBoard || importMutation.isPending}
-              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-medium text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
-            >
-              {importMutation.isPending ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Запуск импорта…</>
-              ) : (
-                <><ArrowRight className="w-4 h-4" /> Импортировать карточки с доски</>
-              )}
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function JobHistory() {
   const { data, refetch, isLoading } = useListMigrationJobs();
   const jobs = data?.data.jobs ?? [];
@@ -917,11 +777,6 @@ export default function MigrationPage() {
       label: "Excel / CSV",
       icon: <FileSpreadsheet className="w-4 h-4" />,
     },
-    {
-      key: "trello",
-      label: "Trello",
-      icon: <Trello className="w-4 h-4" />,
-    },
   ];
 
   return (
@@ -930,7 +785,7 @@ export default function MigrationPage() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Миграция данных</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Импортируйте данные из Excel, CSV, PDF или подключите Trello
+            Импортируйте данные из Excel, CSV или PDF
           </p>
         </div>
 
@@ -964,7 +819,6 @@ export default function MigrationPage() {
           <div className="p-6">
             {tab === "ai" && <AiImportTab />}
             {tab === "excel" && <ExcelTab />}
-            {tab === "trello" && <TrelloTab />}
           </div>
         </div>
 
