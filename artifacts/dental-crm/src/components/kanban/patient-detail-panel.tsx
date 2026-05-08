@@ -52,6 +52,7 @@ import {
 } from "@/lib/patient-utils";
 import type { PatientStatus, InteractionType, ToothCondition } from "@workspace/api-client-react";
 import { FdiChart, CONDITION_CONFIG, getCanalCount } from "@/components/dental-chart/fdi-chart";
+import { TreatmentStagesBoard } from "@/components/dental-chart/treatment-stages-board";
 import { useTranslation } from "react-i18next";
 
 
@@ -1976,6 +1977,12 @@ export function PatientDetailPanel() {
                             setModalToothFdi(fdi);
                             setPlanViewToothFdi(fdi);
                           }}
+                        />
+
+                        <TreatmentStagesBoard
+                          patientId={selectedPatientId ?? ""}
+                          teeth={teethRecords}
+                          activePlan={activePlan}
                         />
 
                       </div>
