@@ -23,8 +23,9 @@ import {
   Crown,
   Wrench,
   Activity,
-  CircleDashed,
   CheckCircle2,
+  Sparkles,
+  Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ToothRecord } from "@workspace/api-client-react";
@@ -47,7 +48,10 @@ type TreatmentPlan = {
 interface StageConfig {
   id: string;
   label: string;
+  /** Tooth conditions that map into this stage */
   conditions: string[];
+  /** Plan-item categories (from procedure template category) that map here */
+  planCategories?: string[];
   color: string;
   bgColor: string;
   borderColor: string;
@@ -57,9 +61,21 @@ interface StageConfig {
 
 const STAGE_CONFIGS: StageConfig[] = [
   {
+    id: "hygiene",
+    label: "Гигиена",
+    conditions: [],
+    planCategories: ["hygiene"],
+    color: "#8b5cf6",
+    bgColor: "#f5f3ff",
+    borderColor: "#ddd6fe",
+    textColor: "#6d28d9",
+    Icon: Sparkles,
+  },
+  {
     id: "therapy",
     label: "Кариес / Терапия",
     conditions: ["cavity", "treated"],
+    planCategories: ["therapy", "restoration", "periodontology", "radiology", "pediatric"],
     color: "#3b82f6",
     bgColor: "#eff6ff",
     borderColor: "#bfdbfe",
@@ -80,6 +96,7 @@ const STAGE_CONFIGS: StageConfig[] = [
     id: "orthopedics",
     label: "Коронки / Ортопедия",
     conditions: ["crown"],
+    planCategories: ["orthopedics"],
     color: "#d97706",
     bgColor: "#fffbeb",
     borderColor: "#fde68a",
@@ -90,6 +107,7 @@ const STAGE_CONFIGS: StageConfig[] = [
     id: "implantation",
     label: "Имплантация",
     conditions: ["implant"],
+    planCategories: ["implantation"],
     color: "#10b981",
     bgColor: "#f0fdf4",
     borderColor: "#a7f3d0",
@@ -100,6 +118,7 @@ const STAGE_CONFIGS: StageConfig[] = [
     id: "surgery",
     label: "Удаление",
     conditions: ["extraction_needed"],
+    planCategories: ["surgery"],
     color: "#ef4444",
     bgColor: "#fef2f2",
     borderColor: "#fecaca",
@@ -107,65 +126,96 @@ const STAGE_CONFIGS: StageConfig[] = [
     Icon: Scissors,
   },
   {
-    id: "missing",
-    label: "Отсутствующие",
+    id: "other",
+    label: "Прочее",
     conditions: ["missing"],
     color: "#6b7280",
     bgColor: "#f9fafb",
     borderColor: "#e5e7eb",
     textColor: "#374151",
-    Icon: CircleDashed,
+    Icon: Layers,
   },
 ];
 
 const DEFAULT_ORDER = STAGE_CONFIGS.map((s) => s.id);
 
+type StageData = { teeth: ToothRecord[]; planItems: TreatmentPlanItem[] };
+
+/** Map each plan item's condition string → stage id */
+function conditionToStageId(condition: string): string | null {
+  for (const stage of STAGE_CONFIGS) {
+    if (stage.conditions.includes(condition)) return stage.id;
+  }
+  return null;
+}
+
+/** Map a plan-item category string → stage id via planCategories */
+function planCategoryToStageId(category: string | null | undefined): string | null {
+  if (!category) return null;
+  for (const stage of STAGE_CONFIGS) {
+    if (stage.planCategories?.includes(category)) return stage.id;
+  }
+  return null;
+}
+
 function buildStageItems(
   teeth: ToothRecord[],
   activePlan: TreatmentPlan | null,
-): Map<string, { teeth: ToothRecord[]; planItems: TreatmentPlanItem[] }> {
-  const result = new Map<string, { teeth: ToothRecord[]; planItems: TreatmentPlanItem[] }>();
+): Map<string, StageData> {
+  const result = new Map<string, StageData>();
   for (const stage of STAGE_CONFIGS) {
     result.set(stage.id, { teeth: [], planItems: [] });
   }
 
-  const toothToStage = new Map<number, string>();
+  // 1. Bucket teeth by condition
+  const toothToStageId = new Map<number, string>();
   for (const tooth of teeth) {
     const cond = tooth.condition ?? "healthy";
     if (cond === "healthy") continue;
-    for (const stage of STAGE_CONFIGS) {
-      if (stage.conditions.includes(cond)) {
-        result.get(stage.id)!.teeth.push(tooth);
-        toothToStage.set(tooth.toothFdi, stage.id);
-        break;
-      }
+    const stageId = conditionToStageId(cond);
+    if (stageId) {
+      result.get(stageId)!.teeth.push(tooth);
+      toothToStageId.set(tooth.toothFdi, stageId);
     }
   }
 
-  if (activePlan) {
-    for (const item of activePlan.items) {
-      if (item.status === "cancelled") continue;
-      const itemCond = item.condition ?? "";
-      let placed = false;
+  if (!activePlan) return result;
 
-      if (itemCond) {
-        for (const stage of STAGE_CONFIGS) {
-          if (stage.conditions.includes(itemCond)) {
-            result.get(stage.id)!.planItems.push(item);
-            placed = true;
-            break;
-          }
-        }
-      }
+  // 2. Bucket plan items
+  for (const item of activePlan.items) {
+    if (item.status === "cancelled") continue;
 
-      if (!placed && item.toothFdi != null) {
-        const stageId = toothToStage.get(item.toothFdi);
-        if (stageId) {
-          result.get(stageId)!.planItems.push(item);
-          placed = true;
-        }
+    // Try item.condition first (set from tooth condition at creation time)
+    if (item.condition) {
+      const stageId = conditionToStageId(item.condition);
+      if (stageId) {
+        result.get(stageId)!.planItems.push(item);
+        continue;
       }
     }
+
+    // Try linking via toothFdi → tooth's stage
+    if (item.toothFdi != null) {
+      const stageId = toothToStageId.get(item.toothFdi);
+      if (stageId) {
+        result.get(stageId)!.planItems.push(item);
+        continue;
+      }
+    }
+
+    // Fallback: try to map via a "category" field if present on the item (some items carry it)
+    const itemAsAny = item as Record<string, unknown>;
+    const cat = (itemAsAny["category"] ?? itemAsAny["procedureCategory"]) as string | undefined;
+    if (cat) {
+      const stageId = planCategoryToStageId(cat);
+      if (stageId) {
+        result.get(stageId)!.planItems.push(item);
+        continue;
+      }
+    }
+
+    // Ultimate fallback → "Прочее"
+    result.get("other")!.planItems.push(item);
   }
 
   return result;
@@ -198,19 +248,24 @@ function SortableStageCard({
   };
 
   const Icon = stage.Icon;
-  const pendingItems = planItems.filter((p) => p.status === "pending");
-  const completedItems = planItems.filter((p) => p.status === "completed");
+
+  // Count: unique teeth + plan items that have no linked tooth in this stage
   const toothFdiSet = new Set(teeth.map((t) => t.toothFdi));
-  const orphanItems = planItems.filter(
+  const orphanPlanItems = planItems.filter(
     (p) => p.toothFdi == null || !toothFdiSet.has(p.toothFdi),
   );
+  const totalCount = teeth.length + orphanPlanItems.length;
+
+  const pendingItems = planItems.filter((p) => p.status === "pending");
+  const completedItems = planItems.filter((p) => p.status === "completed");
 
   return (
     <div
       ref={setNodeRef}
       style={dndStyle}
-      className="shrink-0 w-[168px] flex flex-col rounded-xl border overflow-hidden shadow-sm select-none bg-white"
+      className="shrink-0 w-[172px] flex flex-col rounded-xl border overflow-hidden shadow-sm select-none bg-white"
     >
+      {/* Header */}
       <div
         className="flex items-center gap-1.5 px-2 py-2"
         style={{ backgroundColor: stage.bgColor, borderBottom: `1px solid ${stage.borderColor}` }}
@@ -235,14 +290,16 @@ function SortableStageCard({
           {stage.label}
         </span>
 
+        {/* Combined count badge: teeth + orphan items */}
         <span
           className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center"
           style={{ backgroundColor: stage.color + "25", color: stage.color }}
         >
-          {teeth.length}
+          {totalCount}
         </span>
       </div>
 
+      {/* Expand toggle */}
       <button
         onClick={onToggle}
         className="w-full flex items-center justify-between px-2.5 py-1.5 bg-white hover:bg-gray-50/80 transition-colors"
@@ -252,7 +309,9 @@ function SortableStageCard({
             ? `${pendingItems.length} услуг ожидает`
             : completedItems.length > 0
             ? `${completedItems.length} выполнено`
-            : "нет услуг"}
+            : teeth.length > 0
+            ? "нет услуг"
+            : "только позиции"}
         </span>
         <ChevronDown
           className={cn(
@@ -262,12 +321,17 @@ function SortableStageCard({
         />
       </button>
 
+      {/* Expanded detail */}
       {isExpanded && (
-        <div className="border-t divide-y divide-border/20 max-h-52 overflow-y-auto" style={{ borderColor: stage.borderColor }}>
+        <div
+          className="border-t divide-y divide-border/20 max-h-52 overflow-y-auto"
+          style={{ borderColor: stage.borderColor }}
+        >
           {teeth.length === 0 && planItems.length === 0 && (
-            <p className="text-[10px] text-muted-foreground text-center py-2 px-2">Нет данных</p>
+            <p className="text-[10px] text-muted-foreground text-center py-2">Нет данных</p>
           )}
 
+          {/* Teeth with their nested plan items */}
           {teeth.map((tooth) => {
             const condCfg = CONDITION_CONFIG[tooth.condition ?? "healthy"];
             const toothItems = planItems.filter((p) => p.toothFdi === tooth.toothFdi);
@@ -306,7 +370,8 @@ function SortableStageCard({
             );
           })}
 
-          {orphanItems.map((item) => (
+          {/* Plan items with no linked tooth in this stage */}
+          {orphanPlanItems.map((item) => (
             <div
               key={item.id}
               className={cn(
@@ -357,12 +422,13 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
 
   const stageItems = buildStageItems(teeth, activePlan);
 
+  // Only show stages that have teeth or plan items
   const activeStages = order
-    .map((id) => STAGE_CONFIGS.find((s) => s.id === id)!)
-    .filter((stage) => {
+    .map((id) => STAGE_CONFIGS.find((s) => s.id === id))
+    .filter((stage): stage is StageConfig => {
       if (!stage) return false;
       const items = stageItems.get(stage.id);
-      return items && (items.teeth.length > 0 || items.planItems.length > 0);
+      return !!items && (items.teeth.length > 0 || items.planItems.length > 0);
     });
 
   const sensors = useSensors(
@@ -404,11 +470,16 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
         <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">
           Этапы лечения
         </span>
-        <span className="text-[10px] text-muted-foreground hidden sm:inline">— перетащите для порядка</span>
+        <span className="text-[10px] text-muted-foreground hidden sm:inline">
+          — перетащите для изменения порядка
+        </span>
       </div>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={activeStages.map((s) => s.id)} strategy={horizontalListSortingStrategy}>
+        <SortableContext
+          items={activeStages.map((s) => s.id)}
+          strategy={horizontalListSortingStrategy}
+        >
           <div className="flex gap-2 overflow-x-auto pb-2">
             {activeStages.map((stage) => {
               const items = stageItems.get(stage.id)!;
