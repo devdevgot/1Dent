@@ -6,7 +6,7 @@ import {
   Check,
   AlertTriangle,
   RefreshCw,
-  ChevronDown,
+  ChevronRight,
   Loader2,
   Clock,
   CheckCircle2,
@@ -15,6 +15,8 @@ import {
   Sparkles,
   FileText,
   FileCog,
+  Upload,
+  RotateCcw,
 } from "lucide-react";
 import {
   useListMigrationJobs,
@@ -23,7 +25,6 @@ import {
   useConfirmAiImport,
 } from "@workspace/api-client-react";
 import type { MigrationJob, AiDetectedCategory } from "@workspace/api-client-react";
-
 
 const AI_FIELD_LABELS: Record<string, string> = {
   "": "— не указано —",
@@ -55,6 +56,12 @@ const CATEGORY_LABELS: Record<AiDetectedCategory, string> = {
   templates: "Шаблоны услуг",
 };
 
+const CATEGORY_COLORS: Record<AiDetectedCategory, string> = {
+  patients: "bg-blue-50 text-blue-700 border-blue-200",
+  procedures: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  templates: "bg-amber-50 text-amber-700 border-amber-200",
+};
+
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -77,23 +84,28 @@ function fileTypeFromFile(file: File): "xlsx" | "csv" | "pdf" | null {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, { cls: string; label: string }> = {
-    pending:    { cls: "bg-amber-50 text-amber-700 border border-amber-200",       label: "Ожидание" },
-    processing: { cls: "bg-blue-50 text-blue-700 border border-blue-200",         label: "Обработка" },
-    done:       { cls: "bg-emerald-50 text-emerald-700 border border-emerald-200", label: "Завершено" },
-    failed:     { cls: "bg-red-50 text-red-700 border border-red-200",            label: "Ошибка" },
+  const map: Record<string, { cls: string; label: string; dot: string }> = {
+    pending:    { cls: "bg-amber-50 text-amber-700",   dot: "bg-amber-400",   label: "Ожидание"  },
+    processing: { cls: "bg-blue-50 text-blue-700",     dot: "bg-blue-400",    label: "Обработка" },
+    done:       { cls: "bg-emerald-50 text-emerald-700", dot: "bg-emerald-400", label: "Завершено" },
+    failed:     { cls: "bg-red-50 text-red-700",       dot: "bg-red-400",     label: "Ошибка"    },
   };
-  const s = map[status] ?? { cls: "bg-gray-50 text-gray-600 border border-gray-200", label: status };
-  return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${s.cls}`}>{s.label}</span>;
+  const s = map[status] ?? { cls: "bg-gray-50 text-gray-600", dot: "bg-gray-400", label: status };
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${s.cls}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${s.dot} ${status === "processing" ? "animate-pulse" : ""}`} />
+      {s.label}
+    </span>
+  );
 }
 
 function ProgressBar({ value, max }: { value: number; max: number }) {
   const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
   return (
-    <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+    <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
       <div
-        className="h-2 rounded-full transition-all duration-500"
-        style={{ width: `${pct}%`, background: "linear-gradient(to right, #6366f1, #8b5cf6)" }}
+        className="h-1.5 rounded-full transition-all duration-700"
+        style={{ width: `${pct}%`, background: "linear-gradient(to right, #7c3aed, #a855f7)" }}
       />
     </div>
   );
@@ -109,20 +121,14 @@ function JobCard({ job: initialJob }: { job: MigrationJob }) {
       try {
         const res = await getMigrationJobStatus(job.id);
         setJob(res.data.job);
-        if (res.data.job.status === "done" || res.data.job.status === "failed") {
-          clearInterval(timer);
-        }
-      } catch {
-        // silent - keep polling
-      }
+        if (res.data.job.status === "done" || res.data.job.status === "failed") clearInterval(timer);
+      } catch { /* silent */ }
     }, 2000);
     return () => clearInterval(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [job.id, isActive]);
 
-  useEffect(() => {
-    setJob(initialJob);
-  }, [initialJob]);
+  useEffect(() => { setJob(initialJob); }, [initialJob]);
 
   const pct =
     (job.totalRows ?? 0) > 0
@@ -131,77 +137,92 @@ function JobCard({ job: initialJob }: { job: MigrationJob }) {
 
   type ReportError = { row: number; message: string };
   const report = job.report as Record<string, unknown> | null;
-  const errors: ReportError[] = Array.isArray(report?.["errors"])
-    ? (report!["errors"] as ReportError[])
-    : [];
-
-  const jobType = job.type as string;
-  const jobTypeIcon =
-    jobType === "excel-import" ? <FileSpreadsheet className="w-4 h-4 text-emerald-600" /> :
-    jobType === "ai-smart-import" ? <Sparkles className="w-4 h-4 text-violet-500" /> :
-    <FileSpreadsheet className="w-4 h-4 text-gray-400" />;
-
-  const jobTypeLabel =
-    jobType === "excel-import" ? "Excel" :
-    jobType === "ai-smart-import" ? "ИИ-импорт" :
-    "Импорт";
+  const errors: ReportError[] = Array.isArray(report?.["errors"]) ? (report!["errors"] as ReportError[]) : [];
+  const summary = report?.["summary"] as { patients?: number; procedures?: number; templates?: number } | undefined;
 
   return (
-    <div className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          {jobTypeIcon}
-          <span className="text-sm font-medium text-gray-800">{jobTypeLabel}</span>
+    <div className={`relative bg-white rounded-2xl border overflow-hidden transition-shadow hover:shadow-md ${
+      job.status === "done" ? "border-emerald-100" :
+      job.status === "failed" ? "border-red-100" :
+      job.status === "processing" ? "border-violet-100" :
+      "border-gray-100"
+    }`}>
+      <div className={`absolute left-0 top-0 bottom-0 w-1 ${
+        job.status === "done" ? "bg-emerald-400" :
+        job.status === "failed" ? "bg-red-400" :
+        job.status === "processing" ? "bg-violet-400" :
+        "bg-amber-400"
+      }`} />
+      <div className="pl-4 pr-4 pt-4 pb-3">
+        <div className="flex items-start justify-between gap-2 mb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center shrink-0">
+              <Sparkles className="w-4 h-4 text-violet-500" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-800">ИИ-импорт</p>
+              <p className="text-xs text-gray-400 flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {new Date(job.createdAt).toLocaleString("ru")}
+              </p>
+            </div>
+          </div>
+          <StatusBadge status={job.status} />
         </div>
-        <StatusBadge status={job.status} />
-      </div>
 
-      {(job.totalRows ?? 0) > 0 && (
-        <div className="mb-2">
-          <ProgressBar value={job.processedRows ?? 0} max={job.totalRows ?? 1} />
-          <p className="text-xs text-gray-400 mt-1">
-            {job.processedRows ?? 0} / {job.totalRows ?? 0} строк ({pct}%)
-          </p>
+        {(job.totalRows ?? 0) > 0 && (
+          <div className="mb-3">
+            <ProgressBar value={job.processedRows ?? 0} max={job.totalRows ?? 1} />
+            <p className="text-xs text-gray-400 mt-1">{job.processedRows ?? 0} / {job.totalRows ?? 0} строк · {pct}%</p>
+          </div>
+        )}
+
+        <div className="flex gap-3 text-xs">
+          {(job.successCount ?? 0) > 0 && (
+            <span className="flex items-center gap-1 text-emerald-600 font-medium">
+              <CheckCircle2 className="w-3.5 h-3.5" /> {job.successCount} успешно
+            </span>
+          )}
+          {(job.duplicateCount ?? 0) > 0 && (
+            <span className="flex items-center gap-1 text-amber-600">
+              <Info className="w-3.5 h-3.5" /> {job.duplicateCount} дублей
+            </span>
+          )}
+          {(job.errorCount ?? 0) > 0 && (
+            <span className="flex items-center gap-1 text-red-500">
+              <XCircle className="w-3.5 h-3.5" /> {job.errorCount} ошибок
+            </span>
+          )}
         </div>
-      )}
 
-      <div className="flex gap-4 text-xs text-gray-500">
-        <span className="flex items-center gap-1">
-          <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-          {job.successCount} успешно
-        </span>
-        {(job.duplicateCount ?? 0) > 0 && (
-          <span className="flex items-center gap-1">
-            <Info className="w-3 h-3 text-amber-500" />
-            {job.duplicateCount} дублей
-          </span>
+        {summary && job.status === "done" && (
+          <div className="mt-2 flex gap-2 flex-wrap">
+            {(summary.patients ?? 0) > 0 && (
+              <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">{summary.patients} пациентов</span>
+            )}
+            {(summary.procedures ?? 0) > 0 && (
+              <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">{summary.procedures} процедур</span>
+            )}
+            {(summary.templates ?? 0) > 0 && (
+              <span className="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full">{summary.templates} шаблонов</span>
+            )}
+          </div>
         )}
-        {(job.errorCount ?? 0) > 0 && (
-          <span className="flex items-center gap-1">
-            <XCircle className="w-3 h-3 text-red-500" />
-            {job.errorCount} ошибок
-          </span>
+
+        {errors.length > 0 && (
+          <details className="mt-2">
+            <summary className="text-xs text-red-500 cursor-pointer hover:text-red-600">Показать ошибки ({errors.length})</summary>
+            <ul className="mt-1.5 space-y-1 text-xs text-gray-500 max-h-28 overflow-y-auto">
+              {errors.slice(0, 10).map((e, i) => (
+                <li key={i} className="flex gap-1.5">
+                  <span className="text-gray-300 shrink-0">#{e.row}</span>
+                  <span className="truncate">{e.message}</span>
+                </li>
+              ))}
+            </ul>
+          </details>
         )}
       </div>
-
-      {errors.length > 0 && (
-        <details className="mt-2">
-          <summary className="text-xs text-red-600 cursor-pointer">Показать ошибки</summary>
-          <ul className="mt-1 space-y-0.5 text-xs text-gray-500 max-h-32 overflow-y-auto">
-            {errors.slice(0, 10).map((e, i) => (
-              <li key={i} className="truncate">
-                <span className="text-gray-400 mr-1">Стр.{e.row}:</span>
-                {e.message}
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
-
-      <p className="text-xs text-gray-400 mt-2">
-        <Clock className="inline w-3 h-3 mr-1" />
-        {new Date(job.createdAt).toLocaleString("ru")}
-      </p>
     </div>
   );
 }
@@ -223,25 +244,17 @@ function AiImportTab() {
     isPdf: boolean;
   } | null>(null);
   const [mapping, setMapping] = useState<Record<string, string>>({});
-
   const [jobId, setJobId] = useState<string | null>(null);
 
   const analyzeMutation = useAnalyzeFileWithAi();
   const confirmMutation = useConfirmAiImport();
 
+  const reset = () => { setStep("upload"); setAnalysis(null); setFile(null); setFileType(null); setJobId(null); setError(null); };
+
   const processFile = useCallback(async (f: File) => {
     const ft = fileTypeFromFile(f);
-    if (!ft) {
-      setError("Поддерживаются только форматы: .xlsx, .csv, .pdf");
-      return;
-    }
-    setFile(f);
-    setFileType(ft);
-    setError(null);
-    setAnalysis(null);
-    setJobId(null);
-    setStep("analyze");
-
+    if (!ft) { setError("Поддерживаются только форматы: .xlsx, .csv, .pdf"); return; }
+    setFile(f); setFileType(ft); setError(null); setAnalysis(null); setJobId(null); setStep("analyze");
     try {
       const base64 = await fileToBase64(f);
       const res = await analyzeMutation.mutateAsync({ fileBase64: base64, fileType: ft });
@@ -254,15 +267,11 @@ function AiImportTab() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setDragging(false);
-      const f = e.dataTransfer.files[0];
-      if (f) processFile(f);
-    },
-    [processFile],
-  );
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault(); setDragging(false);
+    const f = e.dataTransfer.files[0];
+    if (f) processFile(f);
+  }, [processFile]);
 
   const handleImport = async () => {
     if (!analysis || !file || !fileType) return;
@@ -270,9 +279,7 @@ function AiImportTab() {
     try {
       const base64 = await fileToBase64(file);
       const res = await confirmMutation.mutateAsync({
-        fileBase64: base64,
-        fileType,
-        mapping,
+        fileBase64: base64, fileType, mapping,
         detectedCategories: analysis.detectedCategories,
         rows: analysis.isPdf ? analysis.previewRows : undefined,
       });
@@ -283,176 +290,193 @@ function AiImportTab() {
     }
   };
 
+  const FORMATS = [
+    { icon: <FileSpreadsheet className="w-4 h-4 text-emerald-500" />, label: "Excel", ext: ".xlsx" },
+    { icon: <FileCog className="w-4 h-4 text-blue-500" />,           label: "CSV",   ext: ".csv"  },
+    { icon: <FileText className="w-4 h-4 text-rose-500" />,          label: "PDF",   ext: ".pdf"  },
+  ];
+
+  const STEPS: { key: Step; label: string }[] = [
+    { key: "upload",  label: "Загрузка"  },
+    { key: "analyze", label: "Анализ ИИ" },
+    { key: "import",  label: "Импорт"    },
+  ];
+  const stepIdx = STEPS.findIndex((s) => s.key === step);
+
   return (
     <div className="space-y-6">
-      {/* Format badges */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <span className="text-xs text-gray-500">Поддерживаемые форматы:</span>
-        {[
-          { icon: <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />, label: "Excel (.xlsx)" },
-          { icon: <FileCog className="w-3.5 h-3.5 text-blue-500" />, label: "CSV (.csv)" },
-          { icon: <FileText className="w-3.5 h-3.5 text-red-500" />, label: "PDF (.pdf)" },
-        ].map((f) => (
-          <span key={f.label} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 rounded-full text-xs text-gray-700 font-medium">
-            {f.icon} {f.label}
-          </span>
-        ))}
-      </div>
 
       {/* Stepper */}
-      <div className="flex items-center gap-2 text-xs">
-        {(["upload", "analyze", "import"] as Step[]).map((s, i) => {
-          const labels = ["Загрузка", "Анализ ИИ", "Импорт"];
-          const isCurrent = step === s;
-          const isDone = (step === "analyze" && s === "upload") || (step === "import" && (s === "upload" || s === "analyze"));
+      <div className="flex items-center">
+        {STEPS.map((s, i) => {
+          const done = i < stepIdx;
+          const active = i === stepIdx;
           return (
-            <div key={s} className="flex items-center gap-2">
-              {i > 0 && <div className={`w-6 h-px ${isDone || isCurrent ? "bg-indigo-400" : "bg-gray-200"}`} />}
-              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full font-medium transition-all ${
-                isCurrent ? "bg-indigo-600 text-white" :
-                isDone ? "bg-indigo-100 text-indigo-600" :
-                "bg-gray-100 text-gray-400"
-              }`}>
-                {isDone ? <Check className="w-3 h-3" /> : <span>{i + 1}</span>}
-                {labels[i]}
+            <div key={s.key} className="flex items-center flex-1 last:flex-none">
+              <div className="flex items-center gap-2">
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all ${
+                  done ? "bg-violet-600 text-white" :
+                  active ? "bg-violet-100 text-violet-700 ring-2 ring-violet-300" :
+                  "bg-gray-100 text-gray-400"
+                }`}>
+                  {done ? <Check className="w-3.5 h-3.5" /> : i + 1}
+                </div>
+                <span className={`text-xs font-medium hidden sm:block ${active ? "text-violet-700" : done ? "text-violet-500" : "text-gray-400"}`}>
+                  {s.label}
+                </span>
               </div>
+              {i < STEPS.length - 1 && (
+                <div className={`flex-1 h-px mx-3 transition-colors ${i < stepIdx ? "bg-violet-300" : "bg-gray-200"}`} />
+              )}
             </div>
           );
         })}
       </div>
 
-      {/* Step: upload */}
+      {/* Step: Upload */}
       {step === "upload" && (
-        <div
-          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={handleDrop}
-          className={`relative border-2 border-dashed rounded-2xl p-10 text-center transition-all ${
-            dragging
-              ? "border-violet-400 bg-violet-50"
-              : "border-gray-200 bg-gray-50 hover:border-violet-300 hover:bg-violet-50/40"
-          }`}
-        >
-          <input
-            type="file"
-            accept=".xlsx,.xls,.csv,.pdf"
-            className="absolute inset-0 opacity-0 cursor-pointer"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) processFile(f); }}
-          />
-          <div className="flex flex-col items-center gap-3">
-            <Sparkles className="w-10 h-10 text-violet-400" />
-            <p className="text-sm font-medium text-gray-700">Перетащите файл или нажмите для выбора</p>
-            <p className="text-xs text-gray-400">Excel, CSV или PDF — до 5 000 строк</p>
+        <div className="space-y-4">
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={handleDrop}
+            className={`relative rounded-2xl border-2 border-dashed transition-all cursor-pointer group ${
+              dragging
+                ? "border-violet-400 bg-violet-50 scale-[1.01]"
+                : "border-gray-200 bg-gradient-to-br from-gray-50 to-violet-50/30 hover:border-violet-300 hover:from-violet-50/50 hover:to-violet-50"
+            }`}
+          >
+            <input
+              type="file"
+              accept=".xlsx,.xls,.csv,.pdf"
+              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) processFile(f); }}
+            />
+            <div className="flex flex-col items-center gap-4 py-14 px-6 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-white shadow-sm border border-gray-100 flex items-center justify-center group-hover:shadow-md transition-shadow">
+                <Upload className="w-7 h-7 text-violet-400" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-700">Перетащите файл сюда</p>
+                <p className="text-xs text-gray-400 mt-1">или нажмите, чтобы выбрать · до 5 000 строк</p>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap justify-center">
+                {FORMATS.map((f) => (
+                  <span key={f.ext} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-100 rounded-full text-xs text-gray-600 font-medium shadow-sm">
+                    {f.icon} {f.label}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Step: analyze (loading) */}
+      {/* Step: Analyze — loading */}
       {step === "analyze" && analyzeMutation.isPending && (
-        <div className="flex flex-col items-center gap-4 py-12">
+        <div className="flex flex-col items-center gap-5 py-16">
           <div className="relative">
-            <Loader2 className="w-12 h-12 text-violet-400 animate-spin" />
-            <Sparkles className="w-5 h-5 text-violet-600 absolute -top-1 -right-1" />
+            <div className="w-20 h-20 rounded-2xl bg-violet-50 flex items-center justify-center">
+              <Sparkles className="w-9 h-9 text-violet-400 animate-pulse" />
+            </div>
+            <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-white border border-gray-100 flex items-center justify-center shadow-sm">
+              <Loader2 className="w-4 h-4 text-violet-500 animate-spin" />
+            </div>
           </div>
           <div className="text-center">
-            <p className="text-sm font-medium text-gray-700">ИИ анализирует файл…</p>
-            <p className="text-xs text-gray-400 mt-1">Определяем структуру данных и сопоставляем колонки</p>
+            <p className="text-base font-semibold text-gray-800">ИИ анализирует файл…</p>
+            <p className="text-sm text-gray-400 mt-1">Определяем структуру данных и сопоставляем колонки</p>
           </div>
           {file && (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-full text-xs text-gray-600">
-              <FileSpreadsheet className="w-3.5 h-3.5" />
+            <div className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-100 rounded-full text-xs text-gray-600 shadow-sm">
+              <FileSpreadsheet className="w-3.5 h-3.5 text-violet-400" />
               {file.name}
             </div>
           )}
         </div>
       )}
 
-      {/* Step: analyze (results) */}
+      {/* Step: Analyze — results */}
       {step === "analyze" && analysis && !analyzeMutation.isPending && (
-        <>
+        <div className="space-y-4">
+
+          {/* File pill + detected categories */}
+          <div className="flex items-center gap-3 flex-wrap">
+            {file && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-violet-50 border border-violet-100 rounded-full text-xs text-violet-700 font-medium">
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                {file.name}
+                <span className="text-violet-400">·</span>
+                {analysis.totalRows} строк
+              </div>
+            )}
+            {analysis.detectedCategories.map((cat) => (
+              <span key={cat} className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-xs font-medium ${CATEGORY_COLORS[cat]}`}>
+                <Check className="w-3 h-3" />
+                {CATEGORY_LABELS[cat]}
+              </span>
+            ))}
+          </div>
+
           {/* PDF warning */}
           {analysis.isPdf && (
-            <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
-              <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
               <div>
-                <p className="font-medium">PDF: структура восстановлена ИИ</p>
-                <p className="text-xs text-amber-700 mt-0.5">Пожалуйста, внимательно проверьте сопоставление колонок перед импортом.</p>
+                <p className="font-semibold">PDF: структура восстановлена ИИ</p>
+                <p className="text-xs text-amber-700 mt-0.5">Проверьте сопоставление колонок перед импортом.</p>
               </div>
             </div>
           )}
 
-          {/* Detected categories */}
-          {analysis.detectedCategories.length > 0 && (
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-gray-500">Обнаружено:</span>
-              {analysis.detectedCategories.map((cat) => (
-                <span
-                  key={cat}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-violet-50 border border-violet-200 rounded-full text-xs font-medium text-violet-700"
-                >
-                  <Check className="w-3 h-3" />
-                  {CATEGORY_LABELS[cat]}
-                </span>
-              ))}
-            </div>
-          )}
-
           {/* Column mapping */}
-          <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-            <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-              <ChevronDown className="w-4 h-4 text-violet-500" />
-              Сопоставление колонок
-              <span className="ml-auto text-xs font-normal text-gray-400">
-                {analysis.totalRows} строк
-              </span>
-            </h3>
-            <div className="space-y-2">
-              {analysis.headers.map((header) => (
-                <div key={header} className="grid grid-cols-2 gap-3 items-center">
-                  <div className="text-sm text-gray-700 bg-gray-50 rounded-lg px-3 py-2 truncate" title={header}>
-                    {header}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={mapping[header] ?? ""}
-                      onChange={(e) => setMapping((m) => ({ ...m, [header]: e.target.value }))}
-                      className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-700 bg-white focus:ring-2 focus:ring-violet-300 focus:border-violet-400 outline-none"
-                    >
-                      {AI_FIELD_OPTIONS.map((opt) => (
-                        <option key={opt} value={opt}>{AI_FIELD_LABELS[opt]}</option>
-                      ))}
-                    </select>
-                    {mapping[header] && (
-                      <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    )}
-                  </div>
+          <div className="bg-gray-50 rounded-2xl p-4 space-y-2">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Сопоставление колонок</p>
+            {analysis.headers.map((header) => (
+              <div key={header} className="flex items-center gap-3 bg-white rounded-xl px-3 py-2.5 border border-gray-100 shadow-sm">
+                <span className="flex-1 text-sm text-gray-700 font-medium truncate min-w-0" title={header}>{header}</span>
+                <ChevronRight className="w-3.5 h-3.5 text-gray-300 shrink-0" />
+                <div className="relative flex-1 min-w-0">
+                  <select
+                    value={mapping[header] ?? ""}
+                    onChange={(e) => setMapping((m) => ({ ...m, [header]: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-lg pl-2.5 pr-7 py-1.5 text-sm bg-white text-gray-700 focus:ring-2 focus:ring-violet-300 focus:border-violet-400 outline-none appearance-none"
+                  >
+                    {AI_FIELD_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>{AI_FIELD_LABELS[opt]}</option>
+                    ))}
+                  </select>
                 </div>
-              ))}
-            </div>
+                {mapping[header] ? (
+                  <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                ) : (
+                  <div className="w-4 h-4 shrink-0" />
+                )}
+              </div>
+            ))}
           </div>
 
           {/* Preview table */}
           {analysis.previewRows.length > 0 && (
-            <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
-              <div className="px-5 py-3 border-b border-gray-100">
-                <h3 className="text-sm font-semibold text-gray-700">Предпросмотр (первые строки)</h3>
+            <div className="rounded-2xl border border-gray-100 overflow-hidden bg-white shadow-sm">
+              <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Предпросмотр</p>
+                <p className="text-xs text-gray-400">первые {Math.min(analysis.previewRows.length, 10)} строк</p>
               </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-xs">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-100">
                       {analysis.headers.map((h) => (
-                        <th key={h} className="text-left px-4 py-2 text-gray-500 font-medium whitespace-nowrap">{h}</th>
+                        <th key={h} className="text-left px-4 py-2.5 text-gray-500 font-semibold whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-gray-50">
                     {analysis.previewRows.slice(0, 10).map((row, i) => (
-                      <tr key={i} className="border-b border-gray-50 hover:bg-gray-50/50">
+                      <tr key={i} className="hover:bg-gray-50/70 transition-colors">
                         {analysis.headers.map((h) => (
-                          <td key={h} className="px-4 py-2 text-gray-600 whitespace-nowrap max-w-[160px] truncate">
-                            {row[h] ?? ""}
-                          </td>
+                          <td key={h} className="px-4 py-2.5 text-gray-600 whitespace-nowrap max-w-[160px] truncate">{row[h] ?? ""}</td>
                         ))}
                       </tr>
                     ))}
@@ -462,49 +486,58 @@ function AiImportTab() {
             </div>
           )}
 
-          <div className="flex gap-3">
+          {/* Actions */}
+          <div className="flex gap-3 pt-1">
             <button
-              onClick={() => { setStep("upload"); setAnalysis(null); setFile(null); }}
-              className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-sm hover:bg-gray-50 transition-colors"
+              onClick={reset}
+              className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-500 rounded-xl text-sm hover:bg-gray-50 hover:text-gray-700 transition-colors"
             >
-              Выбрать другой файл
+              <RotateCcw className="w-3.5 h-3.5" />
+              Другой файл
             </button>
             <button
               onClick={handleImport}
               disabled={confirmMutation.isPending}
-              className="flex-1 flex items-center justify-center gap-2 px-6 py-2.5 bg-violet-600 text-white rounded-xl font-medium text-sm hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+              className="flex-1 flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-sm text-white transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ background: "linear-gradient(135deg, #7c3aed, #a855f7)" }}
             >
               {confirmMutation.isPending ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Запуск импорта…</>
+                <><Loader2 className="w-4 h-4 animate-spin" /> Запуск…</>
               ) : (
                 <><Sparkles className="w-4 h-4" /> Импортировать {analysis.totalRows} строк</>
               )}
             </button>
           </div>
-        </>
+        </div>
       )}
 
-      {/* Step: import */}
+      {/* Step: Import done */}
       {step === "import" && (
         <div className="space-y-4">
-          <div className="flex items-center gap-2 p-4 bg-violet-50 border border-violet-200 rounded-xl text-sm text-violet-700">
-            <CheckCircle2 className="w-5 h-5" />
-            Импорт запущен! Следите за прогрессом в «Истории импортов» ниже.
+          <div className="flex flex-col items-center gap-4 py-10 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center">
+              <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+            </div>
+            <div>
+              <p className="text-base font-semibold text-gray-800">Импорт запущен!</p>
+              <p className="text-sm text-gray-400 mt-1">Следите за прогрессом в истории ниже.</p>
+            </div>
+            {jobId && <p className="text-xs text-gray-300">ID: {jobId}</p>}
           </div>
           <button
-            onClick={() => { setStep("upload"); setAnalysis(null); setFile(null); setJobId(null); }}
-            className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-sm hover:bg-gray-50 transition-colors"
+            onClick={reset}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-sm hover:bg-gray-50 transition-colors"
           >
+            <RotateCcw className="w-3.5 h-3.5" />
             Импортировать ещё один файл
           </button>
-          {jobId && <p className="text-xs text-gray-400">ID задачи: {jobId}</p>}
         </div>
       )}
 
       {/* Error */}
       {error && (
-        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
-          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+        <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
           {error}
         </div>
       )}
@@ -521,32 +554,36 @@ function JobHistory() {
     return () => clearInterval(timer);
   }, [refetch]);
 
+  if (isLoading) return (
+    <div className="flex justify-center py-10">
+      <Loader2 className="w-6 h-6 text-violet-400 animate-spin" />
+    </div>
+  );
+
   return (
     <div className="mt-8">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-base font-semibold text-gray-800">История импортов</h2>
+        <div>
+          <h2 className="text-sm font-semibold text-gray-800">История импортов</h2>
+          <p className="text-xs text-gray-400 mt-0.5">{jobs.length > 0 ? `${jobs.length} задач` : "Нет задач"}</p>
+        </div>
         <button
           onClick={() => refetch()}
-          className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-indigo-600 transition-colors"
+          className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-violet-600 transition-colors px-2 py-1.5 rounded-lg hover:bg-violet-50"
         >
           <RefreshCw className="w-3.5 h-3.5" />
           Обновить
         </button>
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center py-8">
-          <Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
-        </div>
-      ) : jobs.length === 0 ? (
-        <div className="text-center py-10 text-sm text-gray-400">
-          Нет истории импортов
+      {jobs.length === 0 ? (
+        <div className="text-center py-12 text-sm text-gray-300">
+          <Sparkles className="w-8 h-8 mx-auto mb-2 text-gray-200" />
+          История импортов пуста
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          {jobs.map((job) => (
-            <JobCard key={job.id} job={job} />
-          ))}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+          {jobs.map((job) => <JobCard key={job.id} job={job} />)}
         </div>
       )}
     </div>
@@ -557,27 +594,29 @@ export default function MigrationPage() {
   const [, setLocation] = useLocation();
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-5xl mx-auto">
-        <div className="mb-6">
-          <div className="flex items-center gap-2.5 mb-1">
-            <button
-              onClick={() => setLocation("/menu")}
-              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-500 shrink-0"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <h1 className="text-2xl font-bold text-gray-900">Миграция данных</h1>
-          </div>
-          <p className="text-sm text-gray-500 mt-1 pl-10">
-            Импортируйте данные из Excel, CSV или PDF
-          </p>
+    <div className="min-h-screen bg-[#f5f5f7]">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-100 px-6 py-4 flex items-center gap-3">
+        <button
+          onClick={() => setLocation("/menu")}
+          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-500 shrink-0"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: "linear-gradient(135deg, #7c3aed, #a855f7)" }}>
+          <Sparkles className="w-4 h-4 text-white" />
         </div>
+        <div>
+          <h1 className="text-base font-bold text-gray-900 leading-tight">Миграция данных</h1>
+          <p className="text-xs text-gray-400">Excel, CSV или PDF — до 5 000 строк</p>
+        </div>
+      </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-6">
-            <AiImportTab />
-          </div>
+      <div className="max-w-2xl mx-auto px-4 py-6">
+        {/* Main card */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <AiImportTab />
         </div>
 
         <JobHistory />
