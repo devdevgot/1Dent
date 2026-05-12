@@ -3,19 +3,18 @@ import { useAuthStore } from "@/hooks/use-auth";
 import {
   useListUsersAll,
   getListUsersAllQueryKey,
-  useCreateUser,
   useDeleteUser,
   useUpdateUser,
   useUpdateUserStatus,
   useUpdateSalarySettings,
   usePatchUserCapacity,
 } from "@workspace/api-client-react";
-import type { User } from "@workspace/api-client-react";
+import type { User, SalaryType } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   UserPlus, Search, Phone, Calendar, Briefcase,
   ChevronRight, ChevronLeft, MoreVertical, UserCheck, UserX,
-  Trash2, Users, SlidersHorizontal, Copy,
+  Trash2, Users, SlidersHorizontal,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
@@ -23,14 +22,8 @@ import { toast } from "sonner";
 import { useLocation } from "wouter";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import EmployeeDialog, { type EmployeeFormData } from "./employee-dialog";
+import InviteStaffDialog from "./invite-staff-dialog";
 import { cn } from "@/lib/utils";
-
-interface CreateUserApiResponse {
-  user?: {
-    id?: string;
-    rawPassword?: string;
-  };
-}
 
 const ROLES = ["admin", "doctor", "accountant", "warehouse"] as const;
 
@@ -57,11 +50,12 @@ function initials(name: string) {
 function fmtSalaryShort(user: User): string {
   const s = user.salarySettings;
   if (!s) return "—";
-  const type = s.salaryType;
+  const type = s.salaryType as string;
   const fixed = Number(s.fixedAmount);
   const pct = Number(s.commissionPercent);
-  if (type === "fixed") return `${fixed.toLocaleString("ru-KZ")} ₸`;
-  if (type === "commission") return `${pct}%`;
+  if (type === "fixed")                  return `${fixed.toLocaleString("ru-KZ")} ₸/мес`;
+  if (type === "commission")             return `${pct}%`;
+  if (type === "hourly")                 return `${fixed.toLocaleString("ru-KZ")} ₸/час`;
   return `${fixed.toLocaleString("ru-KZ")} ₸ + ${pct}%`;
 }
 
@@ -157,7 +151,7 @@ function UserActionMenu({
   );
 }
 
-export default function UsersPage() {
+export default function StaffPage() {
   const { t } = useTranslation();
   const { user: currentUser } = useAuthStore();
   const [, navigate] = useLocation();
@@ -166,7 +160,8 @@ export default function UsersPage() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [showInactive, setShowInactive] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
@@ -187,40 +182,11 @@ export default function UsersPage() {
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: getListUsersAllQueryKey(showInactive) });
 
-  const createMutation = useCreateUser({
-    mutation: {
-      onSuccess: (res) => {
-        invalidate();
-        setDialogOpen(false);
-        const rawPw = (res?.data as unknown as CreateUserApiResponse)?.user?.rawPassword;
-        if (rawPw) {
-          toast.success(t("employees.created", "Сотрудник создан"), {
-            description: `${t("employees.password", "Пароль")}: ${rawPw}`,
-            action: {
-              label: t("employees.copy", "Копировать"),
-              onClick: () => void navigator.clipboard.writeText(rawPw),
-            },
-            duration: 12000,
-          });
-        } else {
-          toast.success(t("employees.created", "Сотрудник создан"));
-        }
-      },
-      onError: (err: unknown) => {
-        const status =
-          (err as { status?: number })?.status ??
-          (err as { response?: { status?: number } })?.response?.status;
-        const msg = status === 409 ? t("users.emailAlreadyInUse") : t("users.createError");
-        toast.error(t("users.createErrorTitle"), { description: msg });
-      },
-    },
-  });
-
   const updateMutation = useUpdateUser({
     mutation: {
       onSuccess: () => {
         invalidate();
-        setDialogOpen(false);
+        setEditDialogOpen(false);
         setEditingUser(null);
         toast.success(t("employees.updated", "Данные обновлены"));
       },
@@ -260,97 +226,48 @@ export default function UsersPage() {
     },
   });
 
-  const isOwnerOrAdminForSalary = currentUser?.role === "owner" || currentUser?.role === "admin";
+  const isOwnerOrAdmin = currentUser?.role === "owner" || currentUser?.role === "admin";
 
-  const handleSave = async (formData: EmployeeFormData) => {
-    if (editingUser) {
-      await updateMutation.mutateAsync({
+  const handleEditSave = async (formData: EmployeeFormData) => {
+    if (!editingUser) return;
+    await updateMutation.mutateAsync({
+      id: editingUser.id,
+      data: {
+        name: formData.name,
+        role: formData.role,
+        phone: formData.phone || null,
+        position: formData.role === "doctor"
+          ? (formData.specialties[0] || null)
+          : (formData.position || null),
+        specialty: formData.role === "doctor"
+          ? (formData.specialties.join(", ") || null)
+          : null,
+        hireDate: formData.hireDate || null,
+        password: formData.password || undefined,
+      },
+    });
+    if (isOwnerOrAdmin) {
+      await updateSalaryMutation.mutateAsync({
+        userId: editingUser.id,
+        data: {
+          salaryType: formData.salaryType as SalaryType,
+          fixedAmount: formData.salaryType === "hourly" ? formData.hourlyRate : formData.fixedAmount,
+          commissionPercent: formData.commissionPercent,
+        },
+      });
+    }
+    if (formData.role === "doctor" && formData.maxPatientsChanged) {
+      await capacityMutation.mutateAsync({
         id: editingUser.id,
-        data: {
-          name: formData.name,
-          role: formData.role,
-          phone: formData.phone || null,
-          position: formData.role === "doctor"
-            ? (formData.specialties[0] || null)
-            : (formData.position || null),
-          specialty: formData.role === "doctor"
-            ? (formData.specialties.join(", ") || null)
-            : null,
-          hireDate: formData.hireDate || null,
-          password: formData.password || undefined,
-        },
+        data: { maxPatientsPerDay: formData.maxPatientsPerDay },
       });
-      if (isOwnerOrAdminForSalary) {
-        await updateSalaryMutation.mutateAsync({
-          userId: editingUser.id,
-          data: {
-            salaryType: formData.salaryType,
-            fixedAmount: formData.fixedAmount,
-            commissionPercent: formData.commissionPercent,
-          },
-        });
-      }
-      if (formData.role === "doctor" && formData.maxPatientsChanged) {
-        await capacityMutation.mutateAsync({
-          id: editingUser.id,
-          data: { maxPatientsPerDay: formData.maxPatientsPerDay },
-        });
-      }
-      if (formData.isActive !== (editingUser.isActive !== false)) {
-        await statusMutation.mutateAsync({ id: editingUser.id, isActive: formData.isActive });
-      }
-    } else {
-      const res = await createMutation.mutateAsync({
-        data: {
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-          role: formData.role,
-          phone: formData.phone || undefined,
-          position: formData.role === "doctor"
-            ? (formData.specialties[0] || undefined)
-            : (formData.position || undefined),
-          specialty: formData.role === "doctor"
-            ? (formData.specialties.join(", ") || undefined)
-            : undefined,
-          hireDate: formData.hireDate || undefined,
-          maxPatientsPerDay: formData.maxPatientsPerDay,
-        },
-      });
-      const newUserId = (res?.data as unknown as CreateUserApiResponse)?.user?.id;
-      let partialFailure = false;
-      if (newUserId && isOwnerOrAdminForSalary) {
-        try {
-          await updateSalaryMutation.mutateAsync({
-            userId: newUserId,
-            data: {
-              salaryType: formData.salaryType,
-              fixedAmount: formData.fixedAmount,
-              commissionPercent: formData.commissionPercent,
-            },
-          });
-        } catch {
-          partialFailure = true;
-        }
-      }
-      if (newUserId && formData.role === "doctor" && formData.maxPatientsPerDay > 0) {
-        try {
-          await capacityMutation.mutateAsync({
-            id: newUserId,
-            data: { maxPatientsPerDay: formData.maxPatientsPerDay },
-          });
-        } catch {
-          partialFailure = true;
-        }
-      }
-      if (partialFailure) {
-        toast.warning(t("employees.partialSaveWarning", "Сотрудник создан, но настройки зарплаты / лимита не сохранились. Откройте профиль и сохраните снова."), { duration: 8000 });
-      }
+    }
+    if (formData.isActive !== (editingUser.isActive !== false)) {
+      await statusMutation.mutateAsync({ id: editingUser.id, isActive: formData.isActive });
     }
   };
 
-  const isSaving = createMutation.isPending || updateMutation.isPending;
-  const isOwnerOrAdmin = isOwnerOrAdminForSalary;
+  const isSaving = updateMutation.isPending;
 
   return (
     <div className="min-h-full bg-[#f7f8fc] pb-8">
@@ -365,32 +282,39 @@ export default function UsersPage() {
               <ChevronLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-base font-bold text-gray-900">{t("users.title")}</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-base font-bold text-gray-900">Сотрудники</h1>
+                {!isLoading && (
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                    {filtered.length}
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-gray-400 mt-0.5">
-                {filtered.length} {t("employees.people", "чел.")}
-                {showInactive && ` (${t("employees.includingInactive", "включая неактивных")})`}
+                {showInactive ? "включая неактивных" : "активные"}
               </p>
             </div>
           </div>
           {isOwnerOrAdmin && (
             <button
-              onClick={() => { setEditingUser(null); setDialogOpen(true); }}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl text-white text-sm font-semibold"
+              onClick={() => setInviteOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl text-white text-sm font-semibold shadow-sm"
               style={{ backgroundColor: "#98cc1c" }}
             >
               <UserPlus className="w-4 h-4" />
-              {t("common.add", "Добавить")}
+              + Добавить сотрудника
             </button>
           )}
         </div>
 
+        {/* Search + filter toggle */}
         <div className="flex gap-2">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder={t("employees.searchPlaceholder", "Поиск...")}
+              placeholder="Поиск по имени или email..."
               className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
           </div>
@@ -401,7 +325,7 @@ export default function UsersPage() {
                 "px-3 py-2.5 rounded-xl border text-xs font-semibold transition-colors",
                 showInactive ? "bg-primary/10 border-primary/30 text-primary" : "bg-gray-50 border-gray-200 text-gray-500",
               )}
-              title={t("employees.showInactive", "Показать неактивных")}
+              title="Показать неактивных"
             >
               <SlidersHorizontal className="w-4 h-4" />
             </button>
@@ -426,7 +350,7 @@ export default function UsersPage() {
                     : "bg-gray-50 text-gray-500 border-gray-200",
                 )}
               >
-                {r === "all" ? t("employees.allRoles", "Все") : t(`role.${r}`, r)}
+                {r === "all" ? "Все" : t(`role.${r}`, r)}
               </button>
             );
           })}
@@ -441,9 +365,13 @@ export default function UsersPage() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-16">
-            <Users className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-            <p className="text-sm font-semibold text-gray-400">{t("users.emptyTitle")}</p>
-            <p className="text-xs text-gray-300 mt-1">{t("users.emptyDesc")}</p>
+            <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+              <Users className="w-8 h-8 text-gray-300" />
+            </div>
+            <p className="text-sm font-bold text-gray-500">Сотрудников пока нет</p>
+            <p className="text-xs text-gray-300 mt-1">
+              {search ? "Попробуйте другой запрос" : "Нажмите «+ Добавить сотрудника»"}
+            </p>
           </div>
         ) : (
           <AnimatePresence>
@@ -460,13 +388,13 @@ export default function UsersPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.03 }}
                   className={cn(
-                    "bg-white rounded-2xl border border-gray-100 shadow-sm p-4",
+                    "bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:shadow-md transition-shadow",
                     isInactive && "opacity-60",
                   )}
                 >
                   <div className="flex items-start gap-3">
                     <div
-                      className="w-11 h-11 rounded-2xl flex items-center justify-center text-white font-bold text-sm shrink-0"
+                      className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-sm shrink-0"
                       style={{ backgroundColor: avatarColor }}
                     >
                       {initials(u.name)}
@@ -479,12 +407,12 @@ export default function UsersPage() {
                             <p className="text-sm font-bold text-gray-900 truncate">{u.name}</p>
                             {isSelf && (
                               <span className="text-[10px] bg-primary/10 text-primary font-bold px-1.5 py-0.5 rounded-full">
-                                {t("users.you")}
+                                Вы
                               </span>
                             )}
                             {isInactive && (
                               <span className="text-[10px] bg-gray-100 text-gray-500 font-bold px-1.5 py-0.5 rounded-full">
-                                {t("employees.inactive", "Неактивен")}
+                                Неактивен
                               </span>
                             )}
                           </div>
@@ -500,7 +428,7 @@ export default function UsersPage() {
                           user={u}
                           currentUserId={currentUser?.id ?? ""}
                           currentRole={currentUser?.role ?? ""}
-                          onEdit={() => { setEditingUser(u); setDialogOpen(true); }}
+                          onEdit={() => { setEditingUser(u); setEditDialogOpen(true); }}
                           onDelete={() => setDeleteConfirmId(u.id)}
                           onToggleActive={() => statusMutation.mutate({ id: u.id, isActive: !u.isActive })}
                           onNavigate={() => navigate(`/staff/${u.id}`)}
@@ -525,7 +453,7 @@ export default function UsersPage() {
                           <div className="flex items-center gap-1.5">
                             <Calendar className="w-3 h-3 text-gray-300 shrink-0" />
                             <span className="text-xs text-gray-400">
-                              {t("employees.since", "с")} {fmtHireDate(u.hireDate)}
+                              с {fmtHireDate(u.hireDate)}
                             </span>
                           </div>
                         )}
@@ -546,10 +474,17 @@ export default function UsersPage() {
         )}
       </div>
 
+      {/* Invite staff dialog (for new staff) */}
+      <InviteStaffDialog
+        open={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+      />
+
+      {/* Edit staff dialog */}
       <EmployeeDialog
-        open={dialogOpen}
-        onClose={() => { setDialogOpen(false); setEditingUser(null); }}
-        onSave={handleSave}
+        open={editDialogOpen}
+        onClose={() => { setEditDialogOpen(false); setEditingUser(null); }}
+        onSave={handleEditSave}
         isSaving={isSaving}
         editUser={editingUser}
       />

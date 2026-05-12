@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { randomUUID } from "crypto";
+import { randomUUID, randomBytes } from "crypto";
 import { AuthRepository } from "./auth.repository";
 import type { UpdateUserData } from "./auth.repository";
 import {
@@ -241,6 +241,58 @@ export class AuthService {
       throw new ForbiddenError("Only owners can delete other owners");
     }
     await this.repo.deleteUser(id, clinicId);
+  }
+
+  async inviteUser(data: {
+    clinicId: string;
+    name: string;
+    email: string;
+    role: UserRole;
+    requestingRole: UserRole;
+    phone?: string;
+    position?: string;
+    specialty?: string;
+    hireDate?: string;
+  }): Promise<{ userId: string; tempPassword: string; clinicName: string }> {
+    if (data.requestingRole !== "owner" && data.requestingRole !== "admin") {
+      throw new ForbiddenError("Only owners and admins can invite users");
+    }
+    if (data.role === "owner") {
+      throw new ForbiddenError("Cannot invite users with owner role");
+    }
+
+    const existing = await this.repo.findUserByEmail(data.email.toLowerCase());
+    if (existing) throw new ConflictError("Email already in use");
+
+    const tempPassword = randomBytes(5).toString("hex").slice(0, 8).toUpperCase();
+    const passwordHash = await bcrypt.hash(tempPassword, SALT_ROUNDS);
+
+    const user = await this.repo.createUser({
+      id: randomUUID(),
+      clinicId: data.clinicId,
+      name: data.name,
+      email: data.email.toLowerCase(),
+      passwordHash,
+      role: data.role,
+      phone: data.phone ?? null,
+      position: data.position ?? null,
+      specialty: data.specialty ?? null,
+      hireDate: data.hireDate ?? null,
+    });
+
+    const clinic = await this.repo.findClinicById(data.clinicId);
+    const clinicName = clinic?.name ?? "1Dent";
+
+    console.log(
+      `[Invite] Staff invitation for ${data.email}:\n` +
+      `  Clinic: ${clinicName}\n` +
+      `  Name: ${data.name}\n` +
+      `  Temp password: ${tempPassword}\n` +
+      `  Login URL: ${process.env["FRONTEND_URL"] ?? "https://app.1dent.kz"}\n` +
+      `  Instruction: Please change your password after first login.`,
+    );
+
+    return { userId: user.id, tempPassword, clinicName };
   }
 
   async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {

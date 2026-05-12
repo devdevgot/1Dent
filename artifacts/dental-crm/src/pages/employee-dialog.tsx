@@ -28,9 +28,10 @@ export interface EmployeeFormData {
   hireDate: string;
   maxPatientsPerDay: number;
   maxPatientsChanged: boolean;
-  salaryType: "fixed" | "commission" | "fixed_plus_commission";
+  salaryType: "fixed" | "commission" | "fixed_plus_commission" | "hourly";
   fixedAmount: number;
   commissionPercent: number;
+  hourlyRate: number;
 }
 
 const DENTAL_SPECIALTIES = [
@@ -192,7 +193,7 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
     name: "", email: "", password: "", role: "doctor",
     isActive: true, phone: "", position: "", specialty: "", specialties: [], hireDate: "",
     maxPatientsPerDay: 15, maxPatientsChanged: false,
-    salaryType: "fixed", fixedAmount: 0, commissionPercent: 0,
+    salaryType: "fixed", fixedAmount: 0, commissionPercent: 0, hourlyRate: 0,
   };
 
   const [form, setForm] = useState<EmployeeFormData>(defaultForm);
@@ -220,9 +221,10 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
         hireDate: editUser.hireDate ?? "",
         maxPatientsPerDay: 15,
         maxPatientsChanged: false,
-        salaryType: editUser.salarySettings?.salaryType ?? "fixed",
-        fixedAmount: Number(editUser.salarySettings?.fixedAmount ?? 0),
+        salaryType: (editUser.salarySettings?.salaryType as EmployeeFormData["salaryType"]) ?? "fixed",
+        fixedAmount: (editUser.salarySettings?.salaryType as string) === "hourly" ? 0 : Number(editUser.salarySettings?.fixedAmount ?? 0),
         commissionPercent: Number(editUser.salarySettings?.commissionPercent ?? 0),
+        hourlyRate: (editUser.salarySettings?.salaryType as string) === "hourly" ? Number(editUser.salarySettings?.fixedAmount ?? 0) : 0,
       });
     } else {
       setForm(defaultForm);
@@ -526,7 +528,7 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                           {t("employees.salaryType", "Тип оплаты")}
                         </label>
                         <div className="space-y-2">
-                          {(["fixed", "commission", "fixed_plus_commission"] as const).map((type) => (
+                          {(["fixed", "commission", "fixed_plus_commission", "hourly"] as const).map((type) => (
                             <button
                               key={type}
                               type="button"
@@ -542,10 +544,10 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                               </span>
                               <div>
                                 <p className="text-sm font-semibold text-gray-800">
-                                  {t(`employees.salaryType_${type}`, type)}
+                                  {type === "fixed" ? "Оклад" : type === "commission" ? "Процент" : type === "fixed_plus_commission" ? "Оклад + Процент" : "Почасовая"}
                                 </p>
                                 <p className="text-xs text-gray-400">
-                                  {t(`employees.salaryType_${type}_hint`, "")}
+                                  {type === "fixed" ? "Фиксированная сумма в месяц" : type === "commission" ? "Процент от выручки" : type === "fixed_plus_commission" ? "Оба варианта" : "Ставка за рабочий час"}
                                 </p>
                               </div>
                             </button>
@@ -600,7 +602,29 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                         </div>
                       )}
 
-                      {form.salaryType !== "fixed" && form.role !== "doctor" && (
+                      {form.salaryType === "hourly" && (
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+                            Ставка (₸/час)
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              placeholder="0"
+                              value={form.hourlyRate || ""}
+                              onChange={(e) => {
+                                const v = e.target.value.replace(/\D/g, "");
+                                set("hourlyRate", v === "" ? 0 : Number(v));
+                              }}
+                              className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-8 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">₸</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {form.salaryType !== "fixed" && form.salaryType !== "hourly" && form.role !== "doctor" && (
                         <p className="text-xs text-amber-600 bg-amber-50 rounded-xl px-4 py-3">
                           {t("employees.commissionNoteNonDoctor", "Для не-врачебных ролей процент от выручки = 0 (процедуры не назначаются).")}
                         </p>

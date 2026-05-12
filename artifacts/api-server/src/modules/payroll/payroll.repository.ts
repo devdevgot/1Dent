@@ -20,7 +20,7 @@ export interface PayrollPreviewRow {
   userId: string;
   userName: string;
   userRole: string;
-  salaryType: "fixed" | "commission" | "fixed_plus_commission";
+  salaryType: "fixed" | "commission" | "fixed_plus_commission" | "hourly";
   fixedAmount: number;
   commissionPercent: number;
   revenueBase: number;
@@ -46,7 +46,7 @@ export class PayrollRepository {
     userId: string,
     clinicId: string,
     data: {
-      salaryType: "fixed" | "commission" | "fixed_plus_commission";
+      salaryType: "fixed" | "commission" | "fixed_plus_commission" | "hourly";
       fixedAmount: string;
       commissionPercent: string;
     },

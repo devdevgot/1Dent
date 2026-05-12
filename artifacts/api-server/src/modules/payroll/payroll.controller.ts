@@ -12,7 +12,7 @@ const repo = new PayrollRepository();
 router.use(authMiddleware);
 
 const salarySettingsSchema = z.object({
-  salaryType: z.enum(["fixed", "commission", "fixed_plus_commission"]),
+  salaryType: z.enum(["fixed", "commission", "fixed_plus_commission", "hourly"]),
   fixedAmount: z.number().min(0).default(0),
   commissionPercent: z.number().min(0).max(100).default(0),
 });

@@ -15,6 +15,7 @@ export const salaryTypeEnum = pgEnum("salary_type", [
   "fixed",
   "commission",
   "fixed_plus_commission",
+  "hourly",
 ]);
 
 export const payrollStatusEnum = pgEnum("payroll_status", [

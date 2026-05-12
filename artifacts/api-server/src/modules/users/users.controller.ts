@@ -1,14 +1,16 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { z } from "zod";
 import { AuthService } from "../auth/auth.service";
+import { PayrollRepository } from "../payroll/payroll.repository";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
-import { ValidationError } from "../../shared/errors";
+import { ValidationError, TooManyRequestsError } from "../../shared/errors";
 import { db, doctorCapacityTable, usersTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { analyticsCache } from "../../shared/analytics-cache";
 
 const router: IRouter = Router();
 const authService = new AuthService();
+const payrollRepo = new PayrollRepository();
 
 const createUserSchema = z.object({
   name: z.string().min(2),
@@ -20,6 +22,21 @@ const createUserSchema = z.object({
   specialty: z.string().optional(),
   hireDate: z.string().optional(),
   maxPatientsPerDay: z.number().int().min(1).max(50).optional(),
+});
+
+const inviteSchema = z.object({
+  name: z.string().min(2),
+  email: z.string().email(),
+  role: z.enum(["admin", "doctor", "accountant", "warehouse"]),
+  phone: z.string().optional(),
+  position: z.string().optional(),
+  specialty: z.string().optional(),
+  hireDate: z.string().optional(),
+  maxPatientsPerDay: z.number().int().min(1).max(50).optional(),
+  salaryType: z.enum(["fixed", "commission", "fixed_plus_commission", "hourly"]).optional(),
+  fixedAmount: z.number().min(0).optional(),
+  commissionPercent: z.number().min(0).max(100).optional(),
+  hourlyRate: z.number().min(0).optional(),
 });
 
 const updateUserSchema = z.object({
@@ -35,6 +52,9 @@ const updateUserSchema = z.object({
 const statusSchema = z.object({
   isActive: z.boolean(),
 });
+
+const inviteRateLimit = new Map<string, number>();
+const INVITE_COOLDOWN_MS = 60_000;
 
 router.use(authMiddleware);
 
@@ -68,6 +88,67 @@ router.post(
     if (!user) return;
 
     res.status(201).json({ success: true, data: { user } });
+  },
+);
+
+router.post(
+  "/invite",
+  roleGuard("owner", "admin"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const parsed = inviteSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+    }
+
+    const emailKey = parsed.data.email.toLowerCase();
+    const lastSent = inviteRateLimit.get(emailKey);
+    if (lastSent && Date.now() - lastSent < INVITE_COOLDOWN_MS) {
+      const remaining = Math.ceil((INVITE_COOLDOWN_MS - (Date.now() - lastSent)) / 1000);
+      return next(new TooManyRequestsError(`Invitation already sent. Try again in ${remaining}s.`));
+    }
+
+    try {
+      const { userId } = await authService.inviteUser({
+        clinicId: req.user!.clinicId,
+        name: parsed.data.name,
+        email: parsed.data.email,
+        role: parsed.data.role,
+        requestingRole: req.user!.role,
+        phone: parsed.data.phone,
+        position: parsed.data.position,
+        specialty: parsed.data.specialty,
+        hireDate: parsed.data.hireDate,
+      });
+
+      if (parsed.data.salaryType) {
+        const salaryType = parsed.data.salaryType;
+        const fixedAmt = salaryType === "hourly"
+          ? (parsed.data.hourlyRate ?? 0)
+          : (parsed.data.fixedAmount ?? 0);
+        await payrollRepo.upsertSalarySettings(userId, req.user!.clinicId, {
+          salaryType,
+          fixedAmount: String(fixedAmt),
+          commissionPercent: String(parsed.data.commissionPercent ?? 0),
+        });
+      }
+
+      if (parsed.data.role === "doctor" && parsed.data.maxPatientsPerDay) {
+        await db
+          .insert(doctorCapacityTable)
+          .values({ doctorId: userId, clinicId: req.user!.clinicId, maxPatientsPerDay: parsed.data.maxPatientsPerDay })
+          .onConflictDoUpdate({
+            target: doctorCapacityTable.doctorId,
+            set: { maxPatientsPerDay: parsed.data.maxPatientsPerDay },
+          });
+      }
+
+      inviteRateLimit.set(emailKey, Date.now());
+      setTimeout(() => inviteRateLimit.delete(emailKey), INVITE_COOLDOWN_MS);
+
+      res.status(201).json({ success: true });
+    } catch (err) {
+      next(err);
+    }
   },
 );
 
