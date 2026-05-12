@@ -1,350 +1,440 @@
 import { useState } from "react";
-import {
-  Phone, Brain, Activity, CheckCircle2, Circle,
-  Sparkles, Clock, MessageSquare, AlertTriangle,
-  ChevronDown, Play, MoreHorizontal,
-} from "lucide-react";
 
-const CONDITIONS: Record<string, { fill: string; stroke: string; label: string; short: string }> = {
-  healthy:           { fill: "#f0fdf4", stroke: "#86efac", label: "Здоров",    short: "З" },
-  cavity:            { fill: "#fef9c3", stroke: "#fbbf24", label: "Кариес",    short: "К" },
-  treated:           { fill: "#eff6ff", stroke: "#93c5fd", label: "Пролечен",  short: "П" },
-  crown:             { fill: "#fffbeb", stroke: "#fcd34d", label: "Коронка",   short: "Кр" },
-  root_canal:        { fill: "#fff7ed", stroke: "#fb923c", label: "Канал",     short: "Кн" },
-  implant:           { fill: "#f0fdf4", stroke: "#34d399", label: "Имплант",   short: "И" },
-  missing:           { fill: "#f9fafb", stroke: "#d1d5db", label: "Нет",       short: "—" },
-  extraction_needed: { fill: "#fef2f2", stroke: "#f87171", label: "Удаление",  short: "У" },
+// ── Tooth types ──────────────────────────────────────────────────────────────
+type ToothType = "incisor" | "canine" | "premolar" | "molar";
+function toothType(fdi: number): ToothType {
+  const n = fdi % 10;
+  if (n === 1 || n === 2) return "incisor";
+  if (n === 3) return "canine";
+  if (n === 4 || n === 5) return "premolar";
+  return "molar";
+}
+
+const CONDS: Record<string, { dot: string; label: string }> = {
+  healthy:   { dot: "transparent", label: "Здоров" },
+  treatment: { dot: "#3b82f6",     label: "Лечение" },
+  extraction:{ dot: "#ef4444",     label: "Удаление" },
+  implant:   { dot: "#22c55e",     label: "Имплантация" },
+  crown:     { dot: "#eab308",     label: "Коронка/Протез" },
+  problem:   { dot: "#f97316",     label: "Проблемная зона" },
 };
 
-const MOCK_TEETH: Record<number, string> = {
+const MOCK: Record<number, string> = {
   16: "crown", 26: "crown",
-  36: "root_canal", 46: "cavity",
-  11: "treated", 21: "treated",
-  48: "missing", 18: "missing",
-  44: "extraction_needed",
+  36: "treatment", 46: "problem",
+  11: "treatment", 21: "treatment",
+  48: "extraction", 18: "extraction",
+  44: "extraction", 45: "problem",
 };
 
 const UPPER = [18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28];
 const LOWER = [48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38];
 
-function ToothBtn({ fdi, selected, onSelect }: { fdi: number; selected: boolean; onSelect: () => void }) {
-  const cond = MOCK_TEETH[fdi] ?? "healthy";
-  const cfg = CONDITIONS[cond]!;
+// ── Tooth SVG (larger for tablet) ────────────────────────────────────────────
+function Tooth({ fdi, upper, size = "md" }: { fdi: number; upper: boolean; size?: "sm" | "md" }) {
+  const type = toothType(fdi);
+  const cond = MOCK[fdi] ?? "healthy";
+  const { dot } = CONDS[cond]!;
+  const hasDot = dot !== "transparent";
+
+  const W = size === "md" ? 18 : 14;
+  const H = size === "md" ? 34 : 28;
+  const crownH = type === "molar" ? (size === "md" ? 15 : 13) : (size === "md" ? 13 : 11);
+  const rootH = H - crownH;
+
+  const cw = type === "molar" ? W - 2 : type === "premolar" ? W - 4 : W - 6;
+  const cx = (W - cw) / 2;
+  const crownY = upper ? H - crownH : 0;
+  const crownPath = `M${cx},${crownY} Q${cx-1},${crownY + crownH / 2} ${cx},${crownY + crownH} L${cx + cw},${crownY + crownH} Q${cx + cw + 1},${crownY + crownH / 2} ${cx + cw},${crownY} Z`;
+
+  const numRoots = type === "molar" ? 3 : type === "premolar" ? 2 : 1;
+  const rootW = numRoots === 1 ? 6 : numRoots === 2 ? 4.5 : 3.5;
+  const spread = numRoots === 1 ? 0 : numRoots === 2 ? 4 : 5.5;
+  const centers = numRoots === 1
+    ? [W / 2]
+    : numRoots === 2
+    ? [W / 2 - spread / 2, W / 2 + spread / 2]
+    : [W / 2 - spread, W / 2, W / 2 + spread];
+
+  const rootPaths: string[] = [];
+  centers.forEach((rcx) => {
+    const rTopY = upper ? 0 : crownH;
+    const rBotY = upper ? rootH : H;
+    const hw = rootW / 2;
+    const tw = hw * 0.3;
+    if (upper) {
+      rootPaths.push(`M${rcx-hw},${rBotY} L${rcx-tw},${rTopY+2} Q${rcx},${rTopY} ${rcx+tw},${rTopY+2} L${rcx+hw},${rBotY} Z`);
+    } else {
+      rootPaths.push(`M${rcx-hw},${rTopY} L${rcx-tw},${rBotY-2} Q${rcx},${rBotY} ${rcx+tw},${rBotY-2} L${rcx+hw},${rTopY} Z`);
+    }
+  });
+
+  const isExtraction = cond === "extraction";
+  const fillColor = isExtraction ? "#fef2f2" : "#f8fafc";
+  const strokeColor = hasDot ? dot : "#cbd5e1";
+
   return (
-    <button
-      onClick={onSelect}
-      title={`${fdi} — ${cfg.label}`}
-      style={{ background: cfg.fill, borderColor: selected ? "#6366f1" : cfg.stroke }}
-      className={`w-7 h-7 rounded border-2 text-[9px] font-bold flex items-center justify-center transition-all ${
-        selected ? "ring-2 ring-indigo-300 scale-110 z-10" : "hover:scale-105"
-      }`}
-    >
-      {fdi % 10}
-    </button>
+    <div className="flex flex-col items-center gap-0.5 cursor-pointer" title={`${fdi} — ${CONDS[cond]!.label}`}>
+      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
+        {rootPaths.map((d, i) => (
+          <path key={i} d={d} fill="#f1f5f9" stroke="#cbd5e1" strokeWidth={0.7} />
+        ))}
+        <path d={crownPath} fill={fillColor} stroke={strokeColor} strokeWidth={hasDot ? 1.2 : 0.7} />
+        {isExtraction && (
+          <>
+            <line x1={cx+1} y1={crownY+1} x2={cx+cw-1} y2={crownY+crownH-1} stroke="#ef4444" strokeWidth={1} />
+            <line x1={cx+cw-1} y1={crownY+1} x2={cx+1} y2={crownY+crownH-1} stroke="#ef4444" strokeWidth={1} />
+          </>
+        )}
+        {hasDot && !isExtraction && (
+          <circle cx={W/2} cy={upper ? H - crownH/2 : crownH/2} r={2.8} fill={dot} opacity={0.85} />
+        )}
+      </svg>
+      <span className="text-[8px] leading-none text-slate-400 font-medium">{fdi}</span>
+    </div>
   );
 }
 
-const STAGES = [
-  {
-    label: "Удаление", color: "#ef4444", bg: "#fef2f2",
-    items: [{ title: "Удаление зуба 44 (атравматичное)", tooth: 44, price: 15000, status: "pending" as const, urgent: true }],
-  },
-  {
-    label: "Терапия", color: "#3b82f6", bg: "#eff6ff",
-    items: [
-      { title: "Лечение кариеса зуба 46", tooth: 46, price: 8500, status: "pending" as const, urgent: false },
-    ],
-  },
-  {
-    label: "Гигиена", color: "#8b5cf6", bg: "#f5f3ff",
-    items: [{ title: "Профессиональная чистка", tooth: null, price: 6000, status: "done" as const, urgent: false }],
-  },
-];
-
-const AI_SUMMARY = [
-  { label: "Кариес риск", value: 65, color: "#f59e0b" },
-  { label: "Пародонтит", value: 30, color: "#ef4444" },
-  { label: "Гигиена",    value: 80, color: "#10b981" },
-];
+function SectionHeader({ icon, title }: { icon: string; title: string }) {
+  return (
+    <div className="flex items-center gap-2.5 bg-orange-500 text-white px-4 py-2.5 rounded-t-xl">
+      <span className="text-lg">{icon}</span>
+      <p className="text-sm font-bold uppercase tracking-wide">{title}</p>
+    </div>
+  );
+}
+function SectionBody({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`border border-orange-200 border-t-0 rounded-b-xl bg-white px-4 py-4 ${className}`}>
+      {children}
+    </div>
+  );
+}
 
 export function VariantB() {
-  const [activeTab, setActiveTab] = useState<"dental" | "ai">("dental");
   const [selectedFdi, setSelectedFdi] = useState<number | null>(44);
-  const [expandedStage, setExpandedStage] = useState<string | null>("Удаление");
 
   return (
-    <div className="h-screen w-full flex flex-col bg-gray-100 font-sans overflow-hidden" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
+    <div className="min-h-screen bg-gray-50 font-sans" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
 
-      {/* ── Compact top header ── */}
-      <div className="shrink-0 bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-black text-base shrink-0">А</div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-bold text-gray-900 truncate">Асель Нурланова</p>
-            <span className="text-[10px] bg-amber-100 text-amber-700 font-semibold px-1.5 py-0.5 rounded-full shrink-0">Консультация</span>
+      {/* ── HEADER ── */}
+      <div className="bg-white border-b-2 border-orange-500">
+        <div className="px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 bg-orange-50 border-2 border-orange-200 rounded-xl flex items-center justify-center text-2xl">🦷</div>
+            <div>
+              <p className="text-xs text-slate-400 uppercase tracking-widest font-semibold">1Dent Clinic</p>
+              <h1 className="text-2xl font-black text-orange-600 leading-none mt-0.5">ПЛАН ЛЕЧЕНИЯ</h1>
+              <p className="text-xs text-slate-500 mt-1">Индивидуальный план для вашего здоровья</p>
+            </div>
           </div>
-          <p className="text-xs text-gray-400 mt-0.5">34 г. · +7 701 234-56-78 · Д-р Диас Сейткали</p>
+          <div className="text-right space-y-1">
+            <p className="text-xs text-slate-600">📞 8771 800 00 65</p>
+            <p className="text-xs text-slate-600">✉️ info@muslimdent.kz</p>
+            <p className="text-xs text-slate-600">📍 ул. Туркут Озала, 84</p>
+          </div>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          <button className="h-8 w-8 rounded-lg bg-green-50 flex items-center justify-center">
-            <Phone className="w-3.5 h-3.5 text-green-600" />
-          </button>
-          <button className="h-8 w-8 rounded-lg bg-gray-100 flex items-center justify-center">
-            <MessageSquare className="w-3.5 h-3.5 text-gray-500" />
-          </button>
-          <button className="h-8 w-8 rounded-lg bg-gray-100 flex items-center justify-center">
-            <MoreHorizontal className="w-3.5 h-3.5 text-gray-500" />
-          </button>
+
+        {/* Patient meta */}
+        <div className="border-t border-slate-100 px-6 py-3 grid grid-cols-4 gap-4">
+          {[
+            ["Пациент (ФИО)", "Асель Нурланова"],
+            ["Дата рождения", "12.03.1990"],
+            ["Дата консультации", "12.05.2026"],
+            ["Врач", "Диас Сейткали"],
+          ].map(([l, v]) => (
+            <div key={l}>
+              <p className="text-[9px] text-slate-400 uppercase tracking-wide">{l}</p>
+              <div className="border-b border-slate-300 mt-3 pb-0.5">
+                <p className="text-sm font-semibold text-slate-800">{v}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* ── Two-column body ── */}
-      <div className="flex-1 flex overflow-hidden gap-0">
+      <div className="p-5 space-y-4">
 
-        {/* ── Left sidebar: status + quick facts ── */}
-        <div className="w-[140px] shrink-0 bg-white border-r border-gray-100 flex flex-col overflow-y-auto">
-          <div className="p-3 space-y-3">
+        {/* ── TWO-COLUMN: findings + dental chart ── */}
+        <div className="grid grid-cols-5 gap-4">
+
+          {/* Left: findings */}
+          <div className="col-span-2 space-y-4">
+            <div>
+              <SectionHeader icon="🔍" title="Что мы обнаружили" />
+              <SectionBody>
+                <ul className="space-y-2">
+                  {[
+                    "Разрушение зубов и кариес",
+                    "Воспалительные процессы",
+                    "Отсутствие зубов 18, 48",
+                    "Перегрузка жевательных зубов",
+                    "Риск потери зубов при промедлении",
+                  ].map((t, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
+                      <span className="text-orange-500 font-black shrink-0">•</span>{t}
+                    </li>
+                  ))}
+                </ul>
+              </SectionBody>
+            </div>
 
             <div>
-              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">Статус</p>
-              <div className="space-y-1">
-                {["Лид", "Консультация", "Лечение", "Завершён"].map((s) => (
-                  <div key={s} className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[10px] font-semibold ${
-                    s === "Консультация"
-                      ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
-                      : "text-gray-400"
-                  }`}>
-                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                      s === "Консультация" ? "bg-indigo-500" : "bg-gray-200"
-                    }`} />
-                    {s}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="border-t border-gray-50 pt-3">
-              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">Статистика</p>
-              <div className="space-y-2">
-                {[
-                  { label: "Визитов", v: "12" },
-                  { label: "Процедур", v: "8" },
-                  { label: "Долг", v: "0 ₸" },
-                ].map((s) => (
-                  <div key={s.label}>
-                    <p className="text-[9px] text-gray-400">{s.label}</p>
-                    <p className="text-sm font-black text-gray-800">{s.v}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="border-t border-gray-50 pt-3">
-              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">ИИ риски</p>
-              <div className="space-y-2">
-                {AI_SUMMARY.map((r) => (
-                  <div key={r.label}>
-                    <div className="flex items-center justify-between mb-0.5">
-                      <p className="text-[9px] text-gray-500">{r.label}</p>
-                      <p className="text-[9px] font-bold" style={{ color: r.color }}>{r.value}%</p>
+              <SectionHeader icon="⚠️" title="Последствия отказа" />
+              <SectionBody>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { icon: "😣", label: "Усиление боли" },
+                    { icon: "🦷", label: "Потеря зуба" },
+                    { icon: "⬅️", label: "Смещение зубов" },
+                    { icon: "💀", label: "Атрофия кости" },
+                  ].map((c) => (
+                    <div key={c.label} className="text-center bg-red-50 rounded-lg p-2.5 border border-red-100">
+                      <div className="text-2xl mb-1.5">{c.icon}</div>
+                      <p className="text-[10px] font-semibold text-red-700">{c.label}</p>
                     </div>
-                    <div className="w-full h-1 bg-gray-100 rounded-full overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${r.value}%`, background: r.color }} />
-                    </div>
+                  ))}
+                </div>
+              </SectionBody>
+            </div>
+          </div>
+
+          {/* Right: dental chart */}
+          <div className="col-span-3">
+            <SectionHeader icon="🦷" title="Схема зубов" />
+            <SectionBody>
+              {/* Legend */}
+              <div className="flex flex-wrap gap-x-4 gap-y-1.5 mb-4">
+                {Object.entries(CONDS).filter(([k]) => k !== "healthy").map(([k, v]) => (
+                  <div key={k} className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-full border border-slate-200 shrink-0" style={{ background: v.dot }} />
+                    <span className="text-[10px] text-slate-600 font-medium">{v.label}</span>
                   </div>
                 ))}
               </div>
-            </div>
 
+              <p className="text-[9px] font-bold text-slate-400 text-center mb-1.5 uppercase tracking-widest">Верхняя челюсть</p>
+              <div className="flex justify-center gap-0.5">
+                {UPPER.map((fdi) => (
+                  <button
+                    key={fdi}
+                    onClick={() => setSelectedFdi(selectedFdi === fdi ? null : fdi)}
+                    className={`outline-none rounded transition-transform ${selectedFdi === fdi ? "ring-2 ring-orange-400 ring-offset-1 scale-110 z-10" : "hover:scale-105"}`}
+                  >
+                    <Tooth fdi={fdi} upper={true} size="md" />
+                  </button>
+                ))}
+              </div>
+
+              <div className="h-px bg-slate-200 my-2 mx-6" />
+
+              <div className="flex justify-center gap-0.5">
+                {LOWER.map((fdi) => (
+                  <button
+                    key={fdi}
+                    onClick={() => setSelectedFdi(selectedFdi === fdi ? null : fdi)}
+                    className={`outline-none rounded transition-transform ${selectedFdi === fdi ? "ring-2 ring-orange-400 ring-offset-1 scale-110 z-10" : "hover:scale-105"}`}
+                  >
+                    <Tooth fdi={fdi} upper={false} size="md" />
+                  </button>
+                ))}
+              </div>
+              <p className="text-[9px] font-bold text-slate-400 text-center mt-1.5 uppercase tracking-widest">Нижняя челюсть</p>
+
+              {selectedFdi && MOCK[selectedFdi] && (
+                <div className="mt-3 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 flex items-center gap-2">
+                  <span className="w-3.5 h-3.5 rounded-full shrink-0" style={{ background: CONDS[MOCK[selectedFdi]!]?.dot }} />
+                  <p className="text-sm font-semibold text-orange-800">
+                    Зуб {selectedFdi} — {CONDS[MOCK[selectedFdi]!]?.label}
+                  </p>
+                </div>
+              )}
+            </SectionBody>
           </div>
         </div>
 
-        {/* ── Right main area ── */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-
-          {/* Tab bar */}
-          <div className="shrink-0 bg-white border-b border-gray-100 flex px-3">
-            {[
-              { id: "dental" as const, label: "Зубная карта", Icon: Activity },
-              { id: "ai" as const, label: "ИИ анализ", Icon: Brain },
-            ].map(({ id, label, Icon }) => (
-              <button
-                key={id}
-                onClick={() => setActiveTab(id)}
-                className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
-                  activeTab === id
-                    ? "border-indigo-600 text-indigo-600"
-                    : "border-transparent text-gray-400 hover:text-gray-700"
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                {label}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex-1 overflow-y-auto">
-
-            {/* DENTAL */}
-            {activeTab === "dental" && (
-              <div className="p-3 space-y-3">
-
-                {/* Tooth grid */}
-                <div className="bg-white rounded-xl border border-gray-100 p-3">
-                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">Карта зубов FDI</p>
-                  <div className="space-y-1.5">
-                    {[UPPER, LOWER].map((row, ri) => (
-                      <div key={ri} className="flex gap-0.5 justify-center">
-                        {row.map((fdi, i) => (
-                          <div key={fdi} className={i === 8 ? "ml-2" : ""}>
-                            <ToothBtn
-                              fdi={fdi}
-                              selected={selectedFdi === fdi}
-                              onSelect={() => setSelectedFdi(selectedFdi === fdi ? null : fdi)}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                  {selectedFdi && (
-                    <div className="mt-2 bg-indigo-50 rounded-lg px-3 py-2 text-xs">
-                      <p className="font-semibold text-indigo-800">Зуб {selectedFdi} — {CONDITIONS[MOCK_TEETH[selectedFdi] ?? "healthy"]!.label}</p>
-                      <p className="text-indigo-600 text-[10px] mt-0.5">Нажмите для подробностей или начала лечения</p>
+        {/* ── TREATMENT STAGES ── */}
+        <div>
+          <SectionHeader icon="📋" title="План лечения (Этапы)" />
+          <SectionBody>
+            <div className="flex gap-2 items-stretch">
+              {[
+                { n: 1, title: "Диагностика",      items: ["Осмотр", "КТ, снимки", "Фотофиксация", "Составление плана"] },
+                { n: 2, title: "Терапевтическое лечение",  items: ["Лечение кариеса", "Лечение каналов", "Восстановление зубов"] },
+                { n: 3, title: "Хирургическое лечение",    items: ["Удаление зуба 44", "Лечение дёсен", "Синус-лифтинг"] },
+                { n: 4, title: "Имплантация",      items: ["Установка имплантов", "Формирователь десны", "Приживление"] },
+                { n: 5, title: "Ортопедическое лечение",   items: ["Коронки", "Мосты", "Протезы"] },
+              ].map((s, i, arr) => (
+                <div key={s.n} className="flex items-center gap-2 flex-1 min-w-0">
+                  <div className="flex-1 bg-orange-50 border border-orange-200 rounded-xl p-3 h-full">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-7 h-7 rounded-full bg-orange-500 text-white text-xs font-black flex items-center justify-center shrink-0">{s.n}</div>
+                      <p className="text-[10px] font-bold text-orange-800 uppercase leading-tight">{s.title}</p>
                     </div>
+                    <ul className="space-y-1">
+                      {s.items.map((it, ii) => (
+                        <li key={ii} className="flex items-start gap-1 text-[10px] text-slate-600">
+                          <span className="text-orange-400 shrink-0 mt-0.5">•</span>{it}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  {i < arr.length - 1 && (
+                    <div className="text-orange-400 text-xl font-black shrink-0">›</div>
                   )}
                 </div>
+              ))}
+            </div>
+          </SectionBody>
+        </div>
 
-                {/* Treatment stages */}
-                <div className="space-y-2">
-                  {STAGES.map((stage) => {
-                    const isOpen = expandedStage === stage.label;
-                    return (
-                      <div key={stage.label} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-                        <button
-                          onClick={() => setExpandedStage(isOpen ? null : stage.label)}
-                          className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left hover:bg-gray-50 transition-colors"
-                        >
-                          <div className="w-1 h-8 rounded-full shrink-0" style={{ background: stage.color }} />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-bold text-gray-700">{stage.label}</p>
-                            <p className="text-[10px] text-gray-400">{stage.items.length} шаг(а)</p>
-                          </div>
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <span className="text-[10px] font-semibold" style={{ color: stage.color }}>
-                              {stage.items.reduce((s, i) => s + i.price, 0).toLocaleString("ru")} ₸
-                            </span>
-                            <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
-                          </div>
-                        </button>
-                        {isOpen && (
-                          <div className="border-t border-gray-50 px-3 py-2 space-y-2">
-                            {stage.items.map((item, ii) => (
-                              <div key={ii} className="flex items-start gap-2.5">
-                                {item.status === "done"
-                                  ? <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                                  : <Circle className="w-4 h-4 text-gray-200 shrink-0 mt-0.5" />}
-                                <div className="flex-1 min-w-0">
-                                  <p className={`text-xs font-medium ${item.status === "done" ? "line-through text-gray-400" : "text-gray-700"}`}>{item.title}</p>
-                                  <div className="flex items-center gap-2 mt-0.5">
-                                    {item.tooth && <span className="text-[9px] text-gray-400">з.{item.tooth}</span>}
-                                    {item.urgent && (
-                                      <span className="flex items-center gap-0.5 text-[9px] text-red-600 font-semibold">
-                                        <AlertTriangle className="w-2.5 h-2.5" />Срочно
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                                {item.status !== "done" && (
-                                  <button className="shrink-0 flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg bg-blue-500 text-white">
-                                    <Play className="w-2.5 h-2.5" />
-                                    Начать
-                                  </button>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+        {/* ── TWO-COLUMN: costs + variants ── */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <SectionHeader icon="💰" title="Стоимость лечения" />
+            <SectionBody>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-100">
+                    <th className="text-left py-2 text-[10px] text-slate-400 uppercase font-semibold">№</th>
+                    <th className="text-left py-2 text-[10px] text-slate-400 uppercase font-semibold">Процедура</th>
+                    <th className="text-right py-2 text-[10px] text-slate-400 uppercase font-semibold">Стоимость (₸)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {[
+                    ["1", "Диагностика", "Бесплатно"],
+                    ["2", "Лечение кариеса ×2", "17 000"],
+                    ["3", "Удаление зуба 44", "15 000"],
+                    ["4", "Проф. чистка", "6 000"],
+                    ["5", "Коронки МК ×2", "60 000"],
+                  ].map(([n, proc, cost]) => (
+                    <tr key={n} className="hover:bg-orange-50">
+                      <td className="py-2 text-slate-400 font-medium">{n}</td>
+                      <td className="py-2 text-slate-700">{proc}</td>
+                      <td className="py-2 text-right font-semibold text-slate-800">{cost}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-orange-300">
+                    <td colSpan={2} className="pt-3 font-bold text-slate-700">ИТОГО:</td>
+                    <td className="pt-3 text-right font-black text-orange-600 text-base">98 000 ₸</td>
+                  </tr>
+                </tfoot>
+              </table>
 
-                {/* Total */}
-                <div className="bg-indigo-600 rounded-xl px-4 py-3 flex items-center justify-between">
-                  <p className="text-xs text-indigo-200 font-medium">Итого по плану</p>
-                  <p className="text-base font-black text-white">29 500 ₸</p>
-                </div>
-              </div>
-            )}
-
-            {/* AI */}
-            {activeTab === "ai" && (
-              <div className="p-3 space-y-3">
-                <div className="bg-gradient-to-b from-violet-50 to-white rounded-xl border border-violet-100 p-3">
-                  <div className="flex items-center gap-2 mb-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-violet-600 flex items-center justify-center">
-                      <Sparkles className="w-4 h-4 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-gray-800">ИИ-анализ</p>
-                      <p className="text-[9px] text-gray-400 flex items-center gap-1">
-                        <Clock className="w-2.5 h-2.5" />12 мая 2026, 08:15
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="bg-white rounded-lg p-3 border border-violet-100 shadow-sm space-y-1.5 text-xs text-gray-700">
-                    <p className="font-bold text-gray-900 text-[11px]">Общая оценка</p>
-                    <p className="leading-relaxed text-[11px]">Состояние требует внимания: кариозные поражения и признаки пародонтита.</p>
-                    <div className="border-t border-gray-100 pt-1.5">
-                      <p className="font-bold text-gray-900 text-[11px] mb-1">Приоритеты</p>
-                      <div className="space-y-1">
-                        {[
-                          { t: "Удаление зуба 44 — срочно", c: "text-red-600" },
-                          { t: "Лечение кариеса зуба 46 — 2 нед.", c: "text-amber-600" },
-                          { t: "Плановая чистка — 3 мес.", c: "text-blue-600" },
-                        ].map((p, i) => (
-                          <div key={i} className={`flex items-start gap-1.5 text-[11px] font-medium ${p.c}`}>
-                            <span className="shrink-0 font-black">{i + 1}.</span>
-                            {p.t}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="border-t border-gray-100 pt-1.5">
-                      <p className="text-[11px] text-gray-500 leading-relaxed">
-                        При своевременном лечении риск осложнений минимален. Рекомендуется консультация ортодонта.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-xl border border-gray-100 p-3">
-                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2.5">Детальные риски</p>
-                  {AI_SUMMARY.map((r) => (
-                    <div key={r.label} className="mb-2">
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="text-xs text-gray-600 font-medium">{r.label}</p>
-                        <p className="text-xs font-black" style={{ color: r.color }}>{r.value}%</p>
-                      </div>
-                      <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full transition-all" style={{ width: `${r.value}%`, background: r.color }} />
-                      </div>
+              <div className="mt-4 pt-3 border-t border-slate-100">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">Удобные способы оплаты</p>
+                <div className="flex gap-2">
+                  {[
+                    { icon: "💳", label: "Kaspi Red" },
+                    { icon: "📅", label: "Рассрочка 12 мес." },
+                    { icon: "💵", label: "Безналичный расчёт" },
+                  ].map((p) => (
+                    <div key={p.label} className="flex-1 text-center bg-slate-50 rounded-lg py-2.5 border border-slate-100">
+                      <div className="text-xl mb-1">{p.icon}</div>
+                      <p className="text-[8px] text-slate-600 font-medium leading-tight">{p.label}</p>
                     </div>
                   ))}
                 </div>
               </div>
-            )}
+            </SectionBody>
+          </div>
+
+          <div className="space-y-4">
+            {/* Variant 1 & 2 */}
+            <div>
+              <SectionHeader icon="⭐" title="Варианты лечения" />
+              <SectionBody>
+                <div className="space-y-3">
+                  <div className="border-2 border-orange-300 rounded-xl p-3 bg-orange-50">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg">💎</span>
+                      <p className="text-xs font-bold text-orange-700 uppercase">Вариант 1 — Оптимальный</p>
+                    </div>
+                    <ul className="space-y-1 text-xs text-slate-600">
+                      <li>• Полный план лечения (все этапы)</li>
+                      <li>• Металлокерамические коронки</li>
+                      <li>• Гарантия 2 года</li>
+                    </ul>
+                    <p className="text-sm font-black text-orange-600 mt-2">98 000 ₸</p>
+                  </div>
+
+                  <div className="border border-slate-200 rounded-xl p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg">⭐</span>
+                      <p className="text-xs font-bold text-slate-600 uppercase">Вариант 2 — Альтернативный</p>
+                    </div>
+                    <ul className="space-y-1 text-xs text-slate-600">
+                      <li>• Только неотложное лечение</li>
+                      <li>• Временные коронки</li>
+                      <li>• Наблюдение 6 месяцев</li>
+                    </ul>
+                    <p className="text-sm font-black text-slate-700 mt-2">35 000 ₸</p>
+                  </div>
+                </div>
+              </SectionBody>
+            </div>
+
+            <div>
+              <SectionHeader icon="💬" title="Рекомендации" />
+              <SectionBody>
+                <div className="space-y-2">
+                  {[
+                    "Не откладывать более 3 месяцев",
+                    "Пройти профессиональную гигиену",
+                    "Выполнить рекомендованные обследования",
+                    "Соблюдать домашнюю гигиену",
+                  ].map((t, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <span className="w-4 h-4 rounded-full bg-green-100 text-green-600 text-[9px] font-bold flex items-center justify-center shrink-0 mt-0.5">✓</span>
+                      <p className="text-xs text-slate-600 leading-relaxed">{t}</p>
+                    </div>
+                  ))}
+                </div>
+              </SectionBody>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* CTA */}
-      <div className="shrink-0 bg-white border-t border-gray-100 px-4 py-3">
-        <button className="w-full h-10 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition-colors">
-          Записать на приём
-        </button>
+        {/* ── BOTTOM ROW: doctor + trust + guarantees ── */}
+        <div className="grid grid-cols-4 gap-3">
+          {[
+            { icon: "👨‍⚕️", title: "Ваш врач", body: "Диас Сейткали — опытный специалист, который позаботится о вашем здоровье и комфорте." },
+            { icon: "🏆", title: "Почему нам доверяют", body: "Современное оборудование · Опытные врачи · Индивидуальный подход · Безопасность и стерильность" },
+            { icon: "🛡️", title: "Гарантии", body: "Мы предоставляем гарантию на все виды лечения согласно клиническим рекомендациям." },
+            { icon: "💬", title: "Отзывы", body: "Сканируйте QR-код и читайте отзывы наших пациентов на сайте." },
+          ].map((block) => (
+            <div key={block.title} className="bg-white rounded-xl border border-slate-100 p-3">
+              <div className="text-2xl mb-2">{block.icon}</div>
+              <p className="text-[10px] font-bold text-slate-700 mb-1">{block.title}</p>
+              <p className="text-[9px] text-slate-500 leading-relaxed">{block.body}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Signature line */}
+        <div className="bg-white border border-slate-200 rounded-xl px-5 py-4">
+          <p className="text-xs text-slate-500 italic text-center mb-4">
+            Я ознакомлен(а) с планом лечения, стоимостью и согласен(а) с предложенным планом.
+          </p>
+          <div className="grid grid-cols-3 gap-6">
+            {["Подпись пациента", "Дата", "Подпись врача"].map((l) => (
+              <div key={l}>
+                <p className="text-[9px] text-slate-400 uppercase tracking-wide mb-3">{l}</p>
+                <div className="border-b border-slate-300 h-6" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="text-center py-2">
+          <p className="text-base font-bold text-orange-500" style={{ fontFamily: "Georgia, serif" }}>
+            Спасибо, что доверяете нам свою улыбку! 🤍
+          </p>
+        </div>
+
       </div>
     </div>
   );
