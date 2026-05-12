@@ -509,8 +509,8 @@ export function Current() {
   const tabs = [
     { id: "info"        as const, label: "Информация" },
     { id: "dental"      as const, label: "Зубная карта" },
-    { id: "ai_analysis" as const, label: "ИИ анализ" },
     { id: "plans"       as const, label: "Планы лечения" },
+    { id: "ai_analysis" as const, label: "ИИ анализ" },
   ];
 
   return (
