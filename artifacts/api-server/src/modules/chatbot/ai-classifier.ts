@@ -1,4 +1,10 @@
-import { openrouter, DEEPSEEK_MODEL } from "../../lib/openrouter-client";
+import {
+  openrouter,
+  FAST_MODEL,
+  CHAT_MODEL,
+  withTimeout,
+  parseLlmJson,
+} from "../../lib/openrouter-client";
 import { logger } from "../../lib/logger";
 
 export type ServiceType =
@@ -67,7 +73,7 @@ confidence:
 Извлекай имя если пациент представился.
 Извлекай телефон если указан (в любом формате: +7, 8, 7, с пробелами/дефисами).
 
-Отвечай ТОЛЬКО валидным JSON без объяснений:
+Отвечай ТОЛЬКО валидным JSON без объяснений, без markdown-обёрток, без префикса "json":
 {
   "serviceType": "...",
   "urgency": "...", 
@@ -90,16 +96,23 @@ async function classifyWithRetry(
   ];
 
   try {
-    const response = await openrouter.chat.completions.create({
-      model: DEEPSEEK_MODEL,
-      max_tokens: 512,
-      temperature: 0.1,
-      messages,
-      response_format: { type: "json_object" },
-    });
+    const response = await withTimeout(
+      openrouter.chat.completions.create({
+        model: FAST_MODEL,
+        max_tokens: 512,
+        temperature: 0.1,
+        messages,
+        response_format: { type: "json_object" },
+      }),
+      15_000,
+      "classifyPatientRequest",
+    );
 
     const raw = response.choices[0]?.message?.content ?? "{}";
-    const parsed = JSON.parse(raw) as Partial<ClassificationResult>;
+    const parsed = parseLlmJson<Partial<ClassificationResult>>(raw);
+    if (!parsed) {
+      throw new Error("classifier returned unparseable JSON");
+    }
 
     return {
       serviceType: (parsed.serviceType as ServiceType) ?? "unknown",
@@ -114,8 +127,8 @@ async function classifyWithRetry(
     const isRateLimit =
       err instanceof Error && (err.message.includes("429") || err.message.includes("rate"));
 
-    if (attempt < 3) {
-      const delay = isRateLimit ? 2000 * (attempt + 1) : 500 * (attempt + 1);
+    if (attempt < 2) {
+      const delay = isRateLimit ? 1500 * (attempt + 1) : 400 * (attempt + 1);
       logger.warn({ err, attempt }, "[AIClassifier] Retrying after error");
       await new Promise((r) => setTimeout(r, delay));
       return classifyWithRetry(message, history, attempt + 1);
@@ -206,7 +219,7 @@ export async function generateChatbotResponse(
       content:
         "Ниже — примеры стиля общения менеджера клиники. Точно копируй их тон, длину ответов и использование эмодзи:",
     });
-    for (const ex of fewShotExamples.slice(0, 10)) {
+    for (const ex of fewShotExamples.slice(0, 8)) {
       fewShot.push({ role: "user", content: ex.userMessage });
       fewShot.push({ role: "assistant", content: ex.managerResponse });
     }
@@ -221,12 +234,16 @@ export async function generateChatbotResponse(
   ];
 
   try {
-    const response = await openrouter.chat.completions.create({
-      model: DEEPSEEK_MODEL,
-      max_tokens: 300,
-      temperature: 0.7,
-      messages,
-    });
+    const response = await withTimeout(
+      openrouter.chat.completions.create({
+        model: CHAT_MODEL,
+        max_tokens: 400,
+        temperature: 0.6,
+        messages,
+      }),
+      20_000,
+      "generateChatbotResponse",
+    );
     return response.choices[0]?.message?.content ?? null;
   } catch (err) {
     logger.error({ err }, "[AIClassifier] generateChatbotResponse failed — using fallback text");
@@ -244,23 +261,28 @@ export async function extractDatetimeFromText(text: string): Promise<Date | null
 Извлеки из текста пациента дату и время визита. Верни JSON: {"iso": "YYYY-MM-DDTHH:mm:00"} или {"iso": null} если дата/время не указаны или неясны.
 Казахские слова дней: ертең=завтра, бүгін=сегодня, дүйсенбі=понедельник, сейсенбі=вторник, сәрсенбі=среда, бейсенбі=четверг, жұма/жума=пятница, сенбі=суббота, жексенбі=воскресенье.
 Казахские слова времени: таңертең/тангертен=утро(09:00), күндізгі/кундизги=день(13:00), кешкі/кешки=вечер(17:00).
-Если время не указано — ставь 10:00. Дата должна быть >= сегодня.`;
+Если время не указано — ставь 10:00. Дата должна быть >= сегодня.
+Отвечай ТОЛЬКО валидным JSON без markdown-обёрток.`;
 
   try {
-    const response = await openrouter.chat.completions.create({
-      model: DEEPSEEK_MODEL,
-      max_tokens: 80,
-      temperature: 0.1,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: text },
-      ],
-      response_format: { type: "json_object" },
-    });
+    const response = await withTimeout(
+      openrouter.chat.completions.create({
+        model: FAST_MODEL,
+        max_tokens: 80,
+        temperature: 0.1,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: text },
+        ],
+        response_format: { type: "json_object" },
+      }),
+      12_000,
+      "extractDatetimeFromText",
+    );
 
     const raw = response.choices[0]?.message?.content ?? "{}";
-    const parsed = JSON.parse(raw) as { iso?: string | null };
-    if (!parsed.iso) return null;
+    const parsed = parseLlmJson<{ iso?: string | null }>(raw);
+    if (!parsed?.iso) return null;
 
     const date = new Date(parsed.iso);
     if (isNaN(date.getTime())) return null;

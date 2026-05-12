@@ -29,7 +29,7 @@ import { classifyPatientRequest, generateChatbotResponse, extractDatetimeFromTex
 import type { ChatbotState, ChatbotSessionData } from "./chatbot.types";
 import type { ChatbotSettings } from "@workspace/db";
 import { STANDARD_SCRIPT_BLOCKS, type ScriptBlock } from "./script-templates";
-import { openrouter } from "../../lib/openrouter-client";
+import { openrouter, FAST_MODEL, withTimeout, parseLlmJson } from "../../lib/openrouter-client";
 
 type CachedSettings = { settings: ChatbotSettings; expiresAt: number };
 type CachedExamples = { examples: ManagerExample[]; expiresAt: number };
@@ -81,7 +81,10 @@ if (process.env["REDIS_URL"]) {
   redis.on("error", (err: Error) => logger.warn({ err }, "[ChatbotSession] Redis error"));
   logger.info("[ChatbotSession] Redis session store enabled");
 } else {
-  logger.info("[ChatbotSession] REDIS_URL not set — using PostgreSQL session store");
+  logger.info(
+    "[ChatbotSession] REDIS_URL not set — using PostgreSQL session store. " +
+      "For better latency under load, set REDIS_URL secret (e.g. Upstash, Redis Cloud, Replit Redis add-on).",
+  );
 }
 
 async function loadSession(clinicId: string, phone: string): Promise<SessionRecord | null> {
@@ -371,7 +374,7 @@ async function getManagerExamples(clinicId: string): Promise<ManagerExample[]> {
     .orderBy(asc(chatbotManagerExamplesTable.sortOrder), asc(chatbotManagerExamplesTable.createdAt))
     .limit(20);
 
-  examplesCache.set(clinicId, { examples: rows, expiresAt: Date.now() + 60_000 });
+  examplesCache.set(clinicId, { examples: rows, expiresAt: Date.now() + 10_000 });
   return rows;
 }
 
@@ -401,7 +404,7 @@ async function getSettings(clinicId: string): Promise<ChatbotSettings> {
     .limit(1);
 
   if (settings) {
-    settingsCache.set(clinicId, { settings, expiresAt: Date.now() + 60_000 });
+    settingsCache.set(clinicId, { settings, expiresAt: Date.now() + 10_000 });
     return settings;
   }
 
@@ -413,7 +416,7 @@ async function getSettings(clinicId: string): Promise<ChatbotSettings> {
     .returning();
 
   if (created) {
-    settingsCache.set(clinicId, { settings: created, expiresAt: Date.now() + 60_000 });
+    settingsCache.set(clinicId, { settings: created, expiresAt: Date.now() + 10_000 });
     return created;
   }
 
@@ -717,17 +720,52 @@ function buildPlaygroundPrompt(
 ${kazakhNote}${doctorsSection}${scriptContext}`;
 }
 
-function buildSystemPrompt(state: ChatbotState, settings: Awaited<ReturnType<typeof getSettings>>): string {
-  const si = (settings.stepInstructions ?? {}) as StepInstructions;
+/** Renders the clinic's script blocks (same as playground) for injection into prompts. */
+function renderScriptBlocks(
+  settings: Awaited<ReturnType<typeof getSettings>>,
+  clinicName?: string,
+): string {
+  const resolvedClinicName =
+    clinicName ??
+    settings.greetingTemplate?.match(/«(.+?)»/)?.[1] ??
+    settings.greetingTemplate?.match(/"(.+?)"/)?.[1] ??
+    "нашу клинику";
+  const now = new Date();
+  const todayDate = now.toLocaleDateString("ru-KZ", { day: "numeric", month: "long" });
 
+  const resolvePlaceholders = (text: string) =>
+    text
+      .replace(/\{\{clinic_name\}\}/g, resolvedClinicName)
+      .replace(/\{\{date\}\}/g, todayDate)
+      .replace(/\{\{time\}\}/g, "удобное вам время")
+      .replace(/\{\{doctor_name\}\}/g, "вашего врача");
+
+  const savedBlocks = (settings.scriptBlocks ?? []) as ScriptBlock[];
+  const activeBlocks = savedBlocks.length > 0 ? savedBlocks : STANDARD_SCRIPT_BLOCKS;
+  const enabledBlocks = activeBlocks.filter((b) => b.enabled).sort((a, b) => a.order - b.order);
+  if (enabledBlocks.length === 0) return "";
+
+  let out = "\n\nСКРИПТ КЛИНИКИ (используй как основу для ответов, придерживайся стиля и структуры):\n";
+  for (const block of enabledBlocks) {
+    out += `\n--- ${block.title.toUpperCase()} ---\n${resolvePlaceholders(block.content)}\n`;
+  }
+  return out;
+}
+
+function buildSystemPrompt(
+  state: ChatbotState,
+  settings: Awaited<ReturnType<typeof getSettings>>,
+  opts?: { clinicName?: string },
+): string {
+  const si = (settings.stepInstructions ?? {}) as StepInstructions;
   const generalExtra = si.general ? `\n\nДополнительные инструкции клиники:\n${si.general}` : "";
 
   const kazakhNote = `\nВАЖНО: Пациент может писать на казахском языке обычными кириллическими буквами вместо специфических казахских букв (ә→а/е, ғ→г, қ→к, ң→н, ө→о, ұ/ү→у, і→и). Например «салем» вместо «сәлем». Понимай такой текст как казахский и отвечай на казахском, если пациент пишет на казахском.`;
 
   const base = `Ты — вежливый и профессиональный AI-ассистент стоматологической клиники 1Dent (Казахстан).
-Отвечай коротко и по делу. Используй простой, дружелюбный язык. Не ставь диагнозы.
+Отвечай коротко и по делу (1–3 предложения). Используй простой, дружелюбный язык. Не ставь диагнозы.
 Отвечай на том языке, на котором пишет пациент (русский, казахский или английский).
-Не придумывай информацию о клинике — цены, адрес и расписание уточняй у администратора.${kazakhNote}${generalExtra}`;
+Не придумывай информацию о клинике — цены, адрес и расписание бери из скрипта ниже или уточняй у администратора.${kazakhNote}${generalExtra}`;
 
   const now = new Date();
   const todayStr = now.toLocaleDateString("ru-KZ", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
@@ -735,23 +773,24 @@ function buildSystemPrompt(state: ChatbotState, settings: Awaited<ReturnType<typ
   const nowContext = `Сейчас: ${todayStr}, ${currentTimeStr} (Алматы/Астана).`;
   const timeRule = `ВАЖНО: никогда не предлагай и не подтверждай время которое уже прошло сегодня (сейчас ${currentTimeStr}). Если пациент называет прошедшее время — вежливо объясни что оно уже прошло и предложи ближайший доступный слот.`;
 
-  const defaults: Record<ChatbotState, string> = {
-    greeting: `${base}\n\nТвоя задача: поприветствовать пациента и попросить ввести ИИН (12 цифр) — это обязательный шаг для идентификации. Используй шаблон: "${settings.greetingTemplate}"`,
-    collect_iin: `${base}\n\nТы уже поприветствовал пациента и попросил ввести ИИН. ИИН — это 12 цифр и является обязательным для идентификации. Если пациент написал что-то кроме 12 цифр — вежливо попроси ввести именно ИИН.`,
-    collect_name: `${base}\n\nТы уже поприветствовал пациента. Сейчас жди имя или помоги его уточнить если пациент написал что-то непонятное.`,
-    collect_phone: `${base}\n\nТы знаешь имя пациента. Попроси его номер телефона для связи. Принимай номера в любом формате (+7, 8, с пробелами/дефисами).`,
-    collect_problem: `${base}\n\nТы знаешь имя пациента. Твоя задача: узнать с какой проблемой или за какой услугой обращается пациент. Задавай уточняющие вопросы если нужно.`,
-    suggest_doctor: `${base}\n\nТы подобрал врача на основе запроса пациента. Представь врача и предложи запись. Спроси подтверждение (Да/Нет). Казахский: иә/жарайды = да, жоқ/жок = нет.`,
-    manage_appointment: `${base}\n\n${nowContext} У пациента есть ближайшая запись. Спроси что он хочет сделать: перенести на другую дату, отменить запись или оставить как есть.`,
-    show_slots: `${base}\n\n${nowContext} Ты показываешь пациенту свободные слоты врача. Помоги пациенту выбрать удобное время. Все предложенные слоты уже являются будущими. ${timeRule}`,
-    collect_datetime: `${base}\n\n${nowContext} Ты ждёшь от пациента предпочтительную дату и время визита. ${timeRule} Казахские слова: ертең=завтра, бүгін=сегодня, жұма/жума=пятница, дүйсенбі=понедельник, сейсенбі=вторник, сәрсенбі=среда, бейсенбі=четверг, сенбі=суббота. Если пациент указал корректную будущую дату — подтверди её. Если неясно — вежливо попроси уточнить.`,
-    confirm_appointment: `${base}\n\n${nowContext} Пациент готов записаться. Попроси финальное подтверждение деталей записи. ${timeRule}`,
-    dental_qa: `${base}\n\nПациент идентифицирован. Отвечай на вопросы о состоянии его зубов и лечении по данным карты. Если вопрос вне твоих данных — ответь: OPERATOR_NEEDED`,
-    done: `${base}\n\nЗапись подтверждена. Отвечай на вопросы о клинике или направляй к администратору.`,
-    human_takeover: `${base}\n\nСоединяй пациента с администратором.`,
+  const stateGuidance: Record<ChatbotState, string> = {
+    greeting: `Сейчас этап: ПРИВЕТСТВИЕ. Поприветствуй пациента согласно блоку «Приветствие» в скрипте и сразу узнай, что его беспокоит или какая услуга интересует. НЕ проси ИИН, имя или телефон в начале — это создаёт барьер. Эти данные узнаешь позже, когда будешь оформлять запись.`,
+    collect_iin: `Сейчас этап: ИДЕНТИФИКАЦИЯ ПО ИИН. Пациент хочет проверить свою существующую запись. Попроси ввести ИИН (12 цифр).`,
+    collect_name: `Сейчас этап: ИМЯ ДЛЯ ЗАПИСИ. Пациент согласился на запись — попроси его представиться, чтобы оформить визит.`,
+    collect_phone: `Сейчас этап: ТЕЛЕФОН. Попроси номер для связи в любом формате (+7, 8, с пробелами/дефисами).`,
+    collect_problem: `Сейчас этап: МИНИ-ДИАГНОСТИКА. Если пациент жалуется на боль — задавай уточняющие вопросы по блоку «Мини-диагностика». Если запрос ясен (чистка, осмотр, конкретная процедура) — переходи к подбору врача. Используй ценовую информацию из блока «Ответы по услугам» если пациент спрашивает.`,
+    suggest_doctor: `Сейчас этап: ПОДБОР ВРАЧА. Представь подобранного врача и предложи запись согласно блоку «Перевод в запись». Спроси подтверждение (Да/Нет). Казахский: иә/жарайды = да, жоқ/жок = нет.`,
+    manage_appointment: `${nowContext} Сейчас этап: УПРАВЛЕНИЕ ЗАПИСЬЮ. У пациента есть ближайшая запись — спроси что он хочет сделать: перенести на другую дату, отменить запись или оставить как есть.`,
+    show_slots: `${nowContext} Сейчас этап: ВЫБОР СЛОТА. Помоги пациенту выбрать удобное время из предложенных слотов. ${timeRule}`,
+    collect_datetime: `${nowContext} Сейчас этап: ВЫБОР ВРЕМЕНИ. Жди от пациента дату и время визита. ${timeRule} Казахские слова: ертең=завтра, бүгін=сегодня, жұма/жума=пятница, дүйсенбі=понедельник, сейсенбі=вторник, сәрсенбі=среда, бейсенбі=четверг, сенбі=суббота.`,
+    confirm_appointment: `${nowContext} Сейчас этап: ПОДТВЕРЖДЕНИЕ. Пациент готов записаться. Попроси финальное подтверждение деталей записи согласно блоку «Перевод в запись». ${timeRule}`,
+    dental_qa: `Пациент идентифицирован. Отвечай на вопросы о состоянии его зубов и лечении по данным карты. Если вопрос вне твоих данных — ответь ТОЛЬКО: OPERATOR_NEEDED`,
+    done: `Запись подтверждена. Отвечай на вопросы о клинике используя блок «Ответы по услугам» или направляй к администратору.`,
+    human_takeover: `Соединяй пациента с администратором — больше не отвечай.`,
   };
 
-  // State-specific custom instruction overrides base defaults if set
+  // Optional state-specific override from clinic settings — appended as ADDITIONAL guidance
+  // (no longer replaces the default — both work together so the clinic's tweaks layer on top).
   const stateInstructionMap: Record<ChatbotState, keyof StepInstructions | null> = {
     greeting: "greeting",
     collect_iin: null,
@@ -769,16 +808,13 @@ function buildSystemPrompt(state: ChatbotState, settings: Awaited<ReturnType<typ
   };
   const stateKey = stateInstructionMap[state];
   const customInstruction = stateKey ? si[stateKey] : undefined;
+  const customExtra = customInstruction
+    ? `\n\nДополнительные инструкции клиники для этого этапа:\n${customInstruction}`
+    : "";
 
-  const defaultPrompt = defaults[state] ?? base;
-  if (!customInstruction) return defaultPrompt;
+  const scriptContext = renderScriptBlocks(settings, opts?.clinicName);
 
-  // For greeting state, always enforce IIN requirement even when clinic overrides the instruction
-  const iinSuffix =
-    state === "greeting"
-      ? "\n\nОБЯЗАТЕЛЬНО: в конце сообщения попроси пациента ввести ИИН (12 цифр) для идентификации. Не спрашивай имя — только ИИН."
-      : "";
-  return `${base}\n\nИнструкции для этого этапа:\n${customInstruction}${iinSuffix}`;
+  return `${base}\n\n${stateGuidance[state] ?? ""}${customExtra}${scriptContext}`;
 }
 
 // ─── ChatbotService (main export) ───────────────────────────────────────────
@@ -880,17 +916,125 @@ export class ChatbotService {
 
     switch (state) {
       case "greeting": {
-        // Pass the patient's first message as history so language detection works correctly.
-        // buildSystemPrompt("greeting") already instructs AI to ask for IIN.
-        const firstMsgHistory = [{ role: "user" as const, content: text }];
+        // Compute a script-based greeting fallback (NOT the legacy IIN-asking greetingTemplate).
+        const scriptGreeting = (() => {
+          const blocks = ((settings.scriptBlocks ?? []) as ScriptBlock[]);
+          const active = blocks.length > 0 ? blocks : STANDARD_SCRIPT_BLOCKS;
+          const greet = active.find((b) => b.id === "greeting" && b.enabled);
+          const clinicName =
+            settings.greetingTemplate?.match(/«(.+?)»/)?.[1] ??
+            settings.greetingTemplate?.match(/"(.+?)"/)?.[1] ??
+            "нашу клинику";
+          return (greet?.content ?? STANDARD_SCRIPT_BLOCKS[0]!.content)
+            .replace(/\{\{clinic_name\}\}/g, clinicName);
+        })();
+
+        // Identify patient by WhatsApp phone first — no need to ask for IIN if we already know them.
+        const [existingByPhone] = await db
+          .select()
+          .from(patientsTable)
+          .where(and(eq(patientsTable.clinicId, clinicId), eq(patientsTable.phone, phone)))
+          .limit(1);
+
+        if (existingByPhone) {
+          data.existingPatientId = existingByPhone.id;
+          data.patientName = existingByPhone.name;
+
+          // Check for upcoming appointment
+          const now = new Date();
+          const [upcomingProc] = await db
+            .select({
+              id: proceduresTable.id,
+              scheduledAt: proceduresTable.scheduledAt,
+              doctorId: proceduresTable.doctorId,
+            })
+            .from(proceduresTable)
+            .where(
+              and(
+                eq(proceduresTable.clinicId, clinicId),
+                eq(proceduresTable.patientId, existingByPhone.id),
+                eq(proceduresTable.status, "scheduled"),
+                gte(proceduresTable.scheduledAt, now),
+              ),
+            )
+            .orderBy(asc(proceduresTable.scheduledAt))
+            .limit(1);
+
+          if (upcomingProc?.scheduledAt) {
+            let doctorName = "врача";
+            if (upcomingProc.doctorId) {
+              const [doc] = await db
+                .select({ name: usersTable.name })
+                .from(usersTable)
+                .where(eq(usersTable.id, upcomingProc.doctorId))
+                .limit(1);
+              if (doc) doctorName = doc.name;
+            }
+            const apptDate = upcomingProc.scheduledAt.toLocaleDateString("ru-KZ", {
+              weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+            });
+            data.existingProcedureId = upcomingProc.id;
+            data.existingProcedureDate = apptDate;
+            data.existingProcedureDoctorName = doctorName;
+
+            const aiReply = await generateChatbotResponse(
+              buildSystemPrompt("manage_appointment", settings),
+              [{ role: "user" as const, content: text }],
+              `Пациент ${existingByPhone.name} написал. У него уже есть запись к врачу ${doctorName} на ${apptDate}. Поздоровайся по имени, сообщи о записи и предложи: перенести / отменить / оставить как есть.`,
+              managerExamples,
+            );
+            response = aiReply ??
+              `Здравствуйте, ${existingByPhone.name}! 👋\n\nУ вас запись к врачу *${doctorName}* на *${apptDate}*.\n\nЧто хотите сделать?\n• Перенести\n• Отменить\n• Оставить как есть`;
+            session.state = "manage_appointment";
+            session.data = data;
+            break;
+          }
+
+          // Returning patient, no upcoming → straight to problem collection
+          const aiReply = await generateChatbotResponse(
+            buildSystemPrompt("collect_problem", settings),
+            [{ role: "user" as const, content: text }],
+            `Пациент ${existingByPhone.name} написал в чат — вы уже знаете его. Поздоровайся по имени и спроси, чем можешь помочь.`,
+            managerExamples,
+          );
+          response = aiReply ?? `Здравствуйте, ${existingByPhone.name}! 😊 Чем могу помочь?`;
+          session.state = "collect_problem";
+          session.data = data;
+          break;
+        }
+
+        // New patient (not found by phone). Detect if they want to manage an existing
+        // appointment ("моя запись", "перенести", "отменить") — if so, route to IIN identification.
+        const lowerFirst = text.toLowerCase();
+        const wantsExistingAppt =
+          /\b(моя запись|мою запись|мои записи|перенест|отменит|отмена|отменя|записан|жазылған|жылжыту|болдырмау)\b/.test(
+            lowerFirst,
+          );
+
+        if (wantsExistingAppt) {
+          const aiAskIin = await generateChatbotResponse(
+            buildSystemPrompt("collect_iin", settings),
+            [],
+            `Пациент написал: "${text}". Похоже, он хочет проверить или изменить существующую запись, но мы не нашли его по номеру телефона. Поздоровайся и попроси ввести ИИН (12 цифр) для идентификации.`,
+            managerExamples,
+          );
+          response =
+            aiAskIin ??
+            "Здравствуйте! 👋 Чтобы найти вашу запись, пожалуйста, введите ваш ИИН (12 цифр).";
+          session.state = "collect_iin";
+          break;
+        }
+
+        // Otherwise — new patient, greet and process their actual first message as the patient input
+        // so the model can immediately address what they wrote (not just send a generic greeting).
         const aiGreeting = await generateChatbotResponse(
           buildSystemPrompt("greeting", settings),
-          firstMsgHistory,
-          "Пациент впервые написал в чат. Поприветствуй его и попроси ввести ИИН (12 цифр) для идентификации. Не спрашивай имя — только ИИН.",
+          [],
+          text,
           managerExamples,
         );
-        response = aiGreeting ?? settings.greetingTemplate;
-        session.state = "collect_iin";
+        response = aiGreeting ?? scriptGreeting;
+        session.state = "collect_problem";
         break;
       }
 
@@ -992,20 +1136,35 @@ export class ChatbotService {
         if (classification0.extractedPhone) {
           data.collectedPhone = classification0.extractedPhone;
         }
+
+        // If we already have a suggested doctor, the patient is mid-booking — go to datetime selection.
+        if (data.suggestedDoctorId) {
+          let slotsText = "";
+          const slots = await getAvailableSlots(clinicId, data.suggestedDoctorId).catch(() => [] as Date[]);
+          if (slots.length > 0) {
+            slotsText = `\n\nБлижайшие свободные слоты:\n${formatSlots(slots)}\n\nИли укажите своё удобное время.`;
+          }
+          const aiAskTime = await generateChatbotResponse(
+            buildSystemPrompt("collect_datetime", settings),
+            recentMessages,
+            `Имя пациента: ${extractedName}. Записываем к врачу ${data.suggestedDoctorName ?? ""}. Спроси удобную дату и время визита.`,
+            managerExamples,
+          );
+          response = (aiAskTime ?? `Приятно познакомиться, ${extractedName}! 😊\nКогда вам удобно прийти к врачу *${data.suggestedDoctorName ?? ""}*?`) + slotsText;
+          session.state = "collect_datetime";
+          session.data = data;
+          break;
+        }
+
+        // No doctor yet — fall back to collecting the problem first
         const aiReply0 = await generateChatbotResponse(
-          buildSystemPrompt("collect_name", settings),
+          buildSystemPrompt("collect_problem", settings),
           recentMessages,
-          text,
+          `Имя пациента: ${extractedName}. Спроси, чем он обеспокоен или какая услуга нужна.`,
           managerExamples,
         );
-        // If phone was already captured, skip collect_phone
-        if (data.collectedPhone) {
-          response = aiReply0 ?? `Приятно познакомиться, ${extractedName}! 😊\nОпишите вашу проблему или какую процедуру вы хотели бы пройти.`;
-          session.state = "collect_problem";
-        } else {
-          response = aiReply0 ?? `Приятно познакомиться, ${extractedName}! 😊\nПожалуйста, укажите ваш номер телефона для связи.`;
-          session.state = "collect_phone";
-        }
+        response = aiReply0 ?? `Приятно познакомиться, ${extractedName}! 😊\nПодскажите, что вас беспокоит?`;
+        session.state = "collect_problem";
         session.data = data;
         break;
       }
@@ -1112,6 +1271,21 @@ export class ChatbotService {
       case "suggest_doctor": {
         if (isYes(text)) {
           data.confusedCount = 0;
+
+          // If we don't yet know the patient's name (new patient), ask for it before collecting time.
+          if (!data.patientName && !data.existingPatientId) {
+            const aiAskName = await generateChatbotResponse(
+              buildSystemPrompt("collect_name", settings),
+              recentMessages,
+              `Пациент согласен записаться к ${data.suggestedDoctorName ?? "врачу"}. Спроси, как к нему обращаться, чтобы оформить запись.`,
+              managerExamples,
+            );
+            response = aiAskName ?? `Отлично! Подскажите, как к вам обращаться?`;
+            session.state = "collect_name";
+            session.data = data;
+            break;
+          }
+
           // Show available slots for the selected doctor
           let slotsText = "";
           if (data.suggestedDoctorId) {
@@ -1588,23 +1762,26 @@ export class ChatbotService {
 Верни ТОЛЬКО валидный JSON-массив без пояснений, кода и markdown.`;
 
     try {
-      const response = await openrouter.chat.completions.create({
-        model: "deepseek/deepseek-chat-v3-0324",
-        max_tokens: 6000,
-        temperature: 0.1,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `Разбей этот скрипт на блоки:\n\n${rawText}` },
-        ],
-      });
+      const response = await withTimeout(
+        openrouter.chat.completions.create({
+          model: FAST_MODEL,
+          max_tokens: 6000,
+          temperature: 0.1,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: `Разбей этот скрипт на блоки:\n\n${rawText}` },
+          ],
+        }),
+        30_000,
+        "parseScriptWithAI",
+      );
 
       const content = response.choices[0]?.message?.content ?? "[]";
-      const jsonMatch = content.match(/\[[\s\S]*\]/);
-      if (!jsonMatch) {
+      const blocks = parseLlmJson<ScriptBlock[]>(content);
+      if (!blocks || !Array.isArray(blocks)) {
         logger.warn("[ChatbotService] AI parse returned no JSON array — falling back to standard blocks");
         return STANDARD_SCRIPT_BLOCKS;
       }
-      const blocks = JSON.parse(jsonMatch[0]) as ScriptBlock[];
       return blocks.map((b, i) => ({ ...b, order: i, enabled: b.enabled ?? true }));
     } catch (err) {
       logger.error({ err }, "[ChatbotService] parseScriptWithAI failed — returning standard blocks");
