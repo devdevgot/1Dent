@@ -1,47 +1,130 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { TrendingUp, Users, DollarSign, Zap, AlertCircle, CheckCircle, Radio, ChevronLeft, Repeat2, Heart, ClipboardCheck, Crown } from "lucide-react";
-import { useGetAnalytics, useGetChannelStats, getGetChannelStatsQueryKey, useGetPatientMetrics, type ChannelStat } from "@workspace/api-client-react";
+import {
+  PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
+} from "recharts";
+import {
+  TrendingUp, Users, DollarSign, Zap, AlertCircle, CheckCircle,
+  Radio, ChevronLeft, Repeat2, Heart, ClipboardCheck, Crown,
+  CalendarDays, ChevronDown, ChevronUp,
+} from "lucide-react";
+import {
+  useGetAnalytics, useGetChannelStats, getGetChannelStatsQueryKey,
+  useGetPatientMetrics, type ChannelStat,
+} from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 
 const COLORS = ["#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#06b6d4", "#6366f1"];
 
-const PATIENT_STATUS_LABELS: Record<string, string> = {
-  new_request: "Новый запрос",
-  initial_consultation: "Первичный осмотр",
-  diagnostics: "Диагностика",
-  treatment_assigned: "Назначено лечение",
-  treatment_in_progress: "Лечение в процессе",
-  post_op_monitoring: "Пост-оп наблюдение",
-  completed: "Завершено",
+type Period = "today" | "week" | "month" | "year" | "custom";
+
+const PERIOD_LABELS: Record<Period, string> = {
+  today:  "Сегодня",
+  week:   "Неделя",
+  month:  "Месяц",
+  year:   "Год",
+  custom: "Период",
 };
 
-type Period = "week" | "month" | "quarter";
-
-function getPeriodDates(period: Period): { dateFrom: string; dateTo: string } {
+function getPeriodDates(period: Period, customFrom: string, customTo: string): { dateFrom: string; dateTo: string } {
   const now = new Date();
   const dateTo = now.toISOString().split("T")[0]!;
   const from = new Date(now);
-  if (period === "week") from.setDate(from.getDate() - 7);
+  if (period === "today") {
+    return { dateFrom: dateTo, dateTo };
+  }
+  if (period === "week")  from.setDate(from.getDate() - 7);
   else if (period === "month") from.setMonth(from.getMonth() - 1);
-  else from.setMonth(from.getMonth() - 3);
+  else if (period === "year")  from.setFullYear(from.getFullYear() - 1);
+  else if (period === "custom") {
+    return { dateFrom: customFrom || dateTo, dateTo: customTo || dateTo };
+  }
   return { dateFrom: from.toISOString().split("T")[0]!, dateTo };
 }
+
+type StatusLevel = "good" | "normal" | "warn";
+
+function statusConfig(level: StatusLevel) {
+  if (level === "good")   return { label: "Хорошо",          bg: "bg-emerald-50", border: "border-emerald-200", badge: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-500" };
+  if (level === "warn")   return { label: "Требует внимания", bg: "bg-red-50",     border: "border-red-200",     badge: "bg-red-100 text-red-700",         dot: "bg-red-500"     };
+  return                         { label: "Норма",            bg: "bg-amber-50",   border: "border-amber-200",   badge: "bg-amber-100 text-amber-700",     dot: "bg-amber-500"   };
+}
+
+interface QACardProps {
+  question: string;
+  value: React.ReactNode;
+  sub?: React.ReactNode;
+  hint?: string;
+  level?: StatusLevel;
+  icon: React.ReactNode;
+  loading?: boolean;
+}
+
+function QACard({ question, value, sub, hint, level, icon, loading }: QACardProps) {
+  const cfg = level ? statusConfig(level) : null;
+  return (
+    <div className={`bg-white rounded-2xl border shadow-sm p-4 flex flex-col gap-1.5 ${cfg ? `${cfg.border}` : "border-border/50"}`}>
+      {/* Status badge row */}
+      <div className="flex items-start justify-between gap-2 mb-0.5">
+        <p className="text-xs font-semibold text-muted-foreground leading-tight">{question}</p>
+        {cfg && (
+          <span className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${cfg.badge}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+            {cfg.label}
+          </span>
+        )}
+      </div>
+      {/* Main value */}
+      {loading ? (
+        <div className="h-9 w-24 bg-slate-100 animate-pulse rounded-lg mt-1" />
+      ) : (
+        <p className="text-3xl font-extrabold text-foreground tracking-tight leading-none mt-0.5">{value}</p>
+      )}
+      {/* Sub line */}
+      {!loading && sub && (
+        <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{sub}</p>
+      )}
+      {/* Hint */}
+      {!loading && hint && (
+        <p className={`text-xs mt-1 font-medium ${cfg?.level === "warn" ? "text-red-600" : cfg ? "text-amber-700" : "text-muted-foreground"}`}>{hint}</p>
+      )}
+      {/* Icon pill */}
+      <div className="mt-auto pt-2 flex justify-end">
+        <div className="w-8 h-8 rounded-xl bg-slate-50 border border-border/40 flex items-center justify-center text-muted-foreground">
+          {icon}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const PATIENT_STATUS_LABELS: Record<string, string> = {
+  new_request:          "Новый запрос",
+  initial_consultation: "Первичный осмотр",
+  diagnostics:          "Диагностика",
+  treatment_assigned:   "Назначено лечение",
+  treatment_in_progress:"Лечение в процессе",
+  post_op_monitoring:   "Пост-оп наблюдение",
+  completed:            "Завершено",
+};
 
 export default function AnalyticsPage() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
+
+  const [period, setPeriod] = useState<Period>("month");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
+  const [showCustom, setShowCustom] = useState(false);
+  const [channelOpen, setChannelOpen] = useState(true);
+
   const { data: analyticsRes, isLoading: analyticsLoading } = useGetAnalytics();
   const analytics = analyticsRes?.data?.analytics as any;
 
-  const [channelPeriod, setChannelPeriod] = useState<Period>("month");
-  const periodDates = getPeriodDates(channelPeriod);
-
-  const [retentionPeriod, setRetentionPeriod] = useState<Period>("month");
-  const retentionDates = getPeriodDates(retentionPeriod);
-
   const isOwnerOrAdmin = user?.role === "owner" || user?.role === "admin";
+  const pmEnabled = isOwnerOrAdmin || user?.role === "doctor" || user?.role === "accountant";
+
+  const periodDates = getPeriodDates(period, customFrom, customTo);
 
   const { data: channelStatsRes } = useGetChannelStats(
     { dateFrom: periodDates.dateFrom, dateTo: periodDates.dateTo },
@@ -54,25 +137,56 @@ export default function AnalyticsPage() {
   );
   const channelStats: ChannelStat[] = channelStatsRes?.data?.stats ?? [];
 
-  const pmEnabled = isOwnerOrAdmin || user?.role === "doctor" || user?.role === "accountant";
-  const { data: patientMetricsRes, isLoading: pmLoading, isFetching: pmFetching } = useGetPatientMetrics(
-    { dateFrom: retentionDates.dateFrom, dateTo: retentionDates.dateTo },
-    { query: { enabled: pmEnabled } },
-  );
+  const { data: patientMetricsRes, isLoading: pmLoading, isFetching: pmFetching } =
+    useGetPatientMetrics(
+      { dateFrom: periodDates.dateFrom, dateTo: periodDates.dateTo },
+      { query: { enabled: pmEnabled } },
+    );
   const pm = patientMetricsRes?.data;
 
   const statusData = analytics && "patientsByStatus" in analytics && analytics.patientsByStatus
     ? Object.entries(analytics.patientsByStatus).map(([status, count]: [string, unknown]) => ({
         name: PATIENT_STATUS_LABELS[status] || status,
-        value: count,
+        value: count as number,
       }))
     : [];
 
   const doctorKpis = (analytics && "doctorKpis" in analytics) ? (analytics.doctorKpis as any[]) : [];
 
+  const retentionRate    = pm?.retentionRate ?? 0;
+  const treatmentConv    = pm?.treatmentPlanConversion ?? 0;
+  const avgLtv           = pm?.avgLtv ?? 0;
+  const redAlerts        = analytics?.redAlertCount ?? 0;
+
+  const retentionLevel: StatusLevel =
+    retentionRate >= 60 ? "good" : retentionRate >= 30 ? "normal" : "warn";
+
+  const conversionLevel: StatusLevel =
+    treatmentConv >= 70 ? "good" : treatmentConv >= 40 ? "normal" : "warn";
+
+  const retentionHint =
+    retentionLevel === "good"   ? "Пациенты возвращаются — отличный результат"
+    : retentionLevel === "normal" ? "Есть потенциал для роста повторных визитов"
+    : "Стоит активнее работать с базой постоянных пациентов";
+
+  const conversionHint =
+    conversionLevel === "good"   ? "Большинство пациентов соглашаются на лечение"
+    : conversionLevel === "normal" ? "Можно улучшить подачу планов лечения"
+    : "Мало пациентов принимают план лечения — стоит пересмотреть подход";
+
+  function handlePeriod(p: Period) {
+    setPeriod(p);
+    setShowCustom(p === "custom");
+  }
+
+  const revenue = (analytics?.revenueThisMonth ?? analytics?.myRevenueThisMonth ?? 0) as number;
+  const newPats = (analytics?.newPatientsThisMonth ?? analytics?.newPatientsToday ?? 0) as number;
+  const procedures = (analytics?.completedProceduresThisMonth ?? analytics?.myProceduresThisMonth ?? 0) as number;
+  const scheduledToday = (analytics?.scheduledToday ?? 0) as number;
+
   return (
     <div className="h-full flex flex-col overflow-hidden bg-background">
-      {/* Header */}
+      {/* ── Header ── */}
       <div className="shrink-0 px-4 py-4 border-b border-gray-100 bg-white flex items-center gap-3">
         <button
           onClick={() => window.history.back()}
@@ -80,325 +194,172 @@ export default function AnalyticsPage() {
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
-        <div>
+        <div className="flex-1 min-w-0">
           <h1 className="text-[17px] font-semibold text-gray-900">{t("analytics.title")}</h1>
           <p className="text-xs text-muted-foreground mt-0.5">{t("analytics.subtitle")}</p>
         </div>
       </div>
 
-      {/* Content */}
+      {/* ── Period filter bar ── */}
+      <div className="shrink-0 bg-white border-b border-gray-100 px-4 py-3 space-y-2">
+        <div className="flex items-center gap-1.5">
+          <CalendarDays className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+          <div className="flex gap-1 flex-wrap">
+            {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
+              <button
+                key={p}
+                onClick={() => handlePeriod(p)}
+                className={`px-3 py-1.5 text-xs rounded-xl font-semibold transition-all ${
+                  period === p
+                    ? "bg-primary text-white shadow-sm"
+                    : "bg-slate-100 text-gray-600 hover:bg-slate-200"
+                }`}
+              >
+                {PERIOD_LABELS[p]}
+              </button>
+            ))}
+          </div>
+        </div>
+        {showCustom && (
+          <div className="flex items-center gap-2 pl-5">
+            <input
+              type="date"
+              value={customFrom}
+              max={customTo || undefined}
+              onChange={(e) => setCustomFrom(e.target.value)}
+              className="text-xs border border-border/60 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-primary/40 w-36"
+            />
+            <span className="text-xs text-muted-foreground">—</span>
+            <input
+              type="date"
+              value={customTo}
+              min={customFrom || undefined}
+              onChange={(e) => setCustomTo(e.target.value)}
+              className="text-xs border border-border/60 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-primary/40 w-36"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* ── Content ── */}
       <div className="flex-1 overflow-y-auto custom-scrollbar">
-        <div className="p-6 space-y-6">
-          {/* KPI Cards Row 1 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {analyticsLoading ? (
-              [0,1,2,3].map(i => (
-                <div key={i} className="bg-white rounded-xl border border-border/50 p-4 shadow-sm space-y-3 animate-pulse">
-                  <div className="w-24 h-3 bg-slate-200 rounded" />
-                  <div className="w-16 h-8 bg-slate-200 rounded" />
-                </div>
-              ))
-            ) : null}
-            {/* Total Patients */}
-            {!analyticsLoading && (analytics && "totalPatients" in analytics) && (
-              <div className="bg-white rounded-xl border border-border/50 p-4 shadow-sm">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground font-medium">{t("analytics.totalPatients")}</p>
-                    <p className="text-3xl font-bold text-foreground mt-2">{String((analytics as any).totalPatients)}</p>
-                  </div>
-                  <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                    <Users className="h-5 w-5 text-blue-600" />
-                  </div>
-                </div>
-              </div>
-            )}
+        <div className="p-4 space-y-6 pb-10">
 
-            {/* New Patients */}
-            {(analytics && (("newPatientsThisMonth" in analytics && (analytics as any).newPatientsThisMonth !== undefined) || ("newPatientsToday" in analytics && (analytics as any).newPatientsToday !== undefined))) && (
-              <div className="bg-white rounded-xl border border-border/50 p-4 shadow-sm">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground font-medium">
-                      {user?.role === "doctor" ? t("analytics.myPatients") : t("analytics.newPatients")}
-                    </p>
-                    <p className="text-3xl font-bold text-foreground mt-2">
-                      {String((analytics as any).newPatientsThisMonth ?? (analytics as any).newPatientsToday ?? 0)}
-                    </p>
-                  </div>
-                  <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                    <CheckCircle className="h-5 w-5 text-emerald-600" />
-                  </div>
-                </div>
-              </div>
-            )}
-
+          {/* ── Section 1: Core KPI cards ── */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {/* Revenue */}
-            {(analytics && (("revenueThisMonth" in analytics && (analytics as any).revenueThisMonth !== undefined) || ("myRevenueThisMonth" in analytics && (analytics as any).myRevenueThisMonth !== undefined))) && (
-              <div className="bg-white rounded-xl border border-border/50 p-4 shadow-sm">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground font-medium">
-                      {user?.role === "doctor" ? t("analytics.myRevenue") : t("analytics.revenue")}
-                    </p>
-                    <p className="text-3xl font-bold text-foreground mt-2">
-                      ₸{(((analytics as any).revenueThisMonth ?? (analytics as any).myRevenueThisMonth) ?? 0).toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="h-10 w-10 rounded-lg bg-yellow-100 flex items-center justify-center">
-                    <DollarSign className="h-5 w-5 text-yellow-600" />
-                  </div>
-                </div>
-              </div>
+            {analytics && ("revenueThisMonth" in analytics || "myRevenueThisMonth" in analytics) && (
+              <QACard
+                question="Сколько мы заработали?"
+                value={`₸${revenue.toLocaleString("ru-KZ")}`}
+                sub={`За выбранный период`}
+                loading={analyticsLoading}
+                icon={<DollarSign className="w-4 h-4" />}
+              />
             )}
 
-            {/* Completed Procedures / Alerts */}
-            {(analytics && "completedProceduresThisMonth" in analytics) && (
-              <div className="bg-white rounded-xl border border-border/50 p-4 shadow-sm">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground font-medium">{t("analytics.completedProcedures")}</p>
-                    <p className="text-3xl font-bold text-foreground mt-2">{String((analytics as any).completedProceduresThisMonth)}</p>
-                  </div>
-                  <div className="h-10 w-10 rounded-lg bg-violet-100 flex items-center justify-center">
-                    <Zap className="h-5 w-5 text-violet-600" />
-                  </div>
-                </div>
-              </div>
+            {/* New patients */}
+            {analytics && ("newPatientsThisMonth" in analytics || "newPatientsToday" in analytics) && (
+              <QACard
+                question="Сколько новых людей к нам обратились?"
+                value={newPats}
+                sub={newPats === 0 ? "Пока нет новых обращений" : `${newPats === 1 ? "1 новый пациент" : `${newPats} новых пациентов`}`}
+                loading={analyticsLoading}
+                icon={<Users className="w-4 h-4" />}
+              />
             )}
 
-            {(analytics && "redAlertCount" in analytics) && (
-              <div className="bg-white rounded-xl border border-border/50 p-4 shadow-sm">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground font-medium">{t("analytics.redAlerts")}</p>
-                    <p className="text-3xl font-bold text-foreground mt-2">{String((analytics as any).redAlertCount)}</p>
-                  </div>
-                  <div className="h-10 w-10 rounded-lg bg-red-100 flex items-center justify-center">
-                    <AlertCircle className="h-5 w-5 text-red-600" />
-                  </div>
-                </div>
-              </div>
+            {/* Scheduled today */}
+            {analytics && "scheduledToday" in analytics && (
+              <QACard
+                question="Сколько приёмов запланировано сегодня?"
+                value={scheduledToday}
+                sub={scheduledToday === 0 ? "Приёмов на сегодня нет" : `${scheduledToday} запись${scheduledToday === 1 ? "" : scheduledToday < 5 ? "и" : "ей"} на сегодня`}
+                loading={analyticsLoading}
+                icon={<CalendarDays className="w-4 h-4" />}
+              />
             )}
 
-            {(analytics && "myProceduresThisMonth" in analytics) && (
-              <div className="bg-white rounded-xl border border-border/50 p-4 shadow-sm">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground font-medium">{t("analytics.myProcedures")}</p>
-                    <p className="text-3xl font-bold text-foreground mt-2">{String((analytics as any).myProceduresThisMonth)}</p>
-                  </div>
-                  <div className="h-10 w-10 rounded-lg bg-cyan-100 flex items-center justify-center">
-                    <TrendingUp className="h-5 w-5 text-cyan-600" />
-                  </div>
-                </div>
-              </div>
+            {/* Procedures */}
+            {analytics && ("completedProceduresThisMonth" in analytics || "myProceduresThisMonth" in analytics) && (
+              <QACard
+                question="Насколько мы были заняты?"
+                value={procedures}
+                sub={`Выполненных процедур за период`}
+                loading={analyticsLoading}
+                icon={<Zap className="w-4 h-4" />}
+              />
             )}
 
-            {(analytics && "scheduledToday" in analytics) && (
-              <div className="bg-white rounded-xl border border-border/50 p-4 shadow-sm">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground font-medium">{t("analytics.scheduledToday")}</p>
-                    <p className="text-3xl font-bold text-foreground mt-2">{String((analytics as any).scheduledToday)}</p>
-                  </div>
-                  <div className="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center">
-                    <Zap className="h-5 w-5 text-orange-600" />
-                  </div>
-                </div>
-              </div>
+            {/* Red alerts */}
+            {analytics && "redAlertCount" in analytics && (
+              <QACard
+                question="Есть ли пациенты, требующие внимания?"
+                value={redAlerts}
+                sub={redAlerts === 0 ? "Всё в порядке" : `${redAlerts} пациент${redAlerts === 1 ? "" : redAlerts < 5 ? "а" : "ов"} с красными флагами`}
+                level={redAlerts === 0 ? "good" : redAlerts <= 3 ? "normal" : "warn"}
+                hint={redAlerts > 0 ? "Проверьте карточки этих пациентов" : undefined}
+                loading={analyticsLoading}
+                icon={<AlertCircle className="w-4 h-4" />}
+              />
+            )}
+
+            {/* Total patients */}
+            {analytics && "totalPatients" in analytics && (
+              <QACard
+                question="Сколько пациентов в базе?"
+                value={(analytics as any).totalPatients}
+                sub="Всего пациентов в системе"
+                loading={analyticsLoading}
+                icon={<CheckCircle className="w-4 h-4" />}
+              />
             )}
           </div>
 
-          {/* Charts Row */}
-          {statusData.length > 0 && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Patient Status Distribution - Pie Chart */}
-              <div className="bg-white rounded-xl border border-border/50 p-6 shadow-sm">
-                <h3 className="text-sm font-semibold text-foreground mb-4">{t("analytics.patientsByStatus")}</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={statusData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={100}
-                      paddingAngle={2}
-                      dataKey="value"
-                    >
-                      {statusData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="mt-4 grid grid-cols-1 gap-2">
-                  {statusData.map((item, index) => (
-                    <div key={item.name} className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                      <span className="text-xs text-muted-foreground">{item.name}</span>
-                      <span className="text-xs font-semibold text-foreground ml-auto">{String(item.value)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Patient Status Distribution - Bar Chart */}
-              <div className="bg-white rounded-xl border border-border/50 p-6 shadow-sm">
-                <h3 className="text-sm font-semibold text-foreground mb-4">{t("analytics.distribution")}</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={statusData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="value" fill="#3b82f6" radius={[8, 8, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          )}
-
-          {/* Doctor KPIs Table */}
-          {doctorKpis.length > 0 && (
-            <div className="bg-white rounded-xl border border-border/50 p-6 shadow-sm">
-              <h3 className="text-sm font-semibold text-foreground mb-4">{t("analytics.doctorKpis")}</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border/30">
-                      <th className="text-left text-xs font-semibold text-muted-foreground py-3 px-4">{t("analytics.doctorName")}</th>
-                      <th className="text-right text-xs font-semibold text-muted-foreground py-3 px-4">{t("analytics.patients")}</th>
-                      <th className="text-right text-xs font-semibold text-muted-foreground py-3 px-4">{t("analytics.procedures")}</th>
-                      <th className="text-right text-xs font-semibold text-muted-foreground py-3 px-4">{t("analytics.revenue")}</th>
-                      <th className="text-right text-xs font-semibold text-muted-foreground py-3 px-4">{t("analytics.avgCheck")}</th>
-                      <th className="text-right text-xs font-semibold text-muted-foreground py-3 px-4">{t("analytics.nps")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {doctorKpis.map((doctor) => (
-                      <tr key={doctor.doctorId} className="border-b border-border/30 hover:bg-muted/50 transition-colors">
-                        <td className="text-sm text-foreground py-3 px-4 font-medium">{doctor.doctorName}</td>
-                        <td className="text-sm text-foreground py-3 px-4 text-right">{doctor.patientsCount}</td>
-                        <td className="text-sm text-foreground py-3 px-4 text-right">{doctor.proceduresCount}</td>
-                        <td className="text-sm text-foreground py-3 px-4 text-right">₸{doctor.revenueTotal.toLocaleString()}</td>
-                        <td className="text-sm text-foreground py-3 px-4 text-right">₸{Math.round(doctor.averageCheck).toLocaleString()}</td>
-                        <td className="text-sm text-foreground py-3 px-4 text-right font-medium">
-                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                            doctor.nps >= 70 ? "bg-emerald-100 text-emerald-700" :
-                            doctor.nps >= 50 ? "bg-amber-100 text-amber-700" :
-                            "bg-red-100 text-red-700"
-                          }`}>
-                            {doctor.nps}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Patient Retention, LTV, Treatment Plan Conversion */}
+          {/* ── Section 2: Retention & conversion ── */}
           {pmEnabled && (
-            <div className="space-y-4">
-              {/* Section header with period dropdown */}
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <Heart className="h-4 w-4 text-primary" />
-                  <h3 className="text-sm font-semibold text-foreground">{t("analytics.retentionSection")}</h3>
-                </div>
-                <select
-                  value={retentionPeriod}
-                  onChange={(e) => setRetentionPeriod(e.target.value as Period)}
-                  className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-gray-700"
-                >
-                  <option value="week">{t("channel.week")}</option>
-                  <option value="month">{t("channel.month")}</option>
-                  <option value="quarter">{t("channel.quarter")}</option>
-                </select>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Heart className="h-4 w-4 text-primary" />
+                <h2 className="text-sm font-bold text-foreground">Лояльность и конверсия</h2>
               </div>
 
-              {/* 3 KPI cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {/* Retention rate */}
-                <div className="bg-white rounded-xl border border-border/50 p-4 shadow-sm">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-muted-foreground font-medium">{t("analytics.retentionRate")}</p>
-                      {pmLoading || pmFetching ? (
-                        <div className="h-9 w-20 bg-muted animate-pulse rounded mt-2" />
-                      ) : (
-                        <p className="text-3xl font-bold text-foreground mt-2">{pm?.retentionRate ?? 0}%</p>
-                      )}
-                      <p className="text-xs text-muted-foreground mt-1">{t("analytics.retentionRateDesc")}</p>
-                    </div>
-                    <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0 ml-3">
-                      <Repeat2 className="h-5 w-5 text-emerald-600" />
-                    </div>
-                  </div>
-                </div>
+                <QACard
+                  question="Сколько пациентов вернулись снова?"
+                  value={pmLoading || pmFetching ? "…" : `${retentionRate}%`}
+                  sub={`${pm?.returnedPatients ?? 0} из ${pm?.totalUniquePatientsInPeriod ?? 0} пациентов`}
+                  level={pmLoading || pmFetching ? undefined : retentionLevel}
+                  hint={pmLoading || pmFetching ? undefined : retentionHint}
+                  loading={pmLoading}
+                  icon={<Repeat2 className="w-4 h-4" />}
+                />
+
+                {/* Treatment plan conversion */}
+                <QACard
+                  question="Сколько пациентов согласились на лечение?"
+                  value={pmLoading || pmFetching ? "…" : `${treatmentConv}%`}
+                  sub={pmLoading || pmFetching ? undefined : `${pm?.treatmentPlanAccepted ?? 0} из ${pm?.treatmentPlanTotal ?? 0} планов`}
+                  level={pmLoading || pmFetching ? undefined : conversionLevel}
+                  hint={pmLoading || pmFetching ? undefined : conversionHint}
+                  loading={pmLoading}
+                  icon={<ClipboardCheck className="w-4 h-4" />}
+                />
 
                 {/* Average LTV */}
-                <div className="bg-white rounded-xl border border-border/50 p-4 shadow-sm">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-muted-foreground font-medium">{t("analytics.avgLtv")}</p>
-                      {pmLoading || pmFetching ? (
-                        <div className="h-9 w-28 bg-muted animate-pulse rounded mt-2" />
-                      ) : (
-                        <p className="text-3xl font-bold text-foreground mt-2">₸{(pm?.avgLtv ?? 0).toLocaleString()}</p>
-                      )}
-                      <p className="text-xs text-muted-foreground mt-1">{t("analytics.avgLtvDesc")}</p>
-                    </div>
-                    <div className="h-10 w-10 rounded-lg bg-violet-100 flex items-center justify-center shrink-0 ml-3">
-                      <TrendingUp className="h-5 w-5 text-violet-600" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Treatment Plan Conversion */}
-                <div className="bg-white rounded-xl border border-border/50 p-4 shadow-sm">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-muted-foreground font-medium">{t("analytics.treatmentConversion")}</p>
-                      {pmLoading || pmFetching ? (
-                        <div className="h-9 w-20 bg-muted animate-pulse rounded mt-2" />
-                      ) : (
-                        <p className="text-3xl font-bold text-foreground mt-2">{pm?.treatmentPlanConversion ?? 0}%</p>
-                      )}
-                      {!pmLoading && !pmFetching && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {pm?.treatmentPlanAccepted ?? 0} / {pm?.treatmentPlanTotal ?? 0} {t("analytics.treatmentConversionDesc")}
-                        </p>
-                      )}
-                    </div>
-                    <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center shrink-0 ml-3">
-                      <ClipboardCheck className="h-5 w-5 text-amber-600" />
-                    </div>
-                  </div>
-                </div>
+                <QACard
+                  question="Сколько в среднем тратит один пациент?"
+                  value={pmLoading || pmFetching ? "…" : `₸${avgLtv.toLocaleString("ru-KZ")}`}
+                  sub="Средний доход с одного пациента"
+                  loading={pmLoading}
+                  icon={<TrendingUp className="w-4 h-4" />}
+                />
               </div>
 
               {/* Cohort retention table */}
-              {pmLoading ? (
-                <div className="bg-white rounded-xl border border-border/50 p-5 shadow-sm">
-                  <div className="h-4 w-48 bg-muted animate-pulse rounded mb-4" />
-                  {[...Array(4)].map((_, i) => (
-                    <div key={i} className="flex gap-4 mb-3">
-                      <div className="h-3 w-20 bg-muted animate-pulse rounded" />
-                      <div className="h-3 w-10 bg-muted animate-pulse rounded ml-auto" />
-                      <div className="h-3 w-12 bg-muted animate-pulse rounded" />
-                      <div className="h-3 w-12 bg-muted animate-pulse rounded" />
-                      <div className="h-3 w-14 bg-muted animate-pulse rounded" />
-                    </div>
-                  ))}
-                </div>
-              ) : pm && pm.retentionCohorts.some((c) => c.newPatients > 0) ? (
-                <div className="bg-white rounded-xl border border-border/50 p-5 shadow-sm">
+              {!pmLoading && pm && pm.retentionCohorts.some((c) => c.newPatients > 0) && (
+                <div className="bg-white rounded-2xl border border-border/50 p-4 shadow-sm">
                   <h4 className="text-sm font-semibold text-foreground mb-3">{t("analytics.cohortTitle")}</h4>
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs">
@@ -416,53 +377,35 @@ export default function AnalyticsPage() {
                           <tr key={cohort.month} className="border-b border-border/20 hover:bg-muted/30 transition-colors">
                             <td className="py-2 px-3 font-medium text-foreground">{cohort.month}</td>
                             <td className="py-2 px-3 text-right text-foreground">{cohort.newPatients}</td>
-                            <td className="py-2 px-3 text-right">
-                              {cohort.newPatients > 0 ? (
-                                <span className={`px-1.5 py-0.5 rounded font-medium ${
-                                  cohort.returnedIn3m / cohort.newPatients >= 0.5 ? "bg-emerald-100 text-emerald-700" :
-                                  cohort.returnedIn3m > 0 ? "bg-amber-100 text-amber-700" : "text-muted-foreground"
-                                }`}>
-                                  {cohort.returnedIn3m > 0
-                                    ? `${cohort.returnedIn3m} (${Math.round((cohort.returnedIn3m / cohort.newPatients) * 100)}%)`
-                                    : "—"}
-                                </span>
-                              ) : "—"}
-                            </td>
-                            <td className="py-2 px-3 text-right">
-                              {cohort.newPatients > 0 ? (
-                                <span className={`px-1.5 py-0.5 rounded font-medium ${
-                                  cohort.returnedIn6m / cohort.newPatients >= 0.5 ? "bg-emerald-100 text-emerald-700" :
-                                  cohort.returnedIn6m > 0 ? "bg-amber-100 text-amber-700" : "text-muted-foreground"
-                                }`}>
-                                  {cohort.returnedIn6m > 0
-                                    ? `${cohort.returnedIn6m} (${Math.round((cohort.returnedIn6m / cohort.newPatients) * 100)}%)`
-                                    : "—"}
-                                </span>
-                              ) : "—"}
-                            </td>
-                            <td className="py-2 px-3 text-right">
-                              {cohort.newPatients > 0 ? (
-                                <span className={`px-1.5 py-0.5 rounded font-medium ${
-                                  cohort.returnedIn12m / cohort.newPatients >= 0.5 ? "bg-emerald-100 text-emerald-700" :
-                                  cohort.returnedIn12m > 0 ? "bg-amber-100 text-amber-700" : "text-muted-foreground"
-                                }`}>
-                                  {cohort.returnedIn12m > 0
-                                    ? `${cohort.returnedIn12m} (${Math.round((cohort.returnedIn12m / cohort.newPatients) * 100)}%)`
-                                    : "—"}
-                                </span>
-                              ) : "—"}
-                            </td>
+                            {([
+                              { count: cohort.returnedIn3m,  total: cohort.newPatients },
+                              { count: cohort.returnedIn6m,  total: cohort.newPatients },
+                              { count: cohort.returnedIn12m, total: cohort.newPatients },
+                            ] as { count: number; total: number }[]).map((cell, ci) => (
+                              <td key={ci} className="py-2 px-3 text-right">
+                                {cell.total > 0 ? (
+                                  <span className={`px-1.5 py-0.5 rounded font-medium ${
+                                    cell.count / cell.total >= 0.5 ? "bg-emerald-100 text-emerald-700" :
+                                    cell.count > 0               ? "bg-amber-100 text-amber-700"   : "text-muted-foreground"
+                                  }`}>
+                                    {cell.count > 0
+                                      ? `${cell.count} (${Math.round((cell.count / cell.total) * 100)}%)`
+                                      : "—"}
+                                  </span>
+                                ) : "—"}
+                              </td>
+                            ))}
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
                 </div>
-              ) : null}
+              )}
 
               {/* Top patients by LTV — owner/admin only */}
               {isOwnerOrAdmin && (
-                <div className="bg-white rounded-xl border border-border/50 p-5 shadow-sm">
+                <div className="bg-white rounded-2xl border border-border/50 p-4 shadow-sm">
                   <div className="flex items-center gap-2 mb-3">
                     <Crown className="h-4 w-4 text-amber-500" />
                     <h4 className="text-sm font-semibold text-foreground">{t("analytics.topByLtv")}</h4>
@@ -500,113 +443,143 @@ export default function AnalyticsPage() {
             </div>
           )}
 
-          {/* Channel Analytics — owner/admin only */}
-          {isOwnerOrAdmin && (
-            <div className="bg-white rounded-xl border border-border/50 p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Radio className="h-4 w-4 text-primary" />
-                  <h3 className="text-sm font-semibold text-foreground">{t("channelAnalytics.title")}</h3>
+          {/* ── Section 3: Patient distribution pie ── */}
+          {statusData.length > 0 && (
+            <div className="bg-white rounded-2xl border border-border/50 p-5 shadow-sm">
+              <h3 className="text-sm font-bold text-foreground mb-4">На каком этапе находятся пациенты?</h3>
+              <div className="flex flex-col lg:flex-row gap-4 items-center">
+                <div className="w-full lg:w-64 shrink-0">
+                  <ResponsiveContainer width="100%" height={220}>
+                    <PieChart>
+                      <Pie
+                        data={statusData}
+                        cx="50%" cy="50%"
+                        innerRadius={55} outerRadius={90}
+                        paddingAngle={2}
+                        dataKey="value"
+                      >
+                        {statusData.map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
-                <div className="flex items-center gap-1">
-                  {(["week", "month", "quarter"] as Period[]).map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => setChannelPeriod(p)}
-                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                        channelPeriod === p
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:bg-muted"
-                      }`}
-                    >
-                      {t(`channelAnalytics.${p}`)}
-                    </button>
+                <div className="flex-1 grid grid-cols-1 gap-1.5">
+                  {statusData.map((item, index) => (
+                    <div key={item.name} className="flex items-center gap-2 py-1 border-b border-border/20 last:border-0">
+                      <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                      <span className="text-xs text-muted-foreground flex-1">{item.name}</span>
+                      <span className="text-xs font-bold text-foreground">{String(item.value)}</span>
+                    </div>
                   ))}
                 </div>
               </div>
+            </div>
+          )}
 
-              {channelStats.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">{t("channelAnalytics.noData")}</p>
-              ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Pie chart */}
-                  <div>
-                    <ResponsiveContainer width="100%" height={240}>
-                      <PieChart>
-                        <Pie
-                          data={channelStats.map((s) => ({ name: s.channelName, value: s.patientCount }))}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={50}
-                          outerRadius={90}
-                          paddingAngle={2}
-                          dataKey="value"
-                        >
-                          {channelStats.map((_, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className="mt-2 space-y-1">
-                      {channelStats.map((s, i) => (
-                        <div key={s.channelId} className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                          <span className="text-xs text-muted-foreground truncate">{s.channelName}</span>
-                          <span className="text-xs font-semibold text-foreground ml-auto">{s.patientCount}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+          {/* ── Section 4: Doctor KPIs table ── */}
+          {doctorKpis.length > 0 && (
+            <div className="bg-white rounded-2xl border border-border/50 p-5 shadow-sm">
+              <h3 className="text-sm font-bold text-foreground mb-4">{t("analytics.doctorKpis")}</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border/30">
+                      <th className="text-left text-xs font-semibold text-muted-foreground py-3 px-3">{t("analytics.doctorName")}</th>
+                      <th className="text-right text-xs font-semibold text-muted-foreground py-3 px-3">{t("analytics.patients")}</th>
+                      <th className="text-right text-xs font-semibold text-muted-foreground py-3 px-3">{t("analytics.procedures")}</th>
+                      <th className="text-right text-xs font-semibold text-muted-foreground py-3 px-3">{t("analytics.revenue")}</th>
+                      <th className="text-right text-xs font-semibold text-muted-foreground py-3 px-3">{t("analytics.avgCheck")}</th>
+                      <th className="text-right text-xs font-semibold text-muted-foreground py-3 px-3">{t("analytics.nps")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {doctorKpis.map((doctor) => (
+                      <tr key={doctor.doctorId} className="border-b border-border/30 hover:bg-muted/50 transition-colors">
+                        <td className="text-sm text-foreground py-3 px-3 font-medium">{doctor.doctorName}</td>
+                        <td className="text-sm text-foreground py-3 px-3 text-right">{doctor.patientsCount}</td>
+                        <td className="text-sm text-foreground py-3 px-3 text-right">{doctor.proceduresCount}</td>
+                        <td className="text-sm text-foreground py-3 px-3 text-right">₸{doctor.revenueTotal.toLocaleString()}</td>
+                        <td className="text-sm text-foreground py-3 px-3 text-right">₸{Math.round(doctor.averageCheck).toLocaleString()}</td>
+                        <td className="text-sm text-foreground py-3 px-3 text-right">
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${
+                            doctor.nps >= 70 ? "bg-emerald-100 text-emerald-700" :
+                            doctor.nps >= 50 ? "bg-amber-100 text-amber-700"    : "bg-red-100 text-red-700"
+                          }`}>
+                            {doctor.nps}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
-                  {/* Table */}
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-border/30">
-                          <th className="text-left text-xs font-semibold text-muted-foreground py-2 px-3">{t("channelAnalytics.channel")}</th>
-                          <th className="text-right text-xs font-semibold text-muted-foreground py-2 px-3">Клики</th>
-                          <th className="text-right text-xs font-semibold text-muted-foreground py-2 px-3">{t("channelAnalytics.patients")}</th>
-                          <th className="text-right text-xs font-semibold text-muted-foreground py-2 px-3">{t("channelAnalytics.conversion")}</th>
-                          <th className="text-right text-xs font-semibold text-muted-foreground py-2 px-3">{t("channelAnalytics.revenue")}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {channelStats.map((s) => {
-                          const clickToLead = s.clickCount > 0
-                            ? Math.round((s.patientCount / s.clickCount) * 100)
-                            : null;
-                          return (
-                            <tr key={s.channelId} className="border-b border-border/30 hover:bg-muted/50 transition-colors">
-                              <td className="text-xs text-foreground py-2 px-3 font-medium">{s.channelName}</td>
-                              <td className="text-xs text-foreground py-2 px-3 text-right">
-                                <span className="font-mono">{s.clickCount}</span>
-                                {clickToLead !== null && (
-                                  <span className="ml-1 text-muted-foreground">({clickToLead}%→)</span>
-                                )}
-                              </td>
-                              <td className="text-xs text-foreground py-2 px-3 text-right">{s.patientCount}</td>
-                              <td className="text-xs py-2 px-3 text-right">
-                                <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                                  s.conversionRate >= 50 ? "bg-emerald-100 text-emerald-700" :
-                                  s.conversionRate >= 25 ? "bg-amber-100 text-amber-700" :
-                                  "bg-red-100 text-red-700"
-                                }`}>
+          {/* ── Section 5: Channel analytics ── */}
+          {isOwnerOrAdmin && (
+            <div className="bg-white rounded-2xl border border-border/50 shadow-sm overflow-hidden">
+              <button
+                onClick={() => setChannelOpen((v) => !v)}
+                className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Radio className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-bold text-foreground">Откуда к нам приходят люди?</span>
+                </div>
+                {channelOpen
+                  ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                  : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+              </button>
+
+              {channelOpen && (
+                <div className="px-5 pb-5">
+                  {channelStats.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-8">{t("channelAnalytics.noData")}</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Bar-style channel breakdown */}
+                      {channelStats.map((s, i) => {
+                        const max = Math.max(...channelStats.map((x) => x.patientCount));
+                        const pct = max > 0 ? Math.round((s.patientCount / max) * 100) : 0;
+                        const convLevel: StatusLevel =
+                          s.conversionRate >= 50 ? "good" :
+                          s.conversionRate >= 25 ? "normal" : "warn";
+                        const convCfg = statusConfig(convLevel);
+                        return (
+                          <div key={s.channelId} className="space-y-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                                <span className="text-sm font-medium text-foreground">{s.channelName}</span>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${convCfg.badge}`}>
                                   {s.conversionRate}%
                                 </span>
-                              </td>
-                              <td className="text-xs text-foreground py-2 px-3 text-right">₸{s.totalRevenue.toLocaleString()}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                                <span className="text-xs font-bold text-foreground">{s.patientCount} чел.</span>
+                                <span className="text-xs text-muted-foreground">₸{s.totalRevenue.toLocaleString()}</span>
+                              </div>
+                            </div>
+                            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all"
+                                style={{ width: `${pct}%`, backgroundColor: COLORS[i % COLORS.length] }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           )}
+
         </div>
       </div>
     </div>
