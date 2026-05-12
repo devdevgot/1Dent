@@ -52,7 +52,6 @@ import {
 } from "@/lib/patient-utils";
 import type { PatientStatus, InteractionType, ToothCondition } from "@workspace/api-client-react";
 import { FdiChart, CONDITION_CONFIG, getCanalCount } from "@/components/dental-chart/fdi-chart";
-import { TreatmentStagesBoard } from "@/components/dental-chart/treatment-stages-board";
 import { useTranslation } from "react-i18next";
 
 
@@ -938,7 +937,6 @@ export function PatientDetailPanel() {
   const [interactionHistoryCollapsed, setInteractionHistoryCollapsed] = useState(true);
   const [financialCollapsed, setFinancialCollapsed] = useState(true);
   const [proceduresCollapsed, setProceduresCollapsed] = useState(true);
-  const [planSectionCollapsed, setPlanSectionCollapsed] = useState(false);
   const [expandedPlanId, setExpandedPlanId] = useState<string | null>(null);
 
   const { data, isLoading } = useGetPatient(selectedPatientId ?? "", {
@@ -1054,7 +1052,7 @@ export function PatientDetailPanel() {
   const { data: planData, isLoading: planLoading } = useGetActiveTreatmentPlan(selectedPatientId ?? "", {
     query: {
       queryKey: getGetActiveTreatmentPlanQueryKey(selectedPatientId ?? ""),
-      enabled: !!selectedPatientId && activeTab === "dental",
+      enabled: !!selectedPatientId && (activeTab === "dental" || activeTab === "plan"),
     },
   });
   const activePlan = planData?.data?.plan ?? null;
@@ -1066,7 +1064,7 @@ export function PatientDetailPanel() {
   const { data: plansHistoryData, isLoading: plansLoading } = useListTreatmentPlans(selectedPatientId ?? "", {
     query: {
       queryKey: getListTreatmentPlansQueryKey(selectedPatientId ?? ""),
-      enabled: !!selectedPatientId && activeTab === "dental",
+      enabled: !!selectedPatientId && (activeTab === "dental" || activeTab === "plan"),
     },
   });
   const dentalLoading = teethLoading || planLoading || plansLoading;
@@ -1338,6 +1336,7 @@ export function PatientDetailPanel() {
   const tabs = [
     { id: "info"        as const, label: "Информация" },
     { id: "dental"      as const, label: t("patient.tabDental") },
+    { id: "plan"        as const, label: "Планы лечения" },
     { id: "ai_analysis" as const, label: "ИИ анализ" },
   ];
 
@@ -1979,556 +1978,10 @@ export function PatientDetailPanel() {
                           }}
                         />
 
-                        <TreatmentStagesBoard
-                          patientId={selectedPatientId ?? ""}
-                          teeth={teethRecords}
-                          activePlan={activePlan}
-                        />
-
                       </div>
                     )}
                   </div>
 
-                  {/* Treatment Plan section — below the dental chart */}
-                  {!dentalLoading && !isDiagnosisMode && hasDiagnosis && (
-                    <div className="border-t border-border/50">
-                      {/* Section label */}
-                      <button
-                        onClick={() => setPlanSectionCollapsed(!planSectionCollapsed)}
-                        className="w-full px-4 py-2.5 flex items-center justify-between gap-2 bg-gray-50/60 hover:bg-gray-100/60 transition-colors"
-                      >
-                        <div className="flex items-center gap-2">
-                          <ClipboardList className="w-3.5 h-3.5 text-primary" />
-                          <span className="text-xs font-bold text-gray-600 uppercase tracking-wide">
-                            История плана лечения
-                          </span>
-                        </div>
-                        <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${planSectionCollapsed ? "-rotate-90" : ""}`} />
-                      </button>
-
-                      {!planSectionCollapsed && (
-                      <>
-                      {false && (!activePlan ? (
-                        <div className="flex flex-col items-center justify-center gap-4 px-6 py-8">
-                          {/* State: no diagnosis at all */}
-                          {!hasDiagnosis && (
-                            <>
-                              <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
-                                <ClipboardList className="w-6 h-6 text-slate-400" />
-                              </div>
-                              <div className="text-center">
-                                <p className="font-semibold text-gray-800 text-sm">Диагностика не проведена</p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Сначала проведите осмотр зубов пациента
-                                </p>
-                              </div>
-                              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-left max-w-xs">
-                                <svg className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                                <p className="text-xs text-amber-700 leading-relaxed">
-                                  Чтобы составить план лечения, сначала перейдите на вкладку <span className="font-semibold">«Диагностика»</span> и проведите осмотр зубов
-                                </p>
-                              </div>
-                            </>
-                          )}
-
-                          {/* State: has diagnosis but needs re-diagnosis before next plan */}
-                          {hasDiagnosis && needsRediagnosis && (
-                            <>
-                              <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center">
-                                <svg className="w-6 h-6 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                                  <path d="M3 3v5h5"/>
-                                </svg>
-                              </div>
-                              <div className="text-center">
-                                <p className="font-semibold text-gray-800 text-sm">
-                                  Нужна повторная диагностика
-                                </p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Для создания Плана {allPlans.length + 1} проведите повторный осмотр
-                                </p>
-                              </div>
-                              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-left max-w-xs">
-                                <svg className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                                <p className="text-xs text-amber-700 leading-relaxed">
-                                  Для создания нового плана перейдите на вкладку <span className="font-semibold">«Диагностика»</span> и проведите повторный осмотр
-                                </p>
-                              </div>
-                            </>
-                          )}
-
-                          {/* State: ready to create plan */}
-                          {hasDiagnosis && !needsRediagnosis && (
-                            <>
-                              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                                <ClipboardList className="w-6 h-6 text-primary" />
-                              </div>
-                              <div className="text-center">
-                                <p className="font-semibold text-gray-800 text-sm">
-                                  {pastPlans.length > 0
-                                    ? `Создать План ${allPlans.length + 1}`
-                                    : "Нет активного плана лечения"}
-                                </p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  {pastPlans.length > 0
-                                    ? "Предыдущие планы сохранены в истории"
-                                    : "Данные из диагностики добавятся автоматически"}
-                                </p>
-                              </div>
-                              <Button
-                                onClick={() => createPlanMutation.mutate({ id: selectedPatientId, data: {} })}
-                                disabled={createPlanMutation.isPending}
-                                className="gap-2"
-                              >
-                                <Plus className="w-4 h-4" />
-                                {pastPlans.length > 0
-                                  ? `Создать План ${allPlans.length + 1}`
-                                  : "Составить план из диагностики"}
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      ) : (
-                        <>
-                          {/* Plan header */}
-                          <div className="px-4 pt-3 pb-2 border-b border-border/40 space-y-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-gray-900">
-                            План {activePlan.planNumber}
-                          </span>
-                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${
-                            activePlan.status === "draft"
-                              ? "bg-slate-50 text-slate-600 border-slate-200"
-                              : activePlan.status === "approved"
-                              ? "bg-blue-50 text-blue-700 border-blue-200"
-                              : activePlan.status === "in_progress"
-                              ? "bg-amber-50 text-amber-700 border-amber-200"
-                              : "bg-green-50 text-green-700 border-green-200"
-                          }`}>
-                            {activePlan.status === "draft" ? "Черновик"
-                              : activePlan.status === "approved" ? "Согласован"
-                              : activePlan.status === "in_progress" ? "В работе"
-                              : "Завершён"}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          {activePlan.status === "draft" && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-xs h-7 gap-1.5 border-blue-200 text-blue-700 hover:bg-blue-50"
-                              onClick={() => approvePlanMutation.mutate({ id: selectedPatientId, planId: activePlan.id })}
-                              disabled={approvePlanMutation.isPending}
-                            >
-                              <BadgeCheck className="w-3.5 h-3.5" />
-                              Согласовать
-                            </Button>
-                          )}
-                          {(activePlan.status === "completed" || activePlan.status === "in_progress") && (
-                            needsRediagnosis ? (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-xs h-7 gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50"
-                                onClick={() => setIsDiagnosisMode(true)}
-                                title="Нужна повторная диагностика"
-                              >
-                                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
-                                </svg>
-                                Повторная диагностика
-                              </Button>
-                            ) : (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-xs h-7 gap-1.5 border-primary/30 text-primary hover:bg-primary/5"
-                                onClick={() => createPlanMutation.mutate({ id: selectedPatientId, data: {} })}
-                                disabled={createPlanMutation.isPending}
-                              >
-                                <Plus className="w-3.5 h-3.5" />
-                                Следующий план
-                              </Button>
-                            )
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">
-                          {activePlan.items.length} шаг{activePlan.items.length === 1 ? "" : activePlan.items.length < 5 ? "а" : "ов"}
-                          {" · "}
-                          {new Date(activePlan.createdAt).toLocaleDateString("ru", { day: "2-digit", month: "short", year: "numeric" })}
-                        </span>
-                        <span className="text-sm font-bold text-gray-900">
-                          {activePlan.totalCost.toLocaleString("ru")} ₸
-                        </span>
-                      </div>
-                    </div>
-
-                          {/* Tooth filter bar */}
-                          {planViewToothFdi !== null && (
-                            <div className="px-3 pt-2 pb-0">
-                              <div className="flex items-center justify-between bg-primary/8 border border-primary/20 rounded-lg px-3 py-1.5">
-                                <span className="text-xs font-medium text-primary">
-                                  🦷 Зуб #{planViewToothFdi} — план лечения
-                                </span>
-                                <button
-                                  onClick={() => setPlanViewToothFdi(null)}
-                                  className="text-xs text-primary hover:text-primary/70 font-medium transition-colors"
-                                >
-                                  Все зубы
-                                </button>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Items list */}
-                          <div className="p-3 space-y-2">
-                        {visibleActivePlanItems.length === 0 && (
-                          <p className="text-sm text-muted-foreground text-center py-8">
-                            {planViewToothFdi !== null
-                              ? `Нет позиций плана для зуба #${planViewToothFdi}`
-                              : "Нет шагов. Добавьте первый шаг."}
-                          </p>
-                        )}
-                        {visibleActivePlanItems.map((item) => (
-                          <div
-                            key={item.id}
-                            className={`rounded-xl border transition-colors ${
-                              item.status === "completed"
-                                ? "bg-green-50/80 border-green-200"
-                                : item.status === "cancelled"
-                                ? "bg-gray-50 border-gray-200 opacity-60"
-                                : "bg-white border-border/50"
-                            }`}
-                          >
-                            {editingItemId === item.id ? (
-                              <div className="p-3 space-y-2">
-                                <input
-                                  type="text"
-                                  value={editItemTitle}
-                                  onChange={(e) => setEditItemTitle(e.target.value)}
-                                  className="w-full text-sm border border-border rounded-lg px-3 py-1.5 outline-none focus:ring-1 focus:ring-primary"
-                                />
-                                <input
-                                  type="number"
-                                  value={editItemPrice}
-                                  onChange={(e) => setEditItemPrice(e.target.value)}
-                                  min={0}
-                                  className="w-full text-sm border border-border rounded-lg px-3 py-1.5 outline-none focus:ring-1 focus:ring-primary"
-                                />
-                                <div className="flex gap-2">
-                                  <Button
-                                    size="sm"
-                                    className="h-7 text-xs"
-                                    disabled={!editItemTitle.trim() || updateItemMutation.isPending}
-                                    onClick={() => {
-                                      updateItemMutation.mutate({
-                                        id: selectedPatientId,
-                                        planId: activePlan.id,
-                                        itemId: item.id,
-                                        data: { title: editItemTitle.trim(), price: parseFloat(editItemPrice) || 0 },
-                                      });
-                                    }}
-                                  >
-                                    Сохранить
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-7 text-xs"
-                                    onClick={() => setEditingItemId(null)}
-                                  >
-                                    Отмена
-                                  </Button>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="flex items-start gap-2.5 p-3">
-                                <button
-                                  className="mt-0.5 shrink-0 disabled:cursor-not-allowed"
-                                  disabled={item.status !== "pending" || completeItemMutation.isPending}
-                                  onClick={() =>
-                                    completeItemMutation.mutate({
-                                      id: selectedPatientId,
-                                      planId: activePlan.id,
-                                      itemId: item.id,
-                                    })
-                                  }
-                                  title={item.status === "pending" ? "Отметить как выполненный" : undefined}
-                                >
-                                  {item.status === "completed" ? (
-                                    <CheckCircle2 className="w-4 h-4 text-green-600" />
-                                  ) : (
-                                    <Circle className="w-4 h-4 text-border hover:text-primary transition-colors" />
-                                  )}
-                                </button>
-                                <div className="flex-1 min-w-0">
-                                  <p className={`text-sm font-medium leading-tight ${item.status === "completed" ? "line-through text-green-700" : "text-gray-800"}`}>
-                                    {item.title}
-                                  </p>
-                                  <div className="flex items-center gap-2 mt-0.5">
-                                    {item.toothFdi && (
-                                      <span className={`text-xs ${item.status === "completed" ? "text-green-700/80" : "text-muted-foreground"}`}>Зуб #{item.toothFdi}</span>
-                                    )}
-                                    {item.status === "completed" && (
-                                      <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
-                                        Выполнено
-                                      </span>
-                                    )}
-                                    {item.mkb10Code && (
-                                      <span className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono">
-                                        {item.mkb10Code}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-1 shrink-0">
-                                  <span className={`text-sm font-semibold mr-1 ${item.status === "completed" ? "text-green-700" : "text-gray-700"}`}>
-                                    {item.price.toLocaleString("ru")} ₸
-                                  </span>
-                                  {activePlan.status === "draft" && item.status === "pending" && (() => {
-                                    const pendingItems = activePlan.items.filter((i) => i.status === "pending");
-                                    const pendingIdx = pendingItems.indexOf(item);
-                                    return (
-                                      <>
-                                        <button
-                                          disabled={pendingIdx === 0 || updateItemMutation.isPending}
-                                          onClick={() => {
-                                            const above = pendingItems[pendingIdx - 1];
-                                            if (!above) return;
-                                            updateItemMutation.mutate({ id: selectedPatientId, planId: activePlan.id, itemId: item.id, data: { sortOrder: above.sortOrder } });
-                                            updateItemMutation.mutate({ id: selectedPatientId, planId: activePlan.id, itemId: above.id, data: { sortOrder: item.sortOrder } });
-                                          }}
-                                          className="p-0.5 text-muted-foreground hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                                          title="Переместить вверх"
-                                        >
-                                          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 15l-6-6-6 6"/></svg>
-                                        </button>
-                                        <button
-                                          disabled={pendingIdx === pendingItems.length - 1 || updateItemMutation.isPending}
-                                          onClick={() => {
-                                            const below = pendingItems[pendingIdx + 1];
-                                            if (!below) return;
-                                            updateItemMutation.mutate({ id: selectedPatientId, planId: activePlan.id, itemId: item.id, data: { sortOrder: below.sortOrder } });
-                                            updateItemMutation.mutate({ id: selectedPatientId, planId: activePlan.id, itemId: below.id, data: { sortOrder: item.sortOrder } });
-                                          }}
-                                          className="p-0.5 text-muted-foreground hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                                          title="Переместить вниз"
-                                        >
-                                          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 9l6 6 6-6"/></svg>
-                                        </button>
-                                        <button
-                                          onClick={() => {
-                                            setEditingItemId(item.id);
-                                            setEditItemTitle(item.title);
-                                            setEditItemPrice(String(item.price));
-                                          }}
-                                          className="p-0.5 text-muted-foreground hover:text-primary transition-colors"
-                                          title="Редактировать"
-                                        >
-                                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                                          </svg>
-                                        </button>
-                                      </>
-                                    );
-                                  })()}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-
-                        {/* Add item form — only allowed in draft status */}
-                        {activePlan.status === "draft" && (
-                          showAddItemForm ? (
-                            <div className="border border-dashed border-primary/40 rounded-xl p-3 space-y-2 bg-primary/5">
-                              <input
-                                type="text"
-                                placeholder="Название шага"
-                                value={newItemTitle}
-                                onChange={(e) => setNewItemTitle(e.target.value)}
-                                className="w-full text-sm border border-border rounded-lg px-3 py-1.5 outline-none focus:ring-1 focus:ring-primary"
-                              />
-                              <input
-                                type="number"
-                                placeholder="Цена (₸)"
-                                value={newItemPrice}
-                                onChange={(e) => setNewItemPrice(e.target.value)}
-                                min={0}
-                                className="w-full text-sm border border-border rounded-lg px-3 py-1.5 outline-none focus:ring-1 focus:ring-primary"
-                              />
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  className="h-7 text-xs"
-                                  disabled={!newItemTitle.trim() || addPlanItemMutation.isPending}
-                                  onClick={() => {
-                                    const price = parseFloat(newItemPrice) || 0;
-                                    addPlanItemMutation.mutate({
-                                      id: selectedPatientId,
-                                      planId: activePlan.id,
-                                      data: { title: newItemTitle.trim(), price },
-                                    });
-                                  }}
-                                >
-                                  Добавить
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-7 text-xs"
-                                  onClick={() => { setShowAddItemForm(false); setNewItemTitle(""); setNewItemPrice(""); }}
-                                >
-                                  Отмена
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => setShowAddItemForm(true)}
-                              className="w-full flex items-center gap-2 py-2 px-3 rounded-xl border border-dashed border-border text-xs text-muted-foreground hover:border-primary/40 hover:text-primary hover:bg-primary/5 transition-colors"
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                              Добавить шаг
-                            </button>
-                          )
-                        )}
-                      </div>
-                      </>
-                      ))}
-
-                      {/* Plan history — completed/cancelled plans */}
-                {pastPlans.length > 0 && (
-                  <div className="border-t border-border/40 shrink-0">
-                    <button
-                      onClick={() => setHistoryExpanded(!historyExpanded)}
-                      className="w-full flex items-center justify-between px-4 py-2.5 text-xs text-muted-foreground hover:text-gray-700 hover:bg-gray-50/60 transition-colors"
-                    >
-                      <span className="font-medium">История планов ({pastPlans.length})</span>
-                      <ChevronDown className={`w-3.5 h-3.5 transition-transform ${historyExpanded ? "rotate-180" : ""}`} />
-                    </button>
-                    {historyExpanded && (
-                      <div className="max-h-96 overflow-y-auto custom-scrollbar">
-                        {[...pastPlans].sort((a, b) => b.planNumber - a.planNumber).map((plan) => {
-                          const isOpen = expandedPlanId === plan.id;
-                          const doneCount = plan.items.filter((i) => i.status === "completed").length;
-                          const uniqueToothFdis = Array.from(
-                            new Set(plan.items.map((i) => i.toothFdi).filter((f): f is number => f !== null && f !== undefined))
-                          ).sort((a, b) => a - b);
-                          return (
-                            <div key={plan.id} className="border-t border-border/30">
-                              <button
-                                onClick={() => setExpandedPlanId(isOpen ? null : plan.id)}
-                                className="w-full px-4 py-2.5 hover:bg-gray-50/60 transition-colors text-left"
-                              >
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform shrink-0 ${isOpen ? "rotate-180" : ""}`} />
-                                    <span className="text-xs font-bold text-gray-700">
-                                      {uniqueToothFdis.length > 0
-                                        ? `Лечение зуб${uniqueToothFdis.length === 1 ? "а" : "ов"} №${uniqueToothFdis.join(", №")}`
-                                        : `План ${plan.planNumber}`}
-                                    </span>
-                                    <span className={`text-xs px-1.5 py-0.5 rounded-full border ${
-                                      plan.status === "completed"
-                                        ? "bg-green-50 text-green-700 border-green-200"
-                                        : "bg-gray-100 text-gray-500 border-gray-200"
-                                    }`}>
-                                      {plan.status === "completed" ? "Завершён" : "Архив"}
-                                    </span>
-                                  </div>
-                                  <span className="text-xs font-semibold text-gray-700 shrink-0 ml-2">
-                                    {plan.totalCost.toLocaleString("ru")} ₸
-                                  </span>
-                                </div>
-                                {uniqueToothFdis.length > 0 && (
-                                  <div className="flex items-center gap-1.5 mt-1 pl-5 flex-wrap">
-                                    {uniqueToothFdis.map((fdi) => (
-                                      <span
-                                        key={fdi}
-                                        role="button"
-                                        tabIndex={0}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setModalToothFdi(fdi);
-                                        }}
-                                        onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); setModalToothFdi(fdi); } }}
-                                        className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer transition-colors border border-primary/20"
-                                      >
-                                        Зуб #{fdi}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                                <p className="text-xs text-muted-foreground mt-0.5 pl-5">
-                                  {doneCount}/{plan.items.length} шаг{plan.items.length === 1 ? "" : plan.items.length < 5 ? "а" : "ов"} выполнено
-                                  {" · "}
-                                  {new Date(plan.createdAt).toLocaleDateString("ru", { day: "2-digit", month: "short", year: "numeric" })}
-                                </p>
-                              </button>
-                              {isOpen && (
-                                <div className="pb-2 bg-gray-50/40">
-                                  {plan.items.length === 0 ? (
-                                    <p className="text-xs text-muted-foreground px-8 py-2">Нет шагов</p>
-                                  ) : (
-                                    plan.items.map((item) => (
-                                      <div key={item.id} className="flex items-start gap-2.5 px-8 py-1.5">
-                                        <span className={`mt-0.5 shrink-0 w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
-                                          item.status === "completed"
-                                            ? "bg-green-500 border-green-500"
-                                            : item.status === "cancelled"
-                                            ? "bg-gray-200 border-gray-300"
-                                            : "border-gray-300 bg-white"
-                                        }`}>
-                                          {item.status === "completed" && (
-                                            <svg className="w-2 h-2 text-white" viewBox="0 0 12 12" fill="none">
-                                              <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                            </svg>
-                                          )}
-                                          {item.status === "cancelled" && (
-                                            <svg className="w-2 h-2 text-gray-400" viewBox="0 0 12 12" fill="none">
-                                              <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                                            </svg>
-                                          )}
-                                        </span>
-                                        <div className="flex-1 min-w-0">
-                                          <p className={`text-xs leading-snug ${
-                                            item.status === "completed"
-                                              ? "text-gray-500 line-through"
-                                              : item.status === "cancelled"
-                                              ? "text-gray-400 line-through"
-                                              : "text-gray-700"
-                                          }`}>
-                                            {item.title}
-                                          </p>
-                                          {(item.toothFdi || item.mkb10Code) && (
-                                            <p className="text-xs text-muted-foreground mt-0.5 flex gap-2">
-                                              {item.toothFdi && <span>зуб #{item.toothFdi}</span>}
-                                              {item.mkb10Code && <span className="font-mono">{item.mkb10Code}</span>}
-                                            </p>
-                                          )}
-                                        </div>
-                                        <span className="text-xs text-gray-500 shrink-0">{item.price.toLocaleString("ru")} ₸</span>
-                                      </div>
-                                    ))
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                    </div>
-                    )}
-                      </>
-                      )}
-                    </div>
-                  )}
                 </div>
 
               {/* ── Pinned bottom bar: diagnosis action buttons ── */}
@@ -2581,6 +2034,513 @@ export function PatientDetailPanel() {
                 </div>
               )}
 
+              </div>
+            )}
+
+            {/* Treatment Plans Tab */}
+            {activeTab === "plan" && (
+              <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                {/* State: loading */}
+                {(planLoading || plansLoading) && (
+                  <div className="flex-1 flex items-center justify-center">
+                    <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                  </div>
+                )}
+
+                {/* State: no diagnosis yet */}
+                {!planLoading && !plansLoading && !hasDiagnosis && (
+                  <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6 py-10 text-center">
+                    <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center">
+                      <ClipboardList className="w-7 h-7 text-slate-400" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-800">Зубная карта не заполнена</p>
+                      <p className="text-xs text-muted-foreground mt-1 max-w-xs">
+                        Сначала проведите осмотр зубов пациента на вкладке «Зубная карта»
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      className="gap-2 text-sm"
+                      onClick={() => setActiveTab("dental")}
+                    >
+                      Перейти к зубной карте
+                    </Button>
+                  </div>
+                )}
+
+                {/* State: has diagnosis */}
+                {!planLoading && !plansLoading && hasDiagnosis && (
+                  <>
+                    {/* No active plan */}
+                    {!activePlan && (
+                      <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6 py-10 text-center">
+                        {needsRediagnosis ? (
+                          <>
+                            <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center">
+                              <svg className="w-7 h-7 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+                              </svg>
+                            </div>
+                            <div>
+                              <p className="font-semibold text-gray-800">Нужна повторная диагностика</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Для создания Плана {allPlans.length + 1} проведите повторный осмотр на вкладке «Зубная карта»
+                              </p>
+                            </div>
+                            <Button variant="outline" className="gap-2" onClick={() => setActiveTab("dental")}>
+                              Перейти к зубной карте
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+                              <ClipboardList className="w-7 h-7 text-primary" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-gray-800">
+                                {pastPlans.length > 0 ? `Создать план ${allPlans.length + 1}` : "Нет активного плана лечения"}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {pastPlans.length > 0 ? "Предыдущие планы сохранены в истории ниже" : "Данные из диагностики добавятся автоматически"}
+                              </p>
+                            </div>
+                            <Button
+                              className="gap-2"
+                              onClick={() => createPlanMutation.mutate({ id: selectedPatientId, data: {} })}
+                              disabled={createPlanMutation.isPending}
+                            >
+                              <Plus className="w-4 h-4" />
+                              {pastPlans.length > 0 ? `Создать план ${allPlans.length + 1}` : "Составить план из диагностики"}
+                            </Button>
+                          </>
+                        )}
+
+                        {/* Archived plans even when no active plan */}
+                        {pastPlans.length > 0 && (
+                          <div className="w-full mt-4 border-t border-border/40 pt-4">
+                            <button
+                              onClick={() => setHistoryExpanded(!historyExpanded)}
+                              className="w-full flex items-center justify-between px-2 py-2 text-xs text-muted-foreground hover:text-gray-700 transition-colors"
+                            >
+                              <span className="font-medium">История планов ({pastPlans.length})</span>
+                              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${historyExpanded ? "rotate-180" : ""}`} />
+                            </button>
+                            {historyExpanded && (
+                              <div className="space-y-2 mt-1">
+                                {[...pastPlans].sort((a, b) => b.planNumber - a.planNumber).map((plan) => (
+                                  <div key={plan.id} className="rounded-xl border border-border/50 bg-gray-50/50 px-3.5 py-3 text-left">
+                                    <div className="flex items-center justify-between mb-1">
+                                      <span className="text-sm font-semibold text-gray-700">План {plan.planNumber}</span>
+                                      <span className={`text-xs px-1.5 py-0.5 rounded-full border ${plan.status === "completed" ? "bg-green-50 text-green-700 border-green-200" : "bg-gray-100 text-gray-500 border-gray-200"}`}>
+                                        {plan.status === "completed" ? "Завершён" : "Архив"}
+                                      </span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                      {plan.items.filter(i => i.status === "completed").length}/{plan.items.length} шагов · {plan.totalCost.toLocaleString("ru")} ₸
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Has active plan */}
+                    {activePlan && (
+                      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                        {/* Plan header */}
+                        <div className="px-4 pt-3 pb-3 border-b border-border/40 shrink-0 space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-bold text-gray-900">
+                                План {activePlan.planNumber}
+                              </span>
+                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${
+                                activePlan.status === "draft" ? "bg-slate-50 text-slate-600 border-slate-200"
+                                : activePlan.status === "approved" ? "bg-blue-50 text-blue-700 border-blue-200"
+                                : activePlan.status === "in_progress" ? "bg-amber-50 text-amber-700 border-amber-200"
+                                : "bg-green-50 text-green-700 border-green-200"
+                              }`}>
+                                {activePlan.status === "draft" ? "Черновик"
+                                  : activePlan.status === "approved" ? "Согласован"
+                                  : activePlan.status === "in_progress" ? "В работе"
+                                  : "Завершён"}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              {activePlan.status === "draft" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-xs h-7 gap-1.5 border-blue-200 text-blue-700 hover:bg-blue-50"
+                                  onClick={() => approvePlanMutation.mutate({ id: selectedPatientId, planId: activePlan.id })}
+                                  disabled={approvePlanMutation.isPending}
+                                >
+                                  <BadgeCheck className="w-3.5 h-3.5" />
+                                  Согласовать
+                                </Button>
+                              )}
+                              {(activePlan.status === "completed" || activePlan.status === "in_progress") && (
+                                needsRediagnosis ? (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-xs h-7 gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50"
+                                    onClick={() => setActiveTab("dental")}
+                                  >
+                                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+                                    </svg>
+                                    Повторная диагностика
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-xs h-7 gap-1.5 border-primary/30 text-primary hover:bg-primary/5"
+                                    onClick={() => createPlanMutation.mutate({ id: selectedPatientId, data: {} })}
+                                    disabled={createPlanMutation.isPending}
+                                  >
+                                    <Plus className="w-3.5 h-3.5" />
+                                    Следующий план
+                                  </Button>
+                                )
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground">
+                              {activePlan.items.length} шаг{activePlan.items.length === 1 ? "" : activePlan.items.length < 5 ? "а" : "ов"}
+                              {" · "}
+                              {new Date(activePlan.createdAt).toLocaleDateString("ru", { day: "2-digit", month: "short", year: "numeric" })}
+                            </span>
+                            <span className="text-sm font-bold text-gray-900">
+                              {activePlan.totalCost.toLocaleString("ru")} ₸
+                            </span>
+                          </div>
+                          {/* Progress bar */}
+                          {activePlan.items.length > 0 && (() => {
+                            const done = activePlan.items.filter(i => i.status === "completed").length;
+                            const pct = Math.round((done / activePlan.items.length) * 100);
+                            return (
+                              <div>
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-xs text-muted-foreground">Выполнено {done} из {activePlan.items.length}</span>
+                                  <span className="text-xs font-semibold text-gray-600">{pct}%</span>
+                                </div>
+                                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                  <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
+
+                        {/* Tooth filter bar */}
+                        {planViewToothFdi !== null && (
+                          <div className="px-3 pt-2 pb-0 shrink-0">
+                            <div className="flex items-center justify-between bg-primary/8 border border-primary/20 rounded-lg px-3 py-1.5">
+                              <span className="text-xs font-medium text-primary">🦷 Зуб #{planViewToothFdi} — план лечения</span>
+                              <button onClick={() => setPlanViewToothFdi(null)} className="text-xs text-primary hover:text-primary/70 font-medium transition-colors">Все зубы</button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Items list */}
+                        <div className="flex-1 overflow-y-auto custom-scrollbar">
+                          <div className="p-3 space-y-2">
+                            {visibleActivePlanItems.length === 0 && (
+                              <p className="text-sm text-muted-foreground text-center py-8">
+                                {planViewToothFdi !== null ? `Нет позиций плана для зуба #${planViewToothFdi}` : "Нет шагов. Добавьте первый шаг."}
+                              </p>
+                            )}
+                            {visibleActivePlanItems.map((item) => (
+                              <div
+                                key={item.id}
+                                className={`rounded-xl border transition-colors ${
+                                  item.status === "completed" ? "bg-green-50/80 border-green-200"
+                                  : item.status === "cancelled" ? "bg-gray-50 border-gray-200 opacity-60"
+                                  : "bg-white border-border/50"
+                                }`}
+                              >
+                                {editingItemId === item.id ? (
+                                  <div className="p-3 space-y-2">
+                                    <input
+                                      type="text"
+                                      value={editItemTitle}
+                                      onChange={(e) => setEditItemTitle(e.target.value)}
+                                      className="w-full text-sm border border-border rounded-lg px-3 py-1.5 outline-none focus:ring-1 focus:ring-primary"
+                                    />
+                                    <input
+                                      type="number"
+                                      value={editItemPrice}
+                                      onChange={(e) => setEditItemPrice(e.target.value)}
+                                      min={0}
+                                      className="w-full text-sm border border-border rounded-lg px-3 py-1.5 outline-none focus:ring-1 focus:ring-primary"
+                                    />
+                                    <div className="flex gap-2">
+                                      <Button
+                                        size="sm"
+                                        className="h-7 text-xs"
+                                        disabled={!editItemTitle.trim() || updateItemMutation.isPending}
+                                        onClick={() => updateItemMutation.mutate({
+                                          id: selectedPatientId,
+                                          planId: activePlan.id,
+                                          itemId: item.id,
+                                          data: { title: editItemTitle.trim(), price: parseFloat(editItemPrice) || 0 },
+                                        })}
+                                      >Сохранить</Button>
+                                      <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditingItemId(null)}>Отмена</Button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-start gap-2.5 p-3">
+                                    <button
+                                      className="mt-0.5 shrink-0 disabled:cursor-not-allowed"
+                                      disabled={item.status !== "pending" || completeItemMutation.isPending}
+                                      onClick={() => completeItemMutation.mutate({ id: selectedPatientId, planId: activePlan.id, itemId: item.id })}
+                                      title={item.status === "pending" ? "Отметить как выполненный" : undefined}
+                                    >
+                                      {item.status === "completed"
+                                        ? <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                        : <Circle className="w-4 h-4 text-border hover:text-primary transition-colors" />
+                                      }
+                                    </button>
+                                    <div className="flex-1 min-w-0">
+                                      <p className={`text-sm font-medium leading-tight ${item.status === "completed" ? "line-through text-green-700" : "text-gray-800"}`}>
+                                        {item.title}
+                                      </p>
+                                      <div className="flex items-center gap-2 mt-0.5">
+                                        {item.toothFdi && (
+                                          <span className={`text-xs ${item.status === "completed" ? "text-green-700/80" : "text-muted-foreground"}`}>
+                                            Зуб #{item.toothFdi}
+                                          </span>
+                                        )}
+                                        {item.status === "completed" && (
+                                          <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Выполнено</span>
+                                        )}
+                                        {item.mkb10Code && (
+                                          <span className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono">{item.mkb10Code}</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      <span className={`text-sm font-semibold mr-1 ${item.status === "completed" ? "text-green-700" : "text-gray-700"}`}>
+                                        {item.price.toLocaleString("ru")} ₸
+                                      </span>
+                                      {activePlan.status === "draft" && item.status === "pending" && (() => {
+                                        const pendingItems = activePlan.items.filter((i) => i.status === "pending");
+                                        const pendingIdx = pendingItems.indexOf(item);
+                                        return (
+                                          <>
+                                            <button
+                                              disabled={pendingIdx === 0 || updateItemMutation.isPending}
+                                              onClick={() => {
+                                                const above = pendingItems[pendingIdx - 1];
+                                                if (!above) return;
+                                                updateItemMutation.mutate({ id: selectedPatientId, planId: activePlan.id, itemId: item.id, data: { sortOrder: above.sortOrder } });
+                                                updateItemMutation.mutate({ id: selectedPatientId, planId: activePlan.id, itemId: above.id, data: { sortOrder: item.sortOrder } });
+                                              }}
+                                              className="p-0.5 text-muted-foreground hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                            >
+                                              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 15l-6-6-6 6"/></svg>
+                                            </button>
+                                            <button
+                                              disabled={pendingIdx === pendingItems.length - 1 || updateItemMutation.isPending}
+                                              onClick={() => {
+                                                const below = pendingItems[pendingIdx + 1];
+                                                if (!below) return;
+                                                updateItemMutation.mutate({ id: selectedPatientId, planId: activePlan.id, itemId: item.id, data: { sortOrder: below.sortOrder } });
+                                                updateItemMutation.mutate({ id: selectedPatientId, planId: activePlan.id, itemId: below.id, data: { sortOrder: item.sortOrder } });
+                                              }}
+                                              className="p-0.5 text-muted-foreground hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                            >
+                                              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                                            </button>
+                                            <button
+                                              onClick={() => { setEditingItemId(item.id); setEditItemTitle(item.title); setEditItemPrice(String(item.price)); }}
+                                              className="p-0.5 text-muted-foreground hover:text-primary transition-colors"
+                                            >
+                                              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                              </svg>
+                                            </button>
+                                          </>
+                                        );
+                                      })()}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+
+                            {/* Add item form */}
+                            {activePlan.status === "draft" && (
+                              showAddItemForm ? (
+                                <div className="border border-dashed border-primary/40 rounded-xl p-3 space-y-2 bg-primary/5">
+                                  <input
+                                    type="text"
+                                    placeholder="Название шага"
+                                    value={newItemTitle}
+                                    onChange={(e) => setNewItemTitle(e.target.value)}
+                                    className="w-full text-sm border border-border rounded-lg px-3 py-1.5 outline-none focus:ring-1 focus:ring-primary"
+                                  />
+                                  <input
+                                    type="number"
+                                    placeholder="Цена (₸)"
+                                    value={newItemPrice}
+                                    onChange={(e) => setNewItemPrice(e.target.value)}
+                                    min={0}
+                                    className="w-full text-sm border border-border rounded-lg px-3 py-1.5 outline-none focus:ring-1 focus:ring-primary"
+                                  />
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      className="h-7 text-xs"
+                                      disabled={!newItemTitle.trim() || addPlanItemMutation.isPending}
+                                      onClick={() => addPlanItemMutation.mutate({
+                                        id: selectedPatientId,
+                                        planId: activePlan.id,
+                                        data: { title: newItemTitle.trim(), price: parseFloat(newItemPrice) || 0 },
+                                      })}
+                                    >Добавить</Button>
+                                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setShowAddItemForm(false); setNewItemTitle(""); setNewItemPrice(""); }}>Отмена</Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setShowAddItemForm(true)}
+                                  className="w-full flex items-center gap-2 py-2 px-3 rounded-xl border border-dashed border-border text-xs text-muted-foreground hover:border-primary/40 hover:text-primary hover:bg-primary/5 transition-colors"
+                                >
+                                  <Plus className="w-3.5 h-3.5" />
+                                  Добавить шаг
+                                </button>
+                              )
+                            )}
+                          </div>
+
+                          {/* Plan history */}
+                          {pastPlans.length > 0 && (
+                            <div className="border-t border-border/40">
+                              <button
+                                onClick={() => setHistoryExpanded(!historyExpanded)}
+                                className="w-full flex items-center justify-between px-4 py-2.5 text-xs text-muted-foreground hover:text-gray-700 hover:bg-gray-50/60 transition-colors"
+                              >
+                                <span className="font-medium">История планов ({pastPlans.length})</span>
+                                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${historyExpanded ? "rotate-180" : ""}`} />
+                              </button>
+                              {historyExpanded && (
+                                <div className="max-h-96 overflow-y-auto custom-scrollbar">
+                                  {[...pastPlans].sort((a, b) => b.planNumber - a.planNumber).map((plan) => {
+                                    const isOpen = expandedPlanId === plan.id;
+                                    const doneCount = plan.items.filter((i) => i.status === "completed").length;
+                                    const uniqueToothFdis = Array.from(
+                                      new Set(plan.items.map((i) => i.toothFdi).filter((f): f is number => f !== null && f !== undefined))
+                                    ).sort((a, b) => a - b);
+                                    return (
+                                      <div key={plan.id} className="border-t border-border/30">
+                                        <button
+                                          onClick={() => setExpandedPlanId(isOpen ? null : plan.id)}
+                                          className="w-full px-4 py-2.5 hover:bg-gray-50/60 transition-colors text-left"
+                                        >
+                                          <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                              <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform shrink-0 ${isOpen ? "rotate-180" : ""}`} />
+                                              <span className="text-xs font-bold text-gray-700">
+                                                {uniqueToothFdis.length > 0
+                                                  ? `Лечение зуб${uniqueToothFdis.length === 1 ? "а" : "ов"} №${uniqueToothFdis.join(", №")}`
+                                                  : `План ${plan.planNumber}`}
+                                              </span>
+                                              <span className={`text-xs px-1.5 py-0.5 rounded-full border ${
+                                                plan.status === "completed" ? "bg-green-50 text-green-700 border-green-200" : "bg-gray-100 text-gray-500 border-gray-200"
+                                              }`}>
+                                                {plan.status === "completed" ? "Завершён" : "Архив"}
+                                              </span>
+                                            </div>
+                                            <span className="text-xs font-semibold text-gray-700 shrink-0 ml-2">
+                                              {plan.totalCost.toLocaleString("ru")} ₸
+                                            </span>
+                                          </div>
+                                          {uniqueToothFdis.length > 0 && (
+                                            <div className="flex items-center gap-1.5 mt-1 pl-5 flex-wrap">
+                                              {uniqueToothFdis.map((fdi) => (
+                                                <span
+                                                  key={fdi}
+                                                  role="button"
+                                                  tabIndex={0}
+                                                  onClick={(e) => { e.stopPropagation(); setModalToothFdi(fdi); }}
+                                                  onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); setModalToothFdi(fdi); } }}
+                                                  className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer transition-colors border border-primary/20"
+                                                >
+                                                  Зуб #{fdi}
+                                                </span>
+                                              ))}
+                                            </div>
+                                          )}
+                                          <p className="text-xs text-muted-foreground mt-0.5 pl-5">
+                                            {doneCount}/{plan.items.length} шаг{plan.items.length === 1 ? "" : plan.items.length < 5 ? "а" : "ов"} выполнено
+                                            {" · "}
+                                            {new Date(plan.createdAt).toLocaleDateString("ru", { day: "2-digit", month: "short", year: "numeric" })}
+                                          </p>
+                                        </button>
+                                        {isOpen && (
+                                          <div className="pb-2 bg-gray-50/40">
+                                            {plan.items.length === 0 ? (
+                                              <p className="text-xs text-muted-foreground px-8 py-2">Нет шагов</p>
+                                            ) : (
+                                              plan.items.map((item) => (
+                                                <div key={item.id} className="flex items-start gap-2.5 px-8 py-1.5">
+                                                  <span className={`mt-0.5 shrink-0 w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+                                                    item.status === "completed" ? "bg-green-500 border-green-500"
+                                                    : item.status === "cancelled" ? "bg-gray-200 border-gray-300"
+                                                    : "border-gray-300 bg-white"
+                                                  }`}>
+                                                    {item.status === "completed" && (
+                                                      <svg className="w-2 h-2 text-white" viewBox="0 0 12 12" fill="none">
+                                                        <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                      </svg>
+                                                    )}
+                                                    {item.status === "cancelled" && (
+                                                      <svg className="w-2 h-2 text-gray-400" viewBox="0 0 12 12" fill="none">
+                                                        <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                                                      </svg>
+                                                    )}
+                                                  </span>
+                                                  <div className="flex-1 min-w-0">
+                                                    <p className={`text-xs leading-snug ${
+                                                      item.status === "completed" ? "text-gray-500 line-through"
+                                                      : item.status === "cancelled" ? "text-gray-400 line-through"
+                                                      : "text-gray-700"
+                                                    }`}>{item.title}</p>
+                                                    {(item.toothFdi || item.mkb10Code) && (
+                                                      <p className="text-xs text-muted-foreground mt-0.5 flex gap-2">
+                                                        {item.toothFdi && <span>зуб #{item.toothFdi}</span>}
+                                                        {item.mkb10Code && <span className="font-mono">{item.mkb10Code}</span>}
+                                                      </p>
+                                                    )}
+                                                  </div>
+                                                  <span className="text-xs text-gray-500 shrink-0">{item.price.toLocaleString("ru")} ₸</span>
+                                                </div>
+                                              ))
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             )}
 
