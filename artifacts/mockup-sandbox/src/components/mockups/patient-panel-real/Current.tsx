@@ -4,7 +4,7 @@ import {
   X, Phone, User, Calendar, ChevronDown, Stethoscope,
   CreditCard, Plus, ClipboardList, CircleCheck, Circle,
   Archive, FileText, Pencil, CheckCircle2, Ban,
-  Sparkles, Activity, Crown, Scissors,
+  Sparkles, Activity, Crown, Scissors, ChevronRight, ArrowLeft,
 } from "lucide-react";
 
 // ── Design tokens (matching real app) ────────────────────────────────────────
@@ -290,190 +290,97 @@ function InfoTab() {
   );
 }
 
-// ── Plans tab ─────────────────────────────────────────────────────────────────
-function PlansTab() {
-  const [expanded, setExpanded] = useState<Set<string>>(new Set(["therapy", "root_canal"]));
-  const [archiveOpen, setArchiveOpen] = useState(false);
-
-  const toggle = (id: string) => setExpanded(prev => {
-    const next = new Set(prev);
-    next.has(id) ? next.delete(id) : next.add(id);
-    return next;
-  });
-
+// ── Plans list view ────────────────────────────────────────────────────────────
+function PlansList({ onSelect }: { onSelect: (id: string) => void }) {
   return (
     <div className="flex-1 overflow-y-auto custom-scrollbar">
-      <div className="px-6 py-5 space-y-4">
+      <div className="px-6 py-5 space-y-3">
 
-        {/* Active plan summary card */}
-        <div className="bg-gray-50 rounded-2xl p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <ClipboardList className="w-4 h-4" style={{ color: PRIMARY }} />
-              <span className="text-sm font-bold text-gray-900">
-                План лечения №{ACTIVE_PLAN.planNumber}
-              </span>
-            </div>
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-green-50 text-green-700 border-green-200">
-              Активен
-            </span>
-          </div>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Активный план</p>
 
-          {/* Progress bar */}
-          <div className="mb-3">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-gray-500">Выполнено {doneCount} из {allItems.length}</span>
-              <span className="text-xs font-bold text-gray-600">{planProgress}%</span>
-            </div>
-            <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-              <div className="h-full rounded-full bg-green-500" style={{ width: `${planProgress}%` }} />
-            </div>
-          </div>
-
-          {/* Cost row */}
-          <div className="flex items-center justify-between pt-3 border-t border-gray-200">
-            <span className="text-xs text-gray-500">Оплачено</span>
-            <div>
-              <span className="text-sm font-bold text-green-600">{fmt(paidTotal)}</span>
-              <span className="text-xs text-gray-400 ml-1">из {fmt(ACTIVE_PLAN.totalCost)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Stage sections */}
-        {ACTIVE_PLAN.stages.map(stage => {
-          const { Icon } = stage;
-          const isOpen = expanded.has(stage.id);
-          const stageDone = stage.items.filter(i => i.status === "completed").length;
-          const stageTotal = stage.items.reduce((s, i) => s + i.price, 0);
-
-          return (
-            <div key={stage.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-              <div className="h-0.5" style={{ backgroundColor: stage.color }} />
-              <button onClick={() => toggle(stage.id)}
-                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50/60 transition-colors">
-                <span className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: stage.badgeBg }}>
-                  <Icon className="w-3.5 h-3.5" style={{ color: stage.color }} />
+        {/* Active plan card — tappable */}
+        <button onClick={() => onSelect("plan-3")}
+          className="w-full text-left bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+          <div className="h-1 rounded-t-2xl" style={{ backgroundColor: PRIMARY }} />
+          <div className="px-4 py-3.5">
+            <div className="flex items-center justify-between mb-2.5">
+              <div className="flex items-center gap-2">
+                <ClipboardList className="w-4 h-4" style={{ color: PRIMARY }} />
+                <span className="text-sm font-bold text-gray-900">План лечения №3</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-green-50 text-green-700 border-green-200">
+                  Активен
                 </span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-800">{stage.label}</p>
-                  <p className="text-xs text-gray-400">{stageDone}/{stage.items.length} выполнено</p>
-                </div>
-                <span className="text-xs font-medium text-gray-500 shrink-0">{fmt(stageTotal)}</span>
-                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform shrink-0 ${isOpen ? "rotate-180" : ""}`} />
-              </button>
+                <ChevronRight className="w-4 h-4 text-gray-300" />
+              </div>
+            </div>
 
-              {isOpen && (
-                <div className="border-t border-gray-100 px-4 py-3 space-y-2">
-                  {stage.items.map(item => (
-                    <div key={item.id}
-                      className={`rounded-xl border px-3 py-2.5 flex items-start gap-2.5 ${
-                        item.status === "completed"
-                          ? "border-green-100 bg-green-50/40"
-                          : item.status === "in_progress"
-                          ? "border-blue-200 bg-blue-50/30"
-                          : "border-gray-100 bg-gray-50/40"
-                      }`}>
-                      <div className="shrink-0 mt-0.5">
-                        {item.status === "completed" ? (
-                          <CircleCheck className="w-4 h-4 text-green-500" />
-                        ) : item.status === "in_progress" ? (
-                          <span className="flex w-4 h-4 items-center justify-center">
-                            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                          </span>
-                        ) : (
-                          <Circle className="w-4 h-4 text-gray-300" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-medium leading-snug ${
-                          item.status === "completed" ? "line-through text-gray-400" : "text-gray-700"
-                        }`}>{item.title}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          {item.tooth && (
-                            <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-medium">
-                              з.{item.tooth}
-                            </span>
-                          )}
-                          <span className="text-xs text-gray-400">{fmt(item.price)}</span>
-                          {item.status === "in_progress" && (
-                            <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
-                              В процессе
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <button className="shrink-0 p-1 rounded text-gray-300 hover:text-gray-500 transition-colors">
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed border-gray-200 text-xs font-semibold text-gray-400 hover:border-gray-300 transition-colors">
-                    <Plus className="w-3.5 h-3.5" />
-                    Добавить услугу
-                  </button>
-                </div>
-              )}
+            <div className="mb-2">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-gray-400">Выполнено {doneCount} из {allItems.length} услуг</span>
+                <span className="text-xs font-bold text-gray-600">{planProgress}%</span>
+              </div>
+              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-full rounded-full bg-green-500" style={{ width: `${planProgress}%` }} />
+              </div>
             </div>
-          );
-        })}
 
-        {/* Archive */}
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-          <button onClick={() => setArchiveOpen(v => !v)}
-            className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50/60 transition-colors">
-            <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-              <Archive className="w-3.5 h-3.5 text-gray-500" />
+            <div className="flex items-center justify-between pt-2.5 border-t border-gray-100">
+              <span className="text-xs text-gray-400">Создан {ACTIVE_PLAN.createdAt}</span>
+              <div>
+                <span className="text-sm font-bold text-green-600">{fmt(paidTotal)}</span>
+                <span className="text-xs text-gray-400 ml-1">из {fmt(ACTIVE_PLAN.totalCost)}</span>
+              </div>
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-gray-700">Архив планов</p>
-              <p className="text-xs text-gray-400">{ARCHIVED_PLANS.length} завершённых плана</p>
+          </div>
+        </button>
+
+        {/* Archive section */}
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-4 mb-1">Архив</p>
+
+        {ARCHIVED_PLANS.map(plan => (
+          <button key={plan.id} onClick={() => onSelect(plan.id)}
+            className="w-full text-left bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+            <div className="px-4 py-3.5">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-gray-400" />
+                  <span className="text-sm font-semibold text-gray-800">План лечения №{plan.planNumber}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {plan.status === "completed" ? (
+                    <span className="flex items-center gap-1 text-[10px] font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
+                      <CheckCircle2 className="w-3 h-3" /> Выполнен
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-[10px] font-semibold text-red-500 bg-red-50 px-2 py-0.5 rounded-full border border-red-200">
+                      <Ban className="w-3 h-3" /> Отменён
+                    </span>
+                  )}
+                  <ChevronRight className="w-4 h-4 text-gray-300" />
+                </div>
+              </div>
+
+              <p className="text-xs text-gray-500 mb-2">{plan.summary}</p>
+
+              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-2">
+                <div
+                  className={`h-full rounded-full ${plan.status === "completed" ? "bg-green-400" : "bg-red-300"}`}
+                  style={{ width: `${Math.round((plan.doneCount / plan.itemCount) * 100)}%` }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between text-xs text-gray-400">
+                <span>{plan.createdAt} → {plan.completedAt}</span>
+                <span className="font-semibold text-gray-600">{fmt(plan.paidCost)}</span>
+              </div>
             </div>
-            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${archiveOpen ? "rotate-180" : ""}`} />
           </button>
+        ))}
 
-          {archiveOpen && (
-            <div className="border-t border-gray-100 px-4 py-3 space-y-2.5">
-              {ARCHIVED_PLANS.map(plan => (
-                <div key={plan.id}
-                  className="rounded-xl border border-gray-100 bg-gray-50/50 px-3.5 py-3 cursor-pointer hover:bg-gray-100/50 transition-colors">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <FileText className="w-3.5 h-3.5 text-gray-400" />
-                      <span className="text-sm font-semibold text-gray-700">План №{plan.planNumber}</span>
-                    </div>
-                    {plan.status === "completed" ? (
-                      <span className="flex items-center gap-1 text-[10px] font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
-                        <CheckCircle2 className="w-3 h-3" /> Выполнен
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1 text-[10px] font-semibold text-red-500 bg-red-50 px-2 py-0.5 rounded-full border border-red-200">
-                        <Ban className="w-3 h-3" /> Отменён
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500 mb-2">{plan.summary}</p>
-                  <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden mb-1">
-                    <div
-                      className={`h-full rounded-full ${plan.status === "completed" ? "bg-green-400" : "bg-red-300"}`}
-                      style={{ width: `${Math.round((plan.doneCount / plan.itemCount) * 100)}%` }}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-gray-400">
-                    <span>{plan.createdAt} → {plan.completedAt}</span>
-                    <span className="font-semibold text-gray-600">{fmt(plan.paidCost)}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* New plan button */}
-        <button
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-dashed border-gray-200 text-sm font-medium text-gray-400 hover:bg-gray-50 transition-colors">
+        {/* New plan */}
+        <button className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-dashed border-gray-200 text-sm font-medium text-gray-400 hover:bg-gray-50 transition-colors mt-2">
           <Plus className="w-4 h-4" />
           Создать новый план
         </button>
@@ -482,6 +389,187 @@ function PlansTab() {
       </div>
     </div>
   );
+}
+
+// ── Plan detail view ──────────────────────────────────────────────────────────
+function PlanDetail({ planId, onBack }: { planId: string; onBack: () => void }) {
+  const [expanded, setExpanded] = useState<Set<string>>(new Set(["therapy", "root_canal"]));
+
+  const toggle = (id: string) => setExpanded(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+
+  const isActive = planId === "plan-3";
+  const archived = ARCHIVED_PLANS.find(p => p.id === planId);
+
+  return (
+    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+      {/* Back bar */}
+      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-gray-100 shrink-0">
+        <button onClick={onBack}
+          className="flex items-center gap-1.5 text-sm font-medium transition-colors hover:opacity-70"
+          style={{ color: PRIMARY }}>
+          <ArrowLeft className="w-4 h-4" />
+          Все планы
+        </button>
+        <span className="text-gray-200">·</span>
+        <span className="text-sm font-semibold text-gray-700">
+          План лечения №{isActive ? ACTIVE_PLAN.planNumber : archived?.planNumber}
+        </span>
+        <div className="ml-auto">
+          {isActive ? (
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-green-50 text-green-700 border-green-200">Активен</span>
+          ) : archived?.status === "completed" ? (
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-green-50 text-green-600 border-green-200">Выполнен</span>
+          ) : (
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-red-50 text-red-500 border-red-200">Отменён</span>
+          )}
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="px-6 py-4 space-y-3">
+
+          {/* Summary card */}
+          <div className="bg-gray-50 rounded-2xl p-4">
+            <div className="mb-3">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-gray-500">
+                  Выполнено {isActive ? doneCount : archived?.doneCount} из {isActive ? allItems.length : archived?.itemCount} услуг
+                </span>
+                <span className="text-xs font-bold text-gray-600">
+                  {isActive ? planProgress : Math.round(((archived?.doneCount ?? 0) / (archived?.itemCount ?? 1)) * 100)}%
+                </span>
+              </div>
+              <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                <div className="h-full rounded-full bg-green-500"
+                  style={{ width: `${isActive ? planProgress : Math.round(((archived?.doneCount ?? 0) / (archived?.itemCount ?? 1)) * 100)}%` }} />
+              </div>
+            </div>
+            <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+              <span className="text-xs text-gray-500">Оплачено</span>
+              <div>
+                <span className="text-sm font-bold text-green-600">{fmt(isActive ? paidTotal : archived?.paidCost ?? 0)}</span>
+                <span className="text-xs text-gray-400 ml-1">из {fmt(isActive ? ACTIVE_PLAN.totalCost : archived?.totalCost ?? 0)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Stages — only for active plan */}
+          {isActive && ACTIVE_PLAN.stages.map(stage => {
+            const { Icon } = stage;
+            const isOpen = expanded.has(stage.id);
+            const stageDone = stage.items.filter(i => i.status === "completed").length;
+            const stageTotal = stage.items.reduce((s, i) => s + i.price, 0);
+
+            return (
+              <div key={stage.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+                <div className="h-0.5" style={{ backgroundColor: stage.color }} />
+                <button onClick={() => toggle(stage.id)}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50/60 transition-colors">
+                  <span className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: stage.badgeBg }}>
+                    <Icon className="w-3.5 h-3.5" style={{ color: stage.color }} />
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-800">{stage.label}</p>
+                    <p className="text-xs text-gray-400">{stageDone}/{stage.items.length} выполнено</p>
+                  </div>
+                  <span className="text-xs font-medium text-gray-500 shrink-0">{fmt(stageTotal)}</span>
+                  <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform shrink-0 ${isOpen ? "rotate-180" : ""}`} />
+                </button>
+
+                {isOpen && (
+                  <div className="border-t border-gray-100 px-4 py-3 space-y-2">
+                    {stage.items.map(item => (
+                      <div key={item.id}
+                        className={`rounded-xl border px-3 py-2.5 flex items-start gap-2.5 ${
+                          item.status === "completed" ? "border-green-100 bg-green-50/40"
+                          : item.status === "in_progress" ? "border-blue-200 bg-blue-50/30"
+                          : "border-gray-100 bg-gray-50/40"
+                        }`}>
+                        <div className="shrink-0 mt-0.5">
+                          {item.status === "completed" ? (
+                            <CircleCheck className="w-4 h-4 text-green-500" />
+                          ) : item.status === "in_progress" ? (
+                            <span className="flex w-4 h-4 items-center justify-center">
+                              <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                            </span>
+                          ) : (
+                            <Circle className="w-4 h-4 text-gray-300" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-medium leading-snug ${
+                            item.status === "completed" ? "line-through text-gray-400" : "text-gray-700"
+                          }`}>{item.title}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {item.tooth && (
+                              <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-medium">
+                                з.{item.tooth}
+                              </span>
+                            )}
+                            <span className="text-xs text-gray-400">{fmt(item.price)}</span>
+                            {item.status === "in_progress" && (
+                              <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
+                                В процессе
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <button className="shrink-0 p-1 rounded text-gray-300 hover:text-gray-500 transition-colors">
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                    <button className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed border-gray-200 text-xs font-semibold text-gray-400 hover:border-gray-300 transition-colors">
+                      <Plus className="w-3.5 h-3.5" /> Добавить услугу
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Archived plan — simple service list placeholder */}
+          {!isActive && (
+            <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-2 shadow-sm">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Услуги</p>
+              {(planId === "p2"
+                ? ["Лечение кариеса з.14", "Лечение кариеса з.25", "Лечение кариеса з.46", "Профессиональная чистка", "Рентген (4 снимка)"]
+                : ["Консультация по имплантации", "Удаление з.46", "Лечение кариеса з.15", "Лечение кариеса з.36", "Снимок ортопантомограммы", "Изготовление временной коронки", "Установка имплантата", "Нагрузка на имплантат"]
+              ).map((name, i) => (
+                <div key={i} className={`flex items-center gap-2.5 py-1.5 ${i > 0 ? "border-t border-gray-50" : ""}`}>
+                  {planId === "p2" ? (
+                    <CircleCheck className="w-4 h-4 text-green-400 shrink-0" />
+                  ) : i < 2 ? (
+                    <CircleCheck className="w-4 h-4 text-green-400 shrink-0" />
+                  ) : (
+                    <Circle className="w-4 h-4 text-gray-200 shrink-0" />
+                  )}
+                  <span className={`text-sm ${planId === "p2" || i < 2 ? "line-through text-gray-400" : "text-gray-600"}`}>{name}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="h-4" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Plans tab (orchestrator) ──────────────────────────────────────────────────
+function PlansTab() {
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+
+  if (selectedPlanId) {
+    return <PlanDetail planId={selectedPlanId} onBack={() => setSelectedPlanId(null)} />;
+  }
+  return <PlansList onSelect={setSelectedPlanId} />;
 }
 
 // ── Dental tab placeholder ─────────────────────────────────────────────────────
