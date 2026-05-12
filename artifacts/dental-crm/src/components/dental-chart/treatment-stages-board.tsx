@@ -34,6 +34,9 @@ import {
   Timer,
   Loader2,
   RotateCcw,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -236,6 +239,15 @@ interface ItemActions {
   tick: number; // forces re-render every second when timers active
   completingId: string | null;
   cancellingId: string | null;
+  // edit mode
+  isEditMode: boolean;
+  editingItemId: string | null;
+  editDraft: { title: string; price: string };
+  onEditStart: (item: TreatmentPlanItem) => void;
+  onEditSave: (itemId: string) => void;
+  onEditCancel: () => void;
+  onEditDraftChange: (field: "title" | "price", value: string) => void;
+  savingEditId: string | null;
 }
 
 // ── PlanItemCard ──────────────────────────────────────────────────────────────
@@ -256,6 +268,64 @@ function PlanItemCard({
   const isCompleting = actions.completingId === item.id;
   const isCancelling = actions.cancellingId === item.id;
   const isBusy = isCompleting || isCancelling;
+
+  const isEditing = actions.editingItemId === item.id;
+  const isSavingEdit = actions.savingEditId === item.id;
+
+  // ── Edit mode: inline form ───────────────────────────────────────────────
+  if (actions.isEditMode && isPending && isEditing) {
+    return (
+      <div className="rounded-lg border border-blue-200 bg-blue-50/40 px-3 py-2.5 space-y-2">
+        <div className="space-y-1.5">
+          <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Название</label>
+          <input
+            autoFocus
+            value={actions.editDraft.title}
+            onChange={(e) => actions.onEditDraftChange("title", e.target.value)}
+            className="w-full text-[12.5px] border border-gray-200 rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+            placeholder="Название процедуры"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") actions.onEditSave(item.id);
+              if (e.key === "Escape") actions.onEditCancel();
+            }}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Стоимость (₸)</label>
+          <input
+            type="number"
+            min="0"
+            value={actions.editDraft.price}
+            onChange={(e) => actions.onEditDraftChange("price", e.target.value)}
+            className="w-full text-[12.5px] border border-gray-200 rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+            placeholder="0"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") actions.onEditSave(item.id);
+              if (e.key === "Escape") actions.onEditCancel();
+            }}
+          />
+        </div>
+        <div className="flex items-center gap-1.5 justify-end pt-0.5">
+          <button
+            onClick={actions.onEditCancel}
+            disabled={isSavingEdit}
+            className="flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-md border border-gray-200 text-gray-500 hover:bg-gray-100 transition-colors disabled:opacity-50"
+          >
+            <X className="w-3 h-3" />
+            Отмена
+          </button>
+          <button
+            onClick={() => actions.onEditSave(item.id)}
+            disabled={isSavingEdit || !actions.editDraft.title.trim()}
+            className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-md bg-blue-500 text-white hover:bg-blue-600 transition-colors disabled:opacity-50"
+          >
+            {isSavingEdit ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+            Сохранить
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -313,10 +383,21 @@ function PlanItemCard({
             )}
           </div>
         </div>
+
+        {/* Edit pencil button (edit mode only, pending items) */}
+        {actions.isEditMode && isPending && !isEditing && (
+          <button
+            onClick={() => actions.onEditStart(item)}
+            className="shrink-0 p-1.5 rounded-md text-gray-400 hover:text-blue-500 hover:bg-blue-50 transition-colors mt-0.5"
+            title="Редактировать позицию"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
-      {/* Timer + action bar (only for pending items) */}
-      {isPending && (
+      {/* Timer + action bar (only for pending items, not in edit mode) */}
+      {isPending && !actions.isEditMode && (
         <div
           className={cn(
             "flex items-center gap-2 px-3 pb-2.5",
@@ -691,6 +772,13 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
+  // ── Edit mode state ───────────────────────────────────────────────────────
+
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<{ title: string; price: string }>({ title: "", price: "" });
+  const [savingEditId, setSavingEditId] = useState<string | null>(null);
+
   const planId = activePlan?.id ?? "";
 
   const completeMutation = useCompleteTreatmentPlanItem({
@@ -734,6 +822,63 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
       },
     },
   });
+
+  const editMutation = useUpdateTreatmentPlanItem({
+    mutation: {
+      onSuccess: () => {
+        setSavingEditId(null);
+        setEditingItemId(null);
+        setEditDraft({ title: "", price: "" });
+        qc.invalidateQueries({ queryKey: getGetActiveTreatmentPlanQueryKey(patientId) });
+        toast({ title: "Позиция обновлена" });
+      },
+      onError: () => {
+        setSavingEditId(null);
+        toast({ title: "Ошибка", description: "Не удалось сохранить изменения", variant: "destructive" });
+      },
+    },
+  });
+
+  // ── Edit handlers ─────────────────────────────────────────────────────────
+
+  const handleEditStart = useCallback((item: TreatmentPlanItem) => {
+    setEditingItemId(item.id);
+    setEditDraft({ title: item.title, price: String(item.price) });
+  }, []);
+
+  const handleEditSave = useCallback((itemId: string) => {
+    if (!planId || savingEditId) return;
+    setSavingEditId(itemId);
+    editMutation.mutate({
+      id: patientId,
+      planId,
+      itemId,
+      data: {
+        title: editDraft.title.trim(),
+        price: Number(editDraft.price) || 0,
+      },
+    });
+  }, [planId, patientId, savingEditId, editDraft, editMutation]);
+
+  const handleEditCancel = useCallback(() => {
+    setEditingItemId(null);
+    setEditDraft({ title: "", price: "" });
+  }, []);
+
+  const handleEditDraftChange = useCallback((field: "title" | "price", value: string) => {
+    setEditDraft((prev) => ({ ...prev, [field]: value }));
+  }, []);
+
+  const handleToggleEditMode = useCallback(() => {
+    setIsEditMode((prev) => {
+      if (prev) {
+        // exiting edit mode — close any open edit form
+        setEditingItemId(null);
+        setEditDraft({ title: "", price: "" });
+      }
+      return !prev;
+    });
+  }, []);
 
   // ── Item action handlers ──────────────────────────────────────────────────
 
@@ -788,6 +933,14 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
     tick,
     completingId,
     cancellingId,
+    isEditMode,
+    editingItemId,
+    editDraft,
+    onEditStart: handleEditStart,
+    onEditSave: handleEditSave,
+    onEditCancel: handleEditCancel,
+    onEditDraftChange: handleEditDraftChange,
+    savingEditId,
   };
 
   // ── Stage filtering + DnD ─────────────────────────────────────────────────
@@ -853,18 +1006,48 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
               ? `План лечения №${activePlan.planNumber}`
               : "По зубной карте"}
           </span>
-          {runningGlobal > 0 && (
+          {runningGlobal > 0 && !isEditMode && (
             <span className="flex items-center gap-1 text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse inline-block" />
               {runningGlobal} идёт
             </span>
           )}
+          {isEditMode && (
+            <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+              Режим редактирования
+            </span>
+          )}
         </div>
-        {planTotal > 0 && (
-          <span className="text-[12px] font-semibold text-gray-600">
-            {formatPrice(planTotal)}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {planTotal > 0 && !isEditMode && (
+            <span className="text-[12px] font-semibold text-gray-600">
+              {formatPrice(planTotal)}
+            </span>
+          )}
+          {activePlan && (
+            <button
+              onClick={handleToggleEditMode}
+              className={cn(
+                "flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-md border transition-colors",
+                isEditMode
+                  ? "bg-amber-500 border-amber-500 text-white hover:bg-amber-600"
+                  : "border-gray-200 text-gray-500 hover:bg-gray-50 hover:border-gray-300",
+              )}
+            >
+              {isEditMode ? (
+                <>
+                  <Check className="w-3 h-3" />
+                  Готово
+                </>
+              ) : (
+                <>
+                  <Pencil className="w-3 h-3" />
+                  Редактировать
+                </>
+              )}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Progress bar */}
