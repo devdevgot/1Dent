@@ -378,18 +378,6 @@ async function getManagerExamples(clinicId: string): Promise<ManagerExample[]> {
   return rows;
 }
 
-function extractRefCode(text: string): string | null {
-  const match = text.match(/ref:([a-f0-9]{4,8})/i);
-  return match ? match[1]!.toLowerCase() : null;
-}
-
-function extractClickId(text: string): string | null {
-  const match = text.match(/cid:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
-  return match ? match[1]!.toLowerCase() : null;
-}
-
-
-
 // ─── Settings helpers ────────────────────────────────────────────────────────
 
 async function getSettings(clinicId: string): Promise<ChatbotSettings> {
@@ -859,25 +847,6 @@ export class ChatbotService {
 
     const state = session.state;
     const data = { ...session.data };
-
-    // Parse ref code and click_id from any incoming message
-    const refCode = extractRefCode(text);
-    if (refCode && !data.refCode) {
-      try {
-        const channel = await channelsRepo.findByRefCode(refCode);
-        if (channel && channel.clinicId === clinicId) {
-          data.refCode = refCode;
-          data.channelId = channel.id;
-        }
-      } catch (err) {
-        logger.warn({ err }, "ChatbotService: failed to resolve ref code");
-      }
-    }
-
-    const clickId = extractClickId(text);
-    if (clickId && !data.clickId) {
-      data.clickId = clickId;
-    }
 
     // Operator request always takes priority
     if (isOperatorRequest(text)) {
@@ -1437,26 +1406,17 @@ export class ChatbotService {
               let patientId = data.existingPatientId ?? data.createdPatientId;
 
               if (!patientId && data.patientName && data.suggestedDoctorId) {
-                const patientSource = data.refCode ? `ref:${data.refCode}` : "whatsapp";
                 const newPatient = await createPatient(
                   clinicId,
                   data.collectedPhone ?? phone,
                   data.patientName,
                   data.suggestedDoctorId,
-                  patientSource,
+                  "whatsapp",
                   data.collectedIin,
                   "initial_consultation",
                 );
                 patientId = newPatient.id;
                 data.createdPatientId = newPatient.id;
-
-                if (data.clickId) {
-                  channelsRepo
-                    .linkClickToPatient(data.clickId, newPatient.id)
-                    .catch((err) =>
-                      logger.warn({ err, clickId: data.clickId }, "ChatbotService: failed to link click to patient"),
-                    );
-                }
               } else if (patientId && data.existingPatientId && data.suggestedDoctorId) {
                 // Existing patient booking — update their doctor and kanban status
                 await db
@@ -1569,14 +1529,8 @@ export class ChatbotService {
           // Pre-create patient record so collect_datetime can attach the procedure
           if (data.suggestedDoctorId && data.patientName && !data.existingPatientId && !data.createdPatientId) {
             try {
-              const patientSource = data.refCode ? `ref:${data.refCode}` : "whatsapp";
-              const patient = await createPatient(clinicId, phone, data.patientName, data.suggestedDoctorId, patientSource, data.collectedIin, "initial_consultation");
+              const patient = await createPatient(clinicId, phone, data.patientName, data.suggestedDoctorId, "whatsapp", data.collectedIin, "initial_consultation");
               data.createdPatientId = patient.id;
-              if (data.clickId) {
-                channelsRepo.linkClickToPatient(data.clickId, patient.id).catch((err) =>
-                  logger.warn({ err, clickId: data.clickId }, "ChatbotService: failed to link click to patient"),
-                );
-              }
               session.data = data;
             } catch (err) {
               logger.error({ err }, "ChatbotService: failed to create patient in confirm_appointment");

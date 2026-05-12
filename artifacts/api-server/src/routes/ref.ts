@@ -135,8 +135,8 @@ async function handleRefCode(
       }
     }
 
-    // ── Step 5: build text — embed both ref code and click_id ─────────────────
-    const messageText = `Здравствуйте, хочу записаться на приём 👋 (ref:${code} cid:${clickId})`;
+    // ── Step 5: build clean message — no tracking codes visible to user ──────
+    const messageText = `Здравствуйте, хочу записаться на приём 👋`;
     const encodedText = encodeURIComponent(messageText);
 
     if (!phone) {
