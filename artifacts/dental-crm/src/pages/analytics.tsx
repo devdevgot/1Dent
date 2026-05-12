@@ -86,7 +86,7 @@ function QACard({ question, value, sub, hint, level, icon, loading }: QACardProp
       )}
       {/* Hint */}
       {!loading && hint && (
-        <p className={`text-xs mt-1 font-medium ${cfg?.level === "warn" ? "text-red-600" : cfg ? "text-amber-700" : "text-muted-foreground"}`}>{hint}</p>
+        <p className={`text-xs mt-1 font-medium ${level === "warn" ? "text-red-600" : level === "normal" ? "text-amber-700" : "text-muted-foreground"}`}>{hint}</p>
       )}
       {/* Icon pill */}
       <div className="mt-auto pt-2 flex justify-end">
@@ -97,6 +97,9 @@ function QACard({ question, value, sub, hint, level, icon, loading }: QACardProp
     </div>
   );
 }
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _statusLevelUnused = null;
 
 const PATIENT_STATUS_LABELS: Record<string, string> = {
   new_request:          "Новый запрос",
@@ -140,7 +143,7 @@ export default function AnalyticsPage() {
   const { data: patientMetricsRes, isLoading: pmLoading, isFetching: pmFetching } =
     useGetPatientMetrics(
       { dateFrom: periodDates.dateFrom, dateTo: periodDates.dateTo },
-      { query: { enabled: pmEnabled } },
+      { query: { enabled: pmEnabled, queryKey: ["/api/analytics/patient-metrics", periodDates] } },
     );
   const pm = patientMetricsRes?.data;
 
@@ -329,10 +332,10 @@ export default function AnalyticsPage() {
                 <QACard
                   question="Сколько пациентов вернулись снова?"
                   value={pmLoading || pmFetching ? "…" : `${retentionRate}%`}
-                  sub={`${pm?.returnedPatients ?? 0} из ${pm?.totalUniquePatientsInPeriod ?? 0} пациентов`}
+                  sub={`Ретеншн за период`}
                   level={pmLoading || pmFetching ? undefined : retentionLevel}
                   hint={pmLoading || pmFetching ? undefined : retentionHint}
-                  loading={pmLoading}
+                  loading={!!pmLoading}
                   icon={<Repeat2 className="w-4 h-4" />}
                 />
 
