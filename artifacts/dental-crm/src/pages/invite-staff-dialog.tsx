@@ -362,7 +362,6 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                     </p>
                     <div className="w-full max-w-sm">
                       <input
-                        autoFocus
                         type="email"
                         value={form.email}
                         onChange={(e) => {
@@ -402,7 +401,6 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                         ФИО *
                       </label>
                       <input
-                        autoFocus
                         value={form.name}
                         onChange={(e) => { set("name", e.target.value); if (nameError) setNameError(""); }}
                         placeholder="Др. Иванова Мария"
