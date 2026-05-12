@@ -514,13 +514,10 @@ export function Current() {
   ];
 
   return (
-    <div className="relative min-h-screen bg-black/20 flex justify-end">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/20" />
-
+    <div className="flex" style={{ minHeight: "100vh" }}>
       {/* Panel */}
       <div
-        className="relative flex flex-col bg-white shadow-2xl overflow-hidden"
+        className="flex flex-col bg-white shadow-2xl overflow-hidden"
         style={{ width: 448, height: "100vh" }}
       >
         {/* Header */}
