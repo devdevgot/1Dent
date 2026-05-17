@@ -7,7 +7,7 @@ id = "3B4_FFSkEVBkAeYMFRJ2e"
 [[services]]
 localPort = 8080
 name = "API Server"
-paths = ["/api", "/ref", "/wa", "/r"]
+paths = ["/api", "/ref", "/wa", "/r", "/p"]
 
 [services.env]
 PORT = "8080"
