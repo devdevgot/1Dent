@@ -975,7 +975,7 @@ export function PatientDetailPanel() {
   const { data: teethData, refetch: refetchTeeth, isLoading: teethLoading } = useListTeeth(selectedPatientId ?? "", {
     query: {
       queryKey: getListTeethQueryKey(selectedPatientId ?? ""),
-      enabled: !!selectedPatientId && activeTab === "dental",
+      enabled: !!selectedPatientId && activeTab === "treatment",
     },
   });
   const teethRecords: ToothRecord[] = teethData?.data?.teeth ?? [];
@@ -983,7 +983,7 @@ export function PatientDetailPanel() {
   const teethMap = new Map(teethRecords.map((t) => [t.toothFdi, t]));
 
   const { data: conditionPricesData } = useGetConditionPrices({
-    query: { enabled: isDiagnosisMode || activeTab === "dental" },
+    query: { enabled: isDiagnosisMode || activeTab === "treatment" },
   });
   const conditionPricesMap = conditionPricesData?.data?.prices ?? {};
 
@@ -1065,7 +1065,7 @@ export function PatientDetailPanel() {
   const { data: planData, isLoading: planLoading } = useGetActiveTreatmentPlan(selectedPatientId ?? "", {
     query: {
       queryKey: getGetActiveTreatmentPlanQueryKey(selectedPatientId ?? ""),
-      enabled: !!selectedPatientId && (activeTab === "dental" || activeTab === "plan"),
+      enabled: !!selectedPatientId && activeTab === "treatment",
     },
   });
   const activePlan = planData?.data?.plan ?? null;
@@ -1077,7 +1077,7 @@ export function PatientDetailPanel() {
   const { data: plansHistoryData, isLoading: plansLoading } = useListTreatmentPlans(selectedPatientId ?? "", {
     query: {
       queryKey: getListTreatmentPlansQueryKey(selectedPatientId ?? ""),
-      enabled: !!selectedPatientId && (activeTab === "dental" || activeTab === "plan"),
+      enabled: !!selectedPatientId && activeTab === "treatment",
     },
   });
   const dentalLoading = teethLoading || planLoading || plansLoading;
@@ -1458,7 +1458,7 @@ export function PatientDetailPanel() {
     <>
       <div
         className="fixed inset-0 z-40 bg-black/20"
-        onClick={() => setSelectedPatientId(null)}
+        onClick={() => { setSelectedPatientId(null); setActiveTab("info"); setTreatmentStep(1); }}
       />
       <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl z-50 flex flex-col overflow-hidden">
         {/* Header */}
@@ -2229,7 +2229,7 @@ export function PatientDetailPanel() {
                             <div className="flex-1">
                               <p className="text-sm font-semibold text-amber-800">Нужна повторная диагностика</p>
                               <p className="text-xs text-amber-600 mt-0.5">Для создания плана {allPlans.length + 1} проведите повторный осмотр</p>
-                              <button onClick={() => setActiveTab("dental")} className="mt-2 text-xs font-semibold text-amber-700 underline underline-offset-2">Перейти к зубной карте →</button>
+                              <button onClick={() => { setPlanDetailId(null); setTreatmentStep(1); }} className="mt-2 text-xs font-semibold text-amber-700 underline underline-offset-2">Перейти к зубной карте →</button>
                             </div>
                           </div>
                         ) : (
@@ -2350,7 +2350,7 @@ export function PatientDetailPanel() {
                           )}
                           {isActive && activePlan && (activePlan.status === "completed" || activePlan.status === "in_progress") && (
                             needsRediagnosis ? (
-                              <Button variant="outline" className="w-full gap-2 border-amber-200 text-amber-700 hover:bg-amber-50" onClick={() => setActiveTab("dental")}>
+                              <Button variant="outline" className="w-full gap-2 border-amber-200 text-amber-700 hover:bg-amber-50" onClick={() => { setPlanDetailId(null); setTreatmentStep(1); setIsDiagnosisMode(true); }}>
                                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                                 Повторная диагностика
                               </Button>
