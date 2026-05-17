@@ -1,10 +1,108 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
+import { createRequire } from "module";
+import path from "path";
 import { ContractsRepository } from "../modules/contracts/contracts.repository";
 import { sendToPatient } from "../shared/messaging";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 const repo = new ContractsRepository();
+
+// ── PDF generation setup ───────────────────────────────────────────────────
+const _require = createRequire(import.meta.url);
+const pdfmakeDir = path.dirname(_require.resolve("pdfmake/package.json"));
+const fontsDir = path.join(pdfmakeDir, "fonts", "Roboto");
+
+interface PdfPrinterConstructor {
+  new (fonts: Record<string, Record<string, string>>): {
+    createPdfKitDocument(docDef: unknown): NodeJS.EventEmitter & { end(): void };
+  };
+}
+
+function getPdfPrinter(): InstanceType<PdfPrinterConstructor> {
+  // PdfPrinter is the Node.js server-side entry point of pdfmake
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const PdfPrinter = (_require("pdfmake") as { default?: PdfPrinterConstructor } & PdfPrinterConstructor).default
+    ?? (_require("pdfmake") as PdfPrinterConstructor);
+  return new PdfPrinter({
+    Roboto: {
+      normal:      path.join(fontsDir, "Roboto-Regular.ttf"),
+      bold:        path.join(fontsDir, "Roboto-Medium.ttf"),
+      italics:     path.join(fontsDir, "Roboto-Italic.ttf"),
+      bolditalics: path.join(fontsDir, "Roboto-MediumItalic.ttf"),
+    },
+  });
+}
+
+/** Strip HTML tags and decode basic entities for plain-text PDF body. */
+function htmlToPlainLines(html: string): string[] {
+  const text = html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<\/div>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ");
+  return text.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
+}
+
+async function generatePdfBuffer(opts: {
+  templateName: string;
+  patientName: string;
+  clinicName: string;
+  renderedHtml: string;
+  signedAt: string | null;
+}): Promise<Buffer> {
+  const printer = getPdfPrinter();
+  const lines = htmlToPlainLines(opts.renderedHtml);
+
+  const bodyContent = lines.map((line) => ({ text: line, style: "body", margin: [0, 0, 0, 4] as [number, number, number, number] }));
+
+  const docDefinition = {
+    defaultStyle: { font: "Roboto" },
+    pageMargins: [50, 60, 50, 60] as [number, number, number, number],
+    content: [
+      { text: opts.templateName, style: "header" },
+      { text: opts.clinicName, style: "subtitle" },
+      { text: `Пациент: ${opts.patientName}`, style: "meta", margin: [0, 0, 0, 20] as [number, number, number, number] },
+      ...bodyContent,
+      ...(opts.signedAt
+        ? [
+            {
+              canvas: [{ type: "line", x1: 0, y1: 5, x2: 495, y2: 5, lineWidth: 0.5, lineColor: "#cccccc" }],
+              margin: [0, 30, 0, 12] as [number, number, number, number],
+            },
+            {
+              text: `✅ Договор подписан электронно: ${opts.signedAt}\nПациент: ${opts.patientName}`,
+              style: "signatureBlock",
+            },
+          ]
+        : []),
+    ],
+    styles: {
+      header:         { fontSize: 18, bold: true, alignment: "center", margin: [0, 0, 0, 6] },
+      subtitle:       { fontSize: 12, color: "#555555", alignment: "center", margin: [0, 0, 0, 4] },
+      meta:           { fontSize: 12, color: "#333333" },
+      body:           { fontSize: 12, lineHeight: 1.5, color: "#222222" },
+      signatureBlock: { fontSize: 11, color: "#555555", italics: true },
+    },
+  };
+
+  return new Promise((resolve, reject) => {
+    const pdfDoc = printer.createPdfKitDocument(docDefinition);
+    const chunks: Buffer[] = [];
+    pdfDoc.on("data", (chunk: Buffer) => chunks.push(chunk));
+    pdfDoc.on("end", () => resolve(Buffer.concat(chunks)));
+    pdfDoc.on("error", (err: Error) => reject(err));
+    pdfDoc.end();
+  });
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
 
 function getClientIp(req: Request): string | null {
   const forwarded = req.headers["x-forwarded-for"];
@@ -17,6 +115,10 @@ const STATUS_LABELS: Record<string, string> = {
   viewed: "Просмотрен",
   signed: "Подписан",
 };
+
+function escHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
 
 function buildContractPage(opts: {
   templateName: string;
@@ -38,7 +140,7 @@ function buildContractPage(opts: {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>${templateName} — ${clinicName}</title>
+  <title>${escHtml(templateName)} — ${escHtml(clinicName)}</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f2f2f7; min-height: 100vh; color: #1c1c1e; }
@@ -60,14 +162,13 @@ function buildContractPage(opts: {
     .contract-body p { margin-bottom: 8px; }
     .filled-field { background: #fff9c4; border-radius: 3px; padding: 0 2px; font-weight: 700; font-style: normal; }
     .actions { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #e5e5ea; padding: 16px 20px; display: flex; gap: 12px; }
-    .btn { flex: 1; height: 50px; border-radius: 14px; border: none; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.15s; }
+    .btn { flex: 1; height: 50px; border-radius: 14px; border: none; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.15s; text-decoration: none; }
     .btn:active { opacity: 0.8; }
     .btn-primary { background: #6bcb3a; color: #fff; }
-    .btn-secondary { background: #f2f2f7; color: #3a3a3c; text-decoration: none; }
+    .btn-secondary { background: #f2f2f7; color: #3a3a3c; }
     .signed-banner { background: #d4edda; border: 1px solid #c3e6cb; border-radius: 14px; padding: 16px 20px; text-align: center; margin-bottom: 16px; }
     .signed-banner h3 { font-size: 16px; font-weight: 700; color: #155724; margin-bottom: 4px; }
     .signed-banner p { font-size: 13px; color: #155724; opacity: 0.85; }
-    #sign-btn { position: relative; }
     #sign-btn.loading { opacity: 0.7; pointer-events: none; }
     .spinner { width: 18px; height: 18px; border: 2.5px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; display: none; }
     #sign-btn.loading .spinner { display: block; }
@@ -113,7 +214,7 @@ function buildContractPage(opts: {
       <div class="spinner"></div>
       <span class="btn-label">✍️ Подписать</span>
     </button>` : ""}
-    <a class="btn btn-secondary" href="/p/contract/${token}/pdf" download>
+    <a class="btn btn-secondary" href="/p/contract/${token}/pdf" download="${escHtml(templateName)}.pdf">
       📄 Скачать PDF
     </a>
   </div>
@@ -141,24 +242,21 @@ function buildContractPage(opts: {
 </html>`;
 }
 
-function escHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
+// ── Routes ─────────────────────────────────────────────────────────────────
 
 // GET /p/contract/:token — public patient-facing contract page
 router.get("/p/contract/:token", async (req: Request, res: Response, next: NextFunction) => {
   const token = String(req.params["token"]);
   try {
-    const result = await repo.findContractByToken(token!);
+    const result = await repo.findContractByToken(token);
     if (!result) {
       return res.status(404).send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Не найдено</title></head><body style="font-family:sans-serif;text-align:center;padding:60px 20px"><h2>Договор не найден</h2><p style="color:#666">Эта ссылка устарела или недействительна.</p></body></html>`);
     }
 
     const { contract, templateName, patientName, clinicName } = result;
 
-    // Mark as viewed if still "sent"
     if (contract.status === "sent") {
-      repo.markContractViewed(token!).catch((err: unknown) => logger.warn({ err }, "[contract] markViewed failed"));
+      repo.markContractViewed(token).catch((err: unknown) => logger.warn({ err }, "[contract] markViewed failed"));
     }
 
     res.setHeader("Content-Type", "text/html; charset=utf-8");
@@ -168,7 +266,7 @@ router.get("/p/contract/:token", async (req: Request, res: Response, next: NextF
       patientName,
       clinicName,
       renderedHtml: contract.renderedHtml ?? "",
-      token: token!,
+      token,
       status: contract.status,
       signedAt: contract.signedAt,
     }));
@@ -183,9 +281,7 @@ router.post("/p/contract/:token/sign", async (req: Request, res: Response, next:
   const token = String(req.params["token"]);
   try {
     const result = await repo.findContractByToken(token);
-    if (!result) {
-      return res.status(404).json({ success: false, error: "Договор не найден" });
-    }
+    if (!result) return res.status(404).json({ success: false, error: "Договор не найден" });
 
     if (result.contract.status === "signed") {
       return res.json({ success: true, message: "Уже подписан" });
@@ -193,11 +289,8 @@ router.post("/p/contract/:token/sign", async (req: Request, res: Response, next:
 
     const ip = getClientIp(req);
     const signed = await repo.markContractSigned(token, ip);
-    if (!signed) {
-      return res.status(400).json({ success: false, error: "Не удалось подписать" });
-    }
+    if (!signed) return res.status(400).json({ success: false, error: "Не удалось подписать" });
 
-    // Send WhatsApp confirmation to patient
     const confirmMsg = `✅ Договор «${result.templateName}» успешно подписан.\n\nСпасибо, ${result.patientName}! Если у вас есть вопросы — обратитесь в клинику.`;
     sendToPatient(result.contract.clinicId, result.patientPhone, confirmMsg).catch((err: unknown) => {
       logger.warn({ err }, "[contract] Failed to send signing confirmation");
@@ -210,46 +303,36 @@ router.post("/p/contract/:token/sign", async (req: Request, res: Response, next:
   }
 });
 
-// GET /p/contract/:token/pdf — simple PDF download (printable HTML)
+// GET /p/contract/:token/pdf — real PDF download using pdfmake
 router.get("/p/contract/:token/pdf", async (req: Request, res: Response, next: NextFunction) => {
   const token = String(req.params["token"]);
   try {
-    const result = await repo.findContractByToken(token!);
+    const result = await repo.findContractByToken(token);
     if (!result) return res.status(404).send("Not found");
 
     const { contract, templateName, patientName, clinicName } = result;
     const signedAt = contract.signedAt
-      ? new Date(contract.signedAt).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
+      ? new Date(contract.signedAt).toLocaleString("ru-RU", {
+          day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+        })
       : null;
 
-    const printHtml = `<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="utf-8"/>
-  <title>${escHtml(templateName)}</title>
-  <style>
-    body { font-family: Arial, sans-serif; font-size: 13px; line-height: 1.6; color: #000; max-width: 680px; margin: 0 auto; padding: 40px 30px; }
-    h1 { font-size: 18px; text-align: center; margin-bottom: 6px; }
-    .subtitle { text-align: center; color: #555; font-size: 12px; margin-bottom: 30px; }
-    .content p { margin-bottom: 8px; }
-    .filled-field { font-weight: bold; }
-    .signature-block { margin-top: 40px; border-top: 1px solid #ccc; padding-top: 16px; font-size: 12px; color: #555; }
-    @media print { @page { margin: 20mm; } }
-  </style>
-  <script>window.onload=()=>window.print();</script>
-</head>
-<body>
-  <h1>${escHtml(templateName)}</h1>
-  <p class="subtitle">${escHtml(clinicName)} · Пациент: ${escHtml(patientName)}</p>
-  <div class="content">${contract.renderedHtml ?? ""}</div>
-  ${signedAt ? `<div class="signature-block">✅ Договор подписан электронно: ${signedAt}<br>Пациент: ${escHtml(patientName)}</div>` : ""}
-</body>
-</html>`;
+    const pdfBuffer = await generatePdfBuffer({
+      templateName,
+      patientName,
+      clinicName,
+      renderedHtml: contract.renderedHtml ?? "",
+      signedAt,
+    });
 
-    res.setHeader("Content-Type", "text/html; charset=utf-8");
-    res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(templateName)}.pdf"`);
-    return res.send(printHtml);
+    const filename = encodeURIComponent(`${templateName}.pdf`);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${filename}`);
+    res.setHeader("Content-Length", pdfBuffer.length);
+    res.setHeader("Cache-Control", "no-store");
+    return res.send(pdfBuffer);
   } catch (err) {
+    logger.error({ err }, "[contract] PDF generation failed");
     next(err);
     return;
   }

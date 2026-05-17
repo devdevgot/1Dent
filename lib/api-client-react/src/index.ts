@@ -1079,3 +1079,34 @@ export const useSendContract = <TError = unknown>(options?: {
     mutationFn: ({ patientId, templateId }) => sendContract(patientId, templateId),
     ...options?.mutation,
   });
+
+export interface FieldMappingItem {
+  placeholder: string;
+  patientField: string;
+  label: string;
+}
+
+export const updateTemplateMappings = (
+  id: string,
+  fieldMappings: FieldMappingItem[],
+): Promise<{ success: boolean; data: { template: ContractTemplate } }> =>
+  customFetch(`/api/contracts/templates/${id}/mappings`, {
+    method: "PATCH",
+    body: JSON.stringify({ fieldMappings }),
+  });
+
+export const useUpdateTemplateMappings = <TError = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    { success: boolean; data: { template: ContractTemplate } },
+    TError,
+    { id: string; fieldMappings: FieldMappingItem[] }
+  >;
+}) =>
+  useMutation<
+    { success: boolean; data: { template: ContractTemplate } },
+    TError,
+    { id: string; fieldMappings: FieldMappingItem[] }
+  >({
+    mutationFn: ({ id, fieldMappings }) => updateTemplateMappings(id, fieldMappings),
+    ...options?.mutation,
+  });
