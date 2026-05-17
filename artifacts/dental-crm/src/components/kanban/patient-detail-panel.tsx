@@ -913,8 +913,12 @@ export function PatientDetailPanel() {
   const [isStatusOpen, setIsStatusOpen] = useState(false);
 
   const [treatmentStep, setTreatmentStep] = useState<1 | 2 | 3>(1);
-  const [bundleSending, setBundleSending] = useState(false);
+  const [bundleToken, setBundleToken] = useState<string | null>(null);
   const [bundleUrl, setBundleUrl] = useState<string | null>(null);
+  const [bundlePreparing, setBundlePreparing] = useState(false);
+  const [bundleSending, setBundleSending] = useState(false);
+  const [bundleSent, setBundleSent] = useState(false);
+  const [bundlePreviewOpen, setBundlePreviewOpen] = useState(false);
 
   const [isDiagnosisMode, setIsDiagnosisMode] = useState(false);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
@@ -1216,27 +1220,49 @@ export function PatientDetailPanel() {
     setShowSummaryModal(true);
   }, [selectedPatientId]);
 
-  const handleSendBundle = useCallback(async (pid: string) => {
-    setBundleSending(true);
+  // Silently prepares the bundle (no WhatsApp send) — called right after saving diagnosis
+  const handlePrepareBundle = useCallback(async (pid: string) => {
+    setBundlePreparing(true);
     try {
-      const res = await fetch(`/api/contracts/patient/${pid}/send-extraction-bundle`, {
+      const res = await fetch(`/api/contracts/patient/${pid}/prepare-extraction-bundle`, {
         method: "POST",
         credentials: "include",
       });
       const responseData = await res.json() as { success: boolean; data?: { bundleUrl: string; bundleToken: string } };
-      if (responseData.success && responseData.data?.bundleUrl) {
+      if (responseData.success && responseData.data) {
+        setBundleToken(responseData.data.bundleToken);
         setBundleUrl(responseData.data.bundleUrl);
         queryClient.invalidateQueries({ queryKey: ["patient-contracts", pid] }).catch(() => {});
-        toast({ title: "📋 Договоры для удаления отправлены пациенту по WhatsApp" });
-      } else {
-        toast({ title: "Ошибка при отправке пакета документов", variant: "destructive" });
       }
     } catch {
-      toast({ title: "Ошибка при отправке пакета документов", variant: "destructive" });
+      // silent — doctor will see a "prepare" button in step 3 if this fails
+    } finally {
+      setBundlePreparing(false);
+    }
+  }, [queryClient]);
+
+  // Sends WhatsApp for an already-prepared bundle
+  const handleSendBundleWhatsapp = useCallback(async (token: string) => {
+    setBundleSending(true);
+    try {
+      const res = await fetch(`/api/contracts/bundle/${token}/send-whatsapp`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const responseData = await res.json() as { success: boolean; data?: { bundleUrl: string } };
+      if (responseData.success) {
+        setBundleSent(true);
+        if (responseData.data?.bundleUrl) setBundleUrl(responseData.data.bundleUrl);
+        toast({ title: "✅ Пакет договоров отправлен пациенту по WhatsApp" });
+      } else {
+        toast({ title: "Ошибка при отправке по WhatsApp", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Ошибка при отправке по WhatsApp", variant: "destructive" });
     } finally {
       setBundleSending(false);
     }
-  }, [queryClient, toast]);
+  }, [toast]);
 
   const handleSaveDiagnosis = useCallback(async () => {
     if (!selectedPatientId) return;
@@ -1300,16 +1326,18 @@ export function PatientDetailPanel() {
     // Remove the stale cache entirely so the panel re-enters the "polling" state
     queryClient.removeQueries({ queryKey: getDentalAiAnalysisQueryKey(selectedPatientId) });
 
-    // Navigate: extraction → contracts step (3), otherwise → plans step (2)
+    // Always navigate to step 2 (plans). If extraction detected — silently prepare
+    // the bundle in the background so step 3 will be ready when the doctor gets there.
     setActiveTab("treatment");
-    setTreatmentStep(hasExtractionSelected ? 3 : 2);
+    setTreatmentStep(2);
 
-    // Auto-send extraction bundle via WhatsApp
     if (hasExtractionSelected) {
+      setBundleToken(null);
       setBundleUrl(null);
-      void handleSendBundle(selectedPatientId);
+      setBundleSent(false);
+      void handlePrepareBundle(selectedPatientId);
     }
-  }, [selectedPatientId, diagnosisMap, diagnosisNotesMap, diagnosisServicesMap, teethMap, updateToothMutation, triggerAnalysisMutation, createPlanMutation, refetchTeeth, toast, t, queryClient, setActiveTab, handleSendBundle]);
+  }, [selectedPatientId, diagnosisMap, diagnosisNotesMap, diagnosisServicesMap, teethMap, updateToothMutation, triggerAnalysisMutation, createPlanMutation, refetchTeeth, toast, t, queryClient, setActiveTab, handlePrepareBundle]);
 
   const diagnosisSummaryEntries = useMemo((): DiagnosisSummaryEntry[] => {
     const allFdis = new Set([...diagnosisMap.keys(), ...teethMap.keys()]);
@@ -2385,41 +2413,115 @@ export function PatientDetailPanel() {
                 {/* ── Step 3: Договоры ── */}
                 {treatmentStep === 3 && (
                   <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-                    {/* Extraction bundle card (auto-sent) */}
+
+                    {/* Extraction bundle card */}
                     {hasExtractionInPlan && (
-                      <div className="mx-3 mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl shrink-0">
+                      <div className="mx-3 mt-3 p-3.5 bg-amber-50 border border-amber-200 rounded-xl shrink-0">
                         <div className="flex items-start gap-2.5">
-                          <span className="text-lg shrink-0 mt-0.5">🦷</span>
+                          <span className="text-xl shrink-0 mt-0.5">🦷</span>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-amber-900">Пакет договоров — удаление зуба</p>
-                            <p className="text-xs text-amber-700 mt-0.5">4 документа: Договор, ИДС, Вкладыш, Памятка</p>
-                            {bundleSending && (
-                              <p className="text-xs text-amber-600 mt-1 flex items-center gap-1.5">
+                            <p className="text-xs text-amber-700 mt-0.5">4 документа: Договор · ИДС · Вкладыш · Памятка</p>
+
+                            {/* Preparing state */}
+                            {bundlePreparing && (
+                              <p className="text-xs text-amber-600 mt-2 flex items-center gap-1.5">
                                 <span className="inline-block w-3 h-3 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
-                                Генерируем и отправляем по WhatsApp…
+                                Формируем документы…
                               </p>
                             )}
-                            {!bundleSending && bundleUrl && (
-                              <div className="mt-2 flex items-center gap-2 flex-wrap">
-                                <span className="text-xs text-green-700 font-semibold flex items-center gap-1">✅ Отправлено пациенту</span>
-                                <a href={bundleUrl} target="_blank" rel="noreferrer" className="text-xs text-primary underline underline-offset-2 truncate max-w-[200px]">
-                                  Открыть пакет
-                                </a>
+
+                            {/* Ready — not yet sent */}
+                            {!bundlePreparing && bundleToken && !bundleSent && (
+                              <div className="mt-2.5 flex flex-wrap gap-2">
+                                <button
+                                  onClick={() => setBundlePreviewOpen(true)}
+                                  className="text-xs px-3 py-1.5 bg-white border border-amber-300 text-amber-800 rounded-lg font-semibold hover:bg-amber-100 transition-colors flex items-center gap-1.5"
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                  Предпросмотр
+                                </button>
+                                <button
+                                  disabled={bundleSending}
+                                  onClick={() => void handleSendBundleWhatsapp(bundleToken)}
+                                  className="text-xs px-3 py-1.5 bg-[#25D366] text-white rounded-lg font-semibold hover:bg-[#1ebe5d] transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                                >
+                                  {bundleSending ? (
+                                    <span className="inline-block w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                                  ) : (
+                                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.117.549 4.107 1.514 5.836L0 24l6.335-1.493A11.935 11.935 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.028-1.383l-.36-.214-3.732.979.997-3.645-.235-.374A9.786 9.786 0 012.182 12C2.182 6.58 6.58 2.182 12 2.182S21.818 6.58 21.818 12 17.42 21.818 12 21.818z"/></svg>
+                                  )}
+                                  {bundleSending ? "Отправляем…" : "Отправить пациенту"}
+                                </button>
                               </div>
                             )}
-                            {!bundleSending && !bundleUrl && (
+
+                            {/* Sent */}
+                            {!bundlePreparing && bundleSent && bundleToken && (
+                              <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                                <span className="text-xs text-green-700 font-semibold flex items-center gap-1">✅ Отправлено пациенту</span>
+                                <button
+                                  onClick={() => setBundlePreviewOpen(true)}
+                                  className="text-xs px-2.5 py-1 bg-white border border-green-200 text-green-700 rounded-lg font-medium hover:bg-green-50 transition-colors"
+                                >
+                                  Открыть предпросмотр
+                                </button>
+                              </div>
+                            )}
+
+                            {/* Failed to prepare — retry */}
+                            {!bundlePreparing && !bundleToken && selectedPatientId && (
                               <button
-                                onClick={() => selectedPatientId && void handleSendBundle(selectedPatientId)}
+                                onClick={() => void handlePrepareBundle(selectedPatientId)}
                                 className="mt-2 text-xs px-3 py-1.5 bg-amber-600 text-white rounded-lg font-semibold hover:bg-amber-700 transition-colors"
                               >
-                                📋 Отправить пакет договоров
+                                📋 Подготовить документы
                               </button>
                             )}
                           </div>
                         </div>
                       </div>
                     )}
+
                     <ContractsTab patientId={selectedPatientId} />
+
+                    {/* Bundle preview dialog */}
+                    {bundlePreviewOpen && bundleToken && (
+                      <div
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+                        onClick={(e) => { if (e.target === e.currentTarget) setBundlePreviewOpen(false); }}
+                      >
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl h-[85vh] flex flex-col overflow-hidden">
+                          <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
+                            <div>
+                              <p className="text-sm font-semibold text-gray-900">Предпросмотр пакета договоров</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">4 документа · удаление зуба</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <a
+                                href={bundleUrl ?? `/p/bundle/${bundleToken}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-xs px-2.5 py-1.5 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition-colors"
+                              >
+                                ↗ В новой вкладке
+                              </a>
+                              <button
+                                onClick={() => setBundlePreviewOpen(false)}
+                                className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-slate-100 transition-colors"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                          <iframe
+                            src={bundleUrl ?? `/p/bundle/${bundleToken}`}
+                            className="flex-1 w-full border-0"
+                            title="Пакет договоров"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )} {/* end treatmentStep === 3 */}
 
