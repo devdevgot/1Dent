@@ -139,7 +139,11 @@ export async function sendGreenApiMessage(
   apiBaseUrl?: string | null,
 ): Promise<GreenApiSendResult> {
   const url = `${resolveInstanceBaseUrl(apiBaseUrl)}/waInstance${instanceId}/sendMessage/${token}`;
-  const chatId = phone.includes("@") ? phone : `${phone}@c.us`;
+  // Green API requires digits-only phone (no +, spaces, parens, dashes)
+  const digitsOnly = phone.replace(/\D/g, "");
+  const chatId = phone.includes("@") ? phone : `${digitsOnly}@c.us`;
+
+  logger.info({ instanceId, chatId, textLength: text.length }, "[green-api] sendMessage");
 
   const res = await fetch(url, {
     method: "POST",
@@ -150,10 +154,13 @@ export async function sendGreenApiMessage(
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
+    logger.error({ instanceId, chatId, status: res.status, body }, "[green-api] sendMessage failed");
     throw new Error(`Green API sendMessage failed: ${res.status} ${body}`);
   }
 
-  return res.json() as Promise<GreenApiSendResult>;
+  const result = await res.json() as GreenApiSendResult;
+  logger.info({ instanceId, chatId, idMessage: result.idMessage }, "[green-api] sendMessage OK");
+  return result;
 }
 
 export async function getGreenApiQrCode(

@@ -470,11 +470,26 @@ router.post(
       `3. Согласие на выполнение рекомендаций\n4. Памятка после удаления\n\n` +
       `Откройте все документы и подпишите по ссылке:\n${bundleUrl}\n\nКлиника: ${clinicName}`;
 
-    await sendToPatient(clinicId, patientPhone, message).catch((err: unknown) => {
-      logger.error({ err, bundleToken }, "[contracts] Failed to send bundle WhatsApp");
-    });
-
-    res.json({ success: true, data: { bundleToken, bundleUrl } });
+    try {
+      const idMessage = await sendToPatient(clinicId, patientPhone, message);
+      if (!idMessage) {
+        logger.warn({ bundleToken, clinicId, patientPhone }, "[contracts] sendToPatient returned empty idMessage");
+        return res.status(502).json({
+          success: false,
+          code: "WHATSAPP_SEND_FAILED",
+          error: "WhatsApp не подключён или сообщение не доставлено",
+        });
+      }
+      logger.info({ bundleToken, idMessage }, "[contracts] bundle WhatsApp sent");
+      res.json({ success: true, data: { bundleToken, bundleUrl, idMessage } });
+    } catch (err) {
+      logger.error({ err, bundleToken, clinicId, patientPhone }, "[contracts] Failed to send bundle WhatsApp");
+      res.status(502).json({
+        success: false,
+        code: "WHATSAPP_SEND_FAILED",
+        error: err instanceof Error ? err.message : "Ошибка при отправке WhatsApp",
+      });
+    }
   },
 );
 

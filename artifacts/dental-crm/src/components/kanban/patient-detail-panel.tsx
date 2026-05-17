@@ -1253,7 +1253,7 @@ export function PatientDetailPanel() {
         method: "POST",
         credentials: "include",
       });
-      const responseData = await res.json() as { success: boolean; code?: string; data?: { bundleUrl: string } };
+      const responseData = await res.json() as { success: boolean; code?: string; error?: string; data?: { bundleUrl: string } };
       if (responseData.success) {
         setBundleSent(true);
         if (responseData.data?.bundleUrl) setBundleUrl(responseData.data.bundleUrl);
@@ -1261,7 +1261,11 @@ export function PatientDetailPanel() {
       } else if (responseData.code === "WHATSAPP_NOT_CONNECTED" || res.status === 422) {
         setWhatsappNotConnectedOpen(true);
       } else {
-        toast({ title: "Ошибка при отправке по WhatsApp", variant: "destructive" });
+        toast({
+          title: "Ошибка при отправке по WhatsApp",
+          description: responseData.error ?? `HTTP ${res.status}`,
+          variant: "destructive",
+        });
       }
     } catch {
       toast({ title: "Ошибка сети при отправке по WhatsApp", variant: "destructive" });
@@ -1341,16 +1345,9 @@ export function PatientDetailPanel() {
       setBundleToken(null);
       setBundleUrl(null);
       setBundleSent(false);
-      // Prepare the bundle, then immediately send the WhatsApp link to the patient.
-      // Fire-and-forget — doctor can still resend manually if delivery fails.
-      void (async () => {
-        const token = await handlePrepareBundle(selectedPatientId);
-        if (token) {
-          await handleSendBundleWhatsapp(token);
-        }
-      })();
+      void handlePrepareBundle(selectedPatientId);
     }
-  }, [selectedPatientId, diagnosisMap, diagnosisNotesMap, diagnosisServicesMap, teethMap, updateToothMutation, triggerAnalysisMutation, createPlanMutation, refetchTeeth, toast, t, queryClient, setActiveTab, handlePrepareBundle, handleSendBundleWhatsapp]);
+  }, [selectedPatientId, diagnosisMap, diagnosisNotesMap, diagnosisServicesMap, teethMap, updateToothMutation, triggerAnalysisMutation, createPlanMutation, refetchTeeth, toast, t, queryClient, setActiveTab, handlePrepareBundle]);
 
   const diagnosisSummaryEntries = useMemo((): DiagnosisSummaryEntry[] => {
     const allFdis = new Set([...diagnosisMap.keys(), ...teethMap.keys()]);
