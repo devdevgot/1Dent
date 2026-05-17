@@ -256,7 +256,9 @@ router.get("/p/contract/:token", async (req: Request, res: Response, next: NextF
     const { contract, templateName, patientName, clinicName } = result;
 
     if (contract.status === "sent") {
-      repo.markContractViewed(token).catch((err: unknown) => logger.warn({ err }, "[contract] markViewed failed"));
+      await repo.markContractViewed(token).catch((err: unknown) =>
+        logger.warn({ err }, "[contract] markViewed failed"),
+      );
     }
 
     res.setHeader("Content-Type", "text/html; charset=utf-8");

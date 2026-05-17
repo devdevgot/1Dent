@@ -124,10 +124,9 @@ router.post(
       });
       if (!putRes.ok) throw new Error(`GCS upload failed: ${putRes.status}`);
 
-      // Normalize path before tagging
-      const urlObj = new URL(uploadUrl);
-      const rawPath = storage.normalizeObjectEntityPath(urlObj.pathname);
-      fileUrl = rawPath;
+      // Normalize path — pass the full signed URL so normalizeObjectEntityPath
+      // can strip the GCS base URL and return "/objects/..." form
+      fileUrl = storage.normalizeObjectEntityPath(uploadUrl);
 
       // Tag the object with clinic ownership so the storage ACL check can enforce tenant isolation
       await storage.trySetObjectEntityAclPolicy(uploadUrl, {
