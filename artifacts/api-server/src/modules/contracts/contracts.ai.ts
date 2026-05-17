@@ -16,28 +16,92 @@ export const PATIENT_FIELDS: { field: string; label: string }[] = [
 ];
 
 /**
- * Uses AI to detect dynamic placeholders in a contract template text
- * and map each placeholder to a known patient field.
+ * Regex-based heuristic for common Russian/Kazakh dental contract markers.
+ * Catches "ФИО: ______", "ИИН ____", "Дата рождения: __.__.____" etc.
+ * Always runs alongside AI so we never return an empty list when the document
+ * clearly contains form fields.
  */
+function detectFieldsByHeuristic(text: string): FieldMapping[] {
+  const results: FieldMapping[] = [];
+  const seen = new Set<string>();
+
+  const patterns: Array<{ re: RegExp; patientField: string; label: string }> = [
+    { re: /(Ф\.?\s*И\.?\s*О\.?\s*(?:пациента)?\s*[:\-]?\s*[_\s]{4,})/gi, patientField: "patient.name",        label: "ФИО пациента" },
+    { re: /((?:фамилия[,\s]+имя[,\s]+отчество|полное\s+имя)\s*[:\-]?\s*[_\s]{4,})/gi, patientField: "patient.name", label: "ФИО пациента" },
+    { re: /(ИИН\s*[:\-]?\s*[_\s\d]{6,})/gi,                              patientField: "patient.iin",         label: "ИИН пациента" },
+    { re: /((?:тел(?:ефон)?\.?|моб(?:ильный)?\.?|контактный\s+тел[^\s_:-]*)\s*[:\-]?\s*[_\s\d+()-]{6,})/gi, patientField: "patient.phone", label: "Телефон пациента" },
+    { re: /((?:дата\s+рождения|д\.?\s*р\.?)\s*[:\-]?\s*[_\s.\d/]{4,})/gi, patientField: "patient.dateOfBirth", label: "Дата рождения" },
+    { re: /((?:^|\n)\s*пол\s*[:\-]?\s*[_\s]{3,})/gi,                     patientField: "patient.gender",      label: "Пол" },
+    { re: /((?:врач|доктор|лечащий\s+врач)\s*[:\-]?\s*[_\s]{4,})/gi,     patientField: "doctor.name",         label: "ФИО врача" },
+    { re: /((?:наименование\s+клиники|стомат[^\s_:-]+)\s*[:\-]?\s*[_\s]{4,})/gi, patientField: "clinic.name", label: "Название клиники" },
+    { re: /((?:дата\s+(?:заключения|подписания|договора))\s*[:\-]?\s*[_\s.\d/]{4,})/gi, patientField: "date.today", label: "Дата сегодня" },
+    { re: /(«\s*[_\s]{2,}\s*»\s*[_\s]{2,}\s*20[_\s\d]{2,}\s*г\.?)/gi,    patientField: "date.today",          label: "Дата сегодня" },
+  ];
+
+  for (const { re, patientField, label } of patterns) {
+    for (const m of text.matchAll(re)) {
+      const raw = m[0].trim().replace(/\s+/g, " ");
+      const placeholder = raw.length > 80 ? raw.slice(0, 80) : raw;
+      const key = `${patientField}::${placeholder}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      results.push({ placeholder, patientField, label });
+    }
+  }
+  return results;
+}
+
+/** Merge AI + heuristic results, deduping by placeholder. */
+function mergeMappings(a: FieldMapping[], b: FieldMapping[]): FieldMapping[] {
+  const seen = new Map<string, FieldMapping>();
+  for (const m of [...a, ...b]) {
+    if (!m || typeof m.placeholder !== "string" || !m.placeholder.trim()) continue;
+    const key = m.placeholder.trim();
+    if (!seen.has(key)) seen.set(key, m);
+  }
+  return Array.from(seen.values());
+}
+
 export async function analyzeContractFields(
   text: string,
 ): Promise<FieldMapping[]> {
   const truncated = text.slice(0, 8000);
 
-  const systemPrompt = `Ты — система анализа договоров стоматологической клиники.
-Тебе дают текст договора. Найди все динамические поля/плейсхолдеры — места, где нужно подставить данные конкретного пациента.
-Типичные маркеры: ____, [...], {{}}, «заполнить», пустые строки в ФИО/дата/ИИН/телефон, а также явные метки.
+  logger.info(
+    {
+      textLength: text.length,
+      truncatedLength: truncated.length,
+      preview: truncated.slice(0, 300),
+    },
+    "[contracts.ai] analyzeContractFields start",
+  );
 
-Для каждого найденного поля заполни объект:
+  // 1. Heuristic — fast and deterministic, always runs
+  const heuristic = detectFieldsByHeuristic(truncated);
+
+  const systemPrompt = `Ты — система анализа договоров стоматологической клиники.
+Тебе дают текст договора. Найди ВСЕ места, куда нужно подставить данные конкретного пациента.
+
+Ищи агрессивно — типичные сигналы:
+- последовательности подчёркиваний: "____", "_______________", "_ _ _ _"
+- метки с двоеточием: "ФИО:", "ИИН:", "Тел:", "Дата рождения:", "Адрес:"
+- скобки и фигурные скобки: [____], {ФИО}, <ИИН>, {{name}}
+- слова "пациент", "заполнить", "ввести"
+- пустые поля в шаблонах: «___» «____» 20__ г.
+- дата формата __.__.____ или __ . __ . ____
+
+Даже если поле выглядит просто как длинная линия подчёркиваний — это ВЕРОЯТНО плейсхолдер; определи назначение по контексту (текст до и после).
+
+Для каждого места заполни объект:
 {
-  "placeholder": "точная подстрока из текста (например '__ФИО__' или '__________')",
+  "placeholder": "ТОЧНАЯ подстрока из текста (включи метку и подчёркивания, например 'ФИО: _______________')",
   "patientField": "одно из: patient.name | patient.phone | patient.iin | patient.dateOfBirth | patient.gender | doctor.name | clinic.name | date.today | date.year",
-  "label": "человекочитаемое название поля на русском"
+  "label": "человекочитаемое название на русском"
 }
 
-Верни JSON-объект вида: { "fields": [ ...массив объектов... ] }
-Если динамических полей нет — верни { "fields": [] }.`;
+Верни JSON вида: { "fields": [ ... ] }. Если совсем ничего не нашёл — { "fields": [] }.`;
 
+  let aiFields: FieldMapping[] = [];
   try {
     const completion = await withTimeout(
       openrouter.chat.completions.create({
@@ -54,16 +118,21 @@ export async function analyzeContractFields(
     );
 
     const raw = completion.choices[0]?.message.content ?? "";
-    // AI may return { fields: [...] } or just [...]
+    logger.info({ rawSnippet: raw.slice(0, 500) }, "[contracts.ai] AI raw response");
+
     const parsed = parseLlmJson<FieldMapping[] | { fields: FieldMapping[] }>(raw);
-    if (!parsed) return [];
-    if (Array.isArray(parsed)) return parsed;
-    if ("fields" in parsed && Array.isArray(parsed.fields)) return parsed.fields;
-    return [];
+    if (Array.isArray(parsed)) aiFields = parsed;
+    else if (parsed && "fields" in parsed && Array.isArray(parsed.fields)) aiFields = parsed.fields;
   } catch (err) {
-    logger.error({ err }, "[contracts.ai] analyzeContractFields failed");
-    return [];
+    logger.error({ err }, "[contracts.ai] AI call failed; falling back to heuristic only");
   }
+
+  const merged = mergeMappings(aiFields, heuristic);
+  logger.info(
+    { aiCount: aiFields.length, heuristicCount: heuristic.length, mergedCount: merged.length },
+    "[contracts.ai] analyzeContractFields done",
+  );
+  return merged;
 }
 
 /** Substitute patient data into the contract HTML using fieldMappings */

@@ -4,9 +4,9 @@ export const modules: ModuleMap = {
   "./components/mockups/patient-panel/VariantA.tsx": () => import("../components/mockups/patient-panel/VariantA.tsx"),
   "./components/mockups/patient-panel/VariantB.tsx": () => import("../components/mockups/patient-panel/VariantB.tsx"),
   "./components/mockups/patient-panel/VariantC.tsx": () => import("../components/mockups/patient-panel/VariantC.tsx"),
+  "./components/mockups/patient-panel-real/Current.tsx": () => import("../components/mockups/patient-panel-real/Current.tsx"),
+  "./components/mockups/patient-panel-real/WideView.tsx": () => import("../components/mockups/patient-panel-real/WideView.tsx"),
   "./components/mockups/treatment-plan/DesktopView.tsx": () => import("../components/mockups/treatment-plan/DesktopView.tsx"),
   "./components/mockups/treatment-plan/MobileView.tsx": () => import("../components/mockups/treatment-plan/MobileView.tsx"),
-  "./components/mockups/treatment-plan/PatientPlansTab.tsx": () => import("../components/mockups/treatment-plan/PatientPlansTab.tsx"),
-  "./components/mockups/patient-panel-real/Current.tsx": () => import("../components/mockups/patient-panel-real/Current.tsx"),
-  "./components/mockups/patient-panel-real/WideView.tsx": () => import("../components/mockups/patient-panel-real/WideView.tsx")
+  "./components/mockups/treatment-plan/PatientPlansTab.tsx": () => import("../components/mockups/treatment-plan/PatientPlansTab.tsx")
 };
