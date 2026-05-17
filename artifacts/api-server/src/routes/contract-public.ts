@@ -9,29 +9,34 @@ const router: IRouter = Router();
 const repo = new ContractsRepository();
 
 // ── PDF generation setup ───────────────────────────────────────────────────
+// pdfmake 0.3.x exports a singleton instance (not a constructor).
+// Fonts are set directly on the instance as file-system paths.
 const _require = createRequire(import.meta.url);
 const pdfmakeDir = path.dirname(_require.resolve("pdfmake/package.json"));
 const fontsDir = path.join(pdfmakeDir, "fonts", "Roboto");
 
-interface PdfPrinterConstructor {
-  new (fonts: Record<string, Record<string, string>>): {
-    createPdfKitDocument(docDef: unknown): NodeJS.EventEmitter & { end(): void };
+interface PdfmakeInstance {
+  fonts: Record<string, Record<string, string>>;
+  setUrlAccessPolicy(fn: ((url: string) => boolean) | undefined): void;
+  createPdf(docDef: unknown): {
+    getBuffer(): Promise<Buffer>;
   };
 }
 
-function getPdfPrinter(): InstanceType<PdfPrinterConstructor> {
-  // PdfPrinter is the Node.js server-side entry point of pdfmake
+function getPdfInstance(): PdfmakeInstance {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const PdfPrinter = (_require("pdfmake") as { default?: PdfPrinterConstructor } & PdfPrinterConstructor).default
-    ?? (_require("pdfmake") as PdfPrinterConstructor);
-  return new PdfPrinter({
+  const instance = _require("pdfmake") as PdfmakeInstance;
+  instance.fonts = {
     Roboto: {
       normal:      path.join(fontsDir, "Roboto-Regular.ttf"),
       bold:        path.join(fontsDir, "Roboto-Medium.ttf"),
       italics:     path.join(fontsDir, "Roboto-Italic.ttf"),
       bolditalics: path.join(fontsDir, "Roboto-MediumItalic.ttf"),
     },
-  });
+  };
+  // Disable URL access (no remote resources needed)
+  instance.setUrlAccessPolicy(() => false);
+  return instance;
 }
 
 /** Strip HTML tags and decode basic entities for plain-text PDF body. */
@@ -57,10 +62,14 @@ async function generatePdfBuffer(opts: {
   renderedHtml: string;
   signedAt: string | null;
 }): Promise<Buffer> {
-  const printer = getPdfPrinter();
+  const pdfmake = getPdfInstance();
   const lines = htmlToPlainLines(opts.renderedHtml);
 
-  const bodyContent = lines.map((line) => ({ text: line, style: "body", margin: [0, 0, 0, 4] as [number, number, number, number] }));
+  const bodyContent = lines.map((line) => ({
+    text: line,
+    style: "body",
+    margin: [0, 0, 0, 4] as [number, number, number, number],
+  }));
 
   const docDefinition = {
     defaultStyle: { font: "Roboto" },
@@ -77,7 +86,7 @@ async function generatePdfBuffer(opts: {
               margin: [0, 30, 0, 12] as [number, number, number, number],
             },
             {
-              text: `✅ Договор подписан электронно: ${opts.signedAt}\nПациент: ${opts.patientName}`,
+              text: `Договор подписан электронно: ${opts.signedAt}\nПациент: ${opts.patientName}`,
               style: "signatureBlock",
             },
           ]
@@ -92,14 +101,7 @@ async function generatePdfBuffer(opts: {
     },
   };
 
-  return new Promise((resolve, reject) => {
-    const pdfDoc = printer.createPdfKitDocument(docDefinition);
-    const chunks: Buffer[] = [];
-    pdfDoc.on("data", (chunk: Buffer) => chunks.push(chunk));
-    pdfDoc.on("end", () => resolve(Buffer.concat(chunks)));
-    pdfDoc.on("error", (err: Error) => reject(err));
-    pdfDoc.end();
-  });
+  return pdfmake.createPdf(docDefinition).getBuffer();
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
