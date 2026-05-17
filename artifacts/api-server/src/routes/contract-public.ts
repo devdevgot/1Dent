@@ -342,4 +342,236 @@ router.get("/p/contract/:token/pdf", async (req: Request, res: Response, next: N
   }
 });
 
+// ── Bundle Routes ──────────────────────────────────────────────────────────
+
+function buildBundlePage(opts: {
+  clinicName: string;
+  patientName: string;
+  bundleToken: string;
+  contracts: Array<{
+    token: string;
+    templateName: string;
+    renderedHtml: string;
+    status: string;
+    signedAt?: Date | null;
+  }>;
+}): string {
+  const { clinicName, patientName, bundleToken, contracts } = opts;
+  const allSigned = contracts.every((c) => c.status === "signed");
+  const firstSignedAt = contracts.find((c) => c.signedAt)?.signedAt;
+  const signedDateStr = firstSignedAt
+    ? new Date(firstSignedAt).toLocaleString("ru-RU", {
+        day: "2-digit", month: "2-digit", year: "numeric",
+        hour: "2-digit", minute: "2-digit",
+      })
+    : "";
+
+  const tabsJson = JSON.stringify(
+    contracts.map((c, i) => ({
+      idx: i,
+      label: c.templateName,
+      html: c.renderedHtml,
+      status: c.status,
+      token: c.token,
+    })),
+  ).replace(/<\/script>/gi, "<\\/script>");
+
+  const shortLabels = ["Договор", "ИДС", "Вкладыш", "Памятка"];
+
+  const tabButtons = contracts
+    .map(
+      (c, i) =>
+        `<button class="tab-btn${i === 0 ? " active" : ""}" onclick="showTab(${i})" id="tab-btn-${i}">
+          <span class="tab-num">${i + 1}</span>
+          <span class="tab-label">${escHtml(shortLabels[i] ?? c.templateName)}</span>
+          ${c.status === "signed" ? '<span class="tab-check">✓</span>' : ""}
+        </button>`,
+    )
+    .join("");
+
+  return `<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Пакет документов — ${escHtml(clinicName)}</title>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f2f2f7;min-height:100vh;color:#1c1c1e}
+    .header{background:#fff;border-bottom:1px solid #e5e5ea;padding:14px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:20}
+    .logo{width:34px;height:34px;background:#6bcb3a;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .logo svg{width:20px;height:20px}
+    .htext h1{font-size:14px;font-weight:700;color:#1c1c1e;line-height:1.2}
+    .htext p{font-size:11px;color:#6e6e73;margin-top:1px}
+    .hbadge{margin-left:auto;flex-shrink:0;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600}
+    .hbadge.pending{background:#e8f4fd;color:#0077b6}
+    .hbadge.signed{background:#d4edda;color:#155724}
+    .tab-bar{background:#fff;border-bottom:1px solid #e5e5ea;display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;position:sticky;top:62px;z-index:15}
+    .tab-bar::-webkit-scrollbar{display:none}
+    .tab-btn{flex:1;min-width:72px;padding:10px 6px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;border:none;background:transparent;cursor:pointer;position:relative;color:#6e6e73;font-size:10px;font-weight:600;border-bottom:2px solid transparent;transition:color .15s}
+    .tab-btn.active{color:#6bcb3a;border-bottom-color:#6bcb3a}
+    .tab-num{width:22px;height:22px;border-radius:50%;background:#f2f2f7;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;transition:background .15s,color .15s}
+    .tab-btn.active .tab-num{background:#6bcb3a;color:#fff}
+    .tab-label{line-height:1}
+    .tab-check{position:absolute;top:6px;right:6px;font-size:9px;color:#6bcb3a;font-weight:700}
+    .container{max-width:720px;margin:0 auto;padding:16px 14px 130px}
+    .signed-banner{background:#d4edda;border:1px solid #c3e6cb;border-radius:14px;padding:14px 18px;text-align:center;margin-bottom:14px}
+    .signed-banner h3{font-size:15px;font-weight:700;color:#155724;margin-bottom:3px}
+    .signed-banner p{font-size:12px;color:#155724;opacity:.85}
+    .card{background:#fff;border-radius:16px;padding:22px 18px;box-shadow:0 1px 4px rgba(0,0,0,.07);display:none}
+    .card.active{display:block}
+    .card-meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+    .meta-chip{background:#f2f2f7;border-radius:8px;padding:5px 10px;font-size:12px;color:#3a3a3c}
+    .meta-chip span{font-weight:600}
+    .contract-body{line-height:1.7;font-size:13px;color:#3a3a3c;white-space:pre-wrap;word-break:break-word}
+    .actions{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e5e5ea;padding:14px 16px;display:flex;gap:10px;z-index:20}
+    .btn{flex:1;height:48px;border-radius:14px;border:none;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s;text-decoration:none}
+    .btn:active{opacity:.8}
+    .btn-primary{background:#6bcb3a;color:#fff}
+    .btn-secondary{background:#f2f2f7;color:#3a3a3c;font-size:13px}
+    .btn.loading{opacity:.65;pointer-events:none}
+    .spinner{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:none}
+    .btn.loading .spinner{display:block}
+    .btn.loading .btn-label{display:none}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @media(max-width:480px){.container{padding:14px 10px 120px}.card{padding:16px 12px}}
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2C8.5 2 7 4.5 7 6.5c0 1.5.5 3 1.5 4C9.5 11.5 10 13 10 14.5c0 1-.5 2-1 2.5-.5.5-1 .5-1 1.5 0 1.5 1.5 3.5 4 3.5s4-2 4-3.5c0-1-.5-1-.5-1.5-.5-.5-1-1.5-1-2.5 0-1.5.5-3 1.5-4 1-1 1.5-2.5 1.5-4C19 4.5 15.5 2 12 2Z" fill="white"/></svg></div>
+    <div class="htext"><h1>Пакет документов</h1><p>${escHtml(clinicName)}</p></div>
+    <span class="hbadge ${allSigned ? "signed" : "pending"}">${allSigned ? "✅ Подписано" : "Ожидает подписи"}</span>
+  </div>
+
+  <div class="tab-bar">${tabButtons}</div>
+
+  <div class="container">
+    ${allSigned ? `<div class="signed-banner"><h3>✅ Все документы подписаны</h3><p>Подписано ${signedDateStr}</p></div>` : ""}
+    ${contracts
+      .map(
+        (c, i) => `
+    <div class="card${i === 0 ? " active" : ""}" id="tab-panel-${i}">
+      <div class="card-meta">
+        <div class="meta-chip">Пациент: <span>${escHtml(patientName)}</span></div>
+      </div>
+      <div class="contract-body">${c.renderedHtml}</div>
+    </div>`,
+      )
+      .join("")}
+  </div>
+
+  <div class="actions">
+    ${
+      !allSigned
+        ? `<button class="btn btn-primary" id="sign-all-btn" onclick="signAll()">
+        <div class="spinner"></div>
+        <span class="btn-label">✍️ Подписать все (${contracts.length})</span>
+      </button>`
+        : ""
+    }
+    <button class="btn btn-secondary" onclick="downloadCurrent()">📄 PDF</button>
+  </div>
+
+  <script>
+    var TABS = ${tabsJson};
+    var currentIdx = 0;
+    function showTab(idx){
+      document.querySelectorAll('.tab-btn').forEach(function(b,i){b.classList.toggle('active',i===idx)});
+      document.querySelectorAll('.card').forEach(function(c,i){c.classList.toggle('active',i===idx)});
+      currentIdx=idx;
+    }
+    async function signAll(){
+      var btn=document.getElementById('sign-all-btn');
+      btn.classList.add('loading');
+      try{
+        var res=await fetch('/p/bundle/${bundleToken}/sign-all',{method:'POST'});
+        var data=await res.json();
+        if(data.success){location.reload();}
+        else{alert(data.error||'Ошибка при подписании');btn.classList.remove('loading');}
+      }catch{alert('Ошибка сети. Попробуйте снова.');btn.classList.remove('loading');}
+    }
+    function downloadCurrent(){
+      var t=TABS[currentIdx];
+      if(t) window.open('/p/contract/'+t.token+'/pdf','_blank');
+    }
+  </script>
+</body>
+</html>`;
+}
+
+// GET /p/bundle/:bundleToken — public bundle page (all 4 contracts in tabs)
+router.get("/p/bundle/:bundleToken", async (req: Request, res: Response, next: NextFunction) => {
+  const bundleToken = String(req.params["bundleToken"]);
+  try {
+    const results = await repo.findContractsByBundleToken(bundleToken);
+    if (!results.length) {
+      return res.status(404).send(
+        `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Не найдено</title></head><body style="font-family:sans-serif;text-align:center;padding:60px 20px"><h2>Пакет документов не найден</h2><p style="color:#666">Ссылка устарела или недействительна.</p></body></html>`,
+      );
+    }
+
+    await repo.markBundleViewed(bundleToken).catch(() => {});
+
+    const first = results[0]!;
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "no-store");
+    return res.send(
+      buildBundlePage({
+        clinicName: first.clinicName,
+        patientName: first.patientName,
+        bundleToken,
+        contracts: results.map((r) => ({
+          token: r.contract.token,
+          templateName: r.templateName,
+          renderedHtml: r.contract.renderedHtml ?? "",
+          status: r.contract.status,
+          signedAt: r.contract.signedAt,
+        })),
+      }),
+    );
+  } catch (err) {
+    next(err);
+    return;
+  }
+});
+
+// POST /p/bundle/:bundleToken/sign-all — patient signs all documents at once
+router.post("/p/bundle/:bundleToken/sign-all", async (req: Request, res: Response, next: NextFunction) => {
+  const bundleToken = String(req.params["bundleToken"]);
+  try {
+    const results = await repo.findContractsByBundleToken(bundleToken);
+    if (!results.length) {
+      return res.status(404).json({ success: false, error: "Пакет не найден" });
+    }
+
+    const alreadyAllSigned = results.every((r) => r.contract.status === "signed");
+    if (alreadyAllSigned) {
+      return res.json({ success: true, message: "Все документы уже подписаны" });
+    }
+
+    const ip = getClientIp(req);
+    const signed = await repo.markBundleSigned(bundleToken, ip);
+    if (!signed.length) {
+      return res.status(400).json({ success: false, error: "Не удалось подписать" });
+    }
+
+    const first = results[0]!;
+    const signedDateStr = new Date().toLocaleString("ru-RU", {
+      day: "2-digit", month: "2-digit", year: "numeric",
+      hour: "2-digit", minute: "2-digit",
+    });
+    const confirmMsg = `✅ Пакет документов подписан!\n\nСпасибо, ${first.patientName}! Все ${signed.length} документа успешно подписаны ${signedDateStr}.\n\nКлиника ${first.clinicName} желает вам скорейшего выздоровления!`;
+
+    sendToPatient(first.contract.clinicId, first.patientPhone, confirmMsg).catch((err: unknown) => {
+      logger.warn({ err }, "[bundle] Failed to send bundle signing confirmation");
+    });
+
+    return res.json({ success: true });
+  } catch (err) {
+    next(err);
+    return;
+  }
+});
+
 export default router;

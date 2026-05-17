@@ -6,9 +6,14 @@ import {
   usersTable,
   clinicsTable,
 } from "@workspace/db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, isNotNull } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import type { ContractTemplate, PatientContract, FieldMapping } from "@workspace/db";
+import {
+  EXTRACTION_TEMPLATES,
+  renderExtractionTemplate,
+  textToHtml,
+} from "./extraction-templates";
 
 export class ContractsRepository {
   // ── Templates ──────────────────────────────────────────────────────────────
@@ -17,7 +22,7 @@ export class ContractsRepository {
     return db
       .select()
       .from(contractTemplatesTable)
-      .where(eq(contractTemplatesTable.clinicId, clinicId))
+      .where(and(eq(contractTemplatesTable.clinicId, clinicId), eq(contractTemplatesTable.isSystem, false)))
       .orderBy(desc(contractTemplatesTable.createdAt));
   }
 
@@ -66,6 +71,48 @@ export class ContractsRepository {
     return result.length > 0;
   }
 
+  // ── System (extraction) templates ──────────────────────────────────────────
+
+  /**
+   * Lazily creates the 4 extraction system templates for a clinic if they
+   * don't already exist, then returns all 4 in definition order.
+   */
+  async ensureSystemExtractionTemplates(clinicId: string): Promise<ContractTemplate[]> {
+    const existing = await db
+      .select()
+      .from(contractTemplatesTable)
+      .where(and(eq(contractTemplatesTable.clinicId, clinicId), eq(contractTemplatesTable.isSystem, true)));
+
+    const existingTypes = new Set(existing.map((t) => t.systemType));
+
+    const toCreate = EXTRACTION_TEMPLATES.filter((def) => !existingTypes.has(def.id));
+
+    if (toCreate.length > 0) {
+      const inserted = await db
+        .insert(contractTemplatesTable)
+        .values(
+          toCreate.map((def) => ({
+            id: randomUUID(),
+            clinicId,
+            name: def.name,
+            fileUrl: "__system__",
+            fileType: "html",
+            extractedText: def.text,
+            fieldMappings: [] as unknown as FieldMapping[],
+            isSystem: true,
+            systemType: def.id,
+          })),
+        )
+        .returning();
+      existing.push(...inserted);
+    }
+
+    // Return in definition order
+    return EXTRACTION_TEMPLATES.map(
+      (def) => existing.find((t) => t.systemType === def.id)!,
+    ).filter(Boolean);
+  }
+
   // ── Patient contracts ──────────────────────────────────────────────────────
 
   async listPatientContracts(
@@ -82,6 +129,7 @@ export class ContractsRepository {
         templateId: patientContractsTable.templateId,
         sentById: patientContractsTable.sentById,
         token: patientContractsTable.token,
+        bundleToken: patientContractsTable.bundleToken,
         renderedHtml: patientContractsTable.renderedHtml,
         filledData: patientContractsTable.filledData,
         status: patientContractsTable.status,
@@ -119,6 +167,62 @@ export class ContractsRepository {
     return row!;
   }
 
+  /**
+   * Creates all 4 extraction contracts sharing the same bundleToken.
+   * Fills each template with patient/clinic data and renders HTML.
+   */
+  async createExtractionBundle(data: {
+    clinicId: string;
+    patientId: string;
+    sentById: string | null;
+    patientName: string;
+    patientPhone: string;
+    patientIin: string;
+    patientDob: string;
+    clinicName: string;
+    doctorName: string;
+    date: string;
+    year: string;
+  }): Promise<{ bundleToken: string; contracts: PatientContract[] }> {
+    const templates = await this.ensureSystemExtractionTemplates(data.clinicId);
+
+    const vars: Record<string, string> = {
+      patient_name: data.patientName,
+      clinic_name: data.clinicName,
+      doctor_name: data.doctorName,
+      date: data.date,
+      year: data.year,
+      iin: data.patientIin,
+      dob: data.patientDob,
+      phone: data.patientPhone,
+    };
+
+    const bundleToken = randomUUID();
+
+    const rows = await db
+      .insert(patientContractsTable)
+      .values(
+        templates.map((tmpl) => {
+          const rendered = textToHtml(renderExtractionTemplate(tmpl.extractedText ?? "", vars));
+          return {
+            id: randomUUID(),
+            clinicId: data.clinicId,
+            patientId: data.patientId,
+            templateId: tmpl.id,
+            sentById: data.sentById,
+            token: randomUUID(),
+            bundleToken,
+            renderedHtml: rendered,
+            filledData: vars as unknown as Record<string, string>,
+            status: "sent" as const,
+          };
+        }),
+      )
+      .returning();
+
+    return { bundleToken, contracts: rows };
+  }
+
   async findContractByToken(token: string): Promise<{
     contract: PatientContract;
     templateName: string;
@@ -144,6 +248,31 @@ export class ContractsRepository {
     return row ?? null;
   }
 
+  async findContractsByBundleToken(bundleToken: string): Promise<
+    Array<{
+      contract: PatientContract;
+      templateName: string;
+      patientName: string;
+      patientPhone: string;
+      clinicName: string;
+    }>
+  > {
+    return db
+      .select({
+        contract: patientContractsTable,
+        templateName: contractTemplatesTable.name,
+        patientName: patientsTable.name,
+        patientPhone: patientsTable.phone,
+        clinicName: clinicsTable.name,
+      })
+      .from(patientContractsTable)
+      .innerJoin(contractTemplatesTable, eq(patientContractsTable.templateId, contractTemplatesTable.id))
+      .innerJoin(patientsTable, eq(patientContractsTable.patientId, patientsTable.id))
+      .innerJoin(clinicsTable, eq(patientContractsTable.clinicId, clinicsTable.id))
+      .where(eq(patientContractsTable.bundleToken, bundleToken))
+      .orderBy(patientContractsTable.createdAt);
+  }
+
   async markContractViewed(token: string): Promise<void> {
     await db
       .update(patientContractsTable)
@@ -151,6 +280,18 @@ export class ContractsRepository {
       .where(
         and(
           eq(patientContractsTable.token, token),
+          eq(patientContractsTable.status, "sent"),
+        ),
+      );
+  }
+
+  async markBundleViewed(bundleToken: string): Promise<void> {
+    await db
+      .update(patientContractsTable)
+      .set({ status: "viewed" })
+      .where(
+        and(
+          eq(patientContractsTable.bundleToken, bundleToken),
           eq(patientContractsTable.status, "sent"),
         ),
       );
@@ -166,5 +307,16 @@ export class ContractsRepository {
       .where(eq(patientContractsTable.token, token))
       .returning();
     return row ?? null;
+  }
+
+  async markBundleSigned(
+    bundleToken: string,
+    ip: string | null,
+  ): Promise<PatientContract[]> {
+    return db
+      .update(patientContractsTable)
+      .set({ status: "signed", signedAt: new Date(), signedIp: ip })
+      .where(eq(patientContractsTable.bundleToken, bundleToken))
+      .returning();
   }
 }

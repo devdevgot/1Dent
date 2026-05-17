@@ -326,4 +326,83 @@ router.post(
   },
 );
 
+// POST /contracts/patient/:patientId/send-extraction-bundle
+// Auto-generates all 4 extraction documents, sends one WhatsApp bundle link
+router.post(
+  "/patient/:patientId/send-extraction-bundle",
+  authMiddleware,
+  async (req: Request, res: Response, next: NextFunction) => {
+    const patientId = String(req.params["patientId"]);
+    const clinicId = req.user!.clinicId;
+
+    const [patientRow] = await db
+      .select({
+        id: patientsTable.id,
+        name: patientsTable.name,
+        phone: patientsTable.phone,
+        iin: patientsTable.iin,
+        dateOfBirth: patientsTable.dateOfBirth,
+        gender: patientsTable.gender,
+        doctorId: patientsTable.doctorId,
+      })
+      .from(patientsTable)
+      .where(and(eq(patientsTable.id, patientId), eq(patientsTable.clinicId, clinicId)))
+      .limit(1)
+      .catch(() => [null as never]);
+    if (!patientRow) return next(new NotFoundError("Пациент не найден"));
+
+    const [clinicRow] = await db
+      .select({ name: clinicsTable.name })
+      .from(clinicsTable)
+      .where(eq(clinicsTable.id, clinicId))
+      .limit(1);
+    const clinicName = clinicRow?.name ?? "";
+
+    let doctorName = "";
+    if (patientRow.doctorId) {
+      const [doc] = await db
+        .select({ name: usersTable.name })
+        .from(usersTable)
+        .where(eq(usersTable.id, patientRow.doctorId))
+        .limit(1);
+      doctorName = doc?.name ?? "";
+    }
+
+    const today = new Date();
+    const dateStr = today.toLocaleDateString("ru-RU", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+
+    const { bundleToken, contracts } = await repo
+      .createExtractionBundle({
+        clinicId,
+        patientId,
+        sentById: req.user!.userId ?? null,
+        patientName: patientRow.name,
+        patientPhone: patientRow.phone,
+        patientIin: patientRow.iin ?? "",
+        patientDob: patientRow.dateOfBirth ?? "",
+        clinicName,
+        doctorName,
+        date: dateStr,
+        year: String(today.getFullYear()),
+      })
+      .catch(next as (e: unknown) => never);
+    if (!contracts) return;
+
+    const baseUrl = getServerBaseUrl() ?? "https://your-app.replit.app";
+    const bundleUrl = `${baseUrl}/p/bundle/${bundleToken}`;
+
+    const message = `📋 *Пакет документов — Удаление зуба*\n\nУважаемый(-ая) ${patientRow.name}!\n\nВам отправлены 4 документа для ознакомления и подписи:\n1. Договор на оказание услуг\n2. Согласие на удаление зуба\n3. Согласие на выполнение рекомендаций\n4. Памятка после удаления\n\nОткройте все документы и подпишите по ссылке:\n${bundleUrl}\n\nКлиника: ${clinicName}`;
+
+    sendToPatient(clinicId, patientRow.phone, message).catch((err: unknown) => {
+      logger.error({ err, patientId, bundleToken }, "[contracts] Failed to send bundle WhatsApp");
+    });
+
+    res.status(201).json({ success: true, data: { bundleToken, bundleUrl, contracts } });
+  },
+);
+
 export default router;

@@ -912,6 +912,10 @@ export function PatientDetailPanel() {
   const [interactionContent, setInteractionContent] = useState("");
   const [isStatusOpen, setIsStatusOpen] = useState(false);
 
+  const [treatmentStep, setTreatmentStep] = useState<1 | 2 | 3>(1);
+  const [bundleSending, setBundleSending] = useState(false);
+  const [bundleUrl, setBundleUrl] = useState<string | null>(null);
+
   const [isDiagnosisMode, setIsDiagnosisMode] = useState(false);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [diagnosisMap, setDiagnosisMap] = useState<DiagnosisMap>(new Map());
@@ -1145,7 +1149,7 @@ export function PatientDetailPanel() {
   const { data: tasksData } = useListPatientTreatments(selectedPatientId ?? "", {
     query: {
       queryKey: getListPatientTreatmentsQueryKey(selectedPatientId ?? ""),
-      enabled: !!selectedPatientId && activeTab === "dental" && hasDiagnosis,
+      enabled: !!selectedPatientId && activeTab === "treatment" && treatmentStep === 1 && hasDiagnosis,
     },
   });
   const allTasks: ToothTreatment[] = tasksData?.data?.treatments ?? [];
@@ -1212,8 +1216,35 @@ export function PatientDetailPanel() {
     setShowSummaryModal(true);
   }, [selectedPatientId]);
 
+  const handleSendBundle = useCallback(async (pid: string) => {
+    setBundleSending(true);
+    try {
+      const res = await fetch(`/api/contracts/patient/${pid}/send-extraction-bundle`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const responseData = await res.json() as { success: boolean; data?: { bundleUrl: string; bundleToken: string } };
+      if (responseData.success && responseData.data?.bundleUrl) {
+        setBundleUrl(responseData.data.bundleUrl);
+        queryClient.invalidateQueries({ queryKey: ["patient-contracts", pid] }).catch(() => {});
+        toast({ title: "📋 Договоры для удаления отправлены пациенту по WhatsApp" });
+      } else {
+        toast({ title: "Ошибка при отправке пакета документов", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Ошибка при отправке пакета документов", variant: "destructive" });
+    } finally {
+      setBundleSending(false);
+    }
+  }, [queryClient, toast]);
+
   const handleSaveDiagnosis = useCallback(async () => {
     if (!selectedPatientId) return;
+
+    // Capture extraction status BEFORE clearing the service maps
+    const hasExtractionSelected = Array.from(diagnosisServicesMap.values())
+      .flat()
+      .some((s) => isExtractionItem(s.name));
 
     // 1. Save tooth conditions
     const allFdis = new Set([...diagnosisMap.keys(), ...diagnosisNotesMap.keys()]);
@@ -1267,10 +1298,18 @@ export function PatientDetailPanel() {
     toast({ title: t("patient.diagnosisSaved") });
 
     // Remove the stale cache entirely so the panel re-enters the "polling" state
-    // (invalidateQueries would leave the old data visible and stop refetchInterval early)
     queryClient.removeQueries({ queryKey: getDentalAiAnalysisQueryKey(selectedPatientId) });
-    setActiveTab("ai_analysis");
-  }, [selectedPatientId, diagnosisMap, diagnosisNotesMap, diagnosisServicesMap, teethMap, updateToothMutation, triggerAnalysisMutation, createPlanMutation, refetchTeeth, toast, t, queryClient, setActiveTab]);
+
+    // Navigate: extraction → contracts step (3), otherwise → plans step (2)
+    setActiveTab("treatment");
+    setTreatmentStep(hasExtractionSelected ? 3 : 2);
+
+    // Auto-send extraction bundle via WhatsApp
+    if (hasExtractionSelected) {
+      setBundleUrl(null);
+      void handleSendBundle(selectedPatientId);
+    }
+  }, [selectedPatientId, diagnosisMap, diagnosisNotesMap, diagnosisServicesMap, teethMap, updateToothMutation, triggerAnalysisMutation, createPlanMutation, refetchTeeth, toast, t, queryClient, setActiveTab, handleSendBundle]);
 
   const diagnosisSummaryEntries = useMemo((): DiagnosisSummaryEntry[] => {
     const allFdis = new Set([...diagnosisMap.keys(), ...teethMap.keys()]);
@@ -1337,11 +1376,14 @@ export function PatientDetailPanel() {
   const sourceLabel = patient ? (SOURCE_LABELS[patient.source] ?? patient.source) : "";
   const sourceColor = patient ? (SOURCE_COLORS[patient.source] ?? "bg-slate-100 text-slate-600") : "";
 
+  const hasExtractionInPlan = useMemo(() => {
+    if (!activePlan) return false;
+    return activePlan.items.some((item) => isExtractionItem(item.title));
+  }, [activePlan]);
+
   const tabs = [
     { id: "info"      as const, label: "Информация" },
-    { id: "dental"    as const, label: t("patient.tabDental") },
-    { id: "plan"      as const, label: "Планы лечения" },
-    { id: "contracts" as const, label: "Договоры" },
+    { id: "treatment" as const, label: "Лечение" },
   ];
 
   const doctorUser = patient?.doctorId ? allUsers.find((u) => u.id === patient.doctorId) : null;
@@ -1727,8 +1769,32 @@ export function PatientDetailPanel() {
               </div>
             )}
 
-            {/* Dental Chart + Treatment Plan Tab */}
-            {activeTab === "dental" && (
+            {/* ── Treatment Tab: Карта зубов → Планы лечения → Договоры ── */}
+            {activeTab === "treatment" && (
+              <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+
+                {/* Step indicator */}
+                <div className="flex items-center justify-center gap-0 px-3 py-2 border-b border-border/30 bg-white shrink-0">
+                  {([
+                    { id: 1 as const, label: "Карта зубов" },
+                    { id: 2 as const, label: "Планы лечения" },
+                    { id: 3 as const, label: "Договоры" },
+                  ] as const).map((step, idx) => (
+                    <div key={step.id} className="flex items-center">
+                      <button
+                        onClick={() => setTreatmentStep(step.id)}
+                        className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${treatmentStep === step.id ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-slate-100"}`}
+                      >
+                        <span className={`w-4.5 h-4.5 w-[18px] h-[18px] rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 ${treatmentStep === step.id ? "bg-primary text-white" : "bg-slate-200 text-slate-500"}`}>{step.id}</span>
+                        {step.label}
+                      </button>
+                      {idx < 2 && <ChevronRight className="w-3 h-3 text-muted-foreground/40 mx-0.5 shrink-0" />}
+                    </div>
+                  ))}
+                </div>
+
+                {/* ── Step 1: Карта зубов ── */}
+                {treatmentStep === 1 && (
               <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                 <div ref={dentalScrollRef} className="flex-1 overflow-y-auto custom-scrollbar">
                   <div className="p-3 pb-6">
@@ -2046,10 +2112,10 @@ export function PatientDetailPanel() {
               )}
 
               </div>
-            )}
+                )} {/* end treatmentStep === 1 */}
 
-            {/* Treatment Plans Tab */}
-            {activeTab === "plan" && (
+                {/* ── Step 2: Планы лечения ── */}
+                {treatmentStep === 2 && (
               <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                 {/* State: loading */}
                 {(planLoading || plansLoading) && (
@@ -2073,7 +2139,7 @@ export function PatientDetailPanel() {
                     <Button
                       variant="outline"
                       className="gap-2 text-sm"
-                      onClick={() => setActiveTab("dental")}
+                      onClick={() => setTreatmentStep(1)}
                     >
                       Перейти к зубной карте
                     </Button>
@@ -2314,12 +2380,51 @@ export function PatientDetailPanel() {
                 })()}
 
               </div>
-            )}
+                )} {/* end treatmentStep === 2 */}
 
-            {/* Contracts Tab */}
-            {activeTab === "contracts" && (
-              <ContractsTab patientId={selectedPatientId} />
-            )}
+                {/* ── Step 3: Договоры ── */}
+                {treatmentStep === 3 && (
+                  <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                    {/* Extraction bundle card (auto-sent) */}
+                    {hasExtractionInPlan && (
+                      <div className="mx-3 mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl shrink-0">
+                        <div className="flex items-start gap-2.5">
+                          <span className="text-lg shrink-0 mt-0.5">🦷</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-amber-900">Пакет договоров — удаление зуба</p>
+                            <p className="text-xs text-amber-700 mt-0.5">4 документа: Договор, ИДС, Вкладыш, Памятка</p>
+                            {bundleSending && (
+                              <p className="text-xs text-amber-600 mt-1 flex items-center gap-1.5">
+                                <span className="inline-block w-3 h-3 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+                                Генерируем и отправляем по WhatsApp…
+                              </p>
+                            )}
+                            {!bundleSending && bundleUrl && (
+                              <div className="mt-2 flex items-center gap-2 flex-wrap">
+                                <span className="text-xs text-green-700 font-semibold flex items-center gap-1">✅ Отправлено пациенту</span>
+                                <a href={bundleUrl} target="_blank" rel="noreferrer" className="text-xs text-primary underline underline-offset-2 truncate max-w-[200px]">
+                                  Открыть пакет
+                                </a>
+                              </div>
+                            )}
+                            {!bundleSending && !bundleUrl && (
+                              <button
+                                onClick={() => selectedPatientId && void handleSendBundle(selectedPatientId)}
+                                className="mt-2 text-xs px-3 py-1.5 bg-amber-600 text-white rounded-lg font-semibold hover:bg-amber-700 transition-colors"
+                              >
+                                📋 Отправить пакет договоров
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    <ContractsTab patientId={selectedPatientId} />
+                  </div>
+                )} {/* end treatmentStep === 3 */}
+
+              </div>
+            )} {/* end activeTab === "treatment" */}
 
           </>
         ) : (

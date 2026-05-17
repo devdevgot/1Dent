@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, jsonb, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, jsonb, pgEnum, boolean } from "drizzle-orm/pg-core";
 import { clinicsTable } from "./clinics";
 import { patientsTable } from "./patients";
 import { usersTable } from "./users";
@@ -12,6 +12,8 @@ export const contractStatusEnum = pgEnum("contract_status", [
 /**
  * Contract templates uploaded by the clinic (DOCX or PDF).
  * fieldMappings: JSON array of { placeholder, patientField, label }
+ * isSystem: true for built-in system templates (extraction bundle)
+ * systemType: identifies which system template (e.g. "extraction_contract")
  */
 export const contractTemplatesTable = pgTable("contract_templates", {
   id: text("id").primaryKey(),
@@ -23,6 +25,8 @@ export const contractTemplatesTable = pgTable("contract_templates", {
   fileType: text("file_type").notNull().default("docx"),
   extractedText: text("extracted_text"),
   fieldMappings: jsonb("field_mappings").notNull().default("[]"),
+  isSystem: boolean("is_system").notNull().default(false),
+  systemType: text("system_type"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -31,6 +35,7 @@ export const contractTemplatesTable = pgTable("contract_templates", {
  * Instances of a contract sent to a specific patient.
  * filledData: JSON record of { patientField: resolvedValue }
  * token: unique token for the public page URL
+ * bundleToken: shared across all contracts sent together as a bundle
  */
 export const patientContractsTable = pgTable("patient_contracts", {
   id: text("id").primaryKey(),
@@ -47,6 +52,7 @@ export const patientContractsTable = pgTable("patient_contracts", {
     onDelete: "set null",
   }),
   token: text("token").notNull().unique(),
+  bundleToken: text("bundle_token"),
   renderedHtml: text("rendered_html"),
   filledData: jsonb("filled_data").notNull().default("{}"),
   status: contractStatusEnum("status").notNull().default("sent"),
