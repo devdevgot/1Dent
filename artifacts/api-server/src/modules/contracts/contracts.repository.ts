@@ -19,11 +19,14 @@ export class ContractsRepository {
   // ── Templates ──────────────────────────────────────────────────────────────
 
   async listTemplates(clinicId: string): Promise<ContractTemplate[]> {
+    // Ensure system (extraction) templates exist for this clinic on every list call
+    await this.ensureSystemExtractionTemplates(clinicId);
+
     return db
       .select()
       .from(contractTemplatesTable)
-      .where(and(eq(contractTemplatesTable.clinicId, clinicId), eq(contractTemplatesTable.isSystem, false)))
-      .orderBy(desc(contractTemplatesTable.createdAt));
+      .where(eq(contractTemplatesTable.clinicId, clinicId))
+      .orderBy(contractTemplatesTable.isSystem, desc(contractTemplatesTable.createdAt));
   }
 
   async findTemplate(id: string, clinicId: string): Promise<ContractTemplate | null> {

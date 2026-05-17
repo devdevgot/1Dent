@@ -987,6 +987,8 @@ export interface ContractTemplate {
   fileType: string;
   extractedText: string | null;
   fieldMappings: FieldMapping[];
+  isSystem: boolean;
+  systemType: string | null;
   createdAt: string;
   updatedAt: string;
 }
