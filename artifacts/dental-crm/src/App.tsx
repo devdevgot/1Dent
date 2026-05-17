@@ -47,8 +47,6 @@ import MenuPage from "@/pages/menu";
 import MigrationPage from "@/pages/migration";
 import ChannelsPage from "@/pages/channels";
 import ContractTemplatesPage from "@/pages/contract-templates";
-import ContractViewPage from "@/pages/contract-view";
-import BundleViewPage from "@/pages/bundle-view";
 import NotFound from "@/pages/not-found";
 
 // Admin-specific pages
@@ -314,10 +312,6 @@ function Router() {
       <Route path="/contract-templates">
         <ProtectedRoute component={ContractTemplatesPage} allowedRoles={['owner', 'admin']} />
       </Route>
-
-      {/* Public contract viewer — no auth, patients open these links */}
-      <Route path="/contract/:token" component={ContractViewPage} />
-      <Route path="/bundle/:bundleToken" component={BundleViewPage} />
 
       {/* Account settings pages */}
       <Route path="/account-settings">
