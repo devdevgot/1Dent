@@ -21,8 +21,17 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
   fileFilter: (_req, file, cb) => {
-    const allowed = ["application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/pdf", "application/msword"];
-    cb(null, allowed.includes(file.mimetype) || file.originalname.endsWith(".docx") || file.originalname.endsWith(".pdf"));
+    const allowed = [
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/pdf",
+      "application/msword",
+    ];
+    cb(
+      null,
+      allowed.includes(file.mimetype) ||
+        file.originalname.endsWith(".docx") ||
+        file.originalname.endsWith(".pdf"),
+    );
   },
 });
 
@@ -44,11 +53,30 @@ function parseFieldMappings(raw: unknown): FieldMapping[] {
 // ── Template routes ────────────────────────────────────────────────────────
 
 // GET /contracts/templates
-router.get("/templates", authMiddleware, ownerAdminRoles, async (req: Request, res: Response, next: NextFunction) => {
-  const templates = await repo.listTemplates(req.user!.clinicId).catch(next);
-  if (!templates) return;
-  res.json({ success: true, data: { templates } });
-});
+router.get(
+  "/templates",
+  authMiddleware,
+  ownerAdminRoles,
+  async (req: Request, res: Response, next: NextFunction) => {
+    const templates = await repo.listTemplates(req.user!.clinicId).catch(next);
+    if (!templates) return;
+    res.json({ success: true, data: { templates } });
+  },
+);
+
+// GET /contracts/templates/:id — get a single template
+router.get(
+  "/templates/:id",
+  authMiddleware,
+  ownerAdminRoles,
+  async (req: Request, res: Response, next: NextFunction) => {
+    const id = String(req.params["id"]);
+    const template = await repo.findTemplate(id, req.user!.clinicId).catch(next);
+    if (template === undefined) return;
+    if (!template) return next(new NotFoundError("Шаблон не найден"));
+    res.json({ success: true, data: { template } });
+  },
+);
 
 // POST /contracts/templates/upload — upload DOCX/PDF, run AI analysis
 router.post(
@@ -60,8 +88,10 @@ router.post(
     const file = req.file;
     if (!file) return next(new ValidationError("Файл не загружен"));
 
-    const name = (req.body?.name as string)?.trim() || file.originalname.replace(/\.[^.]+$/, "");
-    const isDocx = file.mimetype.includes("wordprocessingml") || file.originalname.endsWith(".docx");
+    const name =
+      (req.body?.name as string)?.trim() || file.originalname.replace(/\.[^.]+$/, "");
+    const isDocx =
+      file.mimetype.includes("wordprocessingml") || file.originalname.endsWith(".docx");
     const fileType = isDocx ? "docx" : "pdf";
 
     // 1. Extract text
@@ -78,10 +108,12 @@ router.post(
       }
     } catch (err) {
       logger.error({ err }, "[contracts] Failed to extract text from template");
-      return next(new ValidationError("Не удалось прочитать файл. Убедитесь, что файл не повреждён."));
+      return next(
+        new ValidationError("Не удалось прочитать файл. Убедитесь, что файл не повреждён."),
+      );
     }
 
-    // 2. Upload file to object storage
+    // 2. Upload file to object storage and tag with clinic-scoped ACL
     let fileUrl = "";
     try {
       const uploadUrl = await storage.getObjectEntityUploadURL();
@@ -91,8 +123,20 @@ router.post(
         body: file.buffer,
       });
       if (!putRes.ok) throw new Error(`GCS upload failed: ${putRes.status}`);
+
+      // Normalize path before tagging
       const urlObj = new URL(uploadUrl);
-      fileUrl = storage.normalizeObjectEntityPath(urlObj.pathname);
+      const rawPath = storage.normalizeObjectEntityPath(urlObj.pathname);
+      fileUrl = rawPath;
+
+      // Tag the object with clinic ownership so the storage ACL check can enforce tenant isolation
+      await storage.trySetObjectEntityAclPolicy(uploadUrl, {
+        owner: req.user!.clinicId,
+        visibility: "private",
+      }).catch((err: unknown) => {
+        // ACL tagging is best-effort — log but don't fail the upload
+        logger.warn({ err }, "[contracts] Failed to set ACL on uploaded template file");
+      });
     } catch (err) {
       logger.error({ err }, "[contracts] Failed to upload template to object storage");
       return next(new Error("Ошибка при сохранении файла"));
@@ -103,7 +147,14 @@ router.post(
 
     // 4. Save template
     const template = await repo
-      .createTemplate({ clinicId: req.user!.clinicId, name, fileUrl, fileType, extractedText, fieldMappings })
+      .createTemplate({
+        clinicId: req.user!.clinicId,
+        name,
+        fileUrl,
+        fileType,
+        extractedText,
+        fieldMappings,
+      })
       .catch(next);
     if (!template) return;
 
@@ -125,9 +176,12 @@ router.patch(
         ),
       })
       .safeParse(req.body);
-    if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation error"));
+    if (!parsed.success)
+      return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation error"));
 
-    const template = await repo.updateTemplateMappings(id, req.user!.clinicId, parsed.data.fieldMappings).catch(next);
+    const template = await repo
+      .updateTemplateMappings(id, req.user!.clinicId, parsed.data.fieldMappings)
+      .catch(next);
     if (!template) return next(new NotFoundError("Шаблон не найден"));
     res.json({ success: true, data: { template } });
   },
@@ -175,11 +229,11 @@ router.post(
     const clinicId = req.user!.clinicId;
     const { templateId } = parsed.data;
 
-    // Load template
+    // Load template (also verifies clinic ownership)
     const template = await repo.findTemplate(templateId, clinicId).catch(next);
     if (!template) return next(new NotFoundError("Шаблон не найден"));
 
-    // Load patient
+    // Load patient (also verifies clinic ownership)
     const [patientRow] = await db
       .select({
         id: patientsTable.id,
@@ -216,8 +270,16 @@ router.post(
 
     // Build filled data map
     const today = new Date();
-    const dateStr = today.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" });
-    const genderMap: Record<string, string> = { male: "мужской", female: "женский", other: "не указан" };
+    const dateStr = today.toLocaleDateString("ru-RU", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+    const genderMap: Record<string, string> = {
+      male: "мужской",
+      female: "женский",
+      other: "не указан",
+    };
 
     const filledData: Record<string, string> = {
       "patient.name":        patientRow.name,
@@ -235,16 +297,21 @@ router.post(
     const fieldMappings = parseFieldMappings(template.fieldMappings);
     const renderedHtml = renderContractHtml(template.extractedText ?? "", fieldMappings, filledData);
 
-    // Generate unique token
     const token = randomUUID();
 
-    // Save contract
     const contract = await repo
-      .createPatientContract({ clinicId, patientId, templateId, sentById: req.user!.userId ?? null, token, renderedHtml, filledData })
+      .createPatientContract({
+        clinicId,
+        patientId,
+        templateId,
+        sentById: req.user!.userId ?? null,
+        token,
+        renderedHtml,
+        filledData,
+      })
       .catch(next);
     if (!contract) return;
 
-    // Build public URL and send via WhatsApp
     const baseUrl = getServerBaseUrl() ?? "https://your-app.replit.app";
     const contractUrl = `${baseUrl}/p/contract/${token}`;
 
