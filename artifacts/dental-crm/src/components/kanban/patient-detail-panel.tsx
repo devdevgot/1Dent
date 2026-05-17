@@ -919,6 +919,7 @@ export function PatientDetailPanel() {
   const [bundleSending, setBundleSending] = useState(false);
   const [bundleSent, setBundleSent] = useState(false);
   const [bundlePreviewOpen, setBundlePreviewOpen] = useState(false);
+  const [whatsappNotConnectedOpen, setWhatsappNotConnectedOpen] = useState(false);
 
   const [isDiagnosisMode, setIsDiagnosisMode] = useState(false);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
@@ -1249,16 +1250,18 @@ export function PatientDetailPanel() {
         method: "POST",
         credentials: "include",
       });
-      const responseData = await res.json() as { success: boolean; data?: { bundleUrl: string } };
+      const responseData = await res.json() as { success: boolean; code?: string; data?: { bundleUrl: string } };
       if (responseData.success) {
         setBundleSent(true);
         if (responseData.data?.bundleUrl) setBundleUrl(responseData.data.bundleUrl);
         toast({ title: "✅ Пакет договоров отправлен пациенту по WhatsApp" });
+      } else if (responseData.code === "WHATSAPP_NOT_CONNECTED" || res.status === 422) {
+        setWhatsappNotConnectedOpen(true);
       } else {
         toast({ title: "Ошибка при отправке по WhatsApp", variant: "destructive" });
       }
     } catch {
-      toast({ title: "Ошибка при отправке по WhatsApp", variant: "destructive" });
+      toast({ title: "Ошибка сети при отправке по WhatsApp", variant: "destructive" });
     } finally {
       setBundleSending(false);
     }
@@ -2484,6 +2487,43 @@ export function PatientDetailPanel() {
                     )}
 
                     <ContractsTab patientId={selectedPatientId} />
+
+                    {/* WhatsApp not connected modal */}
+                    {whatsappNotConnectedOpen && (
+                      <div
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+                        onClick={(e) => { if (e.target === e.currentTarget) setWhatsappNotConnectedOpen(false); }}
+                      >
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+                          <div className="p-6 text-center">
+                            <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                              <svg className="w-7 h-7 text-slate-400" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                                <path d="M12 0C5.373 0 0 5.373 0 12c0 2.117.549 4.107 1.514 5.836L0 24l6.335-1.493A11.935 11.935 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.028-1.383l-.36-.214-3.732.979.997-3.645-.235-.374A9.786 9.786 0 012.182 12C2.182 6.58 6.58 2.182 12 2.182S21.818 6.58 21.818 12 17.42 21.818 12 21.818z"/>
+                              </svg>
+                            </div>
+                            <h3 className="text-base font-bold text-gray-900 mb-1">WhatsApp не подключён</h3>
+                            <p className="text-sm text-muted-foreground mb-5">
+                              Чтобы отправить договоры пациенту, сначала подключите WhatsApp в настройках каналов.
+                            </p>
+                            <div className="flex flex-col gap-2">
+                              <button
+                                onClick={() => { setWhatsappNotConnectedOpen(false); setLocation("/channels"); }}
+                                className="w-full h-10 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors"
+                              >
+                                Подключить WhatsApp
+                              </button>
+                              <button
+                                onClick={() => setWhatsappNotConnectedOpen(false)}
+                                className="w-full h-10 bg-slate-100 text-slate-700 rounded-xl text-sm font-medium hover:bg-slate-200 transition-colors"
+                              >
+                                Закрыть
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Bundle preview dialog */}
                     {bundlePreviewOpen && bundleToken && (

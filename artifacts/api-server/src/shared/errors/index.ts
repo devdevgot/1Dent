@@ -44,3 +44,9 @@ export class TooManyRequestsError extends AppError {
     super(message, 429, "TOO_MANY_REQUESTS");
   }
 }
+
+export class WhatsappNotConnectedError extends AppError {
+  constructor(message = "WhatsApp не подключён для этой клиники") {
+    super(message, 422, "WHATSAPP_NOT_CONNECTED");
+  }
+}

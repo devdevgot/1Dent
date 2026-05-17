@@ -3,7 +3,7 @@ import { Router, type IRouter, type Request, type Response, type NextFunction } 
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
-import { ValidationError, NotFoundError } from "../../shared/errors";
+import { ValidationError, NotFoundError, WhatsappNotConnectedError } from "../../shared/errors";
 import { ContractsRepository } from "./contracts.repository";
 import { analyzeContractFields, renderContractHtml, PATIENT_FIELDS } from "./contracts.ai";
 import { sendToPatient } from "../../shared/messaging";
@@ -422,6 +422,7 @@ router.post(
 
 // POST /contracts/bundle/:bundleToken/send-whatsapp
 // Sends the WhatsApp link for an already-prepared bundle.
+// Returns 422 WHATSAPP_NOT_CONNECTED if the clinic has no WhatsApp configured.
 router.post(
   "/bundle/:bundleToken/send-whatsapp",
   authMiddleware,
@@ -435,6 +436,27 @@ router.post(
     // Security: ensure this bundle belongs to the caller's clinic
     if (rows[0]!.contract.clinicId !== clinicId) {
       return next(new NotFoundError("Пакет не найден"));
+    }
+
+    // Check WhatsApp connectivity before attempting to send
+    const [clinicSettings] = await db
+      .select({
+        greenApiInstanceId: clinicsTable.greenApiInstanceId,
+        greenApiToken: clinicsTable.greenApiToken,
+      })
+      .from(clinicsTable)
+      .where(eq(clinicsTable.id, clinicId))
+      .limit(1);
+
+    const metaEnabled = !!(
+      process.env["WHATSAPP_TOKEN"] && process.env["WHATSAPP_PHONE_ID"]
+    );
+    const greenApiEnabled = !!(
+      clinicSettings?.greenApiInstanceId && clinicSettings?.greenApiToken
+    );
+
+    if (!greenApiEnabled && !metaEnabled) {
+      return next(new WhatsappNotConnectedError());
     }
 
     const { patientName, patientPhone, clinicName } = rows[0]!;
