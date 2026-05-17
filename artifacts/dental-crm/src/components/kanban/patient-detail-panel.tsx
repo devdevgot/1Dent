@@ -1062,6 +1062,38 @@ export function PatientDetailPanel() {
     return () => cancelAnimationFrame(frame);
   }, [pickerCategory]);
 
+  // When patient changes, restore bundle state from the server so that
+  // a page refresh doesn't wipe out a previously prepared bundle.
+  useEffect(() => {
+    if (!selectedPatientId) {
+      setBundleToken(null);
+      setBundleUrl(null);
+      setBundleSent(false);
+      setTreatmentStep(1);
+      return;
+    }
+    void fetch(`/api/contracts/patient/${selectedPatientId}`, { credentials: "include" })
+      .then((r) => r.json() as Promise<{ success: boolean; data?: { contracts: Array<{ bundleToken: string | null; status: string }> } }>)
+      .then((data) => {
+        if (!data.success || !data.data) return;
+        const contracts = data.data.contracts;
+        const bundled = contracts.find((c) => c.bundleToken);
+        if (bundled?.bundleToken) {
+          setBundleToken(bundled.bundleToken);
+          const isSent = contracts.some(
+            (c) => c.bundleToken === bundled.bundleToken && c.status !== "created",
+          );
+          setBundleSent(isSent);
+          setTreatmentStep(3);
+        } else {
+          setBundleToken(null);
+          setBundleUrl(null);
+          setBundleSent(false);
+        }
+      })
+      .catch(() => {});
+  }, [selectedPatientId]);
+
   const { data: planData, isLoading: planLoading } = useGetActiveTreatmentPlan(selectedPatientId ?? "", {
     query: {
       queryKey: getGetActiveTreatmentPlanQueryKey(selectedPatientId ?? ""),
