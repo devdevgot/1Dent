@@ -1380,6 +1380,11 @@ export function PatientDetailPanel() {
     return { total, paid, methodCounts };
   }, [patientProcedures]);
 
+  const hasExtractionInPlan = useMemo(() => {
+    if (!activePlan) return false;
+    return activePlan.items.some((item) => isExtractionItem(item.title));
+  }, [activePlan]);
+
   if (!selectedPatientId) return null;
 
   const patient = data?.data?.patient;
@@ -1406,11 +1411,6 @@ export function PatientDetailPanel() {
   const currentColumn = patient ? KANBAN_COLUMNS.find((c) => c.id === patient.status) : null;
   const sourceLabel = patient ? (SOURCE_LABELS[patient.source] ?? patient.source) : "";
   const sourceColor = patient ? (SOURCE_COLORS[patient.source] ?? "bg-slate-100 text-slate-600") : "";
-
-  const hasExtractionInPlan = useMemo(() => {
-    if (!activePlan) return false;
-    return activePlan.items.some((item) => isExtractionItem(item.title));
-  }, [activePlan]);
 
   const tabs = [
     { id: "info"      as const, label: "Информация" },
