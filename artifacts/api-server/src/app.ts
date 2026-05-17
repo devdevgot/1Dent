@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import refRouter from "./routes/ref";
+import contractPublicRouter from "./routes/contract-public";
 import webhooksRouter from "./routes/webhooks";
 import { logger } from "./lib/logger";
 import { errorHandler } from "./middlewares/error.middleware";
@@ -51,6 +52,7 @@ app.use(cookieParser());
 app.use(webhooksRouter);
 app.use("/api", router);
 app.use(refRouter);
+app.use(contractPublicRouter);
 
 app.use(errorHandler);
 

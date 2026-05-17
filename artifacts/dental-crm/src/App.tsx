@@ -46,6 +46,7 @@ import AccountChangePasswordPage from "@/pages/account-change-password";
 import MenuPage from "@/pages/menu";
 import MigrationPage from "@/pages/migration";
 import ChannelsPage from "@/pages/channels";
+import ContractTemplatesPage from "@/pages/contract-templates";
 import NotFound from "@/pages/not-found";
 
 // Admin-specific pages
@@ -305,6 +306,11 @@ function Router() {
       {/* Settings page */}
       <Route path="/settings">
         <ProtectedRoute component={SettingsPage} allowedRoles={['owner', 'admin', 'doctor', 'accountant', 'warehouse']} />
+      </Route>
+
+      {/* Contract templates management */}
+      <Route path="/contract-templates">
+        <ProtectedRoute component={ContractTemplatesPage} allowedRoles={['owner', 'admin']} />
       </Route>
 
       {/* Account settings pages */}

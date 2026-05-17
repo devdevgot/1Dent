@@ -20,6 +20,7 @@ import {
   Radio,
   ClipboardList,
   DatabaseZap,
+  FileText,
 } from "lucide-react";
 
 const SUPPORTED_LANGS = ["ru", "kz", "en"] as const;
@@ -36,6 +37,7 @@ const ALL_NAV_ITEMS = [
   { nameKey: "nav.chatbot",      href: "/chatbot",            icon: Bot,             roles: ["owner"] },
   { nameKey: "nav.channels",     href: "/channels",           icon: Radio,           roles: ["owner","admin"] },
   { nameKey: "nav.migration",    href: "/migration",          icon: DatabaseZap,     roles: ["owner"] },
+  { nameKey: "nav.contractTemplates", href: "/contract-templates", icon: FileText,    roles: ["owner","admin"] },
 ];
 
 export default function MenuPage() {

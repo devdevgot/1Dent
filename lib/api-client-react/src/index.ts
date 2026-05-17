@@ -970,3 +970,112 @@ export const useConfirmAiImport = <TError = unknown>(options?: {
     mutationFn: (data) => confirmAiImport(data),
     ...options?.mutation,
   });
+
+// ─── Contracts ────────────────────────────────────────────────────────────────
+
+export interface FieldMapping {
+  placeholder: string;
+  patientField: string;
+  label: string;
+}
+
+export interface ContractTemplate {
+  id: string;
+  clinicId: string;
+  name: string;
+  fileUrl: string;
+  fileType: string;
+  extractedText: string | null;
+  fieldMappings: FieldMapping[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PatientContract {
+  id: string;
+  clinicId: string;
+  patientId: string;
+  templateId: string;
+  sentById: string | null;
+  token: string;
+  renderedHtml: string | null;
+  filledData: Record<string, string>;
+  status: "sent" | "viewed" | "signed";
+  signedAt: string | null;
+  signedIp: string | null;
+  createdAt: string;
+  templateName: string;
+  sentByName: string | null;
+}
+
+export interface UploadTemplateResponse {
+  success: boolean;
+  data: { template: ContractTemplate; patientFields: { field: string; label: string }[] };
+}
+
+export interface SendContractResponse {
+  success: boolean;
+  data: { contract: PatientContract; contractUrl: string };
+}
+
+export const listContractTemplates = (): Promise<{ success: boolean; data: { templates: ContractTemplate[] } }> =>
+  customFetch("/api/contracts/templates");
+
+export const useListContractTemplates = <TError = unknown>(options?: {
+  query?: UseQueryOptions<{ success: boolean; data: { templates: ContractTemplate[] } }, TError>;
+}) =>
+  useQuery<{ success: boolean; data: { templates: ContractTemplate[] } }, TError>({
+    queryKey: ["contract-templates"],
+    queryFn: listContractTemplates,
+    ...options?.query,
+  });
+
+export const uploadContractTemplate = (formData: FormData): Promise<UploadTemplateResponse> =>
+  customFetch("/api/contracts/templates/upload", { method: "POST", body: formData });
+
+export const useUploadContractTemplate = <TError = unknown>(options?: {
+  mutation?: UseMutationOptions<UploadTemplateResponse, TError, FormData>;
+}) =>
+  useMutation<UploadTemplateResponse, TError, FormData>({
+    mutationFn: uploadContractTemplate,
+    ...options?.mutation,
+  });
+
+export const deleteContractTemplate = (id: string): Promise<{ success: boolean }> =>
+  customFetch(`/api/contracts/templates/${id}`, { method: "DELETE" });
+
+export const useDeleteContractTemplate = <TError = unknown>(options?: {
+  mutation?: UseMutationOptions<{ success: boolean }, TError, string>;
+}) =>
+  useMutation<{ success: boolean }, TError, string>({
+    mutationFn: deleteContractTemplate,
+    ...options?.mutation,
+  });
+
+export const listPatientContracts = (patientId: string): Promise<{ success: boolean; data: { contracts: PatientContract[] } }> =>
+  customFetch(`/api/contracts/patient/${patientId}`);
+
+export const useListPatientContracts = <TError = unknown>(
+  patientId: string,
+  options?: { query?: UseQueryOptions<{ success: boolean; data: { contracts: PatientContract[] } }, TError> },
+) =>
+  useQuery<{ success: boolean; data: { contracts: PatientContract[] } }, TError>({
+    queryKey: ["patient-contracts", patientId],
+    queryFn: () => listPatientContracts(patientId),
+    enabled: !!patientId,
+    ...options?.query,
+  });
+
+export const sendContract = (patientId: string, templateId: string): Promise<SendContractResponse> =>
+  customFetch(`/api/contracts/patient/${patientId}/send`, {
+    method: "POST",
+    body: JSON.stringify({ templateId }),
+  });
+
+export const useSendContract = <TError = unknown>(options?: {
+  mutation?: UseMutationOptions<SendContractResponse, TError, { patientId: string; templateId: string }>;
+}) =>
+  useMutation<SendContractResponse, TError, { patientId: string; templateId: string }>({
+    mutationFn: ({ patientId, templateId }) => sendContract(patientId, templateId),
+    ...options?.mutation,
+  });

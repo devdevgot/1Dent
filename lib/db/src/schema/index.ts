@@ -10,3 +10,4 @@ export * from "./migration";
 export * from "./channels";
 export * from "./payroll";
 export * from "./handoffs";
+export * from "./contracts";

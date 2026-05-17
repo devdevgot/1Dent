@@ -31,6 +31,7 @@ import {
   getDentalAiAnalysisQueryKey,
 } from "@workspace/api-client-react";
 import { DentalAiAnalysisPanel } from "./dental-ai-analysis-panel";
+import { ContractsTab } from "./contracts-tab";
 import { VoiceDiagnosisModal } from "@/components/dental-chart/voice-diagnosis-modal";
 import type { ToothRecord, ToothTreatment, ProcedureTemplate } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -1337,9 +1338,10 @@ export function PatientDetailPanel() {
   const sourceColor = patient ? (SOURCE_COLORS[patient.source] ?? "bg-slate-100 text-slate-600") : "";
 
   const tabs = [
-    { id: "info"   as const, label: "Информация" },
-    { id: "dental" as const, label: t("patient.tabDental") },
-    { id: "plan"   as const, label: "Планы лечения" },
+    { id: "info"      as const, label: "Информация" },
+    { id: "dental"    as const, label: t("patient.tabDental") },
+    { id: "plan"      as const, label: "Планы лечения" },
+    { id: "contracts" as const, label: "Договоры" },
   ];
 
   const doctorUser = patient?.doctorId ? allUsers.find((u) => u.id === patient.doctorId) : null;
@@ -2312,6 +2314,11 @@ export function PatientDetailPanel() {
                 })()}
 
               </div>
+            )}
+
+            {/* Contracts Tab */}
+            {activeTab === "contracts" && (
+              <ContractsTab patientId={selectedPatientId} />
             )}
 
           </>

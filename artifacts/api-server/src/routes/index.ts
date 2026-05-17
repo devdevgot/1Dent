@@ -20,6 +20,9 @@ import expensesRouter from "../modules/expenses/expenses.controller";
 import handoffsRouter from "../modules/handoffs/handoffs.controller";
 import dentalBroadcastRouter from "../modules/dental-broadcast/dental-broadcast.controller";
 import refRouter from "./ref";
+import contractPublicRouter from "./contract-public";
+import storageRouter from "./storage";
+import contractsRouter from "../modules/contracts/contracts.controller";
 import { actionLogMiddleware } from "../middlewares/action-log.middleware";
 import { authRateLimit } from "../middlewares/rate-limit.middleware";
 import { authMiddleware, roleGuard } from "../middlewares/auth.middleware";
@@ -72,6 +75,8 @@ router.use("/migration", migrationRouter);
 router.use("/", channelsRouter);
 router.use("/", analyticsRouter);
 router.use(messagesRouter);
+router.use("/contracts", contractsRouter);
+router.use(storageRouter);
 
 // Alias: GET /procedure-templates (maps to GET /procedures/templates)
 router.get(
