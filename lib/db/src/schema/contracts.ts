@@ -58,6 +58,8 @@ export const patientContractsTable = pgTable("patient_contracts", {
   status: contractStatusEnum("status").notNull().default("sent"),
   signedAt: timestamp("signed_at", { withTimezone: true }),
   signedIp: text("signed_ip"),
+  otpCode: text("otp_code"),
+  otpExpiresAt: timestamp("otp_expires_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

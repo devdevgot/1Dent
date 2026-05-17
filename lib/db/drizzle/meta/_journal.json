@@ -120,6 +120,13 @@
       "when": 1778112000000,
       "tag": "0016_contract_bundles",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1747699200000,
+      "tag": "0017_contract_otp",
+      "breakpoints": true
     }
   ]
 }

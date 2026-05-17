@@ -322,4 +322,56 @@ export class ContractsRepository {
       .where(eq(patientContractsTable.bundleToken, bundleToken))
       .returning();
   }
+
+  // ── OTP helpers ────────────────────────────────────────────────────────────
+
+  /** Saves a 6-digit OTP for a single contract token (expires in 5 min). */
+  async saveOtpForToken(token: string, code: string, expiresAt: Date): Promise<void> {
+    await db
+      .update(patientContractsTable)
+      .set({ otpCode: code, otpExpiresAt: expiresAt })
+      .where(eq(patientContractsTable.token, token));
+  }
+
+  /** Saves the same OTP for all contracts in a bundle (expires in 5 min). */
+  async saveOtpForBundle(bundleToken: string, code: string, expiresAt: Date): Promise<void> {
+    await db
+      .update(patientContractsTable)
+      .set({ otpCode: code, otpExpiresAt: expiresAt })
+      .where(eq(patientContractsTable.bundleToken, bundleToken));
+  }
+
+  /**
+   * Verifies OTP for a single contract.
+   * Returns 'ok' | 'invalid' | 'expired' | 'not_found'.
+   */
+  async verifyOtpForToken(token: string, code: string): Promise<"ok" | "invalid" | "expired" | "not_found"> {
+    const [row] = await db
+      .select({ otpCode: patientContractsTable.otpCode, otpExpiresAt: patientContractsTable.otpExpiresAt })
+      .from(patientContractsTable)
+      .where(eq(patientContractsTable.token, token))
+      .limit(1);
+    if (!row) return "not_found";
+    if (!row.otpCode) return "invalid";
+    if (row.otpExpiresAt && new Date() > row.otpExpiresAt) return "expired";
+    if (row.otpCode !== code) return "invalid";
+    return "ok";
+  }
+
+  /**
+   * Verifies OTP for a bundle (checks the first contract's OTP).
+   * Returns 'ok' | 'invalid' | 'expired' | 'not_found'.
+   */
+  async verifyOtpForBundle(bundleToken: string, code: string): Promise<"ok" | "invalid" | "expired" | "not_found"> {
+    const [row] = await db
+      .select({ otpCode: patientContractsTable.otpCode, otpExpiresAt: patientContractsTable.otpExpiresAt })
+      .from(patientContractsTable)
+      .where(eq(patientContractsTable.bundleToken, bundleToken))
+      .limit(1);
+    if (!row) return "not_found";
+    if (!row.otpCode) return "invalid";
+    if (row.otpExpiresAt && new Date() > row.otpExpiresAt) return "expired";
+    if (row.otpCode !== code) return "invalid";
+    return "ok";
+  }
 }

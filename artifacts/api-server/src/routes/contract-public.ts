@@ -112,6 +112,16 @@ function getClientIp(req: Request): string | null {
   return req.socket.remoteAddress ?? null;
 }
 
+/** Generates a random 6-digit OTP code. */
+function generateOtpCode(): string {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+/** Returns a Date 5 minutes from now (OTP expiry). */
+function otpExpiry(): Date {
+  return new Date(Date.now() + 5 * 60 * 1000);
+}
+
 const STATUS_LABELS: Record<string, string> = {
   sent: "Отправлен",
   viewed: "Просмотрен",
@@ -171,12 +181,32 @@ function buildContractPage(opts: {
     .signed-banner { background: #d4edda; border: 1px solid #c3e6cb; border-radius: 14px; padding: 16px 20px; text-align: center; margin-bottom: 16px; }
     .signed-banner h3 { font-size: 16px; font-weight: 700; color: #155724; margin-bottom: 4px; }
     .signed-banner p { font-size: 13px; color: #155724; opacity: 0.85; }
-    #sign-btn.loading { opacity: 0.7; pointer-events: none; }
+    .btn.loading { opacity: 0.7; pointer-events: none; }
     .spinner { width: 18px; height: 18px; border: 2.5px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; display: none; }
-    #sign-btn.loading .spinner { display: block; }
-    #sign-btn.loading .btn-label { display: none; }
+    .btn.loading .spinner { display: block; }
+    .btn.loading .btn-label { display: none; }
     @keyframes spin { to { transform: rotate(360deg); } }
     @media (max-width: 480px) { .container { padding: 16px 12px 110px; } .card { padding: 18px 14px; } }
+    /* OTP Modal */
+    .otp-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); backdrop-filter: blur(4px); display: flex; align-items: flex-end; justify-content: center; z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+    .otp-overlay.open { opacity: 1; pointer-events: all; }
+    .otp-box { background: #fff; border-radius: 24px 24px 0 0; padding: 28px 24px 36px; width: 100%; max-width: 480px; transform: translateY(100%); transition: transform 0.25s cubic-bezier(0.32,0.72,0,1); }
+    .otp-overlay.open .otp-box { transform: translateY(0); }
+    .otp-handle { width: 36px; height: 4px; background: #e5e5ea; border-radius: 2px; margin: 0 auto 20px; }
+    .otp-title { font-size: 18px; font-weight: 700; color: #1c1c1e; margin-bottom: 6px; }
+    .otp-sub { font-size: 14px; color: #6e6e73; margin-bottom: 24px; line-height: 1.5; }
+    .otp-inputs { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
+    .otp-input { width: 46px; height: 58px; border: 2px solid #e5e5ea; border-radius: 12px; font-size: 24px; font-weight: 700; text-align: center; color: #1c1c1e; background: #f9f9f9; transition: border-color 0.15s, background 0.15s; outline: none; -webkit-appearance: none; appearance: none; }
+    .otp-input:focus { border-color: #6bcb3a; background: #fff; }
+    .otp-input.error { border-color: #ff3b30; background: #fff0ee; animation: shake 0.3s; }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+    .otp-error { color: #ff3b30; font-size: 13px; text-align: center; min-height: 18px; margin-bottom: 14px; }
+    .otp-submit { width: 100%; height: 52px; border-radius: 14px; border: none; background: #6bcb3a; color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 14px; transition: opacity 0.15s; }
+    .otp-submit:active { opacity: 0.85; }
+    .otp-submit.loading { opacity: 0.65; pointer-events: none; }
+    .otp-footer { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; color: #6e6e73; }
+    .otp-resend { background: none; border: none; color: #6bcb3a; font-size: 13px; font-weight: 600; cursor: pointer; padding: 0; }
+    .otp-resend:disabled { color: #aaa; cursor: default; }
   </style>
 </head>
 <body>
@@ -212,7 +242,7 @@ function buildContractPage(opts: {
 
   <div class="actions">
     ${!isSigned ? `
-    <button class="btn btn-primary" id="sign-btn" onclick="signContract()">
+    <button class="btn btn-primary" id="sign-btn" onclick="startSign()">
       <div class="spinner"></div>
       <span class="btn-label">✍️ Подписать</span>
     </button>` : ""}
@@ -221,24 +251,202 @@ function buildContractPage(opts: {
     </a>
   </div>
 
+  <!-- OTP Modal -->
+  <div class="otp-overlay" id="otp-overlay">
+    <div class="otp-box">
+      <div class="otp-handle"></div>
+      <div class="otp-title">Подтверждение подписи</div>
+      <div class="otp-sub">Введите 6-значный код, который мы отправили вам в WhatsApp.</div>
+      <div class="otp-inputs" id="otp-inputs">
+        <input class="otp-input" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code" />
+        <input class="otp-input" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+        <input class="otp-input" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+        <input class="otp-input" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+        <input class="otp-input" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+        <input class="otp-input" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+      </div>
+      <div class="otp-error" id="otp-error"></div>
+      <button class="otp-submit" id="otp-submit" onclick="submitOtp()">
+        <div class="spinner"></div>
+        <span class="btn-label">✅ Подписать договор</span>
+      </button>
+      <div class="otp-footer">
+        <span id="otp-timer">Код действителен 5:00</span>
+        <span>·</span>
+        <button class="otp-resend" id="otp-resend" onclick="resendOtp()" disabled>Отправить снова</button>
+      </div>
+    </div>
+  </div>
+
   <script>
-    async function signContract() {
-      const btn = document.getElementById('sign-btn');
+    var TOKEN = '${token}';
+    var timerInterval = null;
+    var secondsLeft = 300;
+
+    function startSign() {
+      var btn = document.getElementById('sign-btn');
       btn.classList.add('loading');
-      try {
-        const res = await fetch('/p/contract/${token}/sign', { method: 'POST' });
-        const data = await res.json();
-        if (data.success) {
-          location.reload();
-        } else {
-          alert(data.error || 'Ошибка при подписании');
+      fetch('/p/contract/' + TOKEN + '/request-otp', { method: 'POST' })
+        .then(function(r){ return r.json(); })
+        .then(function(data) {
           btn.classList.remove('loading');
-        }
-      } catch {
-        alert('Ошибка сети. Попробуйте снова.');
-        btn.classList.remove('loading');
+          if (data.success) {
+            openOtpModal();
+          } else {
+            alert(data.error || 'Не удалось отправить код. Попробуйте снова.');
+          }
+        })
+        .catch(function() {
+          btn.classList.remove('loading');
+          alert('Ошибка сети. Попробуйте снова.');
+        });
+    }
+
+    function openOtpModal() {
+      var overlay = document.getElementById('otp-overlay');
+      overlay.classList.add('open');
+      clearInputs();
+      setError('');
+      startTimer(300);
+      setTimeout(function(){ focusFirst(); }, 300);
+    }
+
+    function closeOtpModal() {
+      document.getElementById('otp-overlay').classList.remove('open');
+      clearInterval(timerInterval);
+    }
+
+    function focusFirst() {
+      var inputs = document.querySelectorAll('.otp-input');
+      if (inputs[0]) inputs[0].focus();
+    }
+
+    function clearInputs() {
+      document.querySelectorAll('.otp-input').forEach(function(i){ i.value = ''; });
+    }
+
+    function setError(msg) {
+      document.getElementById('otp-error').textContent = msg;
+      if (msg) {
+        document.querySelectorAll('.otp-input').forEach(function(i){ i.classList.add('error'); });
+        setTimeout(function(){ document.querySelectorAll('.otp-input').forEach(function(i){ i.classList.remove('error'); }); }, 600);
       }
     }
+
+    function getCode() {
+      return Array.from(document.querySelectorAll('.otp-input')).map(function(i){ return i.value; }).join('');
+    }
+
+    function startTimer(seconds) {
+      secondsLeft = seconds;
+      clearInterval(timerInterval);
+      var resend = document.getElementById('otp-resend');
+      resend.disabled = true;
+      timerInterval = setInterval(function() {
+        secondsLeft--;
+        var m = Math.floor(secondsLeft / 60);
+        var s = secondsLeft % 60;
+        var timerEl = document.getElementById('otp-timer');
+        if (timerEl) timerEl.textContent = 'Код действителен ' + m + ':' + (s < 10 ? '0' : '') + s;
+        if (secondsLeft <= 0) {
+          clearInterval(timerInterval);
+          if (timerEl) timerEl.textContent = 'Код истёк';
+          if (resend) resend.disabled = false;
+        }
+      }, 1000);
+    }
+
+    function resendOtp() {
+      document.getElementById('otp-resend').disabled = true;
+      setError('');
+      clearInputs();
+      fetch('/p/contract/' + TOKEN + '/request-otp', { method: 'POST' })
+        .then(function(r){ return r.json(); })
+        .then(function(data) {
+          if (data.success) {
+            startTimer(300);
+            focusFirst();
+          } else {
+            setError(data.error || 'Не удалось отправить код');
+            document.getElementById('otp-resend').disabled = false;
+          }
+        })
+        .catch(function() {
+          setError('Ошибка сети');
+          document.getElementById('otp-resend').disabled = false;
+        });
+    }
+
+    function submitOtp() {
+      var code = getCode();
+      if (code.length < 6) { setError('Введите все 6 цифр'); return; }
+      var btn = document.getElementById('otp-submit');
+      btn.classList.add('loading');
+      setError('');
+      fetch('/p/contract/' + TOKEN + '/sign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code }),
+      })
+        .then(function(r){ return r.json(); })
+        .then(function(data) {
+          btn.classList.remove('loading');
+          if (data.success) {
+            clearInterval(timerInterval);
+            location.reload();
+          } else if (data.code === 'OTP_EXPIRED') {
+            setError('Код истёк. Запросите новый.');
+            document.getElementById('otp-resend').disabled = false;
+          } else {
+            setError(data.error || 'Неверный код. Попробуйте снова.');
+          }
+        })
+        .catch(function() {
+          btn.classList.remove('loading');
+          setError('Ошибка сети. Попробуйте снова.');
+        });
+    }
+
+    // OTP input keyboard navigation
+    (function() {
+      var inputs = Array.from(document.querySelectorAll('.otp-input'));
+      inputs.forEach(function(inp, idx) {
+        inp.addEventListener('input', function(e) {
+          var val = inp.value.replace(/[^0-9]/g, '');
+          // Handle paste of multiple digits
+          if (val.length > 1) {
+            val.split('').slice(0, 6 - idx).forEach(function(ch, i) {
+              if (inputs[idx + i]) inputs[idx + i].value = ch;
+            });
+            var next = inputs[Math.min(idx + val.length, 5)];
+            if (next) next.focus();
+          } else {
+            inp.value = val;
+            if (val && inputs[idx + 1]) inputs[idx + 1].focus();
+          }
+          if (getCode().length === 6) submitOtp();
+        });
+        inp.addEventListener('keydown', function(e) {
+          if (e.key === 'Backspace' && !inp.value && inputs[idx - 1]) {
+            inputs[idx - 1].focus();
+            inputs[idx - 1].value = '';
+          }
+        });
+        inp.addEventListener('paste', function(e) {
+          var text = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '');
+          e.preventDefault();
+          if (text.length >= 6) {
+            text.slice(0, 6).split('').forEach(function(ch, i){ if (inputs[i]) inputs[i].value = ch; });
+            inputs[5].focus();
+            if (getCode().length === 6) submitOtp();
+          }
+        });
+      });
+      // Close modal when clicking overlay background
+      document.getElementById('otp-overlay').addEventListener('click', function(e) {
+        if (e.target === this) closeOtpModal();
+      });
+    })();
   </script>
 </body>
 </html>`;
@@ -280,7 +488,33 @@ router.get("/p/contract/:token", async (req: Request, res: Response, next: NextF
   }
 });
 
-// POST /p/contract/:token/sign — patient clicks "Sign"
+// POST /p/contract/:token/request-otp — sends 6-digit OTP to patient WhatsApp
+router.post("/p/contract/:token/request-otp", async (req: Request, res: Response, next: NextFunction) => {
+  const token = String(req.params["token"]);
+  try {
+    const result = await repo.findContractByToken(token);
+    if (!result) return res.status(404).json({ success: false, error: "Договор не найден" });
+    if (result.contract.status === "signed") {
+      return res.json({ success: false, error: "Договор уже подписан" });
+    }
+
+    const code = generateOtpCode();
+    await repo.saveOtpForToken(token, code, otpExpiry());
+
+    const message = `🔐 Код подтверждения для подписания договора «${result.templateName}»:\n\n*${code}*\n\nКод действителен 5 минут. Не передавайте его третьим лицам.`;
+    sendToPatient(result.contract.clinicId, result.patientPhone, message).catch((err: unknown) => {
+      logger.warn({ err }, "[contract] Failed to send OTP WhatsApp");
+    });
+
+    logger.info({ token }, "[contract] OTP requested");
+    return res.json({ success: true });
+  } catch (err) {
+    next(err);
+    return;
+  }
+});
+
+// POST /p/contract/:token/sign — patient signs after OTP verification
 router.post("/p/contract/:token/sign", async (req: Request, res: Response, next: NextFunction) => {
   const token = String(req.params["token"]);
   try {
@@ -289,6 +523,17 @@ router.post("/p/contract/:token/sign", async (req: Request, res: Response, next:
 
     if (result.contract.status === "signed") {
       return res.json({ success: true, message: "Уже подписан" });
+    }
+
+    const code = String((req.body as Record<string, unknown>)["code"] ?? "").trim();
+    if (!code) return res.status(400).json({ success: false, error: "Код не указан" });
+
+    const otpResult = await repo.verifyOtpForToken(token, code);
+    if (otpResult === "expired") {
+      return res.status(400).json({ success: false, code: "OTP_EXPIRED", error: "Код истёк. Запросите новый." });
+    }
+    if (otpResult !== "ok") {
+      return res.status(400).json({ success: false, code: "OTP_INVALID", error: "Неверный код. Попробуйте снова." });
     }
 
     const ip = getClientIp(req);
@@ -435,6 +680,26 @@ function buildBundlePage(opts: {
     .btn.loading .btn-label{display:none}
     @keyframes spin{to{transform:rotate(360deg)}}
     @media(max-width:480px){.container{padding:14px 10px 120px}.card{padding:16px 12px}}
+    /* OTP Modal */
+    .otp-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center;z-index:100;opacity:0;pointer-events:none;transition:opacity .2s}
+    .otp-overlay.open{opacity:1;pointer-events:all}
+    .otp-box{background:#fff;border-radius:24px 24px 0 0;padding:28px 24px 36px;width:100%;max-width:480px;transform:translateY(100%);transition:transform .25s cubic-bezier(.32,.72,0,1)}
+    .otp-overlay.open .otp-box{transform:translateY(0)}
+    .otp-handle{width:36px;height:4px;background:#e5e5ea;border-radius:2px;margin:0 auto 20px}
+    .otp-title{font-size:18px;font-weight:700;color:#1c1c1e;margin-bottom:6px}
+    .otp-sub{font-size:14px;color:#6e6e73;margin-bottom:24px;line-height:1.5}
+    .otp-inputs{display:flex;gap:10px;justify-content:center;margin-bottom:20px}
+    .otp-input{width:46px;height:58px;border:2px solid #e5e5ea;border-radius:12px;font-size:24px;font-weight:700;text-align:center;color:#1c1c1e;background:#f9f9f9;transition:border-color .15s,background .15s;outline:none;-webkit-appearance:none;appearance:none}
+    .otp-input:focus{border-color:#6bcb3a;background:#fff}
+    .otp-input.error{border-color:#ff3b30;background:#fff0ee;animation:shake .3s}
+    @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+    .otp-error{color:#ff3b30;font-size:13px;text-align:center;min-height:18px;margin-bottom:14px}
+    .otp-submit{width:100%;height:52px;border-radius:14px;border:none;background:#6bcb3a;color:#fff;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:14px;transition:opacity .15s}
+    .otp-submit:active{opacity:.85}
+    .otp-submit.loading{opacity:.65;pointer-events:none}
+    .otp-footer{display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;color:#6e6e73}
+    .otp-resend{background:none;border:none;color:#6bcb3a;font-size:13px;font-weight:600;cursor:pointer;padding:0}
+    .otp-resend:disabled{color:#aaa;cursor:default}
   </style>
 </head>
 <body>
@@ -462,39 +727,166 @@ function buildBundlePage(opts: {
   </div>
 
   <div class="actions">
-    ${
-      !allSigned
-        ? `<button class="btn btn-primary" id="sign-all-btn" onclick="signAll()">
-        <div class="spinner"></div>
-        <span class="btn-label">✍️ Подписать все (${contracts.length})</span>
-      </button>`
-        : ""
-    }
+    ${!allSigned ? `<button class="btn btn-primary" id="sign-all-btn" onclick="startSign()">
+      <div class="spinner"></div>
+      <span class="btn-label">✍️ Подписать все (${contracts.length})</span>
+    </button>` : ""}
     <button class="btn btn-secondary" onclick="downloadCurrent()">📄 PDF</button>
   </div>
 
+  <!-- OTP Modal -->
+  <div class="otp-overlay" id="otp-overlay">
+    <div class="otp-box">
+      <div class="otp-handle"></div>
+      <div class="otp-title">Подтверждение подписи</div>
+      <div class="otp-sub">Введите 6-значный код, который мы отправили вам в WhatsApp.</div>
+      <div class="otp-inputs" id="otp-inputs">
+        <input class="otp-input" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code"/>
+        <input class="otp-input" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]"/>
+        <input class="otp-input" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]"/>
+        <input class="otp-input" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]"/>
+        <input class="otp-input" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]"/>
+        <input class="otp-input" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]"/>
+      </div>
+      <div class="otp-error" id="otp-error"></div>
+      <button class="otp-submit" id="otp-submit" onclick="submitOtp()">
+        <div class="spinner"></div>
+        <span class="btn-label">✅ Подписать все документы</span>
+      </button>
+      <div class="otp-footer">
+        <span id="otp-timer">Код действителен 5:00</span>
+        <span>·</span>
+        <button class="otp-resend" id="otp-resend" onclick="resendOtp()" disabled>Отправить снова</button>
+      </div>
+    </div>
+  </div>
+
   <script>
+    var BUNDLE = '${bundleToken}';
     var TABS = ${tabsJson};
     var currentIdx = 0;
+    var timerInterval = null;
+    var secondsLeft = 300;
+
     function showTab(idx){
       document.querySelectorAll('.tab-btn').forEach(function(b,i){b.classList.toggle('active',i===idx)});
       document.querySelectorAll('.card').forEach(function(c,i){c.classList.toggle('active',i===idx)});
       currentIdx=idx;
     }
-    async function signAll(){
+
+    function startSign(){
       var btn=document.getElementById('sign-all-btn');
       btn.classList.add('loading');
-      try{
-        var res=await fetch('/p/bundle/${bundleToken}/sign-all',{method:'POST'});
-        var data=await res.json();
-        if(data.success){location.reload();}
-        else{alert(data.error||'Ошибка при подписании');btn.classList.remove('loading');}
-      }catch{alert('Ошибка сети. Попробуйте снова.');btn.classList.remove('loading');}
+      fetch('/p/bundle/'+BUNDLE+'/request-otp',{method:'POST'})
+        .then(function(r){return r.json();})
+        .then(function(data){
+          btn.classList.remove('loading');
+          if(data.success){openOtpModal();}
+          else{alert(data.error||'Не удалось отправить код. Попробуйте снова.');}
+        })
+        .catch(function(){
+          btn.classList.remove('loading');
+          alert('Ошибка сети. Попробуйте снова.');
+        });
     }
+
+    function openOtpModal(){
+      document.getElementById('otp-overlay').classList.add('open');
+      clearInputs(); setError(''); startTimer(300);
+      setTimeout(function(){var f=document.querySelector('.otp-input');if(f)f.focus();},300);
+    }
+
+    function clearInputs(){document.querySelectorAll('.otp-input').forEach(function(i){i.value='';})}
+
+    function setError(msg){
+      document.getElementById('otp-error').textContent=msg;
+      if(msg){
+        document.querySelectorAll('.otp-input').forEach(function(i){i.classList.add('error');});
+        setTimeout(function(){document.querySelectorAll('.otp-input').forEach(function(i){i.classList.remove('error');});},600);
+      }
+    }
+
+    function getCode(){return Array.from(document.querySelectorAll('.otp-input')).map(function(i){return i.value;}).join('');}
+
+    function startTimer(seconds){
+      secondsLeft=seconds;
+      clearInterval(timerInterval);
+      document.getElementById('otp-resend').disabled=true;
+      timerInterval=setInterval(function(){
+        secondsLeft--;
+        var m=Math.floor(secondsLeft/60),s=secondsLeft%60;
+        var el=document.getElementById('otp-timer');
+        if(el) el.textContent='Код действителен '+m+':'+(s<10?'0':'')+s;
+        if(secondsLeft<=0){
+          clearInterval(timerInterval);
+          if(el) el.textContent='Код истёк';
+          document.getElementById('otp-resend').disabled=false;
+        }
+      },1000);
+    }
+
+    function resendOtp(){
+      document.getElementById('otp-resend').disabled=true;
+      setError(''); clearInputs();
+      fetch('/p/bundle/'+BUNDLE+'/request-otp',{method:'POST'})
+        .then(function(r){return r.json();})
+        .then(function(data){
+          if(data.success){startTimer(300);var f=document.querySelector('.otp-input');if(f)f.focus();}
+          else{setError(data.error||'Не удалось отправить код');document.getElementById('otp-resend').disabled=false;}
+        })
+        .catch(function(){setError('Ошибка сети');document.getElementById('otp-resend').disabled=false;});
+    }
+
+    function submitOtp(){
+      var code=getCode();
+      if(code.length<6){setError('Введите все 6 цифр');return;}
+      var btn=document.getElementById('otp-submit');
+      btn.classList.add('loading'); setError('');
+      fetch('/p/bundle/'+BUNDLE+'/sign-all',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({code:code}),
+      })
+        .then(function(r){return r.json();})
+        .then(function(data){
+          btn.classList.remove('loading');
+          if(data.success){clearInterval(timerInterval);location.reload();}
+          else if(data.code==='OTP_EXPIRED'){setError('Код истёк. Запросите новый.');document.getElementById('otp-resend').disabled=false;}
+          else{setError(data.error||'Неверный код. Попробуйте снова.');}
+        })
+        .catch(function(){btn.classList.remove('loading');setError('Ошибка сети. Попробуйте снова.');});
+    }
+
     function downloadCurrent(){
       var t=TABS[currentIdx];
       if(t) window.open('/p/contract/'+t.token+'/pdf','_blank');
     }
+
+    (function(){
+      var inputs=Array.from(document.querySelectorAll('.otp-input'));
+      inputs.forEach(function(inp,idx){
+        inp.addEventListener('input',function(){
+          var val=inp.value.replace(/[^0-9]/g,'');
+          if(val.length>1){
+            val.split('').slice(0,6-idx).forEach(function(ch,i){if(inputs[idx+i])inputs[idx+i].value=ch;});
+            var next=inputs[Math.min(idx+val.length,5)];if(next)next.focus();
+          } else {
+            inp.value=val;
+            if(val&&inputs[idx+1])inputs[idx+1].focus();
+          }
+          if(getCode().length===6)submitOtp();
+        });
+        inp.addEventListener('keydown',function(e){
+          if(e.key==='Backspace'&&!inp.value&&inputs[idx-1]){inputs[idx-1].focus();inputs[idx-1].value='';}
+        });
+        inp.addEventListener('paste',function(e){
+          var text=(e.clipboardData||window.clipboardData).getData('text').replace(/[^0-9]/g,'');
+          e.preventDefault();
+          if(text.length>=6){text.slice(0,6).split('').forEach(function(ch,i){if(inputs[i])inputs[i].value=ch;});inputs[5].focus();if(getCode().length===6)submitOtp();}
+        });
+      });
+      document.getElementById('otp-overlay').addEventListener('click',function(e){if(e.target===this)document.getElementById('otp-overlay').classList.remove('open');});
+    })();
   </script>
 </body>
 </html>`;
@@ -536,7 +928,36 @@ router.get("/p/bundle/:bundleToken", async (req: Request, res: Response, next: N
   }
 });
 
-// POST /p/bundle/:bundleToken/sign-all — patient signs all documents at once
+// POST /p/bundle/:bundleToken/request-otp — sends 6-digit OTP to patient WhatsApp
+router.post("/p/bundle/:bundleToken/request-otp", async (req: Request, res: Response, next: NextFunction) => {
+  const bundleToken = String(req.params["bundleToken"]);
+  try {
+    const results = await repo.findContractsByBundleToken(bundleToken);
+    if (!results.length) return res.status(404).json({ success: false, error: "Пакет не найден" });
+
+    const alreadyAllSigned = results.every((r) => r.contract.status === "signed");
+    if (alreadyAllSigned) {
+      return res.json({ success: false, error: "Все документы уже подписаны" });
+    }
+
+    const code = generateOtpCode();
+    await repo.saveOtpForBundle(bundleToken, code, otpExpiry());
+
+    const first = results[0]!;
+    const message = `🔐 Код подтверждения для подписания пакета документов:\n\n*${code}*\n\nПодпишите ${results.length} документа клиники ${first.clinicName}.\nКод действителен 5 минут. Не передавайте его третьим лицам.`;
+    sendToPatient(first.contract.clinicId, first.patientPhone, message).catch((err: unknown) => {
+      logger.warn({ err }, "[bundle] Failed to send OTP WhatsApp");
+    });
+
+    logger.info({ bundleToken }, "[bundle] OTP requested");
+    return res.json({ success: true });
+  } catch (err) {
+    next(err);
+    return;
+  }
+});
+
+// POST /p/bundle/:bundleToken/sign-all — patient signs all documents after OTP verification
 router.post("/p/bundle/:bundleToken/sign-all", async (req: Request, res: Response, next: NextFunction) => {
   const bundleToken = String(req.params["bundleToken"]);
   try {
@@ -548,6 +969,17 @@ router.post("/p/bundle/:bundleToken/sign-all", async (req: Request, res: Respons
     const alreadyAllSigned = results.every((r) => r.contract.status === "signed");
     if (alreadyAllSigned) {
       return res.json({ success: true, message: "Все документы уже подписаны" });
+    }
+
+    const code = String((req.body as Record<string, unknown>)["code"] ?? "").trim();
+    if (!code) return res.status(400).json({ success: false, error: "Код не указан" });
+
+    const otpResult = await repo.verifyOtpForBundle(bundleToken, code);
+    if (otpResult === "expired") {
+      return res.status(400).json({ success: false, code: "OTP_EXPIRED", error: "Код истёк. Запросите новый." });
+    }
+    if (otpResult !== "ok") {
+      return res.status(400).json({ success: false, code: "OTP_INVALID", error: "Неверный код. Попробуйте снова." });
     }
 
     const ip = getClientIp(req);
