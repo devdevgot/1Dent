@@ -8,9 +8,8 @@ import {
   getGetOwnerAnalyticsQueryKey,
   getGetDoctorKpisQueryKey,
 } from "@workspace/api-client-react";
-import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import {
-  ChevronRight, UserCog, Users, Bell, X, ChevronLeft,
+  UserCog, Users, Bell, X, ChevronLeft,
   Stethoscope, Send, Banknote, QrCode, CreditCard,
   Clock, Wallet, CalendarDays, SlidersHorizontal, UserPlus, Layers,
   TrendingUp,
@@ -50,6 +49,62 @@ function todayLabel() {
   return new Date().toLocaleDateString("ru", {
     day: "numeric", month: "long", weekday: "short",
   });
+}
+
+// ─── Donut Chart ──────────────────────────────────────────────────────────────
+type PaymentStat = { method: string; label: string; amount: number; percent: number; color: string };
+
+function DonutChart({ data, activePeriod }: { data: PaymentStat[]; activePeriod: string }) {
+  const SIZE = 260, cx = 130, cy = 130, r = 115, SW = 13;
+  const circ = 2 * Math.PI * r;
+  const total = data.reduce((s, d) => s + d.amount, 0);
+  const GAP = 14;
+  const totalPct = data.reduce((s, d) => s + d.percent, 0);
+
+  let cumLen = 0;
+  const segs = data.map(d => {
+    const segLen = (d.percent / (totalPct || 1)) * circ;
+    const dash = Math.max(0, segLen - GAP);
+    const offset = circ * 0.25 - cumLen;
+    cumLen += segLen;
+    return { ...d, dash, offset };
+  });
+
+  const isEmpty = data.length === 0 || total === 0;
+
+  return (
+    <div style={{ width: SIZE, height: SIZE, position: "relative" }}>
+      <svg width={SIZE} height={SIZE}>
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#EBEBEB" strokeWidth={SW} />
+        {!isEmpty && segs.map((s, i) => (
+          <circle
+            key={i}
+            cx={cx} cy={cy} r={r}
+            fill="none"
+            stroke={s.color}
+            strokeWidth={SW}
+            strokeLinecap="round"
+            strokeDasharray={`${s.dash} ${circ}`}
+            strokeDashoffset={s.offset}
+          />
+        ))}
+      </svg>
+      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+        {isEmpty ? (
+          <span style={{ fontSize: 12, color: "#8e8e93" }}>Нет данных</span>
+        ) : (
+          <>
+            <span style={{ fontWeight: 700, fontSize: 25, lineHeight: "32px", color: "#1c1c1e" }}>
+              {total.toLocaleString("ru-KZ")} ₸
+            </span>
+            <span style={{ fontSize: 12, lineHeight: "16px", color: "#8e8e93", marginTop: 2 }}>
+              {activePeriod}
+            </span>
+          </>
+        )}
+      </div>
+    </div>
+  );
 }
 
 // ─── DATE FILTER ────────────────────────────────────────────────────────────
@@ -98,8 +153,6 @@ export default function OwnerDashboard() {
   const { t } = useTranslation();
   const { user, clinic } = useAuthStore();
   const [, navigate] = useLocation();
-  const [activeIdx, setActiveIdx] = useState<number | null>(null);
-
   // ── Date filter state ──
   const [filterOpen, setFilterOpen]     = useState(false);
   const [showCustom, setShowCustom]     = useState(false);
@@ -134,8 +187,6 @@ export default function OwnerDashboard() {
   const rawAnalytics = (analyticsData?.data?.analytics ?? {}) as Record<string, unknown>;
   const rawKpis = kpiData?.data?.kpis ?? [];
 
-  type PaymentStat = { method: string; label: string; amount: number; percent: number; color: string };
-
   const analytics = {
     revenueThisMonth:               Number(rawAnalytics.revenueThisMonth ?? 0),
     newPatientsThisMonth:           Number(rawAnalytics.newPatientsThisMonth ?? 0),
@@ -155,17 +206,6 @@ export default function OwnerDashboard() {
 
   const revenueByPayment = analytics.revenueByPaymentMethod;
 
-  const donutData = revenueByPayment.length > 0
-    ? revenueByPayment
-    : [{ method: "empty", label: "", amount: 1, percent: 100, color: "#e2e8f0" }];
-
-  const centerValue = activeIdx !== null && revenueByPayment[activeIdx]
-    ? fmtRevenue(revenueByPayment[activeIdx].amount)
-    : fmtRevenue(revenueThisMonth);
-
-  const centerLabel = activeIdx !== null && revenueByPayment[activeIdx]
-    ? `${revenueByPayment[activeIdx].percent}%`
-    : "Подробнее";
 
   return (
     <div className="min-h-full bg-[#f7f8fc] pb-8">
@@ -243,57 +283,13 @@ export default function OwnerDashboard() {
       <div className="mx-4 mt-3 bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
 
         {/* Ring chart */}
-        <div className="relative pt-4 pb-2">
+        <div className="pt-4 pb-2 flex justify-center">
           {isLoading ? (
-            <div className="h-56 flex items-center justify-center">
+            <div className="w-[260px] h-[260px] flex items-center justify-center">
               <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie
-                  data={donutData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={80}
-                  outerRadius={activeIdx !== null ? 108 : 104}
-                  paddingAngle={donutData.length > 1 ? 2 : 0}
-                  dataKey="amount"
-                  startAngle={90}
-                  endAngle={-270}
-                  animationBegin={0}
-                  animationDuration={800}
-                  onMouseEnter={(_, idx) => revenueByPayment.length > 0 && setActiveIdx(idx)}
-                  onMouseLeave={() => setActiveIdx(null)}
-                  strokeWidth={0}
-                >
-                  {donutData.map((entry, idx) => (
-                    <Cell
-                      key={entry.method}
-                      fill={entry.color}
-                      opacity={activeIdx === null || activeIdx === idx ? 1 : 0.4}
-                      style={{ cursor: "pointer", transition: "opacity 0.2s" }}
-                    />
-                  ))}
-                </Pie>
-                {/* SVG center text rendered via foreignObject trick via absolute overlay */}
-              </PieChart>
-            </ResponsiveContainer>
-          )}
-
-          {/* Center overlay */}
-          {!isLoading && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-2xl font-bold text-gray-900 leading-none tracking-tight">
-                {centerValue}
-              </span>
-              <button
-                className="text-xs text-gray-400 mt-1.5 flex items-center gap-0.5 pointer-events-auto"
-                onClick={() => navigate("/analytics")}
-              >
-                {centerLabel} <ChevronRight className="w-3 h-3" />
-              </button>
-            </div>
+            <DonutChart data={revenueByPayment} activePeriod={filterLabel} />
           )}
         </div>
 
