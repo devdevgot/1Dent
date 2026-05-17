@@ -140,8 +140,9 @@ function buildContractPage(opts: {
   token: string;
   status: string;
   signedAt?: Date | null;
+  isPreview?: boolean;
 }): string {
-  const { templateName, patientName, clinicName, renderedHtml, token, status, signedAt } = opts;
+  const { templateName, patientName, clinicName, renderedHtml, token, status, signedAt, isPreview } = opts;
   const isSigned = status === "signed";
   const signedDateStr = signedAt
     ? new Date(signedAt).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
@@ -240,7 +241,7 @@ function buildContractPage(opts: {
     </div>
   </div>
 
-  <div class="actions">
+  ${!isPreview ? `<div class="actions">
     ${!isSigned ? `
     <button class="btn btn-primary" id="sign-btn" onclick="startSign()">
       <div class="spinner"></div>
@@ -249,7 +250,7 @@ function buildContractPage(opts: {
     <a class="btn btn-secondary" href="/p/contract/${token}/pdf" download="${escHtml(templateName)}.pdf">
       📄 Скачать PDF
     </a>
-  </div>
+  </div>` : ""}
 
   <!-- OTP Modal -->
   <div class="otp-overlay" id="otp-overlay">
@@ -464,8 +465,9 @@ router.get("/p/contract/:token", async (req: Request, res: Response, next: NextF
     }
 
     const { contract, templateName, patientName, clinicName } = result;
+    const isPreview = req.query["preview"] === "1";
 
-    if (contract.status === "sent") {
+    if (!isPreview && contract.status === "sent") {
       await repo.markContractViewed(token).catch((err: unknown) =>
         logger.warn({ err }, "[contract] markViewed failed"),
       );
@@ -481,6 +483,7 @@ router.get("/p/contract/:token", async (req: Request, res: Response, next: NextF
       token,
       status: contract.status,
       signedAt: contract.signedAt,
+      isPreview,
     }));
   } catch (err) {
     next(err);
@@ -593,6 +596,7 @@ function buildBundlePage(opts: {
   clinicName: string;
   patientName: string;
   bundleToken: string;
+  isPreview?: boolean;
   contracts: Array<{
     token: string;
     templateName: string;
@@ -601,7 +605,7 @@ function buildBundlePage(opts: {
     signedAt?: Date | null;
   }>;
 }): string {
-  const { clinicName, patientName, bundleToken, contracts } = opts;
+  const { clinicName, patientName, bundleToken, isPreview, contracts } = opts;
   const allSigned = contracts.every((c) => c.status === "signed");
   const firstSignedAt = contracts.find((c) => c.signedAt)?.signedAt;
   const signedDateStr = firstSignedAt
@@ -726,13 +730,13 @@ function buildBundlePage(opts: {
       .join("")}
   </div>
 
-  <div class="actions">
+  ${!isPreview ? `<div class="actions">
     ${!allSigned ? `<button class="btn btn-primary" id="sign-all-btn" onclick="startSign()">
       <div class="spinner"></div>
       <span class="btn-label">✍️ Подписать все (${contracts.length})</span>
     </button>` : ""}
     <button class="btn btn-secondary" onclick="downloadCurrent()">📄 PDF</button>
-  </div>
+  </div>` : ""}
 
   <!-- OTP Modal -->
   <div class="otp-overlay" id="otp-overlay">
@@ -903,7 +907,11 @@ router.get("/p/bundle/:bundleToken", async (req: Request, res: Response, next: N
       );
     }
 
-    await repo.markBundleViewed(bundleToken).catch(() => {});
+    const isPreview = req.query["preview"] === "1";
+
+    if (!isPreview) {
+      await repo.markBundleViewed(bundleToken).catch(() => {});
+    }
 
     const first = results[0]!;
     res.setHeader("Content-Type", "text/html; charset=utf-8");
@@ -913,6 +921,7 @@ router.get("/p/bundle/:bundleToken", async (req: Request, res: Response, next: N
         clinicName: first.clinicName,
         patientName: first.patientName,
         bundleToken,
+        isPreview,
         contracts: results.map((r) => ({
           token: r.contract.token,
           templateName: r.templateName,

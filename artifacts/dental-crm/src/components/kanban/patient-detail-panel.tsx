@@ -2562,7 +2562,7 @@ export function PatientDetailPanel() {
                             </div>
                           </div>
                           <iframe
-                            src={bundleUrl ?? `/p/bundle/${bundleToken}`}
+                            src={`${bundleUrl ?? `/p/bundle/${bundleToken}`}?preview=1`}
                             className="flex-1 w-full border-0"
                             title="Пакет договоров"
                           />
