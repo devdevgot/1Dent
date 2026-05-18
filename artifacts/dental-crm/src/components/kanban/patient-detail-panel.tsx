@@ -1331,10 +1331,16 @@ export function PatientDetailPanel() {
       }),
     );
 
-    // 2. If services were selected per tooth during diagnosis → create treatment plan with those items
+    // 2. If services were selected per tooth during diagnosis → add to existing plan or create new one
     if (diagnosisServicesMap.size > 0) {
       const items: Array<{ toothFdi: number; condition: string; title: string; price: number }> = [];
       for (const [fdi, services] of diagnosisServicesMap.entries()) {
+        // Skip teeth that are already completed in the active plan — don't re-bill
+        const alreadyCompleted = activePlan?.items.some(
+          (item) => item.toothFdi === fdi && item.status === "completed",
+        ) ?? false;
+        if (alreadyCompleted) continue;
+
         const condition = diagnosisMap.get(fdi) ?? teethMap.get(fdi)?.condition ?? "healthy";
         for (const svc of services) {
           items.push({
@@ -1346,7 +1352,21 @@ export function PatientDetailPanel() {
         }
       }
       if (items.length > 0) {
-        await createPlanMutation.mutateAsync({ id: selectedPatientId, data: { items } });
+        if (activePlan) {
+          // Re-diagnosis: add new items to the existing active plan
+          await Promise.all(
+            items.map((item) =>
+              addPlanItemMutation.mutateAsync({
+                id: selectedPatientId,
+                planId: activePlan.id,
+                data: { title: item.title, price: item.price, toothFdi: item.toothFdi },
+              }),
+            ),
+          );
+        } else {
+          // First diagnosis: create a brand-new plan
+          await createPlanMutation.mutateAsync({ id: selectedPatientId, data: { items } });
+        }
       }
     }
 
@@ -1379,20 +1399,21 @@ export function PatientDetailPanel() {
       setBundleSent(false);
       void handlePrepareBundle(selectedPatientId);
     }
-  }, [selectedPatientId, diagnosisMap, diagnosisNotesMap, diagnosisServicesMap, teethMap, updateToothMutation, triggerAnalysisMutation, createPlanMutation, refetchTeeth, toast, t, queryClient, setActiveTab, handlePrepareBundle]);
+  }, [selectedPatientId, diagnosisMap, diagnosisNotesMap, diagnosisServicesMap, teethMap, activePlan, updateToothMutation, triggerAnalysisMutation, createPlanMutation, addPlanItemMutation, refetchTeeth, toast, t, queryClient, setActiveTab, handlePrepareBundle]);
 
   const diagnosisSummaryEntries = useMemo((): DiagnosisSummaryEntry[] => {
-    const allFdis = new Set([...diagnosisMap.keys(), ...teethMap.keys()]);
+    // Only show teeth being actively diagnosed in this session (diagnosisMap).
+    // Old teeth from teethMap are NOT re-billed — they stay as historical data.
     const entries: DiagnosisSummaryEntry[] = [];
-    for (const fdi of allFdis) {
-      const condition = diagnosisMap.get(fdi) ?? teethMap.get(fdi)?.condition ?? "healthy";
+    for (const [fdi, condition] of diagnosisMap.entries()) {
       const priceEntry = conditionPricesMap[condition];
-      const price = priceEntry?.price ?? 0;
+      // Treated teeth are informational only — no charge
+      const price = condition === "treated" ? 0 : (priceEntry?.price ?? 0);
       const mkb10 = priceEntry?.mkb10 ?? "";
       entries.push({ fdi, condition, price, mkb10 });
     }
     return entries.sort((a, b) => a.fdi - b.fdi);
-  }, [diagnosisMap, teethMap, conditionPricesMap]);
+  }, [diagnosisMap, conditionPricesMap]);
 
   const diagnosisTotalCost = useMemo(() => {
     let total = 0;
