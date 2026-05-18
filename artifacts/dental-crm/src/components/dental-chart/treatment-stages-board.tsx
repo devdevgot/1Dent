@@ -609,13 +609,13 @@ function SortableSection({
           </div>
 
           {/* Процедур count */}
-          <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
-            <span className="text-[13px] text-gray-500">
+          <div className="flex items-center justify-between py-2.5 border-t border-gray-100 -mx-4 px-4 bg-gray-50 hover:bg-gray-100 transition-colors">
+            <span className="text-[13px] text-gray-600 font-medium">
               Процедур: {planItems.filter((p) => p.status !== "cancelled").length}
             </span>
             <ChevronRight
               className={cn(
-                "w-4 h-4 text-gray-300 transition-transform duration-200",
+                "w-4 h-4 text-gray-400 transition-transform duration-200",
                 isExpanded && "rotate-90",
               )}
             />
@@ -747,13 +747,13 @@ function CompletedStageSection({
           </div>
 
           {/* Процедур count */}
-          <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
-            <span className="text-[13px] text-gray-400">
+          <div className="flex items-center justify-between py-2.5 border-t border-gray-100 -mx-4 px-4 bg-gray-50 hover:bg-gray-100 transition-colors">
+            <span className="text-[13px] text-gray-500 font-medium">
               Процедур: {planItems.length}
             </span>
             <ChevronRight
               className={cn(
-                "w-4 h-4 text-gray-200 transition-transform duration-200",
+                "w-4 h-4 text-gray-300 transition-transform duration-200",
                 isExpanded && "rotate-90",
               )}
             />
