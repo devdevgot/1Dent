@@ -2257,34 +2257,59 @@ export function PatientDetailPanel() {
                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Активный план</p>
                         {activePlan ? (
                           <button onClick={() => setPlanDetailId(activePlan.id)} className="w-full text-left bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                            <div className="h-1 bg-primary rounded-t-2xl" />
-                            <div className="px-4 py-3.5">
-                              <div className="flex items-center justify-between mb-2.5">
-                                <div className="flex items-center gap-2">
-                                  <ClipboardList className="w-4 h-4 text-primary" />
-                                  <span className="text-sm font-bold text-gray-900">План лечения №{activePlan.planNumber}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${activePlan.status === "draft" ? "bg-slate-50 text-slate-600 border-slate-200" : activePlan.status === "approved" ? "bg-blue-50 text-blue-700 border-blue-200" : activePlan.status === "in_progress" ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-green-50 text-green-700 border-green-200"}`}>
-                                    {activePlan.status === "draft" ? "Черновик" : activePlan.status === "approved" ? "Согласован" : activePlan.status === "in_progress" ? "В работе" : "Завершён"}
-                                  </span>
-                                  <ChevronRight className="w-4 h-4 text-gray-300" />
-                                </div>
-                              </div>
-                              <div className="mb-2">
-                                <div className="flex items-center justify-between mb-1">
-                                  <span className="text-xs text-gray-400">Выполнено {apDone} из {apItems.length} услуг</span>
-                                  <span className="text-xs font-bold text-gray-600">{apPct}%</span>
-                                </div>
-                                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                  <div className="h-full rounded-full bg-green-500" style={{ width: `${apPct}%` }} />
-                                </div>
-                              </div>
-                              <div className="flex items-center justify-between pt-2.5 border-t border-gray-100">
-                                <span className="text-xs text-gray-400">Создан {new Date(activePlan.createdAt).toLocaleDateString("ru", { day: "2-digit", month: "short", year: "numeric" })}</span>
+                            <div className="h-1 bg-primary" />
+                            <div className="px-4 py-4">
+                              {/* Header */}
+                              <div className="flex items-start justify-between mb-4">
                                 <div>
-                                  <span className="text-sm font-bold text-green-600">{apPaid.toLocaleString("ru-KZ")} ₸</span>
-                                  <span className="text-xs text-gray-400 ml-1">из {activePlan.totalCost.toLocaleString("ru-KZ")} ₸</span>
+                                  <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-0.5">Активный план</p>
+                                  <p className="text-[15px] font-bold text-gray-900">
+                                    План #{String(activePlan.planNumber).padStart(4, "0")}
+                                  </p>
+                                  <p className="text-[11px] text-gray-400 mt-0.5">
+                                    Создан {new Date(activePlan.createdAt).toLocaleDateString("ru", { day: "2-digit", month: "long", year: "numeric" })}
+                                  </p>
+                                </div>
+                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0 mt-0.5 ${activePlan.status === "draft" ? "bg-slate-50 text-slate-600 border-slate-200" : activePlan.status === "approved" ? "bg-blue-50 text-blue-700 border-blue-200" : activePlan.status === "in_progress" ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-emerald-50 text-emerald-700 border-emerald-200"}`}>
+                                  {activePlan.status === "draft" ? "Черновик" : activePlan.status === "approved" ? "Согласован" : activePlan.status === "in_progress" ? "В работе" : "Завершён"}
+                                </span>
+                              </div>
+
+                              {/* Ring chart + amount */}
+                              <div className="flex items-center gap-4 mb-4">
+                                {(() => {
+                                  const sz = 68; const r = (sz - 10) / 2; const circ = 2 * Math.PI * r;
+                                  const offset = circ * (1 - apPct / 100);
+                                  return (
+                                    <svg width={sz} height={sz} className="shrink-0">
+                                      <circle cx={sz/2} cy={sz/2} r={r} fill="none" stroke="#f1f5f9" strokeWidth="8" />
+                                      {apPct > 0 && <circle cx={sz/2} cy={sz/2} r={r} fill="none" stroke="hsl(var(--primary))" strokeWidth="8"
+                                        strokeDasharray={String(circ)} strokeDashoffset={String(offset)} strokeLinecap="round"
+                                        transform={`rotate(-90 ${sz/2} ${sz/2})`} />}
+                                      <text x={sz/2} y={sz/2 + 4} textAnchor="middle" fontSize="11" fontWeight="bold" fill="hsl(var(--primary))">{apPct}%</text>
+                                    </svg>
+                                  );
+                                })()}
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-[11px] text-gray-400 mb-0.5">Итого по плану</p>
+                                  <p className="text-[22px] font-bold text-gray-900 leading-none">{activePlan.totalCost.toLocaleString("ru-KZ")} ₸</p>
+                                  <div className="mt-2 space-y-1">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" /><span className="text-[11px] text-gray-500">Выполнено</span></div>
+                                      <span className="text-[11px] font-semibold text-emerald-600">{apPaid.toLocaleString("ru-KZ")} ₸</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-primary/30 shrink-0" /><span className="text-[11px] text-gray-500">Остаток</span></div>
+                                      <span className="text-[11px] font-semibold text-gray-600">{(activePlan.totalCost - apPaid).toLocaleString("ru-KZ")} ₸</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Footer CTA */}
+                              <div className="flex items-center justify-end pt-3 border-t border-gray-100">
+                                <div className="flex items-center gap-1 text-primary text-[12px] font-semibold">
+                                  Открыть план <ChevronRight className="w-3.5 h-3.5" />
                                 </div>
                               </div>
                             </div>
@@ -2393,21 +2418,51 @@ export function PatientDetailPanel() {
                       </div>
                       <div className="flex-1 overflow-y-auto custom-scrollbar">
                         <div className="px-4 py-4 space-y-3">
-                          <div className="bg-gray-50 rounded-2xl p-4">
-                            <div className="mb-3">
-                              <div className="flex items-center justify-between mb-1">
-                                <span className="text-xs text-gray-500">Выполнено {done} из {nc.length} услуг</span>
-                                <span className="text-xs font-bold text-gray-600">{pct}%</span>
+                          {/* Financial summary card */}
+                          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+                            <div className="h-0.5 bg-primary" />
+                            <div className="px-4 py-4">
+                              {/* Ring chart + totals */}
+                              <div className="flex items-center gap-4 mb-4">
+                                {(() => {
+                                  const sz = 68; const r = (sz - 10) / 2; const circ = 2 * Math.PI * r;
+                                  const offset = circ * (1 - pct / 100);
+                                  return (
+                                    <svg width={sz} height={sz} className="shrink-0">
+                                      <circle cx={sz/2} cy={sz/2} r={r} fill="none" stroke="#f1f5f9" strokeWidth="8" />
+                                      {pct > 0 && <circle cx={sz/2} cy={sz/2} r={r} fill="none" stroke="hsl(var(--primary))" strokeWidth="8"
+                                        strokeDasharray={String(circ)} strokeDashoffset={String(offset)} strokeLinecap="round"
+                                        transform={`rotate(-90 ${sz/2} ${sz/2})`} />}
+                                      <text x={sz/2} y={sz/2 + 4} textAnchor="middle" fontSize="11" fontWeight="bold" fill="hsl(var(--primary))">{pct}%</text>
+                                    </svg>
+                                  );
+                                })()}
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-[11px] text-gray-400 mb-0.5">Сумма плана</p>
+                                  <p className="text-[22px] font-bold text-gray-900 leading-none">{detailPlan.totalCost.toLocaleString("ru-KZ")} ₸</p>
+                                  <p className="text-[11px] text-gray-400 mt-0.5">Оплачено {done} из {nc.length} услуг</p>
+                                </div>
                               </div>
-                              <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                <div className="h-full rounded-full bg-green-500 transition-all" style={{ width: `${pct}%` }} />
+                              {/* Paid / Remaining rows */}
+                              <div className="space-y-2 mb-3">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0" />
+                                    <span className="text-[12px] text-gray-600">Выполнено</span>
+                                  </div>
+                                  <span className="text-[13px] font-bold text-emerald-600">{paid.toLocaleString("ru-KZ")} ₸</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <span className="w-2.5 h-2.5 rounded-full bg-primary/30 shrink-0" />
+                                    <span className="text-[12px] text-gray-600">Остаток к оплате</span>
+                                  </div>
+                                  <span className="text-[13px] font-bold text-gray-700">{(detailPlan.totalCost - paid).toLocaleString("ru-KZ")} ₸</span>
+                                </div>
                               </div>
-                            </div>
-                            <div className="flex items-center justify-between pt-3 border-t border-gray-200">
-                              <span className="text-xs text-gray-500">Оплачено</span>
-                              <div>
-                                <span className="text-sm font-bold text-green-600">{paid.toLocaleString("ru-KZ")} ₸</span>
-                                <span className="text-xs text-gray-400 ml-1">из {detailPlan.totalCost.toLocaleString("ru-KZ")} ₸</span>
+                              {/* Progress bar */}
+                              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                <div className="h-full rounded-full bg-primary/70 transition-all duration-700" style={{ width: `${pct}%` }} />
                               </div>
                             </div>
                           </div>
