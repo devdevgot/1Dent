@@ -50,6 +50,7 @@ import { cn } from "@/lib/utils";
 import {
   useCompleteTreatmentPlanItem,
   useUpdateTreatmentPlanItem,
+  useListTreatmentPlans,
   getGetActiveTreatmentPlanQueryKey,
   getListTeethQueryKey,
 } from "@workspace/api-client-react";
@@ -516,6 +517,8 @@ interface SortableSectionProps {
   userRole?: string;
   doctorName?: string;
   onOpenDetail?: () => void;
+  earnedTotal?: number;
+  earnedCount?: number;
 }
 
 function SortableSection({
@@ -529,6 +532,8 @@ function SortableSection({
   userRole,
   doctorName,
   onOpenDetail,
+  earnedTotal,
+  earnedCount,
 }: SortableSectionProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: stage.id });
@@ -606,12 +611,24 @@ function SortableSection({
             )}
           </div>
 
-          {/* Сумма этапа */}
+          {/* Сумма этапа / Заработано */}
           <div className="flex items-center justify-between py-1.5 border-t border-gray-100">
-            <span className="text-[11px] text-gray-400">Сумма этапа</span>
-            <span className="text-[11px] font-semibold text-gray-600">
-              {sectionTotal > 0 ? formatPrice(sectionTotal) : "—"}
-            </span>
+            {sectionTotal > 0 ? (
+              <>
+                <span className="text-[11px] text-gray-400">Сумма этапа</span>
+                <span className="text-[11px] font-semibold text-gray-600">{formatPrice(sectionTotal)}</span>
+              </>
+            ) : earnedTotal && earnedTotal > 0 ? (
+              <>
+                <span className="text-[11px] text-emerald-600 font-medium">Заработано</span>
+                <span className="text-[11px] font-bold text-emerald-600">{formatPrice(earnedTotal)}</span>
+              </>
+            ) : (
+              <>
+                <span className="text-[11px] text-gray-400">Сумма этапа</span>
+                <span className="text-[11px] font-semibold text-gray-600">—</span>
+              </>
+            )}
           </div>
 
           {/* Процедур count — opens detail sheet */}
@@ -620,9 +637,17 @@ function SortableSection({
             onClick={(e) => { e.stopPropagation(); onOpenDetail?.(); }}
             className="flex items-center justify-between py-2.5 border-t border-gray-100 -mx-4 px-4 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 transition-colors cursor-pointer"
           >
-            <span className="text-[13px] text-gray-600 font-medium">
-              Процедур: {planItems.filter((p) => p.status !== "cancelled").length}
-            </span>
+            {planItems.filter((p) => p.status !== "cancelled").length > 0 ? (
+              <span className="text-[13px] text-gray-600 font-medium">
+                Процедур: {planItems.filter((p) => p.status !== "cancelled").length}
+              </span>
+            ) : earnedCount && earnedCount > 0 ? (
+              <span className="text-[13px] text-emerald-600 font-medium">
+                Выполнено ранее: {earnedCount}
+              </span>
+            ) : (
+              <span className="text-[13px] text-gray-400 font-medium">Процедур: 0</span>
+            )}
             <ChevronRight className="w-4 h-4 text-gray-400" />
           </div>
 
@@ -1113,7 +1138,9 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
   const { toast } = useToast();
   const { user } = useAuthStore();
   const { data: usersData } = useListUsers();
+  const { data: allPlansData } = useListTreatmentPlans(patientId);
   const allUsers = useMemo(() => usersData?.data?.users ?? [], [usersData]);
+  const allPlans = useMemo(() => (allPlansData as any)?.data?.plans ?? [], [allPlansData]);
   const doctorName = useMemo(() => {
     const docId = activePlan?.doctorId;
     if (!docId) return undefined;
@@ -1367,7 +1394,31 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
 
   // ── Stage filtering + DnD ─────────────────────────────────────────────────
 
-  const stageItems = buildStageItems(teeth, activePlan);
+  const stageItems = useMemo(() => buildStageItems(teeth, activePlan), [teeth, activePlan]);
+
+  // ── Earned totals from all plans (for stages with no active items) ─────────
+
+  const earnedByStage = useMemo(() => {
+    const map = new Map<string, { total: number; count: number }>();
+    const toothToStage = new Map<number, string>();
+    for (const [stageId, data] of stageItems) {
+      for (const tooth of data.teeth) {
+        toothToStage.set(tooth.toothFdi, stageId);
+      }
+    }
+    for (const plan of allPlans as TreatmentPlan[]) {
+      for (const item of plan.items) {
+        if (item.status !== "completed") continue;
+        let sid: string | null = conditionToStageId(item.condition);
+        if (!sid && item.toothFdi != null) sid = toothToStage.get(item.toothFdi) ?? null;
+        if (!sid) sid = titleToStageId(item.title);
+        if (!sid) continue;
+        const cur = map.get(sid) ?? { total: 0, count: 0 };
+        map.set(sid, { total: cur.total + item.price, count: cur.count + 1 });
+      }
+    }
+    return map;
+  }, [allPlans, stageItems]);
 
   const activeStages = order
     .map((id) => STAGE_CONFIGS.find((s) => s.id === id))
@@ -1498,6 +1549,8 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
                   userRole={user?.role}
                   doctorName={doctorName}
                   onOpenDetail={() => setDetailStageId(stage.id)}
+                  earnedTotal={earnedByStage.get(stage.id)?.total}
+                  earnedCount={earnedByStage.get(stage.id)?.count}
                 />
               );
             })}
