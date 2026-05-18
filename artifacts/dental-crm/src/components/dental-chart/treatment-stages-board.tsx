@@ -544,10 +544,11 @@ function SortableSection({
     <div ref={setNodeRef} style={style} className="select-none">
       <div
         className={cn(
-          "rounded-2xl border bg-white overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.06)] transition-shadow",
+          "rounded-2xl bg-white overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.07)] transition-shadow",
           isDragging && "shadow-lg",
-          runningCount > 0 && "border-blue-200 shadow-blue-100",
+          runningCount > 0 && "shadow-blue-100/80",
         )}
+        style={{ borderLeft: `3px solid ${stage.color}` }}
       >
         {/* Clickable card header */}
         <button onClick={onToggle} className="w-full text-left px-4 pt-4 pb-3">
@@ -706,7 +707,7 @@ function CompletedStageSection({
 
   return (
     <div className="select-none opacity-75 hover:opacity-100 transition-opacity">
-      <div className="rounded-2xl border border-emerald-100 bg-white overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+      <div className="rounded-2xl bg-white overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.05)]" style={{ borderLeft: "3px solid #10b981" }}>
         <button onClick={onToggle} className="w-full text-left px-4 pt-4 pb-3">
           {/* Stage number + title + завершён badge */}
           <div className="flex items-start gap-3 mb-3">
