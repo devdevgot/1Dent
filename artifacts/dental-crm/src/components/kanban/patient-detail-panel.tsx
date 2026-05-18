@@ -2460,10 +2460,6 @@ export function PatientDetailPanel() {
                                   <span className="text-[13px] font-bold text-gray-700">{(detailPlan.totalCost - paid).toLocaleString("ru-KZ")} ₸</span>
                                 </div>
                               </div>
-                              {/* Progress bar */}
-                              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                <div className="h-full rounded-full bg-primary/70 transition-all duration-700" style={{ width: `${pct}%` }} />
-                              </div>
                             </div>
                           </div>
                           {isActive && activePlan && activePlan.status === "draft" && (
