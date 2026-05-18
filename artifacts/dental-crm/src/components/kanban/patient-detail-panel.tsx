@@ -1072,7 +1072,11 @@ export function PatientDetailPanel() {
       setTreatmentStep(1);
       return;
     }
-    void fetch(`/api/contracts/patient/${selectedPatientId}`, { credentials: "include" })
+    const _tok = localStorage.getItem("auth_token");
+    void fetch(`/api/contracts/patient/${selectedPatientId}`, {
+      credentials: "include",
+      headers: _tok ? { Authorization: `Bearer ${_tok}` } : {},
+    })
       .then((r) => r.json() as Promise<{ success: boolean; data?: { contracts: Array<{ bundleToken: string | null; status: string }> } }>)
       .then((data) => {
         if (!data.success || !data.data) return;
@@ -1258,9 +1262,11 @@ export function PatientDetailPanel() {
   const handlePrepareBundle = useCallback(async (pid: string): Promise<string | null> => {
     setBundlePreparing(true);
     try {
+      const tok = localStorage.getItem("auth_token");
       const res = await fetch(`/api/contracts/patient/${pid}/prepare-extraction-bundle`, {
         method: "POST",
         credentials: "include",
+        headers: tok ? { Authorization: `Bearer ${tok}` } : {},
       });
       const responseData = await res.json() as { success: boolean; data?: { bundleUrl: string; bundleToken: string } };
       if (responseData.success && responseData.data) {
@@ -1281,9 +1287,11 @@ export function PatientDetailPanel() {
   const handleSendBundleWhatsapp = useCallback(async (token: string) => {
     setBundleSending(true);
     try {
+      const tok = localStorage.getItem("auth_token");
       const res = await fetch(`/api/contracts/bundle/${token}/send-whatsapp`, {
         method: "POST",
         credentials: "include",
+        headers: tok ? { Authorization: `Bearer ${tok}` } : {},
       });
       const responseData = await res.json() as { success: boolean; code?: string; error?: string; data?: { bundleUrl: string } };
       if (responseData.success) {
