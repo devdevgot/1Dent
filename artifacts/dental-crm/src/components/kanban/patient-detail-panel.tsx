@@ -2429,24 +2429,6 @@ export function PatientDetailPanel() {
                           {isActive && (
                             <TreatmentStagesBoard patientId={selectedPatientId} teeth={teethRecords} activePlan={activePlan} />
                           )}
-                          {isActive && activePlan && activePlan.status === "draft" && (
-                            showAddItemForm ? (
-                              <div className="border border-dashed border-primary/40 rounded-xl p-3 space-y-2 bg-primary/5">
-                                <input type="text" placeholder="Название шага" value={newItemTitle} onChange={(e) => setNewItemTitle(e.target.value)} className="w-full text-sm border border-border rounded-lg px-3 py-1.5 outline-none focus:ring-1 focus:ring-primary" />
-                                <input type="number" placeholder="Цена (₸)" value={newItemPrice} onChange={(e) => setNewItemPrice(e.target.value)} min={0} className="w-full text-sm border border-border rounded-lg px-3 py-1.5 outline-none focus:ring-1 focus:ring-primary" />
-                                <div className="flex gap-2">
-                                  <Button size="sm" className="h-7 text-xs" disabled={!newItemTitle.trim() || addPlanItemMutation.isPending}
-                                    onClick={() => addPlanItemMutation.mutate({ id: selectedPatientId, planId: activePlan.id, data: { title: newItemTitle.trim(), price: parseFloat(newItemPrice) || 0 } })}
-                                  >Добавить</Button>
-                                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setShowAddItemForm(false); setNewItemTitle(""); setNewItemPrice(""); }}>Отмена</Button>
-                                </div>
-                              </div>
-                            ) : (
-                              <button onClick={() => setShowAddItemForm(true)} className="w-full flex items-center gap-2 py-2 px-3 rounded-xl border border-dashed border-border text-xs text-muted-foreground hover:border-primary/40 hover:text-primary hover:bg-primary/5 transition-colors">
-                                <Plus className="w-3.5 h-3.5" /> Добавить шаг
-                              </button>
-                            )
-                          )}
                           {!isActive && (
                             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                               <div className="px-4 py-3 border-b border-gray-100">
