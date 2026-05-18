@@ -916,26 +916,6 @@ function StageDetailSheet({
             )}
           </div>
 
-          {/* Action buttons */}
-          <div className="grid grid-cols-4 gap-2">
-            {[
-              { icon: Calendar, label: "Записать" },
-              { icon: Pencil, label: "Изменить" },
-              { icon: ClipboardList, label: "Оплата" },
-              { icon: Layers, label: "Ещё" },
-            ].map(({ icon: Icon, label }) => (
-              <button
-                key={label}
-                className="flex flex-col items-center gap-1.5 py-3 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-colors"
-              >
-                <span className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center">
-                  <Icon className="w-4.5 h-4.5 text-gray-600" />
-                </span>
-                <span className="text-[10px] text-gray-500 font-medium">{label}</span>
-              </button>
-            ))}
-          </div>
-
           {/* Procedures list */}
           <div>
             <h3 className="text-[15px] font-bold text-gray-900 mb-3">
