@@ -175,6 +175,10 @@ function titleToStageId(title: string): string | null {
 
 type StageData = { teeth: ToothRecord[]; planItems: TreatmentPlanItem[] };
 
+function isStageFullyCompleted(data: StageData): boolean {
+  return data.planItems.length > 0 && data.planItems.every((i) => i.status === "completed");
+}
+
 function buildStageItems(
   teeth: ToothRecord[],
   activePlan: TreatmentPlan | null,
@@ -691,6 +695,125 @@ function SortableSection({
   );
 }
 
+// ── CompletedStageSection ─────────────────────────────────────────────────────
+
+function CompletedStageSection({
+  stage,
+  teeth,
+  planItems,
+  isExpanded,
+  onToggle,
+  actions,
+}: Omit<SortableSectionProps, never>) {
+  const Icon = stage.Icon;
+
+  const toothFdiSet = new Set(teeth.map((t) => t.toothFdi));
+  const orphanItems = planItems.filter(
+    (p) => p.toothFdi == null || !toothFdiSet.has(p.toothFdi),
+  );
+  const totalCount = teeth.length + orphanItems.length;
+  const sectionTotal = planItems.reduce((sum, item) => sum + item.price, 0);
+
+  return (
+    <div className="select-none opacity-70 hover:opacity-100 transition-opacity">
+      <div className="rounded-xl border border-gray-100 bg-white overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+        {/* Green accent line */}
+        <div className="h-0.5 w-full bg-emerald-400" />
+
+        {/* Header */}
+        <button
+          onClick={onToggle}
+          className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-gray-50/70 transition-colors text-left"
+        >
+          {/* Completed icon badge */}
+          <span className="shrink-0 flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-50">
+            <Icon className="w-3.5 h-3.5 text-emerald-500" />
+          </span>
+
+          {/* Label */}
+          <span className="flex-1 min-w-0">
+            <span className="block text-[13px] font-semibold text-gray-500 leading-tight">
+              {stage.label}
+            </span>
+            <span className="flex items-center gap-1.5 mt-0.5">
+              <CircleCheck className="w-3 h-3 text-emerald-500 shrink-0" />
+              <span className="text-[11px] text-emerald-600 font-semibold">Завершено</span>
+            </span>
+          </span>
+
+          {/* Price + count + chevron */}
+          <div className="flex items-center gap-2 shrink-0">
+            {sectionTotal > 0 && (
+              <span className="text-[11px] font-medium text-gray-400">
+                {formatPrice(sectionTotal)}
+              </span>
+            )}
+            <span className="text-[11px] font-bold w-5 h-5 flex items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+              {totalCount}
+            </span>
+            <ChevronDown
+              className={cn(
+                "w-4 h-4 text-gray-300 transition-transform duration-200",
+                isExpanded && "rotate-180",
+              )}
+            />
+          </div>
+        </button>
+
+        {/* Expanded content */}
+        {isExpanded && (
+          <div className="border-t border-gray-100 px-3 py-2.5 space-y-2">
+            {teeth.map((tooth) => {
+              const condCfg = CONDITION_CONFIG[tooth.condition ?? "healthy"];
+              const toothItems = planItems.filter((p) => p.toothFdi === tooth.toothFdi);
+              return (
+                <div key={tooth.toothFdi} className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="w-2 h-2 rounded-sm shrink-0"
+                      style={{
+                        backgroundColor: condCfg?.crownFill ?? "#e5e7eb",
+                        border: `1.5px solid ${condCfg?.stroke ?? "#9ca3af"}`,
+                      }}
+                    />
+                    <span className="text-[12px] font-semibold text-gray-500">
+                      Зуб {tooth.toothFdi}
+                    </span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-md font-medium bg-emerald-50 text-emerald-600">
+                      {condCfg?.label ?? tooth.condition}
+                    </span>
+                  </div>
+                  {toothItems.length > 0 ? (
+                    <div className="pl-3.5 space-y-1.5">
+                      {toothItems.map((item) => (
+                        <PlanItemCard key={item.id} item={item} actions={actions} />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="pl-3.5 text-[11px] text-gray-400 italic">нет позиций плана</p>
+                  )}
+                </div>
+              );
+            })}
+            {orphanItems.length > 0 && (
+              <div className="space-y-1.5">
+                {teeth.length > 0 && (
+                  <div className="text-[10px] text-gray-400 font-medium uppercase tracking-wide pt-1">
+                    Без привязки к зубу
+                  </div>
+                )}
+                {orphanItems.map((item) => (
+                  <PlanItemCard key={item.id} item={item} showTooth actions={actions} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── TreatmentStagesBoard ──────────────────────────────────────────────────────
 
 interface TreatmentStagesBoardProps {
@@ -720,6 +843,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
   });
 
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [expandedCompletedIds, setExpandedCompletedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     try {
@@ -959,6 +1083,13 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
       return !!items && (items.teeth.length > 0 || items.planItems.length > 0);
     });
 
+  const pendingActiveStages = activeStages.filter(
+    (stage) => !isStageFullyCompleted(stageItems.get(stage.id)!),
+  );
+  const completedActiveStages = activeStages.filter(
+    (stage) => isStageFullyCompleted(stageItems.get(stage.id)!),
+  );
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 400, tolerance: 8 } }),
@@ -988,7 +1119,18 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
     });
   }, []);
 
+  const toggleExpandedCompleted = useCallback((id: string) => {
+    setExpandedCompletedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
   if (activeStages.length === 0) return null;
+
+  // reset completed expanded state when patient changes (handled by patientId key externally)
 
   // ── Summary stats ─────────────────────────────────────────────────────────
 
@@ -1072,11 +1214,11 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
         </div>
       )}
 
-      {/* Sections */}
+      {/* Active (pending) sections */}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={activeStages.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext items={pendingActiveStages.map((s) => s.id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-2">
-            {activeStages.map((stage) => {
+            {pendingActiveStages.map((stage) => {
               const items = stageItems.get(stage.id)!;
               return (
                 <SortableSection
@@ -1093,6 +1235,33 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
           </div>
         </SortableContext>
       </DndContext>
+
+      {/* Completed sections — always at the bottom, outside DnD */}
+      {completedActiveStages.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 px-0.5 pt-1">
+            <div className="flex-1 h-px bg-gray-100" />
+            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
+              Завершённые разделы
+            </span>
+            <div className="flex-1 h-px bg-gray-100" />
+          </div>
+          {completedActiveStages.map((stage) => {
+            const items = stageItems.get(stage.id)!;
+            return (
+              <CompletedStageSection
+                key={stage.id}
+                stage={stage}
+                teeth={items.teeth}
+                planItems={items.planItems}
+                isExpanded={expandedCompletedIds.has(stage.id)}
+                onToggle={() => toggleExpandedCompleted(stage.id)}
+                actions={actions}
+              />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
