@@ -555,12 +555,16 @@ function SortableSection({
           onClick={onToggle}
           className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-gray-50/70 transition-colors text-left"
         >
-          {/* Drag handle */}
+          {/* Drag handle — only active in edit mode */}
           <span
-            {...attributes}
-            {...listeners}
+            {...(actions.isEditMode ? { ...attributes, ...listeners } : {})}
             onClick={(e) => e.stopPropagation()}
-            className="touch-none cursor-grab active:cursor-grabbing shrink-0 text-gray-300 hover:text-gray-400 transition-colors"
+            className={cn(
+              "touch-none shrink-0 transition-colors",
+              actions.isEditMode
+                ? "cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600"
+                : "cursor-default text-transparent pointer-events-none",
+            )}
             aria-label="Перетащить раздел"
           >
             <GripVertical className="w-4 h-4" />
