@@ -1121,57 +1121,28 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
   return (
     <div className="mt-4 space-y-3">
       {/* Plan header */}
-      <div className="flex items-center justify-between px-0.5">
-        <div className="flex items-center gap-2">
-          <ClipboardList className="w-4 h-4 text-gray-400" />
-          <span className="text-[13px] font-semibold text-gray-700">
-            {activePlan
-              ? `План лечения №${activePlan.planNumber}`
-              : "По зубной карте"}
-          </span>
-          {runningGlobal > 0 && !isEditMode && (
-            <span className="flex items-center gap-1 text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse inline-block" />
-              {runningGlobal} идёт
-            </span>
-          )}
-          {isEditMode && (
-            <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-              Режим редактирования
-            </span>
-          )}
+      {activePlan && (
+        <div className="flex justify-end px-0.5">
+          <button
+            onClick={handleToggleEditMode}
+            className={cn(
+              "flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-md border transition-colors",
+              isEditMode
+                ? "bg-amber-500 border-amber-500 text-white hover:bg-amber-600"
+                : "border-gray-200 text-gray-500 hover:bg-gray-50 hover:border-gray-300",
+            )}
+          >
+            {isEditMode ? (
+              <>
+                <Check className="w-3 h-3" />
+                Готово
+              </>
+            ) : (
+              <Pencil className="w-3 h-3" />
+            )}
+          </button>
         </div>
-        <div className="flex items-center gap-2">
-          {planTotal > 0 && !isEditMode && (
-            <span className="text-[12px] font-semibold text-gray-600">
-              {formatPrice(planTotal)}
-            </span>
-          )}
-          {activePlan && (
-            <button
-              onClick={handleToggleEditMode}
-              className={cn(
-                "flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-md border transition-colors",
-                isEditMode
-                  ? "bg-amber-500 border-amber-500 text-white hover:bg-amber-600"
-                  : "border-gray-200 text-gray-500 hover:bg-gray-50 hover:border-gray-300",
-              )}
-            >
-              {isEditMode ? (
-                <>
-                  <Check className="w-3 h-3" />
-                  Готово
-                </>
-              ) : (
-                <>
-                  <Pencil className="w-3 h-3" />
-                  Редактировать
-                </>
-              )}
-            </button>
-          )}
-        </div>
-      </div>
+      )}
 
       {/* Progress bar */}
       {totalItems > 0 && (
