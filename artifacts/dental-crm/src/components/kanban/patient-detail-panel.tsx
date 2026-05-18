@@ -1810,59 +1810,6 @@ export function PatientDetailPanel() {
                     </div>
                   )}
 
-                  {/* Interaction history */}
-                  <div>
-                    <button
-                      onClick={() => setInteractionHistoryCollapsed((v) => !v)}
-                      className="w-full flex items-center justify-between mb-3 group"
-                    >
-                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                        {t("patient.tabHistory")} ({interactions.length})
-                      </span>
-                      <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-150 ${interactionHistoryCollapsed ? "" : "rotate-180"}`} />
-                    </button>
-                    {!interactionHistoryCollapsed && (
-                      <div className="space-y-2.5">
-                        {interactions.length === 0 ? (
-                          <p className="text-sm text-muted-foreground italic">{t("patient.noInteractions")}</p>
-                        ) : (
-                          [...interactions]
-                            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                            .map((interaction) => {
-                              const isStatusChange = interaction.type === "status_change";
-                              const formattedContent = isStatusChange
-                                ? interaction.content.split(" → ").map((s) =>
-                                    KANBAN_COLUMNS.find((c) => c.id === s.trim())?.label ?? s.trim()
-                                  ).join(" → ")
-                                : interaction.content;
-                              return (
-                                <div
-                                  key={interaction.id}
-                                  className="bg-slate-50 rounded-xl p-3.5 border border-border/30"
-                                >
-                                  <div className="flex items-center justify-between mb-1.5">
-                                    <span className="text-xs font-semibold text-foreground">
-                                      {t(`interaction.${interaction.type}`)}
-                                    </span>
-                                    <span className="text-[11px] text-muted-foreground">
-                                      {new Date(interaction.createdAt).toLocaleDateString("ru", {
-                                        day: "2-digit",
-                                        month: "short",
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                      })}
-                                    </span>
-                                  </div>
-                                  <p className="text-sm text-muted-foreground leading-relaxed">
-                                    {formattedContent}
-                                  </p>
-                                </div>
-                              );
-                            })
-                        )}
-                      </div>
-                    )}
-                  </div>
                 </div>
               </div>
               </div>
