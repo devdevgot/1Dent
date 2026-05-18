@@ -163,15 +163,11 @@ function PatientsListView({
       : <ChevronDown className="w-3 h-3 text-primary" />;
   };
 
-  const Th = ({ col, label, className = "" }: { col: SortKey; label: string; className?: string }) => (
+  const Th = ({ col: _col, label, className = "" }: { col: SortKey; label: string; className?: string }) => (
     <th
-      className={`px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer select-none whitespace-nowrap ${className}`}
-      onClick={() => handleSort(col)}
+      className={`px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap ${className}`}
     >
-      <span className="flex items-center gap-1">
-        {label}
-        <SortIcon col={col} />
-      </span>
+      {label}
     </th>
   );
 
