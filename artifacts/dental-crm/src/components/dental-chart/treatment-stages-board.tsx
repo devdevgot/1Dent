@@ -671,59 +671,6 @@ function SortableSection({
           </div>
         </button>
 
-        {/* Expanded content */}
-        {isExpanded && (
-          <div className="border-t border-gray-100 px-3 py-2.5 space-y-2">
-            {teeth.map((tooth) => {
-              const condCfg = CONDITION_CONFIG[tooth.condition ?? "healthy"];
-              const toothItems = planItems.filter((p) => p.toothFdi === tooth.toothFdi);
-              return (
-                <div key={tooth.toothFdi} className="space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="w-2 h-2 rounded-sm shrink-0"
-                      style={{
-                        backgroundColor: condCfg?.crownFill ?? "#e5e7eb",
-                        border: `1.5px solid ${condCfg?.stroke ?? "#9ca3af"}`,
-                      }}
-                    />
-                    <span className="text-[12px] font-semibold text-gray-600">Зуб {tooth.toothFdi}</span>
-                    <span
-                      className="text-[10px] px-1.5 py-0.5 rounded-md font-medium"
-                      style={{ backgroundColor: stage.badgeBg, color: stage.textColor }}
-                    >
-                      {condCfg?.label ?? tooth.condition}
-                    </span>
-                  </div>
-                  {toothItems.length > 0 ? (
-                    <div className="pl-3.5 space-y-1.5">
-                      {toothItems.map((item) => (
-                        <PlanItemCard key={item.id} item={item} actions={actions} />
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="pl-3.5 text-[11px] text-gray-400 italic">нет позиций плана</p>
-                  )}
-                </div>
-              );
-            })}
-            {orphanItems.length > 0 && (
-              <div className="space-y-1.5">
-                {teeth.length > 0 && (
-                  <div className="text-[10px] text-gray-400 font-medium uppercase tracking-wide pt-1">
-                    Без привязки к зубу
-                  </div>
-                )}
-                {orphanItems.map((item) => (
-                  <PlanItemCard key={item.id} item={item} showTooth actions={actions} />
-                ))}
-              </div>
-            )}
-            {teeth.length === 0 && planItems.length === 0 && (
-              <p className="text-center text-[12px] text-gray-400 py-2">Нет данных</p>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );
