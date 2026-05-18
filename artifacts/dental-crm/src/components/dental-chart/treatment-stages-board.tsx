@@ -6,6 +6,13 @@ import {
   SheetContent,
 } from "@/components/ui/sheet";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
   DndContext,
   closestCenter,
   PointerSensor,
@@ -241,17 +248,37 @@ function formatElapsed(startedAt: number): string {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
+function formatCountdown(remainingMs: number): string {
+  const secs = Math.max(0, Math.ceil(remainingMs / 1000));
+  const mins = Math.floor(secs / 60);
+  const s = secs % 60;
+  return `${mins}:${s.toString().padStart(2, "0")}`;
+}
+
+const DURATION_OPTIONS: { label: string; ms: number | null }[] = [
+  { label: "Без таймера", ms: null },
+  { label: "15 мин", ms: 15 * 60_000 },
+  { label: "30 мин", ms: 30 * 60_000 },
+  { label: "45 мин", ms: 45 * 60_000 },
+  { label: "1 час", ms: 60 * 60_000 },
+  { label: "1.5 ч", ms: 90 * 60_000 },
+  { label: "2 часа", ms: 120 * 60_000 },
+];
+
 // ── Item action callbacks type ────────────────────────────────────────────────
 
 interface ItemActions {
-  onStart: (itemId: string) => void;
+  onStart: (itemId: string, durationMs?: number | null) => void;
   onStopTimer: (itemId: string) => void;
   onComplete: (itemId: string) => void;
   onCancel: (itemId: string) => void;
   getTimerStart: (itemId: string) => number | undefined;
+  getTimerDuration: (itemId: string) => number | undefined;
   tick: number; // forces re-render every second when timers active
   completingId: string | null;
   cancellingId: string | null;
+  completionPromptItemId: string | null;
+  onDismissPrompt: (continueTimer: boolean) => void;
   // edit mode
   isEditMode: boolean;
   editingItemId: string | null;
@@ -1018,12 +1045,26 @@ function DetailProcedureCard({
   const isDone = item.status === "completed";
   const timerStart = actions.getTimerStart(item.id);
   const isRunning = timerStart !== undefined;
+  const timerDuration = actions.getTimerDuration(item.id);
+
+  const [showPicker, setShowPicker] = useState(false);
+  const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
+
+  const remainingMs = isRunning && timerDuration != null
+    ? timerDuration - (Date.now() - timerStart!)
+    : null;
+  const isExpired = remainingMs !== null && remainingMs <= 0;
+  const pct = (isRunning && timerDuration != null && timerStart != null)
+    ? Math.min(100, Math.round(((Date.now() - timerStart) / timerDuration) * 100))
+    : 0;
 
   return (
     <div
       className={cn(
         "rounded-2xl border px-4 py-3 bg-white",
-        isDone ? "border-emerald-100 bg-emerald-50/30" : "border-gray-100",
+        isDone ? "border-emerald-100 bg-emerald-50/30"
+          : isRunning ? "border-blue-100 bg-blue-50/20"
+          : "border-gray-100",
       )}
     >
       <div className="flex items-start gap-3">
@@ -1047,13 +1088,10 @@ function DetailProcedureCard({
             <span className={cn("text-[14px] font-semibold leading-snug", isDone ? "line-through text-gray-400" : "text-gray-900")}>
               {item.title}
             </span>
-            <ChevronRight className="w-4 h-4 text-gray-300 shrink-0 mt-0.5" />
           </div>
 
           {condCfg && (
-            <p className="text-[11px] text-gray-400 mt-0.5">
-              {condCfg.label}
-            </p>
+            <p className="text-[11px] text-gray-400 mt-0.5">{condCfg.label}</p>
           )}
 
           <div className="mt-2 space-y-1">
@@ -1065,8 +1103,32 @@ function DetailProcedureCard({
             )}
             {isRunning && (
               <div className="flex items-center gap-4 text-[12px] text-gray-500">
-                <span className="text-gray-400 w-16 shrink-0">Длительность:</span>
-                <span className="font-mono font-semibold text-blue-600">{formatElapsed(timerStart!)}</span>
+                <span className="text-gray-400 w-16 shrink-0">
+                  {timerDuration != null ? "Осталось:" : "Прошло:"}
+                </span>
+                {timerDuration != null ? (
+                  <span className={cn(
+                    "font-mono font-bold text-[15px]",
+                    isExpired ? "text-red-500" : remainingMs! < 5 * 60_000 ? "text-orange-500" : "text-blue-600",
+                  )}>
+                    {isExpired ? "0:00" : formatCountdown(remainingMs!)}
+                  </span>
+                ) : (
+                  <span className="font-mono font-semibold text-blue-600">
+                    {formatElapsed(timerStart!)}
+                  </span>
+                )}
+              </div>
+            )}
+            {isRunning && timerDuration != null && (
+              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mt-1">
+                <div
+                  className={cn(
+                    "h-full rounded-full transition-all duration-1000",
+                    isExpired ? "bg-red-400" : pct > 80 ? "bg-orange-400" : "bg-blue-400",
+                  )}
+                  style={{ width: `${pct}%` }}
+                />
               </div>
             )}
             <div className="flex items-center gap-4 text-[12px] text-gray-500">
@@ -1091,6 +1153,60 @@ function DetailProcedureCard({
               </span>
             )}
           </div>
+
+          {/* Duration picker + start button */}
+          {!isDone && !isRunning && (
+            <div className="mt-3">
+              {showPicker ? (
+                <div className="space-y-2">
+                  <p className="text-[11px] text-gray-400 font-medium">Длительность процедуры:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {DURATION_OPTIONS.map((opt) => (
+                      <button
+                        key={String(opt.ms)}
+                        onClick={() => setSelectedDuration(opt.ms)}
+                        className={cn(
+                          "text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-colors",
+                          selectedDuration === opt.ms
+                            ? "bg-blue-600 border-blue-600 text-white"
+                            : "border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600",
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={() => {
+                        actions.onStart(item.id, selectedDuration);
+                        setShowPicker(false);
+                        setSelectedDuration(null);
+                      }}
+                      className="flex-1 flex items-center justify-center gap-1.5 text-[12px] font-semibold py-2 rounded-xl bg-blue-600 text-white active:bg-blue-700"
+                    >
+                      <Play className="w-3.5 h-3.5" />
+                      Начать
+                    </button>
+                    <button
+                      onClick={() => { setShowPicker(false); setSelectedDuration(null); }}
+                      className="px-3 py-2 rounded-xl border border-gray-200 text-gray-500 text-[12px] font-semibold active:bg-gray-50"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => { setShowPicker(true); setSelectedDuration(null); }}
+                  className="w-full flex items-center justify-center gap-2 text-[13px] font-semibold py-2.5 rounded-xl bg-blue-600 text-white active:bg-blue-700 transition-colors"
+                >
+                  <Play className="w-4 h-4" />
+                  Начать процедуру
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -1160,20 +1276,33 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
 
   /** Map<itemId, startedAt (ms timestamp)> */
   const [activeTimers, setActiveTimers] = useState<Map<string, number>>(new Map());
+  /** Map<itemId, plannedDuration (ms)> */
+  const [timerDurations, setTimerDurations] = useState<Map<string, number>>(new Map());
+  /** Item whose timer just expired — triggers completion modal */
+  const [completionPromptItemId, setCompletionPromptItemId] = useState<string | null>(null);
+  /** Items where user chose "continue" after expiry — don't re-trigger */
+  const [suppressedExpiryIds, setSuppressedExpiryIds] = useState<Set<string>>(new Set());
 
-  // Load persisted timers when plan changes
+  // Load persisted timers + durations when plan changes
   useEffect(() => {
-    if (!activePlan) { setActiveTimers(new Map()); return; }
-    const map = new Map<string, number>();
+    if (!activePlan) { setActiveTimers(new Map()); setTimerDurations(new Map()); return; }
+    const tMap = new Map<string, number>();
+    const dMap = new Map<string, number>();
     for (const item of activePlan.items) {
       if (item.status !== "pending") continue;
       const raw = localStorage.getItem(`1dent:timer:${item.id}`);
       if (raw) {
         const ts = parseInt(raw, 10);
-        if (!isNaN(ts)) map.set(item.id, ts);
+        if (!isNaN(ts)) tMap.set(item.id, ts);
+      }
+      const dRaw = localStorage.getItem(`1dent:timer-duration:${item.id}`);
+      if (dRaw) {
+        const d = parseInt(dRaw, 10);
+        if (!isNaN(d)) dMap.set(item.id, d);
       }
     }
-    setActiveTimers(map);
+    setActiveTimers(tMap);
+    setTimerDurations(dMap);
   }, [activePlan?.id, patientId]);
 
   // Tick every second while any timer is running
@@ -1188,6 +1317,19 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
     }
     return () => { if (tickRef.current) clearInterval(tickRef.current); };
   }, [activeTimers.size]);
+
+  // Check for timer expiry every tick
+  useEffect(() => {
+    if (activeTimers.size === 0 || completionPromptItemId !== null) return;
+    for (const [itemId, startedAt] of activeTimers) {
+      const duration = timerDurations.get(itemId);
+      if (!duration) continue;
+      if (Date.now() - startedAt >= duration && !suppressedExpiryIds.has(itemId)) {
+        setCompletionPromptItemId(itemId);
+        break;
+      }
+    }
+  }, [tick, activeTimers, timerDurations, completionPromptItemId, suppressedExpiryIds]);
 
   // ── Mutation state ────────────────────────────────────────────────────────
 
@@ -1206,13 +1348,13 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
   const completeMutation = useCompleteTreatmentPlanItem({
     mutation: {
       onSuccess: (_data, vars) => {
-        // Clear timer for completed item
+        // Clear timer + duration for completed item
         localStorage.removeItem(`1dent:timer:${vars.itemId}`);
-        setActiveTimers((prev) => {
-          const next = new Map(prev);
-          next.delete(vars.itemId);
-          return next;
-        });
+        localStorage.removeItem(`1dent:timer-duration:${vars.itemId}`);
+        setActiveTimers((prev) => { const n = new Map(prev); n.delete(vars.itemId); return n; });
+        setTimerDurations((prev) => { const n = new Map(prev); n.delete(vars.itemId); return n; });
+        setSuppressedExpiryIds((prev) => { const n = new Set(prev); n.delete(vars.itemId); return n; });
+        setCompletionPromptItemId((prev) => prev === vars.itemId ? null : prev);
         setCompletingId(null);
         qc.invalidateQueries({ queryKey: getGetActiveTreatmentPlanQueryKey(patientId) });
         qc.invalidateQueries({ queryKey: getListTeethQueryKey(patientId) });
@@ -1229,11 +1371,11 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
     mutation: {
       onSuccess: (_data, vars) => {
         localStorage.removeItem(`1dent:timer:${vars.itemId}`);
-        setActiveTimers((prev) => {
-          const next = new Map(prev);
-          next.delete(vars.itemId);
-          return next;
-        });
+        localStorage.removeItem(`1dent:timer-duration:${vars.itemId}`);
+        setActiveTimers((prev) => { const n = new Map(prev); n.delete(vars.itemId); return n; });
+        setTimerDurations((prev) => { const n = new Map(prev); n.delete(vars.itemId); return n; });
+        setSuppressedExpiryIds((prev) => { const n = new Set(prev); n.delete(vars.itemId); return n; });
+        setCompletionPromptItemId((prev) => prev === vars.itemId ? null : prev);
         setCancellingId(null);
         qc.invalidateQueries({ queryKey: getGetActiveTreatmentPlanQueryKey(patientId) });
         toast({ title: "Позиция отменена" });
@@ -1304,11 +1446,14 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
 
   // ── Item action handlers ──────────────────────────────────────────────────
 
-  const handleStart = useCallback((itemId: string) => {
+  const handleStart = useCallback((itemId: string, durationMs?: number | null) => {
     const now = Date.now();
     try { localStorage.setItem(`1dent:timer:${itemId}`, String(now)); } catch {}
+    if (durationMs) {
+      try { localStorage.setItem(`1dent:timer-duration:${itemId}`, String(durationMs)); } catch {}
+      setTimerDurations((prev) => new Map(prev).set(itemId, durationMs));
+    }
     setActiveTimers((prev) => new Map(prev).set(itemId, now));
-    // Auto-expand the section containing this item
     if (activePlan) {
       const item = activePlan.items.find((i) => i.id === itemId);
       if (item) {
@@ -1322,15 +1467,16 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
 
   const handleStopTimer = useCallback((itemId: string) => {
     try { localStorage.removeItem(`1dent:timer:${itemId}`); } catch {}
-    setActiveTimers((prev) => {
-      const next = new Map(prev);
-      next.delete(itemId);
-      return next;
-    });
+    try { localStorage.removeItem(`1dent:timer-duration:${itemId}`); } catch {}
+    setActiveTimers((prev) => { const n = new Map(prev); n.delete(itemId); return n; });
+    setTimerDurations((prev) => { const n = new Map(prev); n.delete(itemId); return n; });
+    setSuppressedExpiryIds((prev) => { const n = new Set(prev); n.delete(itemId); return n; });
+    setCompletionPromptItemId((prev) => prev === itemId ? null : prev);
   }, []);
 
   const handleComplete = useCallback((itemId: string) => {
     if (!planId || completingId || cancellingId) return;
+    setCompletionPromptItemId(null);
     setCompletingId(itemId);
     completeMutation.mutate({ id: patientId, planId, itemId });
   }, [planId, patientId, completingId, cancellingId, completeMutation]);
@@ -1346,15 +1492,31 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
     [activeTimers],
   );
 
+  const getTimerDuration = useCallback(
+    (itemId: string) => timerDurations.get(itemId),
+    [timerDurations],
+  );
+
+  const onDismissPrompt = useCallback((continueTimer: boolean) => {
+    const itemId = completionPromptItemId;
+    setCompletionPromptItemId(null);
+    if (continueTimer && itemId) {
+      setSuppressedExpiryIds((prev) => new Set(prev).add(itemId));
+    }
+  }, [completionPromptItemId]);
+
   const actions: ItemActions = {
     onStart: handleStart,
     onStopTimer: handleStopTimer,
     onComplete: handleComplete,
     onCancel: handleCancel,
     getTimerStart,
+    getTimerDuration,
     tick,
     completingId,
     cancellingId,
+    completionPromptItemId,
+    onDismissPrompt,
     isEditMode,
     editingItemId,
     editDraft,
@@ -1580,6 +1742,46 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
             planNotes={activePlan?.notes}
             historicalItems={historyByStage.get(detailStageId) ?? []}
           />
+        );
+      })()}
+
+      {/* Completion prompt modal */}
+      {(() => {
+        const promptItem = completionPromptItemId
+          ? activePlan?.items.find((i) => i.id === completionPromptItemId)
+          : null;
+        return (
+          <Dialog open={completionPromptItemId !== null} onOpenChange={(open) => { if (!open) onDismissPrompt(true); }}>
+            <DialogContent className="max-w-[90vw] rounded-2xl p-6">
+              <DialogHeader>
+                <DialogTitle className="text-[17px] font-bold text-gray-900 text-center">
+                  Процедура завершена?
+                </DialogTitle>
+                {promptItem && (
+                  <DialogDescription className="text-center text-[13px] text-gray-500 pt-1">
+                    {promptItem.title}
+                  </DialogDescription>
+                )}
+              </DialogHeader>
+              <div className="flex flex-col gap-2 mt-4">
+                <button
+                  onClick={() => {
+                    if (completionPromptItemId) handleComplete(completionPromptItemId);
+                    else onDismissPrompt(false);
+                  }}
+                  className="w-full py-3 rounded-xl bg-emerald-500 text-white font-semibold text-[15px] active:bg-emerald-600 transition-colors"
+                >
+                  Да, завершить
+                </button>
+                <button
+                  onClick={() => onDismissPrompt(true)}
+                  className="w-full py-3 rounded-xl border border-gray-200 text-gray-600 font-semibold text-[15px] active:bg-gray-50 transition-colors"
+                >
+                  Нет, продолжить
+                </button>
+              </div>
+            </DialogContent>
+          </Dialog>
         );
       })()}
     </div>
