@@ -979,12 +979,6 @@ function StageDetailSheet({
             {totalCount === 0 && (
               <p className="text-center text-[13px] text-gray-400 py-6">Нет процедур</p>
             )}
-
-            {/* Add procedure button */}
-            <button className="w-full mt-3 py-3 rounded-xl border border-dashed border-gray-200 text-[13px] text-primary font-medium flex items-center justify-center gap-2 hover:bg-primary/5 transition-colors">
-              <span className="text-lg leading-none">+</span>
-              Добавить процедуру
-            </button>
           </div>
 
           {/* Назначено */}
