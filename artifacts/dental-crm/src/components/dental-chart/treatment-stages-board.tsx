@@ -2,6 +2,10 @@ import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useListUsers } from "@workspace/api-client-react";
 import {
+  Sheet,
+  SheetContent,
+} from "@/components/ui/sheet";
+import {
   DndContext,
   closestCenter,
   PointerSensor,
@@ -511,6 +515,7 @@ interface SortableSectionProps {
   index: number;
   userRole?: string;
   doctorName?: string;
+  onOpenDetail?: () => void;
 }
 
 function SortableSection({
@@ -523,6 +528,7 @@ function SortableSection({
   index,
   userRole,
   doctorName,
+  onOpenDetail,
 }: SortableSectionProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: stage.id });
@@ -608,17 +614,16 @@ function SortableSection({
             </span>
           </div>
 
-          {/* Процедур count */}
-          <div className="flex items-center justify-between py-2.5 border-t border-gray-100 -mx-4 px-4 bg-gray-50 hover:bg-gray-100 transition-colors">
+          {/* Процедур count — opens detail sheet */}
+          <div
+            role="button"
+            onClick={(e) => { e.stopPropagation(); onOpenDetail?.(); }}
+            className="flex items-center justify-between py-2.5 border-t border-gray-100 -mx-4 px-4 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 transition-colors cursor-pointer"
+          >
             <span className="text-[13px] text-gray-600 font-medium">
               Процедур: {planItems.filter((p) => p.status !== "cancelled").length}
             </span>
-            <ChevronRight
-              className={cn(
-                "w-4 h-4 text-gray-400 transition-transform duration-200",
-                isExpanded && "rotate-90",
-              )}
-            />
+            <ChevronRight className="w-4 h-4 text-gray-400" />
           </div>
 
           {/* Date + Doctor row */}
@@ -709,6 +714,8 @@ function CompletedStageSection({
   onToggle,
   actions,
   index,
+  doctorName,
+  onOpenDetail,
 }: SortableSectionProps) {
   const toothFdiSet = new Set(teeth.map((t) => t.toothFdi));
   const orphanItems = planItems.filter(
@@ -746,17 +753,16 @@ function CompletedStageSection({
             </span>
           </div>
 
-          {/* Процедур count */}
-          <div className="flex items-center justify-between py-2.5 border-t border-gray-100 -mx-4 px-4 bg-gray-50 hover:bg-gray-100 transition-colors">
+          {/* Процедур count — opens detail sheet */}
+          <div
+            role="button"
+            onClick={(e) => { e.stopPropagation(); onOpenDetail?.(); }}
+            className="flex items-center justify-between py-2.5 border-t border-gray-100 -mx-4 px-4 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 transition-colors cursor-pointer"
+          >
             <span className="text-[13px] text-gray-500 font-medium">
               Процедур: {planItems.length}
             </span>
-            <ChevronRight
-              className={cn(
-                "w-4 h-4 text-gray-300 transition-transform duration-200",
-                isExpanded && "rotate-90",
-              )}
-            />
+            <ChevronRight className="w-4 h-4 text-gray-300" />
           </div>
         </button>
 
@@ -803,6 +809,316 @@ function CompletedStageSection({
   );
 }
 
+// ── StageDetailSheet ──────────────────────────────────────────────────────────
+
+interface StageDetailSheetProps {
+  open: boolean;
+  onClose: () => void;
+  stage: StageConfig;
+  teeth: ToothRecord[];
+  planItems: TreatmentPlanItem[];
+  actions: ItemActions;
+  doctorName?: string;
+  planNotes?: string;
+}
+
+function StageDetailSheet({
+  open,
+  onClose,
+  stage,
+  teeth,
+  planItems,
+  actions,
+  doctorName,
+  planNotes,
+}: StageDetailSheetProps) {
+  const toothFdiSet = new Set(teeth.map((t) => t.toothFdi));
+  const orphanItems = planItems.filter(
+    (p) => p.toothFdi == null || !toothFdiSet.has(p.toothFdi),
+  );
+  const activeProcedures = planItems.filter((p) => p.status !== "cancelled");
+  const completedCount = activeProcedures.filter((p) => p.status === "completed").length;
+  const totalCount = activeProcedures.length;
+  const sectionTotal = activeProcedures.reduce((sum, item) => sum + item.price, 0);
+  const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+  const runningCount = activeProcedures.filter(
+    (p) => p.status === "pending" && actions.getTimerStart(p.id) !== undefined,
+  ).length;
+
+  const statusLabel = (() => {
+    if (runningCount > 0) return { text: "В процессе", cls: "bg-blue-50 text-blue-600 border-blue-100" };
+    const pending = activeProcedures.filter((p) => p.status === "pending");
+    const completed = activeProcedures.filter((p) => p.status === "completed");
+    if (pending.length > 0 && completed.length === 0) return { text: "Запланирован", cls: "bg-slate-100 text-slate-600 border-slate-200" };
+    if (pending.length > 0 && completed.length > 0) return { text: "В работе", cls: "bg-amber-50 text-amber-600 border-amber-100" };
+    if (completed.length > 0) return { text: "Завершён", cls: "bg-emerald-50 text-emerald-600 border-emerald-100" };
+    return { text: "Запланирован", cls: "bg-slate-100 text-slate-600 border-slate-200" };
+  })();
+
+  const stageDescription = teeth.length > 0
+    ? `Зуб${teeth.length > 1 ? "ы" : ""} ${teeth.map((t) => t.toothFdi).join(", ")}`
+    : orphanItems.length > 0 ? "Дополнительные услуги" : "—";
+
+  return (
+    <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <SheetContent
+        side="bottom"
+        className="p-0 rounded-t-3xl h-[92vh] flex flex-col overflow-hidden"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 pt-5 pb-3 shrink-0">
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+          >
+            <ChevronDown className="w-4 h-4 text-gray-600" />
+          </button>
+          <span className="text-[16px] font-bold text-gray-900">{stage.label}</span>
+          <div className="w-8 h-8" />
+        </div>
+
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto px-4 pb-8 space-y-5">
+          {/* Status badge */}
+          <div className="flex justify-center pt-1">
+            <span className={cn("text-[12px] font-semibold px-3 py-1 rounded-full border", statusLabel.cls)}>
+              {statusLabel.text}
+            </span>
+          </div>
+
+          {/* Description */}
+          <p className="text-center text-[14px] text-gray-500">{stageDescription}</p>
+
+          {/* Total + progress */}
+          <div className="bg-gray-50 rounded-2xl p-4 space-y-3">
+            <div>
+              <p className="text-[11px] text-gray-400 mb-0.5">Сумма этапа</p>
+              <p className="text-[24px] font-bold text-gray-900 leading-tight">
+                {sectionTotal > 0 ? formatPrice(sectionTotal) : "—"}
+              </p>
+            </div>
+            {totalCount > 0 && (
+              <>
+                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-emerald-500 rounded-full transition-all duration-700"
+                    style={{ width: `${progressPct}%` }}
+                  />
+                </div>
+                <p className="text-[12px] text-gray-400">
+                  Выполнено{" "}
+                  <span className="text-gray-700 font-semibold">{completedCount}</span>{" "}
+                  из{" "}
+                  <span className="text-gray-700 font-semibold">{totalCount}</span>{" "}
+                  процедур
+                </p>
+              </>
+            )}
+          </div>
+
+          {/* Action buttons */}
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { icon: Calendar, label: "Записать" },
+              { icon: Pencil, label: "Изменить" },
+              { icon: ClipboardList, label: "Оплата" },
+              { icon: Layers, label: "Ещё" },
+            ].map(({ icon: Icon, label }) => (
+              <button
+                key={label}
+                className="flex flex-col items-center gap-1.5 py-3 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-colors"
+              >
+                <span className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center">
+                  <Icon className="w-4.5 h-4.5 text-gray-600" />
+                </span>
+                <span className="text-[10px] text-gray-500 font-medium">{label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Procedures list */}
+          <div>
+            <h3 className="text-[15px] font-bold text-gray-900 mb-3">
+              Процедуры ({totalCount})
+            </h3>
+            <div className="space-y-2">
+              {teeth.map((tooth) => {
+                const condCfg = CONDITION_CONFIG[tooth.condition ?? "healthy"];
+                const toothItems = planItems.filter(
+                  (p) => p.toothFdi === tooth.toothFdi && p.status !== "cancelled",
+                );
+                if (toothItems.length === 0) return null;
+                return toothItems.map((item) => (
+                  <DetailProcedureCard
+                    key={item.id}
+                    item={item}
+                    toothLabel={`${tooth.toothFdi}`}
+                    condCfg={condCfg}
+                    stage={stage}
+                    doctorName={doctorName}
+                    actions={actions}
+                  />
+                ));
+              })}
+              {orphanItems.filter((p) => p.status !== "cancelled").map((item) => (
+                <DetailProcedureCard
+                  key={item.id}
+                  item={item}
+                  doctorName={doctorName}
+                  actions={actions}
+                  stage={stage}
+                />
+              ))}
+            </div>
+
+            {totalCount === 0 && (
+              <p className="text-center text-[13px] text-gray-400 py-6">Нет процедур</p>
+            )}
+
+            {/* Add procedure button */}
+            <button className="w-full mt-3 py-3 rounded-xl border border-dashed border-gray-200 text-[13px] text-primary font-medium flex items-center justify-center gap-2 hover:bg-primary/5 transition-colors">
+              <span className="text-lg leading-none">+</span>
+              Добавить процедуру
+            </button>
+          </div>
+
+          {/* Назначено */}
+          <div>
+            <h3 className="text-[15px] font-bold text-gray-900 mb-3">Назначено</h3>
+            <div className="bg-white rounded-2xl border border-gray-100 divide-y divide-gray-100">
+              <div className="flex items-center gap-3 px-4 py-3">
+                <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
+                <span className="text-[13px] text-gray-500">Дата не назначена</span>
+              </div>
+              {doctorName && (
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <span className="text-[11px] font-bold text-primary">
+                      {doctorName.charAt(0)}
+                    </span>
+                  </div>
+                  <span className="text-[13px] text-gray-700 font-medium">{doctorName}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Комментарий */}
+          <div>
+            <h3 className="text-[15px] font-bold text-gray-900 mb-3">Комментарий</h3>
+            <div className="bg-white rounded-2xl border border-gray-100 px-4 py-3">
+              {planNotes ? (
+                <p className="text-[13px] text-gray-600 leading-relaxed">{planNotes}</p>
+              ) : (
+                <p className="text-[13px] text-gray-400 italic">Нет комментария</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+// ── DetailProcedureCard ────────────────────────────────────────────────────────
+
+function DetailProcedureCard({
+  item,
+  toothLabel,
+  condCfg,
+  stage,
+  doctorName,
+  actions,
+}: {
+  item: TreatmentPlanItem;
+  toothLabel?: string;
+  condCfg?: (typeof CONDITION_CONFIG)[string];
+  stage: StageConfig;
+  doctorName?: string;
+  actions: ItemActions;
+}) {
+  const isDone = item.status === "completed";
+  const timerStart = actions.getTimerStart(item.id);
+  const isRunning = timerStart !== undefined;
+
+  return (
+    <div
+      className={cn(
+        "rounded-2xl border px-4 py-3 bg-white",
+        isDone ? "border-emerald-100 bg-emerald-50/30" : "border-gray-100",
+      )}
+    >
+      <div className="flex items-start gap-3">
+        {/* Tooth badge or icon */}
+        {toothLabel ? (
+          <span
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-[13px] font-bold text-white shrink-0"
+            style={{ backgroundColor: stage.color }}
+          >
+            {toothLabel}
+          </span>
+        ) : (
+          <span className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-gray-100">
+            <Stethoscope className="w-5 h-5 text-gray-400" />
+          </span>
+        )}
+
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <span className={cn("text-[14px] font-semibold leading-snug", isDone ? "line-through text-gray-400" : "text-gray-900")}>
+              {item.title}
+            </span>
+            <ChevronRight className="w-4 h-4 text-gray-300 shrink-0 mt-0.5" />
+          </div>
+
+          {condCfg && (
+            <p className="text-[11px] text-gray-400 mt-0.5">
+              {condCfg.label}
+            </p>
+          )}
+
+          <div className="mt-2 space-y-1">
+            {doctorName && (
+              <div className="flex items-center gap-4 text-[12px] text-gray-500">
+                <span className="text-gray-400 w-16 shrink-0">Доктор:</span>
+                <span className="font-medium">{doctorName}</span>
+              </div>
+            )}
+            {isRunning && (
+              <div className="flex items-center gap-4 text-[12px] text-gray-500">
+                <span className="text-gray-400 w-16 shrink-0">Длительность:</span>
+                <span className="font-mono font-semibold text-blue-600">{formatElapsed(timerStart!)}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-4 text-[12px] text-gray-500">
+              <span className="text-gray-400 w-16 shrink-0">Стоимость:</span>
+              <span className="font-semibold text-gray-700">{formatPrice(item.price)}</span>
+            </div>
+          </div>
+
+          {/* Status badge */}
+          <div className="mt-2">
+            {isDone ? (
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
+                Выполнено
+              </span>
+            ) : isRunning ? (
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100">
+                Выполняется
+              </span>
+            ) : (
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">
+                Запланирована
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── TreatmentStagesBoard ──────────────────────────────────────────────────────
 
 interface TreatmentStagesBoardProps {
@@ -841,6 +1157,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
 
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [expandedCompletedIds, setExpandedCompletedIds] = useState<Set<string>>(new Set());
+  const [detailStageId, setDetailStageId] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -1200,6 +1517,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
                   index={idx}
                   userRole={user?.role}
                   doctorName={doctorName}
+                  onOpenDetail={() => setDetailStageId(stage.id)}
                 />
               );
             })}
@@ -1231,11 +1549,31 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
                 index={pendingActiveStages.length + idx}
                 userRole={user?.role}
                 doctorName={doctorName}
+                onOpenDetail={() => setDetailStageId(stage.id)}
               />
             );
           })}
         </div>
       )}
+
+      {/* Stage detail sheet */}
+      {detailStageId && (() => {
+        const detailStage = STAGE_CONFIGS.find((s) => s.id === detailStageId);
+        const detailItems = stageItems.get(detailStageId);
+        if (!detailStage || !detailItems) return null;
+        return (
+          <StageDetailSheet
+            open={true}
+            onClose={() => setDetailStageId(null)}
+            stage={detailStage}
+            teeth={detailItems.teeth}
+            planItems={detailItems.planItems}
+            actions={actions}
+            doctorName={doctorName}
+            planNotes={activePlan?.notes}
+          />
+        );
+      })()}
     </div>
   );
 }
