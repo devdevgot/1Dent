@@ -46,6 +46,7 @@ export function ContractsTab({ patientId }: ContractsTabProps) {
   const queryClient = useQueryClient();
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [showSend, setShowSend] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(true);
 
   const { data: contractsData, isLoading: contractsLoading } = useListPatientContracts(patientId);
   const { data: templatesData, isLoading: templatesLoading } = useListContractTemplates();
@@ -133,60 +134,72 @@ export function ContractsTab({ patientId }: ContractsTabProps) {
 
           {/* Contract history */}
           <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">История договоров</p>
-            {contractsLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <RefreshCw className="w-5 h-5 text-gray-300 animate-spin" />
-              </div>
-            ) : contracts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
-                <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center">
-                  <FileText className="w-6 h-6 text-gray-300" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Договоров нет</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Отправьте первый договор пациенту</p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {contracts.map((c: PatientContract) => (
-                  <div key={c.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-3.5">
-                    <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-primary/5 flex items-center justify-center shrink-0">
-                        <FileText className="w-4 h-4 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-800 truncate">{c.templateName}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          {formatDate(c.createdAt)}
-                          {c.sentByName && ` · ${c.sentByName}`}
-                        </p>
-                        {c.status === "signed" && c.signedAt && (
-                          <p className="text-xs text-green-600 mt-0.5">
-                            Подписан: {formatDate(c.signedAt)}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex flex-col items-end gap-2">
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${STATUS_COLORS[c.status]}`}>
-                          {STATUS_ICONS[c.status]}
-                          {STATUS_LABELS[c.status]}
-                        </span>
-                        <a
-                          href={`/p/contract/${c.token}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-[10px] text-gray-400 hover:text-primary transition-colors"
-                        >
-                          <ExternalLink className="w-3 h-3" />
-                          Открыть
-                        </a>
-                      </div>
+            <button
+              onClick={() => setHistoryOpen((v) => !v)}
+              className="w-full flex items-center justify-between mb-3 group"
+            >
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">История договоров</p>
+              {historyOpen
+                ? <ChevronUp className="w-3.5 h-3.5 text-gray-300 group-hover:text-gray-400 transition-colors" />
+                : <ChevronDown className="w-3.5 h-3.5 text-gray-300 group-hover:text-gray-400 transition-colors" />}
+            </button>
+            {historyOpen && (
+              <>
+                {contractsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <RefreshCw className="w-5 h-5 text-gray-300 animate-spin" />
+                  </div>
+                ) : contracts.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
+                    <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center">
+                      <FileText className="w-6 h-6 text-gray-300" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Договоров нет</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Отправьте первый договор пациенту</p>
                     </div>
                   </div>
-                ))}
-              </div>
+                ) : (
+                  <div className="space-y-2">
+                    {contracts.map((c: PatientContract) => (
+                      <div key={c.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-3.5">
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-primary/5 flex items-center justify-center shrink-0">
+                            <FileText className="w-4 h-4 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-800 truncate">{c.templateName}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              {formatDate(c.createdAt)}
+                              {c.sentByName && ` · ${c.sentByName}`}
+                            </p>
+                            {c.status === "signed" && c.signedAt && (
+                              <p className="text-xs text-green-600 mt-0.5">
+                                Подписан: {formatDate(c.signedAt)}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex flex-col items-end gap-2">
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${STATUS_COLORS[c.status]}`}>
+                              {STATUS_ICONS[c.status]}
+                              {STATUS_LABELS[c.status]}
+                            </span>
+                            <a
+                              href={`/p/contract/${c.token}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-[10px] text-gray-400 hover:text-primary transition-colors"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              Открыть
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
