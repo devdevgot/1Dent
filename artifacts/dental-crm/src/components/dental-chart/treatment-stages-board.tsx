@@ -845,6 +845,7 @@ interface StageDetailSheetProps {
   actions: ItemActions;
   doctorName?: string;
   planNotes?: string;
+  historicalItems?: TreatmentPlanItem[];
 }
 
 function StageDetailSheet({
@@ -856,21 +857,25 @@ function StageDetailSheet({
   actions,
   doctorName,
   planNotes,
+  historicalItems = [],
 }: StageDetailSheetProps) {
   const toothFdiSet = new Set(teeth.map((t) => t.toothFdi));
   const orphanItems = planItems.filter(
     (p) => p.toothFdi == null || !toothFdiSet.has(p.toothFdi),
   );
   const activeProcedures = planItems.filter((p) => p.status !== "cancelled");
-  const completedCount = activeProcedures.filter((p) => p.status === "completed").length;
-  const totalCount = activeProcedures.length;
-  const sectionTotal = activeProcedures.reduce((sum, item) => sum + item.price, 0);
+  const showHistorical = activeProcedures.length === 0 && historicalItems.length > 0;
+  const displayItems = showHistorical ? historicalItems : activeProcedures;
+  const completedCount = displayItems.filter((p) => p.status === "completed").length;
+  const totalCount = displayItems.length;
+  const sectionTotal = displayItems.reduce((sum, item) => sum + item.price, 0);
   const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
   const runningCount = activeProcedures.filter(
     (p) => p.status === "pending" && actions.getTimerStart(p.id) !== undefined,
   ).length;
 
   const statusLabel = (() => {
+    if (showHistorical) return { text: "Завершён", cls: "bg-emerald-50 text-emerald-600 border-emerald-100" };
     if (runningCount > 0) return { text: "В процессе", cls: "bg-blue-50 text-blue-600 border-blue-100" };
     const pending = activeProcedures.filter((p) => p.status === "pending");
     const completed = activeProcedures.filter((p) => p.status === "completed");
@@ -943,37 +948,64 @@ function StageDetailSheet({
 
           {/* Procedures list */}
           <div>
-            <h3 className="text-[15px] font-bold text-gray-900 mb-3">
-              Процедуры ({totalCount})
-            </h3>
+            <div className="flex items-center gap-2 mb-3">
+              <h3 className="text-[15px] font-bold text-gray-900">
+                Процедуры ({totalCount})
+              </h3>
+              {showHistorical && (
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
+                  История
+                </span>
+              )}
+            </div>
             <div className="space-y-2">
-              {teeth.map((tooth) => {
-                const condCfg = CONDITION_CONFIG[tooth.condition ?? "healthy"];
-                const toothItems = planItems.filter(
-                  (p) => p.toothFdi === tooth.toothFdi && p.status !== "cancelled",
-                );
-                if (toothItems.length === 0) return null;
-                return toothItems.map((item) => (
-                  <DetailProcedureCard
-                    key={item.id}
-                    item={item}
-                    toothLabel={`${tooth.toothFdi}`}
-                    condCfg={condCfg}
-                    stage={stage}
-                    doctorName={doctorName}
-                    actions={actions}
-                  />
-                ));
-              })}
-              {orphanItems.filter((p) => p.status !== "cancelled").map((item) => (
-                <DetailProcedureCard
-                  key={item.id}
-                  item={item}
-                  doctorName={doctorName}
-                  actions={actions}
-                  stage={stage}
-                />
-              ))}
+              {showHistorical ? (
+                historicalItems.map((item) => {
+                  const tooth = teeth.find((t) => t.toothFdi === item.toothFdi);
+                  const condCfg = tooth ? CONDITION_CONFIG[tooth.condition ?? "healthy"] : undefined;
+                  return (
+                    <DetailProcedureCard
+                      key={item.id}
+                      item={item}
+                      toothLabel={item.toothFdi != null ? `${item.toothFdi}` : undefined}
+                      condCfg={condCfg}
+                      stage={stage}
+                      doctorName={doctorName}
+                      actions={actions}
+                    />
+                  );
+                })
+              ) : (
+                <>
+                  {teeth.map((tooth) => {
+                    const condCfg = CONDITION_CONFIG[tooth.condition ?? "healthy"];
+                    const toothItems = planItems.filter(
+                      (p) => p.toothFdi === tooth.toothFdi && p.status !== "cancelled",
+                    );
+                    if (toothItems.length === 0) return null;
+                    return toothItems.map((item) => (
+                      <DetailProcedureCard
+                        key={item.id}
+                        item={item}
+                        toothLabel={`${tooth.toothFdi}`}
+                        condCfg={condCfg}
+                        stage={stage}
+                        doctorName={doctorName}
+                        actions={actions}
+                      />
+                    ));
+                  })}
+                  {orphanItems.filter((p) => p.status !== "cancelled").map((item) => (
+                    <DetailProcedureCard
+                      key={item.id}
+                      item={item}
+                      doctorName={doctorName}
+                      actions={actions}
+                      stage={stage}
+                    />
+                  ))}
+                </>
+              )}
             </div>
 
             {totalCount === 0 && (
@@ -1390,10 +1422,10 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
 
   const stageItems = useMemo(() => buildStageItems(teeth, activePlan), [teeth, activePlan]);
 
-  // ── Earned totals from all plans (for stages with no active items) ─────────
+  // ── Historical completed items from all plans, grouped by stage ──────────
 
-  const earnedByStage = useMemo(() => {
-    const map = new Map<string, { total: number; count: number }>();
+  const historyByStage = useMemo(() => {
+    const map = new Map<string, TreatmentPlanItem[]>();
     const toothToStage = new Map<number, string>();
     for (const [stageId, data] of stageItems) {
       for (const tooth of data.teeth) {
@@ -1407,8 +1439,9 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
         if (!sid && item.toothFdi != null) sid = toothToStage.get(item.toothFdi) ?? null;
         if (!sid) sid = titleToStageId(item.title);
         if (!sid) continue;
-        const cur = map.get(sid) ?? { total: 0, count: 0 };
-        map.set(sid, { total: cur.total + item.price, count: cur.count + 1 });
+        const arr = map.get(sid) ?? [];
+        arr.push(item);
+        map.set(sid, arr);
       }
     }
     return map;
@@ -1543,8 +1576,8 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
                   userRole={user?.role}
                   doctorName={doctorName}
                   onOpenDetail={() => setDetailStageId(stage.id)}
-                  earnedTotal={earnedByStage.get(stage.id)?.total}
-                  earnedCount={earnedByStage.get(stage.id)?.count}
+                  earnedTotal={historyByStage.get(stage.id)?.reduce((s, i) => s + i.price, 0)}
+                  earnedCount={historyByStage.get(stage.id)?.length}
                 />
               );
             })}
@@ -1598,6 +1631,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
             actions={actions}
             doctorName={doctorName}
             planNotes={activePlan?.notes}
+            historicalItems={historyByStage.get(detailStageId) ?? []}
           />
         );
       })()}
