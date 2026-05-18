@@ -2479,7 +2479,7 @@ export function PatientDetailPanel() {
 
                     {/* Extraction bundle card */}
                     {hasExtractionInPlan && (
-                      <div className="mx-4 mt-4 rounded-2xl border border-gray-100 bg-white shadow-sm shrink-0 overflow-hidden">
+                      <div className="mx-6 mt-4 rounded-xl border border-gray-100 bg-white shadow-sm shrink-0 overflow-hidden">
                         {/* Card header */}
                         <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-50">
                           <span className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
