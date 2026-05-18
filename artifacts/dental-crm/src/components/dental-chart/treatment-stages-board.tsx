@@ -18,6 +18,8 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   GripVertical,
   ChevronDown,
+  ChevronRight,
+  Calendar,
   Stethoscope,
   Scissors,
   Crown,
@@ -504,6 +506,7 @@ interface SortableSectionProps {
   isExpanded: boolean;
   onToggle: () => void;
   actions: ItemActions;
+  index: number;
 }
 
 function SortableSection({
@@ -513,6 +516,7 @@ function SortableSection({
   isExpanded,
   onToggle,
   actions,
+  index,
 }: SortableSectionProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: stage.id });
@@ -524,8 +528,6 @@ function SortableSection({
     zIndex: isDragging ? 50 : undefined,
   };
 
-  const Icon = stage.Icon;
-
   const toothFdiSet = new Set(teeth.map((t) => t.toothFdi));
   const orphanItems = planItems.filter(
     (p) => p.toothFdi == null || !toothFdiSet.has(p.toothFdi),
@@ -533,11 +535,7 @@ function SortableSection({
 
   const pendingItems = planItems.filter((p) => p.status === "pending");
   const completedItems = planItems.filter((p) => p.status === "completed");
-  const totalCount = teeth.length + orphanItems.length;
-
   const sectionTotal = planItems.reduce((sum, item) => sum + item.price, 0);
-
-  // Count actively running timers in this section
   const runningCount = planItems.filter(
     (p) => p.status === "pending" && actions.getTimerStart(p.id) !== undefined,
   ).length;
@@ -546,97 +544,99 @@ function SortableSection({
     <div ref={setNodeRef} style={style} className="select-none">
       <div
         className={cn(
-          "rounded-xl border bg-white overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.06)] transition-shadow",
+          "rounded-2xl border bg-white overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.06)] transition-shadow",
           isDragging && "shadow-lg",
           runningCount > 0 && "border-blue-200 shadow-blue-100",
         )}
       >
-        {/* Top accent line */}
-        <div className="h-0.5 w-full" style={{ backgroundColor: stage.color }} />
-
-        {/* Header */}
-        <button
-          onClick={onToggle}
-          className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-gray-50/70 transition-colors text-left"
-        >
-          {/* Drag handle — only active in edit mode */}
-          <span
-            {...(actions.isEditMode ? { ...attributes, ...listeners } : {})}
-            onClick={(e) => e.stopPropagation()}
-            className={cn(
-              "touch-none shrink-0 transition-colors",
-              actions.isEditMode
-                ? "cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600"
-                : "cursor-default text-transparent pointer-events-none",
-            )}
-            aria-label="Перетащить раздел"
-          >
-            <GripVertical className="w-4 h-4" />
-          </span>
-
-          {/* Icon badge */}
-          <span
-            className="shrink-0 flex items-center justify-center w-7 h-7 rounded-lg"
-            style={{ backgroundColor: stage.badgeBg, color: stage.color }}
-          >
-            <Icon className="w-3.5 h-3.5" />
-          </span>
-
-          {/* Label + subtitle */}
-          <span className="flex-1 min-w-0">
-            <span className="block text-[13px] font-semibold text-gray-800 leading-tight">
-              {stage.label}
-            </span>
-            <span className="block text-[11px] text-gray-400 mt-0.5 leading-tight">
-              {runningCount > 0
-                ? `${runningCount} в процессе · `
-                : ""}
-              {pendingItems.length > 0
-                ? `${pendingItems.length} ожидает · ${completedItems.length} выполнено`
-                : completedItems.length > 0
-                ? `${completedItems.length} выполнено`
-                : "нет услуг"}
-            </span>
-          </span>
-
-          {/* Price + count + chevron */}
-          <div className="flex items-center gap-2 shrink-0">
-            {runningCount > 0 && (
-              <span className="flex items-center gap-1 text-[10px] font-semibold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse inline-block" />
-                Идёт
-              </span>
-            )}
-            {sectionTotal > 0 && (
-              <span className="text-[11px] font-medium text-gray-500">
-                {formatPrice(sectionTotal)}
-              </span>
-            )}
+        {/* Clickable card header */}
+        <button onClick={onToggle} className="w-full text-left px-4 pt-4 pb-3">
+          {/* Stage number + title + status badge + drag handle */}
+          <div className="flex items-start gap-3 mb-3">
             <span
-              className="text-[11px] font-bold w-5 h-5 flex items-center justify-center rounded-full"
-              style={{ backgroundColor: stage.badgeBg, color: stage.color }}
+              className="w-9 h-9 rounded-full flex items-center justify-center text-[15px] font-bold text-white shrink-0"
+              style={{ backgroundColor: stage.color }}
             >
-              {totalCount}
+              {index + 1}
             </span>
-            <ChevronDown
+            <div className="flex-1 min-w-0 pt-0.5">
+              <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                <span className="text-[15px] font-bold text-gray-900 leading-tight">{stage.label}</span>
+                {runningCount > 0 ? (
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100">В процессе</span>
+                ) : pendingItems.length > 0 && completedItems.length === 0 ? (
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-100">Ожидает</span>
+                ) : pendingItems.length > 0 && completedItems.length > 0 ? (
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">В работе</span>
+                ) : completedItems.length > 0 ? (
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">Завершён</span>
+                ) : null}
+              </div>
+              <p className="text-[12px] text-gray-400 leading-tight">
+                {teeth.length > 0
+                  ? `Зуб${teeth.length > 1 ? "ы" : ""} ${teeth.map((t) => t.toothFdi).join(", ")}`
+                  : orphanItems.length > 0
+                  ? "Дополнительные услуги"
+                  : "—"}
+              </p>
+            </div>
+            {actions.isEditMode && (
+              <span
+                {...attributes}
+                {...listeners}
+                onClick={(e) => e.stopPropagation()}
+                className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 transition-colors pt-1.5 shrink-0"
+                aria-label="Перетащить раздел"
+              >
+                <GripVertical className="w-4 h-4" />
+              </span>
+            )}
+          </div>
+
+          {/* Сумма этапа */}
+          <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
+            <span className="text-[13px] text-gray-500">Сумма этапа</span>
+            <span className="text-[13px] font-bold text-gray-900">
+              {sectionTotal > 0 ? formatPrice(sectionTotal) : "—"}
+            </span>
+          </div>
+
+          {/* Процедур count */}
+          <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
+            <span className="text-[13px] text-gray-500">
+              Процедур: {planItems.filter((p) => p.status !== "cancelled").length}
+            </span>
+            <ChevronRight
               className={cn(
-                "w-4 h-4 text-gray-400 transition-transform duration-200",
-                isExpanded && "rotate-180",
+                "w-4 h-4 text-gray-300 transition-transform duration-200",
+                isExpanded && "rotate-90",
               )}
             />
+          </div>
+
+          {/* Date row */}
+          <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
+            <div className="flex items-center gap-1.5 text-[12px] text-gray-400">
+              <Calendar className="w-3.5 h-3.5 shrink-0" />
+              <span>Дата не назначена</span>
+            </div>
+            {runningCount > 0 && (
+              <span className="flex items-center gap-1 text-[10px] font-semibold text-blue-500">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                {runningCount} идёт
+              </span>
+            )}
           </div>
         </button>
 
         {/* Expanded content */}
         {isExpanded && (
           <div className="border-t border-gray-100 px-3 py-2.5 space-y-2">
-            {/* Teeth with nested plan items */}
             {teeth.map((tooth) => {
               const condCfg = CONDITION_CONFIG[tooth.condition ?? "healthy"];
               const toothItems = planItems.filter((p) => p.toothFdi === tooth.toothFdi);
               return (
                 <div key={tooth.toothFdi} className="space-y-1.5">
-                  {/* Tooth header */}
                   <div className="flex items-center gap-2">
                     <span
                       className="w-2 h-2 rounded-sm shrink-0"
@@ -645,9 +645,7 @@ function SortableSection({
                         border: `1.5px solid ${condCfg?.stroke ?? "#9ca3af"}`,
                       }}
                     />
-                    <span className="text-[12px] font-semibold text-gray-600">
-                      Зуб {tooth.toothFdi}
-                    </span>
+                    <span className="text-[12px] font-semibold text-gray-600">Зуб {tooth.toothFdi}</span>
                     <span
                       className="text-[10px] px-1.5 py-0.5 rounded-md font-medium"
                       style={{ backgroundColor: stage.badgeBg, color: stage.textColor }}
@@ -655,8 +653,6 @@ function SortableSection({
                       {condCfg?.label ?? tooth.condition}
                     </span>
                   </div>
-
-                  {/* Items for this tooth */}
                   {toothItems.length > 0 ? (
                     <div className="pl-3.5 space-y-1.5">
                       {toothItems.map((item) => (
@@ -669,8 +665,6 @@ function SortableSection({
                 </div>
               );
             })}
-
-            {/* Orphan plan items */}
             {orphanItems.length > 0 && (
               <div className="space-y-1.5">
                 {teeth.length > 0 && (
@@ -683,8 +677,6 @@ function SortableSection({
                 ))}
               </div>
             )}
-
-            {/* Empty state */}
             {teeth.length === 0 && planItems.length === 0 && (
               <p className="text-center text-[12px] text-gray-400 py-2">Нет данных</p>
             )}
@@ -704,57 +696,53 @@ function CompletedStageSection({
   isExpanded,
   onToggle,
   actions,
-}: Omit<SortableSectionProps, never>) {
-  const Icon = stage.Icon;
-
+  index,
+}: SortableSectionProps) {
   const toothFdiSet = new Set(teeth.map((t) => t.toothFdi));
   const orphanItems = planItems.filter(
     (p) => p.toothFdi == null || !toothFdiSet.has(p.toothFdi),
   );
-  const totalCount = teeth.length + orphanItems.length;
   const sectionTotal = planItems.reduce((sum, item) => sum + item.price, 0);
 
   return (
-    <div className="select-none opacity-70 hover:opacity-100 transition-opacity">
-      <div className="rounded-xl border border-gray-100 bg-white overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-        {/* Green accent line */}
-        <div className="h-0.5 w-full bg-emerald-400" />
-
-        {/* Header */}
-        <button
-          onClick={onToggle}
-          className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-gray-50/70 transition-colors text-left"
-        >
-          {/* Completed icon badge */}
-          <span className="shrink-0 flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-50">
-            <Icon className="w-3.5 h-3.5 text-emerald-500" />
-          </span>
-
-          {/* Label */}
-          <span className="flex-1 min-w-0">
-            <span className="block text-[13px] font-semibold text-gray-500 leading-tight">
-              {stage.label}
+    <div className="select-none opacity-75 hover:opacity-100 transition-opacity">
+      <div className="rounded-2xl border border-emerald-100 bg-white overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+        <button onClick={onToggle} className="w-full text-left px-4 pt-4 pb-3">
+          {/* Stage number + title + завершён badge */}
+          <div className="flex items-start gap-3 mb-3">
+            <span className="w-9 h-9 rounded-full flex items-center justify-center text-white shrink-0 bg-emerald-500">
+              <CircleCheck className="w-5 h-5" />
             </span>
-            <span className="flex items-center gap-1.5 mt-0.5">
-              <CircleCheck className="w-3 h-3 text-emerald-500 shrink-0" />
-              <span className="text-[11px] text-emerald-600 font-semibold">Завершено</span>
-            </span>
-          </span>
+            <div className="flex-1 min-w-0 pt-0.5">
+              <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                <span className="text-[15px] font-bold text-gray-600 leading-tight">{stage.label}</span>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">Завершён</span>
+              </div>
+              <p className="text-[12px] text-gray-400 leading-tight">
+                {teeth.length > 0
+                  ? `Зуб${teeth.length > 1 ? "ы" : ""} ${teeth.map((t) => t.toothFdi).join(", ")}`
+                  : orphanItems.length > 0 ? "Дополнительные услуги" : "—"}
+              </p>
+            </div>
+          </div>
 
-          {/* Price + count + chevron */}
-          <div className="flex items-center gap-2 shrink-0">
-            {sectionTotal > 0 && (
-              <span className="text-[11px] font-medium text-gray-400">
-                {formatPrice(sectionTotal)}
-              </span>
-            )}
-            <span className="text-[11px] font-bold w-5 h-5 flex items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-              {totalCount}
+          {/* Сумма этапа */}
+          <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
+            <span className="text-[13px] text-gray-400">Сумма этапа</span>
+            <span className="text-[13px] font-bold text-gray-500">
+              {sectionTotal > 0 ? formatPrice(sectionTotal) : "—"}
             </span>
-            <ChevronDown
+          </div>
+
+          {/* Процедур count */}
+          <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
+            <span className="text-[13px] text-gray-400">
+              Процедур: {planItems.length}
+            </span>
+            <ChevronRight
               className={cn(
-                "w-4 h-4 text-gray-300 transition-transform duration-200",
-                isExpanded && "rotate-180",
+                "w-4 h-4 text-gray-200 transition-transform duration-200",
+                isExpanded && "rotate-90",
               )}
             />
           </div>
@@ -771,23 +759,16 @@ function CompletedStageSection({
                   <div className="flex items-center gap-2">
                     <span
                       className="w-2 h-2 rounded-sm shrink-0"
-                      style={{
-                        backgroundColor: condCfg?.crownFill ?? "#e5e7eb",
-                        border: `1.5px solid ${condCfg?.stroke ?? "#9ca3af"}`,
-                      }}
+                      style={{ backgroundColor: condCfg?.crownFill ?? "#e5e7eb", border: `1.5px solid ${condCfg?.stroke ?? "#9ca3af"}` }}
                     />
-                    <span className="text-[12px] font-semibold text-gray-500">
-                      Зуб {tooth.toothFdi}
-                    </span>
+                    <span className="text-[12px] font-semibold text-gray-500">Зуб {tooth.toothFdi}</span>
                     <span className="text-[10px] px-1.5 py-0.5 rounded-md font-medium bg-emerald-50 text-emerald-600">
                       {condCfg?.label ?? tooth.condition}
                     </span>
                   </div>
                   {toothItems.length > 0 ? (
                     <div className="pl-3.5 space-y-1.5">
-                      {toothItems.map((item) => (
-                        <PlanItemCard key={item.id} item={item} actions={actions} />
-                      ))}
+                      {toothItems.map((item) => <PlanItemCard key={item.id} item={item} actions={actions} />)}
                     </div>
                   ) : (
                     <p className="pl-3.5 text-[11px] text-gray-400 italic">нет позиций плана</p>
@@ -798,13 +779,9 @@ function CompletedStageSection({
             {orphanItems.length > 0 && (
               <div className="space-y-1.5">
                 {teeth.length > 0 && (
-                  <div className="text-[10px] text-gray-400 font-medium uppercase tracking-wide pt-1">
-                    Без привязки к зубу
-                  </div>
+                  <div className="text-[10px] text-gray-400 font-medium uppercase tracking-wide pt-1">Без привязки к зубу</div>
                 )}
-                {orphanItems.map((item) => (
-                  <PlanItemCard key={item.id} item={item} showTooth actions={actions} />
-                ))}
+                {orphanItems.map((item) => <PlanItemCard key={item.id} item={item} showTooth actions={actions} />)}
               </div>
             )}
           </div>
@@ -1218,7 +1195,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={pendingActiveStages.map((s) => s.id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-2">
-            {pendingActiveStages.map((stage) => {
+            {pendingActiveStages.map((stage, idx) => {
               const items = stageItems.get(stage.id)!;
               return (
                 <SortableSection
@@ -1229,6 +1206,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
                   isExpanded={expandedIds.has(stage.id)}
                   onToggle={() => toggleExpanded(stage.id)}
                   actions={actions}
+                  index={idx}
                 />
               );
             })}
@@ -1246,7 +1224,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
             </span>
             <div className="flex-1 h-px bg-gray-100" />
           </div>
-          {completedActiveStages.map((stage) => {
+          {completedActiveStages.map((stage, idx) => {
             const items = stageItems.get(stage.id)!;
             return (
               <CompletedStageSection
@@ -1257,6 +1235,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
                 isExpanded={expandedCompletedIds.has(stage.id)}
                 onToggle={() => toggleExpandedCompleted(stage.id)}
                 actions={actions}
+                index={pendingActiveStages.length + idx}
               />
             );
           })}
