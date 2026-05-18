@@ -595,9 +595,9 @@ function SortableSection({
           </div>
 
           {/* Сумма этапа */}
-          <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
-            <span className="text-[13px] text-gray-500">Сумма этапа</span>
-            <span className="text-[13px] font-bold text-gray-900">
+          <div className="flex items-center justify-between py-1.5 border-t border-gray-100">
+            <span className="text-[11px] text-gray-400">Сумма этапа</span>
+            <span className="text-[11px] font-semibold text-gray-600">
               {sectionTotal > 0 ? formatPrice(sectionTotal) : "—"}
             </span>
           </div>
@@ -728,9 +728,9 @@ function CompletedStageSection({
           </div>
 
           {/* Сумма этапа */}
-          <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
-            <span className="text-[13px] text-gray-400">Сумма этапа</span>
-            <span className="text-[13px] font-bold text-gray-500">
+          <div className="flex items-center justify-between py-1.5 border-t border-gray-100">
+            <span className="text-[11px] text-gray-400">Сумма этапа</span>
+            <span className="text-[11px] font-semibold text-gray-400">
               {sectionTotal > 0 ? formatPrice(sectionTotal) : "—"}
             </span>
           </div>
