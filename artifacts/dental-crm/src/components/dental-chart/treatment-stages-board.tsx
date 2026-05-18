@@ -1,4 +1,6 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useAuthStore } from "@/hooks/use-auth";
+import { useListUsers } from "@workspace/api-client-react";
 import {
   DndContext,
   closestCenter,
@@ -507,6 +509,8 @@ interface SortableSectionProps {
   onToggle: () => void;
   actions: ItemActions;
   index: number;
+  userRole?: string;
+  doctorName?: string;
 }
 
 function SortableSection({
@@ -517,6 +521,8 @@ function SortableSection({
   onToggle,
   actions,
   index,
+  userRole,
+  doctorName,
 }: SortableSectionProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: stage.id });
@@ -615,16 +621,21 @@ function SortableSection({
             />
           </div>
 
-          {/* Date row */}
+          {/* Date + Doctor row */}
           <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
             <div className="flex items-center gap-1.5 text-[12px] text-gray-400">
               <Calendar className="w-3.5 h-3.5 shrink-0" />
               <span>Дата не назначена</span>
+              {runningCount > 0 && (
+                <span className="flex items-center gap-1 text-[10px] font-semibold text-blue-500 ml-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                  {runningCount} идёт
+                </span>
+              )}
             </div>
-            {runningCount > 0 && (
-              <span className="flex items-center gap-1 text-[10px] font-semibold text-blue-500">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                {runningCount} идёт
+            {(userRole === "owner" || userRole === "admin") && doctorName && (
+              <span className="text-[11px] text-gray-500 font-medium truncate max-w-[100px]">
+                {doctorName}
               </span>
             )}
           </div>
@@ -804,6 +815,14 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
   const STORAGE_KEY = `1dent:stages-order:${patientId}`;
   const qc = useQueryClient();
   const { toast } = useToast();
+  const { user } = useAuthStore();
+  const { data: usersData } = useListUsers();
+  const allUsers = useMemo(() => usersData?.data?.users ?? [], [usersData]);
+  const doctorName = useMemo(() => {
+    const docId = activePlan?.doctorId;
+    if (!docId) return undefined;
+    return allUsers.find((u) => u.id === docId)?.name;
+  }, [activePlan?.doctorId, allUsers]);
 
   // ── Section order (DnD) ───────────────────────────────────────────────────
 
@@ -1179,6 +1198,8 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
                   onToggle={() => toggleExpanded(stage.id)}
                   actions={actions}
                   index={idx}
+                  userRole={user?.role}
+                  doctorName={doctorName}
                 />
               );
             })}
@@ -1208,6 +1229,8 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
                 onToggle={() => toggleExpandedCompleted(stage.id)}
                 actions={actions}
                 index={pendingActiveStages.length + idx}
+                userRole={user?.role}
+                doctorName={doctorName}
               />
             );
           })}
