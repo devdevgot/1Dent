@@ -149,7 +149,7 @@ function getCanalOffsets(count: number): number[] {
 interface FdiChartProps {
   teethData: ToothMap;
   selectedFdi: number | null;
-  onToothClick: (fdi: number) => void;
+  onToothClick?: (fdi: number) => void;
   inProgressFdi?: number | null;
   disabledFdis?: Set<number>;
   className?: string;
@@ -202,7 +202,7 @@ function ToothGlyph({
   isInProgress: boolean;
   isDisabled: boolean;
   isUpper: boolean;
-  onClick: () => void;
+  onClick?: () => void;
 }) {
   const type = getToothType(fdi);
   const condition: ToothCondition = record?.condition ?? "healthy";
@@ -232,22 +232,24 @@ function ToothGlyph({
   const canalFill   = condition === "root_canal" ? "#fde8c8" : "#f5e2c5";
   const canalStroke = condition === "root_canal" ? "#d47a30" : "#c4955a";
 
+  const isInteractive = !!onClick;
+
   return (
     <g
-      className={isDisabled ? "cursor-not-allowed" : "cursor-pointer"}
+      className={!isInteractive ? "cursor-default" : isDisabled ? "cursor-not-allowed" : "cursor-pointer"}
       opacity={isDisabled ? 0.38 : 1}
       onClick={() => {
-        if (!isDisabled) onClick();
+        if (isInteractive && !isDisabled) onClick!();
       }}
       onKeyDown={(e) => {
-        if (isDisabled) return;
-        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); }
+        if (!isInteractive || isDisabled) return;
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick!(); }
       }}
-      role="button"
-      tabIndex={isDisabled ? -1 : 0}
+      role={isInteractive ? "button" : undefined}
+      tabIndex={isInteractive && !isDisabled ? 0 : -1}
       aria-label={`Зуб ${fdi}: ${cfg.label}`}
-      aria-disabled={isDisabled}
-      aria-pressed={isSelected}
+      aria-disabled={isInteractive ? isDisabled : undefined}
+      aria-pressed={isInteractive ? isSelected : undefined}
     >
       {/* In-progress pulsing rings */}
       {isInProgress && (
@@ -373,6 +375,7 @@ function ToothGlyph({
 }
 
 export function FdiChart({ teethData, selectedFdi, onToothClick, inProgressFdi, disabledFdis, className }: FdiChartProps) {
+  const handleClick = onToothClick ? (fdi: number) => onToothClick(fdi) : undefined;
   const upperPositions = buildRowPositions(UPPER_ROW);
   const lowerPositions = buildRowPositions(LOWER_ROW);
 
@@ -405,7 +408,7 @@ export function FdiChart({ teethData, selectedFdi, onToothClick, inProgressFdi, 
                   isInProgress={inProgressFdi === fdi}
                   isDisabled={disabledFdis?.has(fdi) ?? false}
                   isUpper={true}
-                  onClick={() => onToothClick(fdi)}
+                  onClick={handleClick ? () => handleClick(fdi) : undefined}
                 />
                 {/* Upper label below crown */}
                 <text
@@ -453,7 +456,7 @@ export function FdiChart({ teethData, selectedFdi, onToothClick, inProgressFdi, 
                   isInProgress={inProgressFdi === fdi}
                   isDisabled={disabledFdis?.has(fdi) ?? false}
                   isUpper={false}
-                  onClick={() => onToothClick(fdi)}
+                  onClick={handleClick ? () => handleClick(fdi) : undefined}
                 />
               </g>
             ))}

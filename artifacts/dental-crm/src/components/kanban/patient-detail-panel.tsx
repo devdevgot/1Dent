@@ -2130,15 +2130,9 @@ export function PatientDetailPanel() {
                         </div>
                         <FdiChart
                           teethData={teethMap}
-                          selectedFdi={selectedToothFdi}
+                          selectedFdi={null}
                           inProgressFdi={activeTreatmentFdi}
                           disabledFdis={disabledTreatmentFdis}
-                          onToothClick={(fdi) => {
-                            if (disabledTreatmentFdis.has(fdi)) return;
-                            setSelectedToothFdi(fdi);
-                            setModalToothFdi(fdi);
-                            setPlanViewToothFdi(fdi);
-                          }}
                         />
 
                       </div>
@@ -2639,38 +2633,6 @@ export function PatientDetailPanel() {
         )}
       </div>
 
-      {/* Tooth action modal */}
-      {modalToothFdi !== null && patient && (
-        <ToothActionModal
-          fdi={modalToothFdi}
-          patientId={selectedPatientId}
-          planItems={
-            activePlan?.items.filter((i) => i.toothFdi === modalToothFdi) ?? []
-          }
-          activeTreatment={activeTreatment}
-          onClose={() => {
-            setModalToothFdi(null);
-            setSelectedToothFdi(null);
-          }}
-          onNavigate={() => {
-            setModalToothFdi(null);
-            setLocation(`/patients/${patient.id}/teeth/${modalToothFdi}`);
-          }}
-          onOpenTreatment={(fdi) => {
-            setSelectedToothFdi(fdi);
-            setModalToothFdi(fdi);
-            setPlanViewToothFdi(fdi);
-          }}
-          onTreatmentStarted={(f, treatment) => {
-            setActiveToothFdi(f);
-            if (treatment) setActiveTreatmentSnapshot(treatment);
-          }}
-          onTreatmentEnded={() => {
-            setActiveToothFdi(null);
-            setActiveTreatmentSnapshot(null);
-          }}
-        />
-      )}
 
       {/* Voice diagnosis modal */}
       {showVoiceModal && selectedPatientId && (
