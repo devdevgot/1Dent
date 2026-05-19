@@ -62,6 +62,7 @@ import {
   useUpdateTreatmentPlanItem,
   useListTreatmentPlans,
   getGetActiveTreatmentPlanQueryKey,
+  getListTreatmentPlansQueryKey,
   getListTeethQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -1254,16 +1255,17 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, ac
         // Active timer — blue highlight
         isActive && "bg-blue-50 border-blue-200",
         // Blocked by another active timer — amber tint, muted
-        isBlocked && "bg-amber-50/70 border-amber-200/80 opacity-75 cursor-not-allowed",
+        isBlocked && "bg-amber-50/70 border-amber-200/80 opacity-75",
         // Completed — green
         isCompleted && "bg-emerald-50/60 border-emerald-100",
         // Normal pending
         !isActive && !isBlocked && !isCompleted && "bg-white border-gray-100",
         !isEditMode && !isBlocked && "cursor-pointer active:bg-slate-50",
+        !isEditMode && isBlocked && "cursor-pointer active:bg-amber-50",
         isEditMode && isPending && !isBlocked && "touch-none cursor-grab active:cursor-grabbing",
       )}
       {...(isEditMode && isPending && !isBlocked ? { ...attributes, ...listeners } : {})}
-      onClick={() => { if (!isEditMode && !isBlocked) onOpenModal(item.id); }}
+      onClick={() => { if (!isEditMode) onOpenModal(item.id); }}
     >
       {isEditMode && isPending && !isBlocked ? (
         <span className="shrink-0 text-gray-300 p-0.5">
@@ -1475,6 +1477,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
         setCompletionPromptItemId((prev) => prev === vars.itemId ? null : prev);
         setCompletingId(null);
         qc.invalidateQueries({ queryKey: getGetActiveTreatmentPlanQueryKey(patientId) });
+        qc.invalidateQueries({ queryKey: getListTreatmentPlansQueryKey(patientId) });
         qc.invalidateQueries({ queryKey: getListTeethQueryKey(patientId) });
         toast({ title: "Процедура завершена", description: "Зубная карта обновлена" });
       },
