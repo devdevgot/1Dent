@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect, useRef, type ComponentType } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef, lazy, Suspense, type ComponentType } from "react";
 import { useLocation } from "wouter";
 import {
   useGetPatient,
@@ -29,8 +29,13 @@ import {
   getListProcedureTemplatesQueryKey,
   getDentalAiAnalysisQueryKey,
 } from "@workspace/api-client-react";
-import { DentalAiAnalysisPanel } from "./dental-ai-analysis-panel";
-import { ContractsTab } from "./contracts-tab";
+// Lazy-loaded so they don't block the first paint of the patient card
+const DentalAiAnalysisPanel = lazy(() =>
+  import("./dental-ai-analysis-panel").then((m) => ({ default: m.DentalAiAnalysisPanel })),
+);
+const ContractsTab = lazy(() =>
+  import("./contracts-tab").then((m) => ({ default: m.ContractsTab })),
+);
 import { VoiceDiagnosisModal } from "@/components/dental-chart/voice-diagnosis-modal";
 import type { ToothRecord, ToothTreatment, ProcedureTemplate } from "@workspace/api-client-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
@@ -952,6 +957,24 @@ export function PatientDetailPanel() {
   const [expandedPlanId, setExpandedPlanId] = useState<string | null>(null);
   const [planDetailId, setPlanDetailId] = useState<string | null>(null);
 
+  // Defer mounting the heavy panel body until after the first paint so the
+  // user always sees the spinner/skeleton immediately instead of a white screen.
+  const [contentReady, setContentReady] = useState(false);
+  useEffect(() => {
+    if (!selectedPatientId) {
+      setContentReady(false);
+      return;
+    }
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => setContentReady(true));
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      if (raf2) cancelAnimationFrame(raf2);
+    };
+  }, [selectedPatientId]);
+
   const { data, isLoading } = useGetPatient(selectedPatientId ?? "", {
     query: {
       queryKey: getGetPatientQueryKey(selectedPatientId ?? ""),
@@ -1603,7 +1626,7 @@ export function PatientDetailPanel() {
           ))}
         </div>
 
-        {isLoading ? (
+        {!contentReady || isLoading ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
           </div>
@@ -2139,7 +2162,9 @@ export function PatientDetailPanel() {
                     {/* AI Analysis — always visible at bottom of dental tab */}
                     {!isDiagnosisMode && (
                       <div className="mt-4">
-                        <DentalAiAnalysisPanel patientId={selectedPatientId} />
+                        <Suspense fallback={<div className="py-6 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-primary/60" /></div>}>
+                          <DentalAiAnalysisPanel patientId={selectedPatientId} />
+                        </Suspense>
                       </div>
                     )}
                   </div>
@@ -2598,7 +2623,9 @@ export function PatientDetailPanel() {
                       </div>
                     )}
 
-                    <ContractsTab patientId={selectedPatientId} />
+                    <Suspense fallback={<div className="py-6 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-primary/60" /></div>}>
+                      <ContractsTab patientId={selectedPatientId} />
+                    </Suspense>
 
                     {/* WhatsApp not connected modal */}
                     {whatsappNotConnectedOpen && (
