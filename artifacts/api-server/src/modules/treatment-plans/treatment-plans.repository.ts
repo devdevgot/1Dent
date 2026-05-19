@@ -443,8 +443,7 @@ export class TreatmentPlansRepository {
 
     const isStructuralChange =
       updates.title !== undefined ||
-      updates.price !== undefined ||
-      updates.sortOrder !== undefined;
+      updates.price !== undefined;
 
     if (isStructuralChange) {
       const [plan] = await db
