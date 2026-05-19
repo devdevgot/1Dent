@@ -2144,14 +2144,6 @@ export function PatientDetailPanel() {
                       </div>
                     )}
 
-                    {/* AI Analysis — always visible at bottom of dental tab */}
-                    {!isDiagnosisMode && (
-                      <div className="mt-4">
-                        <Suspense fallback={<div className="py-6 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-primary/60" /></div>}>
-                          <DentalAiAnalysisPanel patientId={selectedPatientId} />
-                        </Suspense>
-                      </div>
-                    )}
                   </div>
 
                 </div>

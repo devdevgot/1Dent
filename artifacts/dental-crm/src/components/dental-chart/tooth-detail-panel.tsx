@@ -6,6 +6,7 @@ import {
   useListToothTreatments,
   useAddToothTreatment,
   useListInventory,
+  useGetDentalAiAnalysis,
   getListTeethQueryKey,
   getListToothTreatmentsQueryKey,
   getListInventoryQueryKey,
@@ -24,9 +25,81 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { X, Clock, Beaker, Stethoscope } from "lucide-react";
+import { X, Clock, Beaker, Stethoscope, Brain, RefreshCw } from "lucide-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useTranslation } from "react-i18next";
+
+function ToothAiSection({ patientId, toothFdi }: { patientId: string; toothFdi: number }) {
+  const { data, isLoading, isFetching } = useGetDentalAiAnalysis(patientId, {
+    query: { staleTime: 5 * 60 * 1000 },
+  });
+  const analysis = data?.data ?? null;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-4">
+        <div className="w-5 h-5 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!analysis) return null;
+
+  const fdiStr = String(toothFdi);
+  const lines = analysis.reportText.split("\n");
+
+  const elements: JSX.Element[] = [];
+  let key = 0;
+  let inRelevantSection = false;
+  let hasRelevantContent = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) { elements.push(<div key={key++} className="h-1" />); continue; }
+    if (trimmed.startsWith("## ")) {
+      const heading = trimmed.slice(3);
+      inRelevantSection =
+        heading.includes(fdiStr) ||
+        heading.toLowerCase().includes("рекоменд") ||
+        heading.toLowerCase().includes("вывод") ||
+        heading.toLowerCase().includes("общ");
+      elements.push(
+        <p key={key++} className={cn("text-[11px] font-bold mt-2 mb-0.5", inRelevantSection ? "text-primary" : "text-gray-400")}>
+          {heading}
+        </p>,
+      );
+    } else if (inRelevantSection) {
+      hasRelevantContent = true;
+      elements.push(
+        <p key={key++} className="text-[11px] text-gray-700 leading-relaxed">
+          {trimmed.replace(/^[-•]\s/, "• ")}
+        </p>,
+      );
+    }
+  }
+
+  if (!hasRelevantContent) return null;
+
+  const updatedAt = new Date(analysis.updatedAt);
+
+  return (
+    <div>
+      <div className="flex items-center gap-1.5 mb-2">
+        <div className="w-5 h-5 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+          <Brain className="w-3 h-3 text-primary" />
+        </div>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex-1">ИИ-анализ</p>
+        {isFetching && <RefreshCw className="w-3 h-3 text-primary animate-spin" />}
+        <span className="text-[10px] text-muted-foreground">
+          {updatedAt.toLocaleDateString("ru", { day: "2-digit", month: "short" })}
+        </span>
+      </div>
+      <div className="bg-primary/5 border border-primary/10 rounded-xl p-3 space-y-0.5">
+        {elements}
+      </div>
+    </div>
+  );
+}
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString(undefined, {
@@ -291,6 +364,9 @@ export function ToothDetailPanel({
               {updateMutation.isPending ? t("tooth.saving") : t("tooth.save")}
             </Button>
           )}
+
+          {/* AI Analysis for this tooth */}
+          <ToothAiSection patientId={patientId} toothFdi={toothFdi} />
 
           {/* Treatments */}
           <div>
