@@ -158,9 +158,11 @@ export function PlanItemDetailModal({
   const isCompletingThis = completingId === item.id;
   const isCancellingThis = cancellingId === item.id;
   const isTimerRunning = !!timerStart;
-  const elapsed = isTimerRunning ? tick - timerStart! : 0;
+  // tick is a re-render trigger; elapsed/remaining use real Date.now()
+  void tick;
+  const elapsed = isTimerRunning ? Date.now() - timerStart! : 0;
   const duration = timerDuration ?? null;
-  const remaining = duration && isTimerRunning ? Math.max(0, timerStart! + duration - tick) : null;
+  const remaining = duration && isTimerRunning ? Math.max(0, timerStart! + duration - Date.now()) : null;
 
   const updateMutation = useUpdateTreatmentPlanItem({
     mutation: {
