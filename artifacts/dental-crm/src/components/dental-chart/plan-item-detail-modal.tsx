@@ -3,6 +3,7 @@ import {
   X, Brain, FileText, Paperclip, Play, Square, CheckCircle2,
   Ban, Loader2, Clock, Upload, Trash2, Image, File,
   UserRound, ChevronDown, Stethoscope, RefreshCw, StickyNote,
+  Camera, FlipHorizontal, CircleDot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -143,7 +144,13 @@ export function PlanItemDetailModal({
   const [selectedDoctor, setSelectedDoctor] = useState<string>(item.assignedDoctorId ?? "");
   const [showDoctorPicker, setShowDoctorPicker] = useState(false);
   const [durationMinutes, setDurationMinutes] = useState("");
+  const [showCamera, setShowCamera] = useState(false);
+  const [cameraFacing, setCameraFacing] = useState<"environment" | "user">("environment");
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   const isPending = item.status === "pending";
   const isCompleted = item.status === "completed";
@@ -231,6 +238,64 @@ export function PlanItemDetailModal({
     });
     toast({ title: "Файл удалён" });
   }, [attachments, patientId, planId, item.id, updateMutation, toast]);
+
+  const startCamera = useCallback(async (facing: "environment" | "user") => {
+    setCameraError(null);
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: facing },
+        audio: false,
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+    } catch {
+      setCameraError("Нет доступа к камере");
+    }
+  }, []);
+
+  const stopCamera = useCallback(() => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    setShowCamera(false);
+    setCameraError(null);
+  }, []);
+
+  const handleOpenCamera = useCallback(async (facing: "environment" | "user" = "environment") => {
+    setShowCamera(true);
+    setCameraFacing(facing);
+    await startCamera(facing);
+  }, [startCamera]);
+
+  const handleFlipCamera = useCallback(async () => {
+    const next = cameraFacing === "environment" ? "user" : "environment";
+    setCameraFacing(next);
+    await startCamera(next);
+  }, [cameraFacing, startCamera]);
+
+  const handleCapture = useCallback(async () => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d")?.drawImage(video, 0, 0);
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+      const file = new File([blob], `photo_${Date.now()}.jpg`, { type: "image/jpeg" });
+      stopCamera();
+      await handleFileSelect(file);
+    }, "image/jpeg", 0.92);
+  }, [stopCamera, handleFileSelect]);
+
+  // Stop camera on unmount
+  useEffect(() => () => { streamRef.current?.getTracks().forEach((t) => t.stop()); }, []);
 
   const handleComplete = useCallback(() => {
     onComplete(item.id);
@@ -530,25 +595,88 @@ export function PlanItemDetailModal({
           {/* ── Tab: Документы ── */}
           {tab === "files" && (
             <div className="px-4 py-4 space-y-4">
-              {/* Upload zone */}
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadingFile}
-                className="w-full flex flex-col items-center gap-2 p-5 rounded-2xl border-2 border-dashed border-gray-200 hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-50"
-              >
-                {uploadingFile ? (
-                  <>
-                    <Loader2 className="w-6 h-6 text-primary animate-spin" />
-                    <span className="text-[13px] text-gray-500">Загружаем…</span>
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-6 h-6 text-gray-400" />
-                    <span className="text-[13px] font-medium text-gray-600">Нажмите для загрузки</span>
-                    <span className="text-[11px] text-gray-400">Фото, документы, рентген</span>
-                  </>
-                )}
-              </button>
+
+              {/* Camera viewfinder */}
+              {showCamera && (
+                <div className="rounded-2xl overflow-hidden border border-gray-200 bg-black relative">
+                  {cameraError ? (
+                    <div className="flex flex-col items-center gap-2 py-10 text-center px-4">
+                      <Camera className="w-8 h-8 text-gray-400" />
+                      <p className="text-[13px] text-gray-400">{cameraError}</p>
+                      <button
+                        onClick={stopCamera}
+                        className="mt-1 text-[12px] text-primary font-semibold"
+                      >
+                        Закрыть
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className="w-full aspect-[4/3] object-cover"
+                      />
+                      <canvas ref={canvasRef} className="hidden" />
+                      {/* Controls overlay */}
+                      <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between px-4 py-3 bg-gradient-to-t from-black/60 to-transparent">
+                        <button
+                          onClick={stopCamera}
+                          className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => void handleCapture()}
+                          disabled={uploadingFile}
+                          className="w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-lg hover:scale-105 transition-transform disabled:opacity-50"
+                        >
+                          {uploadingFile
+                            ? <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                            : <CircleDot className="w-7 h-7 text-primary" />}
+                        </button>
+                        <button
+                          onClick={() => void handleFlipCamera()}
+                          className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+                        >
+                          <FlipHorizontal className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Action buttons row */}
+              {!showCamera && (
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => void handleOpenCamera("environment")}
+                    disabled={uploadingFile}
+                    className="flex flex-col items-center gap-2 py-4 rounded-2xl border-2 border-dashed border-gray-200 hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-50"
+                  >
+                    <Camera className="w-6 h-6 text-gray-400" />
+                    <span className="text-[12px] font-medium text-gray-600">Сделать фото</span>
+                  </button>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingFile}
+                    className="flex flex-col items-center gap-2 py-4 rounded-2xl border-2 border-dashed border-gray-200 hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-50"
+                  >
+                    {uploadingFile ? (
+                      <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                    ) : (
+                      <Upload className="w-6 h-6 text-gray-400" />
+                    )}
+                    <span className="text-[12px] font-medium text-gray-600">
+                      {uploadingFile ? "Загружаем…" : "Загрузить файл"}
+                    </span>
+                  </button>
+                </div>
+              )}
+
               <input
                 ref={fileInputRef}
                 type="file"
