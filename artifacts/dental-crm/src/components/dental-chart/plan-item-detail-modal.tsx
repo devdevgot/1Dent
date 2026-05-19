@@ -438,10 +438,12 @@ export function PlanItemDetailModal({
                         </div>
                       )}
                       <button
-                        onClick={() => onStopTimer(item.id)}
-                        className="w-full py-2 rounded-xl bg-white border border-gray-200 text-[13px] font-semibold text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-2 transition-colors"
+                        onClick={() => { onStopTimer(item.id); handleComplete(); }}
+                        disabled={isCompletingThis}
+                        className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-[13px] font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
                       >
-                        <Square className="w-4 h-4 text-red-400" /> Остановить
+                        {isCompletingThis ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                        Отметить выполнение
                       </button>
                     </div>
                   ) : (
@@ -552,27 +554,6 @@ export function PlanItemDetailModal({
                 />
               </div>
 
-              {/* Actions */}
-              {isPending && (
-                <div className="space-y-2 pt-2">
-                  <button
-                    onClick={handleComplete}
-                    disabled={isCompletingThis || isCancellingThis}
-                    className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-[14px] flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
-                  >
-                    {isCompletingThis ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                    Отметить выполненной
-                  </button>
-                  <button
-                    onClick={handleCancel}
-                    disabled={isCancellingThis || isCompletingThis}
-                    className="w-full py-2.5 rounded-xl border border-gray-200 text-gray-500 hover:bg-red-50 hover:text-red-500 hover:border-red-200 font-medium text-[13px] flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
-                  >
-                    {isCancellingThis ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />}
-                    Отменить позицию
-                  </button>
-                </div>
-              )}
 
               {isCompleted && (
                 <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 border border-emerald-100">
