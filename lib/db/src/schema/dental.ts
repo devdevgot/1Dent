@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, integer, pgEnum, real, boolean, uniqueIndex, date } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, integer, pgEnum, real, boolean, uniqueIndex, date, json } from "drizzle-orm/pg-core";
 import { clinicsTable } from "./clinics";
 import { usersTable } from "./users";
 import { patientsTable } from "./patients";
