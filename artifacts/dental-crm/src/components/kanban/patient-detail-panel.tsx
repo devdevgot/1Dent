@@ -1152,6 +1152,13 @@ export function PatientDetailPanel() {
   });
   const dentalLoading = teethLoading || planLoading || plansLoading;
 
+  // Auto-open active plan detail when navigating to step 2
+  useEffect(() => {
+    if (treatmentStep === 2 && activePlan && planDetailId === null && !planLoading && !plansLoading) {
+      setPlanDetailId(activePlan.id);
+    }
+  }, [treatmentStep, activePlan?.id, planDetailId, planLoading, plansLoading]);
+
   const allPlans = plansHistoryData?.data?.plans ?? [];
   const pastPlans = allPlans.filter(
     (p) => p.status === "completed" || p.status === "cancelled",
@@ -1434,6 +1441,7 @@ export function PatientDetailPanel() {
     // the bundle in the background so step 3 will be ready when the doctor gets there.
     setActiveTab("treatment");
     setTreatmentStep(2);
+    // Open active plan detail directly (id will be set by useEffect once data loads)
 
     if (hasExtractionSelected) {
       setBundleToken(null);
@@ -1862,7 +1870,12 @@ export function PatientDetailPanel() {
                   ] as const).map((step, idx) => (
                     <div key={step.id} className="flex items-center">
                       <button
-                        onClick={() => setTreatmentStep(step.id)}
+                        onClick={() => {
+                          setTreatmentStep(step.id);
+                          if (step.id === 2 && activePlan) {
+                            setPlanDetailId(activePlan.id);
+                          }
+                        }}
                         className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${treatmentStep === step.id ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-slate-100"}`}
                       >
                         <span className={`w-4.5 h-4.5 w-[18px] h-[18px] rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 ${treatmentStep === step.id ? "bg-primary text-white" : "bg-slate-200 text-slate-500"}`}>{step.id}</span>
@@ -2351,8 +2364,8 @@ export function PatientDetailPanel() {
                   return (
                     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                       <div className="flex items-center gap-2 px-4 py-2.5 border-b border-gray-100 shrink-0">
-                        <button onClick={() => setPlanDetailId(null)} className="flex items-center gap-1.5 text-sm font-medium text-primary hover:opacity-70 transition-opacity">
-                          <ArrowLeft className="w-4 h-4" /> Все планы
+                        <button onClick={() => setTreatmentStep(1)} className="flex items-center gap-1.5 text-sm font-medium text-primary hover:opacity-70 transition-opacity">
+                          <ArrowLeft className="w-4 h-4" /> Карта зубов
                         </button>
                         <span className="text-gray-200">·</span>
                         <span className="text-sm font-semibold text-gray-700">План лечения №{detailPlan.planNumber}</span>
