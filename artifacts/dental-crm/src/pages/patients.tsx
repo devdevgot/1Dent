@@ -30,6 +30,7 @@ import { Button } from "@/components/ui/button";
 import { KanbanColumn } from "@/components/kanban/kanban-column";
 import { PatientCard } from "@/components/kanban/patient-card";
 import { PatientDetailPanel } from "@/components/kanban/patient-detail-panel";
+import { ErrorBoundary } from "@/components/error-boundary";
 import { CreatePatientDialog } from "@/components/kanban/create-patient-dialog";
 import { useKanbanStore } from "@/hooks/use-kanban";
 import { useAuthStore } from "@/hooks/use-auth";
@@ -310,7 +311,9 @@ function PatientsListView({
         </div>
       )}
 
-      <PatientDetailPanel />
+      <ErrorBoundary>
+        <PatientDetailPanel />
+      </ErrorBoundary>
       <ConfirmDeleteDialog
         open={!!deleteConfirm}
         onConfirm={() => { deleteMutation.mutate({ id: deleteConfirm! }); setDeleteConfirm(null); }}
@@ -447,7 +450,9 @@ function PatientsKanbanView({
           </DndContext>
         )}
 
-        <PatientDetailPanel />
+        <ErrorBoundary>
+          <PatientDetailPanel />
+        </ErrorBoundary>
       </div>
     </div>
   );

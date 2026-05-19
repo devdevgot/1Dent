@@ -11,6 +11,7 @@ import type { User, Clinic } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 // Pages
 import Login from "@/pages/login";
@@ -337,11 +338,13 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <AuthProvider>
-            <Router />
-          </AuthProvider>
-        </WouterRouter>
+        <ErrorBoundary>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+            <AuthProvider>
+              <Router />
+            </AuthProvider>
+          </WouterRouter>
+        </ErrorBoundary>
         <Toaster />
         <SonnerToaster position="top-right" richColors />
       </TooltipProvider>

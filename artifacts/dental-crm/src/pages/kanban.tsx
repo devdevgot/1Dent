@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { KanbanColumn } from "@/components/kanban/kanban-column";
 import { PatientCard } from "@/components/kanban/patient-card";
 import { PatientDetailPanel } from "@/components/kanban/patient-detail-panel";
+import { ErrorBoundary } from "@/components/error-boundary";
 import { CreatePatientDialog } from "@/components/kanban/create-patient-dialog";
 import { useKanbanStore } from "@/hooks/use-kanban";
 import { KANBAN_COLUMNS } from "@/lib/patient-utils";
@@ -181,7 +182,9 @@ export default function KanbanPage() {
         </DndContext>
       )}
 
-      <PatientDetailPanel />
+      <ErrorBoundary>
+        <PatientDetailPanel />
+      </ErrorBoundary>
 
       {isCreateOpen && (
         <CreatePatientDialog
