@@ -42,8 +42,6 @@ import {
   Scissors, Crown, Wrench, Baby, Sparkles, Activity, ScanLine, Paintbrush, Search, GripVertical, Mic,
   FileText, Ban, Download,
 } from "lucide-react";
-import { pdf } from "@react-pdf/renderer";
-import { TreatmentPlanPDF } from "@/components/pdf/treatment-plan-pdf";
 import { calculateAge, formatDateOfBirth, maskIIN } from "@workspace/api-zod";
 import { Button } from "@/components/ui/button";
 import { useKanbanStore } from "@/hooks/use-kanban";
@@ -1494,6 +1492,10 @@ export function PatientDetailPanel() {
     if (!patient || !activePlan) return;
     setPdfExporting(true);
     try {
+      const [{ pdf }, { TreatmentPlanPDF }] = await Promise.all([
+        import("@react-pdf/renderer"),
+        import("@/components/pdf/treatment-plan-pdf"),
+      ]);
       const teethArray = Array.from(teethMap.values());
       const doctorName = doctorUser ? doctorUser.name : undefined;
       const blob = await pdf(
@@ -2295,23 +2297,7 @@ export function PatientDetailPanel() {
                               </div>
                             </div>
                           </button>
-                        ) : null}
-
-                        {/* PDF Export button — shown when activePlan exists */}
-                        {activePlan && (
-                          <button
-                            onClick={handleExportPDF}
-                            disabled={pdfExporting}
-                            className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-dashed border-primary/40 text-primary text-[13px] font-semibold hover:bg-primary/5 active:bg-primary/10 transition-colors disabled:opacity-60"
-                          >
-                            {pdfExporting
-                              ? <Loader2 className="w-4 h-4 animate-spin" />
-                              : <Download className="w-4 h-4" />}
-                            {pdfExporting ? "Формируется PDF..." : "Скачать план лечения (PDF)"}
-                          </button>
-                        )}
-
-                        {!activePlan && needsRediagnosis ? (
+                        ) : needsRediagnosis ? (
                           <div className="bg-amber-50 border border-amber-100 rounded-2xl px-4 py-4 flex items-start gap-3">
                             <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
                               <svg className="w-4 h-4 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
@@ -2329,6 +2315,18 @@ export function PatientDetailPanel() {
                           >
                             {createPlanMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                             {pastPlans.length > 0 ? `Создать план ${allPlans.length + 1}` : "Составить план из диагностики"}
+                          </button>
+                        )}
+                        {activePlan && (
+                          <button
+                            onClick={handleExportPDF}
+                            disabled={pdfExporting}
+                            className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-dashed border-primary/40 text-primary text-[13px] font-semibold hover:bg-primary/5 active:bg-primary/10 transition-colors disabled:opacity-60"
+                          >
+                            {pdfExporting
+                              ? <Loader2 className="w-4 h-4 animate-spin" />
+                              : <Download className="w-4 h-4" />}
+                            {pdfExporting ? "Формируется PDF..." : "Скачать план лечения (PDF)"}
                           </button>
                         )}
                         {pastPlans.length > 0 && (
