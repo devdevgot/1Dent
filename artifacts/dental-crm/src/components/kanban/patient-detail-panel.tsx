@@ -2464,92 +2464,22 @@ export function PatientDetailPanel() {
                 {treatmentStep === 3 && (
                   <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
 
-                    {/* Extraction bundle card */}
-                    {hasExtractionInPlan && (
-                      <div className="mx-6 mt-4 rounded-xl border border-gray-100 bg-white shadow-sm shrink-0 overflow-hidden">
-                        {/* Card header */}
-                        <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-50">
-                          <span className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
-                            <ClipboardList className="w-4 h-4 text-slate-500" />
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[13px] font-semibold text-gray-900 leading-tight">Пакет договоров</p>
-                            <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">
-                              Договор · ИДС · Вкладыш · Памятка
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Card body — varies by state */}
-                        <div className="px-4 py-3">
-
-                          {/* Preparing */}
-                          {bundlePreparing && (
-                            <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
-                              <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
-                              Формируем документы…
-                            </div>
-                          )}
-
-                          {/* Ready — not yet sent */}
-                          {!bundlePreparing && bundleToken && !bundleSent && (
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => setBundlePreviewOpen(true)}
-                                className="flex-1 h-8 text-[12px] font-medium text-gray-700 border border-border rounded-lg hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5"
-                              >
-                                <FileText className="w-3.5 h-3.5" />
-                                Предпросмотр
-                              </button>
-                              <button
-                                disabled={bundleSending}
-                                onClick={() => void handleSendBundleWhatsapp(bundleToken)}
-                                className="flex-1 h-8 text-[12px] font-semibold text-white bg-[#25D366] hover:bg-[#1ebe5d] rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
-                              >
-                                {bundleSending ? (
-                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                ) : (
-                                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.117.549 4.107 1.514 5.836L0 24l6.335-1.493A11.935 11.935 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.028-1.383l-.36-.214-3.732.979.997-3.645-.235-.374A9.786 9.786 0 012.182 12C2.182 6.58 6.58 2.182 12 2.182S21.818 6.58 21.818 12 17.42 21.818 12 21.818z"/></svg>
-                                )}
-                                {bundleSending ? "Отправляем…" : "Отправить"}
-                              </button>
-                            </div>
-                          )}
-
-                          {/* Sent */}
-                          {!bundlePreparing && bundleSent && bundleToken && (
-                            <div className="flex items-center justify-between gap-3">
-                              <div className="flex items-center gap-1.5 text-[12px] font-medium text-green-700">
-                                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                                Отправлено пациенту
-                              </div>
-                              <button
-                                onClick={() => setBundlePreviewOpen(true)}
-                                className="text-[12px] font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-                              >
-                                <FileText className="w-3 h-3" />
-                                Открыть
-                              </button>
-                            </div>
-                          )}
-
-                          {/* Failed to prepare — retry */}
-                          {!bundlePreparing && !bundleToken && selectedPatientId && (
-                            <button
-                              onClick={() => void handlePrepareBundle(selectedPatientId)}
-                              className="w-full h-8 text-[12px] font-semibold text-white bg-primary hover:bg-primary/90 rounded-lg transition-colors flex items-center justify-center gap-1.5"
-                            >
-                              <ClipboardList className="w-3.5 h-3.5" />
-                              Подготовить документы
-                            </button>
-                          )}
-
-                        </div>
-                      </div>
-                    )}
-
                     <Suspense fallback={<div className="py-6 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-primary/60" /></div>}>
-                      <ContractsTab patientId={selectedPatientId} />
+                      <ContractsTab
+                        patientId={selectedPatientId}
+                        bundle={{
+                          hasExtractionInPlan,
+                          bundleToken,
+                          bundleSent,
+                          bundlePreparing,
+                          bundleSending,
+                          bundleUrl,
+                          patientId: selectedPatientId,
+                          onPrepare: () => { if (selectedPatientId) void handlePrepareBundle(selectedPatientId); },
+                          onSend: (token) => void handleSendBundleWhatsapp(token),
+                          onOpenPreview: () => setBundlePreviewOpen(true),
+                        }}
+                      />
                     </Suspense>
 
                     {/* WhatsApp not connected modal */}
