@@ -41,6 +41,7 @@ import {
   Activity,
   CheckCircle2,
   Circle,
+  CircleDot,
   Sparkles,
   Layers,
   ClipboardList,
@@ -1222,12 +1223,13 @@ interface SortablePlanItemCardProps {
   isEditMode: boolean;
   completingId: string | null;
   cancellingId: string | null;
+  activeTimerItemId: string | null;
   onComplete: (id: string) => void;
   onCancel: (id: string) => void;
   onOpenModal: (id: string) => void;
 }
 
-function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, onComplete, onCancel, onOpenModal }: SortablePlanItemCardProps) {
+function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, activeTimerItemId, onComplete, onCancel, onOpenModal }: SortablePlanItemCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
     disabled: !isEditMode || item.status !== "pending",
@@ -1238,21 +1240,32 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, on
   const isCompleted = item.status === "completed";
   const isCancellingThis = cancellingId === item.id;
 
+  // Timer-aware states
+  const isActive = activeTimerItemId === item.id;
+  const isBlocked = isPending && !isActive && activeTimerItemId !== null;
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={cn(
-        "flex items-center gap-2 px-3 py-2.5 bg-white border rounded-xl transition-all select-none",
+        "flex items-center gap-2 px-3 py-2.5 border rounded-xl transition-all select-none",
         isDragging ? "shadow-xl ring-2 ring-primary/20 z-50 opacity-95 scale-[1.02]" : "shadow-sm",
+        // Active timer — blue highlight
+        isActive && "bg-blue-50 border-blue-200",
+        // Blocked by another active timer — amber tint, muted
+        isBlocked && "bg-amber-50/70 border-amber-200/80 opacity-75 cursor-not-allowed",
+        // Completed — green
         isCompleted && "bg-emerald-50/60 border-emerald-100",
-        !isEditMode && "cursor-pointer active:bg-slate-50",
-        isEditMode && isPending && "touch-none cursor-grab active:cursor-grabbing",
+        // Normal pending
+        !isActive && !isBlocked && !isCompleted && "bg-white border-gray-100",
+        !isEditMode && !isBlocked && "cursor-pointer active:bg-slate-50",
+        isEditMode && isPending && !isBlocked && "touch-none cursor-grab active:cursor-grabbing",
       )}
-      {...(isEditMode && isPending ? { ...attributes, ...listeners } : {})}
-      onClick={() => { if (!isEditMode) onOpenModal(item.id); }}
+      {...(isEditMode && isPending && !isBlocked ? { ...attributes, ...listeners } : {})}
+      onClick={() => { if (!isEditMode && !isBlocked) onOpenModal(item.id); }}
     >
-      {isEditMode && isPending ? (
+      {isEditMode && isPending && !isBlocked ? (
         <span className="shrink-0 text-gray-300 p-0.5">
           <GripVertical className="w-4 h-4" />
         </span>
@@ -1262,7 +1275,11 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, on
             ? <CheckCircle2 className="w-5 h-5 text-emerald-500" />
             : item.status === "cancelled"
               ? <Ban className="w-5 h-5 text-gray-300" />
-              : <Circle className="w-5 h-5 text-gray-200" />
+              : isActive
+                ? <CircleDot className="w-5 h-5 text-blue-500" />
+                : isBlocked
+                  ? <Circle className="w-5 h-5 text-amber-300" />
+                  : <Circle className="w-5 h-5 text-gray-200" />
           }
         </div>
       )}
@@ -1270,24 +1287,26 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, on
       <div className="flex-1 min-w-0">
         <p className={cn(
           "text-[13px] font-medium leading-snug truncate",
-          isCompleted ? "line-through text-gray-400" : "text-gray-800",
+          isCompleted ? "line-through text-gray-400" : isActive ? "text-blue-800" : isBlocked ? "text-amber-700" : "text-gray-800",
         )}>
           {item.title}
         </p>
         {item.toothFdi != null && (
-          <p className="text-[11px] text-gray-400 mt-0.5">Зуб №{item.toothFdi}</p>
+          <p className={cn("text-[11px] mt-0.5", isActive ? "text-blue-400" : isBlocked ? "text-amber-400" : "text-gray-400")}>
+            Зуб №{item.toothFdi}
+          </p>
         )}
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
         <span className={cn(
           "text-[13px] font-semibold",
-          isCompleted ? "text-emerald-600" : "text-gray-600",
+          isCompleted ? "text-emerald-600" : isActive ? "text-blue-600" : isBlocked ? "text-amber-600" : "text-gray-600",
         )}>
           {item.price.toLocaleString("ru-KZ")} ₸
         </span>
 
-        {isEditMode && isPending && (
+        {isEditMode && isPending && !isBlocked && (
           <button
             onClick={(e) => { e.stopPropagation(); if (!isCancellingThis) onCancel(item.id); }}
             disabled={isCancellingThis}
@@ -1807,6 +1826,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
                   isEditMode={isEditMode}
                   completingId={completingId}
                   cancellingId={cancellingId}
+                  activeTimerItemId={activeTimers.size > 0 ? (activeTimers.keys().next().value ?? null) : null}
                   onComplete={handleComplete}
                   onCancel={handleCancel}
                   onOpenModal={setModalItemId}
