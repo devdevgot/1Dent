@@ -360,25 +360,37 @@ export function PlanItemDetailModal({
                       </button>
                     </div>
                   ) : (
-                    <div className="space-y-2.5">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          min="1"
-                          max="300"
-                          placeholder="Длительность (мин)"
-                          value={durationMinutes}
-                          onChange={(e) => setDurationMinutes(e.target.value)}
-                          className="flex-1 h-9 px-3 rounded-lg border border-gray-200 text-[13px] text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-primary/40"
-                        />
-                        <button
-                          onClick={handleStartTimer}
-                          className="h-9 px-4 rounded-lg bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 flex items-center gap-1.5 transition-colors shrink-0"
-                        >
-                          <Play className="w-3.5 h-3.5" /> Начать
-                        </button>
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { label: "15 мин", value: "15" },
+                          { label: "30 мин", value: "30" },
+                          { label: "45 мин", value: "45" },
+                          { label: "1 час",  value: "60" },
+                          { label: "1.5 ч",  value: "90" },
+                          { label: "2 часа", value: "120" },
+                        ].map(({ label, value }) => (
+                          <button
+                            key={value}
+                            onClick={() => setDurationMinutes(durationMinutes === value ? "" : value)}
+                            className={cn(
+                              "py-2 rounded-xl border text-[13px] font-semibold transition-colors",
+                              durationMinutes === value
+                                ? "bg-primary text-white border-primary"
+                                : "bg-white text-gray-600 border-gray-200 hover:border-primary/40 hover:bg-primary/5"
+                            )}
+                          >
+                            {label}
+                          </button>
+                        ))}
                       </div>
-                      <p className="text-[11px] text-gray-400">Укажите длительность или нажмите «Начать» без неё</p>
+                      <button
+                        onClick={handleStartTimer}
+                        className="w-full h-10 rounded-xl bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 flex items-center justify-center gap-2 transition-colors"
+                      >
+                        <Play className="w-4 h-4" />
+                        {durationMinutes ? `Начать на ${durationMinutes} мин` : "Начать без таймера"}
+                      </button>
                     </div>
                   )}
                 </div>
