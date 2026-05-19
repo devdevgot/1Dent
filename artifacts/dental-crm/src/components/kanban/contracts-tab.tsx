@@ -270,7 +270,7 @@ export function ContractsTab({ patientId }: ContractsTabProps) {
 
                             {/* Open link */}
                             <a
-                              href={`/p/contract/${c.token}`}
+                              href={`/p/contract/${c.token}?preview=1`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-gray-300 hover:text-primary hover:bg-primary/5 transition-colors mt-0.5"
