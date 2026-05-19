@@ -398,7 +398,6 @@ export class TreatmentPlansRepository {
 
     if (!plan) throw new Error("Plan not found");
     if (plan.patientId !== patientId) throw new Error("Plan does not belong to patient");
-    if (plan.status !== "draft") throw new PlanLockedError();
 
     const [created] = await db
       .insert(treatmentPlanItemsTable)

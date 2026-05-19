@@ -1401,8 +1401,8 @@ export function PatientDetailPanel() {
         }
       }
       if (items.length > 0) {
-        if (activePlan && activePlan.status === "draft") {
-          // Re-diagnosis: add new items to the existing draft plan
+        if (activePlan) {
+          // Re-diagnosis: add new items to the existing active plan (draft or approved)
           await Promise.all(
             items.map((item) =>
               addPlanItemMutation.mutateAsync({
@@ -1413,7 +1413,7 @@ export function PatientDetailPanel() {
             ),
           );
         } else {
-          // First diagnosis, or existing plan is already approved/locked → create a new plan
+          // No active plan yet — create a brand-new one
           await createPlanMutation.mutateAsync({ id: selectedPatientId, data: { items } });
         }
       }
