@@ -6,6 +6,9 @@ import { TreatmentPlansRepository, PlanLockedError, ItemAlreadyCompletedError } 
 import { PatientsRepository } from "../patients/patients.repository";
 import { ClinicPricesRepository } from "../clinic/clinic-prices.repository";
 import { DentalRepository } from "../dental/dental.repository";
+import { db, usersTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
+import { generateTreatmentPlanPDF } from "./treatment-plan-pdf";
 
 const router = Router({ mergeParams: true });
 const repo = new TreatmentPlansRepository();
@@ -250,6 +253,50 @@ router.post(
     }
 
     res.json({ success: true, data: { item: result.item, procedureId: result.procedureId } });
+  },
+);
+
+// GET /patients/:id/treatment-plan/:planId/pdf — download plan as PDF
+router.get(
+  "/patients/:id/treatment-plan/:planId/pdf",
+  authMiddleware,
+  docRoles,
+  async (req: Request, res: Response, next: NextFunction) => {
+    const patientId = req.params["id"]!;
+    const planId = req.params["planId"]!;
+    const clinicId = req.user!.clinicId;
+
+    const [patient, plans, teeth] = await Promise.all([
+      patientsRepo.findById(patientId, clinicId),
+      repo.listPlans(patientId, clinicId),
+      dentalRepo.listTeeth(patientId, clinicId),
+    ]).catch((err) => { next(err); return [undefined, undefined, undefined] as const; });
+
+    if (patient === undefined || plans === undefined || teeth === undefined) return;
+    if (!patient) return next(new NotFoundError("Patient not found"));
+
+    const plan = plans.find((p) => p.id === planId);
+    if (!plan) return next(new NotFoundError("Treatment plan not found"));
+
+    let doctorName: string | undefined;
+    if (plan.doctorId) {
+      const [doc] = await db
+        .select({ name: usersTable.name })
+        .from(usersTable)
+        .where(eq(usersTable.id, plan.doctorId))
+        .limit(1);
+      doctorName = doc?.name;
+    }
+
+    const safeName = patient.name.replace(/[^\w\u0400-\u04FF]/g, "_");
+    const planNum = String(plan.planNumber).padStart(4, "0");
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename*=UTF-8''1Dent_Plan_${encodeURIComponent(safeName)}_${planNum}.pdf`,
+    );
+
+    generateTreatmentPlanPDF(res, { patient, plan, teeth, doctorName, clinicName: "1Dent" });
   },
 );
 

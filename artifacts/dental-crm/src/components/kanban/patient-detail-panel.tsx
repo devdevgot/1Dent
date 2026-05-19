@@ -40,9 +40,10 @@ import {
   Phone, User, Calendar, CreditCard, Stethoscope, Copy, Save, IdCard,
   ClipboardList, Plus, BadgeCheck, Circle, ArrowLeft, Square, CheckSquare, Loader2,
   Scissors, Crown, Wrench, Baby, Sparkles, Activity, ScanLine, Paintbrush, Search, GripVertical, Mic,
-  FileText, Ban,
+  FileText, Ban, Download,
 } from "lucide-react";
 import { calculateAge, formatDateOfBirth, maskIIN } from "@workspace/api-zod";
+import { getBaseUrl } from "@/lib/base-url";
 import { Button } from "@/components/ui/button";
 import { useKanbanStore } from "@/hooks/use-kanban";
 import { useAuthStore } from "@/hooks/use-auth";
@@ -1487,6 +1488,34 @@ export function PatientDetailPanel() {
 
   const doctorUser = patient?.doctorId ? allUsers.find((u) => u.id === patient.doctorId) : null;
 
+  const [pdfExporting, setPdfExporting] = useState(false);
+  const handleExportPDF = useCallback(async (planId: string) => {
+    if (!patient) return;
+    setPdfExporting(true);
+    try {
+      const base = getBaseUrl();
+      const resp = await fetch(`${base}/p/api/patients/${patient.id}/treatment-plan/${planId}/pdf`, {
+        credentials: "include",
+      });
+      if (!resp.ok) throw new Error("PDF generation failed");
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const disposition = resp.headers.get("content-disposition") ?? "";
+      const match = disposition.match(/filename\*=UTF-8''([^;]+)/i) ?? disposition.match(/filename="([^"]+)"/i);
+      a.download = match ? decodeURIComponent(match[1]!) : `1Dent_Plan.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      toast({ title: "Ошибка", description: "Не удалось создать PDF", variant: "destructive" });
+    } finally {
+      setPdfExporting(false);
+    }
+  }, [patient, toast]);
+
   const PAYMENT_LABELS: Record<string, string> = {
     cash: "Наличные", kaspi_qr: "Kaspi QR",
     kaspi_transfer: "Kaspi перевод", kaspi_red: "Kaspi Рассрочка",
@@ -2279,6 +2308,16 @@ export function PatientDetailPanel() {
                           >
                             {createPlanMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                             {pastPlans.length > 0 ? `Создать план ${allPlans.length + 1}` : "Составить план из диагностики"}
+                          </button>
+                        )}
+                        {activePlan && (
+                          <button
+                            onClick={() => handleExportPDF(activePlan.id)}
+                            disabled={pdfExporting}
+                            className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-dashed border-primary/40 text-primary text-[13px] font-semibold hover:bg-primary/5 active:bg-primary/10 transition-colors disabled:opacity-60"
+                          >
+                            {pdfExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                            {pdfExporting ? "Формируется PDF..." : "Скачать план лечения (PDF)"}
                           </button>
                         )}
                         {pastPlans.length > 0 && (
