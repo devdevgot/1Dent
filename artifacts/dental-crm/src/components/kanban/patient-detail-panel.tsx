@@ -2317,45 +2317,6 @@ export function PatientDetailPanel() {
                             {pastPlans.length > 0 ? `Создать план ${allPlans.length + 1}` : "Составить план из диагностики"}
                           </button>
                         )}
-                        {pastPlans.length > 0 && (
-                          <>
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-4">Архив</p>
-                            {[...pastPlans].sort((a, b) => b.planNumber - a.planNumber).map((plan) => {
-                              const nc = plan.items.filter((i) => i.status !== "cancelled");
-                              const d = nc.filter((i) => i.status === "completed").length;
-                              const p = nc.length > 0 ? Math.round((d / nc.length) * 100) : 0;
-                              const paid = nc.filter((i) => i.status === "completed").reduce((s, i) => s + i.price, 0);
-                              const fdis = Array.from(new Set(nc.map((i) => i.toothFdi).filter((f): f is number => f !== null && f !== undefined))).sort((a, b) => a - b);
-                              const summary = fdis.length > 0 ? `Зуб${fdis.length > 1 ? "ы" : ""} №${fdis.slice(0, 4).join(", №")}${fdis.length > 4 ? "..." : ""}` : `${nc.length} услуг`;
-                              return (
-                                <button key={plan.id} onClick={() => setPlanDetailId(plan.id)} className="w-full text-left bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                                  <div className="px-4 py-3.5">
-                                    <div className="flex items-center justify-between mb-2">
-                                      <div className="flex items-center gap-2">
-                                        <FileText className="w-4 h-4 text-gray-400" />
-                                        <span className="text-sm font-semibold text-gray-800">План лечения №{plan.planNumber}</span>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        {plan.status === "completed"
-                                          ? <span className="flex items-center gap-1 text-[10px] font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-200"><CheckCircle2 className="w-3 h-3" /> Завершён</span>
-                                          : <span className="flex items-center gap-1 text-[10px] font-semibold text-red-500 bg-red-50 px-2 py-0.5 rounded-full border border-red-200"><Ban className="w-3 h-3" /> Отменён</span>}
-                                        <ChevronRight className="w-4 h-4 text-gray-300" />
-                                      </div>
-                                    </div>
-                                    <p className="text-xs text-gray-500 mb-2 text-left">{summary}</p>
-                                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-2">
-                                      <div className={`h-full rounded-full ${plan.status === "completed" ? "bg-green-400" : "bg-red-300"}`} style={{ width: `${p}%` }} />
-                                    </div>
-                                    <div className="flex items-center justify-between text-xs text-gray-400">
-                                      <span>{new Date(plan.createdAt).toLocaleDateString("ru", { day: "2-digit", month: "short" })} → {new Date(plan.updatedAt).toLocaleDateString("ru", { day: "2-digit", month: "short", year: "numeric" })}</span>
-                                      <span className="font-semibold text-gray-600">{paid.toLocaleString("ru-KZ")} ₸</span>
-                                    </div>
-                                  </div>
-                                </button>
-                              );
-                            })}
-                          </>
-                        )}
                         {activePlan && (activePlan.status === "completed" || activePlan.status === "in_progress") && !needsRediagnosis && (
                           <button className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-dashed border-gray-200 text-sm font-medium text-gray-400 hover:bg-gray-50 transition-colors mt-2"
                             onClick={() => createPlanMutation.mutate({ id: selectedPatientId, data: {} })} disabled={createPlanMutation.isPending}
