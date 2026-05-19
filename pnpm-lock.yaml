@@ -172,9 +172,6 @@ importers:
       '@types/multer':
         specifier: ^2.1.0
         version: 2.1.0
-      '@types/pdfkit':
-        specifier: ^0.17.6
-        version: 0.17.6
       '@workspace/api-zod':
         specifier: workspace:*
         version: link:../../lib/api-zod
@@ -229,9 +226,6 @@ importers:
       pdf-parse:
         specifier: ^1.1.1
         version: 1.1.1
-      pdfkit:
-        specifier: ^0.18.0
-        version: 0.18.0
       pdfmake:
         specifier: ^0.3.7
         version: 0.3.7
@@ -1902,9 +1896,6 @@ packages:
 
   '@types/pdf-parse@1.1.4':
     resolution: {integrity: sha512-+gbBHbNCVGGYw1S9lAIIvrHW47UYOhMIFUsJcMkMrzy1Jf0vulBN3XQIjPgnoOXveMuHnF3b57fXROnY/Or7eg==}
-
-  '@types/pdfkit@0.17.6':
-    resolution: {integrity: sha512-tIwzxk2uWKp0Cq9JIluQXJid77lYhF52EsIOwhsMF4iWLA6YneoBR1xVKYYdAysHuepUB0OX4tdwMiUDdGKmig==}
 
   '@types/pg@8.18.0':
     resolution: {integrity: sha512-gT+oueVQkqnj6ajGJXblFR4iavIXWsGAFCk3dP4Kki5+a9R4NMt0JARdk6s8cUKcfUoqP5dAtDSLU8xYUTFV+Q==}
@@ -5642,10 +5633,6 @@ snapshots:
       '@types/node': 25.3.5
 
   '@types/pdf-parse@1.1.4': {}
-
-  '@types/pdfkit@0.17.6':
-    dependencies:
-      '@types/node': 25.3.5
 
   '@types/pg@8.18.0':
     dependencies:
