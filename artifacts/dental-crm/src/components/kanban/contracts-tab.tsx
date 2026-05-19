@@ -125,42 +125,33 @@ export function ContractsTab({ patientId }: ContractsTabProps) {
                 </div>
               ) : (
                 <>
-                  {/* Template cards */}
-                  <div className="space-y-2">
-                    {templates.map((tmpl) => {
-                      const isSelected = selectedTemplateId === tmpl.id;
-                      return (
-                        <button
-                          key={tmpl.id}
-                          type="button"
-                          onClick={() => setSelectedTemplateId(isSelected ? "" : tmpl.id)}
-                          className={cn(
-                            "w-full flex items-center gap-3 px-3.5 py-3 rounded-xl border transition-all text-left",
-                            isSelected
-                              ? "border-primary bg-primary/5 shadow-sm shadow-primary/10"
-                              : "border-gray-100 bg-gray-50/60 hover:border-gray-200 hover:bg-gray-50",
-                          )}
-                        >
-                          <div className={cn(
-                            "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors",
-                            isSelected ? "bg-primary/15" : "bg-white border border-gray-100",
-                          )}>
-                            <FileText className={cn("w-4 h-4", isSelected ? "text-primary" : "text-gray-400")} />
-                          </div>
-                          <span className={cn(
-                            "flex-1 text-[13px] font-medium leading-snug",
-                            isSelected ? "text-primary" : "text-gray-700",
-                          )}>
-                            {tmpl.name}
-                          </span>
-                          {isSelected && (
-                            <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0">
-                              <CheckCircle2 className="w-3.5 h-3.5 text-white" />
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })}
+                  {/* Styled template selector */}
+                  <div className="relative">
+                    <div className={cn(
+                      "flex items-center gap-2.5 rounded-xl border px-3 py-0 transition-all",
+                      selectedTemplateId
+                        ? "border-primary/40 bg-primary/3 ring-1 ring-primary/20"
+                        : "border-gray-200 bg-gray-50 hover:border-gray-300",
+                    )}>
+                      <FileText className={cn(
+                        "w-4 h-4 shrink-0 transition-colors",
+                        selectedTemplateId ? "text-primary" : "text-gray-400",
+                      )} />
+                      <select
+                        value={selectedTemplateId}
+                        onChange={(e) => setSelectedTemplateId(e.target.value)}
+                        className="flex-1 bg-transparent text-[13px] font-medium text-gray-700 py-3 outline-none appearance-none cursor-pointer"
+                      >
+                        <option value="">— Выберите шаблон —</option>
+                        {templates.map((tmpl) => (
+                          <option key={tmpl.id} value={tmpl.id}>{tmpl.name}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className={cn(
+                        "w-4 h-4 shrink-0 transition-all pointer-events-none",
+                        selectedTemplateId ? "text-primary" : "text-gray-400",
+                      )} />
+                    </div>
                   </div>
 
                   {/* WhatsApp send button */}
