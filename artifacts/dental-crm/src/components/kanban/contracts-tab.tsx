@@ -66,7 +66,9 @@ export function ContractsTab({ patientId }: ContractsTabProps) {
   const { data: templatesData, isLoading: templatesLoading } = useListContractTemplates();
   const sendMutation = useSendContract();
 
-  const contracts = contractsData?.data?.contracts ?? [];
+  const allContracts = contractsData?.data?.contracts ?? [];
+  // Only show contracts that were actually sent (not just prepared/created)
+  const contracts = allContracts.filter((c: PatientContract) => c.status !== "created");
   const templates = templatesData?.data?.templates ?? [];
 
   const handleSend = () => {

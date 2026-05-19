@@ -217,13 +217,25 @@ export class ContractsRepository {
             bundleToken,
             renderedHtml: rendered,
             filledData: vars as unknown as Record<string, string>,
-            status: "sent" as const,
+            status: "created" as const,
           };
         }),
       )
       .returning();
 
     return { bundleToken, contracts: rows };
+  }
+
+  async markBundleSent(bundleToken: string): Promise<void> {
+    await db
+      .update(patientContractsTable)
+      .set({ status: "sent" })
+      .where(
+        and(
+          eq(patientContractsTable.bundleToken, bundleToken),
+          eq(patientContractsTable.status, "created"),
+        ),
+      );
   }
 
   async findContractByToken(token: string): Promise<{

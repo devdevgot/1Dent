@@ -481,6 +481,7 @@ router.post(
         });
       }
       logger.info({ bundleToken, idMessage }, "[contracts] bundle WhatsApp sent");
+      await repo.markBundleSent(bundleToken);
       res.json({ success: true, data: { bundleToken, bundleUrl, idMessage } });
     } catch (err) {
       logger.error({ err, bundleToken, clinicId, patientPhone }, "[contracts] Failed to send bundle WhatsApp");
@@ -535,9 +536,11 @@ router.post(
       `3. Согласие на выполнение рекомендаций\n4. Памятка после удаления\n\n` +
       `Откройте все документы и подпишите по ссылке:\n${bundleUrl}\n\nКлиника: ${ctx.clinicName}`;
 
-    sendToPatient(clinicId, ctx.patientPhone, message).catch((err: unknown) => {
-      logger.error({ err, patientId, bundleToken }, "[contracts] Failed to send bundle WhatsApp");
-    });
+    await sendToPatient(clinicId, ctx.patientPhone, message)
+      .then(() => repo.markBundleSent(bundleToken))
+      .catch((err: unknown) => {
+        logger.error({ err, patientId, bundleToken }, "[contracts] Failed to send bundle WhatsApp");
+      });
 
     res.status(201).json({ success: true, data: { bundleToken, bundleUrl, contracts } });
   },

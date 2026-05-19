@@ -4,6 +4,7 @@ import { patientsTable } from "./patients";
 import { usersTable } from "./users";
 
 export const contractStatusEnum = pgEnum("contract_status", [
+  "created",
   "sent",
   "viewed",
   "signed",
