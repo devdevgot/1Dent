@@ -1115,14 +1115,12 @@ export function PatientDetailPanel() {
       .then((data) => {
         if (!data.success || !data.data) return;
         const contracts = data.data.contracts;
-        const bundled = contracts.find((c) => c.bundleToken);
+        // Find the most recent bundle (last in list = newest)
+        const bundled = [...contracts].reverse().find((c) => c.bundleToken);
         if (bundled?.bundleToken) {
+          // Only restore the token so step 3 knows there's a bundle ready to send.
+          // bundleSent must ONLY be set via the WhatsApp Send button — never from DB state.
           setBundleToken(bundled.bundleToken);
-          const isSent = contracts.some(
-            (c) => c.bundleToken === bundled.bundleToken && c.status !== "created",
-          );
-          setBundleSent(isSent);
-          setTreatmentStep(3);
         } else {
           setBundleToken(null);
           setBundleUrl(null);
