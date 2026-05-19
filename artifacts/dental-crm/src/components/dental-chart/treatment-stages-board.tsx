@@ -260,7 +260,6 @@ function formatCountdown(remainingMs: number): string {
 }
 
 const DURATION_OPTIONS: { label: string; ms: number | null }[] = [
-  { label: "Без таймера", ms: null },
   { label: "15 мин", ms: 15 * 60_000 },
   { label: "30 мин", ms: 30 * 60_000 },
   { label: "45 мин", ms: 45 * 60_000 },
@@ -481,20 +480,6 @@ function PlanItemCard({
                   Начать
                 </button>
 
-                {/* Cancel */}
-                <button
-                  onClick={() => actions.onCancel(item.id)}
-                  disabled={isBusy}
-                  className="flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md border border-gray-200 text-gray-500 hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-colors disabled:opacity-50"
-                  title="Отменить позицию"
-                >
-                  {isCancelling ? (
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                  ) : (
-                    <Ban className="w-3 h-3" />
-                  )}
-                  Отменить
-                </button>
               </>
             ) : (
               <>
@@ -512,20 +497,6 @@ function PlanItemCard({
                   Завершить
                 </button>
 
-                {/* Cancel */}
-                <button
-                  onClick={() => actions.onCancel(item.id)}
-                  disabled={isBusy}
-                  className="flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md border border-gray-200 text-gray-500 hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-colors disabled:opacity-50"
-                  title="Отменить позицию"
-                >
-                  {isCancelling ? (
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                  ) : (
-                    <Ban className="w-3 h-3" />
-                  )}
-                  Отменить
-                </button>
               </>
             )}
           </div>
