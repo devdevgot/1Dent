@@ -39,6 +39,7 @@ import {
   Wrench,
   Activity,
   CheckCircle2,
+  Circle,
   Sparkles,
   Layers,
   ClipboardList,
@@ -1213,6 +1214,98 @@ function DetailProcedureCard({
   );
 }
 
+// ── SortablePlanItemCard ───────────────────────────────────────────────────────
+
+interface SortablePlanItemCardProps {
+  item: TreatmentPlanItem;
+  isEditMode: boolean;
+  completingId: string | null;
+  cancellingId: string | null;
+  onComplete: (id: string) => void;
+  onCancel: (id: string) => void;
+}
+
+function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, onComplete, onCancel }: SortablePlanItemCardProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+    disabled: !isEditMode || item.status !== "pending",
+  });
+  const style = { transform: CSS.Transform.toString(transform), transition };
+
+  const isPending = item.status === "pending";
+  const isCompleted = item.status === "completed";
+  const isCompletingThis = completingId === item.id;
+  const isCancellingThis = cancellingId === item.id;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "flex items-center gap-2 px-3 py-2.5 bg-white border rounded-xl transition-all select-none",
+        isDragging ? "shadow-xl ring-2 ring-primary/20 z-50 opacity-95 scale-[1.02]" : "shadow-sm",
+        isCompleted && "bg-emerald-50/60 border-emerald-100",
+        isPending && !isEditMode && "active:bg-slate-50",
+      )}
+    >
+      {isEditMode && isPending ? (
+        <button
+          {...attributes}
+          {...listeners}
+          className="shrink-0 text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing touch-none p-0.5"
+          tabIndex={-1}
+        >
+          <GripVertical className="w-4 h-4" />
+        </button>
+      ) : (
+        <button
+          onClick={() => isPending && !isCompletingThis && !isCancellingThis && onComplete(item.id)}
+          disabled={!isPending || isCompletingThis || isCancellingThis}
+          className="shrink-0 disabled:cursor-not-allowed"
+        >
+          {isCompletingThis
+            ? <Loader2 className="w-5 h-5 text-primary animate-spin" />
+            : isCompleted
+              ? <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+              : <Circle className="w-5 h-5 text-gray-200 hover:text-primary/40 transition-colors" />
+          }
+        </button>
+      )}
+
+      <div className="flex-1 min-w-0">
+        <p className={cn(
+          "text-[13px] font-medium leading-snug truncate",
+          isCompleted ? "line-through text-gray-400" : "text-gray-800",
+        )}>
+          {item.title}
+        </p>
+        {item.toothFdi != null && (
+          <p className="text-[11px] text-gray-400 mt-0.5">Зуб №{item.toothFdi}</p>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2 shrink-0">
+        <span className={cn(
+          "text-[13px] font-semibold",
+          isCompleted ? "text-emerald-600" : "text-gray-600",
+        )}>
+          {item.price.toLocaleString("ru-KZ")} ₸
+        </span>
+
+        {isEditMode && isPending && (
+          <button
+            onClick={() => !isCancellingThis && onCancel(item.id)}
+            disabled={isCancellingThis}
+            className="w-5 h-5 flex items-center justify-center rounded-full text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors disabled:opacity-50"
+          >
+            {isCancellingThis ? <Loader2 className="w-3 h-3 animate-spin" /> : <X className="w-3 h-3" />}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── TreatmentStagesBoard ──────────────────────────────────────────────────────
 
 interface TreatmentStagesBoardProps {
@@ -1343,6 +1436,16 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
   const [editDraft, setEditDraft] = useState<{ title: string; price: string }>({ title: "", price: "" });
   const [savingEditId, setSavingEditId] = useState<string | null>(null);
 
+  // ── Local items order (for optimistic DnD reordering) ─────────────────────
+
+  const [localItems, setLocalItems] = useState<TreatmentPlanItem[]>(() =>
+    activePlan?.items.filter((i) => i.status !== "cancelled") ?? [],
+  );
+
+  useEffect(() => {
+    setLocalItems(activePlan?.items.filter((i) => i.status !== "cancelled") ?? []);
+  }, [activePlan?.items]);
+
   const planId = activePlan?.id ?? "";
 
   const completeMutation = useCompleteTreatmentPlanItem({
@@ -1402,6 +1505,8 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
       },
     },
   });
+
+  const reorderMutation = useUpdateTreatmentPlanItem();
 
   // ── Edit handlers ─────────────────────────────────────────────────────────
 
@@ -1591,6 +1696,31 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
     [STORAGE_KEY],
   );
 
+  const handleItemDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+      setLocalItems((prev) => {
+        const oldIdx = prev.findIndex((i) => i.id === String(active.id));
+        const newIdx = prev.findIndex((i) => i.id === String(over.id));
+        if (oldIdx === -1 || newIdx === -1) return prev;
+        const next = arrayMove(prev, oldIdx, newIdx);
+        next.forEach((item, idx) => {
+          if ((item.sortOrder ?? 0) !== idx) {
+            reorderMutation.mutate({
+              id: patientId,
+              planId,
+              itemId: item.id,
+              data: { sortOrder: idx },
+            });
+          }
+        });
+        return next;
+      });
+    },
+    [patientId, planId, reorderMutation],
+  );
+
   const toggleExpanded = useCallback((id: string) => {
     setExpandedIds((prev) => {
       const next = new Set(prev);
@@ -1609,9 +1739,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
     });
   }, []);
 
-  if (activeStages.length === 0) return null;
-
-  // reset completed expanded state when patient changes (handled by patientId key externally)
+  if (localItems.length === 0 && !activePlan) return null;
 
   // ── Summary stats ─────────────────────────────────────────────────────────
 
@@ -1642,7 +1770,10 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
                 Готово
               </>
             ) : (
-              <Pencil className="w-3 h-3" />
+              <>
+                <Pencil className="w-3 h-3" />
+                Редактировать
+              </>
             )}
           </button>
         </div>
@@ -1666,63 +1797,27 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
         </div>
       )}
 
-      {/* Active (pending) sections */}
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={pendingActiveStages.map((s) => s.id)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-2">
-            {pendingActiveStages.map((stage, idx) => {
-              const items = stageItems.get(stage.id)!;
-              return (
-                <SortableSection
-                  key={stage.id}
-                  stage={stage}
-                  teeth={items.teeth}
-                  planItems={items.planItems}
-                  isExpanded={expandedIds.has(stage.id)}
-                  onToggle={() => toggleExpanded(stage.id)}
-                  actions={actions}
-                  index={idx}
-                  userRole={user?.role}
-                  doctorName={doctorName}
-                  onOpenDetail={() => setDetailStageId(stage.id)}
-                  earnedTotal={historyByStage.get(stage.id)?.reduce((s, i) => s + i.price, 0)}
-                  earnedCount={historyByStage.get(stage.id)?.length}
+      {/* Flat item cards with DnD reordering */}
+      {localItems.length === 0 ? (
+        <p className="text-sm text-gray-400 text-center py-6">Нет позиций в плане</p>
+      ) : (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleItemDragEnd}>
+          <SortableContext items={localItems.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-2">
+              {localItems.map((item) => (
+                <SortablePlanItemCard
+                  key={item.id}
+                  item={item}
+                  isEditMode={isEditMode}
+                  completingId={completingId}
+                  cancellingId={cancellingId}
+                  onComplete={handleComplete}
+                  onCancel={handleCancel}
                 />
-              );
-            })}
-          </div>
-        </SortableContext>
-      </DndContext>
-
-      {/* Completed sections — always at the bottom, outside DnD */}
-      {completedActiveStages.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 px-0.5 pt-1">
-            <div className="flex-1 h-px bg-gray-100" />
-            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
-              Завершённые разделы
-            </span>
-            <div className="flex-1 h-px bg-gray-100" />
-          </div>
-          {completedActiveStages.map((stage, idx) => {
-            const items = stageItems.get(stage.id)!;
-            return (
-              <CompletedStageSection
-                key={stage.id}
-                stage={stage}
-                teeth={items.teeth}
-                planItems={items.planItems}
-                isExpanded={expandedCompletedIds.has(stage.id)}
-                onToggle={() => toggleExpandedCompleted(stage.id)}
-                actions={actions}
-                index={pendingActiveStages.length + idx}
-                userRole={user?.role}
-                doctorName={doctorName}
-                onOpenDetail={() => setDetailStageId(stage.id)}
-              />
-            );
-          })}
-        </div>
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
 
       {/* Stage detail sheet */}
@@ -1739,7 +1834,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
             planItems={detailItems.planItems}
             actions={actions}
             doctorName={doctorName}
-            planNotes={activePlan?.notes}
+            planNotes={activePlan?.notes ?? undefined}
             historicalItems={historyByStage.get(detailStageId) ?? []}
           />
         );

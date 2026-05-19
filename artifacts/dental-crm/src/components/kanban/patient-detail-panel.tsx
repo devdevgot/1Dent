@@ -2466,25 +2466,36 @@ export function PatientDetailPanel() {
                             <TreatmentStagesBoard patientId={selectedPatientId} teeth={teethRecords} activePlan={activePlan} />
                           )}
                           {!isActive && (
-                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                              <div className="px-4 py-3 border-b border-gray-100">
-                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Услуги</p>
-                              </div>
+                            <div className="space-y-2">
                               {nc.length === 0 ? (
-                                <p className="text-sm text-gray-400 text-center py-6">Нет шагов</p>
+                                <p className="text-sm text-gray-400 text-center py-6">Нет позиций</p>
                               ) : (
-                                <div className="divide-y divide-gray-50">
-                                  {nc.map((item) => (
-                                    <div key={item.id} className="flex items-center gap-2.5 px-4 py-2.5">
-                                      {item.status === "completed" ? <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" /> : <Circle className="w-4 h-4 text-gray-200 shrink-0" />}
-                                      <div className="flex-1 min-w-0">
-                                        <p className={`text-sm ${item.status === "completed" ? "line-through text-gray-400" : "text-gray-700"}`}>{item.title}</p>
-                                        {item.toothFdi && <span className="text-[10px] text-gray-400">зуб #{item.toothFdi}</span>}
-                                      </div>
-                                      <span className="text-xs font-semibold text-gray-500 shrink-0">{item.price.toLocaleString("ru-KZ")} ₸</span>
+                                nc.map((item) => (
+                                  <div
+                                    key={item.id}
+                                    className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border shadow-sm ${
+                                      item.status === "completed"
+                                        ? "bg-emerald-50/60 border-emerald-100"
+                                        : "bg-white border-gray-100"
+                                    }`}
+                                  >
+                                    {item.status === "completed"
+                                      ? <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+                                      : <Circle className="w-5 h-5 text-gray-200 shrink-0" />
+                                    }
+                                    <div className="flex-1 min-w-0">
+                                      <p className={`text-[13px] font-medium leading-snug truncate ${item.status === "completed" ? "line-through text-gray-400" : "text-gray-800"}`}>
+                                        {item.title}
+                                      </p>
+                                      {item.toothFdi != null && (
+                                        <p className="text-[11px] text-gray-400 mt-0.5">Зуб №{item.toothFdi}</p>
+                                      )}
                                     </div>
-                                  ))}
-                                </div>
+                                    <span className={`text-[13px] font-semibold shrink-0 ${item.status === "completed" ? "text-emerald-600" : "text-gray-600"}`}>
+                                      {item.price.toLocaleString("ru-KZ")} ₸
+                                    </span>
+                                  </div>
+                                ))
                               )}
                             </div>
                           )}
