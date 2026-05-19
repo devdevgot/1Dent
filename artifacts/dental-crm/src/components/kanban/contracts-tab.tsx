@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   FileText, Send, CheckCircle2, Eye, ExternalLink,
   RefreshCw, FileSignature, Clock, ChevronDown, ChevronUp,
+  Package, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -41,6 +42,14 @@ const STATUS_CONFIG: Record<string, { color: string; icon: React.ReactNode; dot:
   },
 };
 
+const STATUS_PRIORITY: Record<string, number> = { sent: 0, viewed: 1, signed: 2 };
+
+function bundleAggregateStatus(contracts: PatientContract[]): string {
+  if (contracts.every((c) => c.status === "signed")) return "signed";
+  if (contracts.some((c) => c.status === "viewed" || c.status === "signed")) return "viewed";
+  return "sent";
+}
+
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("ru-RU", {
@@ -56,20 +65,182 @@ function formatDateShort(iso: string | null): string {
   });
 }
 
+interface BundleGroup {
+  bundleToken: string;
+  contracts: PatientContract[];
+  createdAt: string | null;
+  sentByName: string | null;
+}
+
+type HistoryItem =
+  | { type: "bundle"; bundle: BundleGroup; sortKey: number }
+  | { type: "single"; contract: PatientContract; sortKey: number };
+
+function groupContracts(contracts: PatientContract[]): HistoryItem[] {
+  const bundleMap = new Map<string, PatientContract[]>();
+  const singles: PatientContract[] = [];
+
+  for (const c of contracts) {
+    if (c.bundleToken) {
+      const arr = bundleMap.get(c.bundleToken) ?? [];
+      arr.push(c);
+      bundleMap.set(c.bundleToken, arr);
+    } else {
+      singles.push(c);
+    }
+  }
+
+  const items: HistoryItem[] = [];
+
+  for (const [bundleToken, members] of bundleMap.entries()) {
+    const sorted = [...members].sort(
+      (a, b) => STATUS_PRIORITY[a.status ?? "sent"] - STATUS_PRIORITY[b.status ?? "sent"],
+    );
+    const createdAt = sorted[0]?.createdAt ?? null;
+    const sentByName = sorted[0]?.sentByName ?? null;
+    items.push({
+      type: "bundle",
+      bundle: { bundleToken, contracts: sorted, createdAt, sentByName },
+      sortKey: createdAt ? new Date(createdAt).getTime() : 0,
+    });
+  }
+
+  for (const c of singles) {
+    items.push({
+      type: "single",
+      contract: c,
+      sortKey: c.createdAt ? new Date(c.createdAt).getTime() : 0,
+    });
+  }
+
+  return items.sort((a, b) => b.sortKey - a.sortKey);
+}
+
+function BundleModal({ bundle, onClose }: { bundle: BundleGroup; onClose: () => void }) {
+  const aggStatus = bundleAggregateStatus(bundle.contracts);
+  const aggCfg = STATUS_CONFIG[aggStatus] ?? STATUS_CONFIG.sent;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3.5 border-b border-gray-100">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <Package className="w-4.5 h-4.5 text-primary" />
+            </div>
+            <div>
+              <p className="text-[13px] font-bold text-gray-900">Пакет договоров</p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className={cn(
+                  "inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold border",
+                  aggCfg.color,
+                )}>
+                  {aggCfg.icon}
+                  {STATUS_LABELS[aggStatus]}
+                </span>
+                <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                  <Clock className="w-2.5 h-2.5" />
+                  {formatDateShort(bundle.createdAt)}
+                </span>
+                {bundle.sentByName && (
+                  <span className="text-[10px] text-gray-400">· {bundle.sentByName}</span>
+                )}
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Contracts list */}
+        <div className="px-4 py-3 space-y-2 max-h-[60vh] overflow-y-auto">
+          {bundle.contracts.map((c) => {
+            const cfg = STATUS_CONFIG[c.status] ?? STATUS_CONFIG.sent;
+            return (
+              <div key={c.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-gray-100 bg-gray-50/50">
+                <div className="relative shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-white border border-gray-100 shadow-sm flex items-center justify-center">
+                    <FileText className="w-3.5 h-3.5 text-primary/70" />
+                  </div>
+                  <span className={cn(
+                    "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-gray-50",
+                    cfg.dot,
+                  )} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[12px] font-semibold text-gray-800 leading-snug line-clamp-1">
+                    {c.templateName}
+                  </p>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span className={cn(
+                      "inline-flex items-center gap-0.5 px-1 py-0.5 rounded-full text-[10px] font-semibold border",
+                      cfg.color,
+                    )}>
+                      {cfg.icon}
+                      {STATUS_LABELS[c.status]}
+                    </span>
+                    {c.status === "signed" && c.signedAt && (
+                      <span className="text-[10px] text-emerald-600">
+                        {formatDateShort(c.signedAt)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <a
+                  href={`/p/contract/${c.token}?preview=1`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-gray-300 hover:text-primary hover:bg-white transition-colors border border-transparent hover:border-gray-100"
+                  title="Открыть договор"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Footer — open full bundle */}
+        <div className="px-4 pb-4 pt-2">
+          <a
+            href={`/p/bundle/${bundle.bundleToken}?preview=1`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-gray-200 text-[13px] font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-colors"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            Открыть весь пакет
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ContractsTab({ patientId }: ContractsTabProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [historyOpen, setHistoryOpen] = useState(true);
+  const [openBundle, setOpenBundle] = useState<BundleGroup | null>(null);
 
   const { data: contractsData, isLoading: contractsLoading } = useListPatientContracts(patientId);
   const { data: templatesData, isLoading: templatesLoading } = useListContractTemplates();
   const sendMutation = useSendContract();
 
   const allContracts = contractsData?.data?.contracts ?? [];
-  // Only show contracts that were actually sent (not just prepared/created)
   const contracts = allContracts.filter((c: PatientContract) => c.status !== "created");
   const templates = templatesData?.data?.templates ?? [];
+
+  const historyItems = groupContracts(contracts);
 
   const handleSend = () => {
     if (!selectedTemplateId) return;
@@ -98,7 +269,6 @@ export function ContractsTab({ patientId }: ContractsTabProps) {
 
           {/* ── Send contract card ── */}
           <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm bg-white">
-            {/* Header */}
             <div className="px-4 pt-4 pb-3 border-b border-gray-50">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
@@ -127,7 +297,6 @@ export function ContractsTab({ patientId }: ContractsTabProps) {
                 </div>
               ) : (
                 <>
-                  {/* Styled template selector */}
                   <div className="relative">
                     <div className={cn(
                       "flex items-center gap-2.5 rounded-xl border px-3 py-0 transition-all",
@@ -156,7 +325,6 @@ export function ContractsTab({ patientId }: ContractsTabProps) {
                     </div>
                   </div>
 
-                  {/* WhatsApp send button */}
                   <button
                     type="button"
                     onClick={handleSend}
@@ -197,9 +365,9 @@ export function ContractsTab({ patientId }: ContractsTabProps) {
                 <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">
                   История договоров
                 </p>
-                {contracts.length > 0 && (
+                {historyItems.length > 0 && (
                   <span className="text-[10px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">
-                    {contracts.length}
+                    {historyItems.length}
                   </span>
                 )}
               </div>
@@ -214,7 +382,7 @@ export function ContractsTab({ patientId }: ContractsTabProps) {
                   <div className="flex items-center justify-center py-8">
                     <RefreshCw className="w-4 h-4 text-gray-300 animate-spin" />
                   </div>
-                ) : contracts.length === 0 ? (
+                ) : historyItems.length === 0 ? (
                   <div className="flex flex-col items-center justify-center gap-2.5 py-8 text-center">
                     <div className="w-11 h-11 rounded-2xl bg-gray-100 flex items-center justify-center">
                       <FileText className="w-5 h-5 text-gray-300" />
@@ -223,12 +391,72 @@ export function ContractsTab({ patientId }: ContractsTabProps) {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {contracts.map((c: PatientContract) => {
+                    {historyItems.map((item) => {
+                      if (item.type === "bundle") {
+                        const { bundle } = item;
+                        const aggStatus = bundleAggregateStatus(bundle.contracts);
+                        const cfg = STATUS_CONFIG[aggStatus] ?? STATUS_CONFIG.sent;
+                        const signedCount = bundle.contracts.filter((c) => c.status === "signed").length;
+                        return (
+                          <button
+                            key={bundle.bundleToken}
+                            type="button"
+                            onClick={() => setOpenBundle(bundle)}
+                            className="w-full text-left bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden hover:border-primary/30 hover:shadow-md transition-all group"
+                          >
+                            <div className="flex items-start gap-3 px-3.5 py-3">
+                              <div className="relative shrink-0 mt-0.5">
+                                <div className="w-9 h-9 rounded-xl bg-primary/5 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                                  <Package className="w-4 h-4 text-primary" />
+                                </div>
+                                <span className={cn(
+                                  "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white",
+                                  cfg.dot,
+                                )} />
+                              </div>
+
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <p className="text-[13px] font-semibold text-gray-800 leading-snug">
+                                    Пакет договоров
+                                  </p>
+                                  <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full font-medium">
+                                    {bundle.contracts.length} док.
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                  <span className={cn(
+                                    "inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold border",
+                                    cfg.color,
+                                  )}>
+                                    {cfg.icon}
+                                    {aggStatus === "signed"
+                                      ? "Все подписаны"
+                                      : signedCount > 0
+                                        ? `${signedCount}/${bundle.contracts.length} подписано`
+                                        : STATUS_LABELS[aggStatus]}
+                                  </span>
+                                  <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                                    <Clock className="w-2.5 h-2.5" />
+                                    {formatDateShort(bundle.createdAt)}
+                                  </span>
+                                  {bundle.sentByName && (
+                                    <span className="text-[10px] text-gray-400">· {bundle.sentByName}</span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <ChevronDown className="w-4 h-4 text-gray-300 group-hover:text-primary transition-colors shrink-0 mt-2.5 rotate-[-90deg]" />
+                            </div>
+                          </button>
+                        );
+                      }
+
+                      const c = item.contract;
                       const cfg = STATUS_CONFIG[c.status] ?? STATUS_CONFIG.sent;
                       return (
                         <div key={c.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
                           <div className="flex items-start gap-3 px-3.5 py-3">
-                            {/* Icon */}
                             <div className="relative shrink-0 mt-0.5">
                               <div className="w-9 h-9 rounded-xl bg-primary/5 flex items-center justify-center">
                                 <FileText className="w-4 h-4 text-primary" />
@@ -238,8 +466,6 @@ export function ContractsTab({ patientId }: ContractsTabProps) {
                                 cfg.dot,
                               )} />
                             </div>
-
-                            {/* Content */}
                             <div className="flex-1 min-w-0">
                               <p className="text-[13px] font-semibold text-gray-800 truncate leading-snug">
                                 {c.templateName}
@@ -267,8 +493,6 @@ export function ContractsTab({ patientId }: ContractsTabProps) {
                                 </p>
                               )}
                             </div>
-
-                            {/* Open link */}
                             <a
                               href={`/p/contract/${c.token}?preview=1`}
                               target="_blank"
@@ -290,6 +514,10 @@ export function ContractsTab({ patientId }: ContractsTabProps) {
 
         </div>
       </div>
+
+      {openBundle && (
+        <BundleModal bundle={openBundle} onClose={() => setOpenBundle(null)} />
+      )}
     </div>
   );
 }
