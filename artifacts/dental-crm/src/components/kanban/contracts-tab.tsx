@@ -229,7 +229,7 @@ export function ContractsTab({ patientId }: ContractsTabProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
-  const [historyOpen, setHistoryOpen] = useState(true);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [openBundle, setOpenBundle] = useState<BundleGroup | null>(null);
 
   const { data: contractsData, isLoading: contractsLoading } = useListPatientContracts(patientId);
