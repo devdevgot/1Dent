@@ -219,7 +219,6 @@ export function PlanItemDetailModal({
   const [attachments, setAttachments] = useState<string[]>(item.attachments ?? []);
   const [selectedDoctor, setSelectedDoctor] = useState<string>(item.assignedDoctorId ?? "");
   const [showDoctorPicker, setShowDoctorPicker] = useState(false);
-  const [durationMinutes, setDurationMinutes] = useState("");
   const [showCamera, setShowCamera] = useState(false);
   const [cameraFacing, setCameraFacing] = useState<"environment" | "user">("environment");
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -385,11 +384,6 @@ export function PlanItemDetailModal({
     onClose();
   }, [item.id, onCancel, onClose]);
 
-  const handleStartTimer = useCallback(() => {
-    const dMs = durationMinutes ? Number(durationMinutes) * 60 * 1000 : null;
-    onStart(item.id, dMs);
-  }, [item.id, onStart, durationMinutes]);
-
   const assignedUser = allUsers.find((u) => u.id === selectedDoctor);
 
   useEffect(() => {
@@ -523,39 +517,13 @@ export function PlanItemDetailModal({
                       </button>
                     </div>
                   ) : (
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-3 gap-2">
-                        {[
-                          { label: "15 мин", value: "15" },
-                          { label: "30 мин", value: "30" },
-                          { label: "45 мин", value: "45" },
-                          { label: "1 час",  value: "60" },
-                          { label: "1.5 ч",  value: "90" },
-                          { label: "2 часа", value: "120" },
-                        ].map(({ label, value }) => (
-                          <button
-                            key={value}
-                            onClick={() => setDurationMinutes(durationMinutes === value ? "" : value)}
-                            className={cn(
-                              "py-2 rounded-xl border text-[13px] font-semibold transition-colors",
-                              durationMinutes === value
-                                ? "bg-primary text-white border-primary"
-                                : "bg-white text-gray-600 border-gray-200 hover:border-primary/40 hover:bg-primary/5"
-                            )}
-                          >
-                            {label}
-                          </button>
-                        ))}
-                      </div>
-                      <button
-                        onClick={handleStartTimer}
-                        disabled={!durationMinutes}
-                        className="w-full h-10 rounded-xl bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 flex items-center justify-center gap-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        <Play className="w-4 h-4" />
-                        {durationMinutes ? `Начать на ${durationMinutes} мин` : "Выберите время"}
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => onStart(item.id, null)}
+                      className="w-full h-11 rounded-xl bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 active:bg-primary/80 flex items-center justify-center gap-2 transition-colors shadow-sm"
+                    >
+                      <Play className="w-4 h-4" />
+                      {/удал/i.test(item.title) ? "Начать удаление" : "Начать лечение"}
+                    </button>
                   )}
                 </div>
               )}
