@@ -528,21 +528,6 @@ export function PlanItemDetailModal({
                 </div>
               )}
 
-              {/* Direct action buttons (always visible for pending items) */}
-              {isPending && !isTimerRunning && (
-                <div>
-                  <button
-                    onClick={handleComplete}
-                    disabled={isCompletingThis}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-[13px] font-semibold transition-colors disabled:opacity-50"
-                  >
-                    {isCompletingThis
-                      ? <Loader2 className="w-4 h-4 animate-spin" />
-                      : <CheckCircle2 className="w-4 h-4" />}
-                    Выполнена
-                  </button>
-                </div>
-              )}
 
               {/* Doctor assignment */}
               <div>
