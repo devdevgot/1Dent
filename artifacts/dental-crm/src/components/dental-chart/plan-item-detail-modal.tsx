@@ -266,16 +266,8 @@ export function PlanItemDetailModal({
   const fileName = (path: string) => path.split("/").pop() ?? path;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[85vh] overflow-hidden">
-
-        {/* ── Drag handle (mobile) ── */}
-        <div className="flex justify-center pt-3 pb-1 sm:hidden shrink-0">
-          <div className="w-9 h-1 rounded-full bg-gray-200" />
-        </div>
+    <div className="fixed inset-0 z-50 flex flex-col bg-white">
+      <div className="bg-white w-full flex flex-col h-full overflow-hidden">
 
         {/* ── Header ── */}
         <div className="px-4 pt-3 pb-3 border-b border-gray-100 shrink-0">
