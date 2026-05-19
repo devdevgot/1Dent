@@ -2363,16 +2363,6 @@ export function PatientDetailPanel() {
                       : { label: "Отменён", cls: "bg-red-50 text-red-500 border-red-200" };
                   return (
                     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-                      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-gray-100 shrink-0">
-                        <button onClick={() => setTreatmentStep(1)} className="flex items-center gap-1.5 text-sm font-medium text-primary hover:opacity-70 transition-opacity">
-                          <ArrowLeft className="w-4 h-4" /> Карта зубов
-                        </button>
-                        <span className="text-gray-200">·</span>
-                        <span className="text-sm font-semibold text-gray-700">План лечения №{detailPlan.planNumber}</span>
-                        <div className="ml-auto">
-                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${badge.cls}`}>{badge.label}</span>
-                        </div>
-                      </div>
                       <div className="flex-1 overflow-y-auto custom-scrollbar">
                         <div className="px-4 py-4 space-y-3">
                           {/* Financial summary card */}
