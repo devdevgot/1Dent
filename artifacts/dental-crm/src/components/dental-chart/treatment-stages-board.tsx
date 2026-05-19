@@ -657,46 +657,46 @@ function SortableSection({
               </>
             )}
           </div>
-
-          {/* Процедур count — opens detail sheet */}
-          <div
-            role="button"
-            onClick={(e) => { e.stopPropagation(); onOpenDetail?.(); }}
-            className="flex items-center justify-between py-2.5 border-t border-gray-100 -mx-4 px-4 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 transition-colors cursor-pointer"
-          >
-            {planItems.filter((p) => p.status !== "cancelled").length > 0 ? (
-              <span className="text-[13px] text-gray-600 font-medium">
-                Процедур: {planItems.filter((p) => p.status !== "cancelled").length}
-              </span>
-            ) : earnedCount && earnedCount > 0 ? (
-              <span className="text-[13px] text-emerald-600 font-medium">
-                Выполнено ранее: {earnedCount}
-              </span>
-            ) : (
-              <span className="text-[13px] text-gray-400 font-medium">Процедур: 0</span>
-            )}
-            <ChevronRight className="w-4 h-4 text-gray-400" />
-          </div>
-
-          {/* Date + Doctor row */}
-          <div className="flex items-center justify-between py-2.5 border-t border-gray-100">
-            <div className="flex items-center gap-1.5 text-[12px] text-gray-400">
-              <Calendar className="w-3.5 h-3.5 shrink-0" />
-              <span>Дата не назначена</span>
-              {runningCount > 0 && (
-                <span className="flex items-center gap-1 text-[10px] font-semibold text-blue-500 ml-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                  {runningCount} идёт
-                </span>
-              )}
-            </div>
-            {(userRole === "owner" || userRole === "admin") && doctorName && (
-              <span className="text-[11px] text-gray-500 font-medium truncate max-w-[100px]">
-                {doctorName}
-              </span>
-            )}
-          </div>
         </button>
+
+        {/* Процедур count — outside <button> to avoid nesting interactive elements */}
+        <button
+          type="button"
+          onClick={() => onOpenDetail?.()}
+          className="w-full flex items-center justify-between py-2.5 border-t border-gray-100 px-4 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 transition-colors"
+        >
+          {planItems.filter((p) => p.status !== "cancelled").length > 0 ? (
+            <span className="text-[13px] text-gray-600 font-medium">
+              Процедур: {planItems.filter((p) => p.status !== "cancelled").length}
+            </span>
+          ) : earnedCount && earnedCount > 0 ? (
+            <span className="text-[13px] text-emerald-600 font-medium">
+              Выполнено ранее: {earnedCount}
+            </span>
+          ) : (
+            <span className="text-[13px] text-gray-400 font-medium">Процедур: 0</span>
+          )}
+          <ChevronRight className="w-4 h-4 text-gray-400" />
+        </button>
+
+        {/* Date + Doctor row — outside <button> */}
+        <div className="flex items-center justify-between py-2.5 border-t border-gray-100 px-4">
+          <div className="flex items-center gap-1.5 text-[12px] text-gray-400">
+            <Calendar className="w-3.5 h-3.5 shrink-0" />
+            <span>Дата не назначена</span>
+            {runningCount > 0 && (
+              <span className="flex items-center gap-1 text-[10px] font-semibold text-blue-500 ml-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                {runningCount} идёт
+              </span>
+            )}
+          </div>
+          {(userRole === "owner" || userRole === "admin") && doctorName && (
+            <span className="text-[11px] text-gray-500 font-medium truncate max-w-[100px]">
+              {doctorName}
+            </span>
+          )}
+        </div>
 
       </div>
     </div>
@@ -751,18 +751,18 @@ function CompletedStageSection({
               {sectionTotal > 0 ? formatPrice(sectionTotal) : "—"}
             </span>
           </div>
+        </button>
 
-          {/* Процедур count — opens detail sheet */}
-          <div
-            role="button"
-            onClick={(e) => { e.stopPropagation(); onOpenDetail?.(); }}
-            className="flex items-center justify-between py-2.5 border-t border-gray-100 -mx-4 px-4 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 transition-colors cursor-pointer"
-          >
-            <span className="text-[13px] text-gray-500 font-medium">
-              Процедур: {planItems.length}
-            </span>
-            <ChevronRight className="w-4 h-4 text-gray-300" />
-          </div>
+        {/* Процедур count — outside <button> to avoid nesting interactive elements */}
+        <button
+          type="button"
+          onClick={() => onOpenDetail?.()}
+          className="w-full flex items-center justify-between py-2.5 border-t border-gray-100 px-4 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 transition-colors"
+        >
+          <span className="text-[13px] text-gray-500 font-medium">
+            Процедур: {planItems.length}
+          </span>
+          <ChevronRight className="w-4 h-4 text-gray-300" />
         </button>
 
         {/* Expanded content */}
