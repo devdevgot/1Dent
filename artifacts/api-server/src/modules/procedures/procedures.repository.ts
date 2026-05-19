@@ -45,7 +45,11 @@ export class ProceduresRepository {
     return map;
   }
 
-  async list(clinicId: string, doctorId?: string): Promise<ProcedureWithDoctor[]> {
+  async list(clinicId: string, doctorId?: string, patientId?: string): Promise<ProcedureWithDoctor[]> {
+    const conditions = [eq(proceduresTable.clinicId, clinicId)];
+    if (doctorId) conditions.push(eq(proceduresTable.doctorId, doctorId));
+    if (patientId) conditions.push(eq(proceduresTable.patientId, patientId));
+
     const rows = await db
       .select({
         procedure: proceduresTable,
@@ -53,14 +57,7 @@ export class ProceduresRepository {
       })
       .from(proceduresTable)
       .leftJoin(usersTable, eq(proceduresTable.doctorId, usersTable.id))
-      .where(
-        doctorId
-          ? and(
-              eq(proceduresTable.clinicId, clinicId),
-              eq(proceduresTable.doctorId, doctorId),
-            )
-          : eq(proceduresTable.clinicId, clinicId),
-      )
+      .where(conditions.length === 1 ? conditions[0] : and(...conditions))
       .orderBy(desc(proceduresTable.createdAt));
 
     const procedures = rows.map((r) => ({ ...r.procedure, doctorName: r.doctorName }));

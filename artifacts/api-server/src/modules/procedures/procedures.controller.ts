@@ -144,7 +144,8 @@ async function assertDoctorOwnership(
 router.get("/", allRoles, async (req: Request, res: Response, next: NextFunction) => {
   const { clinicId, role, userId } = req.user!;
   const doctorId = role === "doctor" ? userId : undefined;
-  const procedures = await repo.list(clinicId, doctorId).catch(next);
+  const patientId = typeof req.query["patientId"] === "string" ? req.query["patientId"] : undefined;
+  const procedures = await repo.list(clinicId, doctorId, patientId).catch(next);
   if (procedures === undefined) return;
   res.json({ success: true, data: { procedures } });
 });

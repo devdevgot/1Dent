@@ -9,7 +9,6 @@ import {
   useListPatientTreatments,
   useCompleteToothTreatment,
   useUpdateTooth,
-  useListProcedures,
   useListUsers,
   useGetConditionPrices,
   useGetActiveTreatmentPlan,
@@ -34,7 +33,7 @@ import { DentalAiAnalysisPanel } from "./dental-ai-analysis-panel";
 import { ContractsTab } from "./contracts-tab";
 import { VoiceDiagnosisModal } from "@/components/dental-chart/voice-diagnosis-modal";
 import type { ToothRecord, ToothTreatment, ProcedureTemplate } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import {
   X, ChevronDown, ChevronRight, CheckCircle2, Clock, ArrowUpRight,
   Phone, User, Calendar, CreditCard, Stethoscope, Copy, Save, IdCard,
@@ -960,17 +959,28 @@ export function PatientDetailPanel() {
     },
   });
 
-  const { data: proceduresData } = useListProcedures();
-  const { data: usersData } = useListUsers();
+  // Scoped fetch — only this patient's procedures, not the whole clinic
+  const { data: proceduresData } = useQuery({
+    queryKey: ["procedures", "by-patient", selectedPatientId],
+    enabled: !!selectedPatientId,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const tok = localStorage.getItem("auth_token");
+      const resp = await fetch(`${getBaseUrl()}/p/api/procedures?patientId=${selectedPatientId}`, {
+        credentials: "include",
+        headers: tok ? { Authorization: `Bearer ${tok}` } : {},
+      });
+      if (!resp.ok) throw new Error("Failed to load procedures");
+      return resp.json() as Promise<{ success: boolean; data: { procedures: Array<Record<string, unknown>> } }>;
+    },
+  });
+  const { data: usersData } = useListUsers({ query: { staleTime: 5 * 60_000 } });
 
-  const allProcedures = useMemo(
-    () => (proceduresData?.data?.procedures ?? []),
+  const patientProcedures = useMemo(
+    () => (proceduresData?.data?.procedures ?? []) as Array<Record<string, unknown> & { patientId: string }>,
     [proceduresData],
   );
-  const patientProcedures = useMemo(
-    () => allProcedures.filter((p) => p.patientId === selectedPatientId),
-    [allProcedures, selectedPatientId],
-  );
+  const allProcedures = patientProcedures;
   const allUsers = usersData?.data?.users ?? [];
 
   const { data: teethData, refetch: refetchTeeth, isLoading: teethLoading } = useListTeeth(selectedPatientId ?? "", {
