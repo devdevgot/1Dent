@@ -1262,15 +1262,20 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, ac
         !isActive && !isBlocked && !isCompleted && "bg-white border-gray-100",
         !isEditMode && !isBlocked && "cursor-pointer active:bg-slate-50",
         !isEditMode && isBlocked && "cursor-pointer active:bg-amber-50",
-        isEditMode && isPending && !isBlocked && "touch-none cursor-grab active:cursor-grabbing",
       )}
-      {...(isEditMode && isPending && !isBlocked ? { ...attributes, ...listeners } : {})}
       onClick={() => { if (!isEditMode) onOpenModal(item.id); }}
     >
       {isEditMode && isPending && !isBlocked ? (
-        <span className="shrink-0 text-gray-300 p-0.5">
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          className="shrink-0 text-gray-400 hover:text-gray-600 p-1 -m-1 touch-none cursor-grab active:cursor-grabbing"
+          aria-label="Перетащить"
+          onClick={(e) => e.stopPropagation()}
+        >
           <GripVertical className="w-4 h-4" />
-        </span>
+        </button>
       ) : (
         <div className="shrink-0">
           {isCompleted
@@ -1458,8 +1463,10 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
   const [localItems, setLocalItems] = useState<TreatmentPlanItem[]>(() =>
     activePlan?.items.filter((i) => i.status !== "cancelled") ?? [],
   );
+  const pendingReorderCountRef = useRef(0);
 
   useEffect(() => {
+    if (pendingReorderCountRef.current > 0) return;
     setLocalItems(activePlan?.items.filter((i) => i.status !== "cancelled") ?? []);
   }, [activePlan?.items]);
 
@@ -1524,7 +1531,19 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
     },
   });
 
-  const reorderMutation = useUpdateTreatmentPlanItem();
+  const reorderMutation = useUpdateTreatmentPlanItem({
+    mutation: {
+      onSettled: () => {
+        pendingReorderCountRef.current = Math.max(0, pendingReorderCountRef.current - 1);
+        if (pendingReorderCountRef.current === 0) {
+          qc.invalidateQueries({ queryKey: getGetActiveTreatmentPlanQueryKey(patientId) });
+        }
+      },
+      onError: () => {
+        toast({ title: "Не удалось сохранить порядок", variant: "destructive" });
+      },
+    },
+  });
 
   // ── Edit handlers ─────────────────────────────────────────────────────────
 
@@ -1718,25 +1737,27 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
     (event: DragEndEvent) => {
       const { active, over } = event;
       if (!over || active.id === over.id) return;
-      setLocalItems((prev) => {
-        const oldIdx = prev.findIndex((i) => i.id === String(active.id));
-        const newIdx = prev.findIndex((i) => i.id === String(over.id));
-        if (oldIdx === -1 || newIdx === -1) return prev;
-        const next = arrayMove(prev, oldIdx, newIdx);
-        next.forEach((item, idx) => {
-          if ((item.sortOrder ?? 0) !== idx) {
-            reorderMutation.mutate({
-              id: patientId,
-              planId,
-              itemId: item.id,
-              data: { sortOrder: idx },
-            });
-          }
+      const oldIdx = localItems.findIndex((i) => i.id === String(active.id));
+      const newIdx = localItems.findIndex((i) => i.id === String(over.id));
+      if (oldIdx === -1 || newIdx === -1) return;
+      const next = arrayMove(localItems, oldIdx, newIdx);
+      setLocalItems(next);
+      // Send mutations only for items whose sortOrder actually changed
+      const toUpdate = next
+        .map((item, idx) => ({ item, idx }))
+        .filter(({ item, idx }) => (item.sortOrder ?? 0) !== idx);
+      if (toUpdate.length === 0) return;
+      pendingReorderCountRef.current += toUpdate.length;
+      for (const { item, idx } of toUpdate) {
+        reorderMutation.mutate({
+          id: patientId,
+          planId,
+          itemId: item.id,
+          data: { sortOrder: idx },
         });
-        return next;
-      });
+      }
     },
-    [patientId, planId, reorderMutation],
+    [patientId, planId, reorderMutation, localItems],
   );
 
   const toggleExpanded = useCallback((id: string) => {
