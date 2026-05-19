@@ -1461,14 +1461,19 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
   // ── Local items order (for optimistic DnD reordering) ─────────────────────
 
   const [localItems, setLocalItems] = useState<TreatmentPlanItem[]>(() =>
-    activePlan?.items.filter((i) => i.status !== "cancelled") ?? [],
+    activePlan?.items.filter((i) => i.status === "pending") ?? [],
   );
   const pendingReorderCountRef = useRef(0);
 
   useEffect(() => {
     if (pendingReorderCountRef.current > 0) return;
-    setLocalItems(activePlan?.items.filter((i) => i.status !== "cancelled") ?? []);
+    setLocalItems(activePlan?.items.filter((i) => i.status === "pending") ?? []);
   }, [activePlan?.items]);
+
+  const archivedItems = useMemo(
+    () => activePlan?.items.filter((i) => i.status === "completed" || i.status === "cancelled") ?? [],
+    [activePlan?.items],
+  );
 
   const planId = activePlan?.id ?? "";
 
@@ -1837,28 +1842,56 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
       )}
 
       {/* Flat item cards with DnD reordering */}
-      {localItems.length === 0 ? (
+      {localItems.length === 0 && archivedItems.length === 0 ? (
         <p className="text-sm text-gray-400 text-center py-6">Нет позиций в плане</p>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleItemDragEnd}>
-          <SortableContext items={localItems.map((i) => i.id)} strategy={verticalListSortingStrategy}>
-            <div className="space-y-2">
-              {localItems.map((item) => (
-                <SortablePlanItemCard
-                  key={item.id}
-                  item={item}
-                  isEditMode={isEditMode}
-                  completingId={completingId}
-                  cancellingId={cancellingId}
-                  activeTimerItemId={activeTimers.size > 0 ? (activeTimers.keys().next().value ?? null) : null}
-                  onComplete={handleComplete}
-                  onCancel={handleCancel}
-                  onOpenModal={setModalItemId}
-                />
-              ))}
+        <>
+          {localItems.length > 0 && (
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleItemDragEnd}>
+              <SortableContext items={localItems.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+                <div className="space-y-2">
+                  {localItems.map((item) => (
+                    <SortablePlanItemCard
+                      key={item.id}
+                      item={item}
+                      isEditMode={isEditMode}
+                      completingId={completingId}
+                      cancellingId={cancellingId}
+                      activeTimerItemId={activeTimers.size > 0 ? (activeTimers.keys().next().value ?? null) : null}
+                      onComplete={handleComplete}
+                      onCancel={handleCancel}
+                      onOpenModal={setModalItemId}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          )}
+
+          {/* ── Archive: completed + cancelled ── */}
+          {archivedItems.length > 0 && (
+            <div className="mt-4 border-t border-dashed border-gray-200 pt-3">
+              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1">
+                Архив ({archivedItems.length})
+              </p>
+              <div className="space-y-2">
+                {archivedItems.map((item) => (
+                  <SortablePlanItemCard
+                    key={item.id}
+                    item={item}
+                    isEditMode={false}
+                    completingId={completingId}
+                    cancellingId={cancellingId}
+                    activeTimerItemId={null}
+                    onComplete={handleComplete}
+                    onCancel={handleCancel}
+                    onOpenModal={setModalItemId}
+                  />
+                ))}
+              </div>
             </div>
-          </SortableContext>
-        </DndContext>
+          )}
+        </>
       )}
 
       {/* Stage detail sheet */}

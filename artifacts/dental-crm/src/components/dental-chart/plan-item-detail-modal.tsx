@@ -483,6 +483,32 @@ export function PlanItemDetailModal({
                 </div>
               )}
 
+              {/* Direct action buttons (always visible for pending items) */}
+              {isPending && !isTimerRunning && (
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={handleComplete}
+                    disabled={isCompletingThis}
+                    className="flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-[13px] font-semibold transition-colors disabled:opacity-50"
+                  >
+                    {isCompletingThis
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : <CheckCircle2 className="w-4 h-4" />}
+                    Выполнена
+                  </button>
+                  <button
+                    onClick={handleCancel}
+                    disabled={isCancellingThis}
+                    className="flex items-center justify-center gap-2 py-3 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 text-red-500 text-[13px] font-semibold transition-colors disabled:opacity-50"
+                  >
+                    {isCancellingThis
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : <Ban className="w-4 h-4" />}
+                    Отменить
+                  </button>
+                </div>
+              )}
+
               {/* Doctor assignment */}
               <div>
                 <p className="text-[12px] font-semibold text-gray-500 uppercase tracking-wide mb-2">Врач</p>
