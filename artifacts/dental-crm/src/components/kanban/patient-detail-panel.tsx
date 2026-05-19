@@ -1457,13 +1457,22 @@ export function PatientDetailPanel() {
     const entries: DiagnosisSummaryEntry[] = [];
     for (const [fdi, condition] of diagnosisMap.entries()) {
       const priceEntry = conditionPricesMap[condition];
-      // Treated teeth are informational only — no charge
-      const price = condition === "treated" ? 0 : (priceEntry?.price ?? 0);
       const mkb10 = priceEntry?.mkb10 ?? "";
+      // Treated teeth are informational only — no charge
+      if (condition === "treated") {
+        entries.push({ fdi, condition, price: 0, mkb10 });
+        continue;
+      }
+      // If doctor picked specific services for this tooth — use their total price.
+      // Otherwise fall back to the condition-level price from the price table.
+      const services = diagnosisServicesMap.get(fdi);
+      const price = services && services.length > 0
+        ? services.reduce((s, svc) => s + (svc.defaultPrice ?? 0), 0)
+        : (priceEntry?.price ?? 0);
       entries.push({ fdi, condition, price, mkb10 });
     }
     return entries.sort((a, b) => a.fdi - b.fdi);
-  }, [diagnosisMap, conditionPricesMap]);
+  }, [diagnosisMap, conditionPricesMap, diagnosisServicesMap]);
 
   const diagnosisTotalCost = useMemo(() => {
     let total = 0;
