@@ -2401,11 +2401,6 @@ export function PatientDetailPanel() {
                               </div>
                             </div>
                           </div>
-                          {isActive && activePlan && activePlan.status === "draft" && (
-                            <Button variant="outline" className="w-full gap-2 border-blue-200 text-blue-700 hover:bg-blue-50"
-                              onClick={() => approvePlanMutation.mutate({ id: selectedPatientId, planId: activePlan.id })} disabled={approvePlanMutation.isPending}
-                            ><BadgeCheck className="w-4 h-4" /> Согласовать с пациентом</Button>
-                          )}
                           {isActive && activePlan && (activePlan.status === "completed" || activePlan.status === "in_progress") && (
                             needsRediagnosis ? (
                               <Button variant="outline" className="w-full gap-2 border-amber-200 text-amber-700 hover:bg-amber-50" onClick={() => { setPlanDetailId(null); setTreatmentStep(1); setIsDiagnosisMode(true); }}>
