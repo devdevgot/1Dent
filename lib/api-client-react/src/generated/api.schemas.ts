@@ -1247,6 +1247,9 @@ export interface TreatmentPlanItem {
   status: TreatmentPlanItemStatus;
   sortOrder: number;
   procedureId?: string | null;
+  notes?: string | null;
+  attachments?: string[] | null;
+  assignedDoctorId?: string | null;
   createdAt: string;
 }
 
@@ -1347,6 +1350,9 @@ export interface UpdateTreatmentPlanItemRequest {
   /** @minimum 0 */
   sortOrder?: number;
   status?: UpdateTreatmentPlanItemRequestStatus;
+  notes?: string | null;
+  attachments?: string[];
+  assignedDoctorId?: string | null;
 }
 
 export type GetInventoryConsumptionParams = {

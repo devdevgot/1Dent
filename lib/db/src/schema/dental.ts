@@ -205,6 +205,9 @@ export const treatmentPlanItemsTable = pgTable("treatment_plan_items", {
   status: treatmentPlanItemStatusEnum("status").default("pending").notNull(),
   sortOrder: integer("sort_order").notNull().default(0),
   procedureId: text("procedure_id"),
+  notes: text("notes"),
+  attachments: json("attachments").$type<string[]>().default([]),
+  assignedDoctorId: text("assigned_doctor_id").references(() => usersTable.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

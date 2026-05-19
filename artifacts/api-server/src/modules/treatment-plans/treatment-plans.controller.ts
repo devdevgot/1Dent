@@ -38,6 +38,9 @@ const UpdateItemSchema = z.object({
   price: z.number().min(0).optional(),
   sortOrder: z.number().int().min(0).optional(),
   status: z.literal("cancelled").optional(),
+  notes: z.string().nullable().optional(),
+  attachments: z.array(z.string()).optional(),
+  assignedDoctorId: z.string().nullable().optional(),
 });
 
 const AddItemSchema = z.object({

@@ -20,5 +20,8 @@ export interface TreatmentPlanItem {
   status: TreatmentPlanItemStatus;
   sortOrder: number;
   procedureId?: string | null;
+  notes?: string | null;
+  attachments?: string[] | null;
+  assignedDoctorId?: string | null;
   createdAt: Date;
 }

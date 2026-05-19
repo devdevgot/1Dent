@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { PlanItemDetailModal } from "./plan-item-detail-modal";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useListUsers } from "@workspace/api-client-react";
 import {
@@ -1223,9 +1224,10 @@ interface SortablePlanItemCardProps {
   cancellingId: string | null;
   onComplete: (id: string) => void;
   onCancel: (id: string) => void;
+  onOpenModal: (id: string) => void;
 }
 
-function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, onComplete, onCancel }: SortablePlanItemCardProps) {
+function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, onComplete, onCancel, onOpenModal }: SortablePlanItemCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
     disabled: !isEditMode || item.status !== "pending",
@@ -1234,7 +1236,6 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, on
 
   const isPending = item.status === "pending";
   const isCompleted = item.status === "completed";
-  const isCompletingThis = completingId === item.id;
   const isCancellingThis = cancellingId === item.id;
 
   return (
@@ -1245,8 +1246,9 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, on
         "flex items-center gap-2 px-3 py-2.5 bg-white border rounded-xl transition-all select-none",
         isDragging ? "shadow-xl ring-2 ring-primary/20 z-50 opacity-95 scale-[1.02]" : "shadow-sm",
         isCompleted && "bg-emerald-50/60 border-emerald-100",
-        isPending && !isEditMode && "active:bg-slate-50",
+        !isEditMode && "cursor-pointer active:bg-slate-50",
       )}
+      onClick={() => { if (!isEditMode) onOpenModal(item.id); }}
     >
       {isEditMode && isPending ? (
         <button
@@ -1254,22 +1256,19 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, on
           {...listeners}
           className="shrink-0 text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing touch-none p-0.5"
           tabIndex={-1}
+          onClick={(e) => e.stopPropagation()}
         >
           <GripVertical className="w-4 h-4" />
         </button>
       ) : (
-        <button
-          onClick={() => isPending && !isCompletingThis && !isCancellingThis && onComplete(item.id)}
-          disabled={!isPending || isCompletingThis || isCancellingThis}
-          className="shrink-0 disabled:cursor-not-allowed"
-        >
-          {isCompletingThis
-            ? <Loader2 className="w-5 h-5 text-primary animate-spin" />
-            : isCompleted
-              ? <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-              : <Circle className="w-5 h-5 text-gray-200 hover:text-primary/40 transition-colors" />
+        <div className="shrink-0">
+          {isCompleted
+            ? <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+            : item.status === "cancelled"
+              ? <Ban className="w-5 h-5 text-gray-300" />
+              : <Circle className="w-5 h-5 text-gray-200" />
           }
-        </button>
+        </div>
       )}
 
       <div className="flex-1 min-w-0">
@@ -1294,7 +1293,7 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, on
 
         {isEditMode && isPending && (
           <button
-            onClick={() => !isCancellingThis && onCancel(item.id)}
+            onClick={(e) => { e.stopPropagation(); if (!isCancellingThis) onCancel(item.id); }}
             disabled={isCancellingThis}
             className="w-5 h-5 flex items-center justify-center rounded-full text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors disabled:opacity-50"
           >
@@ -1428,6 +1427,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
 
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [modalItemId, setModalItemId] = useState<string | null>(null);
 
   // ── Edit mode state ───────────────────────────────────────────────────────
 
@@ -1813,6 +1813,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
                   cancellingId={cancellingId}
                   onComplete={handleComplete}
                   onCancel={handleCancel}
+                  onOpenModal={setModalItemId}
                 />
               ))}
             </div>
@@ -1840,7 +1841,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
         );
       })()}
 
-      {/* Completion prompt modal */}
+      {/* Completion prompt modal (timer expiry) */}
       {(() => {
         const promptItem = completionPromptItemId
           ? activePlan?.items.find((i) => i.id === completionPromptItemId)
@@ -1877,6 +1878,32 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
               </div>
             </DialogContent>
           </Dialog>
+        );
+      })()}
+
+      {/* Plan item detail modal */}
+      {modalItemId && (() => {
+        const modalItem = localItems.find((i) => i.id === modalItemId)
+          ?? activePlan?.items.find((i) => i.id === modalItemId)
+          ?? null;
+        if (!modalItem || !activePlan) return null;
+        return (
+          <PlanItemDetailModal
+            item={modalItem}
+            patientId={patientId}
+            planId={activePlan.id}
+            allUsers={allUsers as { id: string; name: string; role?: string }[]}
+            timerStart={activeTimers.get(modalItemId)}
+            timerDuration={timerDurations.get(modalItemId)}
+            tick={tick}
+            onStart={handleStart}
+            onStopTimer={handleStopTimer}
+            onComplete={handleComplete}
+            onCancel={handleCancel}
+            completingId={completingId}
+            cancellingId={cancellingId}
+            onClose={() => setModalItemId(null)}
+          />
         );
       })()}
     </div>
