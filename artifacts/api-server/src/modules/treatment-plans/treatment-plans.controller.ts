@@ -5,11 +5,13 @@ import { NotFoundError, ValidationError } from "../../shared/errors";
 import { TreatmentPlansRepository, PlanLockedError, ItemAlreadyCompletedError } from "./treatment-plans.repository";
 import { PatientsRepository } from "../patients/patients.repository";
 import { ClinicPricesRepository } from "../clinic/clinic-prices.repository";
+import { DentalRepository } from "../dental/dental.repository";
 
 const router = Router({ mergeParams: true });
 const repo = new TreatmentPlansRepository();
 const patientsRepo = new PatientsRepository();
 const pricesRepo = new ClinicPricesRepository();
+const dentalRepo = new DentalRepository();
 
 const docRoles = roleGuard("owner", "admin", "doctor");
 
