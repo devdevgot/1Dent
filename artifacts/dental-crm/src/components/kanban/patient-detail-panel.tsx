@@ -40,7 +40,7 @@ import {
   Phone, User, Calendar, CreditCard, Stethoscope, Copy, Save, IdCard,
   ClipboardList, Plus, BadgeCheck, Circle, ArrowLeft, Square, CheckSquare, Loader2,
   Scissors, Crown, Wrench, Baby, Sparkles, Activity, ScanLine, Paintbrush, Search, GripVertical, Mic,
-  FileText, Ban, Download,
+  FileText, Ban,
 } from "lucide-react";
 import { calculateAge, formatDateOfBirth, maskIIN } from "@workspace/api-zod";
 import { Button } from "@/components/ui/button";
@@ -1487,42 +1487,6 @@ export function PatientDetailPanel() {
 
   const doctorUser = patient?.doctorId ? allUsers.find((u) => u.id === patient.doctorId) : null;
 
-  const [pdfExporting, setPdfExporting] = useState(false);
-  const handleExportPDF = useCallback(async () => {
-    if (!patient || !activePlan) return;
-    setPdfExporting(true);
-    try {
-      const [{ pdf }, { TreatmentPlanPDF }] = await Promise.all([
-        import("@react-pdf/renderer"),
-        import("@/components/pdf/treatment-plan-pdf"),
-      ]);
-      const teethArray = Array.from(teethMap.values());
-      const doctorName = doctorUser ? doctorUser.name : undefined;
-      const blob = await pdf(
-        <TreatmentPlanPDF
-          patient={patient}
-          plan={activePlan}
-          teeth={teethArray}
-          doctorName={doctorName}
-          clinicName="1Dent"
-        />
-      ).toBlob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `1Dent_Plan_${patient.name.replace(/\s+/g, "_")}_${String(activePlan.planNumber).padStart(4, "0")}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      console.error("PDF export error", e);
-      toast({ title: "Ошибка", description: "Не удалось создать PDF", variant: "destructive" });
-    } finally {
-      setPdfExporting(false);
-    }
-  }, [patient, activePlan, teethMap, doctorUser, toast]);
-
   const PAYMENT_LABELS: Record<string, string> = {
     cash: "Наличные", kaspi_qr: "Kaspi QR",
     kaspi_transfer: "Kaspi перевод", kaspi_red: "Kaspi Рассрочка",
@@ -2315,18 +2279,6 @@ export function PatientDetailPanel() {
                           >
                             {createPlanMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                             {pastPlans.length > 0 ? `Создать план ${allPlans.length + 1}` : "Составить план из диагностики"}
-                          </button>
-                        )}
-                        {activePlan && (
-                          <button
-                            onClick={handleExportPDF}
-                            disabled={pdfExporting}
-                            className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-dashed border-primary/40 text-primary text-[13px] font-semibold hover:bg-primary/5 active:bg-primary/10 transition-colors disabled:opacity-60"
-                          >
-                            {pdfExporting
-                              ? <Loader2 className="w-4 h-4 animate-spin" />
-                              : <Download className="w-4 h-4" />}
-                            {pdfExporting ? "Формируется PDF..." : "Скачать план лечения (PDF)"}
                           </button>
                         )}
                         {pastPlans.length > 0 && (
