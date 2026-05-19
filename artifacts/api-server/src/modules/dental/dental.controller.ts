@@ -142,6 +142,87 @@ router.get("/ai-analysis", readRoles, async (req: Request, res: Response, next: 
   res.json({ success: true, data: analysis ?? null });
 });
 
+// GET /patients/:id/teeth/:toothFdi/tooth-ai-analysis
+// Generates a focused per-tooth AI analysis on demand.
+const TOOTH_CONDITION_LABELS: Record<string, string> = {
+  healthy: "Здоров",
+  cavity: "Кариес",
+  treated: "Пролечен",
+  crown: "Коронка",
+  root_canal: "Корневой канал",
+  implant: "Имплант",
+  missing: "Отсутствует",
+  extraction_needed: "Требует удаления",
+};
+
+router.get("/:toothFdi/tooth-ai-analysis", readRoles, async (req: Request, res: Response, next: NextFunction) => {
+  const patientId = String(req.params["id"]);
+  const toothFdi = parseInt(String(req.params["toothFdi"]), 10);
+
+  if (isNaN(toothFdi) || toothFdi < 11 || toothFdi > 48) {
+    return next(new ValidationError("toothFdi must be a valid FDI tooth number (11-48)"));
+  }
+
+  const ok = await assertPatientAccess(patientId, req.user!.clinicId, next).catch(next);
+  if (!ok) return;
+
+  const teeth = await repo.listTeeth(patientId, req.user!.clinicId).catch(next);
+  if (!teeth) return;
+
+  const tooth = teeth.find((t) => t.toothFdi === toothFdi);
+  if (!tooth) {
+    res.set("Cache-Control", "no-store");
+    return res.json({ success: true, data: { analysis: null } });
+  }
+
+  const condLabel = TOOTH_CONDITION_LABELS[tooth.condition] ?? tooth.condition;
+  const planTitle = typeof req.query["planTitle"] === "string" ? req.query["planTitle"] : null;
+
+  const contextLines: string[] = [`Зуб ${toothFdi} (система FDI): ${condLabel}`];
+  if (tooth.notes) contextLines.push(`Заметки врача: ${tooth.notes}`);
+  if (planTitle) contextLines.push(`Запланированная процедура: ${planTitle}`);
+
+  const userPrompt = contextLines.join("\n");
+
+  try {
+    const response = await openrouter.chat.completions.create({
+      model: DEEPSEEK_MODEL,
+      max_tokens: 600,
+      temperature: 0.3,
+      messages: [
+        {
+          role: "system",
+          content: `Ты — опытный стоматолог. Анализируй состояние конкретного зуба и давай краткие клинические рекомендации на русском языке.
+Структурируй ответ строго по этим разделам (используй заголовки ## ):
+
+## Диагноз
+[1-2 предложения о текущем состоянии и возможных рисках]
+
+## Рекомендуемое лечение
+[Конкретные шаги, нумерованный список, максимум 4 пункта]
+
+## Прогноз
+[1 предложение о прогнозе при своевременном лечении]
+
+Пиши кратко и профессионально. Не используй жирный текст (**) и курсив (*).`,
+        },
+        { role: "user", content: userPrompt },
+      ],
+    });
+
+    let analysis = response.choices[0]?.message?.content ?? null;
+    if (analysis) {
+      analysis = analysis.replace(/\*\*(.+?)\*\*/g, "$1").replace(/\*(.+?)\*/g, "$1");
+    }
+
+    res.set("Cache-Control", "no-store");
+    res.json({ success: true, data: { analysis } });
+  } catch (err) {
+    logger.error({ err, toothFdi, patientId }, "[DentalAI] Per-tooth analysis failed");
+    next(err);
+  }
+});
+
 // POST /patients/:id/teeth/trigger-ai-analysis
 // Called once after a full diagnosis save to kick off a fresh AI analysis.
 // Deletes the stale result so the frontend polls from a clean state.

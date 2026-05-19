@@ -7,7 +7,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  useGetDentalAiAnalysis,
   useCompleteTreatmentPlanItem,
   useUpdateTreatmentPlanItem,
   getGetActiveTreatmentPlanQueryKey,
@@ -44,17 +43,96 @@ function formatTimer(ms: number): string {
   return `${String(m).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 }
 
-function AiToothSection({ patientId, toothFdi }: { patientId: string; toothFdi?: number | null }) {
-  const { data, isLoading, isFetching } = useGetDentalAiAnalysis(patientId, {
-    query: { staleTime: 5 * 60 * 1000 },
-  });
-  const analysis = data?.data ?? null;
+interface ToothAiSection {
+  title: string;
+  lines: string[];
+}
 
-  if (isLoading) {
+function parseToothAnalysis(text: string): ToothAiSection[] {
+  const sections: ToothAiSection[] = [];
+  let current: ToothAiSection | null = null;
+  for (const raw of text.split("\n")) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (line.startsWith("## ")) {
+      if (current) sections.push(current);
+      current = { title: line.slice(3).trim(), lines: [] };
+    } else if (current) {
+      const clean = line.replace(/^[-•*]\s*/, "").replace(/^\d+\.\s*/, "").trim();
+      if (clean) current.lines.push(clean);
+    }
+  }
+  if (current) sections.push(current);
+  return sections;
+}
+
+function AiToothSection({
+  patientId,
+  toothFdi,
+  planTitle,
+}: {
+  patientId: string;
+  toothFdi?: number | null;
+  planTitle?: string;
+}) {
+  const [analysis, setAnalysis] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fetchedAt, setFetchedAt] = useState<Date | null>(null);
+
+  const fetchAnalysis = useCallback(async () => {
+    if (!toothFdi) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const tok = localStorage.getItem("auth_token");
+      const qs = planTitle ? `?planTitle=${encodeURIComponent(planTitle)}` : "";
+      const res = await fetch(`/api/patients/${patientId}/teeth/${toothFdi}/tooth-ai-analysis${qs}`, {
+        headers: { Authorization: `Bearer ${tok ?? ""}` },
+      });
+      if (!res.ok) throw new Error(`${res.status}`);
+      const json = (await res.json()) as { success: boolean; data: { analysis: string | null } };
+      setAnalysis(json.data?.analysis ?? null);
+      setFetchedAt(new Date());
+    } catch {
+      setError("Не удалось получить анализ. Попробуйте ещё раз.");
+    } finally {
+      setLoading(false);
+    }
+  }, [patientId, toothFdi, planTitle]);
+
+  useEffect(() => {
+    void fetchAnalysis();
+  }, [fetchAnalysis]);
+
+  if (!toothFdi) return null;
+
+  if (loading) {
     return (
-      <div className="flex items-center gap-2 py-2 text-[12px] text-gray-400">
-        <div className="w-3.5 h-3.5 border-2 border-primary/30 border-t-primary rounded-full animate-spin shrink-0" />
-        Загружаем анализ…
+      <div className="rounded-xl border border-primary/10 bg-primary/5 p-3 space-y-2">
+        <div className="flex items-center gap-2 text-[12px] text-primary/70">
+          <div className="w-3.5 h-3.5 border-2 border-primary/30 border-t-primary rounded-full animate-spin shrink-0" />
+          ИИ анализирует зуб {toothFdi}…
+        </div>
+        <div className="space-y-1.5">
+          {[60, 80, 50].map((w, i) => (
+            <div key={i} className="h-2.5 bg-primary/10 rounded animate-pulse" style={{ width: `${w}%` }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-xl border border-red-100 bg-red-50/60 px-3 py-2.5 flex items-start gap-2">
+        <span className="text-red-400 text-[12px] flex-1">{error}</span>
+        <button
+          onClick={() => void fetchAnalysis()}
+          className="text-[11px] font-medium text-red-500 hover:text-red-700 underline shrink-0"
+        >
+          Повторить
+        </button>
       </div>
     );
   }
@@ -62,57 +140,55 @@ function AiToothSection({ patientId, toothFdi }: { patientId: string; toothFdi?:
   if (!analysis) {
     return (
       <p className="text-[12px] text-gray-400 py-1">
-        Проведите диагностику для получения ИИ-анализа
+        Проведите диагностику зуба для получения анализа
       </p>
     );
   }
 
-  // Extract only the bullet points from the section matching this tooth's FDI
-  const fdiStr = toothFdi != null ? String(toothFdi) : null;
-  const lines = analysis.reportText.split("\n");
-  const bullets: string[] = [];
-  let inToothSection = false;
+  const sections = parseToothAnalysis(analysis);
 
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    if (trimmed.startsWith("## ")) {
-      const heading = trimmed.slice(3);
-      inToothSection = fdiStr != null && heading.includes(fdiStr);
-      continue;
-    }
-    if (inToothSection) {
-      const text = trimmed.replace(/^[-•*]\s*/, "").replace(/^\d+\.\s*/, "").trim();
-      if (text) bullets.push(text);
-    }
-  }
-
-  if (bullets.length === 0) {
-    return (
-      <p className="text-[12px] text-gray-400 py-1">
-        {fdiStr ? `Данных по зубу №${fdiStr} не найдено в анализе` : "Нет данных"}
-      </p>
-    );
-  }
-
-  const updatedAt = new Date(analysis.updatedAt);
   return (
-    <div className="bg-primary/5 border border-primary/10 rounded-xl p-3 space-y-1.5">
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-[10px] font-semibold text-primary uppercase tracking-wide">
-          Зуб №{fdiStr}
-        </span>
-        <span className="text-[10px] text-gray-400 flex items-center gap-1">
-          {isFetching && <RefreshCw className="w-2.5 h-2.5 animate-spin" />}
-          {updatedAt.toLocaleDateString("ru", { day: "2-digit", month: "short" })}
-        </span>
+    <div className="rounded-xl border border-primary/10 bg-primary/5 overflow-hidden">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-primary/10">
+        <div className="flex items-center gap-1.5">
+          <Brain className="w-3.5 h-3.5 text-primary" />
+          <span className="text-[11px] font-bold text-primary uppercase tracking-wide">
+            ИИ-анализ · Зуб {toothFdi}
+          </span>
+        </div>
+        <button
+          onClick={() => void fetchAnalysis()}
+          className="p-1 rounded-md hover:bg-primary/10 transition-colors"
+          title="Обновить анализ"
+        >
+          <RefreshCw className="w-3 h-3 text-primary/60" />
+        </button>
       </div>
-      {bullets.map((b, i) => (
-        <p key={i} className="text-[12px] text-gray-700 leading-snug flex gap-1.5">
-          <span className="text-primary shrink-0 mt-0.5">•</span>
-          {b}
-        </p>
-      ))}
+
+      <div className="px-3 py-2.5 space-y-2.5">
+        {sections.length === 0 ? (
+          <p className="text-[12px] text-gray-500">Анализ недоступен</p>
+        ) : (
+          sections.map((sec) => (
+            <div key={sec.title}>
+              <p className="text-[10px] font-bold text-primary/80 uppercase tracking-wide mb-1">
+                {sec.title}
+              </p>
+              {sec.lines.map((line, i) => (
+                <p key={i} className="text-[12px] text-gray-700 leading-snug flex gap-1.5 mb-0.5">
+                  <span className="text-primary/60 shrink-0 mt-0.5">•</span>
+                  {line}
+                </p>
+              ))}
+            </div>
+          ))
+        )}
+        {fetchedAt && (
+          <p className="text-[10px] text-gray-400 pt-0.5">
+            Обновлено: {fetchedAt.toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
@@ -602,7 +678,7 @@ export function PlanItemDetailModal({
                   )}
                 </div>
               </div>
-              <AiToothSection patientId={patientId} toothFdi={item.toothFdi} />
+              <AiToothSection patientId={patientId} toothFdi={item.toothFdi} planTitle={item.title} />
             </div>
           )}
 
