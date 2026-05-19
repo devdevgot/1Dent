@@ -1247,19 +1247,15 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, on
         isDragging ? "shadow-xl ring-2 ring-primary/20 z-50 opacity-95 scale-[1.02]" : "shadow-sm",
         isCompleted && "bg-emerald-50/60 border-emerald-100",
         !isEditMode && "cursor-pointer active:bg-slate-50",
+        isEditMode && isPending && "touch-none cursor-grab active:cursor-grabbing",
       )}
+      {...(isEditMode && isPending ? { ...attributes, ...listeners } : {})}
       onClick={() => { if (!isEditMode) onOpenModal(item.id); }}
     >
       {isEditMode && isPending ? (
-        <button
-          {...attributes}
-          {...listeners}
-          className="shrink-0 text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing touch-none p-0.5"
-          tabIndex={-1}
-          onClick={(e) => e.stopPropagation()}
-        >
+        <span className="shrink-0 text-gray-300 p-0.5">
           <GripVertical className="w-4 h-4" />
-        </button>
+        </span>
       ) : (
         <div className="shrink-0">
           {isCompleted
@@ -1678,7 +1674,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 400, tolerance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
   );
 
   const handleDragEnd = useCallback(
