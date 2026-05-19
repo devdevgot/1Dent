@@ -51,63 +51,67 @@ function AiToothSection({ patientId, toothFdi }: { patientId: string; toothFdi?:
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="w-6 h-6 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+      <div className="flex items-center gap-2 py-2 text-[12px] text-gray-400">
+        <div className="w-3.5 h-3.5 border-2 border-primary/30 border-t-primary rounded-full animate-spin shrink-0" />
+        Загружаем анализ…
       </div>
     );
   }
 
   if (!analysis) {
     return (
-      <div className="flex flex-col items-center gap-3 py-8 text-center">
-        <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-          <Brain className="w-6 h-6 text-primary" />
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-gray-800">Анализ недоступен</p>
-          <p className="text-xs text-gray-400 mt-1">Проведите диагностику для получения ИИ-анализа</p>
-        </div>
-        {isFetching && <div className="flex items-center gap-1.5 text-xs text-primary animate-pulse"><RefreshCw className="w-3 h-3 animate-spin" />Загружаем…</div>}
-      </div>
+      <p className="text-[12px] text-gray-400 py-1">
+        Проведите диагностику для получения ИИ-анализа
+      </p>
     );
   }
 
-  const lines = analysis.reportText.split("\n");
-  const elements: JSX.Element[] = [];
-  let key = 0;
-  let inRelevantSection = false;
+  // Extract only the bullet points from the section matching this tooth's FDI
   const fdiStr = toothFdi != null ? String(toothFdi) : null;
+  const lines = analysis.reportText.split("\n");
+  const bullets: string[] = [];
+  let inToothSection = false;
 
   for (const line of lines) {
     const trimmed = line.trim();
-    if (!trimmed) { elements.push(<div key={key++} className="h-1.5" />); continue; }
+    if (!trimmed) continue;
     if (trimmed.startsWith("## ")) {
       const heading = trimmed.slice(3);
-      inRelevantSection = !fdiStr || heading.includes(fdiStr) || heading.toLowerCase().includes("рекоменд") || heading.toLowerCase().includes("вывод");
-      elements.push(
-        <h3 key={key++} className={cn("text-[12px] font-bold mt-3 mb-1 flex items-center gap-1.5", inRelevantSection ? "text-primary" : "text-gray-500")}>
-          <span className={cn("w-1 h-3.5 rounded-full inline-block shrink-0", inRelevantSection ? "bg-primary" : "bg-gray-300")} />
-          {heading}
-        </h3>,
-      );
-    } else if (/^\d+\./.test(trimmed) || trimmed.startsWith("- ") || trimmed.startsWith("• ")) {
-      elements.push(<p key={key++} className="text-[12px] text-gray-700 pl-3">{trimmed.replace(/^[-•]\s/, "• ")}</p>);
-    } else {
-      elements.push(<p key={key++} className="text-[12px] text-gray-700 leading-relaxed">{trimmed}</p>);
+      inToothSection = fdiStr != null && heading.includes(fdiStr);
+      continue;
     }
+    if (inToothSection) {
+      const text = trimmed.replace(/^[-•*]\s*/, "").replace(/^\d+\.\s*/, "").trim();
+      if (text) bullets.push(text);
+    }
+  }
+
+  if (bullets.length === 0) {
+    return (
+      <p className="text-[12px] text-gray-400 py-1">
+        {fdiStr ? `Данных по зубу №${fdiStr} не найдено в анализе` : "Нет данных"}
+      </p>
+    );
   }
 
   const updatedAt = new Date(analysis.updatedAt);
   return (
-    <div className="space-y-0.5">
-      <div className="flex items-center gap-1.5 mb-3">
-        <Clock className="w-3 h-3 text-gray-400" />
-        <span className="text-[11px] text-gray-400">
-          Обновлено {updatedAt.toLocaleDateString("ru", { day: "2-digit", month: "short" })} {updatedAt.toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}
+    <div className="bg-primary/5 border border-primary/10 rounded-xl p-3 space-y-1.5">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[10px] font-semibold text-primary uppercase tracking-wide">
+          Зуб №{fdiStr}
         </span>
-        {isFetching && <RefreshCw className="w-3 h-3 text-primary animate-spin ml-1" />}
+        <span className="text-[10px] text-gray-400 flex items-center gap-1">
+          {isFetching && <RefreshCw className="w-2.5 h-2.5 animate-spin" />}
+          {updatedAt.toLocaleDateString("ru", { day: "2-digit", month: "short" })}
+        </span>
       </div>
-      <div className="bg-slate-50 rounded-xl p-3 space-y-0.5">{elements}</div>
+      {bullets.map((b, i) => (
+        <p key={i} className="text-[12px] text-gray-700 leading-snug flex gap-1.5">
+          <span className="text-primary shrink-0 mt-0.5">•</span>
+          {b}
+        </p>
+      ))}
     </div>
   );
 }
