@@ -335,19 +335,20 @@ export function PlanItemDetailModal({
   const fileName = (path: string) => path.split("/").pop() ?? path;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center animate-in-fade">
+    <div className="fixed inset-0 z-50 flex items-end justify-center animate-in-fade">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
       />
-      {/* Panel */}
+      {/* Panel — takes ~75% of screen height, anchored near bottom */}
       <div
-        className="relative bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[85vh] overflow-hidden animate-in-slide"
+        className="relative bg-white w-full sm:max-w-md rounded-t-3xl shadow-2xl flex flex-col overflow-hidden animate-in-slide"
+        style={{ height: "75dvh" }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Drag handle (mobile) */}
-        <div className="flex justify-center pt-3 pb-1 sm:hidden shrink-0">
+        {/* Drag handle */}
+        <div className="flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-10 h-1 rounded-full bg-gray-200" />
         </div>
 
