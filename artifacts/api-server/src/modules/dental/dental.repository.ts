@@ -53,6 +53,8 @@ export class DentalRepository {
   ): Promise<ToothRecord> {
     const existing = await this.findTooth(data.patientId, data.clinicId, data.toothFdi);
     if (existing) {
+      // Clear per-tooth AI cache when condition changes
+      const conditionChanged = existing.condition !== data.condition;
       const [updated] = await db
         .update(toothRecordsTable)
         .set({
@@ -60,6 +62,7 @@ export class DentalRepository {
           notes: data.notes,
           updatedBy: data.updatedBy,
           updatedAt: new Date(),
+          ...(conditionChanged ? { aiAnalysis: null, aiAnalysisCondition: null, aiAnalysisPlanTitle: null } : {}),
         })
         .where(eq(toothRecordsTable.id, existing.id))
         .returning();
@@ -70,6 +73,18 @@ export class DentalRepository {
       .values(data)
       .returning();
     return created!;
+  }
+
+  async saveToothAiAnalysis(
+    id: string,
+    analysis: string,
+    condition: string,
+    planTitle: string | null,
+  ): Promise<void> {
+    await db
+      .update(toothRecordsTable)
+      .set({ aiAnalysis: analysis, aiAnalysisCondition: condition, aiAnalysisPlanTitle: planTitle })
+      .where(eq(toothRecordsTable.id, id));
   }
 
   async listAllTreatments(

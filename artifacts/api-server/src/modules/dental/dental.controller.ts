@@ -175,9 +175,19 @@ router.get("/:toothFdi/tooth-ai-analysis", readRoles, async (req: Request, res: 
     return res.json({ success: true, data: { analysis: null } });
   }
 
-  const condLabel = TOOTH_CONDITION_LABELS[tooth.condition] ?? tooth.condition;
   const planTitle = typeof req.query["planTitle"] === "string" ? req.query["planTitle"] : null;
 
+  // Return cached analysis if condition and planTitle haven't changed
+  if (
+    tooth.aiAnalysis &&
+    tooth.aiAnalysisCondition === tooth.condition &&
+    (tooth.aiAnalysisPlanTitle ?? null) === (planTitle ?? null)
+  ) {
+    res.set("Cache-Control", "no-store");
+    return res.json({ success: true, data: { analysis: tooth.aiAnalysis } });
+  }
+
+  const condLabel = TOOTH_CONDITION_LABELS[tooth.condition] ?? tooth.condition;
   const contextLines: string[] = [`Зуб ${toothFdi} (система FDI): ${condLabel}`];
   if (tooth.notes) contextLines.push(`Заметки врача: ${tooth.notes}`);
   if (planTitle) contextLines.push(`Запланированная процедура: ${planTitle}`);
@@ -213,6 +223,13 @@ router.get("/:toothFdi/tooth-ai-analysis", readRoles, async (req: Request, res: 
     let analysis = response.choices[0]?.message?.content ?? null;
     if (analysis) {
       analysis = analysis.replace(/\*\*(.+?)\*\*/g, "$1").replace(/\*(.+?)\*/g, "$1");
+    }
+
+    // Save to cache (fire-and-forget)
+    if (analysis) {
+      repo.saveToothAiAnalysis(tooth.id, analysis, tooth.condition, planTitle).catch((err) =>
+        logger.warn({ err }, "[DentalAI] Failed to cache per-tooth analysis"),
+      );
     }
 
     res.set("Cache-Control", "no-store");

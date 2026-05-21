@@ -63,6 +63,9 @@ export const toothRecordsTable = pgTable("tooth_records", {
   updatedBy: text("updated_by").references(() => usersTable.id, {
     onDelete: "set null",
   }),
+  aiAnalysis: text("ai_analysis"),
+  aiAnalysisCondition: text("ai_analysis_condition"),
+  aiAnalysisPlanTitle: text("ai_analysis_plan_title"),
 });
 
 export const inventoryItemsTable = pgTable("inventory_items", {
