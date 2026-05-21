@@ -61,6 +61,24 @@ import type { PatientStatus, InteractionType, ToothCondition } from "@workspace/
 import { FdiChart, CONDITION_CONFIG, getCanalCount } from "@/components/dental-chart/fdi-chart";
 import { TreatmentStagesBoard } from "@/components/dental-chart/treatment-stages-board";
 import { useTranslation } from "react-i18next";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+  type DragStartEvent,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 
 const INTERACTION_TYPE_KEYS = [
@@ -140,6 +158,106 @@ function isExtractionItem(title: string) {
   );
 }
 
+type PlanItemData = { id: string; title: string; price: number; status: string };
+
+function SortablePlanItem({
+  item,
+  idx,
+  isSelected,
+  isFirst,
+  isOverlay = false,
+  onSelect,
+  onAction,
+  addMutationPending,
+}: {
+  item: PlanItemData;
+  idx: number;
+  isSelected: boolean;
+  isFirst: boolean;
+  isOverlay?: boolean;
+  onSelect: (id: string) => void;
+  onAction: (type: "treatment" | "extraction", title?: string) => void;
+  addMutationPending: boolean;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition: transition ?? "transform 220ms cubic-bezier(0.25,0.46,0.45,0.94)",
+    opacity: isDragging && !isOverlay ? 0 : 1,
+  };
+
+  const isExtraction = isExtractionItem(item.title);
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <div
+        className={`rounded-xl border select-none ${
+          isOverlay
+            ? "border-primary bg-white shadow-2xl ring-2 ring-primary/30 scale-[1.03]"
+            : isSelected
+            ? "border-primary bg-primary/8 ring-1 ring-primary/20"
+            : "border-border/50 bg-slate-50"
+        }`}
+      >
+        <div
+          className="flex items-start gap-2 px-2.5 pt-2.5 pb-2 cursor-pointer active:bg-primary/5 rounded-t-xl transition-colors"
+          onClick={() => !isOverlay && onSelect(item.id)}
+        >
+          <span className={`shrink-0 min-w-[18px] h-[18px] rounded-full text-[10px] font-bold flex items-center justify-center mt-0.5 ${
+            isFirst ? "bg-primary text-white" : "bg-gray-100 text-gray-500"
+          }`}>
+            {idx + 1}
+          </span>
+          <div className="flex-1 min-w-0">
+            <span className="text-xs font-medium text-gray-800 leading-tight block">{item.title}</span>
+            {isFirst && (
+              <p className="text-[9px] font-semibold text-primary mt-0.5 uppercase tracking-wide">
+                Приоритет №1
+              </p>
+            )}
+          </div>
+          <span className="text-xs font-semibold text-gray-600 shrink-0 whitespace-nowrap mt-0.5">
+            {item.price.toLocaleString("ru")} ₸
+          </span>
+          <div
+            {...attributes}
+            {...listeners}
+            className="shrink-0 mt-0.5 p-0.5 touch-none cursor-grab active:cursor-grabbing"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GripVertical className="w-4 h-4 text-gray-300" />
+          </div>
+        </div>
+        {isSelected && !isOverlay && (
+          <div className="px-2.5 pb-2.5 pt-0 pl-9">
+            <Button
+              size="sm"
+              className={`w-full h-8 text-xs gap-1.5 ${
+                isExtraction ? "bg-red-500 hover:bg-red-600 text-white border-0" : ""
+              }`}
+              variant="default"
+              disabled={addMutationPending}
+              onClick={(e) => {
+                e.stopPropagation();
+                onAction(isExtraction ? "extraction" : "treatment", item.title);
+              }}
+            >
+              {addMutationPending ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : isExtraction ? (
+                <><X className="w-3 h-3" />Удалить зуб</>
+              ) : (
+                <><CheckCircle2 className="w-3 h-3" />Начать лечение</>
+              )}
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ToothActionModal({
   fdi,
   patientId,
@@ -182,182 +300,30 @@ function ToothActionModal({
   const [inProgressLabel, setInProgressLabel] = useState(activeTreatmentForThisTooth?.description ?? "");
   const [elapsedSeconds, setElapsedSeconds] = useState(secondsSinceTreatmentStarted(activeTreatmentForThisTooth));
 
-  type PlanItem = { id: string; title: string; price: number; status: string };
-  const [orderedItems, setOrderedItems] = useState<PlanItem[]>(() =>
+  const [orderedItems, setOrderedItems] = useState<PlanItemData[]>(() =>
     planItems.filter((i) => i.status === "pending"),
   );
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-  const [isReordering, setIsReordering] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
-  const moveOrderedItem = (from: number, to: number) => {
-    if (from === to) return;
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 5 } }),
+  );
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveId(String(event.active.id));
+    navigator.vibrate?.(40);
+  }, []);
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    setActiveId(null);
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
     setOrderedItems((prev) => {
-      const next = [...prev];
-      const [moved] = next.splice(from, 1);
-      next.splice(to, 0, moved);
-      return next;
+      const oldIdx = prev.findIndex((i) => i.id === active.id);
+      const newIdx = prev.findIndex((i) => i.id === over.id);
+      return arrayMove(prev, oldIdx, newIdx);
     });
-  };
-
-  const handleDragStart = (index: number) => setDragIndex(index);
-
-  const handleDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    if (dragIndex !== null && dragIndex !== index) {
-      moveOrderedItem(dragIndex, index);
-      setDragIndex(index);
-    }
-    setDragOverIndex(index);
-  };
-
-  const handleDrop = () => {
-    setDragIndex(null);
-    setDragOverIndex(null);
-  };
-
-  const handleDragEnd = () => {
-    setDragIndex(null);
-    setDragOverIndex(null);
-  };
-
-  // Touch drag-and-drop (mobile support)
-  const touchDragRef = useRef<number | null>(null);
-  const listRef = useRef<HTMLDivElement>(null);
-  const ghostRef = useRef<HTMLDivElement | null>(null);
-  const ghostOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-
-  // Long-press state
-  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const longPressDataRef = useRef<{ idx: number; el: HTMLElement; x: number; y: number } | null>(null);
-  const currentTouchPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-
-  const cancelLongPress = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-    longPressDataRef.current = null;
-  };
-
-  // Build and attach a ghost DOM element at the given screen rect
-  const spawnGhost = (el: HTMLElement, touchX: number, touchY: number) => {
-    const rect = el.getBoundingClientRect();
-    ghostOffsetRef.current = { x: touchX - rect.left, y: touchY - rect.top };
-    const ghost = document.createElement("div");
-    ghost.style.cssText = [
-      "position:fixed",
-      `left:${rect.left}px`,
-      `top:${rect.top}px`,
-      `width:${rect.width}px`,
-      "z-index:9999",
-      "pointer-events:none",
-      "opacity:0.92",
-      "box-shadow:0 10px 28px rgba(0,0,0,0.22)",
-      "border-radius:12px",
-      "background:white",
-      "border:2px solid hsl(var(--primary,142 76% 36%))",
-      "transform:scale(1.04)",
-      "overflow:hidden",
-      "will-change:transform",
-    ].join(";");
-    ghost.innerHTML = el.innerHTML;
-    document.body.appendChild(ghost);
-    ghostRef.current = ghost;
-  };
-
-  // Long-press start — fires on every item touch (no reorder mode required)
-  const startLongPress = (idx: number, e: React.TouchEvent) => {
-    cancelLongPress();
-    const touch = e.touches[0];
-    const el = e.currentTarget as HTMLElement;
-    longPressDataRef.current = { idx, el, x: touch.clientX, y: touch.clientY };
-    currentTouchPosRef.current = { x: touch.clientX, y: touch.clientY };
-
-    longPressTimerRef.current = setTimeout(() => {
-      const data = longPressDataRef.current;
-      if (!data) return;
-      navigator.vibrate?.(40); // haptic feedback
-      // Activate reorder mode and immediately start drag
-      setIsReordering(true);
-      touchDragRef.current = data.idx;
-      setDragIndex(data.idx);
-      const pos = currentTouchPosRef.current;
-      spawnGhost(data.el, pos.x, pos.y);
-      longPressTimerRef.current = null;
-      longPressDataRef.current = null;
-    }, 700);
-  };
-
-  const handleTouchEnd = () => {
-    cancelLongPress();
-    ghostRef.current?.remove();
-    ghostRef.current = null;
-    setDragOverIndex(null);
-    setDragIndex(null);
-    touchDragRef.current = null;
-  };
-
-  useEffect(() => {
-    const el = listRef.current;
-    if (!el) return;
-    const SCROLL_ZONE = 64;
-    const SCROLL_SPEED = 7;
-
-    const onTouchMove = (e: TouchEvent) => {
-      const touch = e.touches[0];
-
-      // Always track current touch position (needed for ghost creation on long-press fire)
-      currentTouchPosRef.current = { x: touch.clientX, y: touch.clientY };
-
-      // Cancel long press if finger moved > 10px
-      const lpData = longPressDataRef.current;
-      if (lpData && longPressTimerRef.current) {
-        const dx = touch.clientX - lpData.x;
-        const dy = touch.clientY - lpData.y;
-        if (dx * dx + dy * dy > 100) {
-          clearTimeout(longPressTimerRef.current);
-          longPressTimerRef.current = null;
-          longPressDataRef.current = null;
-        }
-      }
-
-      // Only intercept scroll / move ghost when actively dragging
-      if (touchDragRef.current === null) return;
-      e.preventDefault();
-
-      // Auto-scroll near edges
-      const containerRect = el.getBoundingClientRect();
-      if (touch.clientY < containerRect.top + SCROLL_ZONE) {
-        el.scrollTop -= SCROLL_SPEED;
-      } else if (touch.clientY > containerRect.bottom - SCROLL_ZONE) {
-        el.scrollTop += SCROLL_SPEED;
-      }
-
-      // Move ghost with finger
-      const ghost = ghostRef.current;
-      if (ghost) {
-        ghost.style.left = `${touch.clientX - ghostOffsetRef.current.x}px`;
-        ghost.style.top = `${touch.clientY - ghostOffsetRef.current.y}px`;
-        ghost.style.display = "none";
-      }
-      const target = document.elementFromPoint(touch.clientX, touch.clientY);
-      if (ghost) ghost.style.display = "";
-
-      const itemEl = target?.closest("[data-drag-idx]");
-      if (itemEl) {
-        const over = parseInt((itemEl as HTMLElement).getAttribute("data-drag-idx") ?? "-1");
-        if (over >= 0 && over !== touchDragRef.current) {
-          const from = touchDragRef.current;
-          moveOrderedItem(from, over);
-          touchDragRef.current = over;
-          setDragIndex(over);
-        }
-        setDragOverIndex(over);
-      }
-    };
-    el.addEventListener("touchmove", onTouchMove, { passive: false });
-    return () => el.removeEventListener("touchmove", onTouchMove);
   }, []);
 
   useEffect(() => {
@@ -561,122 +527,52 @@ function ToothActionModal({
 
             {/* Plan items list */}
             {orderedItems.length > 0 ? (
-              <div ref={listRef} className="p-3 space-y-1.5 max-h-72 overflow-y-auto">
-                <div className="flex items-center justify-between px-1 mb-2">
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
-                    Услуги из плана лечения
-                  </p>
-                  {isReordering ? (
-                    <button
-                      onClick={() => setIsReordering(false)}
-                      className="flex items-center gap-1 text-[10px] font-semibold bg-primary text-white px-2.5 py-1 rounded-full"
-                    >
-                      <CheckCircle2 className="w-3 h-3" />
-                      Готово
-                    </button>
-                  ) : (
-                    <span className="text-[9px] text-muted-foreground/50 flex items-center gap-0.5">
-                      <GripVertical className="w-3 h-3" />
-                      удерживайте для сортировки
-                    </span>
-                  )}
-                </div>
-                {orderedItems.map((item, idx) => {
-                  const isSelected = item.id === selectedItemId;
-                  const isExtraction = isExtractionItem(item.title);
-                  const isFirst = idx === 0;
-                  const isDragging = dragIndex === idx;
-                  const isDragOver = dragOverIndex === idx && dragIndex !== idx;
-                  return (
-                    <div
-                      key={item.id}
-                      data-drag-idx={idx}
-                      draggable={isReordering}
-                      onDragStart={isReordering ? () => handleDragStart(idx) : undefined}
-                      onDragOver={isReordering ? (e) => handleDragOver(e, idx) : undefined}
-                      onDrop={isReordering ? handleDrop : undefined}
-                      onDragEnd={isReordering ? handleDragEnd : undefined}
-                      onTouchStart={(e) => startLongPress(idx, e)}
-                      onTouchEnd={handleTouchEnd}
-                      onClick={isReordering ? undefined : () => setSelectedItemId(isSelected ? null : item.id)}
-                      className={`rounded-xl border transition-all select-none ${
-                        isReordering
-                          ? isDragOver
-                            ? "border-primary border-dashed bg-primary/5 cursor-grabbing"
-                            : isDragging
-                            ? "opacity-40 border-border/30 cursor-grabbing"
-                            : "border-border/50 bg-slate-50 cursor-grab"
-                          : isSelected
-                          ? "border-primary bg-primary/8 ring-1 ring-primary/20 cursor-pointer"
-                          : "border-border/50 bg-slate-50 hover:border-primary/30 hover:bg-primary/5 cursor-pointer"
-                      }`}
-                    >
-                      <div className="flex items-start gap-2 px-2.5 pt-2.5 pb-2">
-                        {/* Priority badge */}
-                        <span className={`shrink-0 min-w-[18px] h-[18px] rounded-full text-[10px] font-bold flex items-center justify-center mt-0.5 ${
-                          isFirst
-                            ? "bg-primary text-white"
-                            : "bg-gray-100 text-gray-500"
-                        }`}>
-                          {idx + 1}
-                        </span>
-
-                        {/* Text content */}
-                        <div className="flex-1 min-w-0">
-                          <span className="text-xs font-medium text-gray-800 leading-tight block">{item.title}</span>
-                          {isFirst && (
-                            <p className="text-[9px] font-semibold text-primary mt-0.5 uppercase tracking-wide">
-                              Приоритет №1
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Right side: drag handle in reorder mode, price otherwise */}
-                        {isReordering ? (
-                          <GripVertical className="w-5 h-5 text-primary/50 shrink-0 mt-0.5" />
-                        ) : (
-                          <span className="text-xs font-semibold text-gray-600 shrink-0 whitespace-nowrap mt-0.5">
-                            {item.price.toLocaleString("ru")} ₸
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Action button — only when not reordering */}
-                      {!isReordering && isSelected && (
-                        <div className="px-2.5 pb-2.5 pt-0 pl-9">
-                          <Button
-                            size="sm"
-                            className={`w-full h-8 text-xs gap-1.5 ${
-                              isExtraction
-                                ? "bg-red-500 hover:bg-red-600 text-white border-0"
-                                : ""
-                            }`}
-                            variant="default"
-                            disabled={addMutation.isPending}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAction(isExtraction ? "extraction" : "treatment", item.title);
-                            }}
-                          >
-                            {addMutation.isPending ? (
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                            ) : isExtraction ? (
-                              <>
-                                <X className="w-3 h-3" />
-                                Удалить зуб
-                              </>
-                            ) : (
-                              <>
-                                <CheckCircle2 className="w-3 h-3" />
-                                Начать лечение
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      )}
+              <div className="p-3 max-h-72 overflow-y-auto">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide px-1 mb-2">
+                  Услуги из плана лечения
+                </p>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext items={orderedItems.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-1.5">
+                      {orderedItems.map((item, idx) => (
+                        <SortablePlanItem
+                          key={item.id}
+                          item={item}
+                          idx={idx}
+                          isSelected={item.id === selectedItemId}
+                          isFirst={idx === 0}
+                          onSelect={(id) => setSelectedItemId((prev) => (prev === id ? null : id))}
+                          onAction={handleAction}
+                          addMutationPending={addMutation.isPending}
+                        />
+                      ))}
                     </div>
-                  );
-                })}
+                  </SortableContext>
+                  <DragOverlay dropAnimation={{ duration: 180, easing: "cubic-bezier(0.18,0.67,0.6,1.22)" }}>
+                    {activeId ? (() => {
+                      const item = orderedItems.find((i) => i.id === activeId);
+                      const idx = orderedItems.findIndex((i) => i.id === activeId);
+                      if (!item) return null;
+                      return (
+                        <SortablePlanItem
+                          item={item}
+                          idx={idx}
+                          isSelected={false}
+                          isFirst={idx === 0}
+                          isOverlay
+                          onSelect={() => {}}
+                          onAction={() => {}}
+                          addMutationPending={false}
+                        />
+                      );
+                    })() : null}
+                  </DragOverlay>
+                </DndContext>
               </div>
             ) : (
               <div className="p-4 space-y-2">
