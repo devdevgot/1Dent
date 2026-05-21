@@ -344,11 +344,18 @@ export function PlanItemDetailModal({
     setCameraError(null);
   }, []);
 
-  const handleOpenCamera = useCallback(async (facing: "environment" | "user" = "environment") => {
-    setShowCamera(true);
+  const handleOpenCamera = useCallback((facing: "environment" | "user" = "environment") => {
     setCameraFacing(facing);
-    await startCamera(facing);
-  }, [startCamera]);
+    setShowCamera(true);
+    // startCamera is triggered by useEffect after the <video> element is in the DOM
+  }, []);
+
+  // Start camera stream once the viewfinder <video> element has been mounted
+  useEffect(() => {
+    if (!showCamera) return;
+    void startCamera(cameraFacing);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showCamera]); // intentionally only on showCamera toggle, not cameraFacing
 
   const handleFlipCamera = useCallback(async () => {
     const next = cameraFacing === "environment" ? "user" : "environment";
