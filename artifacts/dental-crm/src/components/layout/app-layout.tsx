@@ -16,10 +16,13 @@ import {
   Wallet,
   Bot,
   MoreHorizontal,
+  MapPin,
+  AlertTriangle,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
+import { useGeoRestriction } from "@/hooks/use-geo-restriction";
 
 const ROLE_DASHBOARD_HREF: Record<string, string> = {
   owner:      "/dashboard",
@@ -32,26 +35,38 @@ const ROLE_DASHBOARD_HREF: Record<string, string> = {
 const MAX_BOTTOM_TABS = 3;
 
 const ALL_NAV_ITEMS = [
-  { nameKey: "nav.dashboard",   href: "__role_dashboard__",  icon: LayoutDashboard, roles: ["owner","admin","doctor","accountant","warehouse"] },
-  { nameKey: "nav.calendar",    href: "/calendar",           icon: Calendar,        roles: ["owner"]                                           },
-  { nameKey: "nav.chat",        href: "/chat",               icon: FaWhatsapp,      roles: ["owner","admin","doctor"]                          },
-  { nameKey: "nav.patients",    href: "/patients",           icon: Users,           roles: ["owner","admin","doctor","accountant"]             },
-  { nameKey: "nav.schedule",    href: "/schedule",           icon: Calendar,        roles: ["doctor"]                                          },
-  { nameKey: "nav.services",    href: "/services",           icon: Stethoscope,     roles: ["owner","admin"]                                   },
-  { nameKey: "nav.analytics",   href: "/analytics",          icon: BarChart3,       roles: ["owner"]                                           },
-  { nameKey: "nav.myAnalytics", href: "/doctor-analytics",   icon: BarChart3,       roles: ["doctor"]                                          },
-  { nameKey: "nav.financials",  href: "/financials",         icon: Wallet,          roles: ["owner","accountant"]                              },
-  { nameKey: "nav.users",       href: "/users",              icon: Settings,        roles: ["owner"]                                         },
-  { nameKey: "nav.chatbot",     href: "/chatbot",            icon: Bot,             roles: ["owner"]                                           },
-  { nameKey: "nav.logs",        href: "/logs",               icon: Activity,        roles: ["owner"]                                           },
-  { nameKey: "nav.settings",    href: "/settings",           icon: Settings,        roles: ["owner","admin","doctor","accountant","warehouse"]  },
+  { nameKey: "nav.dashboard",   href: "__role_dashboard__",  icon: LayoutDashboard, roles: ["owner","admin","doctor","accountant","warehouse"], geoRestricted: false },
+  { nameKey: "nav.calendar",    href: "/calendar",           icon: Calendar,        roles: ["owner"],                                           geoRestricted: false },
+  { nameKey: "nav.chat",        href: "/chat",               icon: FaWhatsapp,      roles: ["owner","admin","doctor"],                          geoRestricted: true  },
+  { nameKey: "nav.patients",    href: "/patients",           icon: Users,           roles: ["owner","admin","doctor","accountant"],             geoRestricted: true  },
+  { nameKey: "nav.schedule",    href: "/schedule",           icon: Calendar,        roles: ["doctor"],                                          geoRestricted: false },
+  { nameKey: "nav.services",    href: "/services",           icon: Stethoscope,     roles: ["owner","admin"],                                   geoRestricted: true  },
+  { nameKey: "nav.analytics",   href: "/analytics",          icon: BarChart3,       roles: ["owner"],                                           geoRestricted: true  },
+  { nameKey: "nav.myAnalytics", href: "/doctor-analytics",   icon: BarChart3,       roles: ["doctor"],                                          geoRestricted: true  },
+  { nameKey: "nav.financials",  href: "/financials",         icon: Wallet,          roles: ["owner","accountant"],                              geoRestricted: true  },
+  { nameKey: "nav.users",       href: "/users",              icon: Settings,        roles: ["owner"],                                           geoRestricted: true  },
+  { nameKey: "nav.chatbot",     href: "/chatbot",            icon: Bot,             roles: ["owner"],                                           geoRestricted: true  },
+  { nameKey: "nav.logs",        href: "/logs",               icon: Activity,        roles: ["owner"],                                           geoRestricted: false },
+  { nameKey: "nav.settings",    href: "/settings",           icon: Settings,        roles: ["owner","admin","doctor","accountant","warehouse"],  geoRestricted: false },
 ];
 
+// Routes that are off-limits outside geo-zone (for non-owners)
+const GEO_RESTRICTED_PREFIXES = [
+  "/patients", "/chat", "/analytics", "/doctor-analytics",
+  "/financials", "/services", "/inventory", "/warehouse",
+  "/users", "/chatbot", "/staff", "/channels",
+  "/migration", "/contract-templates",
+];
+
+function isGeoRestrictedPath(path: string) {
+  return GEO_RESTRICTED_PREFIXES.some((p) => path === p || path.startsWith(p + "/"));
+}
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const [location] = useLocation();
+  const { status, activeBranch, isRestricted, hasBranches } = useGeoRestriction();
 
   const roleDashboardHref = user
     ? (ROLE_DASHBOARD_HREF[user.role] ?? getRoleDashboardPath(user.role))
@@ -69,6 +84,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   const bottomItems = navItems.slice(0, MAX_BOTTOM_TABS);
 
+  // A page is geo-blocked if outside zone and route is restricted
+  const pageBlocked = isRestricted && hasBranches && isGeoRestrictedPath(location);
+
   return (
     <div className="flex flex-col h-[100dvh] bg-background overflow-hidden">
       <AppointmentReminderModal />
@@ -83,13 +101,62 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </header>
       )}
 
+      {/* Geo restriction banner — shown when outside zone */}
+      {isRestricted && hasBranches && (
+        <div className="flex-none flex items-center gap-2 px-4 py-2 bg-amber-50 border-b border-amber-200 z-10">
+          <MapPin className="w-4 h-4 text-amber-500 shrink-0" />
+          <p className="text-xs text-amber-700 font-medium">
+            Вы вне клиники — часть функций недоступна
+          </p>
+        </div>
+      )}
+
+      {/* Status indicator when geo is loading or denied (only if branches exist) */}
+      {hasBranches && status === "denied" && (
+        <div className="flex-none flex items-center gap-2 px-4 py-2 bg-gray-50 border-b border-gray-200 z-10">
+          <AlertTriangle className="w-4 h-4 text-gray-400 shrink-0" />
+          <p className="text-xs text-gray-500">
+            Геолокация недоступна — разрешите доступ в настройках браузера
+          </p>
+        </div>
+      )}
+
       {/* Main content */}
-      <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">{children}</main>
+      <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative">
+        {pageBlocked ? (
+          <div className="flex flex-col items-center justify-center h-full gap-4 px-6 text-center">
+            <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center">
+              <MapPin className="w-8 h-8 text-amber-500" />
+            </div>
+            <div>
+              <h2 className="text-[17px] font-semibold text-gray-900 mb-1">Вы вне клиники</h2>
+              <p className="text-[13px] text-gray-500 leading-relaxed">
+                Этот раздел доступен только когда вы находитесь в клинике.
+                {activeBranch && ` Ближайший филиал: ${activeBranch.name}`}
+              </p>
+            </div>
+          </div>
+        ) : (
+          children
+        )}
+      </main>
 
       {/* Bottom navigation */}
       <nav className="flex-none h-16 bg-white border-t border-border/50 flex items-stretch z-20 safe-area-bottom">
         {bottomItems.map((item) => {
           const isActive = location === item.href || location.startsWith(`${item.href}/`);
+          const blocked = isRestricted && hasBranches && item.geoRestricted;
+          if (blocked) {
+            return (
+              <div
+                key={item.href}
+                className="flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium select-none relative opacity-35"
+              >
+                <item.icon className="w-5 h-5 text-muted-foreground" strokeWidth={1.8} />
+                <span className="text-muted-foreground">{item.name}</span>
+              </div>
+            );
+          }
           return (
             <Link
               key={item.href}

@@ -23,6 +23,7 @@ import refRouter from "./ref";
 import contractPublicRouter from "./contract-public";
 import storageRouter from "./storage";
 import contractsRouter from "../modules/contracts/contracts.controller";
+import branchesRouter from "../modules/branches/branches.controller";
 import { actionLogMiddleware } from "../middlewares/action-log.middleware";
 import { authRateLimit } from "../middlewares/rate-limit.middleware";
 import { authMiddleware, roleGuard } from "../middlewares/auth.middleware";
@@ -76,6 +77,7 @@ router.use("/", channelsRouter);
 router.use("/", analyticsRouter);
 router.use(messagesRouter);
 router.use("/contracts", contractsRouter);
+router.use("/", branchesRouter);
 router.use(storageRouter);
 
 // Alias: GET /procedure-templates (maps to GET /procedures/templates)

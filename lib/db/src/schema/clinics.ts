@@ -13,6 +13,8 @@ export const clinicsTable = pgTable("clinics", {
   greenApiInstanceId: text("green_api_instance_id"),
   greenApiToken: text("green_api_token"),
   greenApiUrl: text("green_api_url"),
+  telegramBotToken: text("telegram_bot_token"),
+  telegramOwnerChatId: text("telegram_owner_chat_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
