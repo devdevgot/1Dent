@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { MapPin, Plus, Trash2, Loader2, Send, CheckCircle2, Bot, Navigation } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 interface Branch {
   id: string;
@@ -330,7 +331,8 @@ export function BranchesSettings() {
             <p className="text-xs text-muted-foreground mt-0.5">Нажмите на карту, чтобы добавить филиал</p>
           </div>
           {mapReady && !addingBranch && (
-            <button
+            <Button
+              className="gap-1.5 h-8 text-xs px-2.5"
               onClick={() => {
                 if (myLocation) {
                   if (pendingMarkerRef.current && ymapRef.current) {
@@ -352,11 +354,10 @@ export function BranchesSettings() {
                   toast({ title: "Нажмите на карту, чтобы выбрать точку" });
                 }
               }}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-primary text-primary-foreground hover:opacity-90 transition-opacity shrink-0"
-              title="Добавить филиал"
             >
-              <Plus className="w-4 h-4" />
-            </button>
+              <Plus className="w-3.5 h-3.5 shrink-0" />
+              Новый филиал
+            </Button>
           )}
         </div>
 
