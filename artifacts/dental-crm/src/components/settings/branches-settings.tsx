@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MapPin, Plus, Trash2, Loader2, Send, CheckCircle2, Bot } from "lucide-react";
+import { MapPin, Plus, Trash2, Loader2, Send, CheckCircle2, Bot, Navigation } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -79,11 +79,14 @@ export function BranchesSettings() {
   const mapRef = useRef<HTMLDivElement>(null);
   const ymapRef = useRef<YMap | null>(null);
   const pendingMarkerRef = useRef<YPlacemark | null>(null);
+  const myLocationMarkerRef = useRef<YPlacemark | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [mapReady, setMapReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [addingBranch, setAddingBranch] = useState<{ lat: number; lon: number } | null>(null);
+  const [myLocation, setMyLocation] = useState<{ lat: number; lon: number } | null>(null);
+  const [locating, setLocating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newRadius, setNewRadius] = useState("200");
   const [saving, setSaving] = useState(false);
@@ -160,6 +163,34 @@ export function BranchesSettings() {
         ymapRef.current = map;
         renderMarkers(map, branches);
         setMapReady(true);
+
+        // Auto-detect device location
+        if (navigator.geolocation) {
+          setLocating(true);
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              if (destroyed) return;
+              const lat = pos.coords.latitude;
+              const lon = pos.coords.longitude;
+              // Center map on device if no branches yet
+              if (!branches.length) {
+                map.setCenter([lat, lon], 15);
+              }
+              // Place blue "my location" dot
+              const myMarker = new window.ymaps.Placemark(
+                [lat, lon],
+                { balloonContent: "Вы здесь" },
+                { preset: "islands#blueCircleDotIcon" },
+              );
+              map.geoObjects.add(myMarker);
+              myLocationMarkerRef.current = myMarker;
+              setMyLocation({ lat, lon });
+              setLocating(false);
+            },
+            () => { setLocating(false); },
+            { timeout: 8000, maximumAge: 60000 },
+          );
+        }
 
         map.events.add("click", (e) => {
           const coords = e.get("coords");
@@ -315,6 +346,51 @@ export function BranchesSettings() {
             )}
             <div ref={mapRef} className="w-full h-full" />
           </div>
+
+          {/* My location suggestion */}
+          {myLocation && !addingBranch && (
+            <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
+              <Navigation className="w-4 h-4 text-blue-500 shrink-0" />
+              <p className="text-sm text-blue-800 flex-1">
+                Местоположение определено — добавить филиал здесь?
+              </p>
+              <button
+                onClick={() => {
+                  if (ymapRef.current && pendingMarkerRef.current) {
+                    ymapRef.current.geoObjects.remove(pendingMarkerRef.current);
+                    pendingMarkerRef.current = null;
+                  }
+                  const marker = new window.ymaps.Placemark(
+                    [myLocation.lat, myLocation.lon],
+                    { balloonContent: "Новый филиал" },
+                    { preset: "islands#redDotIcon" },
+                  );
+                  ymapRef.current?.geoObjects.add(marker);
+                  pendingMarkerRef.current = marker;
+                  setAddingBranch({ lat: myLocation.lat, lon: myLocation.lon });
+                  setNewName("");
+                  setNewRadius("200");
+                }}
+                className="shrink-0 text-xs font-semibold text-blue-600 bg-blue-100 hover:bg-blue-200 transition-colors px-3 py-1.5 rounded-lg"
+              >
+                Да
+              </button>
+              <button
+                onClick={() => setMyLocation(null)}
+                className="shrink-0 text-xs text-blue-400 hover:text-blue-600 transition-colors"
+              >
+                Нет
+              </button>
+            </div>
+          )}
+
+          {/* Locating indicator */}
+          {locating && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Определяем местоположение…
+            </div>
+          )}
 
           {/* Add branch dialog */}
           {addingBranch && (
