@@ -25,6 +25,7 @@ declare global {
       Placemark: new (coords: number[], props: object, opts: object) => YPlacemark;
       Circle: new (coords: [number[], number], props: object, opts: object) => YCircle;
       GeoObjectCollection: new () => YCollection;
+      geocode: (query: string, opts?: object) => Promise<{ geoObjects: { get: (i: number) => { geometry: { getCoordinates: () => number[] }; properties: { get: (k: string) => string } } | null; getLength: () => number } }>;
     };
     _ymapsLoaded?: boolean;
   }
@@ -93,6 +94,11 @@ export function BranchesSettings() {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [branchSearch, setBranchSearch] = useState("");
+
+  const [mapQuery, setMapQuery] = useState("");
+  const [mapGeoResults, setMapGeoResults] = useState<{ name: string; coords: number[] }[]>([]);
+  const [mapSearching, setMapSearching] = useState(false);
+  const geoDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [tgToken, setTgToken] = useState("");
   const [tgChatId, setTgChatId] = useState("");
@@ -233,6 +239,29 @@ export function BranchesSettings() {
     if (ymapRef.current) renderMarkers(ymapRef.current, branches);
   }, [branches, renderMarkers]);
 
+  const handleMapSearch = useCallback((q: string) => {
+    setMapQuery(q);
+    if (geoDebounceRef.current) clearTimeout(geoDebounceRef.current);
+    if (!q.trim() || !window.ymaps?.geocode) { setMapGeoResults([]); return; }
+    geoDebounceRef.current = setTimeout(async () => {
+      setMapSearching(true);
+      try {
+        const res = await window.ymaps.geocode(q, { results: 5, lang: "ru_RU" });
+        const count = res.geoObjects.getLength();
+        const results: { name: string; coords: number[] }[] = [];
+        for (let i = 0; i < Math.min(count, 5); i++) {
+          const obj = res.geoObjects.get(i);
+          if (!obj) continue;
+          const coords = obj.geometry.getCoordinates();
+          const name = obj.properties.get("text") || obj.properties.get("name") || q;
+          results.push({ name, coords });
+        }
+        setMapGeoResults(results);
+      } catch { setMapGeoResults([]); }
+      finally { setMapSearching(false); }
+    }, 400);
+  }, []);
+
   const clearPendingMarker = useCallback(() => {
     if (pendingMarkerRef.current && ymapRef.current) {
       ymapRef.current.geoObjects.remove(pendingMarkerRef.current);
@@ -363,6 +392,47 @@ export function BranchesSettings() {
         </div>
 
         <div className="p-4 space-y-3">
+          {/* Map address search */}
+          {mapReady && (
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none z-10" />
+              {mapSearching && (
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground animate-spin z-10" />
+              )}
+              <input
+                type="text"
+                placeholder="Поиск адреса на карте…"
+                value={mapQuery}
+                onChange={(e) => handleMapSearch(e.target.value)}
+                className="w-full h-9 pl-9 pr-8 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+              {mapQuery.trim() && mapGeoResults.length > 0 && (
+                <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-popover border border-border rounded-xl shadow-lg overflow-hidden">
+                  {mapGeoResults.map((r, i) => (
+                    <button
+                      key={i}
+                      className="w-full flex items-start gap-3 px-4 py-2.5 hover:bg-accent transition-colors text-left"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        ymapRef.current?.setCenter(r.coords, 16);
+                        setMapQuery("");
+                        setMapGeoResults([]);
+                      }}
+                    >
+                      <MapPin className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                      <span className="text-sm text-foreground leading-snug">{r.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {mapQuery.trim() && !mapSearching && mapGeoResults.length === 0 && (
+                <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-popover border border-border rounded-xl shadow-lg overflow-hidden">
+                  <div className="px-4 py-3 text-sm text-muted-foreground text-center">Ничего не найдено</div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Map container */}
           <div className="relative rounded-xl overflow-hidden border border-border/40" style={{ height: 320 }}>
             {loading && (
