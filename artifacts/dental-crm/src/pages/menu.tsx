@@ -111,13 +111,13 @@ export default function MenuPage() {
       <div className="px-4 mb-5">
         <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Меню</p>
         <div className="bg-white rounded-2xl py-3 px-2">
-          <div className="grid grid-cols-3">
+          <div className="grid grid-cols-4">
             {navItems.map((item, index) => {
-              const col = index % 3;
-              const row = Math.floor(index / 3);
-              const totalRows = Math.ceil(navItems.length / 3);
+              const col = index % 4;
+              const row = Math.floor(index / 4);
+              const totalRows = Math.ceil(navItems.length / 4);
               const isLastRow = row === totalRows - 1;
-              const isLastCol = col === 2 || index === navItems.length - 1;
+              const isLastCol = col === 3 || index === navItems.length - 1;
 
               return (
                 <Link
