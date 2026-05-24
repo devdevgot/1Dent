@@ -254,6 +254,7 @@ export function BranchesSettings() {
       clearPendingMarker();
       await loadBranches();
       setAddingBranch(null);
+      setMyLocation(null);
       toast({ title: "Филиал добавлен" });
     } catch {
       toast({ title: "Ошибка при добавлении филиала", variant: "destructive" });
@@ -324,10 +325,39 @@ export function BranchesSettings() {
       <div className="bg-card rounded-2xl border border-border/60 overflow-hidden">
         <div className="flex items-center gap-3 px-5 py-4 border-b border-border/40">
           <MapPin className="w-5 h-5 text-primary" />
-          <div>
+          <div className="flex-1">
             <h2 className="font-semibold text-base text-foreground">Филиалы и геозоны</h2>
             <p className="text-xs text-muted-foreground mt-0.5">Нажмите на карту, чтобы добавить филиал</p>
           </div>
+          {mapReady && !addingBranch && (
+            <button
+              onClick={() => {
+                if (myLocation) {
+                  if (pendingMarkerRef.current && ymapRef.current) {
+                    ymapRef.current.geoObjects.remove(pendingMarkerRef.current);
+                    pendingMarkerRef.current = null;
+                  }
+                  const marker = new window.ymaps.Placemark(
+                    [myLocation.lat, myLocation.lon],
+                    { balloonContent: "Новый филиал" },
+                    { preset: "islands#redDotIcon" },
+                  );
+                  ymapRef.current?.geoObjects.add(marker);
+                  pendingMarkerRef.current = marker;
+                  setAddingBranch({ lat: myLocation.lat, lon: myLocation.lon });
+                  setNewName("");
+                  setNewRadius("200");
+                  setMyLocation(null);
+                } else {
+                  toast({ title: "Нажмите на карту, чтобы выбрать точку" });
+                }
+              }}
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-primary text-primary-foreground hover:opacity-90 transition-opacity shrink-0"
+              title="Добавить филиал"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         <div className="p-4 space-y-3">
