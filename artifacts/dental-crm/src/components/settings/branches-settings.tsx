@@ -324,7 +324,7 @@ export function BranchesSettings() {
     <div className="space-y-5">
 
       {/* Map section */}
-      <div className="bg-card rounded-2xl border border-border/60 overflow-hidden">
+      <div className="bg-card rounded-2xl border border-border/60">
         <div className="flex items-center gap-3 px-5 py-4 border-b border-border/40">
           <MapPin className="w-5 h-5 text-primary" />
           <div className="flex-1">
@@ -470,17 +470,45 @@ export function BranchesSettings() {
             </div>
           )}
 
-          {/* Branch search + list */}
+          {/* Branch search (autocomplete dropdown) + list */}
           {branches.length > 0 && (
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none z-10" />
               <input
                 type="text"
                 placeholder="Поиск по филиалам…"
                 value={branchSearch}
                 onChange={(e) => setBranchSearch(e.target.value)}
+                onFocus={() => setBranchSearch(branchSearch)}
                 className="w-full h-9 pl-9 pr-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
               />
+              {branchSearch.trim() && (
+                <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-popover border border-border rounded-xl shadow-lg overflow-hidden">
+                  {branches.filter((b) => b.name.toLowerCase().includes(branchSearch.toLowerCase())).length === 0 ? (
+                    <div className="px-4 py-3 text-sm text-muted-foreground text-center">Ничего не найдено</div>
+                  ) : (
+                    branches
+                      .filter((b) => b.name.toLowerCase().includes(branchSearch.toLowerCase()))
+                      .map((b) => (
+                        <button
+                          key={b.id}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-accent transition-colors text-left"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            ymapRef.current?.setCenter([b.latitude, b.longitude], 16);
+                            setBranchSearch("");
+                          }}
+                        >
+                          <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">{b.name}</p>
+                            <p className="text-xs text-muted-foreground">{b.latitude.toFixed(4)}, {b.longitude.toFixed(4)} · {b.radiusMeters}м</p>
+                          </div>
+                        </button>
+                      ))
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -491,37 +519,32 @@ export function BranchesSettings() {
           )}
 
           <div className="space-y-2">
-            {branches
-              .filter((b) => b.name.toLowerCase().includes(branchSearch.toLowerCase()))
-              .map((b) => (
-                <div
-                  key={b.id}
-                  className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-background border border-border/40 cursor-pointer hover:border-primary/40 transition-colors"
-                  onClick={() => ymapRef.current?.setCenter([b.latitude, b.longitude], 16)}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <MapPin className="w-4 h-4 text-primary shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{b.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {b.latitude.toFixed(4)}, {b.longitude.toFixed(4)} · {b.radiusMeters}м
-                      </p>
-                    </div>
+            {branches.map((b) => (
+              <div
+                key={b.id}
+                className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-background border border-border/40 cursor-pointer hover:border-primary/40 transition-colors"
+                onClick={() => ymapRef.current?.setCenter([b.latitude, b.longitude], 16)}
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <MapPin className="w-4 h-4 text-primary shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{b.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {b.latitude.toFixed(4)}, {b.longitude.toFixed(4)} · {b.radiusMeters}м
+                    </p>
                   </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); void handleDeleteBranch(b.id); }}
-                    disabled={deletingId === b.id}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg text-red-400 hover:bg-red-50 hover:text-red-500 transition-colors shrink-0 disabled:opacity-50"
-                  >
-                    {deletingId === b.id
-                      ? <Loader2 className="w-4 h-4 animate-spin" />
-                      : <Trash2 className="w-4 h-4" />}
-                  </button>
                 </div>
-              ))}
-            {branchSearch && branches.filter((b) => b.name.toLowerCase().includes(branchSearch.toLowerCase())).length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-2">Ничего не найдено</p>
-            )}
+                <button
+                  onClick={(e) => { e.stopPropagation(); void handleDeleteBranch(b.id); }}
+                  disabled={deletingId === b.id}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-red-400 hover:bg-red-50 hover:text-red-500 transition-colors shrink-0 disabled:opacity-50"
+                >
+                  {deletingId === b.id
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : <Trash2 className="w-4 h-4" />}
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       </div>
