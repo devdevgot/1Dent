@@ -5,7 +5,6 @@ import { useChangePassword } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { User, Shield, Globe, Eye, EyeOff, Settings2, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { BranchesSettings } from "@/components/settings/branches-settings";
 
 function RoleBadge({ role }: { role: string }) {
   const { t } = useTranslation();
@@ -204,9 +203,6 @@ export default function SettingsPage() {
           ))}
         </div>
       </Section>
-
-      {/* Branches & Geo-zones — owner only */}
-      {user?.role === "owner" && <BranchesSettings />}
 
       </div>
     </div>

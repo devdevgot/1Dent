@@ -48,6 +48,7 @@ import MenuPage from "@/pages/menu";
 import MigrationPage from "@/pages/migration";
 import ChannelsPage from "@/pages/channels";
 import ContractTemplatesPage from "@/pages/contract-templates";
+import BranchesPage from "@/pages/branches";
 import NotFound from "@/pages/not-found";
 
 // Admin-specific pages
@@ -312,6 +313,11 @@ function Router() {
       {/* Contract templates management */}
       <Route path="/contract-templates">
         <ProtectedRoute component={ContractTemplatesPage} allowedRoles={['owner', 'admin']} />
+      </Route>
+
+      {/* Branches & geo-zones — owner only */}
+      <Route path="/branches">
+        <ProtectedRoute component={BranchesPage} allowedRoles={['owner']} />
       </Route>
 
       {/* Account settings pages */}
