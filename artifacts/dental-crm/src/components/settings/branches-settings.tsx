@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MapPin, Plus, Trash2, Loader2, Send, CheckCircle2, Bot, Navigation } from "lucide-react";
+import { MapPin, Plus, Trash2, Loader2, Send, CheckCircle2, Bot, Navigation, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -92,6 +92,7 @@ export function BranchesSettings() {
   const [newRadius, setNewRadius] = useState("200");
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [branchSearch, setBranchSearch] = useState("");
 
   const [tgToken, setTgToken] = useState("");
   const [tgChatId, setTgChatId] = useState("");
@@ -469,38 +470,58 @@ export function BranchesSettings() {
             </div>
           )}
 
-          {/* Branch list */}
+          {/* Branch search + list */}
+          {branches.length > 0 && (
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Поиск по филиалам…"
+                value={branchSearch}
+                onChange={(e) => setBranchSearch(e.target.value)}
+                className="w-full h-9 pl-9 pr-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+            </div>
+          )}
+
           {branches.length === 0 && !loading && (
             <p className="text-sm text-muted-foreground text-center py-3">
               Нет добавленных филиалов. Нажмите на карту, чтобы добавить.
             </p>
           )}
+
           <div className="space-y-2">
-            {branches.map((b) => (
-              <div
-                key={b.id}
-                className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-background border border-border/40"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <MapPin className="w-4 h-4 text-primary shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{b.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {b.latitude.toFixed(4)}, {b.longitude.toFixed(4)} · {b.radiusMeters}м
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => void handleDeleteBranch(b.id)}
-                  disabled={deletingId === b.id}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-red-400 hover:bg-red-50 hover:text-red-500 transition-colors shrink-0 disabled:opacity-50"
+            {branches
+              .filter((b) => b.name.toLowerCase().includes(branchSearch.toLowerCase()))
+              .map((b) => (
+                <div
+                  key={b.id}
+                  className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-background border border-border/40 cursor-pointer hover:border-primary/40 transition-colors"
+                  onClick={() => ymapRef.current?.setCenter([b.latitude, b.longitude], 16)}
                 >
-                  {deletingId === b.id
-                    ? <Loader2 className="w-4 h-4 animate-spin" />
-                    : <Trash2 className="w-4 h-4" />}
-                </button>
-              </div>
-            ))}
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <MapPin className="w-4 h-4 text-primary shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{b.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {b.latitude.toFixed(4)}, {b.longitude.toFixed(4)} · {b.radiusMeters}м
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); void handleDeleteBranch(b.id); }}
+                    disabled={deletingId === b.id}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-red-400 hover:bg-red-50 hover:text-red-500 transition-colors shrink-0 disabled:opacity-50"
+                  >
+                    {deletingId === b.id
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : <Trash2 className="w-4 h-4" />}
+                  </button>
+                </div>
+              ))}
+            {branchSearch && branches.filter((b) => b.name.toLowerCase().includes(branchSearch.toLowerCase())).length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-2">Ничего не найдено</p>
+            )}
           </div>
         </div>
       </div>
