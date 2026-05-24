@@ -35,7 +35,7 @@ interface YMap {
   setCenter: (coords: number[], zoom?: number) => void;
   destroy: () => void;
 }
-interface YPlacemark { geometry: { getCoordinates: () => number[] } }
+interface YPlacemark { geometry: { getCoordinates: () => number[] }; options: { set: (k: string, v: unknown) => void } }
 interface YCircle { geometry: { getCoordinates: () => [number[], number] } }
 interface YCollection { add: (obj: unknown) => void }
 
@@ -78,6 +78,7 @@ export function BranchesSettings() {
   const { toast } = useToast();
   const mapRef = useRef<HTMLDivElement>(null);
   const ymapRef = useRef<YMap | null>(null);
+  const pendingMarkerRef = useRef<YPlacemark | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [mapReady, setMapReady] = useState(false);
@@ -162,6 +163,19 @@ export function BranchesSettings() {
 
         map.events.add("click", (e) => {
           const coords = e.get("coords");
+          // Remove previous pending marker if any
+          if (pendingMarkerRef.current) {
+            map.geoObjects.remove(pendingMarkerRef.current);
+            pendingMarkerRef.current = null;
+          }
+          // Place a temporary "pending" marker at clicked point
+          const marker = new window.ymaps.Placemark(
+            [coords[0]!, coords[1]!],
+            { balloonContent: "Новый филиал" },
+            { preset: "islands#redDotIcon" },
+          );
+          map.geoObjects.add(marker);
+          pendingMarkerRef.current = marker;
           setAddingBranch({ lat: coords[0]!, lon: coords[1]! });
           setNewName("");
           setNewRadius("200");
@@ -186,6 +200,13 @@ export function BranchesSettings() {
     if (ymapRef.current) renderMarkers(ymapRef.current, branches);
   }, [branches, renderMarkers]);
 
+  const clearPendingMarker = useCallback(() => {
+    if (pendingMarkerRef.current && ymapRef.current) {
+      ymapRef.current.geoObjects.remove(pendingMarkerRef.current);
+      pendingMarkerRef.current = null;
+    }
+  }, []);
+
   const handleAddBranch = async () => {
     if (!addingBranch || !newName.trim()) return;
     setSaving(true);
@@ -199,6 +220,7 @@ export function BranchesSettings() {
           radiusMeters: Math.max(10, parseInt(newRadius) || 200),
         }),
       });
+      clearPendingMarker();
       await loadBranches();
       setAddingBranch(null);
       toast({ title: "Филиал добавлен" });
@@ -331,7 +353,7 @@ export function BranchesSettings() {
                   Добавить
                 </button>
                 <button
-                  onClick={() => setAddingBranch(null)}
+                  onClick={() => { clearPendingMarker(); setAddingBranch(null); }}
                   className="px-4 h-10 rounded-xl border border-border text-sm text-muted-foreground"
                 >
                   Отмена
