@@ -332,7 +332,7 @@ export function BranchesSettings() {
           </div>
           {mapReady && !addingBranch && (
             <Button
-              className="gap-1.5 h-8 text-xs px-2.5"
+              className="h-8 w-8 p-0"
               onClick={() => {
                 if (myLocation) {
                   if (pendingMarkerRef.current && ymapRef.current) {
@@ -355,8 +355,7 @@ export function BranchesSettings() {
                 }
               }}
             >
-              <Plus className="w-3.5 h-3.5 shrink-0" />
-              Новый филиал
+              <Plus className="w-4 h-4" />
             </Button>
           )}
         </div>
