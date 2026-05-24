@@ -112,22 +112,11 @@ export default function MenuPage() {
         <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Меню</p>
         <div className="bg-white rounded-2xl py-3 px-2">
           <div className="grid grid-cols-4">
-            {navItems.map((item, index) => {
-              const col = index % 4;
-              const row = Math.floor(index / 4);
-              const totalRows = Math.ceil(navItems.length / 4);
-              const isLastRow = row === totalRows - 1;
-              const isLastCol = col === 3 || index === navItems.length - 1;
-
-              return (
+            {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={cn(
-                    "flex flex-col items-center gap-1.5 py-3 px-1 relative",
-                    !isLastRow && "border-b border-gray-100",
-                    !isLastCol && "border-r border-gray-100",
-                  )}
+                  className="flex flex-col items-center gap-1.5 py-3 px-1 relative"
                 >
                   <item.icon
                     className="w-6 h-6 text-primary"
@@ -137,8 +126,7 @@ export default function MenuPage() {
                     {item.name}
                   </span>
                 </Link>
-              );
-            })}
+            ))}
           </div>
         </div>
       </div>
