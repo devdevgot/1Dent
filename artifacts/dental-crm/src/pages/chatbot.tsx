@@ -50,6 +50,7 @@ import {
 import type { ChatbotSettingsUpdate, DentalBroadcastRun, ScriptBlock } from "@workspace/api-client-react";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { KnowledgeModal } from "@/components/chatbot/knowledge-tab";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
@@ -872,6 +873,7 @@ export default function ChatbotPage() {
   const { t } = useTranslation();
   const [tab, setTab] = useState<"sessions" | "settings" | "manager-style" | "ai-broadcast">("sessions");
   const [knowledgeOpen, setKnowledgeOpen] = useState(false);
+  const [scriptOpen, setScriptOpen] = useState(false);
   const [confirmResetPhone, setConfirmResetPhone] = useState<string | null>(null);
   const [localSettings, setLocalSettings] = useState<ChatbotSettingsUpdate>({});
   const [savedSettings, setSavedSettings] = useState<ChatbotSettingsUpdate>({});
@@ -1145,78 +1147,104 @@ export default function ChatbotPage() {
               )}
             </div>
 
-            {/* Script blocks header */}
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-foreground">Скрипт диалога</p>
-                <p className="text-xs text-muted-foreground">{scriptBlocks.length} блоков · нажмите на блок чтобы изменить</p>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                {scriptSaveStatus !== "idle" && (
-                  <span className={cn("text-xs font-medium", scriptSaveStatus === "saved" ? "text-emerald-600" : "text-muted-foreground")}>
-                    {scriptSaveStatus === "saving" ? "Сохранение…" : "Сохранено ✓"}
-                  </span>
-                )}
-                {showResetConfirm ? (
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-muted-foreground">Сбросить?</span>
-                    <button
-                      onClick={() => { handleResetToStandard(); setShowResetConfirm(false); }}
-                      className="text-xs px-2 py-1 rounded-md font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors"
-                    >
-                      Да
-                    </button>
-                    <button
-                      onClick={() => setShowResetConfirm(false)}
-                      className="text-xs px-2 py-1 rounded-md font-medium text-muted-foreground hover:bg-muted transition-colors"
-                    >
-                      Нет
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setShowResetConfirm(true)}
-                    title="Сбросить до стандартного скрипта"
-                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted px-2 py-1 rounded-md transition-colors"
-                  >
-                    <RotateCcw className="h-3 w-3" />
-                    Сбросить
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Block cards */}
-            {scriptBlocks.length === 0 ? (
-              <div className="rounded-xl border border-border/50 bg-muted/30 p-8 text-center">
-                <Bot className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">Загрузка скрипта…</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {[...scriptBlocks].sort((a, b) => a.order - b.order).map((block) => (
-                  <ScriptBlockCard
-                    key={block.id}
-                    block={block}
-                    onContentChange={handleBlockContentChange}
-                    onToggle={handleBlockToggle}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Add custom script button */}
+            {/* Script dialog button */}
             <button
-              onClick={() => setShowCustomScriptModal(true)}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3.5 border border-dashed border-border rounded-xl text-sm text-muted-foreground hover:text-foreground hover:border-primary/50 hover:bg-primary/5 transition-colors"
+              onClick={() => setScriptOpen(true)}
+              className="w-full flex items-center gap-3 rounded-xl border border-border/50 bg-card p-4 hover:bg-muted/30 transition-colors text-left"
             >
-              <Upload className="h-4 w-4" />
-              Добавить кастомный скрипт
+              <ClipboardList className="h-4 w-4 text-primary shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground">Скрипт диалога</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {scriptBlocks.length > 0 ? `${scriptBlocks.length} блоков · настройте ответы чат-бота` : "Настройте ответы чат-бота"}
+                </p>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
             </button>
 
-            <p className="text-[11px] text-muted-foreground text-center pb-2">
-              Загрузите скрипт вашей клиники — ИИ автоматически разобьёт его на редактируемые блоки
-            </p>
+            {/* Script dialog modal */}
+            <Dialog open={scriptOpen} onOpenChange={(v) => !v && setScriptOpen(false)}>
+              <DialogContent className="max-w-2xl w-full max-h-[90vh] flex flex-col p-0 gap-0">
+                <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/50 shrink-0">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <DialogTitle className="flex items-center gap-2 text-base font-semibold">
+                        <ClipboardList className="h-4 w-4 text-primary" />
+                        Скрипт диалога
+                      </DialogTitle>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {scriptBlocks.length} блоков · нажмите на блок чтобы изменить
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 mt-0.5">
+                      {scriptSaveStatus !== "idle" && (
+                        <span className={cn("text-xs font-medium", scriptSaveStatus === "saved" ? "text-emerald-600" : "text-muted-foreground")}>
+                          {scriptSaveStatus === "saving" ? "Сохранение…" : "Сохранено ✓"}
+                        </span>
+                      )}
+                      {showResetConfirm ? (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-muted-foreground">Сбросить?</span>
+                          <button
+                            onClick={() => { handleResetToStandard(); setShowResetConfirm(false); }}
+                            className="text-xs px-2 py-1 rounded-md font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors"
+                          >
+                            Да
+                          </button>
+                          <button
+                            onClick={() => setShowResetConfirm(false)}
+                            className="text-xs px-2 py-1 rounded-md font-medium text-muted-foreground hover:bg-muted transition-colors"
+                          >
+                            Нет
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setShowResetConfirm(true)}
+                          title="Сбросить до стандартного скрипта"
+                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted px-2 py-1 rounded-md transition-colors"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                          Сбросить
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </DialogHeader>
+
+                <div className="overflow-y-auto flex-1 px-6 py-5 space-y-3">
+                  {scriptBlocks.length === 0 ? (
+                    <div className="rounded-xl border border-border/50 bg-muted/30 p-8 text-center">
+                      <Bot className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">Загрузка скрипта…</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {[...scriptBlocks].sort((a, b) => a.order - b.order).map((block) => (
+                        <ScriptBlockCard
+                          key={block.id}
+                          block={block}
+                          onContentChange={handleBlockContentChange}
+                          onToggle={handleBlockToggle}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => { setScriptOpen(false); setShowCustomScriptModal(true); }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3.5 border border-dashed border-border rounded-xl text-sm text-muted-foreground hover:text-foreground hover:border-primary/50 hover:bg-primary/5 transition-colors"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Добавить кастомный скрипт
+                  </button>
+
+                  <p className="text-[11px] text-muted-foreground text-center pb-2">
+                    Загрузите скрипт вашей клиники — ИИ автоматически разобьёт его на редактируемые блоки
+                  </p>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         )}
 
