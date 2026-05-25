@@ -14,7 +14,7 @@ import {
 
 // ── Auth helper ───────────────────────────────────────────────────────────────
 function getToken() {
-  return localStorage.getItem("authToken") ?? localStorage.getItem("token") ?? "";
+  return localStorage.getItem("auth_token") ?? "";
 }
 async function apiFetch(path: string, opts?: RequestInit) {
   const token = getToken();
