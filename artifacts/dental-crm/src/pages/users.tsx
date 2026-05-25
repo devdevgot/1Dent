@@ -297,11 +297,8 @@ export default function StaffPage() {
             </div>
           </div>
           {isOwnerOrAdmin && (
-            <Button
-              onClick={() => setInviteOpen(true)}
-              className="gap-1.5 h-8 text-xs px-2.5 sm:px-3"
-            >
-              <UserPlus className="w-3.5 h-3.5 shrink-0" />
+            <Button onClick={() => setInviteOpen(true)} className="gap-1.5 h-8 text-xs px-2.5 sm:px-3">
+              <Plus className="w-3.5 h-3.5 shrink-0" />
               <span className="hidden sm:inline">Добавить сотрудника</span>
             </Button>
           )}
