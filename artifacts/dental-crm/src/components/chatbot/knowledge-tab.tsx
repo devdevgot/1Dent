@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Globe, FileText, Trash2, Loader2, Plus, Sparkles, CheckCircle2,
-  AlertCircle, Clock, RefreshCw, X, Upload, ChevronRight,
+  AlertCircle, Clock, RefreshCw, X, Upload, Pencil, Save,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -77,10 +77,100 @@ interface KnowledgeScript {
   generatedAt?: string;
 }
 
-// ── Mind Map node component ───────────────────────────────────────────────────
-let globalNodeIndex = 0;
+// ── Node edit dialog ──────────────────────────────────────────────────────────
+interface EditingNode {
+  node: ScriptNode;
+  scriptKey: "primaryScript" | "repeatScript";
+}
 
-function MindNode({ node, depth = 0, indexOffset = 0 }: { node: ScriptNode; depth?: number; indexOffset?: number }) {
+function NodeEditDialog({
+  editing,
+  onClose,
+  onSave,
+  saving,
+}: {
+  editing: EditingNode | null;
+  onClose: () => void;
+  onSave: (scriptKey: "primaryScript" | "repeatScript", nodeId: string, label: string, detail: string) => Promise<void>;
+  saving: boolean;
+}) {
+  const [label, setLabel] = useState("");
+  const [detail, setDetail] = useState("");
+
+  useEffect(() => {
+    if (editing) {
+      setLabel(editing.node.label);
+      setDetail(editing.node.detail ?? "");
+    }
+  }, [editing]);
+
+  if (!editing) return null;
+
+  return (
+    <Dialog open={!!editing} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-md w-full p-0 gap-0">
+        <DialogHeader className="px-5 pt-5 pb-3 border-b border-border/50">
+          <DialogTitle className="flex items-center gap-2 text-sm font-semibold">
+            <Pencil className="h-3.5 w-3.5 text-primary" />
+            Редактировать узел
+          </DialogTitle>
+        </DialogHeader>
+        <div className="px-5 py-4 space-y-3">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-foreground">Название этапа</label>
+            <input
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="Название этапа скрипта"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-foreground">Описание / инструкция</label>
+            <textarea
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+              rows={5}
+              value={detail}
+              onChange={(e) => setDetail(e.target.value)}
+              placeholder="Что нужно сказать или сделать на этом этапе…"
+            />
+          </div>
+        </div>
+        <div className="px-5 pb-5 flex gap-2 justify-end">
+          <button
+            onClick={onClose}
+            className="px-3 py-1.5 text-xs rounded-lg border border-border text-muted-foreground hover:bg-muted transition-colors"
+          >
+            Отмена
+          </button>
+          <button
+            onClick={() => void onSave(editing.scriptKey, editing.node.id, label.trim(), detail.trim())}
+            disabled={saving || !label.trim()}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+            Сохранить
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Mind Map node component ───────────────────────────────────────────────────
+function countNodes(node: ScriptNode): number {
+  return 1 + (node.children ?? []).reduce((s, c) => s + countNodes(c), 0);
+}
+
+function MindNode({
+  node, depth = 0, indexOffset = 0, scriptKey, onSelect,
+}: {
+  node: ScriptNode;
+  depth?: number;
+  indexOffset?: number;
+  scriptKey: "primaryScript" | "repeatScript";
+  onSelect: (node: ScriptNode, scriptKey: "primaryScript" | "repeatScript") => void;
+}) {
   const [visible, setVisible] = useState(false);
   const delay = indexOffset * 80;
 
@@ -90,11 +180,11 @@ function MindNode({ node, depth = 0, indexOffset = 0 }: { node: ScriptNode; dept
   }, [delay]);
 
   const colors = [
-    "bg-primary/10 border-primary/30 text-primary",
-    "bg-violet-50 border-violet-200 text-violet-700",
-    "bg-emerald-50 border-emerald-200 text-emerald-700",
-    "bg-amber-50 border-amber-200 text-amber-700",
-    "bg-sky-50 border-sky-200 text-sky-700",
+    "bg-primary/10 border-primary/30 text-primary hover:bg-primary/15",
+    "bg-violet-50 border-violet-200 text-violet-700 hover:bg-violet-100",
+    "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100",
+    "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100",
+    "bg-sky-50 border-sky-200 text-sky-700 hover:bg-sky-100",
   ];
   const colorClass = colors[depth % colors.length] ?? colors[0]!;
 
@@ -116,32 +206,35 @@ function MindNode({ node, depth = 0, indexOffset = 0 }: { node: ScriptNode; dept
         )}
         style={{ transitionDelay: `${delay}ms` }}
       >
-        <div className={cn(
-          "rounded-xl border px-3 py-2 min-w-[110px] max-w-[160px] shrink-0 shadow-sm",
-          colorClass,
-        )}>
+        <button
+          onClick={() => onSelect(node, scriptKey)}
+          className={cn(
+            "group relative rounded-xl border px-3 py-2 min-w-[110px] max-w-[160px] shrink-0 shadow-sm text-left cursor-pointer transition-all",
+            colorClass,
+          )}
+          title="Нажмите для просмотра и редактирования"
+        >
           <p className="text-xs font-semibold leading-snug">{node.label}</p>
           {node.detail && (
             <p className="text-[10px] opacity-70 mt-0.5 leading-snug line-clamp-2">{node.detail}</p>
           )}
-        </div>
+          <Pencil className="absolute top-1.5 right-1.5 h-2.5 w-2.5 opacity-0 group-hover:opacity-40 transition-opacity" />
+        </button>
       </div>
 
       {/* Children */}
       {childNodes.length > 0 && (
         <div className="flex items-start">
-          {/* Connector */}
           <div className="flex flex-col items-center justify-center self-stretch">
             <div className="w-4 h-px bg-border/60 mt-[18px]" />
           </div>
-          {/* Children column */}
           <div className="flex flex-col gap-2">
             {childNodes.map(({ child, offset }) => (
               <div key={child.id} className="flex items-center gap-0">
                 <div className="flex items-center">
                   <div className="w-3 h-px bg-border/60" />
                 </div>
-                <MindNode node={child} depth={depth + 1} indexOffset={offset} />
+                <MindNode node={child} depth={depth + 1} indexOffset={offset} scriptKey={scriptKey} onSelect={onSelect} />
               </div>
             ))}
           </div>
@@ -151,11 +244,14 @@ function MindNode({ node, depth = 0, indexOffset = 0 }: { node: ScriptNode; dept
   );
 }
 
-function countNodes(node: ScriptNode): number {
-  return 1 + (node.children ?? []).reduce((s, c) => s + countNodes(c), 0);
-}
-
-function MindMap({ script, color }: { script: GeneratedScript; color: string }) {
+function MindMap({
+  script, color, scriptKey, onSelect,
+}: {
+  script: GeneratedScript;
+  color: string;
+  scriptKey: "primaryScript" | "repeatScript";
+  onSelect: (node: ScriptNode, scriptKey: "primaryScript" | "repeatScript") => void;
+}) {
   let offset = 0;
   const nodeGroups = script.nodes.map((node) => {
     const o = offset;
@@ -166,10 +262,11 @@ function MindMap({ script, color }: { script: GeneratedScript; color: string }) 
   return (
     <div className="space-y-2">
       <h3 className={cn("text-sm font-bold", color)}>{script.title}</h3>
+      <p className="text-[10px] text-muted-foreground">Нажмите на любой блок, чтобы посмотреть или изменить</p>
       <div className="overflow-x-auto pb-2">
         <div className="flex flex-col gap-3 min-w-max px-1 py-2">
           {nodeGroups.map(({ node, offset: o }) => (
-            <MindNode key={node.id} node={node} depth={0} indexOffset={o} />
+            <MindNode key={node.id} node={node} depth={0} indexOffset={o} scriptKey={scriptKey} onSelect={onSelect} />
           ))}
         </div>
       </div>
@@ -188,6 +285,8 @@ export function KnowledgeTab() {
   const [generating, setGenerating] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [showScript, setShowScript] = useState(false);
+  const [editingNode, setEditingNode] = useState<EditingNode | null>(null);
+  const [savingNode, setSavingNode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -325,6 +424,44 @@ export function KnowledgeTab() {
     } finally {
       clearTimeout(timer);
       setGenerating(false);
+    }
+  };
+
+  // Deep-update a node by id in a script tree
+  const updateNodeInTree = (nodes: ScriptNode[], id: string, label: string, detail: string): ScriptNode[] =>
+    nodes.map((n) =>
+      n.id === id
+        ? { ...n, label, detail }
+        : { ...n, children: updateNodeInTree(n.children ?? [], id, label, detail) },
+    );
+
+  const handleSaveNode = async (
+    scriptKey: "primaryScript" | "repeatScript",
+    nodeId: string,
+    label: string,
+    detail: string,
+  ) => {
+    if (!script) return;
+    setSavingNode(true);
+    try {
+      const current = script[scriptKey];
+      if (!current) return;
+      const updated: GeneratedScript = {
+        ...current,
+        nodes: updateNodeInTree(current.nodes, nodeId, label, detail),
+      };
+      const newScript = { ...script, [scriptKey]: updated };
+      await apiFetch("/api/knowledge/scripts", {
+        method: "PATCH",
+        body: JSON.stringify({ [scriptKey]: updated }),
+      });
+      setScript(newScript);
+      setEditingNode(null);
+      toast({ title: "Сохранено", description: "Изменения в скрипте сохранены" });
+    } catch {
+      toast({ title: "Ошибка", description: "Не удалось сохранить изменения", variant: "destructive" });
+    } finally {
+      setSavingNode(false);
     }
   };
 
@@ -500,17 +637,34 @@ export function KnowledgeTab() {
 
           {script.primaryScript && (
             <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 overflow-hidden">
-              <MindMap script={script.primaryScript} color="text-primary" />
+              <MindMap
+                script={script.primaryScript}
+                color="text-primary"
+                scriptKey="primaryScript"
+                onSelect={(node, key) => setEditingNode({ node, scriptKey: key })}
+              />
             </div>
           )}
 
           {script.repeatScript && (
             <div className="rounded-xl border border-violet-200 bg-violet-50/50 p-4 overflow-hidden">
-              <MindMap script={script.repeatScript} color="text-violet-700" />
+              <MindMap
+                script={script.repeatScript}
+                color="text-violet-700"
+                scriptKey="repeatScript"
+                onSelect={(node, key) => setEditingNode({ node, scriptKey: key })}
+              />
             </div>
           )}
         </div>
       )}
+
+      <NodeEditDialog
+        editing={editingNode}
+        onClose={() => setEditingNode(null)}
+        onSave={handleSaveNode}
+        saving={savingNode}
+      />
     </div>
   );
 }

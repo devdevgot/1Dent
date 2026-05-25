@@ -108,6 +108,31 @@ router.delete("/knowledge/:id", ownerAdmin, async (req: Request, res: Response, 
   } catch (err) { next(err); }
 });
 
+// ── PATCH /api/knowledge/scripts ─────────────────────────────────────────────
+router.patch("/knowledge/scripts", ownerAdmin, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const parsed = z.object({
+      primaryScript: z.unknown().optional(),
+      repeatScript: z.unknown().optional(),
+    }).safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError("Invalid body"));
+
+    const clinicId = req.user!.clinicId;
+    const { primaryScript, repeatScript } = parsed.data;
+
+    await db
+      .update(knowledgeScriptsTable)
+      .set({
+        ...(primaryScript !== undefined ? { primaryScript: primaryScript as never } : {}),
+        ...(repeatScript !== undefined ? { repeatScript: repeatScript as never } : {}),
+        generatedAt: new Date(),
+      })
+      .where(eq(knowledgeScriptsTable.clinicId, clinicId));
+
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
 // ── POST /api/knowledge/generate ─────────────────────────────────────────────
 router.post("/knowledge/generate", ownerAdmin, async (req: Request, res: Response, next: NextFunction) => {
   try {
