@@ -430,7 +430,6 @@ export function BranchesSettings() {
       {/* ── Branches card ─────────────────────────────────────────────── */}
       <div className="bg-card rounded-2xl border border-border/60 overflow-hidden">
         <div className="flex items-center gap-3 px-5 py-4 border-b border-border/40">
-          <MapPin className="w-5 h-5 text-primary" />
           <div className="flex-1">
             <h2 className="font-semibold text-base text-foreground">Филиалы и геозоны</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
