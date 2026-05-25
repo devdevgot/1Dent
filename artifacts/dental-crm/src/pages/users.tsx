@@ -301,7 +301,7 @@ export default function StaffPage() {
               <button
                 onClick={() => setShowInactive((v) => !v)}
                 className={cn(
-                  "h-8 px-2.5 rounded-lg border text-xs font-semibold transition-colors",
+                  "inline-flex items-center justify-center h-8 w-8 rounded-md border text-xs font-semibold transition-colors shrink-0",
                   showInactive ? "bg-primary/10 border-primary/30 text-primary" : "bg-gray-50 border-gray-200 text-gray-500",
                 )}
                 title="Показать неактивных"
