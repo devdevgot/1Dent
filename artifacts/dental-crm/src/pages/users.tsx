@@ -21,6 +21,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { Button } from "@/components/ui/button";
 import EmployeeDialog, { type EmployeeFormData } from "./employee-dialog";
 import InviteStaffDialog from "./invite-staff-dialog";
 import { cn } from "@/lib/utils";
@@ -296,14 +297,13 @@ export default function StaffPage() {
             </div>
           </div>
           {isOwnerOrAdmin && (
-            <button
+            <Button
               onClick={() => setInviteOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl text-white text-sm font-semibold shadow-sm"
-              style={{ backgroundColor: "#98cc1c" }}
+              className="gap-1.5 h-8 text-xs px-2.5 sm:px-3"
             >
-              <UserPlus className="w-4 h-4" />
-              + Добавить сотрудника
-            </button>
+              <UserPlus className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden sm:inline">Добавить сотрудника</span>
+            </Button>
           )}
         </div>
 
