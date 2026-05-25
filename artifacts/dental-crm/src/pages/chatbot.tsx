@@ -30,6 +30,7 @@ import {
   Bell,
   Heart,
   RotateCcw,
+  BookOpen,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -47,6 +48,7 @@ import {
 } from "@workspace/api-client-react";
 import type { ChatbotSettingsUpdate, DentalBroadcastRun, ScriptBlock } from "@workspace/api-client-react";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { KnowledgeTab } from "@/components/chatbot/knowledge-tab";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
@@ -867,7 +869,7 @@ function CustomScriptModal({
 
 export default function ChatbotPage() {
   const { t } = useTranslation();
-  const [tab, setTab] = useState<"sessions" | "settings" | "manager-style" | "ai-broadcast">("sessions");
+  const [tab, setTab] = useState<"sessions" | "settings" | "manager-style" | "ai-broadcast" | "knowledge">("sessions");
   const [confirmResetPhone, setConfirmResetPhone] = useState<string | null>(null);
   const [localSettings, setLocalSettings] = useState<ChatbotSettingsUpdate>({});
   const [savedSettings, setSavedSettings] = useState<ChatbotSettingsUpdate>({});
@@ -1008,6 +1010,7 @@ export default function ChatbotPage() {
           {([
             { key: "sessions", label: t("chatbot.tab.sessions"), icon: MessageSquare },
             { key: "settings", label: t("chatbot.tab.settings"), icon: Settings },
+            { key: "knowledge", label: "База знаний", icon: BookOpen },
             { key: "manager-style", label: "Playground", icon: FlaskConical },
             { key: "ai-broadcast", label: "ИИ Рассылка", icon: Megaphone },
           ] as const).map(({ key, label, icon: Icon }) => (
@@ -1203,6 +1206,7 @@ export default function ChatbotPage() {
           </div>
         )}
 
+        {tab === "knowledge" && <KnowledgeTab />}
         {tab === "manager-style" && <PlaygroundTab />}
         {tab === "ai-broadcast" && <AiBroadcastTab />}
       </div>
