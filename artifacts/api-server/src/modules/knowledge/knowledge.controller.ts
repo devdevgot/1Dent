@@ -210,18 +210,54 @@ ${knowledgeText}
 
 // ── Background helpers ────────────────────────────────────────────────────────
 
+// Domains that block automated scraping — store URL as reference text instead
+const SOCIAL_DOMAINS: Record<string, string> = {
+  "instagram.com": "Instagram",
+  "www.instagram.com": "Instagram",
+  "facebook.com": "Facebook",
+  "www.facebook.com": "Facebook",
+  "tiktok.com": "TikTok",
+  "www.tiktok.com": "TikTok",
+  "vk.com": "ВКонтакте",
+  "www.vk.com": "ВКонтакте",
+  "t.me": "Telegram",
+  "twitter.com": "Twitter/X",
+  "x.com": "Twitter/X",
+};
+
 async function scrapeUrl(id: string, url: string): Promise<void> {
   try {
+    const hostname = new URL(url).hostname.toLowerCase();
+    const socialName = SOCIAL_DOMAINS[hostname];
+
+    if (socialName) {
+      // Social media blocks scraping — save URL as reference text for the AI
+      const text = `${socialName} профиль клиники: ${url}\n\nЭто ссылка на страницу клиники в ${socialName}. ИИ-ассистент должен учитывать, что клиника активно ведёт ${socialName} и привлекает пациентов через эту платформу.`;
+      await db
+        .update(knowledgeSourcesTable)
+        .set({ extractedText: text, status: "ready" })
+        .where(eq(knowledgeSourcesTable.id, id));
+      return;
+    }
+
     const response = await fetch(url, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; 1DentBot/1.0; +https://1dent.kz)",
-        "Accept": "text/html,application/xhtml+xml",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "ru,kk;q=0.9,en;q=0.8",
       },
       signal: AbortSignal.timeout(20000),
     });
 
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    if (!response.ok) {
+      const friendly =
+        response.status === 403 ? "Сайт запрещает автоматический доступ (403 Forbidden)" :
+        response.status === 404 ? "Страница не найдена (404)" :
+        response.status === 429 ? "Сайт временно ограничил доступ (429). Попробуйте позже" :
+        response.status >= 500 ? `Сервер сайта вернул ошибку (${response.status})` :
+        `HTTP ${response.status}`;
+      throw new Error(friendly);
+    }
 
     const html = await response.text();
     const text = html
@@ -243,9 +279,10 @@ async function scrapeUrl(id: string, url: string): Promise<void> {
       .set({ extractedText: text, status: "ready" })
       .where(eq(knowledgeSourcesTable.id, id));
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
     await db
       .update(knowledgeSourcesTable)
-      .set({ status: "error", errorMessage: String(err) })
+      .set({ status: "error", errorMessage: msg })
       .where(eq(knowledgeSourcesTable.id, id));
   }
 }

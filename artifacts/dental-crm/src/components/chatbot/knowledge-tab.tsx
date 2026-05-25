@@ -385,13 +385,16 @@ export function KnowledgeTab() {
                     <p className="text-[10px] text-muted-foreground truncate">{source.url}</p>
                   )}
                 </div>
-                <div className="shrink-0">
+                <div className="shrink-0 flex items-center gap-1.5">
                   {source.status === "pending" && <Clock className="h-3.5 w-3.5 text-amber-500 animate-pulse" />}
                   {source.status === "ready" && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />}
                   {source.status === "error" && (
-                    <span title={source.errorMessage ?? "Ошибка"}>
-                      <AlertCircle className="h-3.5 w-3.5 text-destructive" />
-                    </span>
+                    <div className="flex items-center gap-1.5 max-w-[140px]">
+                      <AlertCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
+                      <span className="text-[10px] text-destructive leading-tight line-clamp-2">
+                        {source.errorMessage ?? "Ошибка обработки"}
+                      </span>
+                    </div>
                   )}
                 </div>
                 <button
