@@ -12,6 +12,21 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+// ── Error message helper ──────────────────────────────────────────────────────
+function friendlyError(msg: string | null | undefined): string {
+  if (!msg) return "Не удалось обработать источник";
+  const m = msg.toLowerCase();
+  if (m.includes("429")) return "Сайт временно заблокировал доступ — попробуйте позже или удалите и добавьте снова";
+  if (m.includes("403") || m.includes("forbidden")) return "Сайт запрещает автоматический доступ";
+  if (m.includes("404") || m.includes("not found")) return "Страница не найдена — проверьте ссылку";
+  if (m.includes("timeout") || m.includes("timed out")) return "Сайт не ответил вовремя — попробуйте позже";
+  if (m.includes("enotfound") || m.includes("econnrefused") || m.includes("network")) return "Не удалось подключиться к сайту — проверьте ссылку";
+  if (m.includes("ssl") || m.includes("certificate")) return "Ошибка безопасного соединения с сайтом";
+  if (m.includes("500") || m.includes("502") || m.includes("503")) return "Сервер сайта временно недоступен";
+  if (m.includes("invalid url") || m.includes("invalid") && m.includes("url")) return "Некорректная ссылка";
+  return "Не удалось загрузить страницу — проверьте ссылку";
+}
+
 // ── Auth helper ───────────────────────────────────────────────────────────────
 function getToken() {
   return localStorage.getItem("auth_token") ?? "";
@@ -392,7 +407,7 @@ export function KnowledgeTab() {
                     <div className="flex items-center gap-1.5 max-w-[140px]">
                       <AlertCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
                       <span className="text-[10px] text-destructive leading-tight line-clamp-2">
-                        {source.errorMessage ?? "Ошибка обработки"}
+                        {friendlyError(source.errorMessage)}
                       </span>
                     </div>
                   )}
