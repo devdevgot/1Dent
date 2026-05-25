@@ -116,9 +116,13 @@ async function executeBroadcastRun(runId: string, clinicId: string): Promise<voi
       }
 
       if (parsed.needsMessage && parsed.message && patient.phone) {
-        await sendToPatient(clinicId, patient.phone, parsed.message);
-        messagesSent++;
-        logger.info({ patientId: patient.id }, "[DentalBroadcast] Message sent");
+        const msgId = await sendToPatient(clinicId, patient.phone, parsed.message);
+        if (msgId) {
+          messagesSent++;
+          logger.info({ patientId: patient.id, msgId }, "[DentalBroadcast] Message delivered");
+        } else {
+          logger.warn({ patientId: patient.id }, "[DentalBroadcast] sendToPatient returned empty — no provider configured");
+        }
       }
     } catch (err) {
       logger.warn({ err, patientId: patient.id }, "[DentalBroadcast] Error processing patient");

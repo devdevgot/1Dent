@@ -345,7 +345,14 @@ const STATUS_COLOR: Record<DentalBroadcastRun["status"], string> = {
 function AiBroadcastTab() {
   const queryClient = useQueryClient();
   const [showConfirm, setShowConfirm] = useState(false);
-  const { data, isLoading } = useListDentalBroadcastRuns(20);
+  const { data, isLoading } = useListDentalBroadcastRuns(20, {
+    query: {
+      refetchInterval: (query) => {
+        const runs = (query.state.data as { data?: { runs?: { status: string }[] } } | undefined)?.data?.runs ?? [];
+        return runs.some((r) => r.status === "running") ? 3000 : false;
+      },
+    },
+  });
   const runs = data?.data?.runs ?? [];
   const latestRun = runs[0] ?? null;
   const isRunning = latestRun?.status === "running";
