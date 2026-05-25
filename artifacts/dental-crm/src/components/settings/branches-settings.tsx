@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MapPin, Plus, Trash2, Loader2, Send, CheckCircle2, Bot, Navigation, Search } from "lucide-react";
+import { MapPin, Plus, Trash2, Loader2, Send, CheckCircle2, Bot, Navigation, Search, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface Branch {
   id: string;
@@ -25,7 +26,12 @@ declare global {
       Placemark: new (coords: number[], props: object, opts: object) => YPlacemark;
       Circle: new (coords: [number[], number], props: object, opts: object) => YCircle;
       GeoObjectCollection: new () => YCollection;
-      geocode: (query: string, opts?: object) => Promise<{ geoObjects: { get: (i: number) => { geometry: { getCoordinates: () => number[] }; properties: { get: (k: string) => string } } | null; getLength: () => number } }>;
+      geocode: (query: string, opts?: object) => Promise<{
+        geoObjects: {
+          get: (i: number) => { geometry: { getCoordinates: () => number[] }; properties: { get: (k: string) => string } } | null;
+          getLength: () => number;
+        };
+      }>;
     };
     _ymapsLoaded?: boolean;
   }
@@ -76,29 +82,21 @@ function loadYandexMaps(apiKey: string): Promise<void> {
   });
 }
 
+const RADIUS_PRESETS = [
+  { label: "50 м", value: 50 },
+  { label: "100 м", value: 100 },
+  { label: "200 м", value: 200 },
+  { label: "500 м", value: 500 },
+  { label: "1 км", value: 1000 },
+];
+
 export function BranchesSettings() {
   const { toast } = useToast();
-  const mapRef = useRef<HTMLDivElement>(null);
-  const ymapRef = useRef<YMap | null>(null);
-  const pendingMarkerRef = useRef<YPlacemark | null>(null);
-  const myLocationMarkerRef = useRef<YPlacemark | null>(null);
+
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
-  const [mapReady, setMapReady] = useState(false);
-  const [mapError, setMapError] = useState<string | null>(null);
-  const [addingBranch, setAddingBranch] = useState<{ lat: number; lon: number } | null>(null);
-  const [myLocation, setMyLocation] = useState<{ lat: number; lon: number } | null>(null);
-  const [locating, setLocating] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newRadius, setNewRadius] = useState("200");
-  const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [branchSearch, setBranchSearch] = useState("");
-
-  const [mapQuery, setMapQuery] = useState("");
-  const [mapGeoResults, setMapGeoResults] = useState<{ name: string; coords: number[] }[]>([]);
-  const [mapSearching, setMapSearching] = useState(false);
-  const geoDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [tgToken, setTgToken] = useState("");
   const [tgChatId, setTgChatId] = useState("");
@@ -108,6 +106,30 @@ export function BranchesSettings() {
 
   const yandexApiKey = import.meta.env.VITE_YANDEX_MAPS_API_KEY as string | undefined ?? "";
 
+  // ── Modal state ──────────────────────────────────────────────────────────
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const ymapRef = useRef<YMap | null>(null);
+  const pendingMarkerRef = useRef<YPlacemark | null>(null);
+
+  const [modalMapReady, setModalMapReady] = useState(false);
+  const [modalMapError, setModalMapError] = useState<string | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [myLocation, setMyLocation] = useState<{ lat: number; lon: number } | null>(null);
+
+  const [pendingCoords, setPendingCoords] = useState<{ lat: number; lon: number } | null>(null);
+  const [newName, setNewName] = useState("");
+  const [newRadius, setNewRadius] = useState(200);
+  const [customRadius, setCustomRadius] = useState("");
+  const [useCustomRadius, setUseCustomRadius] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const [mapQuery, setMapQuery] = useState("");
+  const [mapGeoResults, setMapGeoResults] = useState<{ name: string; coords: number[] }[]>([]);
+  const [mapSearching, setMapSearching] = useState(false);
+  const geoDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Data loading ─────────────────────────────────────────────────────────
   const loadBranches = useCallback(async () => {
     try {
       const res = await apiFetch("/api/branches");
@@ -125,120 +147,112 @@ export function BranchesSettings() {
       const d = res.data as TelegramSettings;
       setTgToken(d.telegramBotToken ?? "");
       setTgChatId(d.telegramOwnerChatId ?? "");
-    } catch {
-      // ignore
-    }
+    } catch { /* ignore */ }
   }, []);
 
   useEffect(() => { void loadBranches(); void loadTgSettings(); }, [loadBranches, loadTgSettings]);
 
-  // Render markers on map
-  const renderMarkers = useCallback((map: YMap, list: Branch[]) => {
-    map.geoObjects.removeAll();
-    for (const b of list) {
-      const col = new window.ymaps.GeoObjectCollection();
-      col.add(new window.ymaps.Placemark(
-        [b.latitude, b.longitude],
-        { balloonContent: `<b>${b.name}</b><br>Радиус: ${b.radiusMeters}м` },
-        { preset: "islands#blueMedicalIcon" },
-      ));
-      col.add(new window.ymaps.Circle(
-        [[b.latitude, b.longitude], b.radiusMeters],
-        {},
-        { fillColor: "#3B82F620", strokeColor: "#3B82F6", strokeWidth: 2 },
-      ));
-      map.geoObjects.add(col);
-    }
-  }, []);
-
-  // Init map once branches are loaded
+  // ── Modal map init ───────────────────────────────────────────────────────
   useEffect(() => {
-    if (loading || !mapRef.current) return;
+    if (!isModalOpen) return;
     let destroyed = false;
 
-    loadYandexMaps(yandexApiKey)
-      .then(() => {
-        if (destroyed || !mapRef.current) return;
-        const center = branches.length
-          ? [branches[0]!.latitude, branches[0]!.longitude]
-          : [51.18, 71.446]; // Astana fallback
+    // Small delay to let the dialog DOM render
+    const timer = setTimeout(() => {
+      if (!mapRef.current) return;
 
-        const map = new window.ymaps.Map(mapRef.current, {
-          center,
-          zoom: 15,
-          controls: ["zoomControl", "fullscreenControl"],
-        });
-        ymapRef.current = map;
-        renderMarkers(map, branches);
-        setMapReady(true);
+      loadYandexMaps(yandexApiKey)
+        .then(() => {
+          if (destroyed || !mapRef.current) return;
 
-        // Auto-detect device location
-        if (navigator.geolocation) {
-          setLocating(true);
-          navigator.geolocation.getCurrentPosition(
-            (pos) => {
-              if (destroyed) return;
-              const lat = pos.coords.latitude;
-              const lon = pos.coords.longitude;
-              // Center map on device if no branches yet
-              if (!branches.length) {
-                map.setCenter([lat, lon], 15);
-              }
-              // Place blue "my location" dot
-              const myMarker = new window.ymaps.Placemark(
-                [lat, lon],
-                { balloonContent: "Вы здесь" },
-                { preset: "islands#blueCircleDotIcon" },
-              );
-              map.geoObjects.add(myMarker);
-              myLocationMarkerRef.current = myMarker;
-              setMyLocation({ lat, lon });
-              setLocating(false);
-            },
-            () => { setLocating(false); },
-            { timeout: 8000, maximumAge: 60000 },
-          );
-        }
+          const center = branches.length
+            ? [branches[0]!.latitude, branches[0]!.longitude]
+            : [51.18, 71.446];
 
-        map.events.add("click", (e) => {
-          const coords = e.get("coords");
-          // Remove previous pending marker if any
-          if (pendingMarkerRef.current) {
-            map.geoObjects.remove(pendingMarkerRef.current);
-            pendingMarkerRef.current = null;
+          const map = new window.ymaps.Map(mapRef.current, {
+            center,
+            zoom: 14,
+            controls: ["zoomControl"],
+          });
+          ymapRef.current = map;
+
+          // Draw existing branches
+          for (const b of branches) {
+            const col = new window.ymaps.GeoObjectCollection();
+            col.add(new window.ymaps.Placemark(
+              [b.latitude, b.longitude],
+              { balloonContent: `<b>${b.name}</b><br>Радиус: ${b.radiusMeters}м` },
+              { preset: "islands#blueMedicalIcon" },
+            ));
+            col.add(new window.ymaps.Circle(
+              [[b.latitude, b.longitude], b.radiusMeters],
+              {},
+              { fillColor: "#3B82F620", strokeColor: "#3B82F6", strokeWidth: 2 },
+            ));
+            map.geoObjects.add(col);
           }
-          // Place a temporary "pending" marker at clicked point
-          const marker = new window.ymaps.Placemark(
-            [coords[0]!, coords[1]!],
-            { balloonContent: "Новый филиал" },
-            { preset: "islands#redDotIcon" },
-          );
-          map.geoObjects.add(marker);
-          pendingMarkerRef.current = marker;
-          setAddingBranch({ lat: coords[0]!, lon: coords[1]! });
-          setNewName("");
-          setNewRadius("200");
+
+          setModalMapReady(true);
+
+          // Auto-locate device
+          if (navigator.geolocation) {
+            setLocating(true);
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                if (destroyed) return;
+                const lat = pos.coords.latitude;
+                const lon = pos.coords.longitude;
+                if (!branches.length) map.setCenter([lat, lon], 15);
+                map.geoObjects.add(new window.ymaps.Placemark(
+                  [lat, lon],
+                  { balloonContent: "Вы здесь" },
+                  { preset: "islands#blueCircleDotIcon" },
+                ));
+                setMyLocation({ lat, lon });
+                setLocating(false);
+              },
+              () => setLocating(false),
+              { timeout: 8000, maximumAge: 60000 },
+            );
+          }
+
+          // Click to place marker
+          map.events.add("click", (e) => {
+            const coords = e.get("coords");
+            if (pendingMarkerRef.current) {
+              map.geoObjects.remove(pendingMarkerRef.current);
+              pendingMarkerRef.current = null;
+            }
+            const marker = new window.ymaps.Placemark(
+              [coords[0]!, coords[1]!],
+              { balloonContent: "Новый филиал" },
+              { preset: "islands#redDotIcon" },
+            );
+            map.geoObjects.add(marker);
+            pendingMarkerRef.current = marker;
+            setPendingCoords({ lat: coords[0]!, lon: coords[1]! });
+            setNewName("");
+          });
+        })
+        .catch(() => {
+          if (!destroyed) setModalMapError("Не удалось загрузить Яндекс Карты.");
         });
-      })
-      .catch(() => {
-        if (!destroyed) setMapError("Не удалось загрузить Яндекс Карты. Убедитесь в подключении к интернету.");
-      });
+    }, 150);
 
     return () => {
       destroyed = true;
+      clearTimeout(timer);
       if (ymapRef.current) {
         try { ymapRef.current.destroy(); } catch { /* ignore */ }
         ymapRef.current = null;
       }
+      setModalMapReady(false);
+      setModalMapError(null);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading]);
+  }, [isModalOpen]);
 
-  // Re-render markers when branches change and map is ready
-  useEffect(() => {
-    if (ymapRef.current) renderMarkers(ymapRef.current, branches);
-  }, [branches, renderMarkers]);
-
+  // ── Geo search ───────────────────────────────────────────────────────────
   const handleMapSearch = useCallback((q: string) => {
     setMapQuery(q);
     if (geoDebounceRef.current) clearTimeout(geoDebounceRef.current);
@@ -252,9 +266,10 @@ export function BranchesSettings() {
         for (let i = 0; i < Math.min(count, 5); i++) {
           const obj = res.geoObjects.get(i);
           if (!obj) continue;
-          const coords = obj.geometry.getCoordinates();
-          const name = obj.properties.get("text") || obj.properties.get("name") || q;
-          results.push({ name, coords });
+          results.push({
+            name: obj.properties.get("text") || obj.properties.get("name") || q,
+            coords: obj.geometry.getCoordinates(),
+          });
         }
         setMapGeoResults(results);
       } catch { setMapGeoResults([]); }
@@ -262,30 +277,42 @@ export function BranchesSettings() {
     }, 400);
   }, []);
 
-  const clearPendingMarker = useCallback(() => {
+  // ── Close / reset modal ──────────────────────────────────────────────────
+  const closeModal = useCallback(() => {
+    setIsModalOpen(false);
+    setPendingCoords(null);
+    setNewName("");
+    setNewRadius(200);
+    setCustomRadius("");
+    setUseCustomRadius(false);
+    setMyLocation(null);
+    setMapQuery("");
+    setMapGeoResults([]);
     if (pendingMarkerRef.current && ymapRef.current) {
-      ymapRef.current.geoObjects.remove(pendingMarkerRef.current);
+      try { ymapRef.current.geoObjects.remove(pendingMarkerRef.current); } catch { /* ignore */ }
       pendingMarkerRef.current = null;
     }
   }, []);
 
+  // ── Save branch ──────────────────────────────────────────────────────────
   const handleAddBranch = async () => {
-    if (!addingBranch || !newName.trim()) return;
+    if (!pendingCoords || !newName.trim()) return;
+    const radius = useCustomRadius
+      ? Math.max(10, Math.min(50000, parseInt(customRadius) || 200))
+      : newRadius;
     setSaving(true);
     try {
       await apiFetch("/api/branches", {
         method: "POST",
         body: JSON.stringify({
           name: newName.trim(),
-          latitude: addingBranch.lat,
-          longitude: addingBranch.lon,
-          radiusMeters: Math.max(10, parseInt(newRadius) || 200),
+          latitude: pendingCoords.lat,
+          longitude: pendingCoords.lon,
+          radiusMeters: radius,
         }),
       });
-      clearPendingMarker();
       await loadBranches();
-      setAddingBranch(null);
-      setMyLocation(null);
+      closeModal();
       toast({ title: "Филиал добавлен" });
     } catch {
       toast({ title: "Ошибка при добавлении филиала", variant: "destructive" });
@@ -294,6 +321,7 @@ export function BranchesSettings() {
     }
   };
 
+  // ── Delete branch ────────────────────────────────────────────────────────
   const handleDeleteBranch = async (id: string) => {
     setDeletingId(id);
     try {
@@ -307,6 +335,7 @@ export function BranchesSettings() {
     }
   };
 
+  // ── Telegram ─────────────────────────────────────────────────────────────
   const handleSaveTg = async () => {
     setSavingTg(true);
     try {
@@ -349,198 +378,34 @@ export function BranchesSettings() {
     }
   };
 
+  const effectiveRadius = useCustomRadius
+    ? (parseInt(customRadius) || 0)
+    : newRadius;
+
   return (
     <div className="space-y-5">
 
-      {/* Map section */}
-      <div className="bg-card rounded-2xl border border-border/60">
+      {/* ── Branches card ─────────────────────────────────────────────── */}
+      <div className="bg-card rounded-2xl border border-border/60 overflow-hidden">
         <div className="flex items-center gap-3 px-5 py-4 border-b border-border/40">
           <MapPin className="w-5 h-5 text-primary" />
           <div className="flex-1">
             <h2 className="font-semibold text-base text-foreground">Филиалы и геозоны</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">Нажмите на карту, чтобы добавить филиал</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {branches.length > 0 ? `${branches.length} филиал${branches.length === 1 ? "" : branches.length < 5 ? "а" : "ов"}` : "Нет добавленных филиалов"}
+            </p>
           </div>
-          {mapReady && !addingBranch && (
-            <Button
-              className="gap-1.5 h-8 text-xs px-2.5 sm:px-3"
-              onClick={() => {
-                if (myLocation) {
-                  if (pendingMarkerRef.current && ymapRef.current) {
-                    ymapRef.current.geoObjects.remove(pendingMarkerRef.current);
-                    pendingMarkerRef.current = null;
-                  }
-                  const marker = new window.ymaps.Placemark(
-                    [myLocation.lat, myLocation.lon],
-                    { balloonContent: "Новый филиал" },
-                    { preset: "islands#redDotIcon" },
-                  );
-                  ymapRef.current?.geoObjects.add(marker);
-                  pendingMarkerRef.current = marker;
-                  setAddingBranch({ lat: myLocation.lat, lon: myLocation.lon });
-                  setNewName("");
-                  setNewRadius("200");
-                  setMyLocation(null);
-                } else {
-                  toast({ title: "Нажмите на карту, чтобы выбрать точку" });
-                }
-              }}
-            >
-              <Plus className="w-3.5 h-3.5 shrink-0" />
-              <span className="hidden sm:inline">Новый филиал</span>
-            </Button>
-          )}
+          <Button
+            className="gap-1.5 h-8 text-xs px-2.5 sm:px-3"
+            onClick={() => setIsModalOpen(true)}
+          >
+            <Plus className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden sm:inline">Новый филиал</span>
+          </Button>
         </div>
 
         <div className="p-4 space-y-3">
-          {/* Map address search */}
-          {mapReady && (
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none z-10" />
-              {mapSearching && (
-                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground animate-spin z-10" />
-              )}
-              <input
-                type="text"
-                placeholder="Поиск адреса на карте…"
-                value={mapQuery}
-                onChange={(e) => handleMapSearch(e.target.value)}
-                className="w-full h-9 pl-9 pr-8 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-              />
-              {mapQuery.trim() && mapGeoResults.length > 0 && (
-                <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-popover border border-border rounded-xl shadow-lg overflow-hidden">
-                  {mapGeoResults.map((r, i) => (
-                    <button
-                      key={i}
-                      className="w-full flex items-start gap-3 px-4 py-2.5 hover:bg-accent transition-colors text-left"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        ymapRef.current?.setCenter(r.coords, 16);
-                        setMapQuery("");
-                        setMapGeoResults([]);
-                      }}
-                    >
-                      <MapPin className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
-                      <span className="text-sm text-foreground leading-snug">{r.name}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-              {mapQuery.trim() && !mapSearching && mapGeoResults.length === 0 && (
-                <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-popover border border-border rounded-xl shadow-lg overflow-hidden">
-                  <div className="px-4 py-3 text-sm text-muted-foreground text-center">Ничего не найдено</div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Map container */}
-          <div className="relative rounded-xl overflow-hidden border border-border/40" style={{ height: 320 }}>
-            {loading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
-                <Loader2 className="w-6 h-6 text-primary animate-spin" />
-              </div>
-            )}
-            {mapError && !loading && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 gap-2 p-4 text-center">
-                <MapPin className="w-8 h-8 text-gray-300" />
-                <p className="text-sm text-gray-500">{mapError}</p>
-              </div>
-            )}
-            <div ref={mapRef} className="w-full h-full" />
-          </div>
-
-          {/* My location suggestion */}
-          {myLocation && !addingBranch && (
-            <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
-              <Navigation className="w-4 h-4 text-blue-500 shrink-0" />
-              <p className="text-sm text-blue-800 flex-1">
-                Местоположение определено — добавить филиал здесь?
-              </p>
-              <button
-                onClick={() => {
-                  if (ymapRef.current && pendingMarkerRef.current) {
-                    ymapRef.current.geoObjects.remove(pendingMarkerRef.current);
-                    pendingMarkerRef.current = null;
-                  }
-                  const marker = new window.ymaps.Placemark(
-                    [myLocation.lat, myLocation.lon],
-                    { balloonContent: "Новый филиал" },
-                    { preset: "islands#redDotIcon" },
-                  );
-                  ymapRef.current?.geoObjects.add(marker);
-                  pendingMarkerRef.current = marker;
-                  setAddingBranch({ lat: myLocation.lat, lon: myLocation.lon });
-                  setNewName("");
-                  setNewRadius("200");
-                }}
-                className="shrink-0 text-xs font-semibold text-blue-600 bg-blue-100 hover:bg-blue-200 transition-colors px-3 py-1.5 rounded-lg"
-              >
-                Да
-              </button>
-              <button
-                onClick={() => setMyLocation(null)}
-                className="shrink-0 text-xs text-blue-400 hover:text-blue-600 transition-colors"
-              >
-                Нет
-              </button>
-            </div>
-          )}
-
-          {/* Locating indicator */}
-          {locating && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              Определяем местоположение…
-            </div>
-          )}
-
-          {/* Add branch dialog */}
-          {addingBranch && (
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3">
-              <p className="text-sm font-medium text-blue-800">Добавить филиал</p>
-              <p className="text-xs text-blue-600">
-                Координаты: {addingBranch.lat.toFixed(5)}, {addingBranch.lon.toFixed(5)}
-              </p>
-              <div className="space-y-2">
-                <input
-                  type="text"
-                  placeholder="Название филиала"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  className="w-full h-10 rounded-xl border border-border bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-                />
-                <div className="flex gap-2 items-center">
-                  <label className="text-xs text-muted-foreground whitespace-nowrap">Радиус (м):</label>
-                  <input
-                    type="number"
-                    min={10}
-                    max={10000}
-                    value={newRadius}
-                    onChange={(e) => setNewRadius(e.target.value)}
-                    className="w-24 h-10 rounded-xl border border-border bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => void handleAddBranch()}
-                  disabled={saving || !newName.trim()}
-                  className="flex-1 h-10 rounded-xl bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                  Добавить
-                </button>
-                <button
-                  onClick={() => { clearPendingMarker(); setAddingBranch(null); }}
-                  className="px-4 h-10 rounded-xl border border-border text-sm text-muted-foreground"
-                >
-                  Отмена
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Branch search (autocomplete dropdown) + list */}
+          {/* Branch search autocomplete */}
           {branches.length > 0 && (
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none z-10" />
@@ -549,7 +414,6 @@ export function BranchesSettings() {
                 placeholder="Поиск по филиалам…"
                 value={branchSearch}
                 onChange={(e) => setBranchSearch(e.target.value)}
-                onFocus={() => setBranchSearch(branchSearch)}
                 className="w-full h-9 pl-9 pr-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
               />
               {branchSearch.trim() && (
@@ -565,7 +429,6 @@ export function BranchesSettings() {
                           className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-accent transition-colors text-left"
                           onMouseDown={(e) => {
                             e.preventDefault();
-                            ymapRef.current?.setCenter([b.latitude, b.longitude], 16);
                             setBranchSearch("");
                           }}
                         >
@@ -582,18 +445,25 @@ export function BranchesSettings() {
             </div>
           )}
 
-          {branches.length === 0 && !loading && (
-            <p className="text-sm text-muted-foreground text-center py-3">
-              Нет добавленных филиалов. Нажмите на карту, чтобы добавить.
-            </p>
+          {/* Branch list */}
+          {loading && (
+            <div className="flex justify-center py-6">
+              <Loader2 className="w-5 h-5 text-primary animate-spin" />
+            </div>
           )}
-
+          {!loading && branches.length === 0 && (
+            <div className="flex flex-col items-center gap-3 py-8 text-center">
+              <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center">
+                <MapPin className="w-6 h-6 text-muted-foreground" />
+              </div>
+              <p className="text-sm text-muted-foreground">Нажмите «Новый филиал»,<br />чтобы добавить первый филиал</p>
+            </div>
+          )}
           <div className="space-y-2">
             {branches.map((b) => (
               <div
                 key={b.id}
-                className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-background border border-border/40 cursor-pointer hover:border-primary/40 transition-colors"
-                onClick={() => ymapRef.current?.setCenter([b.latitude, b.longitude], 16)}
+                className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-background border border-border/40"
               >
                 <div className="flex items-center gap-2.5 min-w-0">
                   <MapPin className="w-4 h-4 text-primary shrink-0" />
@@ -605,7 +475,7 @@ export function BranchesSettings() {
                   </div>
                 </div>
                 <button
-                  onClick={(e) => { e.stopPropagation(); void handleDeleteBranch(b.id); }}
+                  onClick={() => void handleDeleteBranch(b.id)}
                   disabled={deletingId === b.id}
                   className="w-8 h-8 flex items-center justify-center rounded-lg text-red-400 hover:bg-red-50 hover:text-red-500 transition-colors shrink-0 disabled:opacity-50"
                 >
@@ -619,7 +489,228 @@ export function BranchesSettings() {
         </div>
       </div>
 
-      {/* Telegram notifications */}
+      {/* ── Add branch modal ───────────────────────────────────────────── */}
+      <Dialog open={isModalOpen} onOpenChange={(open) => { if (!open) closeModal(); }}>
+        <DialogContent className="max-w-lg w-full p-0 gap-0 overflow-hidden rounded-2xl">
+          <DialogHeader className="px-5 py-4 border-b border-border/40 flex-row items-center gap-3 space-y-0">
+            <MapPin className="w-5 h-5 text-primary shrink-0" />
+            <DialogTitle className="flex-1 text-base font-semibold">Новый филиал</DialogTitle>
+          </DialogHeader>
+
+          <div className="flex flex-col max-h-[80vh] overflow-y-auto">
+            {/* Address search */}
+            <div className="px-4 pt-4 pb-2 relative">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none z-10" />
+                {mapSearching && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground animate-spin z-10" />
+                )}
+                <input
+                  type="text"
+                  placeholder="Поиск адреса…"
+                  value={mapQuery}
+                  onChange={(e) => handleMapSearch(e.target.value)}
+                  className="w-full h-10 pl-9 pr-8 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                />
+                {mapQuery.trim() && (
+                  <button
+                    className="absolute right-3 top-1/2 -translate-y-1/2 z-10 text-muted-foreground hover:text-foreground"
+                    onMouseDown={(e) => { e.preventDefault(); setMapQuery(""); setMapGeoResults([]); }}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              {mapQuery.trim() && (mapGeoResults.length > 0 || (!mapSearching && mapQuery.trim())) && (
+                <div className="absolute left-4 right-4 top-full z-50 bg-popover border border-border rounded-xl shadow-lg overflow-hidden">
+                  {mapGeoResults.length === 0 ? (
+                    <div className="px-4 py-3 text-sm text-muted-foreground text-center">Ничего не найдено</div>
+                  ) : (
+                    mapGeoResults.map((r, i) => (
+                      <button
+                        key={i}
+                        className="w-full flex items-start gap-3 px-4 py-2.5 hover:bg-accent transition-colors text-left"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          ymapRef.current?.setCenter(r.coords, 16);
+                          setMapQuery("");
+                          setMapGeoResults([]);
+                        }}
+                      >
+                        <MapPin className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                        <span className="text-sm text-foreground leading-snug">{r.name}</span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Map */}
+            <div className="relative mx-4 rounded-xl overflow-hidden border border-border/40" style={{ height: 280 }}>
+              {!modalMapReady && !modalMapError && (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+                  <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                </div>
+              )}
+              {modalMapError && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 gap-2 p-4 text-center">
+                  <MapPin className="w-8 h-8 text-gray-300" />
+                  <p className="text-sm text-gray-500">{modalMapError}</p>
+                </div>
+              )}
+              <div ref={mapRef} className="w-full h-full" />
+              {modalMapReady && !pendingCoords && (
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/60 text-white text-xs px-3 py-1.5 rounded-full whitespace-nowrap pointer-events-none">
+                  Нажмите на карту, чтобы выбрать точку
+                </div>
+              )}
+            </div>
+
+            {/* Location banner */}
+            {locating && (
+              <div className="mx-4 mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Определяем местоположение…
+              </div>
+            )}
+            {myLocation && !pendingCoords && (
+              <div className="mx-4 mt-2 flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5">
+                <Navigation className="w-4 h-4 text-blue-500 shrink-0" />
+                <p className="text-xs text-blue-800 flex-1">Вы здесь — нажмите сюда, чтобы добавить точку</p>
+                <button
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    if (pendingMarkerRef.current && ymapRef.current) {
+                      ymapRef.current.geoObjects.remove(pendingMarkerRef.current);
+                      pendingMarkerRef.current = null;
+                    }
+                    const marker = new window.ymaps.Placemark(
+                      [myLocation.lat, myLocation.lon],
+                      { balloonContent: "Новый филиал" },
+                      { preset: "islands#redDotIcon" },
+                    );
+                    ymapRef.current?.geoObjects.add(marker);
+                    pendingMarkerRef.current = marker;
+                    setPendingCoords({ lat: myLocation.lat, lon: myLocation.lon });
+                    setNewName("");
+                  }}
+                  className="shrink-0 text-xs font-semibold text-blue-600 bg-blue-100 hover:bg-blue-200 transition-colors px-3 py-1 rounded-lg"
+                >
+                  Да
+                </button>
+              </div>
+            )}
+
+            {/* Form — shown after point is selected */}
+            {pendingCoords && (
+              <div className="mx-4 mt-3 mb-4 space-y-3">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-xl px-3 py-2">
+                  <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                  <span>Точка: {pendingCoords.lat.toFixed(5)}, {pendingCoords.lon.toFixed(5)}</span>
+                  <button
+                    className="ml-auto text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      if (pendingMarkerRef.current && ymapRef.current) {
+                        ymapRef.current.geoObjects.remove(pendingMarkerRef.current);
+                        pendingMarkerRef.current = null;
+                      }
+                      setPendingCoords(null);
+                    }}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <input
+                  type="text"
+                  placeholder="Название филиала"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  className="w-full h-10 rounded-xl border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  autoFocus
+                />
+
+                {/* Radius presets */}
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">Радиус геозоны</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {RADIUS_PRESETS.map((p) => (
+                      <button
+                        key={p.value}
+                        onClick={() => { setNewRadius(p.value); setUseCustomRadius(false); }}
+                        className={cn(
+                          "h-8 px-3 rounded-lg text-xs font-medium border transition-colors",
+                          !useCustomRadius && newRadius === p.value
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-background text-foreground border-border hover:border-primary/50",
+                        )}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => setUseCustomRadius(true)}
+                      className={cn(
+                        "h-8 px-3 rounded-lg text-xs font-medium border transition-colors",
+                        useCustomRadius
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background text-foreground border-border hover:border-primary/50",
+                      )}
+                    >
+                      Другой
+                    </button>
+                  </div>
+                  {useCustomRadius && (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={10}
+                        max={50000}
+                        placeholder="Введите метры"
+                        value={customRadius}
+                        onChange={(e) => setCustomRadius(e.target.value)}
+                        className="w-full h-10 rounded-xl border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                        autoFocus
+                      />
+                      <span className="text-sm text-muted-foreground whitespace-nowrap shrink-0">м</span>
+                    </div>
+                  )}
+                  {effectiveRadius > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Зона: <span className="font-medium text-foreground">
+                        {effectiveRadius >= 1000 ? `${(effectiveRadius / 1000).toFixed(1)} км` : `${effectiveRadius} м`}
+                      </span>
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    onClick={() => void handleAddBranch()}
+                    disabled={saving || !newName.trim() || (useCustomRadius && !customRadius.trim())}
+                    className="flex-1 h-10 gap-2"
+                  >
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                    Добавить филиал
+                  </Button>
+                  <button
+                    onClick={closeModal}
+                    className="px-4 h-10 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted transition-colors"
+                  >
+                    Отмена
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Padding when no form */}
+            {!pendingCoords && <div className="pb-4" />}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Telegram notifications ─────────────────────────────────────── */}
       <div className="bg-card rounded-2xl border border-border/60 overflow-hidden">
         <div className="flex items-center gap-3 px-5 py-4 border-b border-border/40">
           <Bot className="w-5 h-5 text-primary" />
@@ -630,9 +721,7 @@ export function BranchesSettings() {
         </div>
         <div className="p-5 space-y-4">
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">
-              Bot Token
-            </label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Bot Token</label>
             <input
               type="text"
               placeholder="123456789:AAF..."
@@ -645,9 +734,7 @@ export function BranchesSettings() {
             </p>
           </div>
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">
-              Chat ID владельца
-            </label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Chat ID владельца</label>
             <input
               type="text"
               placeholder="-100123456789"
