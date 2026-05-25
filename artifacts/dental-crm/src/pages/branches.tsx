@@ -9,7 +9,7 @@ export default function BranchesPage() {
         <Link href="/menu" className="p-1.5 -ml-1.5 rounded-xl active:bg-gray-100 transition-colors">
           <ChevronLeft className="w-5 h-5 text-gray-600" />
         </Link>
-        <h1 className="text-[17px] font-semibold text-gray-900">Филиалы и геозоны</h1>
+        <h1 className="text-[17px] font-semibold text-gray-900">Трекинг</h1>
       </div>
       <div className="px-4 py-5">
         <BranchesSettings />
