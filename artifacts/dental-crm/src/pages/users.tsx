@@ -12,7 +12,7 @@ import {
 import type { User, SalaryType } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  UserPlus, Search, Phone, Calendar, Briefcase,
+  Plus, UserPlus, Search, Phone, Calendar, Briefcase,
   ChevronRight, ChevronLeft, MoreVertical, UserCheck, UserX,
   Trash2, Users, SlidersHorizontal,
 } from "lucide-react";
