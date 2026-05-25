@@ -1142,7 +1142,7 @@ export default function ChatbotPage() {
               <BookOpen className="h-4 w-4 text-primary shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground">База знаний</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Ссылки и файлы для обучения ИИ + генерация скриптов</p>
+                <p className="text-xs text-muted-foreground mt-0.5 truncate">Ссылки и файлы для обучения ИИ + генерация скриптов</p>
               </div>
               <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
             </button>
@@ -1155,7 +1155,7 @@ export default function ChatbotPage() {
               <ClipboardList className="h-4 w-4 text-primary shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground">Скрипт диалога</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-xs text-muted-foreground mt-0.5 truncate">
                   {scriptBlocks.length > 0 ? `${scriptBlocks.length} блоков · настройте ответы чат-бота` : "Настройте ответы чат-бота"}
                 </p>
               </div>
