@@ -259,25 +259,22 @@ export function BranchesSettings() {
     setSearchDone(false);
     setMapGeoResults([]);
     if (geoDebounceRef.current) clearTimeout(geoDebounceRef.current);
-    if (!q.trim() || !window.ymaps?.geocode) return;
+    if (!q.trim()) return;
     geoDebounceRef.current = setTimeout(async () => {
       setMapSearching(true);
       try {
-        const res = await window.ymaps.geocode(q, { results: 5 });
-        const count = res.geoObjects.getLength();
-        const results: { name: string; coords: number[] }[] = [];
-        for (let i = 0; i < Math.min(count, 5); i++) {
-          const obj = res.geoObjects.get(i);
-          if (!obj) continue;
-          results.push({
-            name: obj.properties.get("text") || obj.properties.get("name") || q,
-            coords: obj.geometry.getCoordinates(),
-          });
-        }
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=8&accept-language=ru`;
+        const resp = await fetch(url, { headers: { "Accept": "application/json" } });
+        if (!resp.ok) throw new Error("geocode failed");
+        const data = (await resp.json()) as Array<{ lat: string; lon: string; display_name: string }>;
+        const results = data.map((d) => ({
+          name: d.display_name,
+          coords: [parseFloat(d.lat), parseFloat(d.lon)],
+        }));
         setMapGeoResults(results);
       } catch { setMapGeoResults([]); }
       finally { setMapSearching(false); setSearchDone(true); }
-    }, 400);
+    }, 500);
   }, []);
 
   // ── Close / reset modal ──────────────────────────────────────────────────
