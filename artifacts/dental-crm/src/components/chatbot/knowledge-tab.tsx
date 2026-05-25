@@ -292,14 +292,38 @@ export function KnowledgeTab() {
 
   const handleGenerate = async () => {
     setGenerating(true);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 95000);
     try {
-      const res = await apiFetch("/api/knowledge/generate", { method: "POST" });
-      const { primaryScript, repeatScript } = res.data as { primaryScript: GeneratedScript; repeatScript: GeneratedScript };
+      const token = getToken();
+      const res = await fetch("/api/knowledge/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        signal: controller.signal,
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        const msg = (body as { message?: string }).message;
+        throw new Error(msg ?? "Ошибка сервера");
+      }
+      const json = await res.json();
+      const { primaryScript, repeatScript } = json.data as { primaryScript: GeneratedScript; repeatScript: GeneratedScript };
       setScript({ primaryScript, repeatScript, generatedAt: new Date().toISOString() });
       toast({ title: "Скрипты готовы!", description: "ИИ сгенерировал скрипты на основе ваших материалов" });
     } catch (err) {
-      toast({ title: "Ошибка генерации", description: String(err), variant: "destructive" });
+      const isAbort = err instanceof Error && (err.name === "AbortError" || err.message.includes("aborted"));
+      toast({
+        title: "Не удалось сгенерировать скрипты",
+        description: isAbort
+          ? "Генерация заняла слишком много времени. Попробуйте ещё раз."
+          : err instanceof Error ? err.message : "Попробуйте ещё раз.",
+        variant: "destructive",
+      });
     } finally {
+      clearTimeout(timer);
       setGenerating(false);
     }
   };
