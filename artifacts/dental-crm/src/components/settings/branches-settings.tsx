@@ -127,6 +127,7 @@ export function BranchesSettings() {
   const [mapQuery, setMapQuery] = useState("");
   const [mapGeoResults, setMapGeoResults] = useState<{ name: string; coords: number[] }[]>([]);
   const [mapSearching, setMapSearching] = useState(false);
+  const [searchDone, setSearchDone] = useState(false);
   const geoDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Data loading ─────────────────────────────────────────────────────────
@@ -255,12 +256,14 @@ export function BranchesSettings() {
   // ── Geo search ───────────────────────────────────────────────────────────
   const handleMapSearch = useCallback((q: string) => {
     setMapQuery(q);
+    setSearchDone(false);
+    setMapGeoResults([]);
     if (geoDebounceRef.current) clearTimeout(geoDebounceRef.current);
-    if (!q.trim() || !window.ymaps?.geocode) { setMapGeoResults([]); return; }
+    if (!q.trim() || !window.ymaps?.geocode) return;
     geoDebounceRef.current = setTimeout(async () => {
       setMapSearching(true);
       try {
-        const res = await window.ymaps.geocode(q, { results: 5, lang: "ru_RU" });
+        const res = await window.ymaps.geocode(q, { results: 5 });
         const count = res.geoObjects.getLength();
         const results: { name: string; coords: number[] }[] = [];
         for (let i = 0; i < Math.min(count, 5); i++) {
@@ -273,7 +276,7 @@ export function BranchesSettings() {
         }
         setMapGeoResults(results);
       } catch { setMapGeoResults([]); }
-      finally { setMapSearching(false); }
+      finally { setMapSearching(false); setSearchDone(true); }
     }, 400);
   }, []);
 
@@ -521,7 +524,7 @@ export function BranchesSettings() {
                   </button>
                 )}
               </div>
-              {mapQuery.trim() && (mapGeoResults.length > 0 || (!mapSearching && mapQuery.trim())) && (
+              {mapQuery.trim() && (mapGeoResults.length > 0 || (searchDone && !mapSearching)) && (
                 <div className="absolute left-4 right-4 top-full z-50 bg-popover border border-border rounded-xl shadow-lg overflow-hidden">
                   {mapGeoResults.length === 0 ? (
                     <div className="px-4 py-3 text-sm text-muted-foreground text-center">Ничего не найдено</div>
@@ -535,6 +538,7 @@ export function BranchesSettings() {
                           ymapRef.current?.setCenter(r.coords, 16);
                           setMapQuery("");
                           setMapGeoResults([]);
+                          setSearchDone(false);
                         }}
                       >
                         <MapPin className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
