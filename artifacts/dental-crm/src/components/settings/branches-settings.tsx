@@ -784,7 +784,6 @@ export function BranchesSettings() {
       {/* ── Telegram notifications ─────────────────────────────────────── */}
       <div className="bg-card rounded-2xl border border-border/60 overflow-hidden">
         <div className="flex items-center gap-3 px-5 py-4 border-b border-border/40">
-          <Bot className="w-5 h-5 text-primary" />
           <div>
             <h2 className="font-semibold text-base text-foreground">Telegram-уведомления</h2>
             <p className="text-xs text-muted-foreground mt-0.5">Получайте уведомления о приходе и уходе сотрудников</p>
