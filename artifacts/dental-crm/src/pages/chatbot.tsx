@@ -1112,19 +1112,19 @@ export default function ChatbotPage() {
 
             {/* Bot on/off */}
             <div className="rounded-xl border border-border/50 bg-card p-4">
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-center gap-3 justify-between">
+                <div className="min-w-0">
                   <p className="text-sm font-medium text-foreground">{t("chatbot.settings.enableBot")}</p>
                   <p className="text-xs text-muted-foreground">{t("chatbot.settings.enableBotDesc")}</p>
                 </div>
                 <button
                   onClick={() => setLocalSettings((p) => ({ ...p, enabled: !effectiveEnabled }))}
                   className={cn(
-                    "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
+                    "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors focus:outline-none",
                     effectiveEnabled ? "bg-emerald-500" : "bg-muted-foreground/30",
                   )}
                 >
-                  <span className={cn("inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform", effectiveEnabled ? "translate-x-6" : "translate-x-1")} />
+                  <span className={cn("inline-block h-4 w-4 rounded-full bg-white shadow transition-transform", effectiveEnabled ? "translate-x-6" : "translate-x-1")} />
                 </button>
               </div>
               {autosaveStatus !== "idle" && (
