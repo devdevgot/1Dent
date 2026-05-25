@@ -22,6 +22,7 @@ import dentalBroadcastRouter from "../modules/dental-broadcast/dental-broadcast.
 import refRouter from "./ref";
 import contractPublicRouter from "./contract-public";
 import storageRouter from "./storage";
+import geoRouter from "./geo";
 import contractsRouter from "../modules/contracts/contracts.controller";
 import branchesRouter from "../modules/branches/branches.controller";
 import { actionLogMiddleware } from "../middlewares/action-log.middleware";
@@ -39,6 +40,7 @@ const _patientsRepo = new PatientsRepository();
 
 router.use(healthRouter);
 router.use("/auth", authRateLimit, authRouter);
+router.use(geoRouter);
 router.use(actionLogMiddleware);
 router.use("/users", usersRouter);
 router.use("/patients", patientsRouter);

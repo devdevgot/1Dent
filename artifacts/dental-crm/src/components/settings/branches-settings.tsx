@@ -263,22 +263,10 @@ export function BranchesSettings() {
     geoDebounceRef.current = setTimeout(async () => {
       setMapSearching(true);
       try {
-        const geocoderKey = (import.meta.env.VITE_YANDEX_GEOCODER_KEY as string | undefined) ?? "";
-        const url = `https://geocode-maps.yandex.ru/1.x/?apikey=${geocoderKey}&geocode=${encodeURIComponent(q)}&format=json&results=8&lang=ru_RU`;
-        const resp = await fetch(url);
+        const resp = await fetch(`/api/geo/search?q=${encodeURIComponent(q)}`);
         if (!resp.ok) throw new Error("geocode failed");
-        const data = await resp.json();
-        const members = data?.response?.GeoObjectCollection?.featureMember ?? [];
-        const results = members.map((m: any) => {
-          const go = m.GeoObject;
-          const [lon, lat] = (go.Point.pos as string).split(" ").map(parseFloat);
-          const meta = go.metaDataProperty?.GeocoderMetaData;
-          return {
-            name: meta?.text || go.name || go.description || q,
-            coords: [lat, lon],
-          };
-        });
-        setMapGeoResults(results);
+        const data = await resp.json() as { success: boolean; data: { results: { name: string; coords: number[] }[] } };
+        setMapGeoResults(data.data.results);
       } catch { setMapGeoResults([]); }
       finally { setMapSearching(false); setSearchDone(true); }
     }, 400);
