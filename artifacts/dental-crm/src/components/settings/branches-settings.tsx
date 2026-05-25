@@ -527,7 +527,26 @@ export function BranchesSettings() {
                         className="w-full flex items-start gap-3 px-4 py-2.5 hover:bg-accent transition-colors text-left"
                         onMouseDown={(e) => {
                           e.preventDefault();
-                          ymapRef.current?.setCenter(r.coords, 16);
+                          const [lat, lon] = r.coords as [number, number];
+                          const map = ymapRef.current;
+                          if (map && window.ymaps) {
+                            // Remove previous pending marker
+                            if (pendingMarkerRef.current) {
+                              map.geoObjects.remove(pendingMarkerRef.current);
+                              pendingMarkerRef.current = null;
+                            }
+                            // Place new marker and center map
+                            const marker = new window.ymaps.Placemark(
+                              [lat, lon],
+                              { balloonContent: r.name },
+                              { preset: "islands#redDotIcon" },
+                            );
+                            map.geoObjects.add(marker);
+                            pendingMarkerRef.current = marker;
+                            map.setCenter([lat, lon], 16);
+                            setPendingCoords({ lat, lon });
+                            setNewName("");
+                          }
                           setMapQuery("");
                           setMapGeoResults([]);
                           setSearchDone(false);
