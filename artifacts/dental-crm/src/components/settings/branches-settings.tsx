@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MapPin, Plus, Trash2, Loader2, Send, CheckCircle2, Bot, Navigation, Search, X } from "lucide-react";
+import { MapPin, Plus, Trash2, Loader2, Send, CheckCircle2, Bot, Navigation, Search, X, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -108,6 +108,7 @@ export function BranchesSettings() {
 
   // ── Modal state ──────────────────────────────────────────────────────────
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
   const mapRef = useRef<HTMLDivElement>(null);
   const ymapRef = useRef<YMap | null>(null);
   const pendingMarkerRef = useRef<YPlacemark | null>(null);
@@ -166,16 +167,30 @@ export function BranchesSettings() {
         .then(() => {
           if (destroyed || !mapRef.current) return;
 
-          const center = branches.length
+          const editingB = editingBranch;
+          const center = editingB
+            ? [editingB.latitude, editingB.longitude]
+            : branches.length
             ? [branches[0]!.latitude, branches[0]!.longitude]
             : [51.18, 71.446];
 
           const map = new window.ymaps.Map(mapRef.current, {
             center,
-            zoom: 14,
+            zoom: editingB ? 16 : 14,
             controls: ["zoomControl"],
           });
           ymapRef.current = map;
+
+          // Pre-place marker for branch being edited
+          if (editingB) {
+            const marker = new window.ymaps.Placemark(
+              [editingB.latitude, editingB.longitude],
+              { balloonContent: editingB.name },
+              { preset: "islands#redDotIcon" },
+            );
+            map.geoObjects.add(marker);
+            pendingMarkerRef.current = marker;
+          }
 
           // Draw existing branches
           for (const b of branches) {
@@ -272,9 +287,26 @@ export function BranchesSettings() {
     }, 400);
   }, []);
 
+  // ── Open edit modal ──────────────────────────────────────────────────────
+  const openEditModal = useCallback((branch: Branch) => {
+    setEditingBranch(branch);
+    setNewName(branch.name);
+    const preset = RADIUS_PRESETS.find((p) => p.value === branch.radiusMeters);
+    if (preset) {
+      setNewRadius(branch.radiusMeters);
+      setUseCustomRadius(false);
+    } else {
+      setCustomRadius(String(branch.radiusMeters));
+      setUseCustomRadius(true);
+    }
+    setPendingCoords({ lat: branch.latitude, lon: branch.longitude });
+    setIsModalOpen(true);
+  }, []);
+
   // ── Close / reset modal ──────────────────────────────────────────────────
   const closeModal = useCallback(() => {
     setIsModalOpen(false);
+    setEditingBranch(null);
     setPendingCoords(null);
     setNewName("");
     setNewRadius(200);
@@ -289,28 +321,43 @@ export function BranchesSettings() {
     }
   }, []);
 
-  // ── Save branch ──────────────────────────────────────────────────────────
-  const handleAddBranch = async () => {
+  // ── Save branch (create or update) ───────────────────────────────────────
+  const handleSaveBranch = async () => {
     if (!pendingCoords || !newName.trim()) return;
     const radius = useCustomRadius
       ? Math.max(10, Math.min(50000, parseInt(customRadius) || 200))
       : newRadius;
     setSaving(true);
     try {
-      await apiFetch("/api/branches", {
-        method: "POST",
-        body: JSON.stringify({
-          name: newName.trim(),
-          latitude: pendingCoords.lat,
-          longitude: pendingCoords.lon,
-          radiusMeters: radius,
-        }),
-      });
-      await loadBranches();
-      closeModal();
-      toast({ title: "Филиал добавлен" });
+      if (editingBranch) {
+        await apiFetch(`/api/branches/${editingBranch.id}`, {
+          method: "PUT",
+          body: JSON.stringify({
+            name: newName.trim(),
+            latitude: pendingCoords.lat,
+            longitude: pendingCoords.lon,
+            radiusMeters: radius,
+          }),
+        });
+        await loadBranches();
+        closeModal();
+        toast({ title: "Филиал обновлён" });
+      } else {
+        await apiFetch("/api/branches", {
+          method: "POST",
+          body: JSON.stringify({
+            name: newName.trim(),
+            latitude: pendingCoords.lat,
+            longitude: pendingCoords.lon,
+            radiusMeters: radius,
+          }),
+        });
+        await loadBranches();
+        closeModal();
+        toast({ title: "Филиал добавлен" });
+      }
     } catch {
-      toast({ title: "Ошибка при добавлении филиала", variant: "destructive" });
+      toast({ title: editingBranch ? "Ошибка при обновлении" : "Ошибка при добавлении", variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -469,15 +516,23 @@ export function BranchesSettings() {
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={() => void handleDeleteBranch(b.id)}
-                  disabled={deletingId === b.id}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-red-400 hover:bg-red-50 hover:text-red-500 transition-colors shrink-0 disabled:opacity-50"
-                >
-                  {deletingId === b.id
-                    ? <Loader2 className="w-4 h-4 animate-spin" />
-                    : <Trash2 className="w-4 h-4" />}
-                </button>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => openEditModal(b)}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => void handleDeleteBranch(b.id)}
+                    disabled={deletingId === b.id}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-red-400 hover:bg-red-50 hover:text-red-500 transition-colors disabled:opacity-50"
+                  >
+                    {deletingId === b.id
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : <Trash2 className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -489,7 +544,9 @@ export function BranchesSettings() {
         <DialogContent className="max-w-lg w-full p-0 gap-0 overflow-hidden rounded-2xl">
           <DialogHeader className="px-5 py-4 border-b border-border/40 flex-row items-center gap-3 space-y-0">
             <MapPin className="w-5 h-5 text-primary shrink-0" />
-            <DialogTitle className="flex-1 text-base font-semibold">Новый филиал</DialogTitle>
+            <DialogTitle className="flex-1 text-base font-semibold">
+              {editingBranch ? "Редактировать филиал" : "Новый филиал"}
+            </DialogTitle>
           </DialogHeader>
 
           <div className="flex flex-col max-h-[80vh] overflow-y-auto">
@@ -702,12 +759,12 @@ export function BranchesSettings() {
 
                 <div className="flex gap-2 pt-1">
                   <Button
-                    onClick={() => void handleAddBranch()}
+                    onClick={() => void handleSaveBranch()}
                     disabled={saving || !newName.trim() || (useCustomRadius && !customRadius.trim())}
                     className="flex-1 h-10 gap-2"
                   >
-                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                    Добавить филиал
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : editingBranch ? <Pencil className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                    {editingBranch ? "Сохранить изменения" : "Добавить филиал"}
                   </Button>
                   <button
                     onClick={closeModal}
