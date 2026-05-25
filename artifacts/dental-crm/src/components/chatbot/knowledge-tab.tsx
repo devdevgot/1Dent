@@ -5,6 +5,12 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // ── Auth helper ───────────────────────────────────────────────────────────────
 function getToken() {
@@ -464,5 +470,27 @@ export function KnowledgeTab() {
         </div>
       )}
     </div>
+  );
+}
+
+// ── Modal wrapper ─────────────────────────────────────────────────────────────
+export function KnowledgeModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-2xl w-full max-h-[90vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/50 shrink-0">
+          <DialogTitle className="flex items-center gap-2 text-base font-semibold">
+            <Sparkles className="h-4 w-4 text-primary" />
+            База знаний
+          </DialogTitle>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Добавьте ссылки или файлы — ИИ изучит их и сгенерирует скрипты продаж
+          </p>
+        </DialogHeader>
+        <div className="overflow-y-auto flex-1 px-6 py-5">
+          <KnowledgeTab />
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

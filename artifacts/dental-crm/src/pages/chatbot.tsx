@@ -8,6 +8,7 @@ import {
   RefreshCw,
   Power,
   ChevronLeft,
+  ChevronRight,
   ArrowLeft,
   Phone,
   Send,
@@ -48,7 +49,7 @@ import {
 } from "@workspace/api-client-react";
 import type { ChatbotSettingsUpdate, DentalBroadcastRun, ScriptBlock } from "@workspace/api-client-react";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
-import { KnowledgeTab } from "@/components/chatbot/knowledge-tab";
+import { KnowledgeModal } from "@/components/chatbot/knowledge-tab";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
@@ -869,7 +870,8 @@ function CustomScriptModal({
 
 export default function ChatbotPage() {
   const { t } = useTranslation();
-  const [tab, setTab] = useState<"sessions" | "settings" | "manager-style" | "ai-broadcast" | "knowledge">("sessions");
+  const [tab, setTab] = useState<"sessions" | "settings" | "manager-style" | "ai-broadcast">("sessions");
+  const [knowledgeOpen, setKnowledgeOpen] = useState(false);
   const [confirmResetPhone, setConfirmResetPhone] = useState<string | null>(null);
   const [localSettings, setLocalSettings] = useState<ChatbotSettingsUpdate>({});
   const [savedSettings, setSavedSettings] = useState<ChatbotSettingsUpdate>({});
@@ -1010,7 +1012,6 @@ export default function ChatbotPage() {
           {([
             { key: "sessions", label: t("chatbot.tab.sessions"), icon: MessageSquare },
             { key: "settings", label: t("chatbot.tab.settings"), icon: Settings },
-            { key: "knowledge", label: "База знаний", icon: BookOpen },
             { key: "manager-style", label: "Playground", icon: FlaskConical },
             { key: "ai-broadcast", label: "ИИ Рассылка", icon: Megaphone },
           ] as const).map(({ key, label, icon: Icon }) => (
@@ -1106,6 +1107,19 @@ export default function ChatbotPage() {
         {/* Settings tab — Script blocks */}
         {tab === "settings" && (
           <div className="space-y-4 max-w-2xl">
+
+            {/* Knowledge base button */}
+            <button
+              onClick={() => setKnowledgeOpen(true)}
+              className="w-full flex items-center gap-3 rounded-xl border border-border/50 bg-card p-4 hover:bg-muted/30 transition-colors text-left"
+            >
+              <BookOpen className="h-4 w-4 text-primary shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground">База знаний</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Ссылки и файлы для обучения ИИ + генерация скриптов</p>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+            </button>
 
             {/* Bot on/off */}
             <div className="rounded-xl border border-border/50 bg-card p-4">
@@ -1206,10 +1220,12 @@ export default function ChatbotPage() {
           </div>
         )}
 
-        {tab === "knowledge" && <KnowledgeTab />}
         {tab === "manager-style" && <PlaygroundTab />}
         {tab === "ai-broadcast" && <AiBroadcastTab />}
       </div>
+
+      {/* Knowledge base modal */}
+      <KnowledgeModal open={knowledgeOpen} onClose={() => setKnowledgeOpen(false)} />
 
       {/* Custom script modal */}
       {showCustomScriptModal && (
