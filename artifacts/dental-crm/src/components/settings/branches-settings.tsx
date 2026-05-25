@@ -517,7 +517,7 @@ export function BranchesSettings() {
                 )}
               </div>
               {mapQuery.trim() && (mapGeoResults.length > 0 || (searchDone && !mapSearching)) && (
-                <div className="absolute left-4 right-4 top-full z-50 bg-popover border border-border rounded-xl shadow-lg overflow-hidden">
+                <div className="absolute left-4 right-4 top-full z-50 bg-white border border-border rounded-xl shadow-lg overflow-hidden">
                   {mapGeoResults.length === 0 ? (
                     <div className="px-4 py-3 text-sm text-muted-foreground text-center">Ничего не найдено</div>
                   ) : (
