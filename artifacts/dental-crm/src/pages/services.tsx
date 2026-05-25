@@ -11,6 +11,7 @@ import type { ProcedureTemplate } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { Button } from "@/components/ui/button";
 import {
   Plus, Search, Pencil, Trash2, Check, X, ChevronLeft, ClipboardList,
 } from "lucide-react";
@@ -167,16 +168,16 @@ export default function ServicesPage() {
           <p className="text-xs text-muted-foreground mt-0.5">{templates.length} услуг в каталоге</p>
         </div>
         {isOwner && (
-          <button
+          <Button
             onClick={() => {
               setShowAdd(true);
               setTimeout(() => document.getElementById("add-service-name")?.focus(), 50);
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors shrink-0"
+            className="gap-1.5 h-8 text-xs px-2.5 sm:px-3"
           >
-            <Plus className="w-4 h-4" />
-            Добавить
-          </button>
+            <Plus className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden sm:inline">Добавить</span>
+          </Button>
         )}
       </div>
 
