@@ -296,15 +296,29 @@ export default function StaffPage() {
               </p>
             </div>
           </div>
-          {isOwnerOrAdmin && (
-            <Button onClick={() => setInviteOpen(true)} className="gap-1.5 h-8 text-xs px-2.5 sm:px-3">
-              <Plus className="w-3.5 h-3.5 shrink-0" />
-              <span className="hidden sm:inline">Добавить сотрудника</span>
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {currentUser?.role === "owner" && (
+              <button
+                onClick={() => setShowInactive((v) => !v)}
+                className={cn(
+                  "h-8 px-2.5 rounded-lg border text-xs font-semibold transition-colors",
+                  showInactive ? "bg-primary/10 border-primary/30 text-primary" : "bg-gray-50 border-gray-200 text-gray-500",
+                )}
+                title="Показать неактивных"
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+              </button>
+            )}
+            {isOwnerOrAdmin && (
+              <Button onClick={() => setInviteOpen(true)} className="gap-1.5 h-8 text-xs px-2.5 sm:px-3">
+                <Plus className="w-3.5 h-3.5 shrink-0" />
+                <span className="hidden sm:inline">Добавить сотрудника</span>
+              </Button>
+            )}
+          </div>
         </div>
 
-        {/* Search + filter toggle */}
+        {/* Search */}
         <div className="flex gap-2">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -315,18 +329,6 @@ export default function StaffPage() {
               className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
           </div>
-          {currentUser?.role === "owner" && (
-            <button
-              onClick={() => setShowInactive((v) => !v)}
-              className={cn(
-                "px-3 py-2.5 rounded-xl border text-xs font-semibold transition-colors",
-                showInactive ? "bg-primary/10 border-primary/30 text-primary" : "bg-gray-50 border-gray-200 text-gray-500",
-              )}
-              title="Показать неактивных"
-            >
-              <SlidersHorizontal className="w-4 h-4" />
-            </button>
-          )}
         </div>
 
         {/* Role filter pills */}
