@@ -301,12 +301,15 @@ export default function StaffPage() {
               <button
                 onClick={() => setShowInactive((v) => !v)}
                 className={cn(
-                  "inline-flex items-center justify-center min-h-9 h-8 w-8 rounded-md border text-xs font-semibold transition-colors shrink-0",
-                  showInactive ? "bg-primary/10 border-primary/30 text-primary" : "bg-gray-50 border-gray-200 text-gray-500",
+                  "relative transition-colors p-1.5",
+                  showInactive ? "text-primary" : "text-gray-400 hover:text-primary",
                 )}
                 title="Показать неактивных"
               >
                 <SlidersHorizontal className="w-4 h-4" />
+                {showInactive && (
+                  <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-primary rounded-full" />
+                )}
               </button>
             )}
             {isOwnerOrAdmin && (
