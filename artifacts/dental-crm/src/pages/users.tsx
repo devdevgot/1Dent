@@ -161,6 +161,7 @@ export default function StaffPage() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [showInactive, setShowInactive] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -297,21 +298,21 @@ export default function StaffPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {currentUser?.role === "owner" && (
-              <button
-                onClick={() => setShowInactive((v) => !v)}
-                className={cn(
-                  "relative transition-colors p-1.5",
-                  showInactive ? "text-primary" : "text-gray-400 hover:text-primary",
-                )}
-                title="Показать неактивных"
-              >
-                <SlidersHorizontal className="w-4 h-4" />
-                {showInactive && (
-                  <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-primary rounded-full" />
-                )}
-              </button>
-            )}
+            <button
+              onClick={() => setShowFilters((v) => !v)}
+              className={cn(
+                "relative transition-colors p-1.5",
+                showFilters || search || roleFilter !== "all" || showInactive
+                  ? "text-primary"
+                  : "text-gray-400 hover:text-primary",
+              )}
+              title="Фильтры"
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              {(search || roleFilter !== "all" || showInactive) && (
+                <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-primary rounded-full" />
+              )}
+            </button>
             {isOwnerOrAdmin && (
               <Button onClick={() => setInviteOpen(true)} className="gap-1.5 h-8 text-xs px-2.5 sm:px-3">
                 <Plus className="w-3.5 h-3.5 shrink-0" />
@@ -321,42 +322,53 @@ export default function StaffPage() {
           </div>
         </div>
 
-        {/* Search */}
-        <div className="flex gap-2">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Поиск по имени или email..."
-              className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/30"
-            />
+        {/* Filter panel */}
+        {showFilters && (
+          <div className="mt-2.5 space-y-2.5 border-t border-gray-100 pt-2.5">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Поиск по имени или email..."
+                className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+            </div>
+            <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+              {["all", ...ROLES].map((r) => {
+                const colors = r !== "all" ? ROLE_COLORS[r] : null;
+                const isActive = roleFilter === r;
+                return (
+                  <button
+                    key={r}
+                    onClick={() => setRoleFilter(r)}
+                    className={cn(
+                      "shrink-0 px-3 py-1 rounded-full text-xs font-semibold border transition-all",
+                      isActive
+                        ? colors
+                          ? `${colors.bg} ${colors.text} ${colors.border}`
+                          : "bg-gray-900 text-white border-gray-900"
+                        : "bg-gray-50 text-gray-500 border-gray-200",
+                    )}
+                  >
+                    {r === "all" ? "Все" : t(`role.${r}`, r)}
+                  </button>
+                );
+              })}
+            </div>
+            {currentUser?.role === "owner" && (
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={showInactive}
+                  onChange={(e) => setShowInactive(e.target.checked)}
+                  className="w-4 h-4 rounded accent-primary"
+                />
+                <span className="text-xs text-gray-600">Показать неактивных</span>
+              </label>
+            )}
           </div>
-        </div>
-
-        {/* Role filter pills */}
-        <div className="flex gap-1.5 mt-2.5 overflow-x-auto pb-0.5 scrollbar-none">
-          {["all", ...ROLES].map((r) => {
-            const colors = r !== "all" ? ROLE_COLORS[r] : null;
-            const isActive = roleFilter === r;
-            return (
-              <button
-                key={r}
-                onClick={() => setRoleFilter(r)}
-                className={cn(
-                  "shrink-0 px-3 py-1 rounded-full text-xs font-semibold border transition-all",
-                  isActive
-                    ? colors
-                      ? `${colors.bg} ${colors.text} ${colors.border}`
-                      : "bg-gray-900 text-white border-gray-900"
-                    : "bg-gray-50 text-gray-500 border-gray-200",
-                )}
-              >
-                {r === "all" ? "Все" : t(`role.${r}`, r)}
-              </button>
-            );
-          })}
-        </div>
+        )}
       </div>
 
       {/* Staff list */}
