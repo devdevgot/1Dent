@@ -25,6 +25,8 @@ expertMode = true
   [userenv]
 
   [userenv.shared]
+VITE_YANDEX_MAPS_API_KEY = "3ca6647f-f79e-47bf-8537-882a2aeb8212"
+VITE_YANDEX_GEOCODER_KEY = "9b325167-ed8c-45dc-9bd2-01d4afb2c8ab"
 
   [nix]
   channel = "stable-25_05"

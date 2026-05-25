@@ -263,18 +263,25 @@ export function BranchesSettings() {
     geoDebounceRef.current = setTimeout(async () => {
       setMapSearching(true);
       try {
-        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=8&accept-language=ru`;
-        const resp = await fetch(url, { headers: { "Accept": "application/json" } });
+        const geocoderKey = (import.meta.env.VITE_YANDEX_GEOCODER_KEY as string | undefined) ?? "";
+        const url = `https://geocode-maps.yandex.ru/1.x/?apikey=${geocoderKey}&geocode=${encodeURIComponent(q)}&format=json&results=8&lang=ru_RU`;
+        const resp = await fetch(url);
         if (!resp.ok) throw new Error("geocode failed");
-        const data = (await resp.json()) as Array<{ lat: string; lon: string; display_name: string }>;
-        const results = data.map((d) => ({
-          name: d.display_name,
-          coords: [parseFloat(d.lat), parseFloat(d.lon)],
-        }));
+        const data = await resp.json();
+        const members = data?.response?.GeoObjectCollection?.featureMember ?? [];
+        const results = members.map((m: any) => {
+          const go = m.GeoObject;
+          const [lon, lat] = (go.Point.pos as string).split(" ").map(parseFloat);
+          const meta = go.metaDataProperty?.GeocoderMetaData;
+          return {
+            name: meta?.text || go.name || go.description || q,
+            coords: [lat, lon],
+          };
+        });
         setMapGeoResults(results);
       } catch { setMapGeoResults([]); }
       finally { setMapSearching(false); setSearchDone(true); }
-    }, 500);
+    }, 400);
   }, []);
 
   // ── Close / reset modal ──────────────────────────────────────────────────
