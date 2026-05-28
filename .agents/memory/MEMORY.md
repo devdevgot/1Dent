@@ -1,0 +1,1 @@
+- [Dental AI dedup](dental-ai-dedup.md) — AI analysis uses in-memory hash cache to skip OpenRouter calls when teeth data hasn't changed.

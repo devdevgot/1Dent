@@ -121,23 +121,14 @@ router.put("/:toothFdi", writeRoles, async (req: Request, res: Response, next: N
 });
 
 // GET /patients/:id/teeth/ai-analysis
+// Returns the stored analysis from DB — does NOT trigger a new one.
+// Analysis is generated only when: (a) a tooth condition changes, or (b) POST /trigger-ai-analysis is called.
 router.get("/ai-analysis", readRoles, async (req: Request, res: Response, next: NextFunction) => {
   const patientId = String(req.params["id"]);
   const ok = await assertPatientAccess(patientId, req.user!.clinicId, next).catch(next);
   if (!ok) return;
   const analysis = await getLatestDentalAnalysis(req.user!.clinicId, patientId).catch(next);
   if (analysis === undefined) return;
-
-  // If no cached analysis exists yet, kick off background generation immediately
-  // so the polling on the frontend picks it up within seconds instead of waiting for a tooth update
-  if (!analysis) {
-    triggerDentalAiAnalysis(req.user!.clinicId, patientId).catch((err) =>
-      logger.warn({ err }, "[DentalAI] Background analysis error on tab open"),
-    );
-  }
-
-  // Must not be cached by the browser — the polling frontend needs fresh data every 4 s.
-  // Without this, Express's default ETag causes 304 responses that serve a stale null body forever.
   res.set("Cache-Control", "no-store");
   res.json({ success: true, data: analysis ?? null });
 });

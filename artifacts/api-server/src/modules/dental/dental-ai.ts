@@ -17,6 +17,26 @@ const CONDITION_LABELS: Record<string, string> = {
   extraction_needed: "Требует удаления",
 };
 
+// ── In-memory dedup cache ────────────────────────────────────────────────────
+// Prevents calling OpenRouter multiple times for the same teeth state.
+// Keyed by "clinicId:patientId" → { hash, triggeredAt }
+// Lost on server restart — that's acceptable (at most 1 extra call after restart).
+const analysisDeupCache = new Map<string, { hash: string; triggeredAt: number }>();
+
+function computeTeethHash(
+  teeth: Array<{ toothFdi: number; condition: string; notes: string | null }>,
+): string {
+  const sorted = [...teeth].sort((a, b) => a.toothFdi - b.toothFdi);
+  const str = sorted.map((t) => `${t.toothFdi}:${t.condition}:${t.notes ?? ""}`).join("|");
+  // FNV-1a-style hash — fast, no dependencies
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    hash ^= str.charCodeAt(i);
+    hash = (hash * 0x01000193) >>> 0;
+  }
+  return hash.toString(36);
+}
+
 function buildDentalPrompt(teeth: Array<{ toothFdi: number; condition: string; notes: string | null }>): string {
   if (teeth.length === 0) {
     return "Данные о зубах пациента отсутствуют.";
@@ -68,13 +88,15 @@ async function callOpenRouter(prompt: string, model: string): Promise<string> {
   });
   const text = response.choices[0]?.message?.content;
   if (!text) throw new Error("Empty response from AI");
-  // Strip markdown bold/italic markers that would appear as raw asterisks in plain-text rendering
   return text.replace(/\*\*(.+?)\*\*/g, "$1").replace(/\*(.+?)\*/g, "$1");
 }
 
-export async function triggerDentalAiAnalysis(clinicId: string, patientId: string): Promise<void> {
+export async function triggerDentalAiAnalysis(
+  clinicId: string,
+  patientId: string,
+  force = false,
+): Promise<void> {
   try {
-    // Load all tooth records — only FDI, condition, notes (no personal data)
     const teeth = await db
       .select({
         toothFdi: toothRecordsTable.toothFdi,
@@ -94,9 +116,24 @@ export async function triggerDentalAiAnalysis(clinicId: string, patientId: strin
       return;
     }
 
+    const currentHash = computeTeethHash(teeth);
+    const cacheKey = `${clinicId}:${patientId}`;
+    const cached = analysisDeupCache.get(cacheKey);
+
+    if (!force) {
+      // Skip if the same teeth state was already analyzed within the last 30 minutes
+      const DEDUP_WINDOW_MS = 30 * 60 * 1000;
+      if (cached && cached.hash === currentHash && Date.now() - cached.triggeredAt < DEDUP_WINDOW_MS) {
+        logger.info({ clinicId, patientId }, "[DentalAI] Skipping — teeth unchanged since last analysis");
+        return;
+      }
+    }
+
+    // Mark as in-flight immediately to prevent concurrent duplicate calls
+    analysisDeupCache.set(cacheKey, { hash: currentHash, triggeredAt: Date.now() });
+
     const prompt = buildDentalPrompt(teeth);
 
-    // Try DeepSeek V3 first, fall back to GPT-4o mini
     let reportText: string;
     try {
       reportText = await callOpenRouter(prompt, DEEPSEEK_MODEL);
@@ -105,7 +142,6 @@ export async function triggerDentalAiAnalysis(clinicId: string, patientId: strin
       reportText = await callOpenRouter(prompt, FALLBACK_MODEL);
     }
 
-    // Upsert — one report per patient, overwrite on every diagnosis
     const now = new Date();
     await db
       .insert(dentalAiAnalysesTable)
@@ -124,11 +160,14 @@ export async function triggerDentalAiAnalysis(clinicId: string, patientId: strin
 
     logger.info({ clinicId, patientId }, "[DentalAI] Analysis saved successfully");
   } catch (err) {
+    // On failure, evict cache entry so a retry is allowed
+    analysisDeupCache.delete(`${clinicId}:${patientId}`);
     logger.error({ err, clinicId, patientId }, "[DentalAI] Failed to generate dental AI analysis");
   }
 }
 
 export async function deleteLatestDentalAnalysis(clinicId: string, patientId: string): Promise<void> {
+  analysisDeupCache.delete(`${clinicId}:${patientId}`);
   await db
     .delete(dentalAiAnalysesTable)
     .where(
