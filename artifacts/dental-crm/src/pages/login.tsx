@@ -64,8 +64,7 @@ export default function Login() {
         {/* Logo */}
         <div className="flex flex-col items-center mb-7">
           <div
-            className="w-16 h-16 rounded-[18px] flex items-center justify-center mb-3 shadow-lg"
-            style={{ backgroundColor: "#98cc1c" }}
+            className="w-16 h-16 rounded-[18px] flex items-center justify-center mb-3 shadow-lg bg-primary"
           >
             <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
               <path
@@ -149,8 +148,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={loginMutation.isPending}
-            className="w-full py-3 rounded-xl text-sm font-bold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.98] mt-1"
-            style={{ backgroundColor: "#98cc1c", color: "#1a2204" }}
+            className="w-full py-3 rounded-xl text-sm font-bold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.98] mt-1 bg-primary text-primary-foreground"
           >
             {loginMutation.isPending ? t("auth.signingIn") : t("auth.signIn")}
           </button>
