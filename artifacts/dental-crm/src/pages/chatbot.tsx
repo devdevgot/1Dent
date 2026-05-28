@@ -18,21 +18,13 @@ import {
   AlertCircle,
   Loader2,
   FlaskConical,
-  ChevronDown,
-  Check,
-  Upload,
-  Wand2,
-  FileText,
-  ClipboardList,
   Hand,
   Search,
   MessageCircle,
   Calendar,
   Bell,
   Heart,
-  RotateCcw,
   BookOpen,
-  type LucideIcon,
 } from "lucide-react";
 import {
   useGetChatbotSettings,
@@ -44,31 +36,13 @@ import {
   useListDentalBroadcastRuns,
   useTriggerDentalBroadcast,
   listDentalBroadcastRunsQueryKey,
-  useGetStandardScriptBlocks,
-  useParseScript,
 } from "@workspace/api-client-react";
-import type { ChatbotSettingsUpdate, DentalBroadcastRun, ScriptBlock } from "@workspace/api-client-react";
+import type { ChatbotSettingsUpdate, DentalBroadcastRun } from "@workspace/api-client-react";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { KnowledgeModal } from "@/components/chatbot/knowledge-tab";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
-const BLOCK_ICONS: Record<string, LucideIcon> = {
-  hand: Hand,
-  search: Search,
-  "message-circle": MessageCircle,
-  calendar: Calendar,
-  bell: Bell,
-  megaphone: Megaphone,
-  heart: Heart,
-  "refresh-cw": RefreshCw,
-};
-
-function BlockIcon({ name, className }: { name: string; className?: string }) {
-  const Icon = BLOCK_ICONS[name] ?? Bot;
-  return <Icon className={className ?? "h-4 w-4 text-violet-600"} />;
-}
 
 const STATE_LABELS: Record<string, string> = {
   greeting: "Приветствие",
@@ -518,404 +492,28 @@ function AiBroadcastTab() {
   );
 }
 
-// ─── Script block card ────────────────────────────────────────────────────────
-
-function ScriptBlockCard({
-  block,
-  onContentChange,
-  onToggle,
-}: {
-  block: ScriptBlock;
-  onContentChange: (id: string, content: string) => void;
-  onToggle: (id: string) => void;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const [localContent, setLocalContent] = useState(block.content);
-
-  useEffect(() => {
-    setLocalContent(block.content);
-  }, [block.content]);
-
-  const handleSave = () => {
-    onContentChange(block.id, localContent);
-    setExpanded(false);
-  };
-
-  const handleCancel = () => {
-    setLocalContent(block.content);
-    setExpanded(false);
-  };
-
-  return (
-    <div className={cn("rounded-xl border border-border/50 bg-card overflow-hidden transition-opacity", !block.enabled && "opacity-60")}>
-      <div className="flex items-center gap-3 px-4 py-3">
-        <div className="h-8 w-8 rounded-lg bg-violet-100 flex items-center justify-center shrink-0">
-          <BlockIcon name={block.icon} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-foreground">{block.title}</p>
-          <p className="text-xs text-muted-foreground truncate">{block.description}</p>
-        </div>
-        <button
-          onClick={() => onToggle(block.id)}
-          title={block.enabled ? "Отключить блок" : "Включить блок"}
-          className={cn(
-            "relative inline-flex h-5 w-9 items-center rounded-full transition-colors shrink-0",
-            block.enabled ? "bg-emerald-500" : "bg-muted-foreground/30",
-          )}
-        >
-          <span className={cn(
-            "inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform",
-            block.enabled ? "translate-x-4" : "translate-x-0.5",
-          )} />
-        </button>
-        <button
-          onClick={() => setExpanded((v) => !v)}
-          className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
-        >
-          <ChevronDown className={cn("h-4 w-4 transition-transform", expanded && "rotate-180")} />
-        </button>
-      </div>
-
-      {expanded && (
-        <div className="border-t border-border/40 px-4 py-3 space-y-2.5 bg-muted/20">
-          <p className="text-[11px] text-muted-foreground">
-            Используйте <code className="bg-muted px-1 rounded text-[10px]">{"{{clinic_name}}"}</code>,{" "}
-            <code className="bg-muted px-1 rounded text-[10px]">{"{{date}}"}</code>,{" "}
-            <code className="bg-muted px-1 rounded text-[10px]">{"{{time}}"}</code>,{" "}
-            <code className="bg-muted px-1 rounded text-[10px]">{"{{doctor_name}}"}</code> как переменные.
-          </p>
-          <textarea
-            value={localContent}
-            onChange={(e) => setLocalContent(e.target.value)}
-            rows={10}
-            className="w-full text-sm border border-border/50 rounded-lg px-3 py-2 bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 leading-relaxed"
-          />
-          <div className="flex gap-2 justify-end">
-            <button
-              onClick={handleCancel}
-              className="text-xs px-3 py-1.5 rounded-md font-medium text-muted-foreground hover:bg-muted transition-colors"
-            >
-              Отмена
-            </button>
-            <button
-              onClick={handleSave}
-              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-            >
-              <Check className="h-3.5 w-3.5" />
-              Сохранить блок
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Custom script modal ──────────────────────────────────────────────────────
-
-function CustomScriptModal({
-  onClose,
-  onApply,
-}: {
-  onClose: () => void;
-  onApply: (blocks: ScriptBlock[]) => void;
-}) {
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [rawText, setRawText] = useState("");
-  const [progress, setProgress] = useState(0);
-  const [parsedBlocks, setParsedBlocks] = useState<ScriptBlock[]>([]);
-  const [parseError, setParseError] = useState<string | null>(null);
-  const progressTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const parseScript = useParseScript({
-    mutation: {
-      onSuccess: (res: { data?: { blocks?: ScriptBlock[] } }) => {
-        if (progressTimer.current) clearInterval(progressTimer.current);
-        setProgress(100);
-        setParsedBlocks(res.data?.blocks ?? []);
-        setTimeout(() => setStep(3), 400);
-      },
-      onError: () => {
-        if (progressTimer.current) clearInterval(progressTimer.current);
-        setProgress(0);
-        setParseError("Не удалось обработать скрипт. Проверьте текст и попробуйте снова.");
-      },
-    },
-  });
-
-  const handleParse = () => {
-    if (!rawText.trim()) return;
-    setParseError(null);
-    setProgress(5);
-    let current = 5;
-    progressTimer.current = setInterval(() => {
-      current = Math.min(current + 1.5, 82);
-      setProgress(current);
-    }, 300);
-    parseScript.mutate(rawText);
-  };
-
-  useEffect(() => {
-    return () => { if (progressTimer.current) clearInterval(progressTimer.current); };
-  }, []);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4">
-      <div className="bg-background rounded-t-2xl sm:rounded-2xl shadow-2xl border border-border/50 w-full sm:max-w-lg max-h-[90dvh] flex flex-col overflow-hidden">
-
-        {/* Header */}
-        <div className="shrink-0 flex items-center gap-3 px-5 py-4 border-b border-border/50">
-          <div className="h-8 w-8 rounded-lg bg-violet-100 flex items-center justify-center shrink-0">
-            {step === 1 ? <FileText className="h-4 w-4 text-violet-600" /> :
-             step === 2 ? <Wand2 className="h-4 w-4 text-violet-600" /> :
-             <ClipboardList className="h-4 w-4 text-violet-600" />}
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-foreground">
-              {step === 1 ? "Добавить кастомный скрипт" :
-               step === 2 ? "Вставьте ваш скрипт" :
-               "Результат разбивки"}
-            </p>
-            <p className="text-xs text-muted-foreground">Шаг {step} из 3</p>
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        {/* Progress dots */}
-        <div className="shrink-0 flex items-center justify-center gap-2 py-3">
-          {[1, 2, 3].map((s) => (
-            <div key={s} className={cn("h-1.5 rounded-full transition-all", s === step ? "w-6 bg-primary" : s < step ? "w-3 bg-primary/40" : "w-3 bg-muted")} />
-          ))}
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto px-5 pb-5 space-y-4">
-
-          {/* Step 1 — Explanation */}
-          {step === 1 && (
-            <div className="space-y-4">
-              <div className="rounded-xl bg-violet-50 border border-violet-100 p-4 space-y-2">
-                <p className="text-sm font-medium text-violet-900">Как это работает</p>
-                <p className="text-xs text-violet-800 leading-relaxed">
-                  Вставьте текст вашего скрипта в любом формате. Наш ИИ автоматически разобьёт его на логические блоки:
-                  приветствие, диагностика, услуги, запись, дожим и другие.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-foreground">Что поддерживается:</p>
-                <ul className="space-y-1.5">
-                  {[
-                    "Текст в свободной форме — просто скопируйте ваш скрипт",
-                    "Нумерованные разделы и заголовки",
-                    "Эмодзи и форматирование",
-                    "Скрипты на русском и казахском языках",
-                  ].map((item) => (
-                    <li key={item} className="flex items-start gap-2 text-xs text-muted-foreground">
-                      <Check className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="rounded-xl bg-muted/50 border border-border/50 p-3 space-y-1.5">
-                <p className="text-[11px] font-medium text-foreground">Пример формата:</p>
-                <pre className="text-[10px] text-muted-foreground leading-relaxed whitespace-pre-wrap font-mono">
-{`1. Приветствие
-Здравствуйте! Вы обратились в [Клиника].
-Чем могу помочь?
-
-2. Если болит зуб
-Расскажите подробнее: боль постоянная
-или при нажатии?
-
-3. Запись
-Давайте запишем вас...`}
-                </pre>
-              </div>
-
-              <div className="rounded-xl bg-amber-50 border border-amber-100 p-3">
-                <p className="text-xs text-amber-800">
-                  <strong>Важно:</strong> После разбивки вы сможете просмотреть и отредактировать каждый блок перед применением. Текущий стандартный скрипт будет заменён.
-                </p>
-              </div>
-
-              <button
-                onClick={() => setStep(2)}
-                className="w-full py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors"
-              >
-                Продолжить
-              </button>
-            </div>
-          )}
-
-          {/* Step 2 — Input + parse */}
-          {step === 2 && (
-            <div className="space-y-3">
-              <div>
-                <p className="text-xs font-medium text-foreground mb-1.5">Вставьте текст вашего скрипта:</p>
-                <textarea
-                  value={rawText}
-                  onChange={(e) => setRawText(e.target.value)}
-                  placeholder="Вставьте сюда текст скрипта чат-бота..."
-                  rows={14}
-                  disabled={parseScript.isPending}
-                  className="w-full text-sm border border-border/50 rounded-xl px-3 py-2.5 bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/50 disabled:opacity-60"
-                />
-                <p className="text-[11px] text-muted-foreground mt-1 text-right">{rawText.length} символов</p>
-              </div>
-
-              {parseScript.isPending && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground flex items-center gap-1.5">
-                      <Wand2 className="h-3.5 w-3.5 text-violet-500 animate-pulse" />
-                      ИИ анализирует скрипт…
-                    </span>
-                    <span className="font-medium text-foreground">{Math.round(progress)}%</span>
-                  </div>
-                  <div className="h-2 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-violet-500 transition-all duration-500"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-                  <p className="text-[11px] text-muted-foreground text-center">
-                    Это займёт 10–20 секунд. Пожалуйста, не закрывайте окно.
-                  </p>
-                </div>
-              )}
-
-              {parseError && (
-                <div className="flex items-start gap-2 rounded-xl border border-red-100 bg-red-50 px-3 py-2.5">
-                  <AlertCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
-                  <p className="text-xs text-red-700">{parseError}</p>
-                </div>
-              )}
-
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setStep(1)}
-                  disabled={parseScript.isPending}
-                  className="flex-1 py-2.5 border border-border/60 text-muted-foreground rounded-xl text-sm font-medium hover:bg-muted transition-colors disabled:opacity-50"
-                >
-                  Назад
-                </button>
-                <button
-                  onClick={handleParse}
-                  disabled={!rawText.trim() || parseScript.isPending}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
-                >
-                  {parseScript.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Wand2 className="h-4 w-4" />
-                  )}
-                  Разобрать с ИИ
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Step 3 — Review */}
-          {step === 3 && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-100 px-3 py-2.5">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                <p className="text-xs text-emerald-800">
-                  ИИ разбил скрипт на <strong>{parsedBlocks.length} блоков</strong>. Проверьте результат перед применением.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                {parsedBlocks.map((block) => (
-                  <div key={block.id} className="flex items-start gap-3 rounded-xl border border-border/50 bg-card px-4 py-3">
-                    <div className="h-7 w-7 rounded-md bg-violet-100 flex items-center justify-center shrink-0 mt-0.5">
-                      <BlockIcon name={block.icon} className="h-3.5 w-3.5 text-violet-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground">{block.title}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 whitespace-pre-line">
-                        {block.content.slice(0, 100)}{block.content.length > 100 ? "…" : ""}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <p className="text-[11px] text-muted-foreground text-center">
-                После применения вы сможете отредактировать каждый блок отдельно на странице настроек.
-              </p>
-
-              <div className="flex gap-2 pt-1">
-                <button
-                  onClick={() => setStep(2)}
-                  className="flex-1 py-2.5 border border-border/60 text-muted-foreground rounded-xl text-sm font-medium hover:bg-muted transition-colors"
-                >
-                  Изменить скрипт
-                </button>
-                <button
-                  onClick={() => { onApply(parsedBlocks); onClose(); }}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors"
-                >
-                  <Check className="h-4 w-4" />
-                  Применить скрипт
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function ChatbotPage() {
   const { t } = useTranslation();
   const [tab, setTab] = useState<"sessions" | "settings" | "manager-style" | "ai-broadcast">("sessions");
   const [knowledgeOpen, setKnowledgeOpen] = useState(false);
-  const [scriptOpen, setScriptOpen] = useState(false);
   const [confirmResetPhone, setConfirmResetPhone] = useState<string | null>(null);
   const [localSettings, setLocalSettings] = useState<ChatbotSettingsUpdate>({});
   const [savedSettings, setSavedSettings] = useState<ChatbotSettingsUpdate>({});
   const [autosaveStatus, setAutosaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
-  const [scriptBlocks, setScriptBlocks] = useState<ScriptBlock[]>([]);
-  const [showCustomScriptModal, setShowCustomScriptModal] = useState(false);
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const [scriptSaveStatus, setScriptSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const scriptSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data: settingsRes, refetch: refetchSettings } = useGetChatbotSettings();
   const { data: sessionsRes, refetch: refetchSessions, isLoading: sessionsLoading } = useListChatbotSessions();
-  const { data: standardBlocksRes } = useGetStandardScriptBlocks();
   const updateSettings = useUpdateChatbotSettings();
   const deleteSession = useDeleteChatbotSession();
 
   const settings = settingsRes?.data?.settings;
   const sessions = sessionsRes?.data?.sessions ?? [];
-  const standardBlocks = standardBlocksRes?.data?.blocks ?? [];
 
   const effectiveEnabled = localSettings.enabled ?? settings?.enabled ?? true;
-
-  // Initialize script blocks from saved settings or standard blocks
-  useEffect(() => {
-    if (!settings) return;
-    const saved = ((settings as unknown) as Record<string, unknown>)["scriptBlocks"] as ScriptBlock[] | undefined;
-    if (saved && saved.length > 0) {
-      setScriptBlocks(saved);
-    } else if (standardBlocks.length > 0) {
-      setScriptBlocks(standardBlocks);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings?.id, standardBlocks.length]);
 
   // Autosave for enabled toggle
   useEffect(() => {
@@ -942,46 +540,6 @@ export default function ChatbotPage() {
     return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localSettings]);
-
-  const saveScriptBlocks = (blocks: ScriptBlock[]) => {
-    if (scriptSaveTimer.current) clearTimeout(scriptSaveTimer.current);
-    setScriptSaveStatus("saving");
-    scriptSaveTimer.current = setTimeout(() => {
-      updateSettings.mutate(
-        { data: { scriptBlocks: blocks } as ChatbotSettingsUpdate },
-        {
-          onSuccess: () => {
-            setScriptSaveStatus("saved");
-            setTimeout(() => setScriptSaveStatus("idle"), 2000);
-          },
-          onError: () => setScriptSaveStatus("idle"),
-        },
-      );
-    }, 800);
-  };
-
-  const handleBlockContentChange = (id: string, content: string) => {
-    const updated = scriptBlocks.map((b) => (b.id === id ? { ...b, content } : b));
-    setScriptBlocks(updated);
-    saveScriptBlocks(updated);
-  };
-
-  const handleBlockToggle = (id: string) => {
-    const updated = scriptBlocks.map((b) => (b.id === id ? { ...b, enabled: !b.enabled } : b));
-    setScriptBlocks(updated);
-    saveScriptBlocks(updated);
-  };
-
-  const handleApplyCustomScript = (blocks: ScriptBlock[]) => {
-    setScriptBlocks(blocks);
-    saveScriptBlocks(blocks);
-  };
-
-  const handleResetToStandard = () => {
-    if (standardBlocks.length === 0) return;
-    setScriptBlocks(standardBlocks);
-    saveScriptBlocks(standardBlocks);
-  };
 
   const handleDeleteSession = (phone: string) => {
     deleteSession.mutate({ phone }, { onSuccess: () => refetchSessions() });
@@ -1149,109 +707,11 @@ export default function ChatbotPage() {
               <BookOpen className="h-4 w-4 text-primary shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground">База знаний</p>
-                <p className="text-xs text-muted-foreground mt-0.5 truncate">Ссылки и файлы для обучения ИИ + генерация скриптов</p>
+                <p className="text-xs text-muted-foreground mt-0.5 truncate">Ссылки и файлы — чат-бот отвечает на основе этих данных</p>
               </div>
               <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
             </button>
 
-            {/* Script dialog button */}
-            <button
-              onClick={() => setScriptOpen(true)}
-              className="w-full flex items-center gap-3 rounded-xl border border-border/50 bg-card p-4 hover:bg-muted/30 transition-colors text-left"
-            >
-              <ClipboardList className="h-4 w-4 text-primary shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground">Скрипт диалога</p>
-                <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                  {scriptBlocks.length > 0 ? `${scriptBlocks.length} блоков · настройте ответы чат-бота` : "Настройте ответы чат-бота"}
-                </p>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-            </button>
-
-            {/* Script dialog modal */}
-            <Dialog open={scriptOpen} onOpenChange={(v) => !v && setScriptOpen(false)}>
-              <DialogContent className="max-w-2xl w-full max-h-[90vh] flex flex-col p-0 gap-0">
-                <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/50 shrink-0">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <DialogTitle className="flex items-center gap-2 text-base font-semibold">
-                        <ClipboardList className="h-4 w-4 text-primary" />
-                        Скрипт диалога
-                      </DialogTitle>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {scriptBlocks.length} блоков · нажмите на блок чтобы изменить
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0 mt-0.5">
-                      {scriptSaveStatus !== "idle" && (
-                        <span className={cn("text-xs font-medium", scriptSaveStatus === "saved" ? "text-emerald-600" : "text-muted-foreground")}>
-                          {scriptSaveStatus === "saving" ? "Сохранение…" : "Сохранено ✓"}
-                        </span>
-                      )}
-                      {showResetConfirm ? (
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs text-muted-foreground">Сбросить?</span>
-                          <button
-                            onClick={() => { handleResetToStandard(); setShowResetConfirm(false); }}
-                            className="text-xs px-2 py-1 rounded-md font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors"
-                          >
-                            Да
-                          </button>
-                          <button
-                            onClick={() => setShowResetConfirm(false)}
-                            className="text-xs px-2 py-1 rounded-md font-medium text-muted-foreground hover:bg-muted transition-colors"
-                          >
-                            Нет
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => setShowResetConfirm(true)}
-                          title="Сбросить до стандартного скрипта"
-                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted px-2 py-1 rounded-md transition-colors"
-                        >
-                          <RotateCcw className="h-3 w-3" />
-                          Сбросить
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </DialogHeader>
-
-                <div className="overflow-y-auto flex-1 px-6 py-5 space-y-3">
-                  {scriptBlocks.length === 0 ? (
-                    <div className="rounded-xl border border-border/50 bg-muted/30 p-8 text-center">
-                      <Bot className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-                      <p className="text-sm text-muted-foreground">Загрузка скрипта…</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {[...scriptBlocks].sort((a, b) => a.order - b.order).map((block) => (
-                        <ScriptBlockCard
-                          key={block.id}
-                          block={block}
-                          onContentChange={handleBlockContentChange}
-                          onToggle={handleBlockToggle}
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  <button
-                    onClick={() => { setScriptOpen(false); setShowCustomScriptModal(true); }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3.5 border border-dashed border-border rounded-xl text-sm text-muted-foreground hover:text-foreground hover:border-primary/50 hover:bg-primary/5 transition-colors"
-                  >
-                    <Upload className="h-4 w-4" />
-                    Добавить кастомный скрипт
-                  </button>
-
-                  <p className="text-[11px] text-muted-foreground text-center pb-2">
-                    Загрузите скрипт вашей клиники — ИИ автоматически разобьёт его на редактируемые блоки
-                  </p>
-                </div>
-              </DialogContent>
-            </Dialog>
           </div>
         )}
 
@@ -1261,14 +721,6 @@ export default function ChatbotPage() {
 
       {/* Knowledge base modal */}
       <KnowledgeModal open={knowledgeOpen} onClose={() => setKnowledgeOpen(false)} />
-
-      {/* Custom script modal */}
-      {showCustomScriptModal && (
-        <CustomScriptModal
-          onClose={() => setShowCustomScriptModal(false)}
-          onApply={handleApplyCustomScript}
-        />
-      )}
 
       <ConfirmDeleteDialog
         open={!!confirmResetPhone}

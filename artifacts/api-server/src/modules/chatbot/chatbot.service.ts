@@ -16,6 +16,7 @@ import {
   treatmentPlansTable,
   treatmentPlanItemsTable,
   clinicsTable,
+  knowledgeSourcesTable,
 } from "@workspace/db";
 import type { StepInstructions } from "@workspace/db";
 import { eq, and, inArray, gte, lte, ne, asc, desc, sql } from "drizzle-orm";
@@ -33,6 +34,7 @@ import { openrouter, FAST_MODEL, withTimeout, parseLlmJson } from "../../lib/ope
 
 type CachedSettings = { settings: ChatbotSettings; expiresAt: number };
 type CachedExamples = { examples: ManagerExample[]; expiresAt: number };
+type CachedKnowledge = { text: string; expiresAt: number };
 
 const SESSION_TTL_SECONDS = 24 * 60 * 60;
 const REDIS_KEY_PREFIX = "chatbot:session:";
@@ -360,6 +362,39 @@ const settingsCache = new Map<string, CachedSettings>();
 // Manager examples cache (60s TTL) — shared across sessions
 const examplesCache = new Map<string, CachedExamples>();
 
+// Knowledge base cache (5min TTL) — refreshed lazily on each processMessage call
+const knowledgeCache = new Map<string, CachedKnowledge>();
+
+async function loadKnowledgeContext(clinicId: string): Promise<string> {
+  const cached = knowledgeCache.get(clinicId);
+  if (cached && cached.expiresAt > Date.now()) return cached.text;
+
+  try {
+    const sources = await db
+      .select({ name: knowledgeSourcesTable.name, extractedText: knowledgeSourcesTable.extractedText })
+      .from(knowledgeSourcesTable)
+      .where(and(
+        eq(knowledgeSourcesTable.clinicId, clinicId),
+        eq(knowledgeSourcesTable.status, "ready"),
+      ));
+
+    if (sources.length === 0) {
+      knowledgeCache.set(clinicId, { text: "", expiresAt: Date.now() + 5 * 60_000 });
+      return "";
+    }
+
+    const text = sources
+      .map((s) => `=== ${s.name} ===\n${(s.extractedText ?? "").slice(0, 4000)}`)
+      .join("\n\n---\n\n");
+
+    knowledgeCache.set(clinicId, { text, expiresAt: Date.now() + 5 * 60_000 });
+    return text;
+  } catch (err) {
+    logger.warn({ err }, "[ChatbotService] loadKnowledgeContext failed — skipping knowledge injection");
+    return "";
+  }
+}
+
 async function getManagerExamples(clinicId: string): Promise<ManagerExample[]> {
   const cached = examplesCache.get(clinicId);
   if (cached && cached.expiresAt > Date.now()) return cached.examples;
@@ -632,6 +667,7 @@ function buildPlaygroundPrompt(
   settings: Awaited<ReturnType<typeof getSettings>>,
   doctorsWithSlots?: DoctorWithSlots[],
   clinicName?: string,
+  knowledgeContext?: string,
 ): string {
   const kazakhNote = `ВАЖНО: Пациент может писать на казахском или русском. Отвечай строго на том языке, на котором пишет пациент.`;
 
@@ -695,6 +731,10 @@ function buildPlaygroundPrompt(
   const nowDateStr = nowPlayground.toLocaleDateString("ru-KZ", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
   const nowTimeStr = nowPlayground.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit" });
 
+  const knowledgeSection = knowledgeContext
+    ? `\n\nМАТЕРИАЛЫ КЛИНИКИ (используй эту информацию для ответов о клинике — цены, услуги, врачи, особенности):\n${knowledgeContext}`
+    : "";
+
   return `Ты — AI-ассистент стоматологической клиники. Сейчас ТЕСТОВЫЙ РЕЖИМ (симуляция для проверки скрипта).
 Текущее время: ${nowDateStr}, ${nowTimeStr} (Алматы/Астана).
 
@@ -703,9 +743,9 @@ function buildPlaygroundPrompt(
 2. НЕ спрашивай имя или телефон в начале диалога — сразу узнай проблему
 3. Если пациент согласился на запись и назвал время — подтверди: "✅ Записал вас! (это симуляция — реальная запись не создаётся)"
 4. Отвечай коротко: 1–3 предложения максимум
-5. Не придумывай информацию которой нет в скрипте или списке врачей
+5. Используй только информацию из материалов клиники и списка врачей — не придумывай
 6. НИКОГДА не предлагай и не подтверждай время которое уже прошло (сейчас ${nowTimeStr}). Если пациент называет прошедшее время сегодня — объясни что оно уже прошло и предложи ближайший доступный слот. Все слоты в списке врачей уже являются будущими.
-${kazakhNote}${doctorsSection}${scriptContext}`;
+${kazakhNote}${doctorsSection}${scriptContext}${knowledgeSection}`;
 }
 
 /** Renders the clinic's script blocks (same as playground) for injection into prompts. */
@@ -743,7 +783,7 @@ function renderScriptBlocks(
 function buildSystemPrompt(
   state: ChatbotState,
   settings: Awaited<ReturnType<typeof getSettings>>,
-  opts?: { clinicName?: string },
+  opts?: { clinicName?: string; knowledgeContext?: string },
 ): string {
   const si = (settings.stepInstructions ?? {}) as StepInstructions;
   const generalExtra = si.general ? `\n\nДополнительные инструкции клиники:\n${si.general}` : "";
@@ -802,7 +842,11 @@ function buildSystemPrompt(
 
   const scriptContext = renderScriptBlocks(settings, opts?.clinicName);
 
-  return `${base}\n\n${stateGuidance[state] ?? ""}${customExtra}${scriptContext}`;
+  const knowledgeSection = opts?.knowledgeContext
+    ? `\n\nМАТЕРИАЛЫ КЛИНИКИ (сайт, соцсети, документы — используй как основной источник информации о ценах, услугах и особенностях клиники):\n${opts.knowledgeContext}`
+    : "";
+
+  return `${base}\n\n${stateGuidance[state] ?? ""}${customExtra}${scriptContext}${knowledgeSection}`;
 }
 
 // ─── ChatbotService (main export) ───────────────────────────────────────────
@@ -816,15 +860,21 @@ export class ChatbotService {
   ): Promise<string | null> {
     let settings: Awaited<ReturnType<typeof getSettings>>;
     let managerExamples: ManagerExample[];
+    let knowledgeContext: string;
     try {
-      [settings, managerExamples] = await Promise.all([
+      [settings, managerExamples, knowledgeContext] = await Promise.all([
         getSettings(clinicId),
         getManagerExamples(clinicId),
+        loadKnowledgeContext(clinicId),
       ]);
     } catch (err) {
       logger.error({ err }, "ChatbotService: failed to load settings");
       return null;
     }
+
+    // Local helper to build prompts with knowledge context pre-bound
+    const sp = (state: ChatbotState, spOpts?: { clinicName?: string }) =>
+      buildSystemPrompt(state, settings, { ...spOpts, knowledgeContext });
 
     saveChatbotMessage(clinicId, phone, "inbound", text).catch(() => {});
 
@@ -947,7 +997,7 @@ export class ChatbotService {
             data.existingProcedureDoctorName = doctorName;
 
             const aiReply = await generateChatbotResponse(
-              buildSystemPrompt("manage_appointment", settings),
+              sp("manage_appointment"),
               [{ role: "user" as const, content: text }],
               `Пациент ${existingByPhone.name} написал. У него уже есть запись к врачу ${doctorName} на ${apptDate}. Поздоровайся по имени, сообщи о записи и предложи: перенести / отменить / оставить как есть.`,
               managerExamples,
@@ -961,7 +1011,7 @@ export class ChatbotService {
 
           // Returning patient, no upcoming → straight to problem collection
           const aiReply = await generateChatbotResponse(
-            buildSystemPrompt("collect_problem", settings),
+            sp("collect_problem"),
             [{ role: "user" as const, content: text }],
             `Пациент ${existingByPhone.name} написал в чат — вы уже знаете его. Поздоровайся по имени и спроси, чем можешь помочь.`,
             managerExamples,
@@ -982,7 +1032,7 @@ export class ChatbotService {
 
         if (wantsExistingAppt) {
           const aiAskIin = await generateChatbotResponse(
-            buildSystemPrompt("collect_iin", settings),
+            sp("collect_iin"),
             [],
             `Пациент написал: "${text}". Похоже, он хочет проверить или изменить существующую запись, но мы не нашли его по номеру телефона. Поздоровайся и попроси ввести ИИН (12 цифр) для идентификации.`,
             managerExamples,
@@ -997,7 +1047,7 @@ export class ChatbotService {
         // Otherwise — new patient, greet and process their actual first message as the patient input
         // so the model can immediately address what they wrote (not just send a generic greeting).
         const aiGreeting = await generateChatbotResponse(
-          buildSystemPrompt("greeting", settings),
+          sp("greeting"),
           [],
           text,
           managerExamples,
@@ -1061,7 +1111,7 @@ export class ChatbotService {
               data.existingProcedureDoctorName = doctorName;
 
               const aiReply = await generateChatbotResponse(
-                buildSystemPrompt("manage_appointment", settings),
+                sp("manage_appointment"),
                 [],
                 `Пациент ${iinMatch.name} вошёл. У него есть ближайшая запись к врачу ${doctorName} на ${apptDate}. Сообщи об этом и предложи: перенести на другую дату, отменить запись или оставить как есть.`,
                 managerExamples,
@@ -1072,7 +1122,7 @@ export class ChatbotService {
             } else {
               // No upcoming appointment — start booking flow
               const aiReply = await generateChatbotResponse(
-                buildSystemPrompt("collect_problem", settings),
+                sp("collect_problem"),
                 [],
                 `Пациент ${iinMatch.name} вошёл по ИИН, активных записей нет. Поприветствуй его по имени и спроси, с чем он обращается или какую услугу хочет получить.`,
                 managerExamples,
@@ -1114,7 +1164,7 @@ export class ChatbotService {
             slotsText = `\n\nБлижайшие свободные слоты:\n${formatSlots(slots)}\n\nИли укажите своё удобное время.`;
           }
           const aiAskTime = await generateChatbotResponse(
-            buildSystemPrompt("collect_datetime", settings),
+            sp("collect_datetime"),
             recentMessages,
             `Имя пациента: ${extractedName}. Записываем к врачу ${data.suggestedDoctorName ?? ""}. Спроси удобную дату и время визита.`,
             managerExamples,
@@ -1127,7 +1177,7 @@ export class ChatbotService {
 
         // No doctor yet — fall back to collecting the problem first
         const aiReply0 = await generateChatbotResponse(
-          buildSystemPrompt("collect_problem", settings),
+          sp("collect_problem"),
           recentMessages,
           `Имя пациента: ${extractedName}. Спроси, чем он обеспокоен или какая услуга нужна.`,
           managerExamples,
@@ -1143,7 +1193,7 @@ export class ChatbotService {
         if (classPhone.extractedPhone) {
           data.collectedPhone = classPhone.extractedPhone;
           const aiReplyPhone = await generateChatbotResponse(
-            buildSystemPrompt("collect_phone", settings),
+            sp("collect_phone"),
             recentMessages,
             text,
             managerExamples,
@@ -1180,7 +1230,7 @@ export class ChatbotService {
             data.suggestedDoctorId = therapist.id;
             data.suggestedDoctorName = therapist.name;
             const aiReply = await generateChatbotResponse(
-              buildSystemPrompt("suggest_doctor", settings),
+              sp("suggest_doctor"),
               recentMessages,
               `Пациент написал что-то неясное: "${text}". Мягко предложи запись к терапевту ${therapist.name} для первичного осмотра.`,
               managerExamples,
@@ -1224,7 +1274,7 @@ export class ChatbotService {
               ? " Вижу, что ситуация срочная — постараемся записать вас как можно скорее! 🚨"
               : "";
 
-          const systemPrompt = buildSystemPrompt("suggest_doctor", settings);
+          const systemPrompt = sp("suggest_doctor");
           const context = `Пациент описал: ${classification.summary ?? text}. Рекомендуемый врач: ${doctor.name}. Предложи запись к этому врачу.`;
           const aiReply = await generateChatbotResponse(systemPrompt, recentMessages, context, managerExamples);
           response = aiReply ?? `Понял! Рекомендую врача *${doctor.name}*.${urgencyNote}\n\nЗаписать вас к нему? (Ответьте «Да» или «Нет»)`;
@@ -1244,7 +1294,7 @@ export class ChatbotService {
           // If we don't yet know the patient's name (new patient), ask for it before collecting time.
           if (!data.patientName && !data.existingPatientId) {
             const aiAskName = await generateChatbotResponse(
-              buildSystemPrompt("collect_name", settings),
+              sp("collect_name"),
               recentMessages,
               `Пациент согласен записаться к ${data.suggestedDoctorName ?? "врачу"}. Спроси, как к нему обращаться, чтобы оформить запись.`,
               managerExamples,
@@ -1264,7 +1314,7 @@ export class ChatbotService {
             }
           }
           const aiReply1 = await generateChatbotResponse(
-            buildSystemPrompt("collect_datetime", settings),
+            sp("collect_datetime"),
             recentMessages,
             `Пациент согласен записаться к ${data.suggestedDoctorName ?? "врачу"}. Спроси удобную дату и время визита.`,
             managerExamples,
@@ -1278,7 +1328,7 @@ export class ChatbotService {
         } else {
           // Ambiguous — AI interpretation with confusion counter
           const aiReply2 = await generateChatbotResponse(
-            buildSystemPrompt("suggest_doctor", settings),
+            sp("suggest_doctor"),
             recentMessages,
             text,
             managerExamples,
@@ -1315,7 +1365,7 @@ export class ChatbotService {
             }
           }
           const aiReschedule = await generateChatbotResponse(
-            buildSystemPrompt("collect_datetime", settings),
+            sp("collect_datetime"),
             recentMessages,
             `Пациент хочет перенести запись. Спроси новую дату и время визита.`,
             managerExamples,
@@ -1341,7 +1391,7 @@ export class ChatbotService {
             }
           }
           const aiCancel = await generateChatbotResponse(
-            buildSystemPrompt("done", settings),
+            sp("done"),
             recentMessages,
             `Пациент отменил запись к врачу ${data.existingProcedureDoctorName ?? ""}. Подтверди отмену и предложи записаться снова когда будет нужно.`,
             managerExamples,
@@ -1350,7 +1400,7 @@ export class ChatbotService {
           session.state = "done";
         } else if (wantsKeep || isYes(text)) {
           const aiKeep = await generateChatbotResponse(
-            buildSystemPrompt("done", settings),
+            sp("done"),
             recentMessages,
             `Пациент решил оставить запись как есть. Подтверди что запись сохранена и пожелай удачи.`,
             managerExamples,
@@ -1368,7 +1418,7 @@ export class ChatbotService {
             response = "Соединяю вас с администратором — ожидайте ответа.";
           } else {
             const aiManage = await generateChatbotResponse(
-              buildSystemPrompt("manage_appointment", settings),
+              sp("manage_appointment"),
               recentMessages,
               text,
               managerExamples,
@@ -1487,7 +1537,7 @@ export class ChatbotService {
           });
           const doctorName = data.suggestedDoctorName ?? data.existingProcedureDoctorName ?? "врача";
           const aiDone = await generateChatbotResponse(
-            buildSystemPrompt("done", settings),
+            sp("done"),
             recentMessages,
             data.isReschedule
               ? `Запись перенесена на ${formattedDate} к врачу ${doctorName}. Подтверди перенос.`
@@ -1510,7 +1560,7 @@ export class ChatbotService {
             response = "Соединяю вас с администратором — он поможет выбрать удобное время.";
           } else {
             const aiDateRetry = await generateChatbotResponse(
-              buildSystemPrompt("collect_datetime", settings),
+              sp("collect_datetime"),
               recentMessages,
               text,
               managerExamples,
@@ -1545,7 +1595,7 @@ export class ChatbotService {
             }
           }
           const aiReply3 = await generateChatbotResponse(
-            buildSystemPrompt("collect_datetime", settings),
+            sp("collect_datetime"),
             recentMessages,
             `Пациент согласен записаться к ${data.suggestedDoctorName ?? "врачу"}. Спроси удобную дату и время визита.`,
             managerExamples,
@@ -1561,7 +1611,7 @@ export class ChatbotService {
           session.state = "collect_problem";
         } else {
           const aiReply4 = await generateChatbotResponse(
-            buildSystemPrompt("confirm_appointment", settings),
+            sp("confirm_appointment"),
             recentMessages,
             text,
             managerExamples,
@@ -1828,28 +1878,18 @@ export class ChatbotService {
     userMessage: string,
     history: Array<{ role: "user" | "assistant"; content: string }> = [],
   ) {
-    const [settings, managerExamples, doctorsWithSlots, clinicRow] = await Promise.all([
+    const [settings, managerExamples, doctorsWithSlots, clinicRow, knowledgeContext] = await Promise.all([
       getSettings(clinicId),
       getManagerExamples(clinicId),
       getClinicDoctorsWithSlots(clinicId).catch(() => [] as DoctorWithSlots[]),
       db.select({ name: clinicsTable.name }).from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1).catch(() => []),
+      loadKnowledgeContext(clinicId),
     ]);
     const clinicName = clinicRow[0]?.name ?? undefined;
 
-    // Auto-start: empty message + empty history → return greeting directly from script blocks
+    // Auto-start: empty message + empty history → generate greeting with AI using knowledge context
     if (!userMessage && history.length === 0) {
-      const scriptBlocks = ((settings as unknown) as Record<string, unknown>)["scriptBlocks"] as ScriptBlock[] | undefined;
-      const greetingBlock = scriptBlocks?.find((b) => b.id === "greeting" && b.enabled);
-      if (greetingBlock?.content) {
-        // Replace template placeholders with example values
-        return greetingBlock.content
-          .replace(/\{\{clinic_name\}\}/g, clinicName ?? settings.greetingTemplate?.match(/«(.+?)»/)?.[1] ?? "нашу клинику")
-          .replace(/\{\{date\}\}/g, new Date().toLocaleDateString("ru-KZ", { day: "numeric", month: "long" }))
-          .replace(/\{\{time\}\}/g, doctorsWithSlots[0]?.slots?.[0]?.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit" }) ?? "14:00")
-          .replace(/\{\{doctor_name\}\}/g, doctorsWithSlots[0]?.name ?? "Иван Петров");
-      }
-      // Fallback: generate greeting with AI
-      const systemPrompt = buildPlaygroundPrompt(settings, doctorsWithSlots, clinicName);
+      const systemPrompt = buildPlaygroundPrompt(settings, doctorsWithSlots, clinicName, knowledgeContext);
       const reply = await generateChatbotResponse(
         systemPrompt,
         [],
@@ -1859,7 +1899,7 @@ export class ChatbotService {
       return reply ?? "Здравствуйте! Чем могу помочь?";
     }
 
-    const systemPrompt = buildPlaygroundPrompt(settings, doctorsWithSlots, clinicName);
+    const systemPrompt = buildPlaygroundPrompt(settings, doctorsWithSlots, clinicName, knowledgeContext);
     const chatHistory = history.map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
     const reply = await generateChatbotResponse(systemPrompt, chatHistory, userMessage, managerExamples);
     return reply ?? "AI не ответил. Проверьте API-ключ.";
