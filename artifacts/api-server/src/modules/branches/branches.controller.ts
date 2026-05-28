@@ -87,6 +87,20 @@ router.post("/geo/event", allStaff, async (req: Request, res: Response, next: Ne
     const branch = await repo.getBranch(branchId, clinicId);
     if (!branch) return next(new NotFoundError("Branch not found"));
 
+    // ── Deduplication: prevent duplicate events from page reloads ──────────
+    const lastEvent = await repo.getLastGeoEvent(userId, branchId);
+    if (lastEvent) {
+      const ageMs = Date.now() - new Date(lastEvent.occurredAt).getTime();
+      // Same event type within 3 minutes → idempotent, skip silently
+      if (lastEvent.eventType === eventType && ageMs < 3 * 60 * 1000) {
+        return res.json({ success: true, data: { event: lastEvent } });
+      }
+      // checkout→checkin within 30s → page reload cycle, skip
+      if (lastEvent.eventType === "checkout" && eventType === "checkin" && ageMs < 30 * 1000) {
+        return res.json({ success: true, data: { event: lastEvent } });
+      }
+    }
+
     const event = await repo.logGeoEvent({ clinicId, userId, branchId, eventType });
 
     const tg = await repo.getClinicTelegram(clinicId);

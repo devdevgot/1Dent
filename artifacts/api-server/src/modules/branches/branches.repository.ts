@@ -56,6 +56,16 @@ export class BranchesRepository {
     return deleted ?? null;
   }
 
+  async getLastGeoEvent(userId: string, branchId: string) {
+    const [event] = await db
+      .select()
+      .from(geoEventsTable)
+      .where(and(eq(geoEventsTable.userId, userId), eq(geoEventsTable.branchId, branchId)))
+      .orderBy(desc(geoEventsTable.occurredAt))
+      .limit(1);
+    return event ?? null;
+  }
+
   async logGeoEvent(data: {
     clinicId: string;
     userId: string;

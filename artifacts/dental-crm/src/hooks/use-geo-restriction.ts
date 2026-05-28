@@ -12,7 +12,7 @@ export interface ClinicBranch {
 export type GeoStatus = "loading" | "inside" | "outside" | "no_branches" | "denied" | "unavailable";
 
 function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371000; // Earth radius in metres
+  const R = 6371000;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
   const a =
@@ -73,6 +73,40 @@ function findNearestBranch(
   return nearest;
 }
 
+// ── sessionStorage helpers ──────────────────────────────────────────────────
+// Persists geo state across page refreshes within the same browser tab.
+// This prevents spurious checkin/checkout pairs on F5.
+
+interface PersistedGeoState {
+  inside: boolean;
+  branchId: string | null;
+  savedAt: number; // timestamp ms
+}
+
+function loadPersistedState(userId: string): PersistedGeoState | null {
+  try {
+    const raw = sessionStorage.getItem(`geo_state_${userId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PersistedGeoState;
+    // Discard if older than 2 hours (stale session)
+    if (Date.now() - parsed.savedAt > 2 * 60 * 60 * 1000) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function savePersistedState(userId: string, inside: boolean, branchId: string | null) {
+  try {
+    const state: PersistedGeoState = { inside, branchId, savedAt: Date.now() };
+    sessionStorage.setItem(`geo_state_${userId}`, JSON.stringify(state));
+  } catch { /* non-critical */ }
+}
+
+function clearPersistedState(userId: string) {
+  try { sessionStorage.removeItem(`geo_state_${userId}`); } catch { /* non-critical */ }
+}
+
 export function useGeoRestriction() {
   const { user } = useAuthStore();
   const [status, setStatus] = useState<GeoStatus>("loading");
@@ -83,10 +117,24 @@ export function useGeoRestriction() {
   const prevBranchIdRef = useRef<string | null>(null);
   const watchIdRef = useRef<number | null>(null);
   const branchesRef = useRef<ClinicBranch[]>([]);
+  // Track whether we restored state from sessionStorage (skip checkin on first fix)
+  const restoredRef = useRef(false);
 
   const isOwner = user?.role === "owner";
+  const userId = user?.id ?? "";
 
-  // Load branches once on mount
+  // ── Restore persisted state on mount ─────────────────────────────────────
+  useEffect(() => {
+    if (isOwner || !userId) return;
+    const saved = loadPersistedState(userId);
+    if (saved) {
+      prevInsideRef.current = saved.inside;
+      prevBranchIdRef.current = saved.branchId;
+      restoredRef.current = true;
+    }
+  }, [isOwner, userId]);
+
+  // ── Load branches once on mount ───────────────────────────────────────────
   useEffect(() => {
     if (isOwner) {
       setStatus("no_branches");
@@ -122,19 +170,31 @@ export function useGeoRestriction() {
       setActiveBranch(null);
     }
 
-    // Fire check-in / check-out event on transition
-    if (prevInside !== null && prevInside !== inside) {
+    // Save to sessionStorage so page refresh doesn't lose state
+    savePersistedState(userId, inside, nearest.branch.id);
+
+    // ── Determine whether to fire a geo event ──────────────────────────────
+    if (prevInside === null) {
+      // First GPS fix after fresh page load (no prior sessionStorage state)
+      if (inside && !restoredRef.current) {
+        // Only fire checkin if we have NO persisted state (truly first visit this session)
+        void postGeoEvent(nearest.branch.id, "checkin");
+      }
+      // If restoredRef is true, state was loaded from sessionStorage — no event needed,
+      // the backend deduplication handles any edge cases.
+    } else if (prevInside !== inside) {
+      // Genuine transition: inside↔outside
       const eventType = inside ? "checkin" : "checkout";
-      const branchForEvent = inside ? nearest.branch : (list.find(b => b.id === prevBranchIdRef.current) ?? nearest.branch);
+      const branchForEvent = inside
+        ? nearest.branch
+        : (list.find(b => b.id === prevBranchIdRef.current) ?? nearest.branch);
       void postGeoEvent(branchForEvent.id, eventType);
-    } else if (prevInside === null && inside) {
-      // First determination: fire checkin if inside
-      void postGeoEvent(nearest.branch.id, "checkin");
     }
 
     prevInsideRef.current = inside;
     prevBranchIdRef.current = nearest.branch.id;
-  }, []);
+    restoredRef.current = false; // only skip on very first call
+  }, [userId]);
 
   const handleError = useCallback((err: GeolocationPositionError) => {
     if (err.code === GeolocationPositionError.PERMISSION_DENIED) {
@@ -144,7 +204,7 @@ export function useGeoRestriction() {
     }
   }, []);
 
-  // Start watching position once branches are loaded
+  // ── Start watching position once branches are loaded ──────────────────────
   useEffect(() => {
     if (isOwner || branches.length === 0) return;
     if (!navigator.geolocation) {
@@ -166,18 +226,64 @@ export function useGeoRestriction() {
     };
   }, [branches, isOwner, handlePosition, handleError]);
 
-  // On unmount / tab hide — fire checkout if was inside
+  // ── Tab hide: fire checkout only for genuine tab closes, not page refreshes ──
+  // Strategy: on hide, store a "pending checkout" with timestamp in sessionStorage.
+  // On next page load, if the pending checkout is older than 20s, fire it
+  // (page refresh would've loaded within ~5s; real close has no next load).
+  // On tab becoming visible again, cancel the pending checkout.
   useEffect(() => {
-    if (isOwner) return;
+    if (isOwner || !userId) return;
+
+    const pendingKey = `geo_pending_checkout_${userId}`;
+
+    // On mount: check if there's a pending checkout from a previous hide
+    const pending = sessionStorage.getItem(pendingKey);
+    if (pending) {
+      sessionStorage.removeItem(pendingKey);
+      try {
+        const { branchId: pBranchId, ts } = JSON.parse(pending) as { branchId: string; ts: number };
+        const ageMs = Date.now() - ts;
+        // If the page reloaded within 20s → it was a refresh → skip checkout
+        // (backend deduplication handles any edge case)
+        if (ageMs > 20 * 1000) {
+          void postGeoEvent(pBranchId, "checkout");
+        }
+      } catch { /* non-critical */ }
+    }
+
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "hidden" && prevInsideRef.current && prevBranchIdRef.current) {
-        void postGeoEvent(prevBranchIdRef.current, "checkout");
-        prevInsideRef.current = false;
+      if (document.visibilityState === "hidden") {
+        if (prevInsideRef.current && prevBranchIdRef.current) {
+          // Store pending checkout — don't fire immediately
+          sessionStorage.setItem(pendingKey, JSON.stringify({
+            branchId: prevBranchIdRef.current,
+            ts: Date.now(),
+          }));
+          // Update persisted state to "outside" so refresh doesn't re-checkin
+          savePersistedState(userId, false, prevBranchIdRef.current);
+          prevInsideRef.current = false;
+        }
+      } else if (document.visibilityState === "visible") {
+        // Tab came back — cancel any pending checkout
+        sessionStorage.removeItem(pendingKey);
+        // Restore inside state
+        const saved = loadPersistedState(userId);
+        if (saved?.inside) {
+          prevInsideRef.current = true;
+        }
       }
     };
+
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [isOwner]);
+  }, [isOwner, userId]);
+
+  // ── Clear state on logout ─────────────────────────────────────────────────
+  useEffect(() => {
+    if (!userId) {
+      clearPersistedState(userId);
+    }
+  }, [userId]);
 
   const isRestricted = !isOwner && status === "outside";
   const hasBranches = branches.length > 0;
