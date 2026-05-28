@@ -40,12 +40,12 @@
   --border: 220 13% 91%;
   --input: 220 13% 91%;
   
-  /* Primary: #98cc1c (lime-green) → HSL(78, 73%, 45%) */
-  --primary: 78 73% 45%;
-  --primary-foreground: 220 13% 10%;
+  /* Primary: #1f75fe (blue) → HSL(217, 99%, 56%) */
+  --primary: 217 99% 56%;
+  --primary-foreground: 0 0% 100%;
   
-  /* Accent: slightly deeper green */
-  --accent: 78 73% 38%;
+  /* Accent: slightly deeper blue */
+  --accent: 217 99% 46%;
   --accent-foreground: 0 0% 100%;
   
   --secondary: 220 13% 96%;
@@ -57,7 +57,7 @@
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
   
-  --ring: 78 73% 45%;
+  --ring: 217 99% 56%;
   --radius: 1rem;
 }
 
@@ -71,8 +71,8 @@
   --border: 220 13% 20%;
   --input: 220 13% 20%;
   
-  --primary: 78 73% 48%;
-  --primary-foreground: 220 13% 8%;
+  --primary: 217 99% 62%;
+  --primary-foreground: 0 0% 100%;
   
   --secondary: 220 13% 18%;
   --secondary-foreground: 220 13% 96%;
@@ -80,13 +80,13 @@
   --muted: 220 13% 18%;
   --muted-foreground: 220 9% 60%;
   
-  --accent: 78 73% 42%;
+  --accent: 217 99% 50%;
   --accent-foreground: 0 0% 100%;
   
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 0 0% 100%;
   
-  --ring: 78 73% 48%;
+  --ring: 217 99% 62%;
 }
 
 @layer base {
