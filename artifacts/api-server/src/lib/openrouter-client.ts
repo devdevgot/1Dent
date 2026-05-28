@@ -21,9 +21,9 @@ export const DEEPSEEK_MODEL = "deepseek/deepseek-chat-v3-0324";
 // CHAT_MODEL — used for free-form patient-facing replies. Quality > cost.
 // Override via env if needed (e.g. to A/B test or fall back to DeepSeek).
 export const FAST_MODEL =
-  process.env["CHATBOT_FAST_MODEL"] ?? "openai/gpt-4o-mini";
+  process.env["CHATBOT_FAST_MODEL"] ?? "google/gemini-2.5-flash-preview-05-20";
 export const CHAT_MODEL =
-  process.env["CHATBOT_CHAT_MODEL"] ?? "anthropic/claude-3.5-haiku";
+  process.env["CHATBOT_CHAT_MODEL"] ?? "google/gemini-2.5-flash-preview-05-20";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
