@@ -98,6 +98,7 @@ export function BranchesSettings() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [branchSearch, setBranchSearch] = useState("");
 
   const [tgToken, setTgToken] = useState("");
@@ -435,6 +436,7 @@ export function BranchesSettings() {
     setMyLocation(null);
     setMapQuery("");
     setMapGeoResults([]);
+    setConfirmingDelete(false);
     if (pendingMarkerRef.current && ymapRef.current) {
       try { ymapRef.current.geoObjects.remove(pendingMarkerRef.current); } catch { /* ignore */ }
       pendingMarkerRef.current = null;
@@ -635,23 +637,12 @@ export function BranchesSettings() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    onClick={() => openEditModal(b)}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => void handleDeleteBranch(b.id)}
-                    disabled={deletingId === b.id}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg text-red-400 hover:bg-red-50 hover:text-red-500 transition-colors disabled:opacity-50"
-                  >
-                    {deletingId === b.id
-                      ? <Loader2 className="w-4 h-4 animate-spin" />
-                      : <Trash2 className="w-4 h-4" />}
-                  </button>
-                </div>
+                <button
+                  onClick={() => openEditModal(b)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
               </div>
             ))}
           </div>
@@ -897,6 +888,54 @@ export function BranchesSettings() {
 
             {/* Padding when no form */}
             {!pendingCoords && <div className="pb-4" />}
+
+            {/* Delete section — only for existing branches */}
+            {editingBranch && (
+              <div className="mx-4 mb-4 mt-1">
+                {!confirmingDelete ? (
+                  <button
+                    onClick={() => setConfirmingDelete(true)}
+                    className="w-full flex items-center justify-center gap-2 h-9 rounded-xl border border-red-200 text-sm text-red-500 hover:bg-red-50 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Удалить филиал
+                  </button>
+                ) : (
+                  <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 space-y-3">
+                    <div className="flex items-start gap-2.5">
+                      <Trash2 className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-semibold text-red-800">Удалить филиал?</p>
+                        <p className="text-xs text-red-600 mt-0.5 leading-relaxed">
+                          Все данные трекинга по этому филиалу тоже будут удалены. Это действие нельзя отменить.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          void handleDeleteBranch(editingBranch.id).then(() => closeModal());
+                        }}
+                        disabled={deletingId === editingBranch.id}
+                        className="flex-1 h-9 rounded-xl bg-red-500 text-white text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-red-600 transition-colors disabled:opacity-60"
+                      >
+                        {deletingId === editingBranch.id
+                          ? <Loader2 className="w-4 h-4 animate-spin" />
+                          : <Trash2 className="w-3.5 h-3.5" />}
+                        Да, удалить
+                      </button>
+                      <button
+                        onClick={() => setConfirmingDelete(false)}
+                        disabled={deletingId === editingBranch.id}
+                        className="px-4 h-9 rounded-xl border border-red-200 text-sm text-red-600 bg-white hover:bg-red-50 transition-colors disabled:opacity-60"
+                      >
+                        Отмена
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
