@@ -35,6 +35,7 @@ import { openrouter, FAST_MODEL, withTimeout, parseLlmJson } from "../../lib/ope
 type CachedSettings = { settings: ChatbotSettings; expiresAt: number };
 type CachedExamples = { examples: ManagerExample[]; expiresAt: number };
 type CachedKnowledge = { text: string; expiresAt: number };
+type CachedDoctors = { text: string; expiresAt: number };
 
 const SESSION_TTL_SECONDS = 24 * 60 * 60;
 const REDIS_KEY_PREFIX = "chatbot:session:";
@@ -365,6 +366,9 @@ const examplesCache = new Map<string, CachedExamples>();
 // Knowledge base cache (5min TTL) — refreshed lazily on each processMessage call
 const knowledgeCache = new Map<string, CachedKnowledge>();
 
+// Doctors cache (5min TTL)
+const doctorsCache = new Map<string, CachedDoctors>();
+
 async function loadKnowledgeContext(clinicId: string): Promise<string> {
   const cached = knowledgeCache.get(clinicId);
   if (cached && cached.expiresAt > Date.now()) return cached.text;
@@ -391,6 +395,39 @@ async function loadKnowledgeContext(clinicId: string): Promise<string> {
     return text;
   } catch (err) {
     logger.warn({ err }, "[ChatbotService] loadKnowledgeContext failed — skipping knowledge injection");
+    return "";
+  }
+}
+
+async function loadDoctorsContext(clinicId: string): Promise<string> {
+  const cached = doctorsCache.get(clinicId);
+  if (cached && cached.expiresAt > Date.now()) return cached.text;
+
+  try {
+    const doctors = await db
+      .select({ name: usersTable.name, specialty: usersTable.specialty, position: usersTable.position })
+      .from(usersTable)
+      .where(and(
+        eq(usersTable.clinicId, clinicId),
+        eq(usersTable.role, "doctor"),
+        eq(usersTable.isActive, true),
+      ));
+
+    if (doctors.length === 0) {
+      doctorsCache.set(clinicId, { text: "", expiresAt: Date.now() + 5 * 60_000 });
+      return "";
+    }
+
+    const lines = doctors.map((d) => {
+      const spec = d.specialty ?? d.position ?? "";
+      return spec ? `• ${d.name} — ${spec}` : `• ${d.name}`;
+    });
+    const text = lines.join("\n");
+
+    doctorsCache.set(clinicId, { text, expiresAt: Date.now() + 5 * 60_000 });
+    return text;
+  } catch (err) {
+    logger.warn({ err }, "[ChatbotService] loadDoctorsContext failed — skipping doctors injection");
     return "";
   }
 }
@@ -732,7 +769,7 @@ function buildPlaygroundPrompt(
   const nowTimeStr = nowPlayground.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit" });
 
   const knowledgeSection = knowledgeContext
-    ? `\n\nМАТЕРИАЛЫ КЛИНИКИ (используй эту информацию для ответов о клинике — цены, услуги, врачи, особенности):\n${knowledgeContext}`
+    ? `\n\nМАТЕРИАЛЫ КЛИНИКИ (сайт, документы — используй для ответов о ценах, услугах и особенностях клиники; информация о врачах берётся ТОЛЬКО из раздела «ВРАЧИ КЛИНИКИ» выше):\n${knowledgeContext}`
     : "";
 
   return `Ты — AI-ассистент стоматологической клиники. Сейчас ТЕСТОВЫЙ РЕЖИМ (симуляция для проверки скрипта).
@@ -783,7 +820,7 @@ function renderScriptBlocks(
 function buildSystemPrompt(
   state: ChatbotState,
   settings: Awaited<ReturnType<typeof getSettings>>,
-  opts?: { clinicName?: string; knowledgeContext?: string },
+  opts?: { clinicName?: string; knowledgeContext?: string; doctorsContext?: string },
 ): string {
   const si = (settings.stepInstructions ?? {}) as StepInstructions;
   const generalExtra = si.general ? `\n\nДополнительные инструкции клиники:\n${si.general}` : "";
@@ -842,11 +879,15 @@ function buildSystemPrompt(
 
   const scriptContext = renderScriptBlocks(settings, opts?.clinicName);
 
-  const knowledgeSection = opts?.knowledgeContext
-    ? `\n\nМАТЕРИАЛЫ КЛИНИКИ (сайт, соцсети, документы — используй как основной источник информации о ценах, услугах и особенностях клиники):\n${opts.knowledgeContext}`
+  const doctorsSection = opts?.doctorsContext
+    ? `\n\nВРАЧИ КЛИНИКИ (используй ТОЛЬКО этих врачей при подборе специалиста — не придумывай других):\n${opts.doctorsContext}`
     : "";
 
-  return `${base}\n\n${stateGuidance[state] ?? ""}${customExtra}${scriptContext}${knowledgeSection}`;
+  const knowledgeSection = opts?.knowledgeContext
+    ? `\n\nМАТЕРИАЛЫ КЛИНИКИ (сайт, документы — используй как источник информации о ценах, услугах и особенностях клиники; информация о врачах берётся ТОЛЬКО из раздела «ВРАЧИ КЛИНИКИ» выше):\n${opts.knowledgeContext}`
+    : "";
+
+  return `${base}\n\n${stateGuidance[state] ?? ""}${customExtra}${scriptContext}${doctorsSection}${knowledgeSection}`;
 }
 
 // ─── ChatbotService (main export) ───────────────────────────────────────────
@@ -861,20 +902,22 @@ export class ChatbotService {
     let settings: Awaited<ReturnType<typeof getSettings>>;
     let managerExamples: ManagerExample[];
     let knowledgeContext: string;
+    let doctorsContext: string;
     try {
-      [settings, managerExamples, knowledgeContext] = await Promise.all([
+      [settings, managerExamples, knowledgeContext, doctorsContext] = await Promise.all([
         getSettings(clinicId),
         getManagerExamples(clinicId),
         loadKnowledgeContext(clinicId),
+        loadDoctorsContext(clinicId),
       ]);
     } catch (err) {
       logger.error({ err }, "ChatbotService: failed to load settings");
       return null;
     }
 
-    // Local helper to build prompts with knowledge context pre-bound
+    // Local helper to build prompts with knowledge + doctors context pre-bound
     const sp = (state: ChatbotState, spOpts?: { clinicName?: string }) =>
-      buildSystemPrompt(state, settings, { ...spOpts, knowledgeContext });
+      buildSystemPrompt(state, settings, { ...spOpts, knowledgeContext, doctorsContext });
 
     saveChatbotMessage(clinicId, phone, "inbound", text).catch(() => {});
 
