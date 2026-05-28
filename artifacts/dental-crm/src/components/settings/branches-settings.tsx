@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MapPin, Plus, Trash2, Loader2, Send, CheckCircle2, Bot, Navigation, Search, X, Pencil, ExternalLink, Unlink, Download, LogIn, LogOut, ChevronLeft, ChevronRight } from "lucide-react";
+import { MapPin, Plus, Trash2, Loader2, Send, CheckCircle2, Bot, Navigation, Search, X, Pencil, ExternalLink, Unlink, Download, LogIn, LogOut, ChevronLeft, ChevronRight, ClipboardList, FileSpreadsheet, FileText, Users, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -113,6 +113,16 @@ export function BranchesSettings() {
 
   // ── Tracking table state ──────────────────────────────────────────────────
   type GeoEvent = { id: string; eventType: "checkin" | "checkout"; occurredAt: string; branchId: string; branchName: string; userId: string; userName: string };
+
+  // ── Branch journal modal state ────────────────────────────────────────────
+  const [journalBranch, setJournalBranch] = useState<Branch | null>(null);
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
+  const [journalFrom, setJournalFrom] = useState(monthStart);
+  const [journalTo, setJournalTo] = useState(todayStr);
+  const [journalEmployee, setJournalEmployee] = useState("all");
+  const [journalEvents, setJournalEvents] = useState<GeoEvent[]>([]);
+  const [journalLoading, setJournalLoading] = useState(false);
   const [trackingDate, setTrackingDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [trackingBranchId, setTrackingBranchId] = useState<string>("all");
   const [trackingEvents, setTrackingEvents] = useState<GeoEvent[]>([]);
@@ -218,6 +228,101 @@ export function BranchesSettings() {
     a.download = `tracking_${branchName}_${trackingDate}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const loadJournal = useCallback(async (branch: Branch, from: string, to: string) => {
+    setJournalLoading(true);
+    try {
+      const params = new URLSearchParams({
+        branchId: branch.id,
+        dateFrom: `${from}T00:00:00`,
+        dateTo: `${to}T23:59:59`,
+      });
+      const res = await apiFetch(`/api/geo/tracking?${params.toString()}`);
+      setJournalEvents((res.data as { events: GeoEvent[] }).events);
+    } catch { setJournalEvents([]); }
+    finally { setJournalLoading(false); }
+  }, []);
+
+  const openJournal = useCallback((b: Branch) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const mStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
+    setJournalBranch(b);
+    setJournalFrom(mStart);
+    setJournalTo(today);
+    setJournalEmployee("all");
+    void loadJournal(b, mStart, today);
+  }, [loadJournal]);
+
+  useEffect(() => {
+    if (journalBranch) void loadJournal(journalBranch, journalFrom, journalTo);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [journalFrom, journalTo]);
+
+  const journalPresets = [
+    { label: "Сегодня", from: todayStr, to: todayStr },
+    { label: "Вчера", from: new Date(Date.now() - 86400000).toISOString().slice(0, 10), to: new Date(Date.now() - 86400000).toISOString().slice(0, 10) },
+    { label: "Эта неделя", from: (() => { const d = new Date(); d.setDate(d.getDate() - d.getDay() + 1); return d.toISOString().slice(0, 10); })(), to: todayStr },
+    { label: "Этот месяц", from: monthStart, to: todayStr },
+    { label: "Прошлый месяц", from: (() => { const d = new Date(); d.setMonth(d.getMonth() - 1, 1); return d.toISOString().slice(0, 10); })(), to: (() => { const d = new Date(); d.setDate(0); return d.toISOString().slice(0, 10); })() },
+  ];
+
+  const journalFiltered = journalEmployee === "all"
+    ? journalEvents
+    : journalEvents.filter(e => e.userId === journalEmployee);
+
+  const journalStaff = [...new Map(journalEvents.map(e => [e.userId, { id: e.userId, name: e.userName }])).values()];
+
+  const exportJournalCSV = () => {
+    if (!journalFiltered.length || !journalBranch) return;
+    const header = "Сотрудник,Событие,Дата,Время";
+    const rows = journalFiltered.map(e => {
+      const d = new Date(e.occurredAt);
+      const date = d.toLocaleDateString("ru-RU", { timeZone: "Asia/Almaty" });
+      const time = d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty" });
+      const type = e.eventType === "checkin" ? "Приход" : "Уход";
+      return `"${e.userName}","${type}","${date}","${time}"`;
+    });
+    const csv = "\uFEFF" + [header, ...rows].join("\n");
+    const a = Object.assign(document.createElement("a"), {
+      href: URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" })),
+      download: `tracking_${journalBranch.name}_${journalFrom}_${journalTo}.csv`,
+    });
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  const exportJournalPDF = () => {
+    if (!journalFiltered.length || !journalBranch) return;
+    const rows = journalFiltered.map(e => {
+      const d = new Date(e.occurredAt);
+      const date = d.toLocaleDateString("ru-RU", { timeZone: "Asia/Almaty" });
+      const time = d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty" });
+      const type = e.eventType === "checkin" ? "Приход" : "Уход";
+      const color = e.eventType === "checkin" ? "#15803d" : "#c2410c";
+      return `<tr><td>${e.userName}</td><td style="color:${color};font-weight:600">${type}</td><td>${date}</td><td>${time}</td></tr>`;
+    }).join("");
+    const checkins = journalFiltered.filter(e => e.eventType === "checkin").length;
+    const checkouts = journalFiltered.filter(e => e.eventType === "checkout").length;
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Журнал — ${journalBranch.name}</title>
+<style>*{box-sizing:border-box}body{font-family:Arial,sans-serif;font-size:12px;padding:24px;color:#111}
+h1{font-size:18px;margin:0 0 4px}p.sub{margin:0 0 16px;color:#666;font-size:11px}
+.stats{display:flex;gap:16px;margin-bottom:16px}.stat{background:#f5f5f5;border-radius:8px;padding:8px 16px;text-align:center}
+.stat b{display:block;font-size:20px}.stat span{font-size:10px;color:#888}
+table{width:100%;border-collapse:collapse}th{background:#f0f0f0;text-align:left;padding:7px 10px;border:1px solid #ddd;font-size:11px}
+td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafafa}
+@media print{body{padding:12px}}</style></head><body>
+<h1>Журнал трекинга — ${journalBranch.name}</h1>
+<p class="sub">Период: ${journalFrom} — ${journalTo}${journalEmployee !== "all" ? ` · Сотрудник: ${journalStaff.find(s => s.id === journalEmployee)?.name ?? ""}` : ""}</p>
+<div class="stats">
+  <div class="stat"><b>${journalFiltered.length}</b><span>событий</span></div>
+  <div class="stat"><b style="color:#15803d">${checkins}</b><span>приходов</span></div>
+  <div class="stat"><b style="color:#c2410c">${checkouts}</b><span>уходов</span></div>
+</div>
+<table><thead><tr><th>Сотрудник</th><th>Событие</th><th>Дата</th><th>Время</th></tr></thead>
+<tbody>${rows}</tbody></table></body></html>`;
+    const w = window.open("", "_blank");
+    if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 400); }
   };
 
   const handleConnectPlatform = async () => {
@@ -637,12 +742,21 @@ export function BranchesSettings() {
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={() => openEditModal(b)}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => openJournal(b)}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-primary transition-colors"
+                    title="Журнал трекинга"
+                  >
+                    <ClipboardList className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => openEditModal(b)}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -935,6 +1049,174 @@ export function BranchesSettings() {
                   </div>
                 )}
               </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Branch journal modal ──────────────────────────────────────── */}
+      <Dialog open={!!journalBranch} onOpenChange={(open) => { if (!open) { setJournalBranch(null); setJournalEvents([]); setJournalEmployee("all"); } }}>
+        <DialogContent className="max-w-2xl w-full p-0 gap-0 overflow-hidden rounded-2xl flex flex-col max-h-[90vh]">
+          <DialogHeader className="px-5 py-4 border-b border-border/40 flex-row items-center gap-3 space-y-0 shrink-0">
+            <ClipboardList className="w-5 h-5 text-primary shrink-0" />
+            <DialogTitle className="flex-1 text-base font-semibold">
+              Журнал трекинга — {journalBranch?.name}
+            </DialogTitle>
+            {journalFiltered.length > 0 && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={exportJournalCSV}
+                  className="flex items-center gap-1.5 h-8 px-3 rounded-xl border border-border text-xs text-muted-foreground hover:border-emerald-400 hover:text-emerald-700 transition-colors"
+                  title="Скачать Excel (CSV)"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  Excel
+                </button>
+                <button
+                  onClick={exportJournalPDF}
+                  className="flex items-center gap-1.5 h-8 px-3 rounded-xl border border-border text-xs text-muted-foreground hover:border-red-400 hover:text-red-600 transition-colors"
+                  title="Открыть для печати / PDF"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  PDF
+                </button>
+              </div>
+            )}
+          </DialogHeader>
+
+          {/* Filters */}
+          <div className="px-5 py-3 border-b border-border/40 space-y-2.5 shrink-0">
+            {/* Quick presets */}
+            <div className="flex gap-1.5 flex-wrap">
+              {journalPresets.map(p => (
+                <button
+                  key={p.label}
+                  onClick={() => { setJournalFrom(p.from); setJournalTo(p.to); }}
+                  className={cn(
+                    "h-7 px-3 rounded-full text-xs font-medium transition-all",
+                    journalFrom === p.from && journalTo === p.to
+                      ? "bg-foreground text-background"
+                      : "bg-muted text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Date range + employee */}
+            <div className="flex gap-2 flex-wrap items-center">
+              <div className="flex items-center gap-1.5 flex-1 min-w-[220px]">
+                <input
+                  type="date"
+                  value={journalFrom}
+                  max={journalTo}
+                  onChange={e => setJournalFrom(e.target.value)}
+                  className="flex-1 h-8 rounded-lg border border-border bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                />
+                <span className="text-xs text-muted-foreground">—</span>
+                <input
+                  type="date"
+                  value={journalTo}
+                  min={journalFrom}
+                  max={todayStr}
+                  onChange={e => setJournalTo(e.target.value)}
+                  className="flex-1 h-8 rounded-lg border border-border bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                />
+              </div>
+              {journalStaff.length > 1 && (
+                <div className="flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                  <select
+                    value={journalEmployee}
+                    onChange={e => setJournalEmployee(e.target.value)}
+                    className="h-8 rounded-lg border border-border bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 min-w-[140px]"
+                  >
+                    <option value="all">Все сотрудники</option>
+                    {journalStaff.map(s => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto">
+            {journalLoading ? (
+              <div className="flex items-center justify-center py-16 gap-2 text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-sm">Загрузка…</span>
+              </div>
+            ) : journalFiltered.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3">
+                <div className="w-14 h-14 rounded-2xl bg-muted/60 flex items-center justify-center">
+                  <Filter className="w-6 h-6 text-muted-foreground/40" />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-medium text-foreground">Нет событий</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Попробуйте изменить период или фильтр сотрудника</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-2 px-5 pt-4 pb-3">
+                  <div className="bg-muted/40 rounded-xl px-3 py-2.5 text-center">
+                    <p className="text-lg font-bold text-foreground">{journalFiltered.length}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">событий</p>
+                  </div>
+                  <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2.5 text-center">
+                    <p className="text-lg font-bold text-emerald-700">{journalFiltered.filter(e => e.eventType === "checkin").length}</p>
+                    <p className="text-[10px] text-emerald-600 mt-0.5">приходов</p>
+                  </div>
+                  <div className="bg-orange-50 border border-orange-100 rounded-xl px-3 py-2.5 text-center">
+                    <p className="text-lg font-bold text-orange-700">{journalFiltered.filter(e => e.eventType === "checkout").length}</p>
+                    <p className="text-[10px] text-orange-600 mt-0.5">уходов</p>
+                  </div>
+                </div>
+
+                {/* Table */}
+                <div className="px-5 pb-5">
+                  <div className="rounded-xl border border-border overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-muted/50 border-b border-border">
+                          <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground">Сотрудник</th>
+                          <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground">Событие</th>
+                          <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground">Дата</th>
+                          <th className="text-right px-4 py-2.5 text-xs font-medium text-muted-foreground">Время</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {journalFiltered.map((e, i) => {
+                          const d = new Date(e.occurredAt);
+                          const date = d.toLocaleDateString("ru-RU", { day: "numeric", month: "short", timeZone: "Asia/Almaty" });
+                          const time = d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty" });
+                          return (
+                            <tr key={e.id} className={cn("border-b border-border/50 last:border-0", i % 2 === 0 ? "bg-card" : "bg-muted/20")}>
+                              <td className="px-4 py-3 font-medium text-foreground">{e.userName}</td>
+                              <td className="px-4 py-3">
+                                <span className={cn(
+                                  "inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full",
+                                  e.eventType === "checkin"
+                                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                    : "bg-orange-50 text-orange-700 border border-orange-200",
+                                )}>
+                                  {e.eventType === "checkin" ? <><LogIn className="w-3 h-3" />Приход</> : <><LogOut className="w-3 h-3" />Уход</>}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-xs text-muted-foreground">{date}</td>
+                              <td className="px-4 py-3 text-right font-mono text-sm text-foreground">{time}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         </DialogContent>
