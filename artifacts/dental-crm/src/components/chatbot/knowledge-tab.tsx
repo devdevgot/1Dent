@@ -2,7 +2,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Globe, FileText, Trash2, Loader2, Plus, Sparkles, CheckCircle2,
   AlertCircle, Clock, RefreshCw, X, Upload, Pencil, Save,
+  BookOpen, GitBranch, Maximize2,
 } from "lucide-react";
+import { ScriptMindMap, ScriptMindMapModal, type ScriptMindMapData } from "./script-mindmap";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -668,24 +670,93 @@ export function KnowledgeTab() {
   );
 }
 
-// ── Modal wrapper ─────────────────────────────────────────────────────────────
-export function KnowledgeModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+// ── Combined knowledge + script modal ─────────────────────────────────────────
+interface KnowledgeAndScriptModalProps {
+  open: boolean;
+  onClose: () => void;
+  initialMindMapData?: ScriptMindMapData | null;
+  onSaveMindMap: (data: ScriptMindMapData) => void;
+  mindMapSaveStatus?: "idle" | "saving" | "saved";
+}
+
+export function KnowledgeAndScriptModal({
+  open,
+  onClose,
+  initialMindMapData,
+  onSaveMindMap,
+  mindMapSaveStatus,
+}: KnowledgeAndScriptModalProps) {
+  const [mapExpanded, setMapExpanded] = useState(false);
+
+  if (!open) return null;
+
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-2xl w-full max-h-[90vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/50 shrink-0">
-          <DialogTitle className="flex items-center gap-2 text-base font-semibold">
-            <Sparkles className="h-4 w-4 text-primary" />
-            База знаний
-          </DialogTitle>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Добавьте ссылки или файлы — ИИ изучит их и сгенерирует скрипты продаж
-          </p>
-        </DialogHeader>
-        <div className="overflow-y-auto flex-1 px-6 py-5">
+    <div className="fixed inset-0 z-50 flex flex-col bg-gray-50">
+      {/* Header */}
+      <div className="shrink-0 flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100 shadow-sm">
+        <BookOpen className="h-4 w-4 text-primary shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-gray-800">База знаний и скрипт</p>
+          <p className="text-xs text-gray-400 leading-tight">Обучение чат-бота и сценарий разговора</p>
+        </div>
+        <button
+          onClick={onClose}
+          className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors shrink-0"
+        >
+          <X className="h-4 w-4 text-gray-500" />
+        </button>
+      </div>
+
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto">
+        {/* Knowledge base */}
+        <div className="px-4 py-5">
           <KnowledgeTab />
         </div>
-      </DialogContent>
-    </Dialog>
+
+        {/* Divider */}
+        <div className="h-px bg-border/50 mx-4" />
+
+        {/* Mind map inline section */}
+        <div className="px-4 py-4 pb-8 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <GitBranch className="h-4 w-4 text-primary shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-gray-800">Скрипт диалога</p>
+                <p className="text-xs text-gray-400 mt-0.5">Визуальный редактор сценария разговора</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setMapExpanded(true)}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-lg border border-border/50 hover:bg-gray-100 transition-colors shrink-0"
+            >
+              <Maximize2 className="h-3.5 w-3.5" />
+              На весь экран
+            </button>
+          </div>
+          <div
+            className="rounded-xl border border-border/50 overflow-hidden bg-white"
+            style={{ height: 280 }}
+          >
+            <ScriptMindMap
+              key={open ? "combined-open" : "combined-closed"}
+              initialData={initialMindMapData}
+              onSave={onSaveMindMap}
+              saveStatus={mindMapSaveStatus}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Fullscreen overlay for mind map */}
+      <ScriptMindMapModal
+        open={mapExpanded}
+        onClose={() => setMapExpanded(false)}
+        initialData={initialMindMapData}
+        onSave={onSaveMindMap}
+        saveStatus={mindMapSaveStatus}
+      />
+    </div>
   );
 }
