@@ -123,6 +123,7 @@ export function BranchesSettings() {
   const [journalEmployee, setJournalEmployee] = useState("all");
   const [journalEvents, setJournalEvents] = useState<GeoEvent[]>([]);
   const [journalLoading, setJournalLoading] = useState(false);
+  const [journalFiltersOpen, setJournalFiltersOpen] = useState(false);
   const [trackingDate, setTrackingDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [trackingBranchId, setTrackingBranchId] = useState<string>("all");
   const [trackingEvents, setTrackingEvents] = useState<GeoEvent[]>([]);
@@ -1055,37 +1056,54 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
       </Dialog>
 
       {/* ── Branch journal modal ──────────────────────────────────────── */}
-      <Dialog open={!!journalBranch} onOpenChange={(open) => { if (!open) { setJournalBranch(null); setJournalEvents([]); setJournalEmployee("all"); } }}>
+      <Dialog open={!!journalBranch} onOpenChange={(open) => { if (!open) { setJournalBranch(null); setJournalEvents([]); setJournalEmployee("all"); setJournalFiltersOpen(false); } }}>
         <DialogContent className="max-w-2xl w-full p-0 gap-0 overflow-hidden rounded-2xl flex flex-col max-h-[90vh]">
           <DialogHeader className="px-5 py-4 border-b border-border/40 flex-row items-center gap-3 space-y-0 shrink-0">
             <ClipboardList className="w-5 h-5 text-primary shrink-0" />
             <DialogTitle className="flex-1 text-base font-semibold">
               Журнал трекинга — {journalBranch?.name}
             </DialogTitle>
-            {journalFiltered.length > 0 && (
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={exportJournalCSV}
-                  className="flex items-center gap-1.5 h-8 px-3 rounded-xl border border-border text-xs text-muted-foreground hover:border-emerald-400 hover:text-emerald-700 transition-colors"
-                  title="Скачать Excel (CSV)"
-                >
-                  <FileSpreadsheet className="w-3.5 h-3.5" />
-                  Excel
-                </button>
-                <button
-                  onClick={exportJournalPDF}
-                  className="flex items-center gap-1.5 h-8 px-3 rounded-xl border border-border text-xs text-muted-foreground hover:border-red-400 hover:text-red-600 transition-colors"
-                  title="Открыть для печати / PDF"
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                  PDF
-                </button>
-              </div>
-            )}
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setJournalFiltersOpen(v => !v)}
+                className={cn(
+                  "relative w-8 h-8 flex items-center justify-center rounded-lg border transition-colors",
+                  journalFiltersOpen
+                    ? "border-primary/50 bg-primary/10 text-primary"
+                    : "border-border text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+                title="Фильтры"
+              >
+                <Filter className="w-3.5 h-3.5" />
+                {(journalEmployee !== "all" || journalFrom !== monthStart || journalTo !== todayStr) && !journalFiltersOpen && (
+                  <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-primary" />
+                )}
+              </button>
+              {journalFiltered.length > 0 && (
+                <>
+                  <button
+                    onClick={exportJournalCSV}
+                    className="flex items-center gap-1.5 h-8 px-3 rounded-xl border border-border text-xs text-muted-foreground hover:border-emerald-400 hover:text-emerald-700 transition-colors"
+                    title="Скачать Excel (CSV)"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5" />
+                    Excel
+                  </button>
+                  <button
+                    onClick={exportJournalPDF}
+                    className="flex items-center gap-1.5 h-8 px-3 rounded-xl border border-border text-xs text-muted-foreground hover:border-red-400 hover:text-red-600 transition-colors"
+                    title="Открыть для печати / PDF"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    PDF
+                  </button>
+                </>
+              )}
+            </div>
           </DialogHeader>
 
-          {/* Filters */}
-          <div className="px-5 py-3 border-b border-border/40 space-y-2.5 shrink-0">
+          {/* Filters — collapsible */}
+          {journalFiltersOpen && <div className="px-5 py-3 border-b border-border/40 space-y-2.5 shrink-0">
             {/* Quick presets */}
             <div className="flex gap-1.5 flex-wrap">
               {journalPresets.map(p => (
@@ -1140,7 +1158,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                 </div>
               )}
             </div>
-          </div>
+          </div>}
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto">
