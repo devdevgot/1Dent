@@ -29,6 +29,20 @@ const scriptBlockSchema = z.object({
   order: z.number().int(),
 });
 
+const mindMapNodeSchema = z.object({
+  id: z.string(),
+  label: z.string().max(200),
+  content: z.string().max(2000),
+  isRoot: z.boolean().optional(),
+});
+
+const mindMapEdgeSchema = z.object({
+  id: z.string(),
+  source: z.string(),
+  target: z.string(),
+  label: z.string().max(200).optional(),
+});
+
 const settingsUpdateSchema = z.object({
   enabled: z.boolean().optional(),
   greetingTemplate: z.string().min(1).max(500).optional(),
@@ -37,6 +51,10 @@ const settingsUpdateSchema = z.object({
   followup168hTemplate: z.string().min(1).max(500).optional(),
   stepInstructions: stepInstructionsSchema.optional(),
   scriptBlocks: z.array(scriptBlockSchema).optional(),
+  scriptMindMap: z.object({
+    nodes: z.array(mindMapNodeSchema),
+    edges: z.array(mindMapEdgeSchema),
+  }).optional(),
 });
 
 const parseScriptSchema = z.object({

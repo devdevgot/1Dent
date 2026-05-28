@@ -25,6 +25,7 @@ import {
   Bell,
   Heart,
   BookOpen,
+  GitBranch,
 } from "lucide-react";
 import {
   useGetChatbotSettings,
@@ -40,6 +41,7 @@ import {
 import type { ChatbotSettingsUpdate, DentalBroadcastRun } from "@workspace/api-client-react";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { KnowledgeModal } from "@/components/chatbot/knowledge-tab";
+import { ScriptMindMapModal, type ScriptMindMapData } from "@/components/chatbot/script-mindmap";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
@@ -498,6 +500,8 @@ export default function ChatbotPage() {
   const { t } = useTranslation();
   const [tab, setTab] = useState<"sessions" | "settings" | "manager-style" | "ai-broadcast">("sessions");
   const [knowledgeOpen, setKnowledgeOpen] = useState(false);
+  const [mindMapOpen, setMindMapOpen] = useState(false);
+  const [mindMapSaveStatus, setMindMapSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [confirmResetPhone, setConfirmResetPhone] = useState<string | null>(null);
   const [localSettings, setLocalSettings] = useState<ChatbotSettingsUpdate>({});
   const [savedSettings, setSavedSettings] = useState<ChatbotSettingsUpdate>({});
@@ -540,6 +544,21 @@ export default function ChatbotPage() {
     return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localSettings]);
+
+  const handleSaveMindMap = (data: ScriptMindMapData) => {
+    setMindMapSaveStatus("saving");
+    updateSettings.mutate(
+      { data: { scriptMindMap: data } as ChatbotSettingsUpdate },
+      {
+        onSuccess: () => {
+          setMindMapSaveStatus("saved");
+          setTimeout(() => setMindMapSaveStatus("idle"), 2000);
+          refetchSettings();
+        },
+        onError: () => setMindMapSaveStatus("idle"),
+      },
+    );
+  };
 
   const handleDeleteSession = (phone: string) => {
     deleteSession.mutate({ phone }, { onSuccess: () => refetchSessions() });
@@ -712,6 +731,23 @@ export default function ChatbotPage() {
               <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
             </button>
 
+            {/* Script mind map button */}
+            <button
+              onClick={() => setMindMapOpen(true)}
+              className="w-full flex items-center gap-3 rounded-xl border border-border/50 bg-card p-4 hover:bg-muted/30 transition-colors text-left"
+            >
+              <GitBranch className="h-4 w-4 text-primary shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground">Скрипт диалога</p>
+                <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                  {settings?.scriptMindMap?.nodes?.length
+                    ? `${settings.scriptMindMap.nodes.length} шагов · визуальное ветвление`
+                    : "Визуальный редактор сценария разговора"}
+                </p>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+            </button>
+
           </div>
         )}
 
@@ -721,6 +757,15 @@ export default function ChatbotPage() {
 
       {/* Knowledge base modal */}
       <KnowledgeModal open={knowledgeOpen} onClose={() => setKnowledgeOpen(false)} />
+
+      {/* Script mind map modal */}
+      <ScriptMindMapModal
+        open={mindMapOpen}
+        onClose={() => { setMindMapOpen(false); setMindMapSaveStatus("idle"); }}
+        initialData={settings?.scriptMindMap}
+        onSave={handleSaveMindMap}
+        saveStatus={mindMapSaveStatus}
+      />
 
       <ConfirmDeleteDialog
         open={!!confirmResetPhone}

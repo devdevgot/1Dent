@@ -20,6 +20,25 @@ export interface ScriptBlock {
   order: number;
 }
 
+export interface ScriptMindMapNode {
+  id: string;
+  label: string;
+  content: string;
+  isRoot?: boolean;
+}
+
+export interface ScriptMindMapEdge {
+  id: string;
+  source: string;
+  target: string;
+  label?: string;
+}
+
+export interface ScriptMindMapData {
+  nodes: ScriptMindMapNode[];
+  edges: ScriptMindMapEdge[];
+}
+
 export const chatbotSettingsTable = pgTable("chatbot_settings", {
   id: text("id").primaryKey(),
   clinicId: text("clinic_id")
@@ -47,6 +66,7 @@ export const chatbotSettingsTable = pgTable("chatbot_settings", {
     ),
   stepInstructions: jsonb("step_instructions").$type<StepInstructions>().default({}),
   scriptBlocks: jsonb("script_blocks").$type<ScriptBlock[]>().default([]),
+  scriptMindMap: jsonb("script_mind_map").$type<ScriptMindMapData>().default({ nodes: [], edges: [] }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

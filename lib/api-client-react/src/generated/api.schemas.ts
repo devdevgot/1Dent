@@ -800,6 +800,25 @@ export interface ChatbotStepInstructions {
   confirm?: string;
 }
 
+export interface ScriptMindMapNode {
+  id: string;
+  label: string;
+  content: string;
+  isRoot?: boolean;
+}
+
+export interface ScriptMindMapEdge {
+  id: string;
+  source: string;
+  target: string;
+  label?: string;
+}
+
+export interface ScriptMindMapData {
+  nodes: ScriptMindMapNode[];
+  edges: ScriptMindMapEdge[];
+}
+
 export interface ChatbotSettings {
   id: string;
   clinicId: string;
@@ -809,6 +828,7 @@ export interface ChatbotSettings {
   followup72hTemplate: string;
   followup168hTemplate: string;
   stepInstructions?: ChatbotStepInstructions;
+  scriptMindMap?: ScriptMindMapData;
   createdAt: string;
   updatedAt: string;
 }
@@ -820,6 +840,7 @@ export interface ChatbotSettingsUpdate {
   followup72hTemplate?: string;
   followup168hTemplate?: string;
   stepInstructions?: ChatbotStepInstructions;
+  scriptMindMap?: ScriptMindMapData;
 }
 
 export type ChatbotSessionData = { [key: string]: unknown };
