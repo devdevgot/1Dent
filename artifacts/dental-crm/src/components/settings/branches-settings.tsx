@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MapPin, Plus, Trash2, Loader2, Send, CheckCircle2, Bot, Navigation, Search, X, Pencil, ExternalLink, Unlink } from "lucide-react";
+import { MapPin, Plus, Trash2, Loader2, Send, CheckCircle2, Bot, Navigation, Search, X, Pencil, ExternalLink, Unlink, Download, LogIn, LogOut, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -110,6 +110,13 @@ export function BranchesSettings() {
   const [testingPlatform, setTestingPlatform] = useState(false);
   const [disconnectingPlatform, setDisconnectingPlatform] = useState(false);
 
+  // ── Tracking table state ──────────────────────────────────────────────────
+  type GeoEvent = { id: string; eventType: "checkin" | "checkout"; occurredAt: string; branchId: string; branchName: string; userId: string; userName: string };
+  const [trackingDate, setTrackingDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  const [trackingBranchId, setTrackingBranchId] = useState<string>("all");
+  const [trackingEvents, setTrackingEvents] = useState<GeoEvent[]>([]);
+  const [trackingLoading, setTrackingLoading] = useState(false);
+
   const yandexApiKey = import.meta.env.VITE_YANDEX_MAPS_API_KEY as string | undefined ?? "";
 
   // ── Modal state ──────────────────────────────────────────────────────────
@@ -158,6 +165,59 @@ export function BranchesSettings() {
       setTgPlatformChatId(d.telegramPlatformChatId ?? null);
     } catch { /* ignore */ }
   }, []);
+
+  const loadTracking = useCallback(async (date: string, branchId: string) => {
+    setTrackingLoading(true);
+    try {
+      const dateFrom = `${date}T00:00:00`;
+      const dateTo = `${date}T23:59:59`;
+      const params = new URLSearchParams({ dateFrom, dateTo });
+      if (branchId !== "all") params.set("branchId", branchId);
+      const res = await apiFetch(`/api/geo/tracking?${params.toString()}`);
+      setTrackingEvents((res.data as { events: GeoEvent[] }).events);
+    } catch { setTrackingEvents([]); }
+    finally { setTrackingLoading(false); }
+  }, []);
+
+  useEffect(() => { void loadTracking(trackingDate, trackingBranchId); }, [trackingDate, trackingBranchId, loadTracking]);
+
+  const shiftDate = (days: number) => {
+    const d = new Date(trackingDate);
+    d.setDate(d.getDate() + days);
+    setTrackingDate(d.toISOString().slice(0, 10));
+  };
+
+  const formatTime = (iso: string) =>
+    new Date(iso).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty" });
+
+  const formatDate = (iso: string) =>
+    new Date(iso).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Almaty" });
+
+  const downloadCSV = (branchIdFilter: string) => {
+    const events = branchIdFilter === "all"
+      ? trackingEvents
+      : trackingEvents.filter(e => e.branchId === branchIdFilter);
+    if (!events.length) return;
+
+    const branchName = branchIdFilter === "all"
+      ? "Все филиалы"
+      : (branches.find(b => b.id === branchIdFilter)?.name ?? branchIdFilter);
+
+    const header = "Сотрудник,Тип,Филиал,Время";
+    const rows = events.map(e => {
+      const type = e.eventType === "checkin" ? "Приход" : "Уход";
+      const time = formatTime(e.occurredAt);
+      return `"${e.userName}","${type}","${e.branchName}","${time}"`;
+    });
+    const csv = "\uFEFF" + [header, ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `tracking_${branchName}_${trackingDate}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const handleConnectPlatform = async () => {
     setConnectingPlatform(true);
@@ -916,6 +976,173 @@ export function BranchesSettings() {
                 </p>
               )}
             </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Tracking table ──────────────────────────────────────────────── */}
+      <div className="bg-card rounded-2xl border border-border/60 overflow-hidden">
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-border/40">
+          <div className="flex-1">
+            <h2 className="font-semibold text-base text-foreground">Журнал трекинга</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Приход и уход сотрудников по филиалам</p>
+          </div>
+        </div>
+
+        {/* Date navigator + branch tabs */}
+        <div className="px-5 pt-4 pb-3 space-y-3">
+          {/* Date row */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => shiftDate(-1)}
+              className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+            </button>
+            <input
+              type="date"
+              value={trackingDate}
+              onChange={e => setTrackingDate(e.target.value)}
+              className="flex-1 h-9 rounded-xl border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+            <button
+              onClick={() => shiftDate(1)}
+              disabled={trackingDate >= new Date().toISOString().slice(0, 10)}
+              className="p-1.5 rounded-lg hover:bg-muted transition-colors disabled:opacity-40"
+            >
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </button>
+            <button
+              onClick={() => setTrackingDate(new Date().toISOString().slice(0, 10))}
+              className="h-9 px-3 rounded-xl border border-border text-xs text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
+            >
+              Сегодня
+            </button>
+          </div>
+
+          {/* Branch filter tabs */}
+          {branches.length > 1 && (
+            <div className="flex gap-1.5 flex-wrap">
+              <button
+                onClick={() => setTrackingBranchId("all")}
+                className={cn(
+                  "h-7 px-3 rounded-full text-xs font-medium transition-colors",
+                  trackingBranchId === "all"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:text-foreground",
+                )}
+              >
+                Все
+              </button>
+              {branches.map(b => (
+                <button
+                  key={b.id}
+                  onClick={() => setTrackingBranchId(b.id)}
+                  className={cn(
+                    "h-7 px-3 rounded-full text-xs font-medium transition-colors",
+                    trackingBranchId === b.id
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {b.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Table */}
+        <div className="px-5 pb-5">
+          {trackingLoading ? (
+            <div className="flex items-center justify-center py-10 text-muted-foreground gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-sm">Загрузка…</span>
+            </div>
+          ) : trackingEvents.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-muted-foreground gap-2">
+              <Navigation className="w-8 h-8 opacity-30" />
+              <p className="text-sm">Нет данных за {formatDate(trackingDate)}</p>
+            </div>
+          ) : (
+            <>
+              {/* Download buttons */}
+              <div className="flex gap-2 mb-3 flex-wrap">
+                <button
+                  onClick={() => downloadCSV(trackingBranchId)}
+                  className="flex items-center gap-1.5 h-8 px-3 rounded-xl border border-border text-xs text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Скачать CSV
+                  {trackingBranchId !== "all" && (
+                    <span className="ml-0.5 opacity-70">
+                      — {branches.find(b => b.id === trackingBranchId)?.name}
+                    </span>
+                  )}
+                </button>
+                {trackingBranchId === "all" && branches.length > 1 && branches.map(b => {
+                  const hasEvents = trackingEvents.some(e => e.branchId === b.id);
+                  if (!hasEvents) return null;
+                  return (
+                    <button
+                      key={b.id}
+                      onClick={() => downloadCSV(b.id)}
+                      className="flex items-center gap-1.5 h-8 px-3 rounded-xl border border-border text-xs text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      {b.name}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Events table */}
+              <div className="rounded-xl border border-border overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-muted/50 border-b border-border">
+                      <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground">Сотрудник</th>
+                      <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground">Событие</th>
+                      {trackingBranchId === "all" && (
+                        <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground">Филиал</th>
+                      )}
+                      <th className="text-right px-4 py-2.5 text-xs font-medium text-muted-foreground">Время</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {trackingEvents.map((e, i) => (
+                      <tr
+                        key={e.id}
+                        className={cn(
+                          "border-b border-border/50 last:border-0",
+                          i % 2 === 0 ? "bg-card" : "bg-muted/20",
+                        )}
+                      >
+                        <td className="px-4 py-3 font-medium text-foreground">{e.userName}</td>
+                        <td className="px-4 py-3">
+                          <span className={cn(
+                            "inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full",
+                            e.eventType === "checkin"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              : "bg-orange-50 text-orange-700 border border-orange-200",
+                          )}>
+                            {e.eventType === "checkin"
+                              ? <><LogIn className="w-3 h-3" /> Приход</>
+                              : <><LogOut className="w-3 h-3" /> Уход</>}
+                          </span>
+                        </td>
+                        {trackingBranchId === "all" && (
+                          <td className="px-4 py-3 text-xs text-muted-foreground">{e.branchName}</td>
+                        )}
+                        <td className="px-4 py-3 text-right font-mono text-sm text-foreground">
+                          {formatTime(e.occurredAt)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </div>

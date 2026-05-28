@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import { db } from "@workspace/db";
 import { clinicBranchesTable, geoEventsTable, clinicsTable, usersTable } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, gte, lte, desc } from "drizzle-orm";
 
 export class BranchesRepository {
   async listBranches(clinicId: string) {
@@ -113,5 +113,36 @@ export class BranchesRepository {
       .where(eq(usersTable.id, userId))
       .limit(1);
     return u?.name ?? "Сотрудник";
+  }
+
+  async getGeoTracking(clinicId: string, opts: {
+    branchId?: string;
+    dateFrom: Date;
+    dateTo: Date;
+  }) {
+    const conditions = [
+      eq(geoEventsTable.clinicId, clinicId),
+      gte(geoEventsTable.occurredAt, opts.dateFrom),
+      lte(geoEventsTable.occurredAt, opts.dateTo),
+      ...(opts.branchId ? [eq(geoEventsTable.branchId, opts.branchId)] : []),
+    ];
+
+    const rows = await db
+      .select({
+        id: geoEventsTable.id,
+        eventType: geoEventsTable.eventType,
+        occurredAt: geoEventsTable.occurredAt,
+        branchId: geoEventsTable.branchId,
+        branchName: clinicBranchesTable.name,
+        userId: geoEventsTable.userId,
+        userName: usersTable.name,
+      })
+      .from(geoEventsTable)
+      .innerJoin(clinicBranchesTable, eq(geoEventsTable.branchId, clinicBranchesTable.id))
+      .innerJoin(usersTable, eq(geoEventsTable.userId, usersTable.id))
+      .where(and(...conditions))
+      .orderBy(desc(geoEventsTable.occurredAt));
+
+    return rows;
   }
 }

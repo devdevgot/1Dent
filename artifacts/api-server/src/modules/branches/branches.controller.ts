@@ -146,6 +146,31 @@ router.post("/clinic/telegram-test", ownerOnly, async (req: Request, res: Respon
   } catch (err) { next(err); }
 });
 
+// ── GET /api/geo/tracking ─────────────────────────────────────────────────────
+// Returns geo events for the clinic, optionally filtered by branchId and date range
+router.get("/geo/tracking", ownerOnly, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { branchId, dateFrom, dateTo } = req.query as Record<string, string | undefined>;
+
+    const now = new Date();
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date(now);
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const from = dateFrom ? new Date(dateFrom) : todayStart;
+    const to = dateTo ? new Date(dateTo) : todayEnd;
+
+    const events = await repo.getGeoTracking(req.user!.clinicId, {
+      branchId: branchId || undefined,
+      dateFrom: from,
+      dateTo: to,
+    });
+
+    res.json({ success: true, data: { events } });
+  } catch (err) { next(err); }
+});
+
 // ── POST /api/clinic/telegram-connect/generate ───────────────────────────────
 // Generates a unique deep-link token for the clinic owner to connect via platform bot
 router.post("/clinic/telegram-connect/generate", ownerOnly, async (req: Request, res: Response, next: NextFunction) => {
