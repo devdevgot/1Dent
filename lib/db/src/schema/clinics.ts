@@ -15,6 +15,8 @@ export const clinicsTable = pgTable("clinics", {
   greenApiUrl: text("green_api_url"),
   telegramBotToken: text("telegram_bot_token"),
   telegramOwnerChatId: text("telegram_owner_chat_id"),
+  telegramConnectToken: text("telegram_connect_token"),
+  telegramPlatformChatId: text("telegram_platform_chat_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

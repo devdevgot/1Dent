@@ -147,8 +147,25 @@ app.listen(port, (err) => {
 
   logger.info({ port }, "Server listening");
 
-  // Log resolved webhook base URL so it's immediately visible in deployment logs
+  // Register platform Telegram bot webhook
+  const platformTgToken = process.env["PLATFORM_TG_BOT_TOKEN"];
   const webhookBase = getServerBaseUrl();
+  if (platformTgToken && webhookBase) {
+    const webhookUrl = `${webhookBase}/api/webhook/telegram/platform`;
+    fetch(`https://api.telegram.org/bot${platformTgToken}/setWebhook`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: webhookUrl }),
+    })
+      .then((r) => r.json())
+      .then((r) => logger.info({ result: r }, "[PlatformBot] Webhook registered"))
+      .catch((err) => logger.warn({ err }, "[PlatformBot] Failed to register webhook"));
+  } else {
+    if (!platformTgToken) logger.warn("[PlatformBot] PLATFORM_TG_BOT_TOKEN not set — platform bot disabled");
+    if (!webhookBase) logger.warn("[PlatformBot] webhookBase not resolved — cannot register Telegram webhook");
+  }
+
+  // Log resolved webhook base URL so it's immediately visible in deployment logs
   if (webhookBase) {
     logger.info({ webhookBase }, "Green API webhook base URL resolved — incoming messages will be delivered to this URL");
   } else {

@@ -3,10 +3,12 @@ import { db, clinicsTable } from "@workspace/db";
 import { and, eq, isNull } from "drizzle-orm";
 import { parseGreenApiWebhook, clearGreenApiStateCache, getGreenApiWaSettings, extractPhoneFromWaSettings } from "../shared/green-api";
 import { MessagesService } from "../modules/messages/messages.service";
+import { BranchesRepository } from "../modules/branches/branches.repository";
 import { logger } from "../lib/logger";
 
 const router = Router();
 const service = new MessagesService();
+const branchesRepo = new BranchesRepository();
 
 // ─── POST /api/webhook/greenapi/:clinicId ─────────────────────────────────────
 // Registered BEFORE the main /api router so it is never blocked by the
@@ -118,5 +120,71 @@ router.post(
       .catch((err) => logger.error({ err, clinicId }, "[GreenAPI Webhook] handleInboundWebhook error"));
   },
 );
+
+// ─── POST /api/webhook/telegram/platform ─────────────────────────────────────
+// Platform bot webhook — receives /start <token> and saves owner's chat_id
+router.post("/api/webhook/telegram/platform", async (req: Request, res: Response) => {
+  res.status(200).json({ ok: true });
+
+  try {
+    const body = req.body as Record<string, unknown>;
+    const message = body["message"] as Record<string, unknown> | undefined;
+    if (!message) return;
+
+    const chatId = String((message["chat"] as Record<string, unknown>)?.["id"] ?? "");
+    const text = String(message["text"] ?? "").trim();
+    const firstName = String((message["from"] as Record<string, unknown>)?.["first_name"] ?? "Владелец");
+
+    if (!chatId) return;
+
+    const platformToken = process.env["PLATFORM_TG_BOT_TOKEN"];
+    if (!platformToken) return;
+
+    // Handle /start <token>
+    if (text.startsWith("/start ")) {
+      const connectToken = text.slice(7).trim();
+      if (!connectToken) return;
+
+      const clinic = await branchesRepo.getClinicByConnectToken(connectToken);
+      if (!clinic) {
+        await sendPlatformMessage(platformToken, chatId,
+          "❌ Ссылка недействительна или уже использована. Сгенерируйте новую в настройках 1Dent CRM."
+        );
+        return;
+      }
+
+      // Save chat_id and clear the connect token (one-time use)
+      await branchesRepo.updateClinicTelegram(clinic.id, {
+        telegramPlatformChatId: chatId,
+        telegramConnectToken: null,
+      });
+
+      await sendPlatformMessage(platformToken, chatId,
+        `✅ <b>Telegram подключён!</b>\n\nПривет, ${firstName}! Теперь вы будете получать уведомления от 1Dent CRM о приходе и уходе сотрудников клиники <b>${clinic.name}</b>.`
+      );
+      logger.info({ clinicId: clinic.id, chatId: chatId.slice(0, 4) + "***" }, "[PlatformBot] clinic connected");
+      return;
+    }
+
+    // Handle /start without token — just welcome
+    if (text === "/start") {
+      await sendPlatformMessage(platformToken, chatId,
+        "👋 Добро пожаловать в 1Dent CRM!\n\nЧтобы подключить Telegram-уведомления, перейдите в настройки CRM и нажмите «Подключить Telegram»."
+      );
+    }
+  } catch (err) {
+    logger.error({ err }, "[PlatformBot] webhook error");
+  }
+});
+
+async function sendPlatformMessage(token: string, chatId: string, text: string) {
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML" }),
+    });
+  } catch { /* non-critical */ }
+}
 
 export default router;

@@ -1,5 +1,6 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { z } from "zod";
+import { randomBytes } from "crypto";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 import { BranchesRepository } from "./branches.repository";
@@ -89,13 +90,18 @@ router.post("/geo/event", allStaff, async (req: Request, res: Response, next: Ne
     const event = await repo.logGeoEvent({ clinicId, userId, branchId, eventType });
 
     const tg = await repo.getClinicTelegram(clinicId);
-    if (tg?.telegramBotToken && tg.telegramOwnerChatId) {
-      const userName = await repo.getUserName(userId);
-      const now = new Date();
-      const timeStr = now.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty" });
-      const emoji = eventType === "checkin" ? "✅" : "🚪";
-      const verb = eventType === "checkin" ? "пришёл в" : "ушёл из";
-      const text = `${emoji} <b>${userName}</b> ${verb} <b>${branch.name}</b> — ${timeStr}`;
+    const userName = await repo.getUserName(userId);
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty" });
+    const emoji = eventType === "checkin" ? "✅" : "🚪";
+    const verb = eventType === "checkin" ? "пришёл в" : "ушёл из";
+    const text = `${emoji} <b>${userName}</b> ${verb} <b>${branch.name}</b> — ${timeStr}`;
+
+    // Platform bot takes priority; fall back to per-clinic bot if available
+    const platformToken = process.env["PLATFORM_TG_BOT_TOKEN"];
+    if (platformToken && tg?.telegramPlatformChatId) {
+      void sendTelegramMessage(platformToken, tg.telegramPlatformChatId, text);
+    } else if (tg?.telegramBotToken && tg.telegramOwnerChatId) {
       void sendTelegramMessage(tg.telegramBotToken, tg.telegramOwnerChatId, text);
     }
 
@@ -111,6 +117,8 @@ router.get("/clinic/telegram-settings", ownerOnly, async (req: Request, res: Res
       data: {
         telegramBotToken: settings?.telegramBotToken ?? null,
         telegramOwnerChatId: settings?.telegramOwnerChatId ?? null,
+        telegramPlatformChatId: settings?.telegramPlatformChatId ?? null,
+        telegramConnectToken: settings?.telegramConnectToken ?? null,
       },
     });
   } catch (err) { next(err); }
@@ -134,6 +142,49 @@ router.post("/clinic/telegram-test", ownerOnly, async (req: Request, res: Respon
       return next(new ValidationError("Bot token and chat ID are required"));
     }
     await sendTelegramMessage(telegramBotToken, telegramOwnerChatId, "✅ 1Dent CRM: Telegram-уведомления настроены!");
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
+// ── POST /api/clinic/telegram-connect/generate ───────────────────────────────
+// Generates a unique deep-link token for the clinic owner to connect via platform bot
+router.post("/clinic/telegram-connect/generate", ownerOnly, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const platformToken = process.env["PLATFORM_TG_BOT_TOKEN"];
+    if (!platformToken) return next(new ValidationError("Платформенный бот не настроен"));
+
+    // Get bot username to build the link
+    const meRes = await fetch(`https://api.telegram.org/bot${platformToken}/getMe`);
+    const me = await meRes.json() as { ok: boolean; result?: { username: string } };
+    if (!me.ok || !me.result?.username) return next(new ValidationError("Не удалось получить данные бота"));
+
+    const connectToken = randomBytes(16).toString("hex");
+    await repo.updateClinicTelegram(req.user!.clinicId, { telegramConnectToken: connectToken });
+
+    const deepLink = `https://t.me/${me.result.username}?start=${connectToken}`;
+    res.json({ success: true, data: { deepLink, botUsername: me.result.username } });
+  } catch (err) { next(err); }
+});
+
+// ── POST /api/clinic/telegram-platform-test ──────────────────────────────────
+router.post("/clinic/telegram-platform-test", ownerOnly, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const platformToken = process.env["PLATFORM_TG_BOT_TOKEN"];
+    if (!platformToken) return next(new ValidationError("Платформенный бот не настроен"));
+    const settings = await repo.getClinicTelegram(req.user!.clinicId);
+    if (!settings?.telegramPlatformChatId) return next(new ValidationError("Telegram не подключён — используйте кнопку «Подключить»"));
+    await sendTelegramMessage(platformToken, settings.telegramPlatformChatId, "✅ 1Dent CRM: Telegram-уведомления подключены и работают!");
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
+// ── DELETE /api/clinic/telegram-platform-disconnect ──────────────────────────
+router.delete("/clinic/telegram-platform-disconnect", ownerOnly, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await repo.updateClinicTelegram(req.user!.clinicId, {
+      telegramPlatformChatId: null,
+      telegramConnectToken: null,
+    });
     res.json({ success: true });
   } catch (err) { next(err); }
 });

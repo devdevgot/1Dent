@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MapPin, Plus, Trash2, Loader2, Send, CheckCircle2, Bot, Navigation, Search, X, Pencil } from "lucide-react";
+import { MapPin, Plus, Trash2, Loader2, Send, CheckCircle2, Bot, Navigation, Search, X, Pencil, ExternalLink, Unlink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ interface Branch {
 interface TelegramSettings {
   telegramBotToken: string | null;
   telegramOwnerChatId: string | null;
+  telegramPlatformChatId: string | null;
+  telegramConnectToken: string | null;
 }
 
 declare global {
@@ -103,6 +105,10 @@ export function BranchesSettings() {
   const [savingTg, setSavingTg] = useState(false);
   const [testingTg, setTestingTg] = useState(false);
   const [tgSaved, setTgSaved] = useState(false);
+  const [tgPlatformChatId, setTgPlatformChatId] = useState<string | null>(null);
+  const [connectingPlatform, setConnectingPlatform] = useState(false);
+  const [testingPlatform, setTestingPlatform] = useState(false);
+  const [disconnectingPlatform, setDisconnectingPlatform] = useState(false);
 
   const yandexApiKey = import.meta.env.VITE_YANDEX_MAPS_API_KEY as string | undefined ?? "";
 
@@ -149,8 +155,62 @@ export function BranchesSettings() {
       const d = res.data as TelegramSettings;
       setTgToken(d.telegramBotToken ?? "");
       setTgChatId(d.telegramOwnerChatId ?? "");
+      setTgPlatformChatId(d.telegramPlatformChatId ?? null);
     } catch { /* ignore */ }
   }, []);
+
+  const handleConnectPlatform = async () => {
+    setConnectingPlatform(true);
+    try {
+      const res = await apiFetch("/api/clinic/telegram-connect/generate", { method: "POST" });
+      const { deepLink } = res.data as { deepLink: string };
+      window.open(deepLink, "_blank");
+      // Poll for connection every 3 seconds for up to 2 minutes
+      let attempts = 0;
+      const poll = setInterval(async () => {
+        attempts++;
+        try {
+          const r = await apiFetch("/api/clinic/telegram-settings");
+          const d = r.data as TelegramSettings;
+          if (d.telegramPlatformChatId) {
+            setTgPlatformChatId(d.telegramPlatformChatId);
+            clearInterval(poll);
+            setConnectingPlatform(false);
+            toast({ title: "Telegram подключён!", description: "Теперь вы будете получать уведомления в Telegram" });
+          }
+        } catch { /* ignore */ }
+        if (attempts >= 40) { clearInterval(poll); setConnectingPlatform(false); }
+      }, 3000);
+    } catch (err) {
+      toast({ title: "Ошибка", description: String(err), variant: "destructive" });
+      setConnectingPlatform(false);
+    }
+  };
+
+  const handleTestPlatform = async () => {
+    setTestingPlatform(true);
+    try {
+      await apiFetch("/api/clinic/telegram-platform-test", { method: "POST" });
+      toast({ title: "Тест отправлен!", description: "Проверьте Telegram — вы должны получить сообщение" });
+    } catch (err) {
+      toast({ title: "Ошибка", description: String(err), variant: "destructive" });
+    } finally {
+      setTestingPlatform(false);
+    }
+  };
+
+  const handleDisconnectPlatform = async () => {
+    setDisconnectingPlatform(true);
+    try {
+      await apiFetch("/api/clinic/telegram-platform-disconnect", { method: "DELETE" });
+      setTgPlatformChatId(null);
+      toast({ title: "Telegram отключён" });
+    } catch (err) {
+      toast({ title: "Ошибка", description: String(err), variant: "destructive" });
+    } finally {
+      setDisconnectingPlatform(false);
+    }
+  };
 
   useEffect(() => { void loadBranches(); void loadTgSettings(); }, [loadBranches, loadTgSettings]);
 
@@ -784,64 +844,79 @@ export function BranchesSettings() {
       {/* ── Telegram notifications ─────────────────────────────────────── */}
       <div className="bg-card rounded-2xl border border-border/60 overflow-hidden">
         <div className="flex items-center gap-3 px-5 py-4 border-b border-border/40">
-          <div>
+          <div className="flex-1">
             <h2 className="font-semibold text-base text-foreground">Telegram-уведомления</h2>
             <p className="text-xs text-muted-foreground mt-0.5">Получайте уведомления о приходе и уходе сотрудников</p>
           </div>
+          {tgPlatformChatId && (
+            <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full px-3 py-1 text-xs font-medium">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Подключён
+            </div>
+          )}
         </div>
         <div className="p-5 space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">Bot Token</label>
-            <input
-              type="text"
-              placeholder="123456789:AAF..."
-              value={tgToken}
-              onChange={(e) => setTgToken(e.target.value)}
-              className="w-full h-10 rounded-xl border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-            />
-            <p className="text-[11px] text-muted-foreground mt-1">
-              Создайте бота через <b>@BotFather</b> и скопируйте токен
-            </p>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">Chat ID владельца</label>
-            <input
-              type="text"
-              placeholder="-100123456789"
-              value={tgChatId}
-              onChange={(e) => setTgChatId(e.target.value)}
-              className="w-full h-10 rounded-xl border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-            />
-            <p className="text-[11px] text-muted-foreground mt-1">
-              Напишите боту <b>@userinfobot</b> — он покажет ваш Chat ID
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => void handleSaveTg()}
-              disabled={savingTg}
-              className={cn(
-                "flex-1 h-10 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all",
-                tgSaved
-                  ? "bg-green-500 text-white"
-                  : "bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-60",
+          {tgPlatformChatId ? (
+            /* ── Connected state ── */
+            <div className="space-y-3">
+              <div className="flex items-start gap-3 rounded-xl bg-emerald-50 border border-emerald-200 p-4">
+                <Bot className="w-5 h-5 text-emerald-600 mt-0.5 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-emerald-800">Telegram подключён</p>
+                  <p className="text-xs text-emerald-700 mt-0.5">
+                    Уведомления о приходе и уходе сотрудников отправляются через бот 1Dent
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => void handleTestPlatform()}
+                  disabled={testingPlatform}
+                  className="flex-1 h-10 rounded-xl border border-border text-sm text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  {testingPlatform ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  Проверить
+                </button>
+                <button
+                  onClick={() => void handleDisconnectPlatform()}
+                  disabled={disconnectingPlatform}
+                  className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-red-200 text-sm text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
+                >
+                  {disconnectingPlatform ? <Loader2 className="w-4 h-4 animate-spin" /> : <Unlink className="w-4 h-4" />}
+                  Отключить
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* ── Not connected state ── */
+            <div className="space-y-3">
+              <div className="flex items-start gap-3 rounded-xl bg-muted/50 border border-border p-4">
+                <Bot className="w-5 h-5 text-muted-foreground mt-0.5 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground">Подключите Telegram за 1 шаг</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                    Нажмите кнопку — откроется бот 1Dent. Нажмите&nbsp;<b>«Начать»</b>&nbsp;— и уведомления будут приходить вам автоматически.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => void handleConnectPlatform()}
+                disabled={connectingPlatform}
+                className="w-full h-11 rounded-xl bg-[#229ED9] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-60"
+              >
+                {connectingPlatform ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Ожидаем подключения…</>
+                ) : (
+                  <><ExternalLink className="w-4 h-4" /> Подключить Telegram</>
+                )}
+              </button>
+              {connectingPlatform && (
+                <p className="text-xs text-center text-muted-foreground">
+                  Откройте бота и нажмите «Начать» — страница обновится автоматически
+                </p>
               )}
-            >
-              {savingTg
-                ? <Loader2 className="w-4 h-4 animate-spin" />
-                : tgSaved
-                ? <><CheckCircle2 className="w-4 h-4" /> Сохранено</>
-                : "Сохранить"}
-            </button>
-            <button
-              onClick={() => void handleTestTg()}
-              disabled={testingTg || !tgToken.trim() || !tgChatId.trim()}
-              className="px-4 h-10 rounded-xl border border-border text-sm text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors disabled:opacity-50 flex items-center gap-1.5"
-            >
-              {testingTg ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              Проверить
-            </button>
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

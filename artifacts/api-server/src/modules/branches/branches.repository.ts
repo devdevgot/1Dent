@@ -74,6 +74,8 @@ export class BranchesRepository {
       .select({
         telegramBotToken: clinicsTable.telegramBotToken,
         telegramOwnerChatId: clinicsTable.telegramOwnerChatId,
+        telegramConnectToken: clinicsTable.telegramConnectToken,
+        telegramPlatformChatId: clinicsTable.telegramPlatformChatId,
       })
       .from(clinicsTable)
       .where(eq(clinicsTable.id, clinicId))
@@ -82,14 +84,25 @@ export class BranchesRepository {
   }
 
   async updateClinicTelegram(clinicId: string, data: {
-    telegramBotToken: string | null;
-    telegramOwnerChatId: string | null;
+    telegramBotToken?: string | null;
+    telegramOwnerChatId?: string | null;
+    telegramConnectToken?: string | null;
+    telegramPlatformChatId?: string | null;
   }) {
     const [clinic] = await db
       .update(clinicsTable)
       .set(data)
       .where(eq(clinicsTable.id, clinicId))
       .returning();
+    return clinic ?? null;
+  }
+
+  async getClinicByConnectToken(token: string) {
+    const [clinic] = await db
+      .select()
+      .from(clinicsTable)
+      .where(eq(clinicsTable.telegramConnectToken, token))
+      .limit(1);
     return clinic ?? null;
   }
 
