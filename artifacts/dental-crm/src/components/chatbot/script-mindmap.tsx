@@ -1,5 +1,5 @@
 import "@xyflow/react/dist/style.css";
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   ReactFlow,
   Background,
@@ -15,7 +15,7 @@ import {
   type Node,
   type NodeProps,
 } from "@xyflow/react";
-import { CheckCircle2, GitBranch, Loader2, Plus, Save, Trash2, X } from "lucide-react";
+import { CheckCircle2, GitBranch, Loader2, Maximize2, Minimize2, Plus, Save, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -415,10 +415,27 @@ export function ScriptMindMapModal({
   onSave,
   saveStatus,
 }: ScriptMindMapModalProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handler = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", handler);
+    return () => document.removeEventListener("fullscreenchange", handler);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!isFullscreen) {
+      containerRef.current?.requestFullscreen?.();
+    } else {
+      document.exitFullscreen?.();
+    }
+  };
+
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-gray-50">
+    <div ref={containerRef} className="fixed inset-0 z-50 flex flex-col bg-gray-50">
       <div className="shrink-0 flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100 shadow-sm">
         <GitBranch className="h-4 w-4 text-primary shrink-0" />
         <div className="flex-1 min-w-0">
@@ -427,6 +444,16 @@ export function ScriptMindMapModal({
             Нажмите на карточку чтобы редактировать · «+Шаг» добавляет дочерний · «Ветка» разветвляет
           </p>
         </div>
+        <button
+          onClick={toggleFullscreen}
+          title={isFullscreen ? "Выйти из полноэкранного режима" : "Полноэкранный режим"}
+          className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors shrink-0"
+        >
+          {isFullscreen
+            ? <Minimize2 className="h-4 w-4 text-gray-500" />
+            : <Maximize2 className="h-4 w-4 text-gray-500" />
+          }
+        </button>
         <button
           onClick={onClose}
           className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors shrink-0"
