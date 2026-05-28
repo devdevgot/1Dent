@@ -323,7 +323,6 @@ export function KnowledgeTab() {
   // Show script animation when script changes
   useEffect(() => {
     if (script) {
-      globalNodeIndex = 0;
       setShowScript(false);
       setTimeout(() => setShowScript(true), 100);
     }
