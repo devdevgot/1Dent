@@ -130,6 +130,37 @@ export class MessagesService {
     );
   }
 
+  async handleOutboundPhoneWebhook(
+    clinicId: string,
+    recipientPhone: string,
+    content: string,
+    whatsappMessageId: string,
+  ): Promise<Message | null> {
+    // Dedup: skip if we already have this message (e.g. sent via CRM API)
+    const existing = await this.repo.findByWhatsappMessageId(whatsappMessageId, clinicId);
+    if (existing) return null;
+
+    const patient = await this.repo.findPatientByPhone(recipientPhone, clinicId);
+    if (!patient) {
+      logger.info({ recipientPhone, clinicId }, "[GreenAPI] Outbound from phone: no patient matched — skipped");
+      return null;
+    }
+
+    const message = await this.repo.create({
+      id: randomUUID(),
+      clinicId,
+      patientId: patient.id,
+      direction: "outbound",
+      senderId: null,
+      content,
+      whatsappMessageId,
+      isRedAlert: false,
+    });
+
+    logger.info({ patientId: patient.id, clinicId }, "[GreenAPI] Outbound from phone saved");
+    return message;
+  }
+
   async handleInboundWebhook(
     clinicId: string,
     senderPhone: string,

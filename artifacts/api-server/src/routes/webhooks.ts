@@ -113,6 +113,14 @@ router.post(
       return;
     }
 
+    if (parsed.direction === "outbound") {
+      logger.info({ clinicId, to: parsed.senderPhone, msgId: parsed.messageId }, "[GreenAPI Webhook] outbound from phone");
+      await service
+        .handleOutboundPhoneWebhook(clinicId, parsed.senderPhone, parsed.text, parsed.messageId)
+        .catch((err) => logger.error({ err, clinicId }, "[GreenAPI Webhook] handleOutboundPhoneWebhook error"));
+      return;
+    }
+
     logger.info({ clinicId, from: parsed.senderPhone, msgId: parsed.messageId }, "[GreenAPI Webhook] inbound message");
 
     await service

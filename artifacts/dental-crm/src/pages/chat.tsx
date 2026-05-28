@@ -22,11 +22,9 @@ import {
   XCircle,
   ChevronLeft,
   Pencil,
-  X,
   Loader2,
   PlayCircle,
   StopCircle,
-  UserCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -104,14 +102,22 @@ interface ChatSessionData {
   endedByName: string | null;
 }
 
-function formatDateTime(dateStr: string) {
-  return new Date(dateStr).toLocaleString("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+// ── Timeline types ────────────────────────────────────────────────────────────
+type TimelineItem =
+  | { kind: "message"; ts: string; msg: Message }
+  | { kind: "session_start"; ts: string; name: string | null }
+  | { kind: "session_end"; ts: string; name: string | null };
+
+function buildTimeline(messages: Message[], sessions: ChatSessionData[]): TimelineItem[] {
+  const items: TimelineItem[] = messages.map((m) => ({ kind: "message", ts: m.createdAt, msg: m }));
+  for (const s of sessions) {
+    items.push({ kind: "session_start", ts: s.startedAt, name: s.startedByName });
+    if (s.endedAt) {
+      items.push({ kind: "session_end", ts: s.endedAt, name: s.endedByName });
+    }
+  }
+  items.sort((a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime());
+  return items;
 }
 
 function DeliveryIcon({ status }: { status: DeliveryStatus }) {
@@ -209,6 +215,35 @@ function MessageBubble({ message, isOutbound }: { message: Message; isOutbound: 
   );
 }
 
+function SessionEventBubble({ kind, ts, name }: { kind: "session_start" | "session_end"; ts: string; name: string | null }) {
+  const isStart = kind === "session_start";
+  return (
+    <div className="flex justify-center my-2 px-4">
+      <div
+        className={cn(
+          "inline-flex items-center gap-1.5 text-[11px] font-medium px-3 py-1 rounded-full shadow-sm",
+          isStart
+            ? "bg-green-100 text-green-700 border border-green-200"
+            : "bg-red-50 text-red-600 border border-red-200",
+        )}
+      >
+        {isStart ? (
+          <PlayCircle className="w-3 h-3 shrink-0" />
+        ) : (
+          <StopCircle className="w-3 h-3 shrink-0" />
+        )}
+        <span>
+          {isStart ? "Сотрудник" : "Сотрудник"}
+          {name ? <> <strong>{name}</strong></> : null}
+          {" "}{isStart ? "начал диалог" : "завершил диалог"}
+        </span>
+        <span className="opacity-50">·</span>
+        <span className="opacity-70">{formatTime(ts)}</span>
+      </div>
+    </div>
+  );
+}
+
 function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void }) {
   const { t }           = useTranslation();
   const { user }        = useAuthStore();
@@ -218,7 +253,7 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
   const qc              = useQueryClient();
   const formatDate      = useChatDateLabel();
 
-  const [session, setSession]         = useState<ChatSessionData | null>(null);
+  const [session, setSession]               = useState<ChatSessionData | null>(null);
   const [sessionLoading, setSessionLoading] = useState(true);
   const [sessionHistory, setSessionHistory] = useState<ChatSessionData[]>([]);
   const [sessionWorking, setSessionWorking] = useState(false);
@@ -255,6 +290,7 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
         { method: "POST" },
       );
       setSession(res.data.session);
+      await fetchSession();
     } catch {
       // ignore
     } finally {
@@ -334,18 +370,23 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
     e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
   };
 
-  const grouped: { date: string; messages: Message[] }[] = [];
-  for (const msg of messages) {
-    const d    = formatDate(msg.createdAt);
+  // Build unified timeline: messages + session start/end events merged by timestamp
+  const timeline = buildTimeline(messages, sessionHistory);
+
+  // Group timeline by date
+  const grouped: { date: string; items: TimelineItem[] }[] = [];
+  for (const item of timeline) {
+    const d    = formatDate(item.ts);
     const last = grouped[grouped.length - 1];
-    if (last && last.date === d) last.messages.push(msg);
-    else grouped.push({ date: d, messages: [msg] });
+    if (last && last.date === d) last.items.push(item);
+    else grouped.push({ date: d, items: [item] });
   }
 
   const hasRedAlert = messages.some((m) => m.isRedAlert);
 
   return (
     <div className="flex flex-col h-full">
+      {/* ── Header ── */}
       <div
         className="flex items-center gap-3 px-4 py-3 border-b border-border/30 shrink-0"
         style={{ background: "linear-gradient(135deg,#ffffff 0%,#f8fdf0 100%)" }}
@@ -370,6 +411,14 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
           <p className="text-xs text-muted-foreground truncate">{patient.phone}</p>
         </div>
 
+        {/* Active session indicator in header */}
+        {!sessionLoading && session && (
+          <div className="flex items-center gap-1.5 shrink-0">
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            <span className="text-xs text-green-700 font-medium hidden sm:inline">Чат активен</span>
+          </div>
+        )}
+
         {hasRedAlert && (
           <Badge variant="destructive" className="flex items-center gap-1 shrink-0 text-xs">
             <AlertTriangle className="w-3 h-3" />
@@ -378,58 +427,7 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
         )}
       </div>
 
-      {/* Session banner */}
-      {!sessionLoading && (
-        <div className="shrink-0 border-b border-border/20">
-          {session ? (
-            <div className="flex items-center gap-2.5 px-4 py-2" style={{ backgroundColor: "#f0fdf4" }}>
-              <div className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-green-800 font-medium leading-snug truncate">
-                  Чат начат: <span className="font-semibold">{session.startedByName ?? "—"}</span>
-                  {" · "}{formatDateTime(session.startedAt)}
-                </p>
-              </div>
-              <button
-                onClick={handleEndSession}
-                disabled={sessionWorking}
-                className="flex items-center gap-1 text-xs font-semibold text-red-500 hover:text-red-700 border border-red-200 rounded-lg px-2.5 py-1 hover:bg-red-50 transition-colors disabled:opacity-50 shrink-0"
-              >
-                {sessionWorking ? <Loader2 className="w-3 h-3 animate-spin" /> : <StopCircle className="w-3 h-3" />}
-                Завершить чат
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2.5 px-4 py-2 bg-gray-50">
-              {sessionHistory.length > 0 && (
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-400 truncate">
-                    <UserCheck className="w-3 h-3 inline mr-1" />
-                    Последний чат завершён:{" "}
-                    <span className="font-medium text-gray-500">
-                      {sessionHistory[sessionHistory.length - 1]!.endedByName ?? sessionHistory[sessionHistory.length - 1]!.startedByName ?? "—"}
-                    </span>
-                    {sessionHistory[sessionHistory.length - 1]!.endedAt && (
-                      <> · {formatDateTime(sessionHistory[sessionHistory.length - 1]!.endedAt!)}</>
-                    )}
-                  </p>
-                </div>
-              )}
-              {sessionHistory.length === 0 && <div className="flex-1" />}
-              <button
-                onClick={handleStartSession}
-                disabled={sessionWorking}
-                className="flex items-center gap-1 text-xs font-semibold shrink-0 px-2.5 py-1 rounded-lg border transition-colors disabled:opacity-50"
-                style={{ color: BRAND_DARK, borderColor: BRAND, backgroundColor: BRAND + "15" }}
-              >
-                {sessionWorking ? <Loader2 className="w-3 h-3 animate-spin" /> : <PlayCircle className="w-3 h-3" />}
-                Начать чат
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
+      {/* ── Message feed ── */}
       <div
         className="flex-1 overflow-y-auto py-3"
         style={{ backgroundColor: CHAT_BG, backgroundImage: DOT_PATTERN }}
@@ -442,7 +440,7 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
           </div>
         )}
 
-        {!isLoading && messages.length === 0 && (
+        {!isLoading && messages.length === 0 && sessionHistory.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-3 px-8 text-center">
             <div
               className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-md"
@@ -464,41 +462,94 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
                 {group.date}
               </span>
             </div>
-            {group.messages.map((msg) => (
-              <MessageBubble
-                key={msg.id}
-                message={msg}
-                isOutbound={msg.direction === "outbound"}
-              />
-            ))}
+            {group.items.map((item, idx) => {
+              if (item.kind === "message") {
+                return (
+                  <MessageBubble
+                    key={item.msg.id}
+                    message={item.msg}
+                    isOutbound={item.msg.direction === "outbound"}
+                  />
+                );
+              }
+              return (
+                <SessionEventBubble
+                  key={`${item.kind}-${idx}`}
+                  kind={item.kind}
+                  ts={item.ts}
+                  name={item.name}
+                />
+              );
+            })}
           </div>
         ))}
 
         <div ref={bottomRef} className="h-2" />
       </div>
 
-      <div className="flex items-end gap-2.5 px-3 py-2.5 border-t border-border/30 shrink-0 bg-[#f0f2f5]">
-        <div className="flex-1 bg-white rounded-2xl px-3.5 py-2 shadow-sm border border-border/20 flex items-end min-h-[44px]">
-          <textarea
-            ref={textareaRef}
-            value={text}
-            onChange={handleInput}
-            onKeyDown={handleKeyDown}
-            placeholder={t("chat.messagePlaceholder")}
-            rows={1}
-            className="w-full resize-none outline-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground leading-relaxed"
-            style={{ maxHeight: 120, minHeight: 24 }}
-          />
+      {/* ── Input area with Start/End buttons ── */}
+      {!sessionLoading && !session ? (
+        // No active session — show "Начать диалог" button
+        <div className="px-3 py-2.5 border-t border-border/30 shrink-0 bg-[#f0f2f5]">
+          <button
+            onClick={handleStartSession}
+            disabled={sessionWorking}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl font-semibold text-sm transition-all active:scale-[0.98] disabled:opacity-60 shadow-sm"
+            style={{ backgroundColor: BRAND, color: BRAND_DARK }}
+          >
+            {sessionWorking
+              ? <Loader2 className="w-4 h-4 animate-spin" />
+              : <PlayCircle className="w-4 h-4" />
+            }
+            {sessionWorking ? "Начинаем…" : "Начать диалог"}
+          </button>
         </div>
-        <button
-          onClick={handleSend}
-          disabled={!text.trim() || sendMutation.isPending}
-          className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition-all active:scale-95 disabled:opacity-40 shadow-md"
-          style={{ backgroundColor: BRAND }}
-        >
-          <Send className="w-4 h-4" style={{ color: BRAND_DARK }} />
-        </button>
-      </div>
+      ) : (
+        // Active session (or still loading) — show full input with "Завершить" on left
+        <div className="flex flex-col gap-0 border-t border-border/30 shrink-0 bg-[#f0f2f5]">
+          <div className="flex items-end gap-2 px-3 py-2.5">
+            {/* Завершить button on the left */}
+            {!sessionLoading && session && (
+              <button
+                onClick={handleEndSession}
+                disabled={sessionWorking}
+                title="Завершить диалог"
+                className="flex items-center gap-1 text-xs font-semibold text-red-500 hover:text-red-700 border border-red-200 rounded-xl px-2.5 py-2 hover:bg-red-50 transition-colors disabled:opacity-50 shrink-0 self-end mb-0.5"
+              >
+                {sessionWorking
+                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  : <StopCircle className="w-3.5 h-3.5" />
+                }
+                <span className="hidden sm:inline">Завершить</span>
+              </button>
+            )}
+
+            {/* Message textarea */}
+            <div className="flex-1 bg-white rounded-2xl px-3.5 py-2 shadow-sm border border-border/20 flex items-end min-h-[44px]">
+              <textarea
+                ref={textareaRef}
+                value={text}
+                onChange={handleInput}
+                onKeyDown={handleKeyDown}
+                placeholder={t("chat.messagePlaceholder")}
+                rows={1}
+                className="w-full resize-none outline-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground leading-relaxed"
+                style={{ maxHeight: 120, minHeight: 24 }}
+              />
+            </div>
+
+            {/* Send button */}
+            <button
+              onClick={handleSend}
+              disabled={!text.trim() || sendMutation.isPending}
+              className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition-all active:scale-95 disabled:opacity-40 shadow-md"
+              style={{ backgroundColor: BRAND }}
+            >
+              <Send className="w-4 h-4" style={{ color: BRAND_DARK }} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -512,8 +563,27 @@ export default function ChatPage() {
   const [waStatusLoading, setWaStatusLoading]   = useState(true);
   const [modalOpen, setModalOpen]               = useState(false);
   const [modalAtSetup, setModalAtSetup]         = useState(false);
+  const [activePatientIds, setActivePatientIds] = useState<Set<string>>(new Set());
 
   const isOwner = user?.role === "owner";
+
+  // Fetch active sessions to sort the patient list
+  const fetchActiveSessions = useCallback(async () => {
+    try {
+      const res = await customFetch<{ success: boolean; data: { activePatientIds: string[] } }>(
+        "/api/chat-sessions/active",
+      );
+      setActivePatientIds(new Set(res.data.activePatientIds));
+    } catch {
+      // non-critical
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchActiveSessions();
+    const iv = setInterval(fetchActiveSessions, 15_000);
+    return () => clearInterval(iv);
+  }, [fetchActiveSessions]);
 
   const fetchWaStatus = useCallback(async () => {
     try {
@@ -521,8 +591,6 @@ export default function ChatPage() {
         "/api/clinic/green-api/status",
       );
       setWaStatus(res.data);
-      // Open modal if not configured at all, OR if configured but device was removed (not connected).
-      // Use functional updater so we don't re-trigger setModalAtSetup if modal is already open.
       if (isOwner && (!res.data.configured || !res.data.connected)) {
         setModalOpen((already) => {
           if (!already) setModalAtSetup(false);
@@ -538,7 +606,6 @@ export default function ChatPage() {
 
   useEffect(() => {
     fetchWaStatus();
-    // Poll every 30 seconds so disconnection is detected while staying on chat page
     const iv = setInterval(fetchWaStatus, 30_000);
     return () => clearInterval(iv);
   }, [fetchWaStatus]);
@@ -569,8 +636,6 @@ export default function ChatPage() {
 
   const handleModalClose = () => {
     setModalOpen(false);
-    // If user manually opened the modal via "Изменить" (modalAtSetup=true), just dismiss and stay.
-    // Otherwise (modal was auto-opened because WA is not connected), redirect to dashboard.
     if (!modalAtSetup && !waStatus?.connected) {
       setLocation(getRoleDashboardPath(user?.role ?? "owner"));
     } else {
@@ -582,14 +647,23 @@ export default function ChatPage() {
     query: { queryKey: getListPatientsQueryKey() },
   });
 
-  const patients        = data?.data?.patients ?? [];
-  const filtered        = patients.filter((p) =>
+  const patients = data?.data?.patients ?? [];
+
+  // Sort: active sessions first, then alphabetically
+  const sortedPatients = [...patients].sort((a, b) => {
+    const aActive = activePatientIds.has(a.id) ? 0 : 1;
+    const bActive = activePatientIds.has(b.id) ? 0 : 1;
+    if (aActive !== bActive) return aActive - bActive;
+    return a.name.localeCompare(b.name, "ru");
+  });
+
+  const filtered = sortedPatients.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase()),
   );
   const selectedPatient = patients.find((p) => p.id === selectedPatientId);
   const handleBack      = () => setSelectedPatientId(null);
 
-  const waConnected = waStatus?.connected ?? false;
+  const waConnected  = waStatus?.connected ?? false;
   const waConfigured = waStatus?.configured ?? false;
 
   return (
@@ -663,6 +737,7 @@ export default function ChatPage() {
               key={patient.id}
               patient={patient}
               isSelected={patient.id === selectedPatientId}
+              isActive={activePatientIds.has(patient.id)}
               onSelect={() => setSelectedPatientId(patient.id)}
             />
           ))}
@@ -711,10 +786,12 @@ export default function ChatPage() {
 function PatientListItem({
   patient,
   isSelected,
+  isActive,
   onSelect,
 }: {
   patient: Patient;
   isSelected: boolean;
+  isActive: boolean;
   onSelect: () => void;
 }) {
   const { bg, text } = getAvatarColor(patient.name);
@@ -735,16 +812,33 @@ function PatientListItem({
       )}
       style={isSelected ? { borderLeftColor: BRAND } : undefined}
     >
-      <div
-        className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 font-bold text-sm shadow-sm"
-        style={{ backgroundColor: bg, color: text }}
-      >
-        {initials}
+      <div className="relative shrink-0">
+        <div
+          className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm shadow-sm"
+          style={{ backgroundColor: bg, color: text }}
+        >
+          {initials}
+        </div>
+        {/* Active session indicator dot */}
+        {isActive && (
+          <span
+            className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white"
+            style={{ backgroundColor: "#22c55e" }}
+          />
+        )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className={cn("font-semibold text-sm truncate", isSelected ? "text-[#1a2204]" : "text-foreground")}>
-          {patient.name}
-        </p>
+        <div className="flex items-center gap-1.5">
+          <p className={cn("font-semibold text-sm truncate", isSelected ? "text-[#1a2204]" : "text-foreground")}>
+            {patient.name}
+          </p>
+          {isActive && (
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0"
+              style={{ backgroundColor: BRAND + "30", color: BRAND_DARK }}>
+              активен
+            </span>
+          )}
+        </div>
         <p className="text-xs text-muted-foreground truncate mt-0.5">{patient.phone}</p>
       </div>
       {isSelected && (

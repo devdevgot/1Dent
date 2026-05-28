@@ -71,6 +71,15 @@ export class MessagesRepository {
     return msg!;
   }
 
+  async findByWhatsappMessageId(whatsappMessageId: string, clinicId: string): Promise<Message | null> {
+    const [msg] = await db
+      .select()
+      .from(messagesTable)
+      .where(and(eq(messagesTable.whatsappMessageId, whatsappMessageId), eq(messagesTable.clinicId, clinicId)))
+      .limit(1);
+    return msg ?? null;
+  }
+
   async listNotifications(userId: string, clinicId: string): Promise<Notification[]> {
     return db
       .select()

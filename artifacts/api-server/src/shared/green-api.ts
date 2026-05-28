@@ -99,6 +99,9 @@ export interface GreenApiSendResult {
 }
 
 export interface ParsedWebhook {
+  /** "inbound" = message from patient; "outbound" = sent from clinic's personal phone */
+  direction: "inbound" | "outbound";
+  /** For inbound: patient's phone. For outbound: recipient (patient) phone. */
   senderPhone: string;
   text: string;
   messageId: string;
@@ -406,19 +409,13 @@ export async function getPartnerInstances(partnerToken: string): Promise<Partner
 export function parseGreenApiWebhook(body: unknown): ParsedWebhook | null {
   try {
     const b = body as Record<string, unknown>;
-
-    if (b["typeWebhook"] !== "incomingMessageReceived") return null;
+    const typeWebhook = b["typeWebhook"] as string | undefined;
 
     const senderData = b["senderData"] as Record<string, unknown> | undefined;
     const messageData = b["messageData"] as Record<string, unknown> | undefined;
     const idMessage = b["idMessage"] as string | undefined;
 
     if (!senderData || !messageData || !idMessage) return null;
-
-    const sender = senderData["sender"] as string | undefined;
-    if (!sender) return null;
-
-    const senderPhone = sender.replace("@c.us", "").replace("@g.us", "");
 
     // textMessageData — plain text messages
     const textMessageData = messageData["textMessageData"] as Record<string, unknown> | undefined;
@@ -432,7 +429,26 @@ export function parseGreenApiWebhook(body: unknown): ParsedWebhook | null {
 
     if (!text) return null;
 
-    return { senderPhone, text, messageId: idMessage };
+    // ── Inbound: message from patient ────────────────────────────────────────
+    if (typeWebhook === "incomingMessageReceived") {
+      const sender = senderData["sender"] as string | undefined;
+      if (!sender) return null;
+      const senderPhone = sender.replace("@c.us", "").replace("@g.us", "");
+      return { direction: "inbound", senderPhone, text, messageId: idMessage };
+    }
+
+    // ── Outbound: sent from the clinic's connected phone (not via API) ───────
+    // "outgoingMessageReceived" = typed & sent manually on the device
+    // "outgoingAPIMessageReceived" = sent via Green API (already saved by CRM — skip)
+    if (typeWebhook === "outgoingMessageReceived") {
+      // chatId is the RECIPIENT (patient) phone
+      const chatId = senderData["chatId"] as string | undefined;
+      if (!chatId) return null;
+      const recipientPhone = chatId.replace("@c.us", "").replace("@g.us", "");
+      return { direction: "outbound", senderPhone: recipientPhone, text, messageId: idMessage };
+    }
+
+    return null;
   } catch (err) {
     logger.warn({ err }, "parseGreenApiWebhook: failed to parse");
     return null;

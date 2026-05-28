@@ -95,6 +95,24 @@ router.post(
   },
 );
 
+// ─── GET /chat-sessions/active ───────────────────────────────────────────────
+// Returns all patientIds that have an active (non-ended) chat session in the clinic.
+router.get(
+  "/chat-sessions/active",
+  authMiddleware,
+  patientReadRoles,
+  async (req: Request, res: Response, next: NextFunction) => {
+    const clinicId = req.user!.clinicId;
+    const rows = await db
+      .select({ patientId: chatSessionsTable.patientId })
+      .from(chatSessionsTable)
+      .where(and(eq(chatSessionsTable.clinicId, clinicId), isNull(chatSessionsTable.endedAt)))
+      .catch(next);
+    if (!rows) return;
+    res.json({ success: true, data: { activePatientIds: rows.map((r) => r.patientId) } });
+  },
+);
+
 // ─── GET /patients/:patientId/chat-session ───────────────────────────────────
 // Returns the active (non-ended) chat session for a patient, or null.
 // Includes startedBy and endedBy user names.
