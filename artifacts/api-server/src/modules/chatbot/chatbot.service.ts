@@ -324,8 +324,8 @@ function formatSlots(slots: Date[]): string {
   return slots
     .map((s) => {
       const day = dayNames[s.getDay()];
-      const date = s.toLocaleDateString("ru-KZ", { day: "numeric", month: "long" });
-      const time = s.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit" });
+      const date = s.toLocaleDateString("ru-KZ", { day: "numeric", month: "long", timeZone: "Asia/Almaty" });
+      const time = s.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty" });
       return `• ${day}, ${date} в ${time}`;
     })
     .join("\n");
@@ -631,6 +631,7 @@ async function loadPatientDentalContext(clinicId: string, patientId: string): Pr
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
+        timeZone: "Asia/Almaty",
       });
       const typeLabel = t.type === "extraction" ? "удаление" : "лечение";
       const statusLabel = t.status === "done" ? " ✓" : " (в процессе)";
@@ -765,8 +766,8 @@ function buildPlaygroundPrompt(
           .map((s) => {
             const dayNames = ["вс", "пн", "вт", "ср", "чт", "пт", "сб"];
             const day = dayNames[s.getDay()];
-            const date = s.toLocaleDateString("ru-KZ", { day: "numeric", month: "long" });
-            const time = s.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit" });
+            const date = s.toLocaleDateString("ru-KZ", { day: "numeric", month: "long", timeZone: "Asia/Almaty" });
+            const time = s.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty" });
             return `${day} ${date} в ${time}`;
           })
           .join(", ");
@@ -784,13 +785,13 @@ function buildPlaygroundPrompt(
     settings.greetingTemplate?.match(/"(.+?)"/)?.[1] ??
     "нашу клинику";
   const now = new Date();
-  const todayDate = now.toLocaleDateString("ru-KZ", { day: "numeric", month: "long" });
+  const todayDate = now.toLocaleDateString("ru-KZ", { day: "numeric", month: "long", timeZone: "Asia/Almaty" });
   const firstDoctor = doctorsWithSlots?.[0];
   const exampleDoctorName = firstDoctor?.name ?? "Иван Петров";
   const exampleTime =
-    firstDoctor?.slots?.[0]?.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit" }) ?? "14:00";
+    firstDoctor?.slots?.[0]?.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty" }) ?? "14:00";
   const exampleDate =
-    firstDoctor?.slots?.[0]?.toLocaleDateString("ru-KZ", { day: "numeric", month: "long" }) ?? todayDate;
+    firstDoctor?.slots?.[0]?.toLocaleDateString("ru-KZ", { day: "numeric", month: "long", timeZone: "Asia/Almaty" }) ?? todayDate;
 
   const resolvePlaceholders = (text: string) =>
     text
@@ -810,8 +811,8 @@ function buildPlaygroundPrompt(
   }
 
   const nowPlayground = new Date();
-  const nowDateStr = nowPlayground.toLocaleDateString("ru-KZ", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-  const nowTimeStr = nowPlayground.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit" });
+  const nowDateStr = nowPlayground.toLocaleDateString("ru-KZ", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Almaty" });
+  const nowTimeStr = nowPlayground.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty" });
 
   const knowledgeSection = knowledgeContext
     ? `\n\nМАТЕРИАЛЫ КЛИНИКИ (сайт, документы — используй для ответов о ценах, услугах и особенностях клиники; информация о врачах берётся ТОЛЬКО из раздела «ВРАЧИ КЛИНИКИ» выше):\n${knowledgeContext}`
@@ -845,7 +846,7 @@ function renderScriptBlocks(
     settings.greetingTemplate?.match(/"(.+?)"/)?.[1] ??
     "нашу клинику";
   const now = new Date();
-  const todayDate = now.toLocaleDateString("ru-KZ", { day: "numeric", month: "long" });
+  const todayDate = now.toLocaleDateString("ru-KZ", { day: "numeric", month: "long", timeZone: "Asia/Almaty" });
 
   const resolvePlaceholders = (text: string) =>
     text
@@ -882,8 +883,8 @@ function buildSystemPrompt(
 Не придумывай информацию о клинике — цены, адрес и расписание бери из скрипта ниже или уточняй у администратора.${kazakhNote}${generalExtra}`;
 
   const now = new Date();
-  const todayStr = now.toLocaleDateString("ru-KZ", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-  const currentTimeStr = now.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit" });
+  const todayStr = now.toLocaleDateString("ru-KZ", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Almaty" });
+  const currentTimeStr = now.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty" });
   const nowContext = `Сейчас: ${todayStr}, ${currentTimeStr} (Алматы/Астана).`;
   const timeRule = `ВАЖНО: никогда не предлагай и не подтверждай время которое уже прошло сегодня (сейчас ${currentTimeStr}). Если пациент называет прошедшее время — вежливо объясни что оно уже прошло и предложи ближайший доступный слот.`;
 
@@ -1085,7 +1086,7 @@ export class ChatbotService {
               if (doc) doctorName = doc.name;
             }
             const apptDate = upcomingProc.scheduledAt.toLocaleDateString("ru-KZ", {
-              weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+              weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty",
             });
             data.existingProcedureId = upcomingProc.id;
             data.existingProcedureDate = apptDate;
@@ -1199,7 +1200,7 @@ export class ChatbotService {
                 if (doc) doctorName = doc.name;
               }
               const apptDate = upcomingProc.scheduledAt.toLocaleDateString("ru-KZ", {
-                weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+                weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty",
               });
               data.existingProcedureId = upcomingProc.id;
               data.existingProcedureDate = apptDate;
@@ -1604,7 +1605,7 @@ export class ChatbotService {
                   .where(and(eq(usersTable.clinicId, clinicId), inArray(usersTable.role, ["owner", "admin"])));
                 if (staffRecipients.length > 0) {
                   const apptDateStr = extractedDate.toLocaleDateString("ru-KZ", {
-                    weekday: "short", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+                    weekday: "short", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty",
                   });
                   const notifMsg = `📅 Новая запись через чатбот: ${data.patientName ?? phone} → ${data.suggestedDoctorName ?? "врач"} (${serviceLabel}), ${apptDateStr}`;
                   await db.insert(notificationsTable).values(
@@ -1628,7 +1629,7 @@ export class ChatbotService {
           }
 
           const formattedDate = extractedDate.toLocaleDateString("ru-KZ", {
-            weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+            weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty",
           });
           const doctorName = data.suggestedDoctorName ?? data.existingProcedureDoctorName ?? "врача";
           const aiDone = await generateChatbotResponse(

@@ -255,7 +255,7 @@ export async function generateChatbotResponse(
 
 export async function extractDatetimeFromText(text: string): Promise<Date | null> {
   const now = new Date();
-  const todayStr = now.toLocaleDateString("ru-KZ", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const todayStr = now.toLocaleDateString("ru-KZ", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Asia/Almaty" });
 
   const systemPrompt = `Сегодня ${todayStr} (${now.toISOString()}).
 Извлеки из текста пациента дату и время визита. Верни JSON: {"iso": "YYYY-MM-DDTHH:mm:00"} или {"iso": null} если дата/время не указаны или неясны.
