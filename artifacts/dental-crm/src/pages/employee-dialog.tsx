@@ -156,8 +156,7 @@ function SpecialtyTagInput({
               <button
                 type="button"
                 onMouseDown={() => addTag(inputValue.trim())}
-                className="w-full text-left px-4 py-2.5 text-sm font-semibold border-t border-gray-100 hover:bg-gray-50 transition-colors"
-                style={{ color: "#98cc1c" }}
+                className="w-full text-left px-4 py-2.5 text-sm font-semibold border-t border-gray-100 hover:bg-gray-50 transition-colors text-primary"
               >
                 + Добавить «{inputValue.trim()}»
               </button>
@@ -290,8 +289,7 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                     key={tab.key}
                     type="button"
                     onClick={() => setActiveTab(tab.key)}
-                    className="flex-1 flex flex-col items-center gap-1 py-2 rounded-2xl text-xs font-semibold transition-all"
-                    style={isActive ? { backgroundColor: "#98cc1c22", color: "#98cc1c" } : { color: "#9ca3af" }}
+                    className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-2xl text-xs font-semibold transition-all ${isActive ? "bg-primary/10 text-primary" : "text-gray-400"}`}
                   >
                     <Icon className="w-4 h-4" />
                     {t(tab.labelKey, tab.key)}
@@ -396,16 +394,13 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                           <button
                             type="button"
                             onClick={() => set("isActive", !form.isActive)}
-                            className="w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all"
-                            style={form.isActive
-                              ? { borderColor: "#98cc1c", backgroundColor: "#98cc1c11" }
-                              : { borderColor: "#e5e7eb", backgroundColor: "#f9fafb" }}
+                            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all ${form.isActive ? "border-primary bg-primary/5" : "border-gray-200 bg-gray-50"}`}
                           >
                             <div className="flex items-center gap-2.5">
                               {form.isActive
-                                ? <ToggleRight className="w-5 h-5" style={{ color: "#98cc1c" }} />
+                                ? <ToggleRight className="w-5 h-5 text-primary" />
                                 : <ToggleLeft className="w-5 h-5 text-gray-400" />}
-                              <span className="text-sm font-semibold" style={form.isActive ? { color: "#98cc1c" } : { color: "#6b7280" }}>
+                              <span className={`text-sm font-semibold ${form.isActive ? "text-primary" : "text-gray-500"}`}>
                                 {form.isActive
                                   ? t("employees.statusActive", "Активен")
                                   : t("employees.statusInactive", "Неактивен")}
@@ -651,8 +646,7 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                     <button
                       type="button"
                       onClick={() => setActiveTab(activeTab === "personal" ? "position" : "salary")}
-                      className="flex-1 py-3.5 rounded-2xl text-sm font-bold text-white"
-                      style={{ backgroundColor: "#98cc1c" }}
+                      className="flex-1 py-3.5 rounded-2xl text-sm font-bold text-white bg-primary"
                     >
                       {t("employees.next", "Далее")}
                     </button>
@@ -661,8 +655,7 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                       type="button"
                       disabled={isSaving}
                       onClick={() => onSave(form)}
-                      className="flex-1 py-3.5 rounded-2xl text-sm font-bold text-white disabled:opacity-60"
-                      style={{ backgroundColor: "#98cc1c" }}
+                      className="flex-1 py-3.5 rounded-2xl text-sm font-bold text-white bg-primary disabled:opacity-60"
                     >
                       {isSaving ? t("common.saving", "Сохранение...") : (isEdit ? t("employees.save", "Сохранить") : t("employees.create", "Создать"))}
                     </button>
