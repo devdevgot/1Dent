@@ -86,7 +86,7 @@ router.post("/knowledge/file", ownerAdmin, async (req: Request, res: Response, n
       status: "pending",
     });
 
-    void extractFileText(id, objectPath, mimeType);
+    void extractFileText(id, objectPath, mimeType, name);
 
     const [source] = await db.select().from(knowledgeSourcesTable).where(eq(knowledgeSourcesTable.id, id)).limit(1);
     res.status(201).json({ success: true, data: { source } });
@@ -379,10 +379,61 @@ async function scrapeUrl(id: string, url: string): Promise<void> {
   }
 }
 
-async function extractFileText(id: string, objectPath: string, mimeType: string): Promise<void> {
+const IMAGE_MIME_TYPES = new Set([
+  "image/jpeg", "image/jpg", "image/png", "image/webp",
+  "image/gif", "image/bmp", "image/tiff",
+]);
+
+async function extractImageText(id: string, buffer: Buffer, mimeType: string, name: string): Promise<void> {
+  const base64 = buffer.toString("base64");
+  const imgType = mimeType === "image/jpg" ? "image/jpeg" : mimeType;
+
+  const completion = await withTimeout(
+    openrouter.chat.completions.create({
+      model: FAST_MODEL,
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "image_url",
+              image_url: { url: `data:${imgType};base64,${base64}` },
+            },
+            {
+              type: "text",
+              text: `Это изображение из базы знаний стоматологической клиники (файл: «${name}»).
+Извлеки из него всю полезную информацию: адреса, часы работы, услуги, цены, имена врачей, акции, контакты, описания — всё что видно.
+Верни только структурированный текст без лишних комментариев. Если изображение нечитаемо или не содержит полезных данных — напиши «Изображение не содержит текстовых данных».`,
+            },
+          ],
+        },
+      ],
+      temperature: 0.1,
+      max_tokens: 2000,
+    }),
+    45000,
+    "image-extract",
+  );
+
+  const extracted = completion.choices[0]?.message?.content?.trim() ?? "";
+  const text = extracted || "Изображение не содержит текстовых данных";
+
+  await db
+    .update(knowledgeSourcesTable)
+    .set({ extractedText: text, status: "ready" })
+    .where(eq(knowledgeSourcesTable.id, id));
+}
+
+async function extractFileText(id: string, objectPath: string, mimeType: string, name?: string): Promise<void> {
   try {
     const file = await storage.getObjectEntityFile(objectPath);
     const [buffer] = await file.download();
+
+    // Handle images via vision model
+    if (IMAGE_MIME_TYPES.has(mimeType) || mimeType.startsWith("image/")) {
+      await extractImageText(id, buffer, mimeType, name ?? objectPath);
+      return;
+    }
 
     let text = "";
 

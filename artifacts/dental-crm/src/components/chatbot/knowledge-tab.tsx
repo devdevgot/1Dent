@@ -336,8 +336,8 @@ export function KnowledgeTab({
           <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-foreground">Загрузить файл</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Прайс-лист, презентация, скрипт — до 10 МБ</p>
+                <p className="text-sm font-semibold text-foreground">Загрузить файл или фото</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Прайс-лист, скрипт, фото актуального — до 10 МБ</p>
               </div>
               <button
                 onClick={() => setFileModalOpen(false)}
@@ -362,7 +362,7 @@ export function KnowledgeTab({
                 <>
                   <Upload className="h-6 w-6 text-muted-foreground/60" />
                   <span className="text-xs font-medium">Нажмите, чтобы выбрать файл</span>
-                  <span className="text-[11px] text-muted-foreground/70">PDF, DOCX, TXT, MD</span>
+                  <span className="text-[11px] text-muted-foreground/70">PDF, DOCX, TXT, JPG, PNG, WEBP</span>
                 </>
               )}
             </button>
@@ -370,7 +370,7 @@ export function KnowledgeTab({
             <input
               ref={fileInputRef}
               type="file"
-              accept=".pdf,.docx,.txt,.md"
+              accept=".pdf,.docx,.txt,.md,.jpg,.jpeg,.png,.webp,.gif,.bmp"
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0];
