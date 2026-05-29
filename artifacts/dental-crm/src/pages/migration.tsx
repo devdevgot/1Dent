@@ -17,6 +17,9 @@ import {
   FileCog,
   Upload,
   RotateCcw,
+  Download,
+  Trash2,
+  ShieldAlert,
 } from "lucide-react";
 import {
   useListMigrationJobs,
@@ -545,6 +548,163 @@ function AiImportTab() {
   );
 }
 
+function ExportSection() {
+  const [exporting, setExporting] = useState(false);
+  const [wiping, setWiping] = useState(false);
+  const [confirmWipe, setConfirmWipe] = useState(false);
+  const [done, setDone] = useState<"export" | "wipe" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+
+  const triggerDownload = async (): Promise<boolean> => {
+    const res = await fetch("/api/migration/export", {
+      headers: { Authorization: `Bearer ${token ?? ""}` },
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || `HTTP ${res.status}`);
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const cd = res.headers.get("content-disposition") ?? "";
+    const match = cd.match(/filename="?([^"]+)"?/);
+    a.download = match?.[1] ?? `1dent_export_${new Date().toISOString().split("T")[0]}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    return true;
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    setError(null);
+    setDone(null);
+    try {
+      await triggerDownload();
+      setDone("export");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Ошибка экспорта");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleWipe = async () => {
+    setWiping(true);
+    setError(null);
+    setDone(null);
+    try {
+      await triggerDownload();
+      const res = await fetch("/api/migration/wipe", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token ?? ""}` },
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error((j as { message?: string }).message ?? `HTTP ${res.status}`);
+      }
+      setDone("wipe");
+      setConfirmWipe(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Ошибка при удалении данных");
+    } finally {
+      setWiping(false);
+    }
+  };
+
+  return (
+    <div className="mt-6 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
+      <div>
+        <p className="text-sm font-semibold text-gray-800">Экспорт данных</p>
+        <p className="text-xs text-gray-400 mt-0.5">
+          Скачайте все данные клиники в XLSX — пациенты, карты зубов, планы лечения, процедуры и шаблоны услуг
+        </p>
+      </div>
+
+      {done === "export" && (
+        <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-sm text-emerald-700">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          Файл скачан. Импортируйте его снова в любой момент.
+        </div>
+      )}
+      {done === "wipe" && (
+        <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-sm text-emerald-700">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          Данные экспортированы и удалены. Вы можете восстановить их через импорт.
+        </div>
+      )}
+      {error && (
+        <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          {error}
+        </div>
+      )}
+
+      <div className="flex flex-col sm:flex-row gap-3">
+        <button
+          onClick={() => void handleExport()}
+          disabled={exporting || wiping}
+          className="flex-1 flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm font-medium text-gray-700 disabled:opacity-50 transition-colors"
+        >
+          {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+          Экспортировать XLSX
+        </button>
+        <button
+          onClick={() => { setConfirmWipe(true); setError(null); }}
+          disabled={exporting || wiping}
+          className="flex-1 flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 text-sm font-medium text-red-600 disabled:opacity-50 transition-colors"
+        >
+          <Trash2 className="w-4 h-4" />
+          Экспорт и очистить все данные
+        </button>
+      </div>
+
+      {/* Confirmation dialog */}
+      {confirmWipe && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => !wiping && setConfirmWipe(false)} />
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center shrink-0">
+                <ShieldAlert className="w-5 h-5 text-red-500" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-800">Удалить все данные клиники?</p>
+                <p className="text-xs text-gray-400 mt-0.5">Это действие необратимо</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              Сначала будет скачан XLSX-файл со всеми данными. Затем из системы удалятся все пациенты, карты зубов, планы лечения и процедуры.
+              <br /><br />
+              Для восстановления используйте этот файл через импорт.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmWipe(false)}
+                disabled={wiping}
+                className="flex-1 h-10 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-40"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={() => void handleWipe()}
+                disabled={wiping}
+                className="flex-1 h-10 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {wiping ? <><Loader2 className="w-4 h-4 animate-spin" /> Удаление…</> : <>Скачать и удалить</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function JobHistory() {
   const { data, refetch, isLoading } = useListMigrationJobs();
   const jobs = data?.data.jobs ?? [];
@@ -615,6 +775,7 @@ export default function MigrationPage() {
           <AiImportTab />
         </div>
 
+        <ExportSection />
         <JobHistory />
       </div>
     </div>
