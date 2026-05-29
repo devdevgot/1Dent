@@ -56,17 +56,17 @@ interface QACardProps {
   sub?: React.ReactNode;
   hint?: string;
   level?: StatusLevel;
-  icon: React.ReactNode;
+  icon?: React.ReactNode;
   loading?: boolean;
 }
 
-function QACard({ question, value, sub, hint, level, icon, loading }: QACardProps) {
+function QACard({ question, value, sub, hint, level, loading }: QACardProps) {
   const cfg = level ? statusConfig(level) : null;
   return (
-    <div className={`bg-white rounded-2xl border shadow-sm p-4 flex flex-col gap-1.5 ${cfg ? `${cfg.border}` : "border-border/50"}`}>
-      {/* Status badge row */}
-      <div className="flex items-start justify-between gap-2 mb-0.5">
-        <p className="text-xs font-semibold text-muted-foreground leading-tight">{question}</p>
+    <div className={`bg-white rounded-2xl border shadow-sm p-4 flex flex-col gap-1 ${cfg ? `${cfg.border}` : "border-border/50"}`}>
+      {/* Question — primary focus */}
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-base font-bold text-foreground leading-snug">{question}</p>
         {cfg && (
           <span className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${cfg.badge}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
@@ -74,11 +74,11 @@ function QACard({ question, value, sub, hint, level, icon, loading }: QACardProp
           </span>
         )}
       </div>
-      {/* Main value */}
+      {/* Value — secondary */}
       {loading ? (
-        <div className="h-9 w-24 bg-slate-100 animate-pulse rounded-lg mt-1" />
+        <div className="h-7 w-20 bg-slate-100 animate-pulse rounded-lg mt-2" />
       ) : (
-        <p className="text-3xl font-extrabold text-foreground tracking-tight leading-none mt-0.5">{value}</p>
+        <p className="text-xl font-extrabold text-primary tracking-tight leading-none mt-2">{value}</p>
       )}
       {/* Sub line */}
       {!loading && sub && (
@@ -88,12 +88,6 @@ function QACard({ question, value, sub, hint, level, icon, loading }: QACardProp
       {!loading && hint && (
         <p className={`text-xs mt-1 font-medium ${level === "warn" ? "text-red-600" : level === "normal" ? "text-amber-700" : "text-muted-foreground"}`}>{hint}</p>
       )}
-      {/* Icon pill */}
-      <div className="mt-auto pt-2 flex justify-end">
-        <div className="w-8 h-8 rounded-xl bg-slate-50 border border-border/40 flex items-center justify-center text-muted-foreground">
-          {icon}
-        </div>
-      </div>
     </div>
   );
 }
