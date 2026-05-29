@@ -402,7 +402,7 @@ export function PlanItemDetailModal({
   const tabs = [
     { id: "info" as const, label: "Процедура", icon: Stethoscope },
     { id: "ai" as const, label: "ИИ-анализ", icon: Brain },
-    { id: "files" as const, label: "Документы", icon: Paperclip },
+    { id: "files" as const, label: "Снимки", icon: Paperclip },
   ];
 
   const fileUrl = (path: string) => {
