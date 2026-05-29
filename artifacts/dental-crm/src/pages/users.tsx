@@ -439,27 +439,22 @@ export default function StaffPage() {
                   onClick={() => navigate(`/staff/${doc.doctorId}`)}
                   className="w-full bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-all duration-200 text-left"
                 >
-                  <div className="h-1 w-full bg-primary/30" />
+                  <div className="h-1 w-full bg-primary" />
                   <div className="p-4">
                     <div className="flex items-center gap-3 mb-3">
                       <div
                         className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-sm"
-                        style={{ backgroundColor: AVATAR_COLORS["doctor"] }}
+                        style={{ backgroundColor: "#1f75fe" }}
                       >
                         {doc.doctorName.split(" ").map((w: string) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-bold text-gray-900 truncate">{doc.doctorName}</p>
-                        <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border bg-emerald-100 text-emerald-700 border-emerald-200">
+                        <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border bg-primary/10 text-primary border-primary/20">
                           {t("role.doctor")}
                         </span>
                       </div>
-                      <div className={cn(
-                        "text-sm font-bold px-2.5 py-1 rounded-xl",
-                        doc.nps >= 70 ? "bg-emerald-100 text-emerald-700" :
-                        doc.nps >= 50 ? "bg-amber-100 text-amber-700" :
-                        "bg-red-100 text-red-700",
-                      )}>
+                      <div className="text-sm font-bold px-2.5 py-1 rounded-xl bg-primary/10 text-primary">
                         NPS {doc.nps}
                       </div>
                     </div>
