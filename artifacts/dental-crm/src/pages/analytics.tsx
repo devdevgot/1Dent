@@ -442,16 +442,16 @@ export default function AnalyticsPage() {
 
           {/* ── Section 3: Patient distribution pie ── */}
           {statusData.length > 0 && (
-            <div className="bg-white rounded-2xl border border-border/50 p-5 shadow-sm">
-              <h3 className="text-sm font-bold text-foreground mb-4">На каком этапе находятся пациенты?</h3>
+            <div className="bg-white rounded-3xl border border-gray-100 p-4 shadow-sm">
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">На каком этапе находятся пациенты?</h3>
               <div className="flex flex-col lg:flex-row gap-4 items-center">
-                <div className="w-full lg:w-64 shrink-0">
-                  <ResponsiveContainer width="100%" height={220}>
+                <div className="w-full lg:w-56 shrink-0">
+                  <ResponsiveContainer width="100%" height={200}>
                     <PieChart>
                       <Pie
                         data={statusData}
                         cx="50%" cy="50%"
-                        innerRadius={55} outerRadius={90}
+                        innerRadius={50} outerRadius={80}
                         paddingAngle={2}
                         dataKey="value"
                       >
@@ -463,12 +463,12 @@ export default function AnalyticsPage() {
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="flex-1 grid grid-cols-1 gap-1.5">
+                <div className="flex-1 grid grid-cols-1">
                   {statusData.map((item, index) => (
-                    <div key={item.name} className="flex items-center gap-2 py-1 border-b border-border/20 last:border-0">
-                      <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                      <span className="text-xs text-muted-foreground flex-1">{item.name}</span>
-                      <span className="text-xs font-bold text-foreground">{String(item.value)}</span>
+                    <div key={item.name} className="flex items-center gap-2.5 py-2.5 border-b border-gray-50 last:border-0">
+                      <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                      <span className="text-sm text-gray-600 flex-1">{item.name}</span>
+                      <span className="text-sm font-bold text-gray-800">{String(item.value)}</span>
                     </div>
                   ))}
                 </div>
