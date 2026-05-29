@@ -526,12 +526,12 @@ export default function StaffPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.03 }}
                   className={cn(
-                    "bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-all duration-200",
+                    "bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200",
                     isInactive && "opacity-55",
                   )}
                 >
                   {/* Role accent strip */}
-                  <div className={cn("h-1 w-full", stripColor)} />
+                  <div className={cn("h-1 w-full rounded-t-2xl", stripColor)} />
 
                   <div className="p-4">
                     <div className="flex items-start gap-3">
