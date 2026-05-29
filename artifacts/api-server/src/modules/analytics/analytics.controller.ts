@@ -22,7 +22,32 @@ import {
 } from "@workspace/db";
 import { eq, and, gte, lte, sql, inArray, type SQL } from "drizzle-orm";
 import ExcelJS from "exceljs";
-import PdfPrinter from "pdfmake";
+import { createRequire } from "module";
+import path from "path";
+
+const _require = createRequire(import.meta.url);
+const _pdfmakeDir = path.dirname(_require.resolve("pdfmake/package.json"));
+const _fontsDir = path.join(_pdfmakeDir, "fonts", "Roboto");
+
+interface PdfmakeInstance {
+  fonts: Record<string, Record<string, string>>;
+  setUrlAccessPolicy(fn: ((url: string) => boolean) | undefined): void;
+  createPdf(docDef: unknown): { getBuffer(): Promise<Buffer> };
+}
+
+function getPdfInstance(): PdfmakeInstance {
+  const instance = _require("pdfmake") as PdfmakeInstance;
+  instance.fonts = {
+    Roboto: {
+      normal:      path.join(_fontsDir, "Roboto-Regular.ttf"),
+      bold:        path.join(_fontsDir, "Roboto-Medium.ttf"),
+      italics:     path.join(_fontsDir, "Roboto-Italic.ttf"),
+      bolditalics: path.join(_fontsDir, "Roboto-MediumItalic.ttf"),
+    },
+  };
+  instance.setUrlAccessPolicy(() => false);
+  return instance;
+}
 
 const router: IRouter = Router();
 const repo = new AnalyticsRepository();
@@ -434,16 +459,7 @@ router.get(
         : dateTo ? `по ${fmtDate(dateTo)}`
         : "За всё время";
 
-      const fonts = {
-        Roboto: {
-          normal: "Helvetica",
-          bold: "Helvetica-Bold",
-          italics: "Helvetica-Oblique",
-          bolditalics: "Helvetica-BoldOblique",
-        },
-      };
-
-      const printer = new PdfPrinter(fonts);
+      const pdfmake = getPdfInstance();
 
       const docDefinition = {
         content: [
@@ -549,12 +565,12 @@ router.get(
       const toStr = dateTo ? dateTo.toISOString().slice(0, 10) : "all";
       const filename = `financial-report-${fromStr}-${toStr}.pdf`;
 
+      const pdfBuffer = await pdfmake.createPdf(docDefinition).getBuffer();
+
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-
-      const pdfDoc = printer.createPdfKitDocument(docDefinition as Parameters<typeof printer.createPdfKitDocument>[0]);
-      pdfDoc.pipe(res);
-      pdfDoc.end();
+      res.setHeader("Content-Length", pdfBuffer.length);
+      res.send(pdfBuffer);
     } catch (err) {
       next(err);
     }
