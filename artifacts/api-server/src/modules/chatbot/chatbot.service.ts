@@ -700,6 +700,51 @@ ${dentalContext}
 4. Не придумывай цены, расписание или процедуры, которых нет в карте.`;
 }
 
+/**
+ * Converts a ScriptMindMapData tree into a readable text block for the LLM system prompt.
+ * Returns an empty string if the mind map is empty.
+ */
+function renderMindMapScript(
+  mindMap: { nodes?: { id: string; label: string; content: string; isRoot?: boolean }[]; edges?: { id: string; source: string; target: string; label?: string }[] } | null | undefined,
+): string {
+  if (!mindMap?.nodes?.length) return "";
+
+  const { nodes, edges = [] } = mindMap;
+
+  // Build parent → children adjacency map
+  const childrenMap: Record<string, string[]> = {};
+  const hasParent = new Set<string>();
+  for (const edge of edges) {
+    if (!childrenMap[edge.source]) childrenMap[edge.source] = [];
+    childrenMap[edge.source].push(edge.target);
+    hasParent.add(edge.target);
+  }
+
+  const nodeById = new Map(nodes.map((n) => [n.id, n]));
+  const roots = nodes.filter((n) => !hasParent.has(n.id));
+  if (roots.length === 0) return "";
+
+  function renderNode(id: string, depth: number): string {
+    const node = nodeById.get(id);
+    if (!node) return "";
+    const indent = "  ".repeat(depth);
+    const bullet = depth === 0 ? "▶" : "–";
+    let out = `${indent}${bullet} ${node.label}`;
+    if (node.content?.trim()) out += `\n${indent}  ${node.content.trim()}`;
+    out += "\n";
+    for (const childId of childrenMap[id] ?? []) {
+      out += renderNode(childId, depth + 1);
+    }
+    return out;
+  }
+
+  let text = "\n\nСКРИПТ ДИАЛОГА — МАЙНД-МЭП КЛИНИКИ (это ГЛАВНЫЙ сценарий — строго следуй структуре веток при общении с пациентом):\n";
+  for (const root of roots) {
+    text += renderNode(root.id, 0);
+  }
+  return text;
+}
+
 function buildPlaygroundPrompt(
   settings: Awaited<ReturnType<typeof getSettings>>,
   doctorsWithSlots?: DoctorWithSlots[],
@@ -772,6 +817,8 @@ function buildPlaygroundPrompt(
     ? `\n\nМАТЕРИАЛЫ КЛИНИКИ (сайт, документы — используй для ответов о ценах, услугах и особенностях клиники; информация о врачах берётся ТОЛЬКО из раздела «ВРАЧИ КЛИНИКИ» выше):\n${knowledgeContext}`
     : "";
 
+  const mindMapSection = renderMindMapScript(settings.scriptMindMap);
+
   return `Ты — AI-ассистент стоматологической клиники. Сейчас ТЕСТОВЫЙ РЕЖИМ (симуляция для проверки скрипта).
 Текущее время: ${nowDateStr}, ${nowTimeStr} (Алматы/Астана).
 
@@ -782,7 +829,7 @@ function buildPlaygroundPrompt(
 4. Отвечай коротко: 1–3 предложения максимум
 5. Используй только информацию из материалов клиники и списка врачей — не придумывай
 6. НИКОГДА не предлагай и не подтверждай время которое уже прошло (сейчас ${nowTimeStr}). Если пациент называет прошедшее время сегодня — объясни что оно уже прошло и предложи ближайший доступный слот. Все слоты в списке врачей уже являются будущими.
-${kazakhNote}${doctorsSection}${scriptContext}${knowledgeSection}`;
+${kazakhNote}${doctorsSection}${mindMapSection}${scriptContext}${knowledgeSection}`;
 }
 
 /** Renders the clinic's script blocks (same as playground) for injection into prompts. */
@@ -878,6 +925,7 @@ function buildSystemPrompt(
     : "";
 
   const scriptContext = renderScriptBlocks(settings, opts?.clinicName);
+  const mindMapSection = renderMindMapScript(settings.scriptMindMap);
 
   const doctorsSection = opts?.doctorsContext
     ? `\n\nВРАЧИ КЛИНИКИ (используй ТОЛЬКО этих врачей при подборе специалиста — не придумывай других):\n${opts.doctorsContext}`
@@ -887,7 +935,7 @@ function buildSystemPrompt(
     ? `\n\nМАТЕРИАЛЫ КЛИНИКИ (сайт, документы — используй как источник информации о ценах, услугах и особенностях клиники; информация о врачах берётся ТОЛЬКО из раздела «ВРАЧИ КЛИНИКИ» выше):\n${opts.knowledgeContext}`
     : "";
 
-  return `${base}\n\n${stateGuidance[state] ?? ""}${customExtra}${scriptContext}${doctorsSection}${knowledgeSection}`;
+  return `${base}\n\n${stateGuidance[state] ?? ""}${customExtra}${mindMapSection}${scriptContext}${doctorsSection}${knowledgeSection}`;
 }
 
 // ─── ChatbotService (main export) ───────────────────────────────────────────
