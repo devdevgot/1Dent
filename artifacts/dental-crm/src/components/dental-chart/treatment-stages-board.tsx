@@ -1206,7 +1206,10 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, ac
     id: item.id,
     disabled: !isEditMode || item.status !== "pending",
   });
-  const style = { transform: CSS.Transform.toString(transform), transition };
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    transition: isDragging ? undefined : transition,
+  };
 
   const isPending = item.status === "pending";
   const isCompleted = item.status === "completed";
@@ -1221,8 +1224,8 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, ac
       ref={setNodeRef}
       style={style}
       className={cn(
-        "flex items-center gap-2 px-3 py-2.5 border rounded-xl transition-all select-none",
-        isDragging ? "shadow-xl ring-2 ring-primary/20 z-50 opacity-95 scale-[1.02]" : "shadow-sm",
+        "flex items-center gap-2 px-3 py-2.5 border rounded-xl transition-colors select-none",
+        isDragging ? "shadow-xl ring-2 ring-primary/20 z-50 opacity-95" : "shadow-sm",
         // Active timer — blue highlight
         isActive && "bg-blue-50 border-blue-200",
         // Blocked by another active timer — amber tint, muted
