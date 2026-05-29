@@ -346,7 +346,7 @@ export default function ContractTemplatesPage() {
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-semibold text-gray-700 truncate">{tmpl.name}</p>
                           <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-100 border border-amber-200 px-1.5 py-0.5 rounded-full">
-                            🦷 Удаление зуба
+                            Удаление зуба
                           </span>
                         </div>
                         <p className="text-xs text-gray-400 mt-0.5">
