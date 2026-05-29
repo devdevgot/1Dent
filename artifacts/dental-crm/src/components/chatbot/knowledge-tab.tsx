@@ -114,6 +114,7 @@ export function KnowledgeTab({
   const [addingUrl, setAddingUrl] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [fileModalOpen, setFileModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -285,33 +286,68 @@ export function KnowledgeTab({
         </p>
       </div>
 
-      {/* File upload */}
-      <div className="rounded-xl border border-border/50 bg-card p-4 space-y-3">
-        <p className="text-xs font-medium text-foreground">Загрузить файл</p>
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploadingFile}
-          className="w-full flex items-center justify-center gap-2 h-20 rounded-xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-colors text-sm text-muted-foreground disabled:opacity-50"
-        >
-          {uploadingFile
-            ? <><Loader2 className="h-4 w-4 animate-spin" /> Загрузка…</>
-            : <><Upload className="h-4 w-4" /> PDF, DOCX или TXT</>
-          }
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".pdf,.docx,.txt,.md"
-          className="hidden"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) void handleFileUpload(f);
-          }}
-        />
-        <p className="text-[11px] text-muted-foreground">
-          Прайс-лист, презентация, скрипт вашей клиники — до 10 МБ
-        </p>
-      </div>
+      {/* File upload — compact button */}
+      <button
+        onClick={() => setFileModalOpen(true)}
+        className="flex items-center gap-2 h-9 px-3 rounded-xl border border-border/60 bg-card hover:bg-muted/60 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <Upload className="h-3.5 w-3.5 shrink-0" />
+        Загрузить файл
+      </button>
+
+      {/* File upload modal */}
+      {fileModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => !uploadingFile && setFileModalOpen(false)} />
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Загрузить файл</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Прайс-лист, презентация, скрипт — до 10 МБ</p>
+              </div>
+              <button
+                onClick={() => setFileModalOpen(false)}
+                disabled={uploadingFile}
+                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-muted-foreground disabled:opacity-40"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingFile}
+              className="w-full flex flex-col items-center justify-center gap-2 h-32 rounded-xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-colors text-sm text-muted-foreground disabled:opacity-50"
+            >
+              {uploadingFile ? (
+                <>
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <span className="text-xs">Загрузка…</span>
+                </>
+              ) : (
+                <>
+                  <Upload className="h-6 w-6 text-muted-foreground/60" />
+                  <span className="text-xs font-medium">Нажмите, чтобы выбрать файл</span>
+                  <span className="text-[11px] text-muted-foreground/70">PDF, DOCX, TXT, MD</span>
+                </>
+              )}
+            </button>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.docx,.txt,.md"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) {
+                  void handleFileUpload(f).then(() => setFileModalOpen(false));
+                }
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Sources list */}
       {loading ? (
