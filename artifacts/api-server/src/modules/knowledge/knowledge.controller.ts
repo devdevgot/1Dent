@@ -5,7 +5,7 @@ import { eq, and } from "drizzle-orm";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 import { db } from "@workspace/db";
-import { knowledgeSourcesTable, knowledgeScriptsTable } from "@workspace/db";
+import { knowledgeSourcesTable, knowledgeScriptsTable, clinicsTable } from "@workspace/db";
 import { openrouter, FAST_MODEL, parseLlmJson, withTimeout } from "../../lib/openrouter-client";
 import { ObjectStorageService } from "../../lib/objectStorage";
 
@@ -137,13 +137,16 @@ router.patch("/knowledge/scripts", ownerAdmin, async (req: Request, res: Respons
 router.post("/knowledge/generate", ownerAdmin, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const clinicId = req.user!.clinicId;
-    const sources = await db
-      .select()
-      .from(knowledgeSourcesTable)
-      .where(and(
+
+    const [clinicRow, sources] = await Promise.all([
+      db.select({ name: clinicsTable.name }).from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1),
+      db.select().from(knowledgeSourcesTable).where(and(
         eq(knowledgeSourcesTable.clinicId, clinicId),
         eq(knowledgeSourcesTable.status, "ready"),
-      ));
+      )),
+    ]);
+
+    const realClinicName = clinicRow[0]?.name ?? null;
 
     if (sources.length === 0) {
       return next(new ValidationError("Нет готовых источников знаний. Дождитесь обработки добавленных материалов."));
@@ -153,7 +156,13 @@ router.post("/knowledge/generate", ownerAdmin, async (req: Request, res: Respons
       .map((s) => `=== ИСТОЧНИК: ${s.name} ===\n${(s.extractedText ?? "").slice(0, 10000)}`)
       .join("\n\n---\n\n");
 
+    const clinicNameNote = realClinicName
+      ? `ВАЖНО: Настоящее название клиники — «${realClinicName}». Используй именно это название везде, где нужно упомянуть клинику (в приветствиях, прощаниях, ссылках). НЕ используй названия платформ (2ГИС, Яндекс, Google, Instagram и т.п.) как название клиники.`
+      : `ВАЖНО: В текстах приветствий и прощаний вместо конкретного названия клиники используй плейсхолдер {{clinic_name}} — он будет автоматически заменён на реальное название.`;
+
     const prompt = `Ты — ведущий эксперт по продажам и коммуникациям в стоматологии. Тебе предоставлены все материалы реальной стоматологической клиники. Твоя задача — создать два исчерпывающих, детальных скрипта продаж, которые администратор или чат-бот использует для ведения пациентов от первого касания до записи на приём.
+
+${clinicNameNote}
 
 ═══════════════════════════════
 МАТЕРИАЛЫ КЛИНИКИ:
@@ -268,6 +277,18 @@ const SOCIAL_DOMAINS: Record<string, string> = {
   "t.me": "Telegram",
   "twitter.com": "Twitter/X",
   "x.com": "Twitter/X",
+  // Map/directory services — pages show platform name, not clinic name
+  "2gis.kz": "2ГИС",
+  "2gis.ru": "2ГИС",
+  "go.2gis.com": "2ГИС",
+  "2gis.com": "2ГИС",
+  "maps.google.com": "Google Maps",
+  "google.com": "Google",
+  "www.google.com": "Google",
+  "yandex.ru": "Яндекс.Карты",
+  "yandex.kz": "Яндекс.Карты",
+  "maps.yandex.ru": "Яндекс.Карты",
+  "maps.yandex.kz": "Яндекс.Карты",
 };
 
 async function scrapeUrl(id: string, url: string): Promise<void> {
