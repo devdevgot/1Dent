@@ -30,27 +30,27 @@ import { cn } from "@/lib/utils";
 const ROLES = ["admin", "doctor", "accountant", "warehouse"] as const;
 
 const ROLE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  owner:      { bg: "bg-purple-100", text: "text-purple-700", border: "border-purple-200" },
-  admin:      { bg: "bg-blue-100",   text: "text-blue-700",   border: "border-blue-200" },
-  doctor:     { bg: "bg-emerald-100",text: "text-emerald-700",border: "border-emerald-200" },
-  accountant: { bg: "bg-amber-100",  text: "text-amber-700",  border: "border-amber-200" },
-  warehouse:  { bg: "bg-slate-100",  text: "text-slate-700",  border: "border-slate-200" },
+  owner:      { bg: "bg-primary/10", text: "text-primary", border: "border-primary/20" },
+  admin:      { bg: "bg-primary/10", text: "text-primary", border: "border-primary/20" },
+  doctor:     { bg: "bg-primary/10", text: "text-primary", border: "border-primary/20" },
+  accountant: { bg: "bg-primary/10", text: "text-primary", border: "border-primary/20" },
+  warehouse:  { bg: "bg-primary/10", text: "text-primary", border: "border-primary/20" },
 };
 
 const ROLE_STRIP: Record<string, string> = {
-  owner:      "bg-purple-400",
-  admin:      "bg-blue-400",
-  doctor:     "bg-emerald-400",
-  accountant: "bg-amber-400",
-  warehouse:  "bg-slate-400",
+  owner:      "bg-primary",
+  admin:      "bg-primary",
+  doctor:     "bg-primary",
+  accountant: "bg-primary",
+  warehouse:  "bg-primary",
 };
 
 const AVATAR_COLORS: Record<string, string> = {
-  owner:      "#7c3aed",
-  admin:      "#2563eb",
-  doctor:     "#059669",
-  accountant: "#d97706",
-  warehouse:  "#6b7280",
+  owner:      "#1f75fe",
+  admin:      "#1f75fe",
+  doctor:     "#1f75fe",
+  accountant: "#1f75fe",
+  warehouse:  "#1f75fe",
 };
 
 function initials(name: string) {
