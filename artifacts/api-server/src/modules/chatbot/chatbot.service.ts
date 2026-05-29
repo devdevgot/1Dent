@@ -1894,6 +1894,7 @@ export class ChatbotService {
       followup168hTemplate?: string;
       stepInstructions?: StepInstructions;
       scriptBlocks?: ScriptBlock[];
+      scriptMindMap?: { nodes: { id: string; label: string; content: string; isRoot?: boolean }[]; edges: { id: string; source: string; target: string; label?: string }[] };
     },
   ) {
     const settings = await getSettings(clinicId);
