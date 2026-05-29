@@ -219,7 +219,7 @@ ${knowledgeText}
         messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },
         temperature: 0.4,
-        max_tokens: 6000,
+        max_tokens: 16000,
       }),
       90000,
       "knowledge-generate",
