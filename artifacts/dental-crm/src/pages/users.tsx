@@ -8,13 +8,14 @@ import {
   useUpdateUserStatus,
   useUpdateSalarySettings,
   usePatchUserCapacity,
+  useGetDoctorKpis,
 } from "@workspace/api-client-react";
 import type { User, SalaryType } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  Plus, UserPlus, Search, Phone, Calendar, Briefcase,
+  Plus, Search, Phone, Calendar, Briefcase,
   ChevronRight, ChevronLeft, MoreVertical, UserCheck, UserX,
-  Trash2, Users, SlidersHorizontal,
+  Trash2, Users, SlidersHorizontal, BarChart2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
@@ -166,6 +167,7 @@ export default function StaffPage() {
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
 
+  const [activeTab, setActiveTab] = useState<"staff" | "analytics">("staff");
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [showInactive, setShowInactive] = useState(false);
@@ -179,6 +181,9 @@ export default function StaffPage() {
     { includeInactive: showInactive },
     { query: { queryKey: getListUsersAllQueryKey(showInactive) } },
   );
+
+  const { data: kpiData, isLoading: kpiLoading } = useGetDoctorKpis();
+  const doctors = kpiData?.data?.kpis ?? [];
 
   const rawUsers = (data?.data?.users ?? []) as User[];
 
@@ -282,7 +287,7 @@ export default function StaffPage() {
   return (
     <div className="min-h-full bg-[#f7f8fc] pb-8">
       {/* Header */}
-      <div className="bg-white border-b border-gray-100 px-4 py-4">
+      <div className="bg-white border-b border-gray-100 px-4 pt-4 pb-0">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <button
@@ -294,45 +299,74 @@ export default function StaffPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-base font-bold text-gray-900">Сотрудники</h1>
-                {!isLoading && (
+                {!isLoading && activeTab === "staff" && (
                   <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
                     {filtered.length}
                   </span>
                 )}
               </div>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {showInactive ? "включая неактивных" : "активные"}
-              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowFilters((v) => !v)}
-              className={cn(
-                "relative transition-colors p-1.5",
-                showFilters || search || roleFilter !== "all" || showInactive
-                  ? "text-primary"
-                  : "text-gray-400 hover:text-primary",
-              )}
-              title="Фильтры"
-            >
-              <SlidersHorizontal className="w-4 h-4" />
-              {(search || roleFilter !== "all" || showInactive) && (
-                <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-primary rounded-full" />
-              )}
-            </button>
-            {isOwnerOrAdmin && (
-              <Button onClick={() => setInviteOpen(true)} className="gap-1.5 h-8 text-xs px-2.5 sm:px-3">
-                <Plus className="w-3.5 h-3.5 shrink-0" />
-                <span className="hidden sm:inline">Добавить сотрудника</span>
-              </Button>
+            {activeTab === "staff" && (
+              <>
+                <button
+                  onClick={() => setShowFilters((v) => !v)}
+                  className={cn(
+                    "relative transition-colors p-1.5",
+                    showFilters || search || roleFilter !== "all" || showInactive
+                      ? "text-primary"
+                      : "text-gray-400 hover:text-primary",
+                  )}
+                  title="Фильтры"
+                >
+                  <SlidersHorizontal className="w-4 h-4" />
+                  {(search || roleFilter !== "all" || showInactive) && (
+                    <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-primary rounded-full" />
+                  )}
+                </button>
+                {isOwnerOrAdmin && (
+                  <Button onClick={() => setInviteOpen(true)} className="gap-1.5 h-8 text-xs px-2.5 sm:px-3">
+                    <Plus className="w-3.5 h-3.5 shrink-0" />
+                    <span className="hidden sm:inline">Добавить сотрудника</span>
+                  </Button>
+                )}
+              </>
             )}
           </div>
         </div>
 
-        {/* Filter panel */}
-        {showFilters && (
-          <div className="mt-2.5 space-y-2.5 border-t border-gray-100 pt-2.5">
+        {/* Tab bar */}
+        <div className="flex gap-0">
+          <button
+            onClick={() => setActiveTab("staff")}
+            className={cn(
+              "flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors",
+              activeTab === "staff"
+                ? "border-primary text-primary"
+                : "border-transparent text-gray-400 hover:text-gray-600",
+            )}
+          >
+            <Users className="w-3.5 h-3.5" />
+            Сотрудники
+          </button>
+          <button
+            onClick={() => setActiveTab("analytics")}
+            className={cn(
+              "flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors",
+              activeTab === "analytics"
+                ? "border-primary text-primary"
+                : "border-transparent text-gray-400 hover:text-gray-600",
+            )}
+          >
+            <BarChart2 className="w-3.5 h-3.5" />
+            Аналитика
+          </button>
+        </div>
+
+        {/* Filter panel (staff tab only) */}
+        {activeTab === "staff" && showFilters && (
+          <div className="mt-2.5 space-y-2.5 border-t border-gray-100 pt-2.5 pb-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
@@ -379,8 +413,88 @@ export default function StaffPage() {
         )}
       </div>
 
-      {/* Staff list */}
-      <div className="px-4 pt-3 space-y-2">
+      {/* ── Analytics tab ──────────────────────────────────────── */}
+      {activeTab === "analytics" && (
+        <div className="px-4 pt-4 pb-8">
+          {kpiLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+            </div>
+          ) : doctors.length === 0 ? (
+            <div className="text-center py-16">
+              <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                <BarChart2 className="w-8 h-8 text-gray-300" />
+              </div>
+              <p className="text-sm font-bold text-gray-500">Нет данных по врачам</p>
+              <p className="text-xs text-gray-300 mt-1">Добавьте врача и назначьте процедуры</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {doctors.map((doc, i) => (
+                <motion.button
+                  key={doc.doctorId}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                  onClick={() => navigate(`/staff/${doc.doctorId}`)}
+                  className="w-full bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-all duration-200 text-left"
+                >
+                  <div className="h-1 w-full bg-primary/30" />
+                  <div className="p-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-sm"
+                        style={{ backgroundColor: AVATAR_COLORS["doctor"] }}
+                      >
+                        {doc.doctorName.split(" ").map((w: string) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-gray-900 truncate">{doc.doctorName}</p>
+                        <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border bg-emerald-100 text-emerald-700 border-emerald-200">
+                          {t("role.doctor")}
+                        </span>
+                      </div>
+                      <div className={cn(
+                        "text-sm font-bold px-2.5 py-1 rounded-xl",
+                        doc.nps >= 70 ? "bg-emerald-100 text-emerald-700" :
+                        doc.nps >= 50 ? "bg-amber-100 text-amber-700" :
+                        "bg-red-100 text-red-700",
+                      )}>
+                        NPS {doc.nps}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="bg-gray-50 rounded-xl px-3 py-2 text-center">
+                        <p className="text-[10px] text-gray-400 mb-0.5">Пациентов</p>
+                        <p className="text-sm font-bold text-gray-800">{doc.patientsCount}</p>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl px-3 py-2 text-center">
+                        <p className="text-[10px] text-gray-400 mb-0.5">Процедур</p>
+                        <p className="text-sm font-bold text-gray-800">{doc.proceduresCount}</p>
+                      </div>
+                      <div className="bg-primary/5 rounded-xl px-3 py-2 text-center">
+                        <p className="text-[10px] text-primary/70 mb-0.5">Выручка</p>
+                        <p className="text-sm font-bold text-primary">{(doc.revenueTotal / 1000).toFixed(0)}K ₸</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between mt-2.5 px-1">
+                      <span className="text-xs text-gray-400">
+                        Средний чек: <span className="font-semibold text-gray-600">{Math.round(doc.averageCheck).toLocaleString("ru-KZ")} ₸</span>
+                      </span>
+                      <span className="text-xs text-primary font-semibold flex items-center gap-0.5">
+                        Подробнее <ChevronRight className="w-3.5 h-3.5" />
+                      </span>
+                    </div>
+                  </div>
+                </motion.button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Staff list tab ─────────────────────────────────────── */}
+      {activeTab === "staff" && <div className="px-4 pt-3 space-y-2">
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
             <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
@@ -503,7 +617,7 @@ export default function StaffPage() {
             })}
           </AnimatePresence>
         )}
-      </div>
+      </div>}
 
       {/* Invite staff dialog (for new staff) */}
       <InviteStaffDialog

@@ -1,1 +1,1 @@
-- [Dental AI dedup](dental-ai-dedup.md) — AI analysis uses in-memory hash cache to skip OpenRouter calls when teeth data hasn't changed.
+- [API client type exports](api-client-type-exports.md) — not all schema types re-exported from main @workspace/api-client-react index; use type inference instead.
