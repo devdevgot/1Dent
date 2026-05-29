@@ -36,6 +36,14 @@ const ROLE_COLORS: Record<string, { bg: string; text: string; border: string }> 
   warehouse:  { bg: "bg-slate-100",  text: "text-slate-700",  border: "border-slate-200" },
 };
 
+const ROLE_STRIP: Record<string, string> = {
+  owner:      "bg-purple-400",
+  admin:      "bg-blue-400",
+  doctor:     "bg-emerald-400",
+  accountant: "bg-amber-400",
+  warehouse:  "bg-slate-400",
+};
+
 const AVATAR_COLORS: Record<string, string> = {
   owner:      "#7c3aed",
   admin:      "#2563eb",
@@ -395,6 +403,8 @@ export default function StaffPage() {
               const isSelf = u.id === currentUser?.id;
               const isInactive = u.isActive === false;
 
+              const stripColor = ROLE_STRIP[u.role] ?? "bg-slate-400";
+
               return (
                 <motion.div
                   key={u.id}
@@ -402,80 +412,87 @@ export default function StaffPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.03 }}
                   className={cn(
-                    "bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:shadow-md transition-shadow",
-                    isInactive && "opacity-60",
+                    "bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-all duration-200",
+                    isInactive && "opacity-55",
                   )}
                 >
-                  <div className="flex items-start gap-3">
-                    <div
-                      className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-sm shrink-0"
-                      style={{ backgroundColor: avatarColor }}
-                    >
-                      {initials(u.name)}
-                    </div>
+                  {/* Role accent strip */}
+                  <div className={cn("h-1 w-full", stripColor)} />
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <p className="text-sm font-bold text-gray-900 truncate">{u.name}</p>
-                            {isSelf && (
-                              <span className="text-[10px] bg-primary/10 text-primary font-bold px-1.5 py-0.5 rounded-full">
-                                Вы
-                              </span>
-                            )}
-                            {isInactive && (
-                              <span className="text-[10px] bg-gray-100 text-gray-500 font-bold px-1.5 py-0.5 rounded-full">
-                                Неактивен
-                              </span>
-                            )}
-                          </div>
-                          <span className={cn(
-                            "inline-block mt-0.5 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border",
-                            colors.bg, colors.text, colors.border,
-                          )}>
-                            {t(`role.${u.role}`)}
-                          </span>
-                        </div>
-
-                        <UserActionMenu
-                          user={u}
-                          currentUserId={currentUser?.id ?? ""}
-                          currentRole={currentUser?.role ?? ""}
-                          onEdit={() => { setEditingUser(u); setEditDialogOpen(true); }}
-                          onDelete={() => setDeleteConfirmId(u.id)}
-                          onToggleActive={() => statusMutation.mutate({ id: u.id, isActive: !u.isActive })}
-                          onNavigate={() => navigate(`/staff/${u.id}`)}
-                        />
+                  <div className="p-4">
+                    <div className="flex items-start gap-3">
+                      {/* Circular avatar */}
+                      <div
+                        className="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-md ring-2 ring-white"
+                        style={{ backgroundColor: avatarColor }}
+                      >
+                        {initials(u.name)}
                       </div>
 
-                      <div className="mt-2 space-y-1">
-                        {u.position && (
-                          <div className="flex items-center gap-1.5">
-                            <Briefcase className="w-3 h-3 text-gray-300 shrink-0" />
-                            <span className="text-xs text-gray-500">{u.position}</span>
-                            {u.specialty && <span className="text-xs text-gray-400">· {u.specialty}</span>}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            {/* Name row */}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className="text-sm font-bold text-gray-900 truncate">{u.name}</p>
+                              {isSelf && (
+                                <span className="text-[10px] bg-primary/10 text-primary font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                                  Вы
+                                </span>
+                              )}
+                              {isInactive && (
+                                <span className="text-[10px] bg-gray-100 text-gray-400 font-semibold px-1.5 py-0.5 rounded-full shrink-0">
+                                  Неактивен
+                                </span>
+                              )}
+                            </div>
+                            {/* Role + position inline */}
+                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                              <span className={cn(
+                                "inline-block text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border shrink-0",
+                                colors.bg, colors.text, colors.border,
+                              )}>
+                                {t(`role.${u.role}`)}
+                              </span>
+                              {(u.position || u.specialty) && (
+                                <span className="text-xs text-gray-400 truncate">
+                                  {u.specialty || u.position}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                        )}
-                        {u.phone && (
-                          <div className="flex items-center gap-1.5">
-                            <Phone className="w-3 h-3 text-gray-300 shrink-0" />
-                            <span className="text-xs text-gray-500">{u.phone}</span>
-                          </div>
-                        )}
-                        {u.hireDate && (
-                          <div className="flex items-center gap-1.5">
-                            <Calendar className="w-3 h-3 text-gray-300 shrink-0" />
-                            <span className="text-xs text-gray-400">
-                              с {fmtHireDate(u.hireDate)}
-                            </span>
-                          </div>
-                        )}
-                        {u.salarySettings && (
-                          <div className="mt-1 inline-block bg-gray-50 rounded-lg px-2.5 py-1">
-                            <span className="text-[11px] font-semibold text-gray-600">
-                              {fmtSalaryShort(u)}
-                            </span>
+
+                          <UserActionMenu
+                            user={u}
+                            currentUserId={currentUser?.id ?? ""}
+                            currentRole={currentUser?.role ?? ""}
+                            onEdit={() => { setEditingUser(u); setEditDialogOpen(true); }}
+                            onDelete={() => setDeleteConfirmId(u.id)}
+                            onToggleActive={() => statusMutation.mutate({ id: u.id, isActive: !u.isActive })}
+                            onNavigate={() => navigate(`/staff/${u.id}`)}
+                          />
+                        </div>
+
+                        {/* Details row — horizontal */}
+                        {(u.phone || u.hireDate || u.salarySettings) && (
+                          <div className="mt-2.5 flex items-center gap-3 flex-wrap">
+                            {u.phone && (
+                              <span className="flex items-center gap-1 text-xs text-gray-400">
+                                <Phone className="w-3 h-3 shrink-0" />
+                                {u.phone}
+                              </span>
+                            )}
+                            {u.hireDate && (
+                              <span className="flex items-center gap-1 text-xs text-gray-400">
+                                <Calendar className="w-3 h-3 shrink-0" />
+                                с {fmtHireDate(u.hireDate)}
+                              </span>
+                            )}
+                            {u.salarySettings && (
+                              <span className="flex items-center gap-1 text-[11px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-lg">
+                                {fmtSalaryShort(u)}
+                              </span>
+                            )}
                           </div>
                         )}
                       </div>
