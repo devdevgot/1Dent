@@ -107,8 +107,8 @@ function ProgressBar({ value, max }: { value: number; max: number }) {
   return (
     <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
       <div
-        className="h-1.5 rounded-full transition-all duration-700"
-        style={{ width: `${pct}%`, background: "linear-gradient(to right, #7c3aed, #a855f7)" }}
+        className="h-1.5 rounded-full bg-primary transition-all duration-700"
+        style={{ width: `${pct}%` }}
       />
     </div>
   );
@@ -147,20 +147,20 @@ function JobCard({ job: initialJob }: { job: MigrationJob }) {
     <div className={`relative bg-white rounded-2xl border overflow-hidden transition-shadow hover:shadow-md ${
       job.status === "done" ? "border-emerald-100" :
       job.status === "failed" ? "border-red-100" :
-      job.status === "processing" ? "border-violet-100" :
+      job.status === "processing" ? "border-primary/20" :
       "border-gray-100"
     }`}>
       <div className={`absolute left-0 top-0 bottom-0 w-1 ${
         job.status === "done" ? "bg-emerald-400" :
         job.status === "failed" ? "bg-red-400" :
-        job.status === "processing" ? "bg-violet-400" :
+        job.status === "processing" ? "bg-primary" :
         "bg-amber-400"
       }`} />
       <div className="pl-4 pr-4 pt-4 pb-3">
         <div className="flex items-start justify-between gap-2 mb-3">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center shrink-0">
-              <Sparkles className="w-4 h-4 text-violet-500" />
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <Sparkles className="w-4 h-4 text-primary" />
             </div>
             <div>
               <p className="text-sm font-semibold text-gray-800">ИИ-импорт</p>
@@ -318,18 +318,18 @@ function AiImportTab() {
             <div key={s.key} className="flex items-center flex-1 last:flex-none">
               <div className="flex items-center gap-2">
                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all ${
-                  done ? "bg-violet-600 text-white" :
-                  active ? "bg-violet-100 text-violet-700 ring-2 ring-violet-300" :
+                  done ? "bg-primary text-white" :
+                  active ? "bg-primary/10 text-primary ring-2 ring-primary/30" :
                   "bg-gray-100 text-gray-400"
                 }`}>
                   {done ? <Check className="w-3.5 h-3.5" /> : i + 1}
                 </div>
-                <span className={`text-xs font-medium hidden sm:block ${active ? "text-violet-700" : done ? "text-violet-500" : "text-gray-400"}`}>
+                <span className={`text-xs font-medium hidden sm:block ${active ? "text-primary" : done ? "text-primary/70" : "text-gray-400"}`}>
                   {s.label}
                 </span>
               </div>
               {i < STEPS.length - 1 && (
-                <div className={`flex-1 h-px mx-3 transition-colors ${i < stepIdx ? "bg-violet-300" : "bg-gray-200"}`} />
+                <div className={`flex-1 h-px mx-3 transition-colors ${i < stepIdx ? "bg-primary/40" : "bg-gray-200"}`} />
               )}
             </div>
           );
@@ -345,8 +345,8 @@ function AiImportTab() {
             onDrop={handleDrop}
             className={`relative rounded-2xl border-2 border-dashed transition-all cursor-pointer group ${
               dragging
-                ? "border-violet-400 bg-violet-50 scale-[1.01]"
-                : "border-gray-200 bg-gradient-to-br from-gray-50 to-violet-50/30 hover:border-violet-300 hover:from-violet-50/50 hover:to-violet-50"
+                ? "border-primary bg-primary/5 scale-[1.01]"
+                : "border-gray-200 bg-gradient-to-br from-gray-50 to-blue-50/30 hover:border-primary/40 hover:from-blue-50/40 hover:to-blue-50"
             }`}
           >
             <input
@@ -357,7 +357,7 @@ function AiImportTab() {
             />
             <div className="flex flex-col items-center gap-4 py-14 px-6 text-center">
               <div className="w-16 h-16 rounded-2xl bg-white shadow-sm border border-gray-100 flex items-center justify-center group-hover:shadow-md transition-shadow">
-                <Upload className="w-7 h-7 text-violet-400" />
+                <Upload className="w-7 h-7 text-primary" />
               </div>
               <div>
                 <p className="text-sm font-semibold text-gray-700">Перетащите файл сюда</p>
@@ -379,11 +379,11 @@ function AiImportTab() {
       {step === "analyze" && analyzeMutation.isPending && (
         <div className="flex flex-col items-center gap-5 py-16">
           <div className="relative">
-            <div className="w-20 h-20 rounded-2xl bg-violet-50 flex items-center justify-center">
-              <Sparkles className="w-9 h-9 text-violet-400 animate-pulse" />
+            <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <Sparkles className="w-9 h-9 text-primary animate-pulse" />
             </div>
             <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-white border border-gray-100 flex items-center justify-center shadow-sm">
-              <Loader2 className="w-4 h-4 text-violet-500 animate-spin" />
+              <Loader2 className="w-4 h-4 text-primary animate-spin" />
             </div>
           </div>
           <div className="text-center">
@@ -392,7 +392,7 @@ function AiImportTab() {
           </div>
           {file && (
             <div className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-100 rounded-full text-xs text-gray-600 shadow-sm">
-              <FileSpreadsheet className="w-3.5 h-3.5 text-violet-400" />
+              <FileSpreadsheet className="w-3.5 h-3.5 text-primary" />
               {file.name}
             </div>
           )}
@@ -406,10 +406,10 @@ function AiImportTab() {
           {/* File pill + detected categories */}
           <div className="flex items-center gap-3 flex-wrap">
             {file && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-violet-50 border border-violet-100 rounded-full text-xs text-violet-700 font-medium">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full text-xs text-primary font-medium">
                 <FileSpreadsheet className="w-3.5 h-3.5" />
                 {file.name}
-                <span className="text-violet-400">·</span>
+                <span className="text-primary/50">·</span>
                 {analysis.totalRows} строк
               </div>
             )}
@@ -443,7 +443,7 @@ function AiImportTab() {
                   <select
                     value={mapping[header] ?? ""}
                     onChange={(e) => setMapping((m) => ({ ...m, [header]: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-lg pl-2.5 pr-7 py-1.5 text-sm bg-white text-gray-700 focus:ring-2 focus:ring-violet-300 focus:border-violet-400 outline-none appearance-none"
+                    className="w-full border border-gray-200 rounded-lg pl-2.5 pr-7 py-1.5 text-sm bg-white text-gray-700 focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none appearance-none"
                   >
                     {AI_FIELD_OPTIONS.map((opt) => (
                       <option key={opt} value={opt}>{AI_FIELD_LABELS[opt]}</option>
@@ -501,8 +501,7 @@ function AiImportTab() {
             <button
               onClick={handleImport}
               disabled={confirmMutation.isPending}
-              className="flex-1 flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-sm text-white transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ background: "linear-gradient(135deg, #7c3aed, #a855f7)" }}
+              className="flex-1 flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-sm text-white bg-primary hover:opacity-90 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {confirmMutation.isPending ? (
                 <><Loader2 className="w-4 h-4 animate-spin" /> Запуск…</>
@@ -716,7 +715,7 @@ function JobHistory() {
 
   if (isLoading) return (
     <div className="flex justify-center py-10">
-      <Loader2 className="w-6 h-6 text-violet-400 animate-spin" />
+      <Loader2 className="w-6 h-6 text-primary animate-spin" />
     </div>
   );
 
@@ -729,7 +728,7 @@ function JobHistory() {
         </div>
         <button
           onClick={() => refetch()}
-          className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-violet-600 transition-colors px-2 py-1.5 rounded-lg hover:bg-violet-50"
+          className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-primary/5"
         >
           <RefreshCw className="w-3.5 h-3.5" />
           Обновить
