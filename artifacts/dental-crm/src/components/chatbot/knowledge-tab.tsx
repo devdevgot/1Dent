@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Globe, FileText, Trash2, Loader2, Plus, Sparkles, CheckCircle2,
-  AlertCircle, Clock, X, Upload, AlignLeft,
+  AlertCircle, Clock, X, Upload, AlignLeft, ChevronDown, ChevronUp,
   BookOpen, GitBranch, Maximize2,
 } from "lucide-react";
 import { ScriptMindMap, ScriptMindMapModal, type ScriptMindMapData } from "./script-mindmap";
@@ -119,6 +119,7 @@ export function KnowledgeTab({
   const [textName, setTextName] = useState("");
   const [textContent, setTextContent] = useState("");
   const [addingText, setAddingText] = useState(false);
+  const [addSourceOpen, setAddSourceOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -274,6 +275,8 @@ export function KnowledgeTab({
   const readySources = sources.filter((s) => s.status === "ready");
   const pendingSources = sources.filter((s) => s.status === "pending");
 
+  const showAddForms = sources.length === 0 || addSourceOpen;
+
   return (
     <div className="space-y-4 max-w-2xl">
 
@@ -285,49 +288,54 @@ export function KnowledgeTab({
         </p>
       </div>
 
-      {/* URL input */}
-      <div className="rounded-xl border border-border/50 bg-card p-4 space-y-3">
-        <p className="text-xs font-medium text-foreground">Добавить ссылку</p>
-        <div className="flex gap-2">
-          <input
-            type="url"
-            placeholder="https://example.com"
-            value={urlInput}
-            onChange={(e) => setUrlInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") void handleAddUrl(); }}
-            className="flex-1 h-9 rounded-xl border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-          />
-          <button
-            onClick={() => void handleAddUrl()}
-            disabled={addingUrl || !urlInput.trim()}
-            className="flex items-center gap-1.5 h-9 px-3 rounded-xl bg-primary text-primary-foreground text-xs font-medium disabled:opacity-50 hover:opacity-90 transition-opacity shrink-0"
-          >
-            {addingUrl ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-            Добавить
-          </button>
-        </div>
-        <p className="text-[11px] text-muted-foreground">
-          Сайт клиники, Instagram, 2GIS, отзывы — любая публичная страница
-        </p>
-      </div>
+      {/* Add-source forms — visible when no sources yet, or manually opened */}
+      {showAddForms && (
+        <>
+          {/* URL input */}
+          <div className="rounded-xl border border-border/50 bg-card p-4 space-y-3">
+            <p className="text-xs font-medium text-foreground">Добавить ссылку</p>
+            <div className="flex gap-2">
+              <input
+                type="url"
+                placeholder="https://example.com"
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") void handleAddUrl(); }}
+                className="flex-1 h-9 rounded-xl border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+              <button
+                onClick={() => void handleAddUrl()}
+                disabled={addingUrl || !urlInput.trim()}
+                className="flex items-center gap-1.5 h-9 px-3 rounded-xl bg-primary text-primary-foreground text-xs font-medium disabled:opacity-50 hover:opacity-90 transition-opacity shrink-0"
+              >
+                {addingUrl ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                Добавить
+              </button>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Сайт клиники, Instagram, 2GIS, отзывы — любая публичная страница
+            </p>
+          </div>
 
-      {/* Secondary action buttons row */}
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => setFileModalOpen(true)}
-          className="flex items-center gap-2 h-9 px-3 rounded-xl border border-border/60 bg-card hover:bg-muted/60 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <Upload className="h-3.5 w-3.5 shrink-0" />
-          Загрузить файл
-        </button>
-        <button
-          onClick={() => setTextModalOpen(true)}
-          className="flex items-center gap-2 h-9 px-3 rounded-xl border border-border/60 bg-card hover:bg-muted/60 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <AlignLeft className="h-3.5 w-3.5 shrink-0" />
-          Добавить текст
-        </button>
-      </div>
+          {/* File / text buttons */}
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setFileModalOpen(true)}
+              className="flex items-center gap-2 h-9 px-3 rounded-xl border border-border/60 bg-card hover:bg-muted/60 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Upload className="h-3.5 w-3.5 shrink-0" />
+              Загрузить файл / фото
+            </button>
+            <button
+              onClick={() => setTextModalOpen(true)}
+              className="flex items-center gap-2 h-9 px-3 rounded-xl border border-border/60 bg-card hover:bg-muted/60 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <AlignLeft className="h-3.5 w-3.5 shrink-0" />
+              Добавить текст
+            </button>
+          </div>
+        </>
+      )}
 
       {/* File upload modal */}
       {fileModalOpen && (
@@ -510,6 +518,19 @@ export function KnowledgeTab({
             })}
           </div>
         </div>
+      )}
+
+      {/* "Add source" toggle — shown only when sources already exist */}
+      {sources.length > 0 && (
+        <button
+          onClick={() => setAddSourceOpen((v) => !v)}
+          className="w-full flex items-center justify-center gap-2 h-9 rounded-xl border border-dashed border-border/70 bg-card hover:bg-muted/50 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {addSourceOpen
+            ? <><ChevronUp className="h-3.5 w-3.5" /> Скрыть формы добавления</>
+            : <><Plus className="h-3.5 w-3.5" /> Добавить источник</>
+          }
+        </button>
       )}
 
       {/* Generate button */}
