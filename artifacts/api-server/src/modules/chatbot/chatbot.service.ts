@@ -818,6 +818,8 @@ function buildPlaygroundPrompt(
     : "";
 
   const mindMapSection = renderMindMapScript(settings.scriptMindMap);
+  // When a mind map exists it IS the script — skip standard/custom blocks to avoid conflict
+  const effectiveScriptContext = mindMapSection ? "" : scriptContext;
 
   return `Ты — AI-ассистент стоматологической клиники. Сейчас ТЕСТОВЫЙ РЕЖИМ (симуляция для проверки скрипта).
 Текущее время: ${nowDateStr}, ${nowTimeStr} (Алматы/Астана).
@@ -829,7 +831,7 @@ function buildPlaygroundPrompt(
 4. Отвечай коротко: 1–3 предложения максимум
 5. Используй только информацию из материалов клиники и списка врачей — не придумывай
 6. НИКОГДА не предлагай и не подтверждай время которое уже прошло (сейчас ${nowTimeStr}). Если пациент называет прошедшее время сегодня — объясни что оно уже прошло и предложи ближайший доступный слот. Все слоты в списке врачей уже являются будущими.
-${kazakhNote}${doctorsSection}${mindMapSection}${scriptContext}${knowledgeSection}`;
+${kazakhNote}${doctorsSection}${mindMapSection}${effectiveScriptContext}${knowledgeSection}`;
 }
 
 /** Renders the clinic's script blocks (same as playground) for injection into prompts. */
@@ -926,6 +928,8 @@ function buildSystemPrompt(
 
   const scriptContext = renderScriptBlocks(settings, opts?.clinicName);
   const mindMapSection = renderMindMapScript(settings.scriptMindMap);
+  // When a mind map exists it IS the script — skip standard/custom blocks to avoid conflict
+  const effectiveScriptContext = mindMapSection ? "" : scriptContext;
 
   const doctorsSection = opts?.doctorsContext
     ? `\n\nВРАЧИ КЛИНИКИ (используй ТОЛЬКО этих врачей при подборе специалиста — не придумывай других):\n${opts.doctorsContext}`
@@ -935,7 +939,7 @@ function buildSystemPrompt(
     ? `\n\nМАТЕРИАЛЫ КЛИНИКИ (сайт, документы — используй как источник информации о ценах, услугах и особенностях клиники; информация о врачах берётся ТОЛЬКО из раздела «ВРАЧИ КЛИНИКИ» выше):\n${opts.knowledgeContext}`
     : "";
 
-  return `${base}\n\n${stateGuidance[state] ?? ""}${customExtra}${mindMapSection}${scriptContext}${doctorsSection}${knowledgeSection}`;
+  return `${base}\n\n${stateGuidance[state] ?? ""}${customExtra}${mindMapSection}${effectiveScriptContext}${doctorsSection}${knowledgeSection}`;
 }
 
 // ─── ChatbotService (main export) ───────────────────────────────────────────
