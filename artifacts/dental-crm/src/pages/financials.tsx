@@ -368,7 +368,6 @@ export default function FinancialsPage() {
                 onClick={() => { setEditingExpense(null); setExpenseDialogOpen(true); }}
                 className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:bg-primary/10 px-2.5 py-1.5 rounded-lg transition-colors"
               >
-                <Plus className="w-3.5 h-3.5" />
                 {t("expenses.add")}
               </button>
             )}
