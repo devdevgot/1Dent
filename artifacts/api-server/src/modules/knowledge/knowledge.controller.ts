@@ -93,6 +93,32 @@ router.post("/knowledge/file", ownerAdmin, async (req: Request, res: Response, n
   } catch (err) { next(err); }
 });
 
+// ── POST /api/knowledge/text ──────────────────────────────────────────────────
+router.post("/knowledge/text", ownerAdmin, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const parsed = z.object({
+      name: z.string().min(1).max(200),
+      text: z.string().min(1).max(50000),
+    }).safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Invalid body"));
+
+    const { name, text } = parsed.data;
+    const id = randomUUID();
+
+    await db.insert(knowledgeSourcesTable).values({
+      id,
+      clinicId: req.user!.clinicId,
+      type: "text",
+      name,
+      extractedText: text,
+      status: "ready",
+    });
+
+    const [source] = await db.select().from(knowledgeSourcesTable).where(eq(knowledgeSourcesTable.id, id)).limit(1);
+    res.status(201).json({ success: true, data: { source } });
+  } catch (err) { next(err); }
+});
+
 // ── DELETE /api/knowledge/:id ─────────────────────────────────────────────────
 router.delete("/knowledge/:id", ownerAdmin, async (req: Request, res: Response, next: NextFunction) => {
   try {

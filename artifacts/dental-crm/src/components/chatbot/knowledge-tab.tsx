@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Globe, FileText, Trash2, Loader2, Plus, Sparkles, CheckCircle2,
-  AlertCircle, Clock, X, Upload,
+  AlertCircle, Clock, X, Upload, AlignLeft,
   BookOpen, GitBranch, Maximize2,
 } from "lucide-react";
 import { ScriptMindMap, ScriptMindMapModal, type ScriptMindMapData } from "./script-mindmap";
@@ -115,6 +115,10 @@ export function KnowledgeTab({
   const [generating, setGenerating] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [fileModalOpen, setFileModalOpen] = useState(false);
+  const [textModalOpen, setTextModalOpen] = useState(false);
+  const [textName, setTextName] = useState("");
+  const [textContent, setTextContent] = useState("");
+  const [addingText, setAddingText] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -192,6 +196,27 @@ export function KnowledgeTab({
     } finally {
       setUploadingFile(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleAddText = async () => {
+    if (!textContent.trim()) return;
+    setAddingText(true);
+    try {
+      const name = textName.trim() || "Текстовый источник";
+      const res = await apiFetch("/api/knowledge/text", {
+        method: "POST",
+        body: JSON.stringify({ name, text: textContent.trim() }),
+      });
+      setSources((prev) => [...prev, res.data.source as KnowledgeSource]);
+      setTextName("");
+      setTextContent("");
+      setTextModalOpen(false);
+      toast({ title: "Текст добавлен", description: "Источник готов для генерации скриптов" });
+    } catch (err) {
+      toast({ title: "Ошибка", description: String(err), variant: "destructive" });
+    } finally {
+      setAddingText(false);
     }
   };
 
@@ -286,14 +311,23 @@ export function KnowledgeTab({
         </p>
       </div>
 
-      {/* File upload — compact button */}
-      <button
-        onClick={() => setFileModalOpen(true)}
-        className="flex items-center gap-2 h-9 px-3 rounded-xl border border-border/60 bg-card hover:bg-muted/60 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <Upload className="h-3.5 w-3.5 shrink-0" />
-        Загрузить файл
-      </button>
+      {/* Secondary action buttons row */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => setFileModalOpen(true)}
+          className="flex items-center gap-2 h-9 px-3 rounded-xl border border-border/60 bg-card hover:bg-muted/60 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Upload className="h-3.5 w-3.5 shrink-0" />
+          Загрузить файл
+        </button>
+        <button
+          onClick={() => setTextModalOpen(true)}
+          className="flex items-center gap-2 h-9 px-3 rounded-xl border border-border/60 bg-card hover:bg-muted/60 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <AlignLeft className="h-3.5 w-3.5 shrink-0" />
+          Добавить текст
+        </button>
+      </div>
 
       {/* File upload modal */}
       {fileModalOpen && (
@@ -349,6 +383,52 @@ export function KnowledgeTab({
         </div>
       )}
 
+      {/* Text modal */}
+      {textModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => !addingText && setTextModalOpen(false)} />
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Добавить текст</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Адреса, расписание, прайс — скопируйте из Instagram, 2GIS или напишите вручную</p>
+              </div>
+              <button
+                onClick={() => setTextModalOpen(false)}
+                disabled={addingText}
+                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-muted-foreground disabled:opacity-40"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <input
+              type="text"
+              placeholder="Название (например: Адреса клиники)"
+              value={textName}
+              onChange={(e) => setTextName(e.target.value)}
+              className="w-full h-9 rounded-xl border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+
+            <textarea
+              placeholder={"Вставьте или напишите текст…\n\nНапример:\nАдреса клиники:\n• ул. Абая 12 — пн-пт 9:00–19:00\n• ул. Навои 5 — пн-сб 9:00–20:00"}
+              value={textContent}
+              onChange={(e) => setTextContent(e.target.value)}
+              rows={7}
+              className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
+            />
+
+            <button
+              onClick={() => void handleAddText()}
+              disabled={addingText || !textContent.trim()}
+              className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-50 hover:opacity-90 transition-opacity"
+            >
+              {addingText ? <><Loader2 className="h-4 w-4 animate-spin" /> Добавление…</> : <>Добавить источник</>}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Sources list */}
       {loading ? (
         <div className="flex justify-center py-6">
@@ -363,40 +443,71 @@ export function KnowledgeTab({
             )}
           </p>
           <div className="divide-y divide-border/40 rounded-xl border border-border/50 bg-card overflow-hidden">
-            {sources.map((source) => (
-              <div key={source.id} className="flex items-center gap-3 px-4 py-2.5">
-                <div className="shrink-0">
-                  {source.type === "url"
-                    ? <Globe className="h-3.5 w-3.5 text-blue-500" />
-                    : <FileText className="h-3.5 w-3.5 text-violet-500" />
-                  }
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-foreground truncate">{source.name}</p>
-                  {source.url && (
-                    <p className="text-[10px] text-muted-foreground truncate">{source.url}</p>
-                  )}
-                </div>
-                <div className="shrink-0 flex items-center gap-1.5">
-                  {source.status === "pending" && <Clock className="h-3.5 w-3.5 text-amber-500 animate-pulse" />}
-                  {source.status === "ready" && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />}
-                  {source.status === "error" && (
-                    <div className="flex items-center gap-1.5 max-w-[140px]">
-                      <AlertCircle className="h-3.5 w-3.5 text-red-500 shrink-0" />
-                      <span className="text-[10px] text-red-500 truncate" title={friendlyError(source.errorMessage)}>
-                        {friendlyError(source.errorMessage)}
-                      </span>
+            {sources.map((source) => {
+              const isNoScrape = source.type === "url" && source.url && (() => {
+                try {
+                  const h = new URL(source.url).hostname.toLowerCase();
+                  return ["instagram.com","www.instagram.com","facebook.com","www.facebook.com",
+                    "tiktok.com","www.tiktok.com","vk.com","www.vk.com","t.me",
+                    "twitter.com","x.com","2gis.kz","2gis.ru","go.2gis.com","2gis.com",
+                    "maps.google.com","yandex.ru","yandex.kz","maps.yandex.ru","maps.yandex.kz",
+                  ].includes(h);
+                } catch { return false; }
+              })();
+              return (
+                <div key={source.id} className="flex flex-col gap-1 px-4 py-2.5">
+                  <div className="flex items-center gap-3">
+                    <div className="shrink-0">
+                      {source.type === "text"
+                        ? <AlignLeft className="h-3.5 w-3.5 text-teal-500" />
+                        : source.type === "url"
+                          ? <Globe className="h-3.5 w-3.5 text-blue-500" />
+                          : <FileText className="h-3.5 w-3.5 text-violet-500" />
+                      }
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-foreground truncate">{source.name}</p>
+                      {source.url && (
+                        <p className="text-[10px] text-muted-foreground truncate">{source.url}</p>
+                      )}
+                    </div>
+                    <div className="shrink-0 flex items-center gap-1.5">
+                      {source.status === "pending" && <Clock className="h-3.5 w-3.5 text-amber-500 animate-pulse" />}
+                      {source.status === "ready" && !isNoScrape && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />}
+                      {source.status === "error" && (
+                        <div className="flex items-center gap-1.5 max-w-[140px]">
+                          <AlertCircle className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                          <span className="text-[10px] text-red-500 truncate" title={friendlyError(source.errorMessage)}>
+                            {friendlyError(source.errorMessage)}
+                          </span>
+                        </div>
+                      )}
+                      <button
+                        onClick={() => void handleDeleteSource(source.id)}
+                        className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 transition-colors"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+                  {isNoScrape && (
+                    <div className="ml-6 flex items-start gap-1.5 rounded-lg bg-amber-50 border border-amber-200 px-2.5 py-1.5">
+                      <AlertCircle className="h-3 w-3 text-amber-500 shrink-0 mt-0.5" />
+                      <p className="text-[10px] text-amber-700 leading-snug">
+                        Контент не извлечён — эта платформа блокирует автоматический доступ.
+                        Скопируйте нужные данные (адреса, часы работы) и добавьте через{" "}
+                        <button
+                          onClick={() => { setTextName("Данные из " + source.name); setTextModalOpen(true); }}
+                          className="font-semibold underline underline-offset-2 hover:text-amber-900"
+                        >
+                          «Добавить текст»
+                        </button>
+                      </p>
                     </div>
                   )}
-                  <button
-                    onClick={() => void handleDeleteSource(source.id)}
-                    className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 transition-colors"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </button>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
