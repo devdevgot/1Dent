@@ -29,6 +29,7 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { restrictToParentElement, restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import {
   GripVertical,
   ChevronDown,
@@ -1821,7 +1822,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
       ) : (
         <>
           {localItems.length > 0 && (
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleItemDragEnd}>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[restrictToVerticalAxis, restrictToParentElement]} onDragEnd={handleItemDragEnd}>
               <SortableContext items={localItems.map((i) => i.id)} strategy={verticalListSortingStrategy}>
                 <div className="space-y-2">
                   {localItems.map((item) => (
