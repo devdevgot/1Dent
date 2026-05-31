@@ -17,6 +17,7 @@ import {
   treatmentPlanItemsTable,
   clinicsTable,
   knowledgeSourcesTable,
+  procedureTemplatesTable,
 } from "@workspace/db";
 import type { StepInstructions } from "@workspace/db";
 import { eq, and, inArray, gte, lte, ne, asc, desc, sql } from "drizzle-orm";
@@ -36,6 +37,7 @@ type CachedSettings = { settings: ChatbotSettings; expiresAt: number };
 type CachedExamples = { examples: ManagerExample[]; expiresAt: number };
 type CachedKnowledge = { text: string; expiresAt: number };
 type CachedDoctors = { text: string; expiresAt: number };
+type CachedPriceList = { text: string; expiresAt: number };
 
 const SESSION_TTL_SECONDS = 24 * 60 * 60;
 const REDIS_KEY_PREFIX = "chatbot:session:";
@@ -369,6 +371,9 @@ const knowledgeCache = new Map<string, CachedKnowledge>();
 // Doctors cache (5min TTL)
 const doctorsCache = new Map<string, CachedDoctors>();
 
+// Price list cache (2min TTL) — clinic procedure templates with prices
+const priceListCache = new Map<string, CachedPriceList>();
+
 async function loadKnowledgeContext(clinicId: string): Promise<string> {
   const cached = knowledgeCache.get(clinicId);
   if (cached && cached.expiresAt > Date.now()) return cached.text;
@@ -428,6 +433,80 @@ async function loadDoctorsContext(clinicId: string): Promise<string> {
     return text;
   } catch (err) {
     logger.warn({ err }, "[ChatbotService] loadDoctorsContext failed — skipping doctors injection");
+    return "";
+  }
+}
+
+// Category names in Russian for price list formatting
+const CATEGORY_LABELS: Record<string, string> = {
+  diagnostics: "Диагностика",
+  treatment: "Терапия",
+  therapy: "Терапия",
+  removal: "Удаление",
+  extraction: "Удаление",
+  surgery: "Хирургия",
+  prosthetics: "Протезирование",
+  implants: "Имплантология",
+  implantology: "Имплантология",
+  orthodontics: "Ортодонтия",
+  hygiene: "Гигиена",
+  cleaning: "Гигиена",
+  cosmetic: "Эстетика",
+  aesthetic: "Эстетика",
+  pediatric: "Детская стоматология",
+  children: "Детская стоматология",
+  endodontics: "Эндодонтия",
+  periodontology: "Пародонтология",
+  other: "Прочее",
+};
+
+async function loadPriceListContext(clinicId: string): Promise<string> {
+  const cached = priceListCache.get(clinicId);
+  if (cached && cached.expiresAt > Date.now()) return cached.text;
+
+  try {
+    const templates = await db
+      .select({
+        name: procedureTemplatesTable.name,
+        defaultPrice: procedureTemplatesTable.defaultPrice,
+        category: procedureTemplatesTable.category,
+      })
+      .from(procedureTemplatesTable)
+      .where(eq(procedureTemplatesTable.clinicId, clinicId))
+      .orderBy(procedureTemplatesTable.category, procedureTemplatesTable.name);
+
+    if (templates.length === 0) {
+      priceListCache.set(clinicId, { text: "", expiresAt: Date.now() + 2 * 60_000 });
+      return "";
+    }
+
+    // Group by category
+    const grouped = new Map<string, Array<{ name: string; price: number }>>();
+    for (const t of templates) {
+      const cat = t.category ?? "other";
+      if (!grouped.has(cat)) grouped.set(cat, []);
+      grouped.get(cat)!.push({ name: t.name, price: t.defaultPrice ?? 0 });
+    }
+
+    const lines: string[] = [];
+    for (const [cat, items] of grouped) {
+      const label = CATEGORY_LABELS[cat] ?? cat;
+      const entries = items
+        .map((i) => {
+          const priceStr = i.price > 0
+            ? `от ${Math.round(i.price).toLocaleString("ru")} ₸`
+            : "цена по запросу";
+          return `${i.name} — ${priceStr}`;
+        })
+        .join(", ");
+      lines.push(`${label}: ${entries}`);
+    }
+
+    const text = lines.join("\n");
+    priceListCache.set(clinicId, { text, expiresAt: Date.now() + 2 * 60_000 });
+    return text;
+  } catch (err) {
+    logger.warn({ err }, "[ChatbotService] loadPriceListContext failed — skipping price injection");
     return "";
   }
 }
@@ -751,6 +830,7 @@ function buildPlaygroundPrompt(
   doctorsWithSlots?: DoctorWithSlots[],
   clinicName?: string,
   knowledgeContext?: string,
+  priceListContext?: string,
 ): string {
   const kazakhNote = `ВАЖНО: Пациент может писать на казахском или русском. Отвечай строго на том языке, на котором пишет пациент.`;
 
@@ -814,8 +894,12 @@ function buildPlaygroundPrompt(
   const nowDateStr = nowPlayground.toLocaleDateString("ru-KZ", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Almaty" });
   const nowTimeStr = nowPlayground.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty" });
 
+  const priceListPlaygroundSection = priceListContext
+    ? `\n\nПРАЙС-ЛИСТ КЛИНИКИ (официальные цены — используй для ответов о стоимости услуг):\n${priceListContext}\n\n⚠️ ПРАВИЛО РЕЛЕВАНТНОСТИ: Когда пациент спрашивает о конкретной услуге — называй цену ТОЛЬКО запрошенной услуги. Не перечисляй другие услуги.`
+    : "";
+
   const knowledgeSection = knowledgeContext
-    ? `\n\nМАТЕРИАЛЫ КЛИНИКИ (сайт, документы — используй для ответов о ценах, услугах и особенностях клиники; информация о врачах берётся ТОЛЬКО из раздела «ВРАЧИ КЛИНИКИ» выше):\n${knowledgeContext}`
+    ? `\n\nМАТЕРИАЛЫ КЛИНИКИ (сайт, документы — дополнительный источник информации; цены берутся из ПРАЙС-ЛИСТА выше):\n${knowledgeContext}`
     : "";
 
   const mindMapSection = renderMindMapScript(settings.scriptMindMap);
@@ -832,7 +916,7 @@ function buildPlaygroundPrompt(
 4. Отвечай коротко: 1–3 предложения максимум
 5. Используй только информацию из материалов клиники и списка врачей — не придумывай
 6. НИКОГДА не предлагай и не подтверждай время которое уже прошло (сейчас ${nowTimeStr}). Если пациент называет прошедшее время сегодня — объясни что оно уже прошло и предложи ближайший доступный слот. Все слоты в списке врачей уже являются будущими.
-${kazakhNote}${doctorsSection}${mindMapSection}${effectiveScriptContext}${knowledgeSection}`;
+${kazakhNote}${doctorsSection}${priceListPlaygroundSection}${mindMapSection}${effectiveScriptContext}${knowledgeSection}`;
 }
 
 /** Renders the clinic's script blocks (same as playground) for injection into prompts. */
@@ -870,7 +954,7 @@ function renderScriptBlocks(
 function buildSystemPrompt(
   state: ChatbotState,
   settings: Awaited<ReturnType<typeof getSettings>>,
-  opts?: { clinicName?: string; knowledgeContext?: string; doctorsContext?: string },
+  opts?: { clinicName?: string; knowledgeContext?: string; doctorsContext?: string; priceListContext?: string },
 ): string {
   const si = (settings.stepInstructions ?? {}) as StepInstructions;
   const generalExtra = si.general ? `\n\nДополнительные инструкции клиники:\n${si.general}` : "";
@@ -936,11 +1020,15 @@ function buildSystemPrompt(
     ? `\n\nВРАЧИ КЛИНИКИ (используй ТОЛЬКО этих врачей при подборе специалиста — не придумывай других):\n${opts.doctorsContext}`
     : "";
 
-  const knowledgeSection = opts?.knowledgeContext
-    ? `\n\nМАТЕРИАЛЫ КЛИНИКИ (сайт, документы — используй как источник информации о ценах, услугах и особенностях клиники; информация о врачах берётся ТОЛЬКО из раздела «ВРАЧИ КЛИНИКИ» выше):\n${opts.knowledgeContext}`
+  const priceListSection = opts?.priceListContext
+    ? `\n\nПРАЙС-ЛИСТ КЛИНИКИ (официальные цены — используй для ответов о стоимости услуг):\n${opts.priceListContext}\n\n⚠️ ПРАВИЛО РЕЛЕВАНТНОСТИ: Когда пациент спрашивает о конкретной услуге (удаление, кариес, имплант, чистка и т.д.) — называй цену ТОЛЬКО запрошенной услуги. Не перечисляй другие услуги. Точно соответствуй запросу: спросили про удаление — дай цену удаления, про кариес — цену лечения кариеса, про имплант — цену имплантации.`
     : "";
 
-  return `${base}\n\n${stateGuidance[state] ?? ""}${customExtra}${mindMapSection}${effectiveScriptContext}${doctorsSection}${knowledgeSection}`;
+  const knowledgeSection = opts?.knowledgeContext
+    ? `\n\nМАТЕРИАЛЫ КЛИНИКИ (сайт, документы — дополнительный источник информации об услугах и особенностях клиники; цены берутся из ПРАЙС-ЛИСТА выше; информация о врачах — из раздела «ВРАЧИ КЛИНИКИ»):\n${opts.knowledgeContext}`
+    : "";
+
+  return `${base}\n\n${stateGuidance[state] ?? ""}${customExtra}${mindMapSection}${effectiveScriptContext}${doctorsSection}${priceListSection}${knowledgeSection}`;
 }
 
 // ─── ChatbotService (main export) ───────────────────────────────────────────
@@ -956,12 +1044,14 @@ export class ChatbotService {
     let managerExamples: ManagerExample[];
     let knowledgeContext: string;
     let doctorsContext: string;
+    let priceListContext: string;
     try {
-      [settings, managerExamples, knowledgeContext, doctorsContext] = await Promise.all([
+      [settings, managerExamples, knowledgeContext, doctorsContext, priceListContext] = await Promise.all([
         getSettings(clinicId),
         getManagerExamples(clinicId),
         loadKnowledgeContext(clinicId),
         loadDoctorsContext(clinicId),
+        loadPriceListContext(clinicId),
       ]);
     } catch (err) {
       logger.error({ err }, "ChatbotService: failed to load settings");
@@ -970,7 +1060,7 @@ export class ChatbotService {
 
     // Local helper to build prompts with knowledge + doctors context pre-bound
     const sp = (state: ChatbotState, spOpts?: { clinicName?: string }) =>
-      buildSystemPrompt(state, settings, { ...spOpts, knowledgeContext, doctorsContext });
+      buildSystemPrompt(state, settings, { ...spOpts, knowledgeContext, doctorsContext, priceListContext });
 
     saveChatbotMessage(clinicId, phone, "inbound", text).catch(() => {});
 
@@ -1975,18 +2065,19 @@ export class ChatbotService {
     userMessage: string,
     history: Array<{ role: "user" | "assistant"; content: string }> = [],
   ) {
-    const [settings, managerExamples, doctorsWithSlots, clinicRow, knowledgeContext] = await Promise.all([
+    const [settings, managerExamples, doctorsWithSlots, clinicRow, knowledgeContext, priceListContext] = await Promise.all([
       getSettings(clinicId),
       getManagerExamples(clinicId),
       getClinicDoctorsWithSlots(clinicId).catch(() => [] as DoctorWithSlots[]),
       db.select({ name: clinicsTable.name }).from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1).catch(() => []),
       loadKnowledgeContext(clinicId),
+      loadPriceListContext(clinicId),
     ]);
     const clinicName = clinicRow[0]?.name ?? undefined;
 
     // Auto-start: empty message + empty history → generate greeting with AI using knowledge context
     if (!userMessage && history.length === 0) {
-      const systemPrompt = buildPlaygroundPrompt(settings, doctorsWithSlots, clinicName, knowledgeContext);
+      const systemPrompt = buildPlaygroundPrompt(settings, doctorsWithSlots, clinicName, knowledgeContext, priceListContext);
       const reply = await generateChatbotResponse(
         systemPrompt,
         [],
@@ -1996,7 +2087,7 @@ export class ChatbotService {
       return reply ?? "Здравствуйте! Чем могу помочь?";
     }
 
-    const systemPrompt = buildPlaygroundPrompt(settings, doctorsWithSlots, clinicName, knowledgeContext);
+    const systemPrompt = buildPlaygroundPrompt(settings, doctorsWithSlots, clinicName, knowledgeContext, priceListContext);
     const chatHistory = history.map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
     const reply = await generateChatbotResponse(systemPrompt, chatHistory, userMessage, managerExamples);
     return reply ?? "AI не ответил. Проверьте API-ключ.";
