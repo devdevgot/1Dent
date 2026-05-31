@@ -339,20 +339,58 @@ function is2GisHostname(hostname: string): boolean {
   return ["2gis.kz", "2gis.ru", "2gis.com", "www.2gis.kz", "www.2gis.ru", "go.2gis.com", "catalog.2gis.com"].includes(hostname);
 }
 
+// Resolve go.2gis.com shortlinks by following redirect to the canonical firm URL
+async function resolve2GisShortlink(url: string): Promise<string> {
+  const res = await fetch(url, {
+    method: "GET",
+    redirect: "follow",
+    signal: AbortSignal.timeout(12000),
+    headers: { "User-Agent": "Mozilla/5.0 (compatible; 1Dent-Knowledge-Bot/1.0)" },
+  });
+  return res.url; // final URL after redirect chain
+}
+
 // Extract numeric firm ID from 2GIS URL paths like /almaty/firm/70000001040464842
 function extract2GisFirmId(url: string): string | null {
   const match = /\/firm\/(\d+)/.exec(url);
   return match?.[1] ?? null;
 }
 
-// 2GIS Catalog API — returns structured business data (name, address, hours, rating, reviews)
+// Fetch top reviews text from 2GIS Reviews API (up to 10 reviews)
+async function fetch2GisReviews(firmId: string, apiKey: string): Promise<string[]> {
+  try {
+    const reviewsUrl = `https://catalog.api.2gis.com/3.0/reviews?object_id=${firmId}&key=${apiKey}&fields=reviews.user,reviews.text,reviews.rating&locale=ru_KZ&page_size=10&sort_by=date_edited`;
+    const res = await fetch(reviewsUrl, { signal: AbortSignal.timeout(12000) });
+    if (!res.ok) return [];
+    const data = await res.json() as Record<string, unknown>;
+    const result = data["result"] as Record<string, unknown> | undefined;
+    const reviews = result?.["reviews"] as Array<Record<string, unknown>> | undefined;
+    if (!reviews?.length) return [];
+    return reviews
+      .map((r) => {
+        const user = (r["user"] as Record<string, unknown> | undefined)?.["name"] as string | undefined;
+        const text = r["text"] as string | undefined;
+        const rating = r["rating"] as number | undefined;
+        if (!text) return "";
+        const parts: string[] = [];
+        if (user) parts.push(`${user}`);
+        if (rating) parts.push(`★${rating}`);
+        parts.push(text.slice(0, 400));
+        return parts.join(" — ");
+      })
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+// 2GIS Catalog API — returns structured business data (name, address, hours, services, rating, reviews)
 // Requires TWOGIS_API_KEY env var (free developer key from dev.2gis.ru)
 async function fetch2GisData(firmId: string): Promise<string> {
   const apiKey = process.env["TWOGIS_API_KEY"];
   if (!apiKey) throw new Error("NO_API_KEY");
 
   const fields = [
-    "items.point",
     "items.schedule",
     "items.stat",
     "items.attribute_groups",
@@ -364,10 +402,14 @@ async function fetch2GisData(firmId: string): Promise<string> {
   ].join(",");
 
   const apiUrl = `https://catalog.api.2gis.com/3.0/items?id=${firmId}&key=${apiKey}&fields=${fields}&locale=ru_KZ`;
-  const res = await fetch(apiUrl, { signal: AbortSignal.timeout(15000) });
-  if (!res.ok) throw new Error(`2GIS API HTTP ${res.status}`);
+  const [itemRes, reviewTexts] = await Promise.all([
+    fetch(apiUrl, { signal: AbortSignal.timeout(15000) }),
+    fetch2GisReviews(firmId, apiKey),
+  ]);
 
-  const data = await res.json() as Record<string, unknown>;
+  if (!itemRes.ok) throw new Error(`2GIS API HTTP ${itemRes.status}`);
+
+  const data = await itemRes.json() as Record<string, unknown>;
   const result = data["result"] as Record<string, unknown> | undefined;
   const items = result?.["items"] as Record<string, unknown>[] | undefined;
   const item = items?.[0];
@@ -385,6 +427,31 @@ async function fetch2GisData(firmId: string): Promise<string> {
   const rubrics = item["rubrics"] as Array<Record<string, unknown>> | undefined;
   if (rubrics?.length) {
     lines.push(`Категория: ${rubrics.map((r) => r["name"] as string).filter(Boolean).join(", ")}`);
+  }
+
+  // Parse attribute_groups for service lists and specializations
+  const attrGroups = item["attribute_groups"] as Array<Record<string, unknown>> | undefined;
+  if (attrGroups?.length) {
+    const serviceLines: string[] = [];
+    for (const group of attrGroups) {
+      const groupName = group["name"] as string | undefined;
+      const attributes = group["attributes"] as Array<Record<string, unknown>> | undefined;
+      if (!attributes?.length) continue;
+      const attrNames = attributes
+        .map((a) => {
+          const n = a["name"] as string | undefined;
+          const v = a["value"];
+          // Only include attributes with true boolean value or non-empty string value
+          if (typeof v === "boolean" && v) return n;
+          if (typeof v === "string" && v && v !== "false") return `${n}: ${v}`;
+          return null;
+        })
+        .filter(Boolean) as string[];
+      if (attrNames.length && groupName) {
+        serviceLines.push(`${groupName}: ${attrNames.join(", ")}`);
+      }
+    }
+    if (serviceLines.length) lines.push(`Услуги и специализации:\n${serviceLines.join("\n")}`);
   }
 
   const schedule = item["schedule"] as Record<string, unknown> | undefined;
@@ -423,6 +490,10 @@ async function fetch2GisData(firmId: string): Promise<string> {
       }
     }
     if (phones.length) lines.push(`Телефоны: ${phones.join(", ")}`);
+  }
+
+  if (reviewTexts.length) {
+    lines.push(`\nОтзывы пациентов:\n${reviewTexts.map((r, i) => `${i + 1}. ${r}`).join("\n")}`);
   }
 
   if (lines.length === 0) throw new Error("2GIS: пустой ответ API");
@@ -523,8 +594,16 @@ async function scrapeUrl(id: string, url: string): Promise<void> {
     let extractedText = "";
 
     if (is2GisHostname(hostname)) {
-      // 2GIS: try structured Catalog API first (requires TWOGIS_API_KEY), fall back to Jina
-      const firmId = extract2GisFirmId(url);
+      // 2GIS: resolve shortlinks first (go.2gis.com → canonical URL with firm ID)
+      let resolvedUrl = url;
+      if (hostname === "go.2gis.com") {
+        try {
+          resolvedUrl = await resolve2GisShortlink(url);
+        } catch {
+          resolvedUrl = url; // keep original if redirect fails
+        }
+      }
+      const firmId = extract2GisFirmId(resolvedUrl);
       let apiText = "";
       if (firmId) {
         try {
