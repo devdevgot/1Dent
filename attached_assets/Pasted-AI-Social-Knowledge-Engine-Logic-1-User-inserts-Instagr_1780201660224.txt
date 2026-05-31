@@ -1,0 +1,205 @@
+AI Social Knowledge Engine — Logic
+
+1. User inserts:
+
+* Instagram link
+* website
+* 2GIS link
+* TikTok
+* YouTube
+* Telegram
+* etc.
+
+⸻
+
+2. System launches browser automation using:
+
+* Playwright
+* stealth plugin
+* browser fingerprinting
+* residential proxies
+* cookies/session support
+
+Goal:
+Bypass anti-bot protections and behave like a real user.
+
+⸻
+
+3. Browser crawler opens pages and:
+
+* scrolls pages
+* opens posts
+* opens comments
+* opens reels
+* opens stories/highlights
+* navigates internal pages
+* waits random delays
+* simulates human behavior
+
+⸻
+
+4. System generates:
+
+* full-page screenshots
+* mobile screenshots
+* HTML snapshots
+* extracted DOM content
+
+Store:
+
+* screenshots
+* raw HTML
+* metadata
+
+⸻
+
+5. OCR/Vision layer processes screenshots using:
+
+* GPT-4o Vision
+* Gemini Vision
+* OCR engine
+
+Extract:
+
+* text
+* prices
+* services
+* CTA
+* offers
+* captions
+* business tone
+* visual style
+* pain points
+* FAQs
+
+⸻
+
+6. Text extraction layer parses:
+
+* captions
+* comments
+* bio
+* descriptions
+* website text
+* reviews
+* menus
+* metadata
+
+⸻
+
+7. Processing pipeline:
+
+* clean text
+* remove duplicates
+* normalize content
+* chunk data
+* summarize long content
+* classify content types
+
+⸻
+
+8. Embedding layer creates embeddings for:
+
+* screenshots summaries
+* captions
+* reviews
+* website content
+* comments
+* FAQs
+
+Using:
+
+* OpenAI embeddings
+    or
+* Gemini embeddings
+
+⸻
+
+9. Save everything into:
+
+* raw storage
+* structured database
+* vector database
+
+Store:
+
+* source URL
+* screenshots
+* extracted text
+* embeddings
+* summaries
+* timestamps
+
+⸻
+
+10. Implement incremental sync:
+
+* track hashes/checksums
+* detect new posts/pages
+* update only changed content
+* avoid full rescans
+
+⸻
+
+11. AI retrieval system (RAG):
+    When user asks something:
+12. search vector database
+13. retrieve relevant chunks
+14. inject context into prompt
+15. generate response
+
+⸻
+
+12. AI should be able to:
+
+* generate sales scripts
+* answer like company manager
+* generate WhatsApp replies
+* generate follow-ups
+* generate content plans
+* analyze competitors
+* create FAQ
+* replicate brand tone of voice
+
+⸻
+
+13. Anti-ban logic:
+
+* residential proxy rotation
+* randomized delays
+* browser fingerprints
+* session reuse
+* cookie persistence
+* rate limiting
+* incremental crawling
+* avoid aggressive scraping
+
+⸻
+
+14. Recommended tools/services:
+
+* Playwright
+* Browserbase
+* BrightData
+* Smartproxy
+* GPT-4o Vision
+* Gemini Vision
+* Qdrant
+* Pinecone
+* OCR engine
+
+⸻
+
+15. Important:
+    Do NOT fine-tune the model.
+
+Use:
+RAG (Retrieval-Augmented Generation)
+
+Reason:
+
+* easier updates
+* cheaper
+* scalable
+* real-time knowledge
+* better accuracy
