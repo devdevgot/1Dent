@@ -335,6 +335,100 @@ function isYouTubeUrl(hostname: string): boolean {
   return ["youtube.com", "www.youtube.com", "youtu.be", "m.youtube.com"].includes(hostname);
 }
 
+function is2GisHostname(hostname: string): boolean {
+  return ["2gis.kz", "2gis.ru", "2gis.com", "www.2gis.kz", "www.2gis.ru", "go.2gis.com", "catalog.2gis.com"].includes(hostname);
+}
+
+// Extract numeric firm ID from 2GIS URL paths like /almaty/firm/70000001040464842
+function extract2GisFirmId(url: string): string | null {
+  const match = /\/firm\/(\d+)/.exec(url);
+  return match?.[1] ?? null;
+}
+
+// 2GIS Catalog API — returns structured business data (name, address, hours, rating, reviews)
+// Requires TWOGIS_API_KEY env var (free developer key from dev.2gis.ru)
+async function fetch2GisData(firmId: string): Promise<string> {
+  const apiKey = process.env["TWOGIS_API_KEY"];
+  if (!apiKey) throw new Error("NO_API_KEY");
+
+  const fields = [
+    "items.point",
+    "items.schedule",
+    "items.stat",
+    "items.attribute_groups",
+    "items.address",
+    "items.full_name",
+    "items.name",
+    "items.rubrics",
+    "items.contact_groups",
+  ].join(",");
+
+  const apiUrl = `https://catalog.api.2gis.com/3.0/items?id=${firmId}&key=${apiKey}&fields=${fields}&locale=ru_KZ`;
+  const res = await fetch(apiUrl, { signal: AbortSignal.timeout(15000) });
+  if (!res.ok) throw new Error(`2GIS API HTTP ${res.status}`);
+
+  const data = await res.json() as Record<string, unknown>;
+  const result = data["result"] as Record<string, unknown> | undefined;
+  const items = result?.["items"] as Record<string, unknown>[] | undefined;
+  const item = items?.[0];
+  if (!item) throw new Error("2GIS: объект не найден в каталоге");
+
+  const lines: string[] = [];
+
+  const fullName = item["full_name"] as string | undefined;
+  const name = item["name"] as string | undefined;
+  if (fullName ?? name) lines.push(`Название: ${fullName ?? name}`);
+
+  const address = item["address"] as Record<string, unknown> | undefined;
+  if (address?.["name"]) lines.push(`Адрес: ${address["name"] as string}`);
+
+  const rubrics = item["rubrics"] as Array<Record<string, unknown>> | undefined;
+  if (rubrics?.length) {
+    lines.push(`Категория: ${rubrics.map((r) => r["name"] as string).filter(Boolean).join(", ")}`);
+  }
+
+  const schedule = item["schedule"] as Record<string, unknown> | undefined;
+  if (schedule) {
+    const dayNames: Record<string, string> = {
+      Mon: "Пн", Tue: "Вт", Wed: "Ср", Thu: "Чт", Fri: "Пт", Sat: "Сб", Sun: "Вс",
+    };
+    const scheduleLines: string[] = [];
+    for (const [day, info] of Object.entries(schedule)) {
+      if (typeof info !== "object" || info === null) continue;
+      const s = info as Record<string, unknown>;
+      const isWorking = s["is_working_day"] as boolean | undefined;
+      const hours = s["working_hours"] as Array<Record<string, string>> | undefined;
+      if (isWorking && hours?.length) {
+        scheduleLines.push(`${dayNames[day] ?? day}: ${hours.map((h) => `${h["from"]}-${h["to"]}`).join(", ")}`);
+      } else if (isWorking === false) {
+        scheduleLines.push(`${dayNames[day] ?? day}: выходной`);
+      }
+    }
+    if (scheduleLines.length) lines.push(`Часы работы:\n${scheduleLines.join("\n")}`);
+  }
+
+  const stat = item["stat"] as Record<string, unknown> | undefined;
+  if (stat?.["rating"]) lines.push(`Рейтинг: ${stat["rating"]} / 5`);
+  if (stat?.["review_count"]) lines.push(`Отзывов: ${stat["review_count"]}`);
+
+  const contactGroups = item["contact_groups"] as Array<Record<string, unknown>> | undefined;
+  if (contactGroups?.length) {
+    const phones: string[] = [];
+    for (const group of contactGroups) {
+      const contacts = group["contacts"] as Array<Record<string, unknown>> | undefined;
+      for (const contact of contacts ?? []) {
+        if (contact["type"] === "phone" && contact["value"]) {
+          phones.push(contact["value"] as string);
+        }
+      }
+    }
+    if (phones.length) lines.push(`Телефоны: ${phones.join(", ")}`);
+  }
+
+  if (lines.length === 0) throw new Error("2GIS: пустой ответ API");
+  return lines.join("\n");
+}
+
 // Scrape any URL via Jina AI Reader — renders JS, handles social media public pages
 async function scrapeWithJina(url: string): Promise<string> {
   const jinaUrl = `https://r.jina.ai/${url}`;
@@ -428,8 +522,32 @@ async function scrapeUrl(id: string, url: string): Promise<void> {
 
     let extractedText = "";
 
-    if (isYouTubeUrl(hostname)) {
-      // YouTube: combine oEmbed metadata + Jina full-page content
+    if (is2GisHostname(hostname)) {
+      // 2GIS: try structured Catalog API first (requires TWOGIS_API_KEY), fall back to Jina
+      const firmId = extract2GisFirmId(url);
+      let apiText = "";
+      if (firmId) {
+        try {
+          apiText = await fetch2GisData(firmId);
+        } catch (apiErr) {
+          // NO_API_KEY is expected when key not set — silently fall through to Jina
+          if (apiErr instanceof Error && apiErr.message !== "NO_API_KEY") {
+            console.warn("[2GIS API] Error:", apiErr.message);
+          }
+        }
+      }
+      // Always also run Jina for reviews, extra content, photos descriptions
+      let jinaText = "";
+      try {
+        jinaText = await scrapeWithJina(url);
+      } catch {
+        // Jina failed for 2GIS — not critical if API worked
+      }
+      extractedText = [apiText, jinaText].filter(Boolean).join("\n\n---\n\n");
+      if (!extractedText) throw new Error("Не удалось получить данные из 2ГИС");
+
+    } else if (isYouTubeUrl(hostname)) {
+      // YouTube: oEmbed for structured title/author + Jina for channel desc and video list
       const [meta, jinaResult] = await Promise.allSettled([
         fetchYouTubeMetadata(url),
         scrapeWithJina(url),
@@ -438,13 +556,12 @@ async function scrapeUrl(id: string, url: string): Promise<void> {
       const jinaText = jinaResult.status === "fulfilled" ? jinaResult.value : "";
       extractedText = [metaText, jinaText].filter(Boolean).join("\n\n---\n\n");
       if (!extractedText) throw new Error("Не удалось получить содержимое YouTube страницы");
+
     } else {
-      // All other URLs — try Jina first (handles Instagram, TikTok, VK, 2GIS, regular sites)
-      // Fall back to raw fetch only for non-social sites
+      // All other URLs (Instagram, TikTok, VK, regular sites) — Jina first, raw fetch as fallback
       try {
         extractedText = await scrapeWithJina(url);
       } catch {
-        // Jina failed — only attempt raw fallback for non-social domains
         const isSocial = ["instagram.com", "www.instagram.com", "tiktok.com", "www.tiktok.com",
           "vk.com", "www.vk.com", "facebook.com", "www.facebook.com"].includes(hostname);
         if (isSocial) {
