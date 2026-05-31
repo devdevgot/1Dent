@@ -149,6 +149,66 @@ async function getPatientProblems(
   }));
 }
 
+/**
+ * Returns a condition-specific urgency sentence based on what problems the patient has.
+ * Priority: extraction > root canal / pulpitis > crown > caries > generic
+ */
+function getUrgencyMessage(problems: ToothProblem[]): string {
+  const text = problems.map((p) => p.label.toLowerCase()).join(" ");
+
+  const hasExtraction =
+    text.includes("удал") ||
+    text.includes("extraction") ||
+    text.includes("extraction_needed");
+
+  const hasRootCanal =
+    text.includes("пульпит") ||
+    text.includes("эндодонт") ||
+    text.includes("канал") ||
+    text.includes("root_canal") ||
+    text.includes("периодонт");
+
+  const hasCrown =
+    text.includes("коронк") ||
+    text.includes("crown");
+
+  const hasCaries =
+    text.includes("кариес") ||
+    text.includes("пломб") ||
+    text.includes("cavity") ||
+    text.includes("filling") ||
+    text.includes("реставрац");
+
+  if (hasExtraction) {
+    return (
+      "Если откладывать удаление, инфекция может распространиться на соседние зубы и кость — " +
+      "это приведёт к более сложному лечению и дополнительным расходам 😔"
+    );
+  }
+  if (hasRootCanal) {
+    return (
+      "Если не лечить пульпит, воспаление перейдёт вглубь — в корень и кость. " +
+      "Это сильная боль и высокий риск потери зуба 😔"
+    );
+  }
+  if (hasCrown) {
+    return (
+      "Без коронки зуб остаётся хрупким: небольшая нагрузка может его сломать или " +
+      "потребовать полного удаления 😔"
+    );
+  }
+  if (hasCaries) {
+    return (
+      "Если отложить лечение, кариес углубится до нерва — и тогда вместо простой пломбы " +
+      "потребуется более сложная и дорогостоящая процедура 😔"
+    );
+  }
+  return (
+    "Если откладывать визит, состояние зуба будет ухудшаться — " +
+    "что приведёт к более длительному и дорогостоящему лечению 😔"
+  );
+}
+
 function buildMessage(patientName: string, problems: ToothProblem[]): string | null {
   if (problems.length === 0) return null;
 
@@ -156,12 +216,13 @@ function buildMessage(patientName: string, problems: ToothProblem[]): string | n
   const toothLines = problems
     .map((p) => `🦷 Зуб ${p.toothFdi} — ${p.label}`)
     .join("\n");
+  const urgency = getUrgencyMessage(problems);
 
   return (
     `Здравствуйте, ${firstName} 👋\n` +
     `У вас остались зубы, которые ещё требуют лечения:\n\n` +
     `${toothLines}\n\n` +
-    `Если отложить лечение, кариес может перейти в воспаление, сильную боль или привести к удалению зуба 😔\n\n` +
+    `${urgency}\n\n` +
     `Ваш план лечения сохранён.\n` +
     `Напишите «Продолжить», и мы подберём удобное время 🤍`
   );
