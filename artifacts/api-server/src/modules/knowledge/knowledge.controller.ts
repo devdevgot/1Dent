@@ -119,6 +119,36 @@ router.post("/knowledge/text", ownerAdmin, async (req: Request, res: Response, n
   } catch (err) { next(err); }
 });
 
+// ── POST /api/knowledge/:id/rescan ────────────────────────────────────────────
+router.post("/knowledge/:id/rescan", ownerAdmin, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const [source] = await db
+      .select()
+      .from(knowledgeSourcesTable)
+      .where(and(
+        eq(knowledgeSourcesTable.id, req.params["id"]!),
+        eq(knowledgeSourcesTable.clinicId, req.user!.clinicId),
+      ))
+      .limit(1);
+
+    if (!source) return next(new NotFoundError("Source not found"));
+    if (source.type !== "url") {
+      return next(new ValidationError("Только URL-источники можно обновить повторно"));
+    }
+    if (!source.url) return next(new ValidationError("URL не найден"));
+
+    await db
+      .update(knowledgeSourcesTable)
+      .set({ status: "pending", errorMessage: null, extractedText: null })
+      .where(eq(knowledgeSourcesTable.id, source.id));
+
+    void scrapeUrl(source.id, source.url);
+
+    const [updated] = await db.select().from(knowledgeSourcesTable).where(eq(knowledgeSourcesTable.id, source.id)).limit(1);
+    res.json({ success: true, data: { source: updated } });
+  } catch (err) { next(err); }
+});
+
 // ── DELETE /api/knowledge/:id ─────────────────────────────────────────────────
 router.delete("/knowledge/:id", ownerAdmin, async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -198,9 +228,10 @@ ${knowledgeText}
 
 ИНСТРУКЦИИ:
 1. Внимательно извлеки из материалов: название клиники, адрес, режим работы, список услуг с ценами, имена врачей и их специализации, уникальные предложения (акции, рассрочки, гарантии), контакты, отзывы пациентов, конкурентные преимущества.
-2. Используй ТОЛЬКО реальную информацию из материалов — не выдумывай данные.
-3. Для каждого узла пропиши подробный "detail": конкретные фразы, вопросы, ответы на возражения, примеры из ассортимента клиники.
-4. Скрипт должен быть живым, человечным, не роботизированным.
+2. Если материалы содержат контент из Instagram, TikTok, ВКонтакте, 2ГИС и других соцсетей/платформ — извлеки из них: тон общения бренда, типичные вопросы и возражения из комментариев, акции и спецпредложения, отзывы и истории пациентов. Используй эти данные для создания живых и убедительных скриптов.
+3. Используй ТОЛЬКО реальную информацию из материалов — не выдумывай данные.
+4. Для каждого узла пропиши подробный "detail": конкретные фразы, вопросы, ответы на возражения, примеры из ассортимента клиники.
+5. Скрипт должен быть живым, человечным, не роботизированным.
 
 Структура primaryScript (первичный пациент — звонит или пишет впервые):
 - 7-9 главных ветвей, каждая с 3-5 дочерними узлами
@@ -290,41 +321,104 @@ ${knowledgeText}
 
 // ── Background helpers ────────────────────────────────────────────────────────
 
-// Domains that block automated scraping — store URL as reference text instead
-const SOCIAL_DOMAINS: Record<string, string> = {
-  "instagram.com": "Instagram",
-  "www.instagram.com": "Instagram",
-  "facebook.com": "Facebook",
-  "www.facebook.com": "Facebook",
-  "tiktok.com": "TikTok",
-  "www.tiktok.com": "TikTok",
-  "vk.com": "ВКонтакте",
-  "www.vk.com": "ВКонтакте",
-  "t.me": "Telegram",
-  "twitter.com": "Twitter/X",
-  "x.com": "Twitter/X",
-  // Map/directory services — pages show platform name, not clinic name
-  "2gis.kz": "2ГИС",
-  "2gis.ru": "2ГИС",
-  "go.2gis.com": "2ГИС",
-  "2gis.com": "2ГИС",
+// Domains that cannot yield useful content even via Jina (require login or show no clinic data)
+const TRULY_BLOCKED: Record<string, string> = {
   "maps.google.com": "Google Maps",
   "google.com": "Google",
   "www.google.com": "Google",
-  "yandex.ru": "Яндекс.Карты",
-  "yandex.kz": "Яндекс.Карты",
-  "maps.yandex.ru": "Яндекс.Карты",
-  "maps.yandex.kz": "Яндекс.Карты",
+  "t.me": "Telegram",
+  "twitter.com": "Twitter/X",
+  "x.com": "Twitter/X",
 };
+
+function isYouTubeUrl(hostname: string): boolean {
+  return ["youtube.com", "www.youtube.com", "youtu.be", "m.youtube.com"].includes(hostname);
+}
+
+// Scrape any URL via Jina AI Reader — renders JS, handles social media public pages
+async function scrapeWithJina(url: string): Promise<string> {
+  const jinaUrl = `https://r.jina.ai/${url}`;
+  const response = await fetch(jinaUrl, {
+    headers: {
+      "Accept": "text/plain",
+      "User-Agent": "Mozilla/5.0 (compatible; 1Dent-Knowledge-Bot/1.0)",
+      "X-Timeout": "25",
+    },
+    signal: AbortSignal.timeout(35000),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Jina вернул HTTP ${response.status}`);
+  }
+
+  const text = await response.text();
+  // Jina sometimes returns an error message as text — detect it
+  if (text.startsWith("Error:") || text.startsWith("Jinaai Error")) {
+    throw new Error(text.slice(0, 200));
+  }
+  return text.replace(/\s{3,}/g, "\n\n").trim().slice(0, 25000);
+}
+
+// YouTube oEmbed — returns title + author without an API key
+async function fetchYouTubeMetadata(url: string): Promise<string> {
+  try {
+    const oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`;
+    const res = await fetch(oembedUrl, { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) return "";
+    const data = await res.json() as { title?: string; author_name?: string };
+    const parts: string[] = [];
+    if (data.title) parts.push(`Название видео/канала: ${data.title}`);
+    if (data.author_name) parts.push(`Канал YouTube: ${data.author_name}`);
+    return parts.join("\n");
+  } catch {
+    return "";
+  }
+}
+
+// Fallback: raw fetch + html strip for regular sites when Jina is unavailable
+async function scrapeWithRawFetch(url: string): Promise<string> {
+  const response = await fetch(url, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Language": "ru,kk;q=0.9,en;q=0.8",
+    },
+    signal: AbortSignal.timeout(20000),
+  });
+
+  if (!response.ok) {
+    const friendly =
+      response.status === 403 ? "Сайт запрещает автоматический доступ (403 Forbidden)" :
+      response.status === 404 ? "Страница не найдена (404)" :
+      response.status === 429 ? "Сайт временно ограничил доступ (429). Попробуйте позже" :
+      response.status >= 500 ? `Сервер сайта вернул ошибку (${response.status})` :
+      `HTTP ${response.status}`;
+    throw new Error(friendly);
+  }
+
+  const html = await response.text();
+  return html
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/\s{2,}/g, " ")
+    .trim()
+    .slice(0, 25000);
+}
 
 async function scrapeUrl(id: string, url: string): Promise<void> {
   try {
     const hostname = new URL(url).hostname.toLowerCase();
-    const socialName = SOCIAL_DOMAINS[hostname];
+    const blockedName = TRULY_BLOCKED[hostname];
 
-    if (socialName) {
-      // Social media blocks scraping — save URL as reference text for the AI
-      const text = `${socialName} профиль клиники: ${url}\n\nЭто ссылка на страницу клиники в ${socialName}. ИИ-ассистент должен учитывать, что клиника активно ведёт ${socialName} и привлекает пациентов через эту платформу.`;
+    if (blockedName) {
+      const text = `${blockedName} профиль клиники: ${url}\n\nЭто ссылка на страницу клиники в ${blockedName}. ИИ-ассистент должен учитывать, что клиника активно ведёт ${blockedName} и привлекает пациентов через эту платформу.`;
       await db
         .update(knowledgeSourcesTable)
         .set({ extractedText: text, status: "ready" })
@@ -332,43 +426,41 @@ async function scrapeUrl(id: string, url: string): Promise<void> {
       return;
     }
 
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "ru,kk;q=0.9,en;q=0.8",
-      },
-      signal: AbortSignal.timeout(20000),
-    });
+    let extractedText = "";
 
-    if (!response.ok) {
-      const friendly =
-        response.status === 403 ? "Сайт запрещает автоматический доступ (403 Forbidden)" :
-        response.status === 404 ? "Страница не найдена (404)" :
-        response.status === 429 ? "Сайт временно ограничил доступ (429). Попробуйте позже" :
-        response.status >= 500 ? `Сервер сайта вернул ошибку (${response.status})` :
-        `HTTP ${response.status}`;
-      throw new Error(friendly);
+    if (isYouTubeUrl(hostname)) {
+      // YouTube: combine oEmbed metadata + Jina full-page content
+      const [meta, jinaResult] = await Promise.allSettled([
+        fetchYouTubeMetadata(url),
+        scrapeWithJina(url),
+      ]);
+      const metaText = meta.status === "fulfilled" ? meta.value : "";
+      const jinaText = jinaResult.status === "fulfilled" ? jinaResult.value : "";
+      extractedText = [metaText, jinaText].filter(Boolean).join("\n\n---\n\n");
+      if (!extractedText) throw new Error("Не удалось получить содержимое YouTube страницы");
+    } else {
+      // All other URLs — try Jina first (handles Instagram, TikTok, VK, 2GIS, regular sites)
+      // Fall back to raw fetch only for non-social sites
+      try {
+        extractedText = await scrapeWithJina(url);
+      } catch {
+        // Jina failed — only attempt raw fallback for non-social domains
+        const isSocial = ["instagram.com", "www.instagram.com", "tiktok.com", "www.tiktok.com",
+          "vk.com", "www.vk.com", "facebook.com", "www.facebook.com"].includes(hostname);
+        if (isSocial) {
+          throw new Error("Не удалось загрузить страницу — соцсеть заблокировала доступ. Скопируйте нужные данные и добавьте через «Добавить текст»");
+        }
+        extractedText = await scrapeWithRawFetch(url);
+      }
     }
 
-    const html = await response.text();
-    const text = html
-      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
-      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
-      .replace(/<!--[\s\S]*?-->/g, " ")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/&nbsp;/g, " ")
-      .replace(/&amp;/g, "&")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/&quot;/g, '"')
-      .replace(/\s{2,}/g, " ")
-      .trim()
-      .slice(0, 25000);
+    if (!extractedText || extractedText.length < 20) {
+      throw new Error("Страница не содержит текстового контента");
+    }
 
     await db
       .update(knowledgeSourcesTable)
-      .set({ extractedText: text, status: "ready" })
+      .set({ extractedText, status: "ready" })
       .where(eq(knowledgeSourcesTable.id, id));
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Globe, FileText, Trash2, Loader2, Plus, Sparkles, CheckCircle2,
   AlertCircle, Clock, X, Upload, AlignLeft, ChevronDown, ChevronUp,
-  BookOpen, GitBranch, Maximize2,
+  BookOpen, GitBranch, Maximize2, RefreshCw,
 } from "lucide-react";
 import { ScriptMindMap, ScriptMindMapModal, type ScriptMindMapData } from "./script-mindmap";
 import { cn } from "@/lib/utils";
@@ -120,6 +120,7 @@ export function KnowledgeTab({
   const [textContent, setTextContent] = useState("");
   const [addingText, setAddingText] = useState(false);
   const [addSourceOpen, setAddSourceOpen] = useState(false);
+  const [rescanningIds, setRescanningIds] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -227,6 +228,19 @@ export function KnowledgeTab({
       setSources((prev) => prev.filter((s) => s.id !== id));
     } catch (err) {
       toast({ title: "Ошибка", description: String(err), variant: "destructive" });
+    }
+  };
+
+  const handleRescan = async (id: string) => {
+    setRescanningIds((prev) => new Set(prev).add(id));
+    try {
+      const res = await apiFetch(`/api/knowledge/${id}/rescan`, { method: "POST" });
+      setSources((prev) => prev.map((s) => s.id === id ? (res.data.source as KnowledgeSource) : s));
+      toast({ title: "Обновление запущено", description: "Идёт повторное извлечение контента…" });
+    } catch (err) {
+      toast({ title: "Ошибка", description: String(err), variant: "destructive" });
+    } finally {
+      setRescanningIds((prev) => { const n = new Set(prev); n.delete(id); return n; });
     }
   };
 
@@ -452,16 +466,7 @@ export function KnowledgeTab({
           </p>
           <div className="divide-y divide-border/40 rounded-xl border border-border/50 bg-card overflow-hidden">
             {sources.map((source) => {
-              const isNoScrape = source.type === "url" && source.url && (() => {
-                try {
-                  const h = new URL(source.url).hostname.toLowerCase();
-                  return ["instagram.com","www.instagram.com","facebook.com","www.facebook.com",
-                    "tiktok.com","www.tiktok.com","vk.com","www.vk.com","t.me",
-                    "twitter.com","x.com","2gis.kz","2gis.ru","go.2gis.com","2gis.com",
-                    "maps.google.com","yandex.ru","yandex.kz","maps.yandex.ru","maps.yandex.kz",
-                  ].includes(h);
-                } catch { return false; }
-              })();
+              const isRescanning = rescanningIds.has(source.id);
               return (
                 <div key={source.id} className="flex flex-col gap-1 px-4 py-2.5">
                   <div className="flex items-center gap-3">
@@ -481,14 +486,24 @@ export function KnowledgeTab({
                     </div>
                     <div className="shrink-0 flex items-center gap-1.5">
                       {source.status === "pending" && <Clock className="h-3.5 w-3.5 text-amber-500 animate-pulse" />}
-                      {source.status === "ready" && !isNoScrape && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />}
+                      {source.status === "ready" && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />}
                       {source.status === "error" && (
-                        <div className="flex items-center gap-1.5 max-w-[140px]">
+                        <div className="flex items-center gap-1.5 max-w-[120px]">
                           <AlertCircle className="h-3.5 w-3.5 text-red-500 shrink-0" />
                           <span className="text-[10px] text-red-500 truncate" title={friendlyError(source.errorMessage)}>
                             {friendlyError(source.errorMessage)}
                           </span>
                         </div>
+                      )}
+                      {source.type === "url" && (
+                        <button
+                          onClick={() => void handleRescan(source.id)}
+                          disabled={isRescanning || source.status === "pending"}
+                          title="Повторно извлечь контент"
+                          className="p-1 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-500 transition-colors disabled:opacity-40"
+                        >
+                          <RefreshCw className={cn("h-3 w-3", isRescanning && "animate-spin")} />
+                        </button>
                       )}
                       <button
                         onClick={() => void handleDeleteSource(source.id)}
@@ -498,21 +513,6 @@ export function KnowledgeTab({
                       </button>
                     </div>
                   </div>
-                  {isNoScrape && (
-                    <div className="ml-6 flex items-start gap-1.5 rounded-lg bg-amber-50 border border-amber-200 px-2.5 py-1.5">
-                      <AlertCircle className="h-3 w-3 text-amber-500 shrink-0 mt-0.5" />
-                      <p className="text-[10px] text-amber-700 leading-snug">
-                        Контент не извлечён — эта платформа блокирует автоматический доступ.
-                        Скопируйте нужные данные (адреса, часы работы) и добавьте через{" "}
-                        <button
-                          onClick={() => { setTextName("Данные из " + source.name); setTextModalOpen(true); }}
-                          className="font-semibold underline underline-offset-2 hover:text-amber-900"
-                        >
-                          «Добавить текст»
-                        </button>
-                      </p>
-                    </div>
-                  )}
                 </div>
               );
             })}
