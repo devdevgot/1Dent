@@ -1,26 +1,79 @@
 import { randomUUID } from "crypto";
-import { db, dentalBroadcastRunsTable, dentalAiAnalysesTable, patientsTable, clinicsTable } from "@workspace/db";
-import { eq, and, isNotNull, ne, sql } from "drizzle-orm";
-import { openrouter } from "../../lib/openrouter-client";
+import {
+  db,
+  dentalBroadcastRunsTable,
+  patientsTable,
+  clinicsTable,
+  toothRecordsTable,
+  treatmentPlansTable,
+  treatmentPlanItemsTable,
+} from "@workspace/db";
+import { eq, and, isNotNull, ne, sql, inArray, asc } from "drizzle-orm";
 import { sendToPatient } from "../../shared/messaging";
 import { logger } from "../../lib/logger";
 
-const GEMINI_MODEL = "google/gemini-2.0-flash-001";
+// Conditions that still require active treatment
+const PROBLEM_CONDITIONS = [
+  "cavity",
+  "root_canal",
+  "extraction_needed",
+  "crown",
+] as const;
+
+const CONDITION_LABEL: Record<string, string> = {
+  cavity: "кариес",
+  root_canal: "требует эндодонтического лечения",
+  extraction_needed: "требует удаления",
+  crown: "требует коронки",
+};
+
+type PatientForBroadcast = {
+  id: string;
+  name: string;
+  phone: string;
+};
+
+type ToothProblem = {
+  toothFdi: number;
+  label: string;
+};
 
 function todayDateString(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-type PatientRow = { id: string; phone: string | null; reportText: string };
+async function fetchPatientsForBroadcast(
+  clinicId: string,
+): Promise<PatientForBroadcast[]> {
+  const rows = await db
+    .selectDistinct({
+      id: patientsTable.id,
+      name: patientsTable.name,
+      phone: patientsTable.phone,
+    })
+    .from(toothRecordsTable)
+    .innerJoin(patientsTable, eq(patientsTable.id, toothRecordsTable.patientId))
+    .where(
+      and(
+        eq(toothRecordsTable.clinicId, clinicId),
+        inArray(toothRecordsTable.condition, [...PROBLEM_CONDITIONS]),
+        isNotNull(patientsTable.phone),
+        ne(patientsTable.phone, ""),
+      ),
+    );
+
+  return rows.filter((r) => r.phone !== null) as PatientForBroadcast[];
+}
 
 async function countPatientsForBroadcast(clinicId: string): Promise<number> {
   const [row] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(dentalAiAnalysesTable)
-    .innerJoin(patientsTable, eq(patientsTable.id, dentalAiAnalysesTable.patientId))
+    .select({ count: sql<number>`count(distinct ${patientsTable.id})::int` })
+    .from(toothRecordsTable)
+    .innerJoin(patientsTable, eq(patientsTable.id, toothRecordsTable.patientId))
     .where(
       and(
-        eq(dentalAiAnalysesTable.clinicId, clinicId),
+        eq(toothRecordsTable.clinicId, clinicId),
+        inArray(toothRecordsTable.condition, [...PROBLEM_CONDITIONS]),
         isNotNull(patientsTable.phone),
         ne(patientsTable.phone, ""),
       ),
@@ -28,22 +81,90 @@ async function countPatientsForBroadcast(clinicId: string): Promise<number> {
   return row?.count ?? 0;
 }
 
-async function fetchPatientsForBroadcast(clinicId: string): Promise<PatientRow[]> {
-  return db
-    .select({
-      id: patientsTable.id,
-      phone: patientsTable.phone,
-      reportText: dentalAiAnalysesTable.reportText,
-    })
-    .from(dentalAiAnalysesTable)
-    .innerJoin(patientsTable, eq(patientsTable.id, dentalAiAnalysesTable.patientId))
+async function getPatientProblems(
+  clinicId: string,
+  patientId: string,
+): Promise<ToothProblem[]> {
+  // Prefer pending treatment plan items — they have specific procedure titles
+  const activePlans = await db
+    .select({ id: treatmentPlansTable.id })
+    .from(treatmentPlansTable)
     .where(
       and(
-        eq(dentalAiAnalysesTable.clinicId, clinicId),
-        isNotNull(patientsTable.phone),
-        ne(patientsTable.phone, ""),
+        eq(treatmentPlansTable.clinicId, clinicId),
+        eq(treatmentPlansTable.patientId, patientId),
+        inArray(treatmentPlansTable.status, ["draft", "approved", "in_progress"]),
       ),
-    );
+    )
+    .limit(3);
+
+  if (activePlans.length > 0) {
+    const planIds = activePlans.map((p) => p.id);
+    const items = await db
+      .select({
+        toothFdi: treatmentPlanItemsTable.toothFdi,
+        title: treatmentPlanItemsTable.title,
+      })
+      .from(treatmentPlanItemsTable)
+      .where(
+        and(
+          inArray(treatmentPlanItemsTable.planId, planIds),
+          eq(treatmentPlanItemsTable.status, "pending"),
+          isNotNull(treatmentPlanItemsTable.toothFdi),
+        ),
+      )
+      .orderBy(asc(treatmentPlanItemsTable.sortOrder))
+      .limit(8);
+
+    const problems: ToothProblem[] = [];
+    const seen = new Set<number>();
+    for (const item of items) {
+      if (item.toothFdi !== null && !seen.has(item.toothFdi)) {
+        seen.add(item.toothFdi);
+        problems.push({ toothFdi: item.toothFdi, label: item.title });
+      }
+    }
+    if (problems.length > 0) return problems;
+  }
+
+  // Fallback: raw tooth records with problem conditions
+  const teeth = await db
+    .select({
+      toothFdi: toothRecordsTable.toothFdi,
+      condition: toothRecordsTable.condition,
+    })
+    .from(toothRecordsTable)
+    .where(
+      and(
+        eq(toothRecordsTable.clinicId, clinicId),
+        eq(toothRecordsTable.patientId, patientId),
+        inArray(toothRecordsTable.condition, [...PROBLEM_CONDITIONS]),
+      ),
+    )
+    .orderBy(asc(toothRecordsTable.toothFdi));
+
+  return teeth.map((t) => ({
+    toothFdi: t.toothFdi,
+    label: CONDITION_LABEL[t.condition] ?? t.condition,
+  }));
+}
+
+function buildMessage(patientName: string, problems: ToothProblem[]): string | null {
+  if (problems.length === 0) return null;
+
+  const firstName = patientName.trim().split(" ")[0] ?? patientName;
+  const toothLines = problems
+    .map((p) => `🦷 Зуб ${p.toothFdi} — ${p.label}`)
+    .join("\n");
+
+  return (
+    `Здравствуйте, ${firstName} 👋\n` +
+    `У вас остались зубы, которые ещё требуют лечения:\n\n` +
+    `${toothLines}\n\n` +
+    `Если отложить лечение, кариес может перейти в воспаление, сильную боль или привести к удалению зуба 😔\n\n` +
+    `Ваш план лечения сохранён.\n` +
+    `Напишите «Продолжить», и мы подберём удобное время 🤍`
+  );
 }
 
 async function insertBroadcastRun(
@@ -74,7 +195,10 @@ async function executeBroadcastRun(runId: string, clinicId: string): Promise<voi
     .set({ totalPatients: patients.length })
     .where(eq(dentalBroadcastRunsTable.id, runId));
 
-  logger.info({ clinicId, runId, totalPatients: patients.length }, "[DentalBroadcast] Run started");
+  logger.info(
+    { clinicId, runId, totalPatients: patients.length },
+    "[DentalBroadcast] Run started",
+  );
 
   let messagesSent = 0;
   let errorsCount = 0;
@@ -82,50 +206,34 @@ async function executeBroadcastRun(runId: string, clinicId: string): Promise<voi
   for (let i = 0; i < patients.length; i++) {
     const patient = patients[i]!;
     try {
-      const aiResponse = await openrouter.chat.completions.create({
-        model: GEMINI_MODEL,
-        max_tokens: 400,
-        temperature: 0.4,
-        response_format: { type: "json_object" },
-        messages: [
-          {
-            role: "system",
-            content:
-              "Ты — стоматолог-консультант клиники. Проанализируй отчёт о зубном здоровье пациента и определи, " +
-              "нужно ли пригласить его на консультацию или лечение. " +
-              "Отвечай строго в JSON: { \"needsMessage\": true/false, \"message\": \"текст\" или null }. " +
-              "Если у пациента нет серьёзных проблем — верни needsMessage: false. " +
-              "Если есть тревожные находки — составь короткое тёплое сообщение на русском языке (2–3 предложения), " +
-              "не упоминай конкретные диагнозы, просто пригласи на консультацию. Не используй слово 'зубная карта'.",
-          },
-          {
-            role: "user",
-            content: `Отчёт о зубном здоровье пациента:\n\n${patient.reportText}`,
-          },
-        ],
-      });
+      const problems = await getPatientProblems(clinicId, patient.id);
+      const message = buildMessage(patient.name, problems);
 
-      const rawContent = aiResponse.choices[0]?.message?.content ?? "{}";
-      let parsed: { needsMessage?: boolean; message?: string | null } = {};
-      try {
-        const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
-        parsed = JSON.parse(jsonMatch ? jsonMatch[0] : rawContent);
-      } catch {
-        logger.warn({ patientId: patient.id, rawContent }, "[DentalBroadcast] Failed to parse AI JSON");
-        errorsCount++;
-      }
-
-      if (parsed.needsMessage && parsed.message && patient.phone) {
-        const msgId = await sendToPatient(clinicId, patient.phone, parsed.message);
+      if (message && patient.phone) {
+        const msgId = await sendToPatient(clinicId, patient.phone, message);
         if (msgId) {
           messagesSent++;
-          logger.info({ patientId: patient.id, msgId }, "[DentalBroadcast] Message delivered");
+          logger.info(
+            { patientId: patient.id, msgId, toothCount: problems.length },
+            "[DentalBroadcast] Message delivered",
+          );
         } else {
-          logger.warn({ patientId: patient.id }, "[DentalBroadcast] sendToPatient returned empty — no provider configured");
+          logger.warn(
+            { patientId: patient.id },
+            "[DentalBroadcast] sendToPatient returned empty — no provider configured",
+          );
         }
+      } else {
+        logger.info(
+          { patientId: patient.id },
+          "[DentalBroadcast] No problems found — skipping patient",
+        );
       }
     } catch (err) {
-      logger.warn({ err, patientId: patient.id }, "[DentalBroadcast] Error processing patient");
+      logger.warn(
+        { err, patientId: patient.id },
+        "[DentalBroadcast] Error processing patient",
+      );
       errorsCount++;
     }
 
@@ -146,7 +254,10 @@ async function executeBroadcastRun(runId: string, clinicId: string): Promise<voi
     })
     .where(eq(dentalBroadcastRunsTable.id, runId));
 
-  logger.info({ clinicId, runId, messagesSent, errorsCount }, "[DentalBroadcast] Run completed");
+  logger.info(
+    { clinicId, runId, messagesSent, errorsCount },
+    "[DentalBroadcast] Run completed",
+  );
 }
 
 export async function runDentalBroadcastForClinic(
@@ -156,7 +267,10 @@ export async function runDentalBroadcastForClinic(
   const run = await insertBroadcastRun(clinicId, totalPatients);
 
   executeBroadcastRun(run.id, clinicId).catch((err) => {
-    logger.error({ err, clinicId, runId: run.id }, "[DentalBroadcast] Background execution error");
+    logger.error(
+      { err, clinicId, runId: run.id },
+      "[DentalBroadcast] Background execution error",
+    );
     db.update(dentalBroadcastRunsTable)
       .set({ status: "failed", completedAt: new Date() })
       .where(eq(dentalBroadcastRunsTable.id, run.id))
@@ -194,12 +308,18 @@ export async function runDentalBroadcastForAllClinics(): Promise<void> {
       .limit(1);
 
     if (existing) {
-      logger.info({ clinicId: clinic.id, runDate }, "[DentalBroadcast] Already ran today — skipping");
+      logger.info(
+        { clinicId: clinic.id, runDate },
+        "[DentalBroadcast] Already ran today — skipping",
+      );
       continue;
     }
 
     runDentalBroadcastForClinic(clinic.id).catch((err) => {
-      logger.error({ err, clinicId: clinic.id }, "[DentalBroadcast] Fire-and-forget failed");
+      logger.error(
+        { err, clinicId: clinic.id },
+        "[DentalBroadcast] Fire-and-forget failed",
+      );
     });
   }
 }
