@@ -6,7 +6,7 @@ const tabs = [
   { path: "/clinics", label: "Клиники", icon: "🏥" },
   { path: "/activity", label: "Активность", icon: "💬" },
   { path: "/logs", label: "Логи", icon: "📋" },
-  { path: "/admins", label: "Админы", icon: "👤" },
+  { path: "/settings", label: "Настройки", icon: "⚙️" },
 ];
 
 export default function BottomNav() {

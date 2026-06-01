@@ -1,164 +1,173 @@
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, type ChatbotSession, type ChatbotMessage, type Clinic } from "../lib/api";
-import { useTgBackButton, haptic } from "../hooks/useTgBackButton";
+import { haptic } from "../hooks/useTgBackButton";
 
 type View = "sessions" | "messages";
 
-function ClinicPickerScreen({ onSelect }: { onSelect: (c: { id: string; name: string }) => void }) {
-  const [search, setSearch] = useState("");
-  const { data, isLoading } = useQuery({
-    queryKey: ["tma-clinics-picker"],
-    queryFn: () => api.get<{ success: boolean; data: { clinics: Clinic[] } }>("/clinics"),
-    staleTime: 60_000,
-  });
-  const clinics = (data?.data?.clinics ?? []).filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase())
-  );
-
-  return (
-    <div className="px-4 pt-6 space-y-4">
-      <div>
-        <h1 className="text-xl font-bold text-foreground">Активность</h1>
-        <p className="text-sm text-muted-foreground">Выберите клинику для просмотра</p>
-      </div>
-      <input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="🔍 Поиск клиники..."
-        className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary"
-      />
-      <div className="space-y-2">
-        {isLoading
-          ? Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-14 bg-card rounded-lg border border-border animate-pulse" />)
-          : clinics.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => { haptic("light"); onSelect({ id: c.id, name: c.name }); }}
-              className="w-full flex items-center gap-3 p-3 bg-card rounded-lg border border-border hover:border-primary/50 transition-colors text-left"
-            >
-              <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0">
-                {c.name[0]?.toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{c.name}</p>
-                <p className="text-xs text-muted-foreground">{c.usersCount ?? 0} польз · {c.patientsCount ?? 0} пац</p>
-              </div>
-              <span className="text-muted-foreground text-lg">›</span>
-            </button>
-          ))}
-      </div>
-    </div>
-  );
-}
+const stateColors: Record<string, string> = {
+  greeting: "bg-blue-500/20 text-blue-400",
+  collecting_name: "bg-yellow-500/20 text-yellow-400",
+  booking: "bg-green-500/20 text-green-400",
+  human_takeover: "bg-red-500/20 text-red-400",
+  completed: "bg-gray-500/20 text-gray-400",
+};
 
 function SessionRow({ s }: { s: ChatbotSession }) {
-  const stateColors: Record<string, string> = {
-    greeting: "bg-blue-500/20 text-blue-400",
-    collecting_name: "bg-yellow-500/20 text-yellow-400",
-    booking: "bg-green-500/20 text-green-400",
-    human_takeover: "bg-red-500/20 text-red-400",
-  };
+  const color = stateColors[s.state] ?? "bg-gray-500/20 text-gray-400";
   return (
     <div className="bg-card rounded-lg border border-border p-3 space-y-1">
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-foreground">{s.phone}</span>
-        <span className={`text-xs px-2 py-0.5 rounded-full ${stateColors[s.state] ?? "bg-muted text-muted-foreground"}`}>{s.state}</span>
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-sm font-mono text-foreground">{s.phone}</span>
+        <span className={`text-xs px-2 py-0.5 rounded-full ${color}`}>{s.state}</span>
+        {s.humanTakeover && <span className="text-xs px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400">👤 оператор</span>}
       </div>
-      {s.humanTakeover && <span className="inline-block text-xs text-red-400 bg-red-500/10 px-2 py-0.5 rounded">👤 Оператор</span>}
-      <p className="text-xs text-muted-foreground">{new Date(s.updatedAt).toLocaleString("ru", { dateStyle: "short", timeStyle: "short" })}</p>
+      <p className="text-xs text-muted-foreground">{new Date(s.updatedAt).toLocaleString("ru")}</p>
     </div>
   );
 }
 
 function MessageRow({ m }: { m: ChatbotMessage }) {
-  const isIn = m.direction === "inbound";
   return (
-    <div className={`flex gap-2 ${isIn ? "flex-row" : "flex-row-reverse"}`}>
-      <div className={`max-w-[80%] rounded-xl px-3 py-2 ${isIn ? "bg-card border border-border" : "bg-primary/20 border border-primary/30"}`}>
-        <p className="text-xs font-medium text-muted-foreground mb-0.5">{isIn ? "📱 " + m.phone.slice(-4) : "🤖 Бот"}</p>
-        <p className="text-sm text-foreground">{m.content}</p>
-        <p className="text-xs text-muted-foreground mt-1">{new Date(m.createdAt).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}</p>
-      </div>
-    </div>
-  );
-}
-
-function ActivityContent({ clinic, onBack }: { clinic: { id: string; name: string }; onBack: () => void }) {
-  const [view, setView] = useState<View>("sessions");
-  const [page, setPage] = useState(1);
-
-  const handleBack = useCallback(() => { haptic("light"); onBack(); }, [onBack]);
-  useTgBackButton(handleBack);
-
-  const sessionsQ = useQuery({
-    queryKey: ["tma-activity-sessions", clinic.id, page],
-    queryFn: () => api.get<{ success: boolean; data: { sessions: ChatbotSession[]; total: number } }>(`/sessions?clinicId=${clinic.id}&page=${page}`),
-    enabled: view === "sessions",
-  });
-  const messagesQ = useQuery({
-    queryKey: ["tma-activity-messages", clinic.id, page],
-    queryFn: () => api.get<{ success: boolean; data: { messages: ChatbotMessage[]; total: number } }>(`/messages?clinicId=${clinic.id}&page=${page}`),
-    enabled: view === "messages",
-  });
-
-  const q = view === "sessions" ? sessionsQ : messagesQ;
-  const sessions = sessionsQ.data?.data?.sessions ?? [];
-  const messages = messagesQ.data?.data?.messages ?? [];
-  const items = view === "sessions" ? sessions : messages;
-  const total = (view === "sessions" ? sessionsQ.data?.data?.total : messagesQ.data?.data?.total) ?? 0;
-  const pages = Math.ceil(total / 50);
-
-  return (
-    <div className="px-4 pt-4 space-y-4 pb-4">
+    <div className={`rounded-lg border p-3 space-y-1 ${m.direction === "inbound" ? "bg-card border-border" : "bg-primary/5 border-primary/20"}`}>
       <div className="flex items-center gap-2">
-        <button onClick={handleBack} className="text-muted-foreground">←</button>
-        <div>
-          <h1 className="text-lg font-bold text-foreground">{clinic.name}</h1>
-          <p className="text-xs text-muted-foreground">Активность чат-бота</p>
-        </div>
+        <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{m.direction === "inbound" ? "⬇️ входящее" : "⬆️ исходящее"}</span>
+        <span className="text-xs font-mono text-muted-foreground">{m.phone}</span>
       </div>
-
-      <div className="flex bg-muted rounded-lg p-1">
-        {(["sessions", "messages"] as View[]).map((v) => (
-          <button
-            key={v}
-            onClick={() => { haptic("light"); setView(v); setPage(1); }}
-            className={`flex-1 py-1.5 rounded-md text-sm font-medium transition-colors ${view === v ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}
-          >{v === "sessions" ? "💬 Сессии" : "📨 Сообщения"}</button>
-        ))}
-      </div>
-
-      <p className="text-xs text-muted-foreground">Всего: {total}</p>
-
-      <div className="space-y-2">
-        {q.isLoading
-          ? Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-16 bg-card rounded-lg border border-border animate-pulse" />)
-          : view === "sessions"
-          ? sessions.map((s) => <SessionRow key={s.id} s={s} />)
-          : messages.map((m) => <MessageRow key={m.id} m={m} />)}
-        {!q.isLoading && !items.length && (
-          <div className="py-10 text-center">
-            <p className="text-3xl mb-2">{view === "sessions" ? "💬" : "📨"}</p>
-            <p className="text-sm text-muted-foreground">Нет данных</p>
-          </div>
-        )}
-      </div>
-
-      {pages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1.5 bg-card border border-border rounded-lg text-sm disabled:opacity-40">←</button>
-          <span className="text-sm text-muted-foreground">{page} / {pages}</span>
-          <button onClick={() => setPage(p => Math.min(pages, p + 1))} disabled={page === pages} className="px-3 py-1.5 bg-card border border-border rounded-lg text-sm disabled:opacity-40">→</button>
-        </div>
-      )}
+      <p className="text-sm text-foreground line-clamp-2">{m.content}</p>
+      <p className="text-xs text-muted-foreground">{new Date(m.createdAt).toLocaleString("ru")}</p>
     </div>
   );
 }
 
 export default function ActivityPage() {
-  const [clinic, setClinic] = useState<{ id: string; name: string } | null>(null);
+  const [view, setView] = useState<View>("sessions");
+  const [clinicId, setClinicId] = useState<string>("");
+  const [direction, setDirection] = useState<string>("");
+  const [search, setSearch] = useState<string>("");
+  const [page, setPage] = useState(1);
 
-  if (!clinic) return <ClinicPickerScreen onSelect={setClinic} />;
-  return <ActivityContent clinic={clinic} onBack={() => setClinic(null)} />;
+  const { data: clinicsData } = useQuery({
+    queryKey: ["tma-clinics-picker"],
+    queryFn: () => api.get<{ success: boolean; data: { clinics: Clinic[] } }>("/clinics"),
+    staleTime: 60_000,
+  });
+  const clinics = clinicsData?.data?.clinics ?? [];
+
+  const sessionsQ = useQuery({
+    queryKey: ["tma-activity-sessions", clinicId, page],
+    queryFn: () => {
+      const params = new URLSearchParams({ page: String(page) });
+      if (clinicId) params.set("clinicId", clinicId);
+      const endpoint = clinicId ? `/clinics/${clinicId}/sessions?${params}` : `/sessions?${params}`;
+      return api.get<{ success: boolean; data: { sessions: ChatbotSession[]; total: number; page: number } }>(endpoint);
+    },
+    enabled: view === "sessions",
+    staleTime: 30_000,
+  });
+
+  const messagesQ = useQuery({
+    queryKey: ["tma-activity-messages", clinicId, direction, search, page],
+    queryFn: () => {
+      const params = new URLSearchParams({ page: String(page) });
+      if (direction) params.set("direction", direction);
+      if (search) params.set("search", search);
+      const endpoint = clinicId ? `/clinics/${clinicId}/messages?${params}` : `/messages?${params}`;
+      return api.get<{ success: boolean; data: { messages: ChatbotMessage[]; total: number } }>(endpoint);
+    },
+    enabled: view === "messages",
+    staleTime: 30_000,
+  });
+
+  const sessions = sessionsQ.data?.data?.sessions ?? [];
+  const sessTotal = sessionsQ.data?.data?.total ?? 0;
+  const messages = messagesQ.data?.data?.messages ?? [];
+  const msgTotal = messagesQ.data?.data?.total ?? 0;
+  const isLoading = view === "sessions" ? sessionsQ.isLoading : messagesQ.isLoading;
+
+  const handleViewChange = (v: View) => {
+    haptic("light");
+    setView(v);
+    setPage(1);
+  };
+
+  return (
+    <div className="px-4 pt-6 pb-4 space-y-4">
+      <div>
+        <h1 className="text-xl font-bold text-foreground">Активность</h1>
+        <p className="text-sm text-muted-foreground">Платформенные сессии и сообщения</p>
+      </div>
+
+      {/* Filters */}
+      <div className="space-y-2">
+        <select
+          value={clinicId}
+          onChange={(e) => { setClinicId(e.target.value); setPage(1); }}
+          className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary"
+        >
+          <option value="">🏥 Все клиники</option>
+          {clinics.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+
+        {view === "messages" && (
+          <div className="flex gap-2">
+            <select
+              value={direction}
+              onChange={(e) => { setDirection(e.target.value); setPage(1); }}
+              className="flex-1 bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary"
+            >
+              <option value="">Все направления</option>
+              <option value="inbound">⬇️ Входящие</option>
+              <option value="outbound">⬆️ Исходящие</option>
+            </select>
+            <input
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              placeholder="Поиск..."
+              className="flex-1 bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2">
+        {(["sessions", "messages"] as View[]).map((v) => (
+          <button
+            key={v}
+            onClick={() => handleViewChange(v)}
+            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${view === v ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground"}`}
+          >
+            {v === "sessions" ? `💬 Сессии${view === "sessions" && sessTotal ? ` (${sessTotal})` : ""}` : `📨 Сообщения${view === "messages" && msgTotal ? ` (${msgTotal})` : ""}`}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div className="space-y-2">
+        {isLoading
+          ? Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-16 bg-card rounded-lg border border-border animate-pulse" />)
+          : view === "sessions"
+            ? sessions.length === 0
+              ? <p className="text-center text-muted-foreground text-sm py-8">Сессий нет</p>
+              : sessions.map((s) => <SessionRow key={s.id} s={s} />)
+            : messages.length === 0
+              ? <p className="text-center text-muted-foreground text-sm py-8">Сообщений нет</p>
+              : messages.map((m) => <MessageRow key={m.id} m={m} />)
+        }
+      </div>
+
+      {/* Pagination */}
+      {((view === "sessions" && sessTotal > 50) || (view === "messages" && msgTotal > 50)) && (
+        <div className="flex gap-2 justify-center">
+          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
+            className="px-4 py-2 bg-card border border-border rounded-lg text-sm disabled:opacity-40">← Назад</button>
+          <span className="px-3 py-2 text-sm text-muted-foreground">Стр. {page}</span>
+          <button onClick={() => setPage((p) => p + 1)}
+            disabled={(view === "sessions" && sessions.length < 50) || (view === "messages" && messages.length < 50)}
+            className="px-4 py-2 bg-card border border-border rounded-lg text-sm disabled:opacity-40">Вперёд →</button>
+        </div>
+      )}
+    </div>
+  );
 }

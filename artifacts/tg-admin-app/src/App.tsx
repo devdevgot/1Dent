@@ -9,7 +9,7 @@ import ClinicsPage from "./pages/ClinicsPage";
 import ClinicDetailPage from "./pages/ClinicDetailPage";
 import ActivityPage from "./pages/ActivityPage";
 import LogsPage from "./pages/LogsPage";
-import AdminsPage from "./pages/AdminsPage";
+import SettingsPage from "./pages/SettingsPage";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -92,7 +92,7 @@ function Inner() {
             <Route path="/clinics/:clinicId" element={<ClinicDetailPage />} />
             <Route path="/activity" element={<ActivityPage />} />
             <Route path="/logs" element={<LogsPage />} />
-            <Route path="/admins" element={<AdminsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </main>
         <BottomNavWrapper />

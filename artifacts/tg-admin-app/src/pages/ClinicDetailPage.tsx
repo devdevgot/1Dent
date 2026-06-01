@@ -184,6 +184,9 @@ function InfoTab({ clinicId }: { clinicId: string }) {
 // ── Users Tab ──
 function UsersTab({ clinicId }: { clinicId: string }) {
   const qc = useQueryClient();
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState({ name: "", email: "", role: "doctor", specialty: "", phone: "" });
+
   const { data, isLoading } = useQuery({
     queryKey: ["tma-clinic-users", clinicId],
     queryFn: () => api.get<{ success: boolean; data: { users: Record<string, unknown>[] } }>(`/clinics/${clinicId}/users`),
@@ -193,90 +196,341 @@ function UsersTab({ clinicId }: { clinicId: string }) {
       api.patch(`/clinics/${clinicId}/users/${userId}`, { isActive }),
     onSuccess: () => { hapticNotify("success"); qc.invalidateQueries({ queryKey: ["tma-clinic-users", clinicId] }); },
   });
+  const deleteMut = useMutation({
+    mutationFn: (userId: string) => api.delete(`/clinics/${clinicId}/users/${userId}`),
+    onSuccess: () => { hapticNotify("warning"); qc.invalidateQueries({ queryKey: ["tma-clinic-users", clinicId] }); },
+  });
+  const createMut = useMutation({
+    mutationFn: () => api.post(`/clinics/${clinicId}/users`, { ...form, password: "changeme123" }),
+    onSuccess: () => {
+      hapticNotify("success");
+      qc.invalidateQueries({ queryKey: ["tma-clinic-users", clinicId] });
+      setShowAdd(false);
+      setForm({ name: "", email: "", role: "doctor", specialty: "", phone: "" });
+    },
+    onError: (err) => tgAlert(err instanceof Error ? err.message : "Ошибка"),
+  });
 
   if (isLoading) return <LoadingSkeleton />;
   const users = data?.data?.users ?? [];
-  if (!users.length) return <EmptyState icon="👥" text="Нет сотрудников" />;
   return (
-    <div className="space-y-2">
-      {users.map((u, i) => (
-        <div key={i} className="bg-card rounded-lg border border-border p-3">
-          <div className="flex items-center justify-between">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground">{String(u["name"] ?? "—")}</p>
-              <p className="text-xs text-muted-foreground">{String(u["email"] ?? "—")} · {String(u["role"] ?? "—")}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className={`text-xs px-2 py-0.5 rounded-full ${u["isActive"] ? "bg-green-500/20 text-green-400" : "bg-muted text-muted-foreground"}`}>
-                {u["isActive"] ? "Активен" : "Неактивен"}
-              </span>
-              <button
-                onClick={() => { haptic("medium"); toggleMut.mutate({ userId: String(u["id"]), isActive: !u["isActive"] }); }}
-                className="text-xs text-muted-foreground px-2 py-1 rounded border border-border hover:border-primary/50"
-              >{u["isActive"] ? "✕" : "↺"}</button>
+    <div className="space-y-3">
+      <button onClick={() => { haptic("light"); setShowAdd(v => !v); }}
+        className="w-full py-2 bg-primary/10 border border-primary/20 rounded-lg text-sm text-primary font-medium">
+        {showAdd ? "✕ Отмена" : "+ Добавить сотрудника"}
+      </button>
+
+      {showAdd && (
+        <div className="bg-card border border-border rounded-xl p-4 space-y-2">
+          <p className="text-sm font-medium text-foreground">Новый сотрудник</p>
+          {(["name", "email", "phone"] as const).map((f) => (
+            <input key={f} value={form[f]} onChange={(e) => setForm(p => ({ ...p, [f]: e.target.value }))}
+              placeholder={f === "name" ? "Имя*" : f === "email" ? "Email*" : "Телефон"}
+              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary" />
+          ))}
+          <div className="flex gap-2">
+            <select value={form.role} onChange={(e) => setForm(p => ({ ...p, role: e.target.value }))}
+              className="flex-1 bg-background border border-border rounded-lg px-2 py-2 text-sm text-foreground">
+              {["owner","admin","doctor","accountant","warehouse"].map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+            {form.role === "doctor" && (
+              <input value={form.specialty} onChange={(e) => setForm(p => ({ ...p, specialty: e.target.value }))}
+                placeholder="Специальность" className="flex-1 bg-background border border-border rounded-lg px-2 py-2 text-sm text-foreground focus:outline-none focus:border-primary" />
+            )}
+          </div>
+          <button onClick={() => { if (form.name && form.email) { haptic("medium"); createMut.mutate(); } }}
+            disabled={!form.name.trim() || !form.email.trim() || createMut.isPending}
+            className="w-full py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium disabled:opacity-50">
+            {createMut.isPending ? "Сохранение..." : "Создать"}
+          </button>
+        </div>
+      )}
+
+      {!users.length && !showAdd && <EmptyState icon="👥" text="Нет сотрудников" />}
+      <div className="space-y-2">
+        {users.map((u, i) => (
+          <div key={i} className="bg-card rounded-lg border border-border p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-sm font-medium text-foreground">{String(u["name"] ?? "—")}</p>
+                  <span className="text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground">{String(u["role"] ?? "")}</span>
+                  <span className={`text-xs px-1.5 py-0.5 rounded ${u["isActive"] ? "text-green-400" : "text-muted-foreground"}`}>
+                    {u["isActive"] ? "●" : "○"}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground truncate">{String(u["email"] ?? "—")}{u["specialty"] ? ` · ${String(u["specialty"])}` : ""}</p>
+              </div>
+              <div className="flex gap-1 flex-shrink-0">
+                <button onClick={() => { haptic("medium"); toggleMut.mutate({ userId: String(u["id"]), isActive: !u["isActive"] }); }}
+                  className="text-xs px-2 py-1 rounded-lg border border-border text-muted-foreground hover:border-primary/50">
+                  {u["isActive"] ? "↓" : "↑"}
+                </button>
+                <button onClick={() => { haptic("heavy"); tgConfirm(`Деактивировать ${String(u["name"])}?`, (ok) => { if (ok) deleteMut.mutate(String(u["id"])); }); }}
+                  className="text-xs px-2 py-1 rounded-lg border border-red-500/20 text-red-400">✕</button>
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
+
+const PATIENT_STATUSES = [
+  { value: "", label: "Все статусы" },
+  { value: "new_request", label: "Новая заявка" },
+  { value: "initial_consultation", label: "Консультация" },
+  { value: "diagnostics", label: "Диагностика" },
+  { value: "treatment_assigned", label: "Назначено лечение" },
+  { value: "treatment_in_progress", label: "Лечение" },
+  { value: "post_op_monitoring", label: "Мониторинг" },
+  { value: "completed", label: "Завершён" },
+];
+
+const statusColors: Record<string, string> = {
+  new_request: "bg-blue-500/20 text-blue-400",
+  initial_consultation: "bg-cyan-500/20 text-cyan-400",
+  diagnostics: "bg-yellow-500/20 text-yellow-400",
+  treatment_assigned: "bg-orange-500/20 text-orange-400",
+  treatment_in_progress: "bg-purple-500/20 text-purple-400",
+  post_op_monitoring: "bg-pink-500/20 text-pink-400",
+  completed: "bg-green-500/20 text-green-400",
+};
 
 // ── Patients Tab ──
 function PatientsTab({ clinicId }: { clinicId: string }) {
+  const qc = useQueryClient();
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editStatus, setEditStatus] = useState("");
+
+  const params = new URLSearchParams({ page: String(page) });
+  if (search) params.set("search", search);
+  if (status) params.set("status", status);
+
   const { data, isLoading } = useQuery({
-    queryKey: ["tma-clinic-patients", clinicId, page],
-    queryFn: () => api.get<{ success: boolean; data: { patients: Record<string, unknown>[]; total: number } }>(`/clinics/${clinicId}/patients?page=${page}`),
+    queryKey: ["tma-clinic-patients", clinicId, page, search, status],
+    queryFn: () => api.get<{ success: boolean; data: { patients: Record<string, unknown>[]; total: number } }>(`/clinics/${clinicId}/patients?${params}`),
   });
-  if (isLoading) return <LoadingSkeleton />;
+  const patchMut = useMutation({
+    mutationFn: ({ id, s }: { id: string; s: string }) => api.patch(`/clinics/${clinicId}/patients/${id}`, { status: s }),
+    onSuccess: () => { hapticNotify("success"); setEditingId(null); qc.invalidateQueries({ queryKey: ["tma-clinic-patients", clinicId] }); },
+  });
+
   const patients = data?.data?.patients ?? [];
   const total = data?.data?.total ?? 0;
   const pages = Math.ceil(total / 50);
-  if (!patients.length) return <EmptyState icon="🦷" text="Нет пациентов" />;
+
   return (
-    <div className="space-y-2">
-      <p className="text-xs text-muted-foreground">Всего: {total}</p>
-      {patients.map((p, i) => (
-        <div key={i} className="bg-card rounded-lg border border-border p-3">
-          <p className="text-sm font-medium text-foreground">{String(p["name"] ?? "—")}</p>
-          <p className="text-xs text-muted-foreground">{String(p["phone"] ?? "—")}</p>
-        </div>
-      ))}
-      <Paginator page={page} pages={pages} onPage={setPage} />
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="🔍 Поиск..."
+          className="flex-1 bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary" />
+        <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}
+          className="flex-1 bg-card border border-border rounded-lg px-2 py-2 text-sm text-foreground">
+          {PATIENT_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+        </select>
+      </div>
+      {isLoading ? <LoadingSkeleton /> : (
+        <>
+          <p className="text-xs text-muted-foreground">Всего: {total}</p>
+          {!patients.length ? <EmptyState icon="🦷" text="Нет пациентов" /> : (
+            <div className="space-y-2">
+              {patients.map((p, i) => (
+                <div key={i} className="bg-card rounded-lg border border-border p-3 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground">{String(p["name"] ?? "—")}</p>
+                      <p className="text-xs text-muted-foreground">{String(p["phone"] ?? "—")} · {String(p["source"] ?? "—")}</p>
+                    </div>
+                    <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${statusColors[String(p["status"])] ?? "bg-muted text-muted-foreground"}`}>
+                      {PATIENT_STATUSES.find(s => s.value === p["status"])?.label ?? String(p["status"])}
+                    </span>
+                  </div>
+                  {editingId === String(p["id"]) ? (
+                    <div className="flex gap-2">
+                      <select value={editStatus} onChange={(e) => setEditStatus(e.target.value)}
+                        className="flex-1 bg-background border border-border rounded-lg px-2 py-1.5 text-sm text-foreground">
+                        {PATIENT_STATUSES.filter(s => s.value).map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                      </select>
+                      <button onClick={() => { haptic("medium"); patchMut.mutate({ id: String(p["id"]), s: editStatus }); }}
+                        disabled={patchMut.isPending} className="px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm disabled:opacity-50">✓</button>
+                      <button onClick={() => setEditingId(null)} className="px-3 py-1.5 bg-muted text-muted-foreground rounded-lg text-sm">✕</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => { haptic("light"); setEditingId(String(p["id"])); setEditStatus(String(p["status"])); }}
+                      className="text-xs text-primary px-2 py-1 bg-primary/10 rounded-lg">Изменить статус</button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          <Paginator page={page} pages={pages} onPage={setPage} />
+        </>
+      )}
     </div>
   );
 }
 
-// ── Chatbot Overview ──
+// ── Chatbot Overview + Settings ──
 function ChatbotTab({ clinicId }: { clinicId: string }) {
-  const { data, isLoading } = useQuery({
+  const qc = useQueryClient();
+  const [subTab, setSubTab] = useState<"overview" | "settings">("overview");
+  const [pingStatus, setPingStatus] = useState<string | null>(null);
+  const [settingsForm, setSettingsForm] = useState({
+    enabled: true,
+    greetingTemplate: "",
+    greenApiInstanceId: "",
+    greenApiToken: "",
+    greenApiUrl: "",
+    telegramBotToken: "",
+    whatsappPhone: "",
+  });
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+
+  const overviewQ = useQuery({
     queryKey: ["tma-clinic-chatbot", clinicId],
     queryFn: () => api.get<{ success: boolean; data: { totalSessions: number; totalMessages: number; recentSessions: ChatbotSession[] } }>(`/clinics/${clinicId}/chatbot`),
+    enabled: subTab === "overview",
   });
-  if (isLoading) return <LoadingSkeleton rows={2} />;
-  const d = data?.data;
+  const settingsQ = useQuery({
+    queryKey: ["tma-clinic-chatbot-settings", clinicId],
+    queryFn: () => api.get<{ success: boolean; data: { settings: Record<string, unknown> | null; connection: Record<string, unknown> | null } }>(`/clinics/${clinicId}/chatbot/settings`),
+    enabled: subTab === "settings",
+  });
+
+  useEffect(() => {
+    if (settingsQ.data?.data && !settingsLoaded) {
+      const s = settingsQ.data.data.settings;
+      const c = settingsQ.data.data.connection;
+      setSettingsForm({
+        enabled: Boolean(s?.["enabled"] ?? true),
+        greetingTemplate: String(s?.["greetingTemplate"] ?? ""),
+        greenApiInstanceId: String(c?.["greenApiInstanceId"] ?? ""),
+        greenApiToken: String(c?.["greenApiToken"] ?? ""),
+        greenApiUrl: String(c?.["greenApiUrl"] ?? ""),
+        telegramBotToken: String(c?.["telegramBotToken"] ?? ""),
+        whatsappPhone: String(c?.["whatsappPhone"] ?? ""),
+      });
+      setSettingsLoaded(true);
+    }
+  }, [settingsQ.data, settingsLoaded]);
+
+  const saveMut = useMutation({
+    mutationFn: () => api.patch(`/clinics/${clinicId}/chatbot/settings`, settingsForm),
+    onSuccess: () => { hapticNotify("success"); qc.invalidateQueries({ queryKey: ["tma-clinic-chatbot-settings", clinicId] }); tgAlert("Настройки сохранены"); },
+    onError: (err) => { hapticNotify("error"); tgAlert(err instanceof Error ? err.message : "Ошибка"); },
+  });
+
+  const handlePing = async () => {
+    haptic("light");
+    setPingStatus("Проверяю...");
+    try {
+      const res = await api.post<{ success: boolean; data: { connected: boolean; stateInstance?: string; reason?: string } }>(`/clinics/${clinicId}/chatbot/ping`);
+      setPingStatus(res.data.connected ? `✅ Подключён (${res.data.stateInstance ?? ""})` : `❌ Не подключён${res.data.reason ? ` — ${res.data.reason}` : ""}`);
+    } catch {
+      setPingStatus("❌ Ошибка проверки");
+    }
+  };
+
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
-        <StatCard label="Сессий" value={d?.totalSessions ?? 0} />
-        <StatCard label="Сообщений" value={d?.totalMessages ?? 0} />
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        {(["overview", "settings"] as const).map((t) => (
+          <button key={t} onClick={() => { haptic("light"); setSubTab(t); setSettingsLoaded(false); }}
+            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${subTab === t ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground"}`}>
+            {t === "overview" ? "📊 Обзор" : "⚙️ Настройки"}
+          </button>
+        ))}
       </div>
-      <div>
-        <p className="text-xs text-muted-foreground mb-2">Последние сессии</p>
-        <div className="space-y-2">
-          {(d?.recentSessions ?? []).map((s) => (
-            <div key={s.id} className="bg-card rounded-lg border border-border p-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-foreground">{s.phone}</span>
-                {s.humanTakeover && <span className="text-xs text-red-400 bg-red-500/10 px-2 py-0.5 rounded">👤 Оператор</span>}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">{s.state} · {new Date(s.updatedAt).toLocaleString("ru", { dateStyle: "short", timeStyle: "short" })}</p>
+
+      {subTab === "overview" && (
+        overviewQ.isLoading ? <LoadingSkeleton rows={2} /> : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <StatCard label="Сессий" value={overviewQ.data?.data?.totalSessions ?? 0} />
+              <StatCard label="Сообщений" value={overviewQ.data?.data?.totalMessages ?? 0} />
             </div>
-          ))}
-          {!(d?.recentSessions ?? []).length && <EmptyState icon="🤖" text="Нет активных сессий" />}
-        </div>
-      </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">Последние сессии</p>
+              <div className="space-y-2">
+                {(overviewQ.data?.data?.recentSessions ?? []).map((s) => (
+                  <div key={s.id} className="bg-card rounded-lg border border-border p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-foreground">{s.phone}</span>
+                      {s.humanTakeover && <span className="text-xs text-red-400 bg-red-500/10 px-2 py-0.5 rounded">👤 Оператор</span>}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">{s.state} · {new Date(s.updatedAt).toLocaleString("ru", { dateStyle: "short", timeStyle: "short" })}</p>
+                  </div>
+                ))}
+                {!(overviewQ.data?.data?.recentSessions ?? []).length && <EmptyState icon="🤖" text="Нет активных сессий" />}
+              </div>
+            </div>
+          </div>
+        )
+      )}
+
+      {subTab === "settings" && (
+        settingsQ.isLoading ? <LoadingSkeleton rows={3} /> : (
+          <div className="space-y-3">
+            <div className="bg-card border border-border rounded-xl p-4 space-y-3">
+              <p className="text-sm font-semibold text-foreground">🤖 Бот</p>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-foreground">Чат-бот активен</span>
+                <button onClick={() => setSettingsForm(p => ({ ...p, enabled: !p.enabled }))}
+                  className={`w-12 h-6 rounded-full transition-colors ${settingsForm.enabled ? "bg-primary" : "bg-muted"}`}>
+                  <span className={`block w-5 h-5 bg-white rounded-full shadow transition-transform mx-0.5 ${settingsForm.enabled ? "translate-x-6" : "translate-x-0"}`} />
+                </button>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Приветствие</p>
+                <textarea value={settingsForm.greetingTemplate} onChange={(e) => setSettingsForm(p => ({ ...p, greetingTemplate: e.target.value }))} rows={3}
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary resize-none" />
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-foreground">📱 WhatsApp (Green API)</p>
+                <button onClick={handlePing} className="text-xs text-primary px-2 py-1 bg-primary/10 rounded-lg">Ping</button>
+              </div>
+              {pingStatus && <p className="text-xs text-foreground bg-muted/50 px-3 py-2 rounded-lg">{pingStatus}</p>}
+              {[
+                { key: "greenApiInstanceId", label: "idInstance" },
+                { key: "greenApiToken", label: "apiToken" },
+                { key: "greenApiUrl", label: "apiUrl" },
+                { key: "whatsappPhone", label: "Телефон WhatsApp" },
+              ].map(({ key, label }) => (
+                <div key={key}>
+                  <p className="text-xs text-muted-foreground mb-1">{label}</p>
+                  <input value={settingsForm[key as keyof typeof settingsForm] as string}
+                    onChange={(e) => setSettingsForm(p => ({ ...p, [key]: e.target.value }))}
+                    placeholder={label} type={key.toLowerCase().includes("token") ? "password" : "text"}
+                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary font-mono" />
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-card border border-border rounded-xl p-4 space-y-3">
+              <p className="text-sm font-semibold text-foreground">✈️ Telegram</p>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Bot Token</p>
+                <input value={settingsForm.telegramBotToken} onChange={(e) => setSettingsForm(p => ({ ...p, telegramBotToken: e.target.value }))}
+                  placeholder="123456789:AABBcc..." type="password"
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary font-mono" />
+              </div>
+            </div>
+
+            <button onClick={() => { haptic("medium"); saveMut.mutate(); }} disabled={saveMut.isPending}
+              className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-medium text-sm disabled:opacity-50">
+              {saveMut.isPending ? "Сохранение..." : "💾 Сохранить настройки"}
+            </button>
+          </div>
+        )
+      )}
     </div>
   );
 }
@@ -383,10 +637,11 @@ function ChannelsTab({ clinicId }: { clinicId: string }) {
   const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState("");
   const [newType, setNewType] = useState("other");
+  const [pingStatus, setPingStatus] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["tma-clinic-channels", clinicId],
-    queryFn: () => api.get<{ success: boolean; data: { channels: Record<string, unknown>[] } }>(`/clinics/${clinicId}/channels`),
+    queryFn: () => api.get<{ success: boolean; data: { botChannels: Array<Record<string, unknown>>; marketingChannels: Record<string, unknown>[] } }>(`/clinics/${clinicId}/channels`),
   });
   const createMut = useMutation({
     mutationFn: () => api.post(`/clinics/${clinicId}/channels`, { name: newName, type: newType }),
@@ -397,33 +652,83 @@ function ChannelsTab({ clinicId }: { clinicId: string }) {
     onSuccess: () => { hapticNotify("warning"); qc.invalidateQueries({ queryKey: ["tma-clinic-channels", clinicId] }); },
   });
 
+  const handlePing = async () => {
+    haptic("light"); setPingStatus("Проверяю...");
+    try {
+      const res = await api.post<{ success: boolean; data: { connected: boolean; stateInstance?: string; reason?: string } }>(`/clinics/${clinicId}/channels/ping`);
+      setPingStatus(res.data.connected ? `✅ Подключён (${res.data.stateInstance ?? ""})` : `❌ Нет связи${res.data.reason ? ` — ${res.data.reason}` : ""}`);
+    } catch { setPingStatus("❌ Ошибка"); }
+  };
+
   if (isLoading) return <LoadingSkeleton />;
-  const channels = data?.data?.channels ?? [];
+  const botChannels = data?.data?.botChannels ?? [];
+  const marketingChannels = data?.data?.marketingChannels ?? [];
+
   return (
-    <div className="space-y-3">
-      {showAdd && (
-        <div className="bg-card border border-border rounded-xl p-3 space-y-2">
-          <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Название канала" className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary" />
-          <select value={newType} onChange={(e) => setNewType(e.target.value)} className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground">
-            {["instagram","telegram","2gis","website","whatsapp","referral","other"].map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-          <div className="flex gap-2">
-            <button onClick={() => { setShowAdd(false); setNewName(""); }} className="flex-1 py-1.5 bg-muted text-muted-foreground rounded-lg text-sm">Отмена</button>
-            <button onClick={() => { if (newName.trim()) createMut.mutate(); }} disabled={!newName.trim() || createMut.isPending} className="flex-1 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm disabled:opacity-50">Создать</button>
-          </div>
+    <div className="space-y-4">
+      {/* Bot channels */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Бот-каналы</p>
+          <button onClick={handlePing} className="text-xs text-primary px-2 py-1 bg-primary/10 rounded-lg">Ping WA</button>
         </div>
-      )}
-      <button onClick={() => { haptic("medium"); setShowAdd(!showAdd); }} className="w-full py-2 bg-card border border-dashed border-border rounded-lg text-sm text-muted-foreground hover:border-primary/50">+ Добавить канал</button>
-      {!channels.length && !showAdd && <EmptyState icon="📡" text="Нет каналов" />}
-      {channels.map((c, i) => (
-        <div key={i} className="bg-card rounded-lg border border-border p-3 flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-foreground">{String(c["name"] ?? "—")}</p>
-            <p className="text-xs text-muted-foreground">{String(c["type"] ?? "—")} · {String(c["refCode"] ?? "")}</p>
+        {pingStatus && <p className="text-xs text-foreground bg-muted/50 px-3 py-2 rounded-lg">{pingStatus}</p>}
+        {botChannels.map((ch, i) => {
+          const type = String(ch["type"] ?? "");
+          const configured = Boolean(ch["configured"]);
+          return (
+            <div key={i} className="bg-card rounded-lg border border-border p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-base">{type === "whatsapp" ? "📱" : "✈️"}</span>
+                <span className="text-sm font-medium text-foreground capitalize">{type}</span>
+                <span className={`ml-auto text-xs px-2 py-0.5 rounded-full ${configured ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+                  {configured ? "Настроен" : "Не настроен"}
+                </span>
+              </div>
+              {type === "whatsapp" && (
+                <div className="space-y-0.5 mt-1">
+                  {ch["idInstance"] && <p className="text-xs text-muted-foreground font-mono">idInstance: {String(ch["idInstance"])}</p>}
+                  {ch["apiUrl"] && <p className="text-xs text-muted-foreground font-mono">apiUrl: {String(ch["apiUrl"])}</p>}
+                  {ch["phone"] && <p className="text-xs text-muted-foreground">📞 {String(ch["phone"])}</p>}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Marketing channels */}
+      <div className="space-y-2">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Маркетинговые каналы</p>
+        {showAdd && (
+          <div className="bg-card border border-border rounded-xl p-3 space-y-2">
+            <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Название канала"
+              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary" />
+            <select value={newType} onChange={(e) => setNewType(e.target.value)}
+              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground">
+              {["instagram","telegram","2gis","website","whatsapp","referral","other"].map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <div className="flex gap-2">
+              <button onClick={() => { setShowAdd(false); setNewName(""); }} className="flex-1 py-1.5 bg-muted text-muted-foreground rounded-lg text-sm">Отмена</button>
+              <button onClick={() => { if (newName.trim()) createMut.mutate(); }} disabled={!newName.trim() || createMut.isPending}
+                className="flex-1 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm disabled:opacity-50">Создать</button>
+            </div>
           </div>
-          <button onClick={() => { haptic("medium"); tgConfirm("Удалить канал?", (ok) => { if (ok) deleteMut.mutate(String(c["id"])); }); }} className="text-xs text-red-400 px-2 py-1 rounded-lg border border-red-500/20">✕</button>
-        </div>
-      ))}
+        )}
+        <button onClick={() => { haptic("medium"); setShowAdd(!showAdd); }}
+          className="w-full py-2 bg-card border border-dashed border-border rounded-lg text-sm text-muted-foreground hover:border-primary/50">+ Добавить канал</button>
+        {!marketingChannels.length && !showAdd && <EmptyState icon="📡" text="Нет маркетинговых каналов" />}
+        {marketingChannels.map((c, i) => (
+          <div key={i} className="bg-card rounded-lg border border-border p-3 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-foreground">{String(c["name"] ?? "—")}</p>
+              <p className="text-xs text-muted-foreground">{String(c["type"] ?? "—")} · ref: {String(c["refCode"] ?? "")}</p>
+            </div>
+            <button onClick={() => { haptic("medium"); tgConfirm("Удалить канал?", (ok) => { if (ok) deleteMut.mutate(String(c["id"])); }); }}
+              className="text-xs text-red-400 px-2 py-1 rounded-lg border border-red-500/20">✕</button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

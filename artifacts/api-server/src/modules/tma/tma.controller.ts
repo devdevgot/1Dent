@@ -12,6 +12,7 @@ import {
   actionLogsTable,
   chatbotSessionsTable,
   chatbotMessagesTable,
+  chatbotSettingsTable,
   clinicChannelsTable,
   knowledgeSourcesTable,
   contractTemplatesTable,
@@ -21,8 +22,9 @@ import {
   notificationsTable,
   appointmentRemindersTable,
   postopFollowupsTable,
+  doctorCapacityTable,
 } from "@workspace/db";
-import { eq, desc, count, sum, gte, lte, and, sql, not } from "drizzle-orm";
+import { eq, desc, count, sum, gte, lte, and, sql, not, ilike, or, isNotNull } from "drizzle-orm";
 import { requireTmaAdmin, invalidateAdminCache } from "./tma.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 
@@ -212,32 +214,137 @@ router.delete("/clinics/:clinicId", async (req: Request, res: Response, next: Ne
   } catch (err) { next(err); }
 });
 
+// ── PLATFORM SETTINGS ────────────────────────────────────────────────────────
+router.get("/settings", async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const [admins, [clinicsRow], [usersRow], [patientsRow]] = await Promise.all([
+      db.select().from(platformAdminsTable).orderBy(platformAdminsTable.createdAt),
+      db.select({ count: count() }).from(clinicsTable).where(eq(clinicsTable.isActive, true)),
+      db.select({ count: count() }).from(usersTable),
+      db.select({ count: count() }).from(patientsTable),
+    ]);
+    const botConfigured = !!process.env["PLATFORM_TG_BOT_TOKEN"];
+    const webhookBase = process.env["REPLIT_DEV_DOMAIN"]
+      ? `https://${process.env["REPLIT_DEV_DOMAIN"]}`
+      : null;
+    res.json({
+      success: true,
+      data: {
+        admins,
+        stats: { clinics: clinicsRow?.count ?? 0, users: usersRow?.count ?? 0, patients: patientsRow?.count ?? 0 },
+        bot: {
+          configured: botConfigured,
+          webhookUrl: webhookBase ? `${webhookBase}/api/webhook/telegram/platform` : null,
+          tmaUrl: webhookBase ? `${webhookBase}/tg-admin` : null,
+        },
+      },
+    });
+  } catch (err) { next(err); }
+});
+
 // ── CLINIC USERS ──────────────────────────────────────────────────────────────
 router.get("/clinics/:clinicId/users", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const users = await db.select({
       id: usersTable.id, name: usersTable.name, email: usersTable.email,
-      role: usersTable.role, isActive: usersTable.isActive,
-      specialty: usersTable.specialty, createdAt: usersTable.createdAt,
+      role: usersTable.role, isActive: usersTable.isActive, phone: usersTable.phone,
+      position: usersTable.position, specialty: usersTable.specialty, createdAt: usersTable.createdAt,
     })
       .from(usersTable)
       .where(eq(usersTable.clinicId, req.params["clinicId"]!))
-      .orderBy(desc(usersTable.createdAt));
-    res.json({ success: true, data: { users } });
+      .orderBy(usersTable.role, usersTable.name);
+    // attach doctor capacity
+    const withCapacity = await Promise.all(users.map(async (u) => {
+      if (u.role !== "doctor") return { ...u, maxPatientsPerDay: null };
+      const [cap] = await db.select({ max: doctorCapacityTable.maxPatientsPerDay }).from(doctorCapacityTable)
+        .where(eq(doctorCapacityTable.doctorId, u.id)).limit(1);
+      return { ...u, maxPatientsPerDay: cap?.max ?? 20 };
+    }));
+    res.json({ success: true, data: { users: withCapacity } });
   } catch (err) { next(err); }
+});
+
+router.post("/clinics/:clinicId/users", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const schema = z.object({
+      name: z.string().min(1).max(200),
+      email: z.string().email(),
+      role: z.enum(["owner","admin","doctor","accountant","warehouse"]).default("doctor"),
+      specialty: z.string().optional(),
+      phone: z.string().optional(),
+      password: z.string().min(6).default("changeme123"),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+    // simple hash — clinic managers set real password later
+    const { createHash } = await import("crypto");
+    const passwordHash = createHash("sha256").update(parsed.data.password).digest("hex");
+    const [user] = await db.insert(usersTable).values({
+      id: randomUUID(),
+      clinicId: req.params["clinicId"]!,
+      name: parsed.data.name,
+      email: parsed.data.email,
+      role: parsed.data.role,
+      specialty: parsed.data.specialty,
+      phone: parsed.data.phone,
+      passwordHash,
+      isActive: true,
+    }).returning();
+    res.status(201).json({ success: true, data: { user } });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("unique") || msg.includes("duplicate")) return next(new ValidationError("Email уже используется"));
+    next(err);
+  }
 });
 
 router.patch("/clinics/:clinicId/users/:userId", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const schema = z.object({ isActive: z.boolean().optional(), role: z.string().optional() });
+    const schema = z.object({
+      isActive: z.boolean().optional(),
+      role: z.enum(["owner","admin","doctor","accountant","warehouse"]).optional(),
+      name: z.string().min(1).optional(),
+      specialty: z.string().optional(),
+      phone: z.string().optional(),
+    });
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) return next(new ValidationError("Invalid fields"));
     const [user] = await db.update(usersTable)
-      .set(parsed.data)
+      .set({ ...parsed.data, updatedAt: new Date() })
       .where(and(eq(usersTable.id, req.params["userId"]!), eq(usersTable.clinicId, req.params["clinicId"]!)))
       .returning();
     if (!user) return next(new NotFoundError("User not found"));
     res.json({ success: true, data: { user } });
+  } catch (err) { next(err); }
+});
+
+router.patch("/clinics/:clinicId/users/:userId/capacity", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const schema = z.object({ maxPatientsPerDay: z.number().int().min(1).max(100) });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError("maxPatientsPerDay (1–100) required"));
+    const existing = await db.select({ doctorId: doctorCapacityTable.doctorId })
+      .from(doctorCapacityTable).where(eq(doctorCapacityTable.doctorId, req.params["userId"]!)).limit(1);
+    if (existing.length) {
+      await db.update(doctorCapacityTable).set({ maxPatientsPerDay: parsed.data.maxPatientsPerDay })
+        .where(eq(doctorCapacityTable.doctorId, req.params["userId"]!));
+    } else {
+      await db.insert(doctorCapacityTable).values({
+        doctorId: req.params["userId"]!, clinicId: req.params["clinicId"]!, maxPatientsPerDay: parsed.data.maxPatientsPerDay,
+      });
+    }
+    res.json({ success: true, data: { maxPatientsPerDay: parsed.data.maxPatientsPerDay } });
+  } catch (err) { next(err); }
+});
+
+router.delete("/clinics/:clinicId/users/:userId", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const [user] = await db.update(usersTable)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(and(eq(usersTable.id, req.params["userId"]!), eq(usersTable.clinicId, req.params["clinicId"]!)))
+      .returning({ id: usersTable.id });
+    if (!user) return next(new NotFoundError("User not found"));
+    res.json({ success: true });
   } catch (err) { next(err); }
 });
 
@@ -248,16 +355,62 @@ router.get("/clinics/:clinicId/patients", async (req: Request, res: Response, ne
     const limit = 50;
     const offset = (page - 1) * limit;
     const clinicId = req.params["clinicId"]!;
+    const search = req.query["search"] as string | undefined;
+    const status = req.query["status"] as string | undefined;
+    const source = req.query["source"] as string | undefined;
+
+    const conditions = [eq(patientsTable.clinicId, clinicId)];
+    if (status) conditions.push(eq(patientsTable.status, status as never));
+    if (source) conditions.push(eq(patientsTable.source, source));
+    if (search) conditions.push(or(
+      ilike(patientsTable.name, `%${search}%`),
+      ilike(patientsTable.phone, `%${search}%`),
+    )!);
+
+    const where = and(...conditions);
     const patients = await db.select({
       id: patientsTable.id, name: patientsTable.name, phone: patientsTable.phone,
-      status: patientsTable.status, createdAt: patientsTable.createdAt,
+      status: patientsTable.status, source: patientsTable.source,
+      gender: patientsTable.gender, createdAt: patientsTable.createdAt,
     })
       .from(patientsTable)
-      .where(eq(patientsTable.clinicId, clinicId))
+      .where(where)
       .orderBy(desc(patientsTable.createdAt))
       .limit(limit).offset(offset);
-    const [total] = await db.select({ count: count() }).from(patientsTable).where(eq(patientsTable.clinicId, clinicId));
+    const [total] = await db.select({ count: count() }).from(patientsTable).where(where);
     res.json({ success: true, data: { patients, total: total?.count ?? 0, page } });
+  } catch (err) { next(err); }
+});
+
+router.get("/clinics/:clinicId/patients/:patientId", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const [patient] = await db.select().from(patientsTable)
+      .where(and(eq(patientsTable.id, req.params["patientId"]!), eq(patientsTable.clinicId, req.params["clinicId"]!)))
+      .limit(1);
+    if (!patient) return next(new NotFoundError("Patient not found"));
+    const [[procRow]] = await Promise.all([
+      db.select({ count: count() }).from(proceduresTable).where(eq(proceduresTable.patientId, req.params["patientId"]!)),
+    ]);
+    res.json({ success: true, data: { patient: { ...patient, proceduresCount: procRow?.count ?? 0 } } });
+  } catch (err) { next(err); }
+});
+
+router.patch("/clinics/:clinicId/patients/:patientId", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const schema = z.object({
+      status: z.enum(["new_request","initial_consultation","diagnostics","treatment_assigned","treatment_in_progress","post_op_monitoring","completed"]).optional(),
+      source: z.string().optional(),
+      doctorId: z.string().optional(),
+      notes: z.string().optional(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+    const [patient] = await db.update(patientsTable)
+      .set(parsed.data)
+      .where(and(eq(patientsTable.id, req.params["patientId"]!), eq(patientsTable.clinicId, req.params["clinicId"]!)))
+      .returning();
+    if (!patient) return next(new NotFoundError("Patient not found"));
+    res.json({ success: true, data: { patient } });
   } catch (err) { next(err); }
 });
 
@@ -278,6 +431,97 @@ router.get("/clinics/:clinicId/chatbot", async (req: Request, res: Response, nex
         .orderBy(desc(chatbotSessionsTable.updatedAt)).limit(20),
     ]);
     res.json({ success: true, data: { totalSessions: sessionsRow?.count ?? 0, totalMessages: msgRow?.count ?? 0, recentSessions: activeSessions } });
+  } catch (err) { next(err); }
+});
+
+// ── CHATBOT SETTINGS ─────────────────────────────────────────────────────────
+router.get("/clinics/:clinicId/chatbot/settings", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const clinicId = req.params["clinicId"]!;
+    const [settings] = await db.select().from(chatbotSettingsTable)
+      .where(eq(chatbotSettingsTable.clinicId, clinicId)).limit(1);
+    const [clinic] = await db.select({
+      greenApiInstanceId: clinicsTable.greenApiInstanceId,
+      greenApiToken: clinicsTable.greenApiToken,
+      greenApiUrl: clinicsTable.greenApiUrl,
+      telegramBotToken: clinicsTable.telegramBotToken,
+      whatsappPhone: clinicsTable.whatsappPhone,
+    }).from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1);
+    res.json({ success: true, data: { settings: settings ?? null, connection: clinic ?? null } });
+  } catch (err) { next(err); }
+});
+
+router.patch("/clinics/:clinicId/chatbot/settings", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const clinicId = req.params["clinicId"]!;
+    const schema = z.object({
+      enabled: z.boolean().optional(),
+      greetingTemplate: z.string().optional(),
+      followup24hTemplate: z.string().optional(),
+      followup72hTemplate: z.string().optional(),
+      followup168hTemplate: z.string().optional(),
+      greenApiInstanceId: z.string().optional(),
+      greenApiToken: z.string().optional(),
+      greenApiUrl: z.string().url().optional(),
+      telegramBotToken: z.string().optional(),
+      whatsappPhone: z.string().optional(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+
+    const { greenApiInstanceId, greenApiToken, greenApiUrl, telegramBotToken, whatsappPhone, ...botFields } = parsed.data;
+
+    // Update clinic connection fields
+    if (greenApiInstanceId !== undefined || greenApiToken !== undefined || greenApiUrl !== undefined || telegramBotToken !== undefined || whatsappPhone !== undefined) {
+      const clinicUpd: Record<string, string | undefined> = {};
+      if (greenApiInstanceId !== undefined) clinicUpd["greenApiInstanceId"] = greenApiInstanceId;
+      if (greenApiToken !== undefined) clinicUpd["greenApiToken"] = greenApiToken;
+      if (greenApiUrl !== undefined) clinicUpd["greenApiUrl"] = greenApiUrl;
+      if (telegramBotToken !== undefined) clinicUpd["telegramBotToken"] = telegramBotToken;
+      if (whatsappPhone !== undefined) clinicUpd["whatsappPhone"] = whatsappPhone;
+      await db.update(clinicsTable).set(clinicUpd).where(eq(clinicsTable.id, clinicId));
+    }
+
+    // Upsert chatbot settings
+    const existing = await db.select({ id: chatbotSettingsTable.id }).from(chatbotSettingsTable)
+      .where(eq(chatbotSettingsTable.clinicId, clinicId)).limit(1);
+    let settings;
+    if (existing.length && Object.keys(botFields).length) {
+      [settings] = await db.update(chatbotSettingsTable)
+        .set({ ...botFields, updatedAt: new Date() })
+        .where(eq(chatbotSettingsTable.clinicId, clinicId))
+        .returning();
+    } else if (!existing.length) {
+      [settings] = await db.insert(chatbotSettingsTable).values({ id: randomUUID(), clinicId, ...botFields }).returning();
+    } else {
+      [settings] = await db.select().from(chatbotSettingsTable).where(eq(chatbotSettingsTable.clinicId, clinicId)).limit(1);
+    }
+    res.json({ success: true, data: { settings } });
+  } catch (err) { next(err); }
+});
+
+router.post("/clinics/:clinicId/chatbot/ping", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const clinicId = req.params["clinicId"]!;
+    const [clinic] = await db.select({
+      greenApiInstanceId: clinicsTable.greenApiInstanceId,
+      greenApiToken: clinicsTable.greenApiToken,
+      greenApiUrl: clinicsTable.greenApiUrl,
+    }).from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1);
+
+    if (!clinic?.greenApiInstanceId || !clinic.greenApiToken) {
+      return res.json({ success: true, data: { connected: false, reason: "WhatsApp not configured" } });
+    }
+
+    try {
+      const baseUrl = clinic.greenApiUrl || "https://api.green-api.com";
+      const pingRes = await fetch(`${baseUrl}/waInstance${clinic.greenApiInstanceId}/getStateInstance/${clinic.greenApiToken}`, { signal: AbortSignal.timeout(5000) });
+      const pingData = await pingRes.json() as Record<string, unknown>;
+      const connected = (pingData["stateInstance"] as string) === "authorized";
+      res.json({ success: true, data: { connected, stateInstance: pingData["stateInstance"] ?? "unknown" } });
+    } catch {
+      res.json({ success: true, data: { connected: false, reason: "ping failed" } });
+    }
   } catch (err) { next(err); }
 });
 
@@ -343,27 +587,80 @@ router.get("/clinics/:clinicId/messages", async (req: Request, res: Response, ne
   try {
     const clinicId = req.params["clinicId"]!;
     const page = parseInt(String(req.query["page"] ?? "1"), 10);
+    const direction = req.query["direction"] as "inbound" | "outbound" | undefined;
+    const search = req.query["search"] as string | undefined;
+    const cursor = req.query["cursor"] as string | undefined;
+
+    const conditions = [eq(chatbotMessagesTable.clinicId, clinicId)];
+    if (direction) conditions.push(eq(chatbotMessagesTable.direction, direction));
+    if (search) conditions.push(or(
+      ilike(chatbotMessagesTable.content, `%${search}%`),
+      ilike(chatbotMessagesTable.phone, `%${search}%`),
+    )!);
+    if (cursor) conditions.push(lte(chatbotMessagesTable.createdAt, new Date(cursor)));
+
+    const where = and(...conditions);
     const messages = await db.select({
       id: chatbotMessagesTable.id, phone: chatbotMessagesTable.phone,
       direction: chatbotMessagesTable.direction, content: chatbotMessagesTable.content,
       createdAt: chatbotMessagesTable.createdAt,
     })
       .from(chatbotMessagesTable)
-      .where(eq(chatbotMessagesTable.clinicId, clinicId))
+      .where(where)
       .orderBy(desc(chatbotMessagesTable.createdAt))
-      .limit(50).offset((page - 1) * 50);
-    const [total] = await db.select({ count: count() }).from(chatbotMessagesTable).where(eq(chatbotMessagesTable.clinicId, clinicId));
-    res.json({ success: true, data: { messages, total: total?.count ?? 0, page } });
+      .limit(50).offset(cursor ? 0 : (page - 1) * 50);
+    const [total] = await db.select({ count: count() }).from(chatbotMessagesTable).where(where);
+    const nextCursor = messages.length === 50 ? messages[messages.length - 1]?.createdAt?.toISOString() : null;
+    res.json({ success: true, data: { messages, total: total?.count ?? 0, page, nextCursor } });
   } catch (err) { next(err); }
 });
 
 // ── CLINIC CHANNELS ───────────────────────────────────────────────────────────
 router.get("/clinics/:clinicId/channels", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const channels = await db.select().from(clinicChannelsTable)
-      .where(eq(clinicChannelsTable.clinicId, req.params["clinicId"]!))
-      .orderBy(desc(clinicChannelsTable.createdAt));
-    res.json({ success: true, data: { channels } });
+    const clinicId = req.params["clinicId"]!;
+    const [channels, [clinic]] = await Promise.all([
+      db.select().from(clinicChannelsTable)
+        .where(eq(clinicChannelsTable.clinicId, clinicId))
+        .orderBy(desc(clinicChannelsTable.createdAt)),
+      db.select({
+        greenApiInstanceId: clinicsTable.greenApiInstanceId,
+        greenApiToken: clinicsTable.greenApiToken,
+        greenApiUrl: clinicsTable.greenApiUrl,
+        telegramBotToken: clinicsTable.telegramBotToken,
+        whatsappPhone: clinicsTable.whatsappPhone,
+      }).from(clinicsTable).where(eq(clinicsTable.id, clinicId)),
+    ]);
+    // Build bot channels from clinic connection fields
+    const botChannels: Array<{ type: string; idInstance?: string | null; apiToken?: string | null; apiUrl?: string | null; phone?: string | null; configured: boolean }> = [
+      { type: "whatsapp", idInstance: clinic?.greenApiInstanceId, apiToken: clinic?.greenApiToken, apiUrl: clinic?.greenApiUrl, phone: clinic?.whatsappPhone, configured: !!clinic?.greenApiInstanceId && !!clinic.greenApiToken },
+      { type: "telegram", apiToken: clinic?.telegramBotToken, configured: !!clinic?.telegramBotToken },
+    ];
+    res.json({ success: true, data: { botChannels, marketingChannels: channels } });
+  } catch (err) { next(err); }
+});
+
+router.post("/clinics/:clinicId/channels/ping", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const clinicId = req.params["clinicId"]!;
+    const [clinic] = await db.select({
+      greenApiInstanceId: clinicsTable.greenApiInstanceId,
+      greenApiToken: clinicsTable.greenApiToken,
+      greenApiUrl: clinicsTable.greenApiUrl,
+    }).from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1);
+
+    if (!clinic?.greenApiInstanceId || !clinic.greenApiToken) {
+      return res.json({ success: true, data: { connected: false, reason: "WhatsApp not configured" } });
+    }
+    try {
+      const baseUrl = clinic.greenApiUrl || "https://api.green-api.com";
+      const pingRes = await fetch(`${baseUrl}/waInstance${clinic.greenApiInstanceId}/getStateInstance/${clinic.greenApiToken}`, { signal: AbortSignal.timeout(5000) });
+      const pingData = await pingRes.json() as Record<string, unknown>;
+      const connected = (pingData["stateInstance"] as string) === "authorized";
+      res.json({ success: true, data: { connected, stateInstance: pingData["stateInstance"] ?? "unknown" } });
+    } catch {
+      res.json({ success: true, data: { connected: false, reason: "ping failed" } });
+    }
   } catch (err) { next(err); }
 });
 
