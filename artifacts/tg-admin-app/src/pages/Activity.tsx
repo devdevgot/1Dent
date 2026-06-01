@@ -1,8 +1,29 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { api, type ChatbotSession, type ChatbotMessage } from "../lib/api";
+import { api, type ChatbotSession, type ChatbotMessage, type Clinic } from "../lib/api";
 
 type View = "sessions" | "messages";
+
+function ClinicPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { data } = useQuery({
+    queryKey: ["tma-clinics-picker"],
+    queryFn: () => api.get<{ success: boolean; data: { clinics: Clinic[] } }>("/clinics"),
+    staleTime: 60_000,
+  });
+  const clinics = data?.data?.clinics ?? [];
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary"
+    >
+      <option value="">🌐 Все клиники</option>
+      {clinics.map((c) => (
+        <option key={c.id} value={c.id}>{c.name}</option>
+      ))}
+    </select>
+  );
+}
 
 function SessionRow({ s }: { s: ChatbotSession }) {
   const stateColors: Record<string, string> = {
@@ -14,21 +35,12 @@ function SessionRow({ s }: { s: ChatbotSession }) {
   return (
     <div className="bg-card rounded-lg border border-border p-3 space-y-1">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-foreground">
-          {s.phone.replace(/(\d{1})(\d{3})(\d{3})(\d{4})/, "+$1 ($2) $3-$4")}
-        </span>
-        <span className={`text-xs px-2 py-0.5 rounded-full ${stateColors[s.state] ?? "bg-muted text-muted-foreground"}`}>
-          {s.state}
-        </span>
+        <span className="text-sm font-medium text-foreground">{s.phone}</span>
+        <span className={`text-xs px-2 py-0.5 rounded-full ${stateColors[s.state] ?? "bg-muted text-muted-foreground"}`}>{s.state}</span>
       </div>
-      {s.humanTakeover && (
-        <span className="inline-block text-xs text-red-400 bg-red-500/10 px-2 py-0.5 rounded">
-          👤 Оператор
-        </span>
-      )}
-      <p className="text-xs text-muted-foreground">
-        {new Date(s.updatedAt).toLocaleString("ru", { dateStyle: "short", timeStyle: "short" })}
-      </p>
+      {s.humanTakeover && <span className="inline-block text-xs text-red-400 bg-red-500/10 px-2 py-0.5 rounded">👤 Оператор</span>}
+      {s.clinicId && <p className="text-xs text-muted-foreground font-mono">Клиника: {s.clinicId.slice(0, 8)}…</p>}
+      <p className="text-xs text-muted-foreground">{new Date(s.updatedAt).toLocaleString("ru", { dateStyle: "short", timeStyle: "short" })}</p>
     </div>
   );
 }
@@ -37,18 +49,10 @@ function MessageRow({ m }: { m: ChatbotMessage }) {
   const isInbound = m.direction === "inbound";
   return (
     <div className={`flex gap-2 ${isInbound ? "flex-row" : "flex-row-reverse"}`}>
-      <div
-        className={`max-w-[80%] rounded-xl px-3 py-2 ${
-          isInbound ? "bg-card border border-border" : "bg-primary/20 border border-primary/30"
-        }`}
-      >
-        <p className="text-xs font-medium text-muted-foreground mb-0.5">
-          {isInbound ? "📱 " + m.phone.slice(-4) : "🤖 Бот"}
-        </p>
+      <div className={`max-w-[80%] rounded-xl px-3 py-2 ${isInbound ? "bg-card border border-border" : "bg-primary/20 border border-primary/30"}`}>
+        <p className="text-xs font-medium text-muted-foreground mb-0.5">{isInbound ? "📱 " + m.phone.slice(-4) : "🤖 Бот"}</p>
         <p className="text-sm text-foreground">{m.content}</p>
-        <p className="text-xs text-muted-foreground mt-1">
-          {new Date(m.createdAt).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}
-        </p>
+        <p className="text-xs text-muted-foreground mt-1">{new Date(m.createdAt).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}</p>
       </div>
     </div>
   );
@@ -57,16 +61,23 @@ function MessageRow({ m }: { m: ChatbotMessage }) {
 export default function Activity() {
   const [view, setView] = useState<View>("sessions");
   const [page, setPage] = useState(1);
+  const [clinicId, setClinicId] = useState("");
+
+  const buildUrl = (base: string) => {
+    const params = new URLSearchParams({ page: String(page) });
+    if (clinicId) params.set("clinicId", clinicId);
+    return `${base}?${params.toString()}`;
+  };
 
   const sessionsQ = useQuery({
-    queryKey: ["tma-sessions", page],
-    queryFn: () => api.get<{ success: boolean; data: { sessions: ChatbotSession[]; total: number; page: number } }>(`/sessions?page=${page}`),
+    queryKey: ["tma-sessions", page, clinicId],
+    queryFn: () => api.get<{ success: boolean; data: { sessions: ChatbotSession[]; total: number; page: number } }>(buildUrl("/sessions")),
     enabled: view === "sessions",
   });
 
   const messagesQ = useQuery({
-    queryKey: ["tma-messages", page],
-    queryFn: () => api.get<{ success: boolean; data: { messages: ChatbotMessage[]; total: number; page: number } }>(`/messages?page=${page}`),
+    queryKey: ["tma-messages", page, clinicId],
+    queryFn: () => api.get<{ success: boolean; data: { messages: ChatbotMessage[]; total: number; page: number } }>(buildUrl("/messages")),
     enabled: view === "messages",
   });
 
@@ -78,34 +89,39 @@ export default function Activity() {
   const total = d?.total ?? 0;
   const pages = Math.ceil(total / 50);
 
+  const handleClinicChange = (v: string) => {
+    setClinicId(v);
+    setPage(1);
+  };
+
   return (
     <div className="px-4 pt-6 space-y-4">
       <div>
         <h1 className="text-xl font-bold text-foreground">Активность</h1>
-        <p className="text-sm text-muted-foreground">Чат-бот по всем клиникам</p>
+        <p className="text-sm text-muted-foreground">Чат-бот сессии и сообщения</p>
       </div>
+
+      <ClinicPicker value={clinicId} onChange={handleClinicChange} />
 
       <div className="flex bg-muted rounded-lg p-1">
         {(["sessions", "messages"] as View[]).map((v) => (
           <button
             key={v}
             onClick={() => { setView(v); setPage(1); }}
-            className={`flex-1 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              view === v ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-            }`}
+            className={`flex-1 py-1.5 rounded-md text-sm font-medium transition-colors ${view === v ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}
           >
             {v === "sessions" ? "💬 Сессии" : "📨 Сообщения"}
           </button>
         ))}
       </div>
 
-      <div className="text-xs text-muted-foreground">Всего: {total}</div>
+      <div className="text-xs text-muted-foreground">
+        {clinicId ? "Клиника выбрана ·" : "Все клиники ·"} Всего: {total}
+      </div>
 
       <div className="space-y-2">
         {q.isLoading
-          ? Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-16 bg-card rounded-lg border border-border animate-pulse" />
-            ))
+          ? Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-16 bg-card rounded-lg border border-border animate-pulse" />)
           : view === "sessions"
           ? (items as ChatbotSession[]).map((s) => <SessionRow key={s.id} s={s} />)
           : (items as ChatbotMessage[]).map((m) => <MessageRow key={m.id} m={m} />)}
@@ -113,21 +129,9 @@ export default function Activity() {
 
       {pages > 1 && (
         <div className="flex items-center justify-center gap-2 pb-4">
-          <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="px-3 py-1.5 bg-card border border-border rounded-lg text-sm disabled:opacity-40"
-          >
-            ←
-          </button>
+          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1.5 bg-card border border-border rounded-lg text-sm disabled:opacity-40">←</button>
           <span className="text-sm text-muted-foreground">{page} / {pages}</span>
-          <button
-            onClick={() => setPage((p) => Math.min(pages, p + 1))}
-            disabled={page === pages}
-            className="px-3 py-1.5 bg-card border border-border rounded-lg text-sm disabled:opacity-40"
-          >
-            →
-          </button>
+          <button onClick={() => setPage((p) => Math.min(pages, p + 1))} disabled={page === pages} className="px-3 py-1.5 bg-card border border-border rounded-lg text-sm disabled:opacity-40">→</button>
         </div>
       )}
     </div>

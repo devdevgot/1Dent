@@ -64,6 +64,7 @@ export interface DashboardData {
 export interface PlatformAdmin {
   id: string;
   telegramUserId: string;
+  telegramUsername: string | null;
   name: string;
   addedBy: string | null;
   createdAt: string;
@@ -94,5 +95,47 @@ export interface ChatbotMessage {
   phone: string;
   direction: "inbound" | "outbound";
   content: string;
+  createdAt: string;
+}
+
+export interface Notification {
+  id: string;
+  type: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface Broadcast {
+  id: string;
+  type: string;
+  status: string;
+  sendAt: string;
+  createdAt: string;
+}
+
+export interface ClinicFile {
+  id: string;
+  name: string;
+  type: string;
+  source: string;
+  url: string;
+  createdAt: string;
+}
+
+export interface Contract {
+  id: string;
+  patientName: string;
+  patientPhone: string;
+  status: string;
+  signedAt: string | null;
+  createdAt: string;
+}
+
+export interface KnowledgeEntry {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
   createdAt: string;
 }

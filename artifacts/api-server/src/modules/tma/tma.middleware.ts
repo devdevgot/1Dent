@@ -86,8 +86,11 @@ export async function requireTmaAdmin(req: Request, res: Response, next: NextFun
     return res.status(401).json({ success: false, error: "Missing Telegram initData" });
   }
 
-  // In dev mode allow bypassing auth with env var
-  const devBypass = process.env["TMA_DEV_BYPASS_TG_ID"];
+  // In dev mode allow bypassing auth with env var (never active in production)
+  const devBypass =
+    process.env["NODE_ENV"] !== "production"
+      ? process.env["TMA_DEV_BYPASS_TG_ID"]
+      : undefined;
   let telegramUserId: string;
   let firstName = "Dev";
 
