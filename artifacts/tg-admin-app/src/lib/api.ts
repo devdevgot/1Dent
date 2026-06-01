@@ -112,7 +112,11 @@ export interface Broadcast {
   id: string;
   type: string;
   status: string;
-  sendAt: string;
+  sendAt: string | null;
+  title?: string | null;
+  message?: string | null;
+  sentCount?: number;
+  failedCount?: number;
   createdAt: string;
 }
 

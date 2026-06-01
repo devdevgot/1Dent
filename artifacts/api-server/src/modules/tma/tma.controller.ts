@@ -25,6 +25,7 @@ import {
   notificationsTable,
   appointmentRemindersTable,
   postopFollowupsTable,
+  adminBroadcastsTable,
   doctorCapacityTable,
   inventoryItemsTable,
   inventoryStockTable,
@@ -296,7 +297,7 @@ router.post("/clinics/:clinicId/users", async (req: Request, res: Response, next
       role: z.enum(["owner","admin","doctor","accountant","warehouse"]).default("doctor"),
       specialty: z.string().optional(),
       phone: z.string().optional(),
-      password: z.string().min(6).default("changeme123"),
+      password: z.string().min(8),
     });
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
@@ -722,6 +723,31 @@ router.delete("/clinics/:clinicId/channels/:channelId", async (req: Request, res
   } catch (err) { next(err); }
 });
 
+router.get("/clinics/:clinicId/channels/:channelId/status", async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { clinicId, channelId } = req.params as Record<string, string>;
+    const [channel] = await db.select().from(clinicChannelsTable)
+      .where(and(eq(clinicChannelsTable.id, channelId), eq(clinicChannelsTable.clinicId, clinicId)) as SQL<unknown>);
+    if (!channel) { next(new NotFoundError("Channel not found")); return; }
+    const [clinic] = await db.select({
+      greenApiInstanceId: clinicsTable.greenApiInstanceId,
+      greenApiToken: clinicsTable.greenApiToken,
+    }).from(clinicsTable).where(eq(clinicsTable.id, clinicId));
+    if (!clinic?.greenApiInstanceId || !clinic?.greenApiToken) {
+      res.json({ success: true, data: { channel, connected: false, reason: "no_integration" } }); return;
+    }
+    try {
+      const baseUrl = "https://api.green-api.com";
+      const pingRes = await fetch(`${baseUrl}/waInstance${clinic.greenApiInstanceId}/getStateInstance/${clinic.greenApiToken}`, { signal: AbortSignal.timeout(5000) });
+      const pingData = await pingRes.json() as Record<string, unknown>;
+      const connected = (pingData["stateInstance"] as string) === "authorized";
+      res.json({ success: true, data: { channel, connected, stateInstance: pingData["stateInstance"] ?? "unknown" } });
+    } catch {
+      res.json({ success: true, data: { channel, connected: false, reason: "ping failed" } });
+    }
+  } catch (err) { next(err); }
+});
+
 // ── PROCEDURE TEMPLATES ───────────────────────────────────────────────────────
 router.get("/clinics/:clinicId/procedure-templates", async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -869,17 +895,25 @@ router.get("/clinics/:clinicId/broadcasts", async (req: Request, res: Response, 
   try {
     const clinicId = req.params["clinicId"] as string;
     const page = parseInt(String(req.query["page"] ?? "1"), 10);
+    const status = req.query["status"] as string | undefined;
     const limit = 25;
-    const [reminders, followups, [remCount], [followCount]] = await Promise.all([
+    const adminWhere = and(
+      eq(adminBroadcastsTable.clinicId, clinicId),
+      status ? eq(adminBroadcastsTable.status, status as never) : undefined,
+    ) as SQL<unknown>;
+    const [adminBroadcasts, reminders, followups, [abCount], [remCount], [followCount]] = await Promise.all([
+      db.select({ id: adminBroadcastsTable.id, type: sql<string>`'admin_broadcast'`, title: adminBroadcastsTable.title, message: adminBroadcastsTable.message, status: adminBroadcastsTable.status, sentCount: adminBroadcastsTable.sentCount, failedCount: adminBroadcastsTable.failedCount, sendAt: adminBroadcastsTable.scheduledAt, createdAt: adminBroadcastsTable.createdAt })
+        .from(adminBroadcastsTable).where(adminWhere).orderBy(desc(adminBroadcastsTable.createdAt)).limit(limit).offset((page - 1) * limit),
       db.select({ id: appointmentRemindersTable.id, type: sql<string>`'appointment_reminder'`, status: appointmentRemindersTable.status, sendAt: appointmentRemindersTable.sendAt, createdAt: appointmentRemindersTable.createdAt })
-        .from(appointmentRemindersTable).where(eq(appointmentRemindersTable.clinicId, clinicId)).orderBy(desc(appointmentRemindersTable.createdAt)).limit(limit).offset((page - 1) * limit),
+        .from(appointmentRemindersTable).where(eq(appointmentRemindersTable.clinicId, clinicId)).orderBy(desc(appointmentRemindersTable.createdAt)).limit(limit),
       db.select({ id: postopFollowupsTable.id, type: sql<string>`'postop_followup'`, status: postopFollowupsTable.status, sendAt: postopFollowupsTable.sendAt, createdAt: postopFollowupsTable.createdAt })
-        .from(postopFollowupsTable).where(eq(postopFollowupsTable.clinicId, clinicId)).orderBy(desc(postopFollowupsTable.createdAt)).limit(limit).offset((page - 1) * limit),
+        .from(postopFollowupsTable).where(eq(postopFollowupsTable.clinicId, clinicId)).orderBy(desc(postopFollowupsTable.createdAt)).limit(limit),
+      db.select({ count: count() }).from(adminBroadcastsTable).where(adminWhere),
       db.select({ count: count() }).from(appointmentRemindersTable).where(eq(appointmentRemindersTable.clinicId, clinicId)),
       db.select({ count: count() }).from(postopFollowupsTable).where(eq(postopFollowupsTable.clinicId, clinicId)),
     ]);
-    const broadcasts = [...reminders, ...followups].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, limit);
-    res.json({ success: true, data: { broadcasts, total: (remCount?.count ?? 0) + (followCount?.count ?? 0), page } });
+    const broadcasts = [...adminBroadcasts, ...reminders, ...followups].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, limit);
+    res.json({ success: true, data: { broadcasts, total: (abCount?.count ?? 0) + (remCount?.count ?? 0) + (followCount?.count ?? 0), page } });
   } catch (err) { next(err); }
 });
 
@@ -940,21 +974,39 @@ router.delete("/clinics/:clinicId/knowledge/:sourceId", async (req: Request, res
 });
 
 // ── BROADCASTS WRITE ─────────────────────────────────────────────────────────
-// NOTE: appointment_reminder and postop_followup records require patientId +
-// procedureId (NOT NULL FK). Superadmin can cancel/stop existing broadcasts
-// but cannot create new ones without a specific patient/procedure context —
-// those are created by the clinic-side scheduling system.
-router.post("/clinics/:clinicId/broadcasts", (_req: Request, res: Response) => {
-  res.status(422).json({
-    success: false,
-    error: "Broadcasts are created automatically by the scheduling system. Use the stop endpoint to cancel a pending broadcast.",
-  });
+router.post("/clinics/:clinicId/broadcasts", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const schema = z.object({
+      title: z.string().min(1, "title required"),
+      message: z.string().min(1, "message required"),
+      scheduledAt: z.string().datetime().optional(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+    const clinicId = req.params["clinicId"] as string;
+    const admin = (req as Request & { tmaAdmin?: { id: string } }).tmaAdmin;
+    const [broadcast] = await db.insert(adminBroadcastsTable).values({
+      id: randomUUID(),
+      clinicId,
+      title: parsed.data.title,
+      message: parsed.data.message,
+      status: "scheduled",
+      scheduledAt: parsed.data.scheduledAt ? new Date(parsed.data.scheduledAt) : null,
+      createdBy: admin?.id ?? null,
+    }).returning();
+    res.status(201).json({ success: true, data: { broadcast } });
+  } catch (err) { next(err); }
 });
 
 router.post("/clinics/:clinicId/broadcasts/:broadcastId/stop", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { clinicId, broadcastId } = req.params as Record<string, string>;
-    // Try stopping in both tables
+    // Try admin_broadcasts first, then legacy tables
+    const [ab] = await db.update(adminBroadcastsTable)
+      .set({ status: "cancelled" })
+      .where(and(eq(adminBroadcastsTable.id, broadcastId), eq(adminBroadcastsTable.clinicId, clinicId)) as SQL<unknown>)
+      .returning({ id: adminBroadcastsTable.id });
+    if (ab) return res.json({ success: true, data: { stopped: true } });
     const [ar] = await db.update(appointmentRemindersTable)
       .set({ status: "cancelled" })
       .where(and(eq(appointmentRemindersTable.id, broadcastId), eq(appointmentRemindersTable.clinicId, clinicId)) as SQL<unknown>)
@@ -966,6 +1018,16 @@ router.post("/clinics/:clinicId/broadcasts/:broadcastId/stop", async (req: Reque
       .returning({ id: postopFollowupsTable.id });
     if (!pf) return next(new NotFoundError("Broadcast not found"));
     res.json({ success: true, data: { stopped: true } });
+  } catch (err) { next(err); }
+});
+
+router.get("/clinics/:clinicId/broadcasts/:broadcastId/stats", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { clinicId, broadcastId } = req.params as Record<string, string>;
+    const [broadcast] = await db.select().from(adminBroadcastsTable)
+      .where(and(eq(adminBroadcastsTable.id, broadcastId), eq(adminBroadcastsTable.clinicId, clinicId)) as SQL<unknown>);
+    if (!broadcast) return next(new NotFoundError("Broadcast not found"));
+    res.json({ success: true, data: { broadcast, stats: { sentCount: broadcast.sentCount, failedCount: broadcast.failedCount, status: broadcast.status } } });
   } catch (err) { next(err); }
 });
 
@@ -1591,6 +1653,16 @@ router.post("/sessions/:sessionId/takeover", async (req: Request, res: Response,
       .returning();
     if (!updated) return next(new NotFoundError("Session not found"));
     res.json({ success: true, data: { session: updated } });
+  } catch (err) { next(err); }
+});
+
+router.delete("/sessions/:sessionId", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const [deleted] = await db.delete(chatbotSessionsTable)
+      .where(eq(chatbotSessionsTable.id, req.params["sessionId"] as string))
+      .returning({ id: chatbotSessionsTable.id });
+    if (!deleted) return next(new NotFoundError("Session not found"));
+    res.json({ success: true });
   } catch (err) { next(err); }
 });
 

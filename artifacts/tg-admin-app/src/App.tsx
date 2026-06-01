@@ -103,6 +103,13 @@ function Inner() {
             <Route path="/picker/contracts" element={<ClinicPickerPage title="Договоры" icon="📝" tab="contracts" />} />
             <Route path="/picker/inventory" element={<ClinicPickerPage title="Инвентарь" icon="📦" tab="inventory" />} />
             <Route path="/picker/finances" element={<ClinicPickerPage title="Финансы" icon="💰" tab="finances" />} />
+            <Route path="/picker/users" element={<ClinicPickerPage title="Сотрудники" icon="👥" tab="users" />} />
+            <Route path="/picker/chatbot" element={<ClinicPickerPage title="Чатбот" icon="🤖" tab="chatbot" />} />
+            <Route path="/picker/channels" element={<ClinicPickerPage title="Каналы" icon="📡" tab="channels" />} />
+            <Route path="/picker/procedures" element={<ClinicPickerPage title="Прайс-лист" icon="💊" tab="procedures" />} />
+            <Route path="/picker/knowledge" element={<ClinicPickerPage title="База знаний" icon="📚" tab="knowledge" />} />
+            <Route path="/picker/notifications" element={<ClinicPickerPage title="Уведомления" icon="🔔" tab="notifications" />} />
+            <Route path="/picker/files" element={<ClinicPickerPage title="Файлы" icon="📁" tab="files" />} />
 
             <Route path="/activity" element={<ActivityPage />} />
             <Route path="/logs" element={<LogsPage />} />

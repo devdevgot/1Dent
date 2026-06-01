@@ -863,6 +863,11 @@ function AnalyticsTab({ clinicId }: { clinicId: string }) {
 function BroadcastsTab({ clinicId }: { clinicId: string }) {
   const qc = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [showAdd, setShowAdd] = useState(false);
+  const [title, setTitle] = useState("");
+  const [message, setMessage] = useState("");
+  const [scheduledAt, setScheduledAt] = useState("");
+
   const { data, isLoading } = useQuery({
     queryKey: ["tma-clinic-broadcasts", clinicId, statusFilter],
     queryFn: () => {
@@ -871,44 +876,81 @@ function BroadcastsTab({ clinicId }: { clinicId: string }) {
       return api.get<{ success: boolean; data: { broadcasts: Broadcast[]; total: number } }>(`/clinics/${clinicId}/broadcasts?${params}`);
     },
   });
+  const createMut = useMutation({
+    mutationFn: () => api.post(`/clinics/${clinicId}/broadcasts`, {
+      title, message,
+      ...(scheduledAt ? { scheduledAt: new Date(scheduledAt).toISOString() } : {}),
+    }),
+    onSuccess: () => {
+      hapticNotify("success");
+      qc.invalidateQueries({ queryKey: ["tma-clinic-broadcasts", clinicId] });
+      setShowAdd(false); setTitle(""); setMessage(""); setScheduledAt("");
+    },
+  });
   const stopMut = useMutation({
     mutationFn: (id: string) => api.post(`/clinics/${clinicId}/broadcasts/${id}/stop`),
     onSuccess: () => { hapticNotify("warning"); qc.invalidateQueries({ queryKey: ["tma-clinic-broadcasts", clinicId] }); },
   });
+
   if (isLoading) return <LoadingSkeleton />;
   const items = data?.data?.broadcasts ?? [];
-  const statusColors: Record<string, string> = { pending: "bg-yellow-500/20 text-yellow-400", scheduled: "bg-yellow-500/20 text-yellow-400", sent: "bg-green-500/20 text-green-400", cancelled: "bg-muted text-muted-foreground", failed: "bg-red-500/20 text-red-400" };
+  const statusColors: Record<string, string> = { pending: "bg-yellow-500/20 text-yellow-400", scheduled: "bg-yellow-500/20 text-yellow-400", draft: "bg-blue-500/20 text-blue-400", sent: "bg-green-500/20 text-green-400", cancelled: "bg-muted text-muted-foreground", failed: "bg-red-500/20 text-red-400" };
+  const typeLabels: Record<string, string> = { admin_broadcast: "📢 Рассылка", appointment_reminder: "📅 Напоминание", postop_followup: "🏥 Постоп" };
+
   return (
     <div className="space-y-3">
-      <div className="bg-primary/10 border border-primary/20 rounded-lg p-2.5 text-xs text-primary">
-        📢 Рассылки создаются автоматически планировщиком при записи пациента. Суперадмин может отменять ожидающие рассылки.
+      {showAdd && (
+        <div className="bg-card border border-border rounded-xl p-3 space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase">Новая рассылка</p>
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Заголовок рассылки"
+            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary" />
+          <textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Текст сообщения..." rows={3}
+            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary resize-none" />
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Запланировать (необязательно)</p>
+            <input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)}
+              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary" />
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => setShowAdd(false)} className="flex-1 py-1.5 bg-muted text-muted-foreground rounded-lg text-sm">Отмена</button>
+            <button onClick={() => createMut.mutate()} disabled={createMut.isPending || !title.trim() || !message.trim()}
+              className="flex-1 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm disabled:opacity-50">
+              {createMut.isPending ? "Создаём..." : "Создать"}
+            </button>
+          </div>
+        </div>
+      )}
+      <div className="flex gap-2">
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
+          className="flex-1 bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary">
+          <option value="">Все статусы</option>
+          <option value="draft">📝 Черновики</option>
+          <option value="scheduled">📅 Запланированы</option>
+          <option value="sent">✅ Отправлены</option>
+          <option value="cancelled">🚫 Отменены</option>
+          <option value="failed">❌ Ошибка</option>
+        </select>
+        <button onClick={() => { haptic("medium"); setShowAdd(!showAdd); }}
+          className="px-3 py-2 bg-primary/10 text-primary border border-primary/20 rounded-lg text-sm">+ Создать</button>
       </div>
-      <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); }}
-        className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary">
-        <option value="">Все статусы</option>
-        <option value="pending">⏳ Ожидают</option>
-        <option value="scheduled">📅 Запланированы</option>
-        <option value="sent">✅ Отправлены</option>
-        <option value="cancelled">🚫 Отменены</option>
-        <option value="failed">❌ Ошибка</option>
-      </select>
       {!items.length ? <EmptyState icon="📢" text="Нет рассылок" /> : (
         <div className="space-y-2">
           <p className="text-xs text-muted-foreground">Всего: {data?.data?.total ?? 0}</p>
           {items.map((b) => (
             <div key={b.id} className="bg-card rounded-lg border border-border p-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">{b.type === "appointment_reminder" ? "📅 Напоминание" : "🏥 Постоп"}</span>
+                <span className="text-xs text-muted-foreground">{typeLabels[b.type] ?? b.type}</span>
                 <div className="flex items-center gap-2">
                   <span className={`text-xs px-2 py-0.5 rounded-full ${statusColors[b.status] ?? "bg-muted text-muted-foreground"}`}>{b.status}</span>
-                  {(b.status === "pending" || b.status === "scheduled") && (
+                  {(b.status === "pending" || b.status === "scheduled" || b.status === "draft") && (
                     <button onClick={() => { haptic("medium"); tgConfirm("Отменить рассылку?", (ok) => { if (ok) stopMut.mutate(b.id); }); }}
                       disabled={stopMut.isPending}
                       className="text-xs text-red-400 px-1.5 py-0.5 rounded border border-red-500/20 hover:bg-red-500/10">■ Отменить</button>
                   )}
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">Отправка: {new Date(b.sendAt).toLocaleString("ru", { dateStyle: "short", timeStyle: "short" })}</p>
+              {b.title && <p className="text-sm font-medium text-foreground mt-1">{b.title}</p>}
+              {b.sendAt && <p className="text-xs text-muted-foreground mt-0.5">Отправка: {new Date(b.sendAt).toLocaleString("ru", { dateStyle: "short", timeStyle: "short" })}</p>}
             </div>
           ))}
         </div>
