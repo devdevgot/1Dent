@@ -1,5 +1,6 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
 import { randomUUID } from "crypto";
+import bcrypt from "bcryptjs";
 import { z } from "zod";
 import {
   db,
@@ -24,7 +25,7 @@ import {
   postopFollowupsTable,
   doctorCapacityTable,
 } from "@workspace/db";
-import { eq, desc, count, sum, gte, lte, and, sql, not, ilike, or, isNotNull } from "drizzle-orm";
+import { eq, desc, count, sum, gte, lte, and, sql, not, ilike, or, isNotNull, type SQL } from "drizzle-orm";
 import { requireTmaAdmin, invalidateAdminCache } from "./tma.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 
@@ -67,7 +68,7 @@ router.post("/admins", async (req: Request, res: Response, next: NextFunction) =
 router.delete("/admins/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const [deleted] = await db.delete(platformAdminsTable)
-      .where(eq(platformAdminsTable.id, req.params["id"]!))
+      .where(eq(platformAdminsTable.id, req.params["id"] as string))
       .returning({ telegramUserId: platformAdminsTable.telegramUserId });
     if (!deleted) return next(new NotFoundError("Admin not found"));
     invalidateAdminCache(deleted.telegramUserId);
@@ -174,7 +175,7 @@ router.post("/clinics", async (req: Request, res: Response, next: NextFunction) 
 
 router.get("/clinics/:clinicId", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const [clinic] = await db.select().from(clinicsTable).where(eq(clinicsTable.id, req.params["clinicId"]!)).limit(1);
+    const [clinic] = await db.select().from(clinicsTable).where(eq(clinicsTable.id, req.params["clinicId"] as string)).limit(1);
     if (!clinic) return next(new NotFoundError("Clinic not found"));
     const [[uc], [pc]] = await Promise.all([
       db.select({ count: count() }).from(usersTable).where(eq(usersTable.clinicId, clinic.id)),
@@ -195,7 +196,7 @@ router.patch("/clinics/:clinicId", async (req: Request, res: Response, next: Nex
     if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
     const [clinic] = await db.update(clinicsTable)
       .set(parsed.data)
-      .where(eq(clinicsTable.id, req.params["clinicId"]!))
+      .where(eq(clinicsTable.id, req.params["clinicId"] as string))
       .returning();
     if (!clinic) return next(new NotFoundError("Clinic not found"));
     res.json({ success: true, data: { clinic } });
@@ -207,7 +208,7 @@ router.delete("/clinics/:clinicId", async (req: Request, res: Response, next: Ne
   try {
     const [clinic] = await db.update(clinicsTable)
       .set({ isActive: false })
-      .where(eq(clinicsTable.id, req.params["clinicId"]!))
+      .where(eq(clinicsTable.id, req.params["clinicId"] as string))
       .returning({ id: clinicsTable.id });
     if (!clinic) return next(new NotFoundError("Clinic not found"));
     res.json({ success: true, data: { deactivated: true } });
@@ -251,7 +252,7 @@ router.get("/clinics/:clinicId/users", async (req: Request, res: Response, next:
       position: usersTable.position, specialty: usersTable.specialty, createdAt: usersTable.createdAt,
     })
       .from(usersTable)
-      .where(eq(usersTable.clinicId, req.params["clinicId"]!))
+      .where(eq(usersTable.clinicId, req.params["clinicId"] as string))
       .orderBy(usersTable.role, usersTable.name);
     // attach doctor capacity
     const withCapacity = await Promise.all(users.map(async (u) => {
@@ -277,11 +278,10 @@ router.post("/clinics/:clinicId/users", async (req: Request, res: Response, next
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
     // simple hash — clinic managers set real password later
-    const { createHash } = await import("crypto");
-    const passwordHash = createHash("sha256").update(parsed.data.password).digest("hex");
+    const passwordHash = await bcrypt.hash(parsed.data.password, 10);
     const [user] = await db.insert(usersTable).values({
       id: randomUUID(),
-      clinicId: req.params["clinicId"]!,
+      clinicId: req.params["clinicId"] as string,
       name: parsed.data.name,
       email: parsed.data.email,
       role: parsed.data.role,
@@ -311,7 +311,7 @@ router.patch("/clinics/:clinicId/users/:userId", async (req: Request, res: Respo
     if (!parsed.success) return next(new ValidationError("Invalid fields"));
     const [user] = await db.update(usersTable)
       .set({ ...parsed.data, updatedAt: new Date() })
-      .where(and(eq(usersTable.id, req.params["userId"]!), eq(usersTable.clinicId, req.params["clinicId"]!)))
+      .where(and(eq(usersTable.id, req.params["userId"] as string), eq(usersTable.clinicId, req.params["clinicId"] as string)))
       .returning();
     if (!user) return next(new NotFoundError("User not found"));
     res.json({ success: true, data: { user } });
@@ -324,13 +324,13 @@ router.patch("/clinics/:clinicId/users/:userId/capacity", async (req: Request, r
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) return next(new ValidationError("maxPatientsPerDay (1–100) required"));
     const existing = await db.select({ doctorId: doctorCapacityTable.doctorId })
-      .from(doctorCapacityTable).where(eq(doctorCapacityTable.doctorId, req.params["userId"]!)).limit(1);
+      .from(doctorCapacityTable).where(eq(doctorCapacityTable.doctorId, req.params["userId"] as string)).limit(1);
     if (existing.length) {
       await db.update(doctorCapacityTable).set({ maxPatientsPerDay: parsed.data.maxPatientsPerDay })
-        .where(eq(doctorCapacityTable.doctorId, req.params["userId"]!));
+        .where(eq(doctorCapacityTable.doctorId, req.params["userId"] as string));
     } else {
       await db.insert(doctorCapacityTable).values({
-        doctorId: req.params["userId"]!, clinicId: req.params["clinicId"]!, maxPatientsPerDay: parsed.data.maxPatientsPerDay,
+        doctorId: req.params["userId"] as string, clinicId: req.params["clinicId"] as string, maxPatientsPerDay: parsed.data.maxPatientsPerDay,
       });
     }
     res.json({ success: true, data: { maxPatientsPerDay: parsed.data.maxPatientsPerDay } });
@@ -341,7 +341,7 @@ router.delete("/clinics/:clinicId/users/:userId", async (req: Request, res: Resp
   try {
     const [user] = await db.update(usersTable)
       .set({ isActive: false, updatedAt: new Date() })
-      .where(and(eq(usersTable.id, req.params["userId"]!), eq(usersTable.clinicId, req.params["clinicId"]!)))
+      .where(and(eq(usersTable.id, req.params["userId"] as string), eq(usersTable.clinicId, req.params["clinicId"] as string)))
       .returning({ id: usersTable.id });
     if (!user) return next(new NotFoundError("User not found"));
     res.json({ success: true });
@@ -354,20 +354,20 @@ router.get("/clinics/:clinicId/patients", async (req: Request, res: Response, ne
     const page = parseInt(String(req.query["page"] ?? "1"), 10);
     const limit = 50;
     const offset = (page - 1) * limit;
-    const clinicId = req.params["clinicId"]!;
+    const clinicId = req.params["clinicId"] as string;
     const search = req.query["search"] as string | undefined;
     const status = req.query["status"] as string | undefined;
     const source = req.query["source"] as string | undefined;
 
-    const conditions = [eq(patientsTable.clinicId, clinicId)];
-    if (status) conditions.push(eq(patientsTable.status, status as never));
-    if (source) conditions.push(eq(patientsTable.source, source));
-    if (search) conditions.push(or(
-      ilike(patientsTable.name, `%${search}%`),
-      ilike(patientsTable.phone, `%${search}%`),
-    )!);
-
-    const where = and(...conditions);
+    const where = and(
+      eq(patientsTable.clinicId, clinicId),
+      status ? eq(patientsTable.status, status as never) : undefined,
+      source ? eq(patientsTable.source, source) : undefined,
+      search ? or(
+        ilike(patientsTable.name, `%${search}%`),
+        ilike(patientsTable.phone, `%${search}%`),
+      ) : undefined,
+    ) as SQL<unknown>;
     const patients = await db.select({
       id: patientsTable.id, name: patientsTable.name, phone: patientsTable.phone,
       status: patientsTable.status, source: patientsTable.source,
@@ -385,11 +385,11 @@ router.get("/clinics/:clinicId/patients", async (req: Request, res: Response, ne
 router.get("/clinics/:clinicId/patients/:patientId", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const [patient] = await db.select().from(patientsTable)
-      .where(and(eq(patientsTable.id, req.params["patientId"]!), eq(patientsTable.clinicId, req.params["clinicId"]!)))
+      .where(and(eq(patientsTable.id, req.params["patientId"] as string), eq(patientsTable.clinicId, req.params["clinicId"] as string)))
       .limit(1);
     if (!patient) return next(new NotFoundError("Patient not found"));
     const [[procRow]] = await Promise.all([
-      db.select({ count: count() }).from(proceduresTable).where(eq(proceduresTable.patientId, req.params["patientId"]!)),
+      db.select({ count: count() }).from(proceduresTable).where(eq(proceduresTable.patientId, req.params["patientId"] as string)),
     ]);
     res.json({ success: true, data: { patient: { ...patient, proceduresCount: procRow?.count ?? 0 } } });
   } catch (err) { next(err); }
@@ -407,7 +407,7 @@ router.patch("/clinics/:clinicId/patients/:patientId", async (req: Request, res:
     if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
     const [patient] = await db.update(patientsTable)
       .set(parsed.data)
-      .where(and(eq(patientsTable.id, req.params["patientId"]!), eq(patientsTable.clinicId, req.params["clinicId"]!)))
+      .where(and(eq(patientsTable.id, req.params["patientId"] as string), eq(patientsTable.clinicId, req.params["clinicId"] as string)))
       .returning();
     if (!patient) return next(new NotFoundError("Patient not found"));
     res.json({ success: true, data: { patient } });
@@ -417,7 +417,7 @@ router.patch("/clinics/:clinicId/patients/:patientId", async (req: Request, res:
 // ── CLINIC CHATBOT ────────────────────────────────────────────────────────────
 router.get("/clinics/:clinicId/chatbot", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const clinicId = req.params["clinicId"]!;
+    const clinicId = req.params["clinicId"] as string;
     const [[sessionsRow], [msgRow], activeSessions] = await Promise.all([
       db.select({ count: count() }).from(chatbotSessionsTable).where(eq(chatbotSessionsTable.clinicId, clinicId)),
       db.select({ count: count() }).from(chatbotMessagesTable).where(eq(chatbotMessagesTable.clinicId, clinicId)),
@@ -437,7 +437,7 @@ router.get("/clinics/:clinicId/chatbot", async (req: Request, res: Response, nex
 // ── CHATBOT SETTINGS ─────────────────────────────────────────────────────────
 router.get("/clinics/:clinicId/chatbot/settings", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const clinicId = req.params["clinicId"]!;
+    const clinicId = req.params["clinicId"] as string;
     const [settings] = await db.select().from(chatbotSettingsTable)
       .where(eq(chatbotSettingsTable.clinicId, clinicId)).limit(1);
     const [clinic] = await db.select({
@@ -453,7 +453,7 @@ router.get("/clinics/:clinicId/chatbot/settings", async (req: Request, res: Resp
 
 router.patch("/clinics/:clinicId/chatbot/settings", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const clinicId = req.params["clinicId"]!;
+    const clinicId = req.params["clinicId"] as string;
     const schema = z.object({
       enabled: z.boolean().optional(),
       greetingTemplate: z.string().optional(),
@@ -479,7 +479,7 @@ router.patch("/clinics/:clinicId/chatbot/settings", async (req: Request, res: Re
       if (greenApiUrl !== undefined) clinicUpd["greenApiUrl"] = greenApiUrl;
       if (telegramBotToken !== undefined) clinicUpd["telegramBotToken"] = telegramBotToken;
       if (whatsappPhone !== undefined) clinicUpd["whatsappPhone"] = whatsappPhone;
-      await db.update(clinicsTable).set(clinicUpd).where(eq(clinicsTable.id, clinicId));
+      await db.update(clinicsTable).set(clinicUpd as never).where(eq(clinicsTable.id, clinicId));
     }
 
     // Upsert chatbot settings
@@ -500,9 +500,9 @@ router.patch("/clinics/:clinicId/chatbot/settings", async (req: Request, res: Re
   } catch (err) { next(err); }
 });
 
-router.post("/clinics/:clinicId/chatbot/ping", async (req: Request, res: Response, next: NextFunction) => {
+router.post("/clinics/:clinicId/chatbot/ping", async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const clinicId = req.params["clinicId"]!;
+    const clinicId = req.params["clinicId"] as string;
     const [clinic] = await db.select({
       greenApiInstanceId: clinicsTable.greenApiInstanceId,
       greenApiToken: clinicsTable.greenApiToken,
@@ -510,7 +510,7 @@ router.post("/clinics/:clinicId/chatbot/ping", async (req: Request, res: Respons
     }).from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1);
 
     if (!clinic?.greenApiInstanceId || !clinic.greenApiToken) {
-      return res.json({ success: true, data: { connected: false, reason: "WhatsApp not configured" } });
+      res.json({ success: true, data: { connected: false, reason: "WhatsApp not configured" } }); return;
     }
 
     try {
@@ -528,7 +528,7 @@ router.post("/clinics/:clinicId/chatbot/ping", async (req: Request, res: Respons
 // ── CLINIC SESSIONS ───────────────────────────────────────────────────────────
 router.get("/clinics/:clinicId/sessions", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const clinicId = req.params["clinicId"]!;
+    const clinicId = req.params["clinicId"] as string;
     const page = parseInt(String(req.query["page"] ?? "1"), 10);
     const sessions = await db.select({
       id: chatbotSessionsTable.id, phone: chatbotSessionsTable.phone,
@@ -546,13 +546,13 @@ router.get("/clinics/:clinicId/sessions", async (req: Request, res: Response, ne
 
 router.post("/clinics/:clinicId/sessions/:sessionId/takeover", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { clinicId, sessionId } = req.params;
+    const { clinicId, sessionId } = req.params as Record<string, string>;
     const schema = z.object({ humanTakeover: z.boolean() });
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) return next(new ValidationError("humanTakeover (boolean) required"));
     const [updated] = await db.update(chatbotSessionsTable)
       .set({ humanTakeover: parsed.data.humanTakeover })
-      .where(and(eq(chatbotSessionsTable.id, sessionId!), eq(chatbotSessionsTable.clinicId, clinicId!)))
+      .where(and(eq(chatbotSessionsTable.id, sessionId), eq(chatbotSessionsTable.clinicId, clinicId)))
       .returning();
     if (!updated) return next(new NotFoundError("Session not found"));
     res.json({ success: true, data: { session: updated } });
@@ -561,10 +561,10 @@ router.post("/clinics/:clinicId/sessions/:sessionId/takeover", async (req: Reque
 
 router.post("/clinics/:clinicId/sessions/:sessionId/reset", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { clinicId, sessionId } = req.params;
+    const { clinicId, sessionId } = req.params as Record<string, string>;
     const [updated] = await db.update(chatbotSessionsTable)
       .set({ state: "greeting", humanTakeover: false })
-      .where(and(eq(chatbotSessionsTable.id, sessionId!), eq(chatbotSessionsTable.clinicId, clinicId!)))
+      .where(and(eq(chatbotSessionsTable.id, sessionId), eq(chatbotSessionsTable.clinicId, clinicId)))
       .returning();
     if (!updated) return next(new NotFoundError("Session not found"));
     res.json({ success: true, data: { session: updated } });
@@ -573,9 +573,9 @@ router.post("/clinics/:clinicId/sessions/:sessionId/reset", async (req: Request,
 
 router.delete("/clinics/:clinicId/sessions/:sessionId", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { clinicId, sessionId } = req.params;
+    const { clinicId, sessionId } = req.params as Record<string, string>;
     const [deleted] = await db.delete(chatbotSessionsTable)
-      .where(and(eq(chatbotSessionsTable.id, sessionId!), eq(chatbotSessionsTable.clinicId, clinicId!)))
+      .where(and(eq(chatbotSessionsTable.id, sessionId), eq(chatbotSessionsTable.clinicId, clinicId)))
       .returning({ id: chatbotSessionsTable.id });
     if (!deleted) return next(new NotFoundError("Session not found"));
     res.json({ success: true });
@@ -585,21 +585,21 @@ router.delete("/clinics/:clinicId/sessions/:sessionId", async (req: Request, res
 // ── CLINIC MESSAGES ───────────────────────────────────────────────────────────
 router.get("/clinics/:clinicId/messages", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const clinicId = req.params["clinicId"]!;
+    const clinicId = req.params["clinicId"] as string;
     const page = parseInt(String(req.query["page"] ?? "1"), 10);
     const direction = req.query["direction"] as "inbound" | "outbound" | undefined;
     const search = req.query["search"] as string | undefined;
     const cursor = req.query["cursor"] as string | undefined;
 
-    const conditions = [eq(chatbotMessagesTable.clinicId, clinicId)];
-    if (direction) conditions.push(eq(chatbotMessagesTable.direction, direction));
-    if (search) conditions.push(or(
-      ilike(chatbotMessagesTable.content, `%${search}%`),
-      ilike(chatbotMessagesTable.phone, `%${search}%`),
-    )!);
-    if (cursor) conditions.push(lte(chatbotMessagesTable.createdAt, new Date(cursor)));
-
-    const where = and(...conditions);
+    const where = and(
+      eq(chatbotMessagesTable.clinicId, clinicId),
+      direction ? eq(chatbotMessagesTable.direction, direction) : undefined,
+      search ? or(
+        ilike(chatbotMessagesTable.content, `%${search}%`),
+        ilike(chatbotMessagesTable.phone, `%${search}%`),
+      ) : undefined,
+      cursor ? lte(chatbotMessagesTable.createdAt, new Date(cursor)) : undefined,
+    ) as SQL<unknown>;
     const messages = await db.select({
       id: chatbotMessagesTable.id, phone: chatbotMessagesTable.phone,
       direction: chatbotMessagesTable.direction, content: chatbotMessagesTable.content,
@@ -618,7 +618,7 @@ router.get("/clinics/:clinicId/messages", async (req: Request, res: Response, ne
 // ── CLINIC CHANNELS ───────────────────────────────────────────────────────────
 router.get("/clinics/:clinicId/channels", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const clinicId = req.params["clinicId"]!;
+    const clinicId = req.params["clinicId"] as string;
     const [channels, [clinic]] = await Promise.all([
       db.select().from(clinicChannelsTable)
         .where(eq(clinicChannelsTable.clinicId, clinicId))
@@ -640,9 +640,9 @@ router.get("/clinics/:clinicId/channels", async (req: Request, res: Response, ne
   } catch (err) { next(err); }
 });
 
-router.post("/clinics/:clinicId/channels/ping", async (req: Request, res: Response, next: NextFunction) => {
+router.post("/clinics/:clinicId/channels/ping", async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const clinicId = req.params["clinicId"]!;
+    const clinicId = req.params["clinicId"] as string;
     const [clinic] = await db.select({
       greenApiInstanceId: clinicsTable.greenApiInstanceId,
       greenApiToken: clinicsTable.greenApiToken,
@@ -650,7 +650,7 @@ router.post("/clinics/:clinicId/channels/ping", async (req: Request, res: Respon
     }).from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1);
 
     if (!clinic?.greenApiInstanceId || !clinic.greenApiToken) {
-      return res.json({ success: true, data: { connected: false, reason: "WhatsApp not configured" } });
+      res.json({ success: true, data: { connected: false, reason: "WhatsApp not configured" } }); return;
     }
     try {
       const baseUrl = clinic.greenApiUrl || "https://api.green-api.com";
@@ -674,7 +674,7 @@ router.post("/clinics/:clinicId/channels", async (req: Request, res: Response, n
     if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
     const refCode = randomUUID().split("-")[0]!;
     const [channel] = await db.insert(clinicChannelsTable).values({
-      id: randomUUID(), clinicId: req.params["clinicId"]!, refCode, ...parsed.data,
+      id: randomUUID(), clinicId: req.params["clinicId"] as string, refCode, ...parsed.data,
     }).returning();
     res.status(201).json({ success: true, data: { channel } });
   } catch (err) { next(err); }
@@ -683,7 +683,7 @@ router.post("/clinics/:clinicId/channels", async (req: Request, res: Response, n
 router.delete("/clinics/:clinicId/channels/:channelId", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const [deleted] = await db.delete(clinicChannelsTable)
-      .where(and(eq(clinicChannelsTable.id, req.params["channelId"]!), eq(clinicChannelsTable.clinicId, req.params["clinicId"]!)))
+      .where(and(eq(clinicChannelsTable.id, req.params["channelId"] as string), eq(clinicChannelsTable.clinicId, req.params["clinicId"] as string)))
       .returning({ id: clinicChannelsTable.id });
     if (!deleted) return next(new NotFoundError("Channel not found"));
     res.json({ success: true });
@@ -694,16 +694,73 @@ router.delete("/clinics/:clinicId/channels/:channelId", async (req: Request, res
 router.get("/clinics/:clinicId/procedure-templates", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const templates = await db.select().from(procedureTemplatesTable)
-      .where(eq(procedureTemplatesTable.clinicId, req.params["clinicId"]!))
+      .where(eq(procedureTemplatesTable.clinicId, req.params["clinicId"] as string))
       .orderBy(procedureTemplatesTable.category, procedureTemplatesTable.name);
     res.json({ success: true, data: { templates } });
+  } catch (err) { next(err); }
+});
+
+router.post("/clinics/:clinicId/procedure-templates", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const schema = z.object({
+      name: z.string().min(1).max(200),
+      category: z.string().min(1).max(100),
+      defaultPrice: z.number().nonnegative().optional(),
+      description: z.string().optional(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+    const [template] = await db.insert(procedureTemplatesTable).values({
+      id: randomUUID(),
+      clinicId: req.params["clinicId"] as string,
+      name: parsed.data.name,
+      category: parsed.data.category,
+      defaultPrice: parsed.data.defaultPrice ?? 0,
+      description: parsed.data.description ?? null,
+    }).returning();
+    res.status(201).json({ success: true, data: { template } });
+  } catch (err) { next(err); }
+});
+
+router.patch("/clinics/:clinicId/procedure-templates/:templateId", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const schema = z.object({
+      name: z.string().min(1).max(200).optional(),
+      category: z.string().min(1).max(100).optional(),
+      defaultPrice: z.number().nonnegative().optional(),
+      description: z.string().optional(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+    const [template] = await db.update(procedureTemplatesTable)
+      .set(parsed.data)
+      .where(and(
+        eq(procedureTemplatesTable.id, req.params["templateId"] as string),
+        eq(procedureTemplatesTable.clinicId, req.params["clinicId"] as string),
+      ) as SQL<unknown>)
+      .returning();
+    if (!template) return next(new NotFoundError("Template not found"));
+    res.json({ success: true, data: { template } });
+  } catch (err) { next(err); }
+});
+
+router.delete("/clinics/:clinicId/procedure-templates/:templateId", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const [deleted] = await db.delete(procedureTemplatesTable)
+      .where(and(
+        eq(procedureTemplatesTable.id, req.params["templateId"] as string),
+        eq(procedureTemplatesTable.clinicId, req.params["clinicId"] as string),
+      ) as SQL<unknown>)
+      .returning({ id: procedureTemplatesTable.id });
+    if (!deleted) return next(new NotFoundError("Template not found"));
+    res.json({ success: true });
   } catch (err) { next(err); }
 });
 
 // ── ANALYTICS ─────────────────────────────────────────────────────────────────
 router.get("/clinics/:clinicId/analytics", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const clinicId = req.params["clinicId"]!;
+    const clinicId = req.params["clinicId"] as string;
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
@@ -729,10 +786,56 @@ router.get("/clinics/:clinicId/analytics", async (req: Request, res: Response, n
   } catch (err) { next(err); }
 });
 
+// ── ANALYTICS — DOCTOR & CHANNEL BREAKDOWN ────────────────────────────────────
+router.get("/clinics/:clinicId/analytics/doctors", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const clinicId = req.params["clinicId"] as string;
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const doctors = await db.select({
+      id: usersTable.id,
+      name: usersTable.name,
+      specialty: usersTable.specialty,
+      completedCount: count(proceduresTable.id),
+    })
+      .from(usersTable)
+      .leftJoin(proceduresTable, and(
+        eq(proceduresTable.doctorId, usersTable.id),
+        eq(proceduresTable.status, "completed"),
+        gte(proceduresTable.completedAt, monthStart),
+      ) as SQL<unknown>)
+      .where(and(eq(usersTable.clinicId, clinicId), eq(usersTable.role, "doctor")) as SQL<unknown>)
+      .groupBy(usersTable.id, usersTable.name, usersTable.specialty)
+      .orderBy(desc(count(proceduresTable.id)));
+    res.json({ success: true, data: { doctors } });
+  } catch (err) { next(err); }
+});
+
+router.get("/clinics/:clinicId/analytics/channels", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const clinicId = req.params["clinicId"] as string;
+    const channels = await db.select({
+      id: clinicChannelsTable.id,
+      name: clinicChannelsTable.name,
+      type: clinicChannelsTable.type,
+      patientsCount: count(patientsTable.id),
+    })
+      .from(clinicChannelsTable)
+      .leftJoin(patientsTable, and(
+        eq(patientsTable.clinicId, clinicId),
+        eq(patientsTable.source, clinicChannelsTable.refCode),
+      ) as SQL<unknown>)
+      .where(eq(clinicChannelsTable.clinicId, clinicId))
+      .groupBy(clinicChannelsTable.id, clinicChannelsTable.name, clinicChannelsTable.type)
+      .orderBy(desc(count(patientsTable.id)));
+    res.json({ success: true, data: { channels } });
+  } catch (err) { next(err); }
+});
+
 // ── BROADCASTS ────────────────────────────────────────────────────────────────
 router.get("/clinics/:clinicId/broadcasts", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const clinicId = req.params["clinicId"]!;
+    const clinicId = req.params["clinicId"] as string;
     const page = parseInt(String(req.query["page"] ?? "1"), 10);
     const limit = 25;
     const [reminders, followups, [remCount], [followCount]] = await Promise.all([
@@ -755,8 +858,31 @@ router.get("/clinics/:clinicId/knowledge", async (req: Request, res: Response, n
       id: knowledgeSourcesTable.id, name: knowledgeSourcesTable.name,
       type: knowledgeSourcesTable.type, status: knowledgeSourcesTable.status,
       createdAt: knowledgeSourcesTable.createdAt,
-    }).from(knowledgeSourcesTable).where(eq(knowledgeSourcesTable.clinicId, req.params["clinicId"]!)).orderBy(desc(knowledgeSourcesTable.createdAt));
+    }).from(knowledgeSourcesTable).where(eq(knowledgeSourcesTable.clinicId, req.params["clinicId"] as string)).orderBy(desc(knowledgeSourcesTable.createdAt));
     res.json({ success: true, data: { entries } });
+  } catch (err) { next(err); }
+});
+
+router.post("/clinics/:clinicId/knowledge", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const schema = z.object({
+      name: z.string().min(1).max(200),
+      type: z.enum(["text", "url", "file", "faq"]).default("text"),
+      content: z.string().optional(),
+      url: z.string().url().optional(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+    const [source] = await db.insert(knowledgeSourcesTable).values({
+      id: randomUUID(),
+      clinicId: req.params["clinicId"] as string,
+      name: parsed.data.name,
+      type: parsed.data.type,
+      status: "pending",
+      extractedText: parsed.data.content ?? null,
+      url: parsed.data.url ?? null,
+    }).returning();
+    res.status(201).json({ success: true, data: { source } });
   } catch (err) { next(err); }
 });
 
@@ -764,7 +890,7 @@ router.post("/clinics/:clinicId/knowledge/:sourceId/rescan", async (req: Request
   try {
     const [updated] = await db.update(knowledgeSourcesTable)
       .set({ status: "pending" })
-      .where(and(eq(knowledgeSourcesTable.id, req.params["sourceId"]!), eq(knowledgeSourcesTable.clinicId, req.params["clinicId"]!)))
+      .where(and(eq(knowledgeSourcesTable.id, req.params["sourceId"] as string), eq(knowledgeSourcesTable.clinicId, req.params["clinicId"] as string)))
       .returning();
     if (!updated) return next(new NotFoundError("Knowledge source not found"));
     res.json({ success: true, data: { source: updated } });
@@ -774,17 +900,71 @@ router.post("/clinics/:clinicId/knowledge/:sourceId/rescan", async (req: Request
 router.delete("/clinics/:clinicId/knowledge/:sourceId", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const [deleted] = await db.delete(knowledgeSourcesTable)
-      .where(and(eq(knowledgeSourcesTable.id, req.params["sourceId"]!), eq(knowledgeSourcesTable.clinicId, req.params["clinicId"]!)))
+      .where(and(eq(knowledgeSourcesTable.id, req.params["sourceId"] as string), eq(knowledgeSourcesTable.clinicId, req.params["clinicId"] as string)))
       .returning({ id: knowledgeSourcesTable.id });
     if (!deleted) return next(new NotFoundError("Knowledge source not found"));
     res.json({ success: true });
   } catch (err) { next(err); }
 });
 
+// ── BROADCASTS WRITE ─────────────────────────────────────────────────────────
+router.post("/clinics/:clinicId/broadcasts", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const schema = z.object({
+      type: z.enum(["appointment_reminder", "postop_followup"]).default("appointment_reminder"),
+      patientId: z.string().uuid().optional(),
+      appointmentId: z.string().uuid().optional(),
+      sendAt: z.string().datetime().optional(),
+      message: z.string().optional(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+    const clinicId = req.params["clinicId"] as string;
+    const sendAt = parsed.data.sendAt ? new Date(parsed.data.sendAt) : new Date(Date.now() + 60_000);
+
+    if (parsed.data.type === "postop_followup") {
+      const [broadcast] = await db.insert(postopFollowupsTable).values({
+        id: randomUUID(),
+        clinicId,
+        patientId: parsed.data.patientId ?? null,
+        status: "scheduled",
+        sendAt,
+      } as never).returning();
+      return res.status(201).json({ success: true, data: { broadcast } });
+    }
+    const [broadcast] = await db.insert(appointmentRemindersTable).values({
+      id: randomUUID(),
+      clinicId,
+      appointmentId: parsed.data.appointmentId ?? null,
+      status: "scheduled",
+      sendAt,
+    } as never).returning();
+    res.status(201).json({ success: true, data: { broadcast } });
+  } catch (err) { next(err); }
+});
+
+router.post("/clinics/:clinicId/broadcasts/:broadcastId/stop", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { clinicId, broadcastId } = req.params as Record<string, string>;
+    // Try stopping in both tables
+    const [ar] = await db.update(appointmentRemindersTable)
+      .set({ status: "cancelled" })
+      .where(and(eq(appointmentRemindersTable.id, broadcastId), eq(appointmentRemindersTable.clinicId, clinicId)) as SQL<unknown>)
+      .returning({ id: appointmentRemindersTable.id });
+    if (ar) return res.json({ success: true, data: { stopped: true } });
+    const [pf] = await db.update(postopFollowupsTable)
+      .set({ status: "cancelled" })
+      .where(and(eq(postopFollowupsTable.id, broadcastId), eq(postopFollowupsTable.clinicId, clinicId)) as SQL<unknown>)
+      .returning({ id: postopFollowupsTable.id });
+    if (!pf) return next(new NotFoundError("Broadcast not found"));
+    res.json({ success: true, data: { stopped: true } });
+  } catch (err) { next(err); }
+});
+
 // ── CONTRACTS ─────────────────────────────────────────────────────────────────
 router.get("/clinics/:clinicId/contracts", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const clinicId = req.params["clinicId"]!;
+    const clinicId = req.params["clinicId"] as string;
     const page = parseInt(String(req.query["page"] ?? "1"), 10);
     const limit = 50;
     const contracts = await db.select({
@@ -806,10 +986,55 @@ router.get("/clinics/:clinicId/contracts", async (req: Request, res: Response, n
   } catch (err) { next(err); }
 });
 
+// ── CONTRACT TEMPLATES WRITE ──────────────────────────────────────────────────
+router.post("/clinics/:clinicId/contracts/templates", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const schema = z.object({
+      name: z.string().min(1).max(200),
+      content: z.string().optional(),
+      fileType: z.string().optional(),
+      fileUrl: z.string().url().optional(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+    const [template] = await db.insert(contractTemplatesTable).values({
+      id: randomUUID(),
+      clinicId: req.params["clinicId"] as string,
+      name: parsed.data.name,
+      content: parsed.data.content ?? null,
+      fileType: parsed.data.fileType ?? "text",
+      fileUrl: parsed.data.fileUrl ?? null,
+    } as never).returning();
+    res.status(201).json({ success: true, data: { template } });
+  } catch (err) { next(err); }
+});
+
+router.get("/clinics/:clinicId/contracts/templates", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const templates = await db.select().from(contractTemplatesTable)
+      .where(eq(contractTemplatesTable.clinicId, req.params["clinicId"] as string))
+      .orderBy(desc(contractTemplatesTable.createdAt));
+    res.json({ success: true, data: { templates } });
+  } catch (err) { next(err); }
+});
+
+router.delete("/clinics/:clinicId/contracts/templates/:templateId", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const [deleted] = await db.delete(contractTemplatesTable)
+      .where(and(
+        eq(contractTemplatesTable.id, req.params["templateId"] as string),
+        eq(contractTemplatesTable.clinicId, req.params["clinicId"] as string),
+      ) as SQL<unknown>)
+      .returning({ id: contractTemplatesTable.id });
+    if (!deleted) return next(new NotFoundError("Template not found"));
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
 // ── FINANCES ──────────────────────────────────────────────────────────────────
 router.get("/clinics/:clinicId/finances", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const clinicId = req.params["clinicId"]!;
+    const clinicId = req.params["clinicId"] as string;
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
@@ -857,7 +1082,7 @@ router.post("/clinics/:clinicId/expenses", async (req: Request, res: Response, n
     if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
     const [expense] = await db.insert(clinicExpensesTable).values({
       id: randomUUID(),
-      clinicId: req.params["clinicId"]!,
+      clinicId: req.params["clinicId"] as string,
       amount: String(parsed.data.amount),
       category: parsed.data.category as never,
       description: parsed.data.description,
@@ -870,7 +1095,7 @@ router.post("/clinics/:clinicId/expenses", async (req: Request, res: Response, n
 // ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
 router.get("/clinics/:clinicId/notifications", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const clinicId = req.params["clinicId"]!;
+    const clinicId = req.params["clinicId"] as string;
     const page = parseInt(String(req.query["page"] ?? "1"), 10);
     const notifications = await db.select({
       id: notificationsTable.id, type: notificationsTable.type,
@@ -890,7 +1115,7 @@ router.patch("/clinics/:clinicId/notifications/:notifId", async (req: Request, r
     if (!parsed.success) return next(new ValidationError("read (boolean) required"));
     const [updated] = await db.update(notificationsTable)
       .set({ read: parsed.data.read })
-      .where(and(eq(notificationsTable.id, req.params["notifId"]!), eq(notificationsTable.clinicId, req.params["clinicId"]!)))
+      .where(and(eq(notificationsTable.id, req.params["notifId"] as string), eq(notificationsTable.clinicId, req.params["clinicId"] as string)))
       .returning();
     if (!updated) return next(new NotFoundError("Notification not found"));
     res.json({ success: true, data: { notification: updated } });
@@ -900,7 +1125,7 @@ router.patch("/clinics/:clinicId/notifications/:notifId", async (req: Request, r
 // ── FILES ─────────────────────────────────────────────────────────────────────
 router.get("/clinics/:clinicId/files", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const clinicId = req.params["clinicId"]!;
+    const clinicId = req.params["clinicId"] as string;
     const [contractFiles, knowledgeFiles] = await Promise.all([
       db.select({ id: contractTemplatesTable.id, name: contractTemplatesTable.name, type: contractTemplatesTable.fileType, source: sql<string>`'contract_template'`, url: contractTemplatesTable.fileUrl, createdAt: contractTemplatesTable.createdAt })
         .from(contractTemplatesTable).where(eq(contractTemplatesTable.clinicId, clinicId)).orderBy(desc(contractTemplatesTable.createdAt)),
@@ -914,13 +1139,13 @@ router.get("/clinics/:clinicId/files", async (req: Request, res: Response, next:
 
 router.delete("/clinics/:clinicId/files/:fileId", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { clinicId, fileId } = req.params;
+    const { clinicId, fileId } = req.params as Record<string, string>;
     const [kt] = await db.delete(contractTemplatesTable)
-      .where(and(eq(contractTemplatesTable.id, fileId!), eq(contractTemplatesTable.clinicId, clinicId!)))
+      .where(and(eq(contractTemplatesTable.id, fileId), eq(contractTemplatesTable.clinicId, clinicId)) as SQL<unknown>)
       .returning({ id: contractTemplatesTable.id });
     if (kt) return res.json({ success: true });
     const [ks] = await db.delete(knowledgeSourcesTable)
-      .where(and(eq(knowledgeSourcesTable.id, fileId!), eq(knowledgeSourcesTable.clinicId, clinicId!)))
+      .where(and(eq(knowledgeSourcesTable.id, fileId), eq(knowledgeSourcesTable.clinicId, clinicId)) as SQL<unknown>)
       .returning({ id: knowledgeSourcesTable.id });
     if (!ks) return next(new NotFoundError("File not found"));
     res.json({ success: true });
@@ -930,7 +1155,7 @@ router.delete("/clinics/:clinicId/files/:fileId", async (req: Request, res: Resp
 // ── CLINIC LOGS ───────────────────────────────────────────────────────────────
 router.get("/clinics/:clinicId/logs", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const clinicId = req.params["clinicId"]!;
+    const clinicId = req.params["clinicId"] as string;
     const page = parseInt(String(req.query["page"] ?? "1"), 10);
     const logs = await db.select({
       id: actionLogsTable.id, actionType: actionLogsTable.actionType,

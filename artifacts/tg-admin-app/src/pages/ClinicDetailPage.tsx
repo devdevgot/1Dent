@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import WebApp from "@twa-dev/sdk";
@@ -687,9 +687,9 @@ function ChannelsTab({ clinicId }: { clinicId: string }) {
               </div>
               {type === "whatsapp" && (
                 <div className="space-y-0.5 mt-1">
-                  {ch["idInstance"] && <p className="text-xs text-muted-foreground font-mono">idInstance: {String(ch["idInstance"])}</p>}
-                  {ch["apiUrl"] && <p className="text-xs text-muted-foreground font-mono">apiUrl: {String(ch["apiUrl"])}</p>}
-                  {ch["phone"] && <p className="text-xs text-muted-foreground">📞 {String(ch["phone"])}</p>}
+                  {!!ch["idInstance"] && <p className="text-xs text-muted-foreground font-mono">idInstance: {String(ch["idInstance"])}</p>}
+                  {!!ch["apiUrl"] && <p className="text-xs text-muted-foreground font-mono">apiUrl: {String(ch["apiUrl"])}</p>}
+                  {!!ch["phone"] && <p className="text-xs text-muted-foreground">📞 {String(ch["phone"])}</p>}
                 </div>
               )}
             </div>
@@ -954,7 +954,7 @@ function ClinicLogsTab({ clinicId }: { clinicId: string }) {
               <span className={`text-xs font-mono font-bold ${color}`}>{at}</span>
               <span className="text-xs text-muted-foreground">{String(l["entityType"] ?? "")}</span>
             </div>
-            {l["details"] && <p className="text-xs text-foreground/80 line-clamp-2">{String(l["details"])}</p>}
+            {!!l["details"] && <p className="text-xs text-foreground/80 line-clamp-2">{String(l["details"])}</p>}
             <p className="text-xs text-muted-foreground">{new Date(String(l["createdAt"])).toLocaleString("ru", { dateStyle: "short", timeStyle: "short" })}</p>
           </div>
         );
@@ -1055,12 +1055,14 @@ export default function ClinicDetailPage() {
       const handler = () => handleBack();
       WebApp.BackButton.onClick(handler);
       return () => { WebApp.BackButton.offClick(handler); WebApp.BackButton.hide(); };
-    } catch { /* noop */ }
+    } catch {
+      return undefined;
+    }
   }, [handleBack]);
 
   if (!clinicId) { navigate("/clinics"); return null; }
 
-  const tabContent: Record<Tab, JSX.Element> = {
+  const tabContent: Record<Tab, React.JSX.Element> = {
     info: <InfoTab clinicId={clinicId} />,
     users: <UsersTab clinicId={clinicId} />,
     patients: <PatientsTab clinicId={clinicId} />,

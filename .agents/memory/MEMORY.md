@@ -1,8 +1,3 @@
-- [API client type exports](api-client-type-exports.md) — not all schema types re-exported from main @workspace/api-client-react index; use type inference instead.
-- [TMA static serving via api-server](tma-static-serving.md) — tg-admin-app built static files served from api-server at /tg-admin/; Replit port detection fails for sub-path (non-root) web artifacts.
-- [TMA route ordering in Express](tma-route-order.md) — /api/tma router must be mounted BEFORE /api router to bypass JWT auth middleware that covers all /api/* paths.
-- [TMA dev bypass setup](tma-dev-bypass.md) — dev auth requires TMA_DEV_BYPASS_TG_ID + PLATFORM_SUPERADMIN_TG_ID env vars (development scope only).
-- [Drizzle journal must be kept in sync](drizzle-journal-sync.md) — when applying migrations via raw psql (not via pnpm run migrate), must manually add entries to lib/db/drizzle/meta/_journal.json or future pnpm run migrate calls will re-apply them and fail.
-- [payrollRecordsTable field names](payroll-schema-fields.md) — payroll uses periodMonth/periodYear (not periodStart), calculatedAmount (not netPay); clinicExpenses uses description (not note).
-- [Channels WhatsApp contract](channels-whatsapp.md) — clinic bot channels (WhatsApp/Telegram) live on clinicsTable fields (greenApiInstanceId/Token/Url, telegramBotToken, whatsappPhone); clinicChannelsTable is for marketing attribution channels only.
-- [DB project references rebuild](db-project-references.md) — lib/db has a dist/ compiled with TypeScript project references; after schema changes run tsc -p tsconfig.json in lib/db or tsc check in api-server shows stale type errors.
+- [Express 5 req.params typing](express5-params.md) — bracket indexing returns `string | string[]`, use `as string` cast or `as Record<string,string>` destructuring
+- [Drizzle TS2769 pattern](drizzle-ts2769.md) — `and()` result needs `as SQL<unknown>` cast when used in `.where()` with dynamic conditions
+- [TMA controller schema mismatches](tma-schema-facts.md) — procedureTemplatesTable uses `defaultPrice:real` not `price`; knowledgeSourcesTable uses `extractedText` not `content`

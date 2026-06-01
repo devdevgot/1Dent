@@ -15,9 +15,9 @@ function LogRow({ log }: { log: LogEntry }) {
       <div className="flex items-center gap-2 flex-wrap">
         <span className={`text-xs font-bold uppercase ${color}`}>{log.actionType}</span>
         {log.entityType && <span className="text-xs text-muted-foreground">{log.entityType}</span>}
-        {log.userId && <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">uid:{log.userId.slice(0, 8)}</span>}
+        {log.entityId && <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">id:{log.entityId.slice(0, 8)}</span>}
       </div>
-      {log.description && <p className="text-sm text-foreground">{log.description}</p>}
+      {log.details && <p className="text-sm text-foreground">{log.details}</p>}
       <p className="text-xs text-muted-foreground">{new Date(log.createdAt).toLocaleString("ru")}</p>
     </div>
   );

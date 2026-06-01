@@ -1,14 +1,13 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
-import { haptic } from "../hooks/useTgBackButton";
+import { haptic, hapticNotify } from "../hooks/useTgBackButton";
 
 interface PlatformAdmin {
   id: string;
-  telegramId: string;
+  telegramUserId: string;
   name?: string | null;
   telegramUsername?: string | null;
-  role: string;
   createdAt: string;
 }
 
@@ -33,13 +32,13 @@ function AdminRow({ admin, onRemove }: { admin: PlatformAdmin; onRemove: (id: st
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0">
-            {(admin.name ?? admin.telegramId)[0]?.toUpperCase()}
+            {(admin.name ?? admin.telegramUserId)[0]?.toUpperCase()}
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">{admin.name ?? `TG ${admin.telegramId}`}</p>
+            <p className="text-sm font-medium text-foreground truncate">{admin.name ?? `TG ${admin.telegramUserId}`}</p>
             <div className="flex items-center gap-1 flex-wrap">
               {admin.telegramUsername && <span className="text-xs text-muted-foreground">@{admin.telegramUsername}</span>}
-              <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded">{admin.role}</span>
+              <span className="text-xs bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-mono">{admin.telegramUserId}</span>
             </div>
           </div>
         </div>
@@ -56,9 +55,9 @@ function AdminRow({ admin, onRemove }: { admin: PlatformAdmin; onRemove: (id: st
 
 export default function SettingsPage() {
   const [showAddForm, setShowAddForm] = useState(false);
-  const [tgId, setTgId] = useState("");
+  const [tgUserId, setTgUserId] = useState("");
+  const [tgUsername, setTgUsername] = useState("");
   const [tgName, setTgName] = useState("");
-  const [role, setRole] = useState("superadmin");
   const qc = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -70,10 +69,14 @@ export default function SettingsPage() {
   const settings = data?.data;
 
   const addAdmin = useMutation({
-    mutationFn: () => api.post("/admins", { telegramId: tgId.trim(), name: tgName.trim() || undefined, role }),
+    mutationFn: () => api.post("/admins", {
+      telegramUserId: tgUserId.trim(),
+      telegramUsername: tgUsername.trim() || undefined,
+      name: tgName.trim() || tgUserId.trim(),
+    }),
     onSuccess: () => {
-      haptic("success");
-      setTgId(""); setTgName(""); setShowAddForm(false);
+      hapticNotify("success");
+      setTgUserId(""); setTgUsername(""); setTgName(""); setShowAddForm(false);
       void qc.invalidateQueries({ queryKey: ["tma-settings"] });
       void qc.invalidateQueries({ queryKey: ["tma-admins"] });
     },
@@ -149,9 +152,16 @@ export default function SettingsPage() {
           <div className="bg-card border border-border rounded-lg p-4 space-y-3">
             <p className="text-sm font-medium text-foreground">Новый администратор</p>
             <input
-              value={tgId}
-              onChange={(e) => setTgId(e.target.value)}
-              placeholder="Telegram ID (числовой)*"
+              value={tgUserId}
+              onChange={(e) => setTgUserId(e.target.value)}
+              placeholder="Telegram User ID (числовой)*"
+              inputMode="numeric"
+              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary"
+            />
+            <input
+              value={tgUsername}
+              onChange={(e) => setTgUsername(e.target.value)}
+              placeholder="@username (необязательно)"
               className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary"
             />
             <input
@@ -160,17 +170,9 @@ export default function SettingsPage() {
               placeholder="Имя (необязательно)"
               className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary"
             />
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary"
-            >
-              <option value="superadmin">superadmin</option>
-              <option value="support">support</option>
-            </select>
             <button
               onClick={() => { haptic("light"); addAdmin.mutate(); }}
-              disabled={!tgId.trim() || addAdmin.isPending}
+              disabled={!tgUserId.trim() || addAdmin.isPending}
               className="w-full py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium disabled:opacity-50"
             >
               {addAdmin.isPending ? "Добавление..." : "Добавить"}
