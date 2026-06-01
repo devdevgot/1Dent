@@ -1114,6 +1114,23 @@ router.post("/clinics/:clinicId/expenses", async (req: Request, res: Response, n
   } catch (err) { next(err); }
 });
 
+router.get("/clinics/:clinicId/expenses", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const clinicId = req.params["clinicId"] as string;
+    const page = parseInt(String(req.query["page"] ?? "1"), 10);
+    const expenses = await db.select({
+      id: clinicExpensesTable.id, amount: clinicExpensesTable.amount,
+      category: clinicExpensesTable.category, description: clinicExpensesTable.description,
+      expenseDate: clinicExpensesTable.expenseDate, createdAt: clinicExpensesTable.createdAt,
+    }).from(clinicExpensesTable)
+      .where(eq(clinicExpensesTable.clinicId, clinicId))
+      .orderBy(desc(clinicExpensesTable.expenseDate))
+      .limit(50).offset((page - 1) * 50);
+    const [total] = await db.select({ count: count() }).from(clinicExpensesTable).where(eq(clinicExpensesTable.clinicId, clinicId));
+    res.json({ success: true, data: { expenses, total: total?.count ?? 0, page } });
+  } catch (err) { next(err); }
+});
+
 // ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
 router.get("/clinics/:clinicId/notifications", async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -1141,6 +1158,15 @@ router.patch("/clinics/:clinicId/notifications/:notifId", async (req: Request, r
       .returning();
     if (!updated) return next(new NotFoundError("Notification not found"));
     res.json({ success: true, data: { notification: updated } });
+  } catch (err) { next(err); }
+});
+
+router.post("/clinics/:clinicId/notifications/mark-all-read", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await db.update(notificationsTable)
+      .set({ read: true })
+      .where(and(eq(notificationsTable.clinicId, req.params["clinicId"] as string), eq(notificationsTable.read, false)) as SQL<unknown>);
+    res.json({ success: true });
   } catch (err) { next(err); }
 });
 
@@ -1258,6 +1284,65 @@ router.get("/clinics/:clinicId/inventory/consumption", async (req: Request, res:
       stockValueThisMonth: Number(stockValue?.total ?? 0),
       periodStart: monthStart.toISOString(),
     } });
+  } catch (err) { next(err); }
+});
+
+router.post("/clinics/:clinicId/inventory/items", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const schema = z.object({
+      name: z.string().min(1).max(200),
+      category: z.enum(["materials", "instruments", "medications", "consumables", "prosthetics", "implants", "other"]).default("other"),
+      unit: z.string().min(1).max(50).default("шт"),
+      unitPrice: z.number().nonnegative().default(0),
+      minQuantity: z.number().nonnegative().default(0),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+    const clinicId = req.params["clinicId"] as string;
+    const itemId = randomUUID();
+    const [item] = await db.insert(inventoryItemsTable).values({
+      id: itemId,
+      clinicId,
+      name: parsed.data.name,
+      category: parsed.data.category as never,
+      unit: parsed.data.unit,
+      unitPrice: parsed.data.unitPrice,
+    }).returning();
+    await db.insert(inventoryStockTable).values({
+      id: randomUUID(),
+      clinicId,
+      itemId,
+      quantity: 0,
+      minQuantity: parsed.data.minQuantity,
+    });
+    res.status(201).json({ success: true, data: { item } });
+  } catch (err) { next(err); }
+});
+
+router.patch("/clinics/:clinicId/inventory/stock/:itemId", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const schema = z.object({
+      quantity: z.number().nonnegative().optional(),
+      minQuantity: z.number().nonnegative().optional(),
+      delta: z.number().optional(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+    const { clinicId, itemId } = req.params as Record<string, string>;
+    const [existing] = await db.select().from(inventoryStockTable)
+      .where(and(eq(inventoryStockTable.itemId, itemId), eq(inventoryStockTable.clinicId, clinicId)) as SQL<unknown>);
+    if (!existing) return next(new NotFoundError("Stock record not found"));
+    const newQty = parsed.data.delta !== undefined
+      ? Math.max(0, Number(existing.quantity) + parsed.data.delta)
+      : (parsed.data.quantity ?? Number(existing.quantity));
+    const [updated] = await db.update(inventoryStockTable)
+      .set({
+        quantity: newQty,
+        ...(parsed.data.minQuantity !== undefined ? { minQuantity: parsed.data.minQuantity } : {}),
+      })
+      .where(and(eq(inventoryStockTable.itemId, itemId), eq(inventoryStockTable.clinicId, clinicId)) as SQL<unknown>)
+      .returning();
+    res.json({ success: true, data: { stock: updated } });
   } catch (err) { next(err); }
 });
 
@@ -1392,6 +1477,39 @@ router.get("/clinics/:clinicId/knowledge/scripts", async (req: Request, res: Res
     const [scripts] = await db.select().from(knowledgeScriptsTable)
       .where(eq(knowledgeScriptsTable.clinicId, req.params["clinicId"] as string)).limit(1);
     res.json({ success: true, data: { scripts: scripts ?? null } });
+  } catch (err) { next(err); }
+});
+
+router.post("/clinics/:clinicId/knowledge/sources", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const schema = z.object({
+      name: z.string().min(1).max(200),
+      type: z.enum(["text", "url", "file", "faq"]).default("text"),
+      content: z.string().optional(),
+      url: z.string().url().optional(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+    const [source] = await db.insert(knowledgeSourcesTable).values({
+      id: randomUUID(),
+      clinicId: req.params["clinicId"] as string,
+      name: parsed.data.name,
+      type: parsed.data.type,
+      status: "pending",
+      extractedText: parsed.data.content ?? null,
+      url: parsed.data.url ?? null,
+    }).returning();
+    res.status(201).json({ success: true, data: { source } });
+  } catch (err) { next(err); }
+});
+
+router.delete("/clinics/:clinicId/knowledge/sources/:sourceId", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const [deleted] = await db.delete(knowledgeSourcesTable)
+      .where(and(eq(knowledgeSourcesTable.id, req.params["sourceId"] as string), eq(knowledgeSourcesTable.clinicId, req.params["clinicId"] as string)) as SQL<unknown>)
+      .returning({ id: knowledgeSourcesTable.id });
+    if (!deleted) return next(new NotFoundError("Knowledge source not found"));
+    res.json({ success: true });
   } catch (err) { next(err); }
 });
 

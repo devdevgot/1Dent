@@ -736,24 +736,67 @@ function ChannelsTab({ clinicId }: { clinicId: string }) {
 
 // ── Procedures Tab ──
 function ProceduresTab({ clinicId }: { clinicId: string }) {
+  const qc = useQueryClient();
+  const [showAdd, setShowAdd] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newCat, setNewCat] = useState("Общая стоматология");
+  const [newPrice, setNewPrice] = useState("");
   const { data, isLoading } = useQuery({
     queryKey: ["tma-clinic-procedures", clinicId],
     queryFn: () => api.get<{ success: boolean; data: { templates: Record<string, unknown>[] } }>(`/clinics/${clinicId}/procedure-templates`),
   });
+  const createMut = useMutation({
+    mutationFn: () => api.post(`/clinics/${clinicId}/procedure-templates`, { name: newName, category: newCat, defaultPrice: Number(newPrice) || 0 }),
+    onSuccess: () => { hapticNotify("success"); qc.invalidateQueries({ queryKey: ["tma-clinic-procedures", clinicId] }); setShowAdd(false); setNewName(""); setNewPrice(""); },
+  });
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => api.delete(`/clinics/${clinicId}/procedure-templates/${id}`),
+    onSuccess: () => { hapticNotify("warning"); qc.invalidateQueries({ queryKey: ["tma-clinic-procedures", clinicId] }); },
+  });
   if (isLoading) return <LoadingSkeleton />;
   const items = data?.data?.templates ?? [];
-  if (!items.length) return <EmptyState icon="💊" text="Нет шаблонов услуг" />;
+  const cats = ["Общая стоматология", "Ортопедия", "Хирургия", "Ортодонтия", "Пародонтология", "Эндодонтия", "Профилактика", "Другое"];
   return (
-    <div className="space-y-2">
-      {items.map((t, i) => (
-        <div key={i} className="bg-card rounded-lg border border-border p-3">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-foreground">{String(t["name"] ?? "—")}</p>
-            <p className="text-sm font-bold text-primary">{Number(t["price"] ?? 0).toLocaleString()} ₸</p>
+    <div className="space-y-3">
+      {showAdd && (
+        <div className="bg-card border border-border rounded-xl p-3 space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase">Новая услуга</p>
+          <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Название"
+            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary" />
+          <select value={newCat} onChange={(e) => setNewCat(e.target.value)}
+            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground">
+            {cats.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <input value={newPrice} onChange={(e) => setNewPrice(e.target.value)} placeholder="Цена (₸)" type="number" min="0"
+            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary" />
+          <div className="flex gap-2">
+            <button onClick={() => { setShowAdd(false); setNewName(""); setNewPrice(""); }} className="flex-1 py-1.5 bg-muted text-muted-foreground rounded-lg text-sm">Отмена</button>
+            <button onClick={() => { if (newName.trim()) createMut.mutate(); }} disabled={!newName.trim() || createMut.isPending}
+              className="flex-1 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm disabled:opacity-50">Создать</button>
           </div>
-          <p className="text-xs text-muted-foreground">{String(t["category"] ?? "—")} · {String(t["duration"] ?? "—")} мин</p>
         </div>
-      ))}
+      )}
+      <button onClick={() => { haptic("medium"); setShowAdd(!showAdd); }}
+        className="w-full py-2 bg-card border border-dashed border-border rounded-lg text-sm text-muted-foreground hover:border-primary/50">+ Добавить услугу</button>
+      {!items.length && !showAdd ? <EmptyState icon="💊" text="Нет шаблонов услуг" /> : (
+        <div className="space-y-2">
+          {items.map((t) => (
+            <div key={String(t["id"])} className="bg-card rounded-lg border border-border p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{String(t["name"] ?? "—")}</p>
+                  <p className="text-xs text-muted-foreground">{String(t["category"] ?? "—")}</p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <p className="text-sm font-bold text-primary">{Number(t["defaultPrice"] ?? 0).toLocaleString()} ₸</p>
+                  <button onClick={() => { haptic("medium"); tgConfirm("Удалить услугу?", (ok) => { if (ok) deleteMut.mutate(String(t["id"])); }); }}
+                    className="text-xs text-red-400 px-1.5 py-1 rounded border border-red-500/20">✕</button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -793,26 +836,63 @@ function AnalyticsTab({ clinicId }: { clinicId: string }) {
 
 // ── Broadcasts Tab ──
 function BroadcastsTab({ clinicId }: { clinicId: string }) {
+  const qc = useQueryClient();
+  const [showAdd, setShowAdd] = useState(false);
+  const [bType, setBType] = useState<"appointment_reminder" | "postop_followup">("appointment_reminder");
   const { data, isLoading } = useQuery({
     queryKey: ["tma-clinic-broadcasts", clinicId],
     queryFn: () => api.get<{ success: boolean; data: { broadcasts: Broadcast[]; total: number } }>(`/clinics/${clinicId}/broadcasts`),
   });
+  const createMut = useMutation({
+    mutationFn: () => api.post(`/clinics/${clinicId}/broadcasts`, { type: bType }),
+    onSuccess: () => { hapticNotify("success"); qc.invalidateQueries({ queryKey: ["tma-clinic-broadcasts", clinicId] }); setShowAdd(false); },
+  });
+  const stopMut = useMutation({
+    mutationFn: (id: string) => api.post(`/clinics/${clinicId}/broadcasts/${id}/stop`),
+    onSuccess: () => { hapticNotify("warning"); qc.invalidateQueries({ queryKey: ["tma-clinic-broadcasts", clinicId] }); },
+  });
   if (isLoading) return <LoadingSkeleton />;
   const items = data?.data?.broadcasts ?? [];
-  if (!items.length) return <EmptyState icon="📢" text="Нет рассылок" />;
-  const statusColors: Record<string, string> = { pending: "bg-yellow-500/20 text-yellow-400", sent: "bg-green-500/20 text-green-400", cancelled: "bg-muted text-muted-foreground" };
+  const statusColors: Record<string, string> = { pending: "bg-yellow-500/20 text-yellow-400", scheduled: "bg-yellow-500/20 text-yellow-400", sent: "bg-green-500/20 text-green-400", cancelled: "bg-muted text-muted-foreground" };
   return (
-    <div className="space-y-2">
-      <p className="text-xs text-muted-foreground">Всего: {data?.data?.total ?? 0}</p>
-      {items.map((b) => (
-        <div key={b.id} className="bg-card rounded-lg border border-border p-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">{b.type === "appointment_reminder" ? "📅 Напоминание" : "🏥 Постоп"}</span>
-            <span className={`text-xs px-2 py-0.5 rounded-full ${statusColors[b.status] ?? "bg-muted text-muted-foreground"}`}>{b.status}</span>
+    <div className="space-y-3">
+      {showAdd && (
+        <div className="bg-card border border-border rounded-xl p-3 space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase">Новая рассылка</p>
+          <select value={bType} onChange={(e) => setBType(e.target.value as typeof bType)}
+            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground">
+            <option value="appointment_reminder">📅 Напоминание о записи</option>
+            <option value="postop_followup">🏥 Постоперационное</option>
+          </select>
+          <div className="flex gap-2">
+            <button onClick={() => setShowAdd(false)} className="flex-1 py-1.5 bg-muted text-muted-foreground rounded-lg text-sm">Отмена</button>
+            <button onClick={() => createMut.mutate()} disabled={createMut.isPending}
+              className="flex-1 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm disabled:opacity-50">Создать</button>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">Отправка: {new Date(b.sendAt).toLocaleString("ru", { dateStyle: "short", timeStyle: "short" })}</p>
         </div>
-      ))}
+      )}
+      <button onClick={() => { haptic("medium"); setShowAdd(!showAdd); }}
+        className="w-full py-2 bg-card border border-dashed border-border rounded-lg text-sm text-muted-foreground hover:border-primary/50">+ Создать рассылку</button>
+      {!items.length && !showAdd ? <EmptyState icon="📢" text="Нет рассылок" /> : (
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">Всего: {data?.data?.total ?? 0}</p>
+          {items.map((b) => (
+            <div key={b.id} className="bg-card rounded-lg border border-border p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">{b.type === "appointment_reminder" ? "📅 Напоминание" : "🏥 Постоп"}</span>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${statusColors[b.status] ?? "bg-muted text-muted-foreground"}`}>{b.status}</span>
+                  {(b.status === "pending" || b.status === "scheduled") && (
+                    <button onClick={() => { haptic("medium"); tgConfirm("Остановить рассылку?", (ok) => { if (ok) stopMut.mutate(b.id); }); }}
+                      className="text-xs text-red-400 px-1.5 py-0.5 rounded border border-red-500/20">■ Стоп</button>
+                  )}
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Отправка: {new Date(b.sendAt).toLocaleString("ru", { dateStyle: "short", timeStyle: "short" })}</p>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -820,77 +900,215 @@ function BroadcastsTab({ clinicId }: { clinicId: string }) {
 // ── Knowledge Tab ──
 function KnowledgeTab({ clinicId }: { clinicId: string }) {
   const qc = useQueryClient();
-  const { data, isLoading } = useQuery({
-    queryKey: ["tma-clinic-knowledge", clinicId],
-    queryFn: () => api.get<{ success: boolean; data: { entries: KnowledgeEntry[] } }>(`/clinics/${clinicId}/knowledge`),
+  const [showAdd, setShowAdd] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newType, setNewType] = useState<"text" | "url" | "faq">("text");
+  const [newUrl, setNewUrl] = useState("");
+  const [section, setSection] = useState<"sources" | "scripts">("sources");
+
+  const { data: srcData, isLoading: srcLoading } = useQuery({
+    queryKey: ["tma-clinic-knowledge-sources", clinicId],
+    queryFn: () => api.get<{ success: boolean; data: { entries: KnowledgeEntry[] } }>(`/clinics/${clinicId}/knowledge/sources`),
+  });
+  const { data: scriptData, isLoading: scriptLoading } = useQuery({
+    queryKey: ["tma-clinic-knowledge-scripts", clinicId],
+    queryFn: () => api.get<{ success: boolean; data: { scripts: Record<string, unknown> | null } }>(`/clinics/${clinicId}/knowledge/scripts`),
+  });
+
+  const createMut = useMutation({
+    mutationFn: () => api.post(`/clinics/${clinicId}/knowledge/sources`, {
+      name: newName, type: newType,
+      ...(newType === "url" ? { url: newUrl } : {}),
+    }),
+    onSuccess: () => { hapticNotify("success"); qc.invalidateQueries({ queryKey: ["tma-clinic-knowledge-sources", clinicId] }); setShowAdd(false); setNewName(""); setNewUrl(""); },
+  });
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => api.delete(`/clinics/${clinicId}/knowledge/sources/${id}`),
+    onSuccess: () => { hapticNotify("warning"); qc.invalidateQueries({ queryKey: ["tma-clinic-knowledge-sources", clinicId] }); },
   });
   const rescanMut = useMutation({
     mutationFn: (id: string) => api.post(`/clinics/${clinicId}/knowledge/${id}/rescan`),
-    onSuccess: () => { hapticNotify("success"); qc.invalidateQueries({ queryKey: ["tma-clinic-knowledge", clinicId] }); tgAlert("Запрос на переиндексацию отправлен"); },
-  });
-  const deleteMut = useMutation({
-    mutationFn: (id: string) => api.delete(`/clinics/${clinicId}/knowledge/${id}`),
-    onSuccess: () => { hapticNotify("warning"); qc.invalidateQueries({ queryKey: ["tma-clinic-knowledge", clinicId] }); },
+    onSuccess: () => { hapticNotify("success"); qc.invalidateQueries({ queryKey: ["tma-clinic-knowledge-sources", clinicId] }); tgAlert("Переиндексация запущена"); },
   });
 
-  if (isLoading) return <LoadingSkeleton />;
-  const items = data?.data?.entries ?? [];
-  if (!items.length) return <EmptyState icon="📚" text="Нет источников знаний" />;
   const statusColors: Record<string, string> = { active: "bg-green-500/20 text-green-400", pending: "bg-yellow-500/20 text-yellow-400", error: "bg-red-500/20 text-red-400" };
+
   return (
-    <div className="space-y-2">
-      {items.map((e) => (
-        <div key={e.id} className="bg-card rounded-lg border border-border p-3">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-foreground truncate flex-1 mr-2">{e.name}</p>
-            <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${statusColors[e.status] ?? "bg-muted text-muted-foreground"}`}>{e.status}</span>
-          </div>
-          <p className="text-xs text-muted-foreground">{e.type}</p>
-          <div className="flex gap-2 mt-2">
-            <button onClick={() => { haptic("light"); rescanMut.mutate(e.id); }} disabled={rescanMut.isPending} className="text-xs px-2 py-1 rounded-lg border border-border text-muted-foreground hover:border-primary/50">🔄 Переиндексировать</button>
-            <button onClick={() => { haptic("medium"); tgConfirm("Удалить источник?", (ok) => { if (ok) deleteMut.mutate(e.id); }); }} className="text-xs px-2 py-1 rounded-lg border border-red-500/20 text-red-400">✕</button>
-          </div>
-        </div>
-      ))}
+    <div className="space-y-3">
+      <div className="flex rounded-lg bg-card border border-border overflow-hidden">
+        {(["sources", "scripts"] as const).map((s) => (
+          <button key={s} onClick={() => setSection(s)}
+            className={`flex-1 py-2 text-xs font-medium ${section === s ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+            {s === "sources" ? "📚 Источники" : "📝 Скрипты"}
+          </button>
+        ))}
+      </div>
+
+      {section === "sources" && (
+        <>
+          {showAdd && (
+            <div className="bg-card border border-border rounded-xl p-3 space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase">Новый источник</p>
+              <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Название"
+                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary" />
+              <select value={newType} onChange={(e) => setNewType(e.target.value as typeof newType)}
+                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground">
+                <option value="text">Текст</option>
+                <option value="url">URL</option>
+                <option value="faq">FAQ</option>
+              </select>
+              {newType === "url" && (
+                <input value={newUrl} onChange={(e) => setNewUrl(e.target.value)} placeholder="https://..."
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary" />
+              )}
+              <div className="flex gap-2">
+                <button onClick={() => { setShowAdd(false); setNewName(""); setNewUrl(""); }} className="flex-1 py-1.5 bg-muted text-muted-foreground rounded-lg text-sm">Отмена</button>
+                <button onClick={() => { if (newName.trim()) createMut.mutate(); }} disabled={!newName.trim() || createMut.isPending}
+                  className="flex-1 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm disabled:opacity-50">Добавить</button>
+              </div>
+            </div>
+          )}
+          <button onClick={() => { haptic("medium"); setShowAdd(!showAdd); }}
+            className="w-full py-2 bg-card border border-dashed border-border rounded-lg text-sm text-muted-foreground hover:border-primary/50">+ Добавить источник</button>
+          {srcLoading ? <LoadingSkeleton rows={2} /> : (
+            <div className="space-y-2">
+              {(srcData?.data?.entries ?? []).map((e) => (
+                <div key={e.id} className="bg-card rounded-lg border border-border p-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-sm font-medium text-foreground truncate flex-1 mr-2">{e.name}</p>
+                    <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${statusColors[e.status] ?? "bg-muted text-muted-foreground"}`}>{e.status}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-2">{e.type}</p>
+                  <div className="flex gap-2">
+                    <button onClick={() => { haptic("light"); rescanMut.mutate(e.id); }} disabled={rescanMut.isPending} className="text-xs px-2 py-1 rounded-lg border border-border text-muted-foreground hover:border-primary/50">🔄 Переиндексировать</button>
+                    <button onClick={() => { haptic("medium"); tgConfirm("Удалить источник?", (ok) => { if (ok) deleteMut.mutate(e.id); }); }} className="text-xs px-2 py-1 rounded-lg border border-red-500/20 text-red-400">✕</button>
+                  </div>
+                </div>
+              ))}
+              {!(srcData?.data?.entries ?? []).length && <EmptyState icon="📚" text="Нет источников знаний" />}
+            </div>
+          )}
+        </>
+      )}
+
+      {section === "scripts" && (
+        scriptLoading ? <LoadingSkeleton rows={2} /> : (
+          scriptData?.data?.scripts ? (
+            <div className="bg-card rounded-xl border border-border p-4 space-y-3">
+              <p className="text-xs font-semibold text-muted-foreground uppercase">Скрипты бота</p>
+              {Object.entries(scriptData.data.scripts as Record<string, unknown>).filter(([k]) => k !== "id" && k !== "clinicId" && k !== "createdAt" && k !== "updatedAt").map(([key, val]) => (
+                <div key={key} className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground capitalize">{key.replace(/_/g, " ")}</p>
+                  <p className="text-sm text-foreground bg-muted/30 rounded-lg p-2">{String(val ?? "—")}</p>
+                </div>
+              ))}
+            </div>
+          ) : <EmptyState icon="📝" text="Скрипты не настроены" />
+        )
+      )}
     </div>
   );
 }
 
 // ── Contracts Tab ──
 function ContractsTab({ clinicId }: { clinicId: string }) {
+  const qc = useQueryClient();
+  const [section, setSection] = useState<"signed" | "templates">("signed");
   const [page, setPage] = useState(1);
-  const { data, isLoading } = useQuery({
-    queryKey: ["tma-clinic-contracts", clinicId, page],
-    queryFn: () => api.get<{ success: boolean; data: { contracts: Contract[]; total: number; templateCount: number } }>(`/clinics/${clinicId}/contracts?page=${page}`),
+  const [showAddTpl, setShowAddTpl] = useState(false);
+  const [tplName, setTplName] = useState("");
+
+  const { data: signedData, isLoading: signedLoading } = useQuery({
+    queryKey: ["tma-clinic-contracts-signed", clinicId, page],
+    queryFn: () => api.get<{ success: boolean; data: { contracts: Contract[]; total: number } }>(`/clinics/${clinicId}/contracts/signed?page=${page}`),
+    enabled: section === "signed",
   });
-  if (isLoading) return <LoadingSkeleton />;
-  const contracts = data?.data?.contracts ?? [];
-  const total = data?.data?.total ?? 0;
-  const templateCount = data?.data?.templateCount ?? 0;
-  const pages = Math.ceil(total / 50);
+  const { data: tplData, isLoading: tplLoading } = useQuery({
+    queryKey: ["tma-clinic-contracts-templates", clinicId],
+    queryFn: () => api.get<{ success: boolean; data: { templates: Record<string, unknown>[] } }>(`/clinics/${clinicId}/contracts/templates`),
+    enabled: section === "templates",
+  });
+
+  const createTplMut = useMutation({
+    mutationFn: () => api.post(`/clinics/${clinicId}/contracts/templates`, { name: tplName }),
+    onSuccess: () => { hapticNotify("success"); qc.invalidateQueries({ queryKey: ["tma-clinic-contracts-templates", clinicId] }); setShowAddTpl(false); setTplName(""); },
+  });
+  const deleteTplMut = useMutation({
+    mutationFn: (id: string) => api.delete(`/clinics/${clinicId}/contracts/templates/${id}`),
+    onSuccess: () => { hapticNotify("warning"); qc.invalidateQueries({ queryKey: ["tma-clinic-contracts-templates", clinicId] }); },
+  });
+
   const statusColors: Record<string, string> = { signed: "bg-green-500/20 text-green-400", sent: "bg-blue-500/20 text-blue-400", viewed: "bg-yellow-500/20 text-yellow-400", created: "bg-muted text-muted-foreground" };
+
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-3">
-        <StatCard label="Договоров" value={total} />
-        <StatCard label="Шаблонов" value={templateCount} />
+      <div className="flex rounded-lg bg-card border border-border overflow-hidden">
+        {(["signed", "templates"] as const).map((s) => (
+          <button key={s} onClick={() => { setSection(s); setPage(1); }}
+            className={`flex-1 py-2 text-xs font-medium ${section === s ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+            {s === "signed" ? "✍️ Подписанные" : "📋 Шаблоны"}
+          </button>
+        ))}
       </div>
-      {!contracts.length ? <EmptyState icon="📝" text="Нет договоров" /> : (
-        <>
-          {contracts.map((c) => (
-            <div key={c.id} className="bg-card rounded-lg border border-border p-3">
-              <div className="flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{c.patientName}</p>
-                  <p className="text-xs text-muted-foreground">{c.patientPhone}</p>
-                </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full ml-2 ${statusColors[c.status] ?? "bg-muted text-muted-foreground"}`}>{c.status}</span>
+
+      {section === "signed" && (
+        signedLoading ? <LoadingSkeleton /> : (
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">Всего: {signedData?.data?.total ?? 0}</p>
+            {!(signedData?.data?.contracts ?? []).length ? <EmptyState icon="📝" text="Нет подписанных договоров" /> : (
+              <>
+                {(signedData?.data?.contracts ?? []).map((c) => (
+                  <div key={c.id} className="bg-card rounded-lg border border-border p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{c.patientName}</p>
+                        <p className="text-xs text-muted-foreground">{c.patientPhone}</p>
+                      </div>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ml-2 ${statusColors[c.status] ?? "bg-muted text-muted-foreground"}`}>{c.status}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">{new Date(c.createdAt).toLocaleDateString("ru")}</p>
+                  </div>
+                ))}
+                <Paginator page={page} pages={Math.ceil((signedData?.data?.total ?? 0) / 50)} onPage={setPage} />
+              </>
+            )}
+          </div>
+        )
+      )}
+
+      {section === "templates" && (
+        <div className="space-y-3">
+          {showAddTpl && (
+            <div className="bg-card border border-border rounded-xl p-3 space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase">Новый шаблон</p>
+              <input value={tplName} onChange={(e) => setTplName(e.target.value)} placeholder="Название шаблона"
+                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary" />
+              <div className="flex gap-2">
+                <button onClick={() => { setShowAddTpl(false); setTplName(""); }} className="flex-1 py-1.5 bg-muted text-muted-foreground rounded-lg text-sm">Отмена</button>
+                <button onClick={() => { if (tplName.trim()) createTplMut.mutate(); }} disabled={!tplName.trim() || createTplMut.isPending}
+                  className="flex-1 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm disabled:opacity-50">Создать</button>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">{new Date(c.createdAt).toLocaleDateString("ru")}</p>
             </div>
-          ))}
-          <Paginator page={page} pages={pages} onPage={setPage} />
-        </>
+          )}
+          <button onClick={() => { haptic("medium"); setShowAddTpl(!showAddTpl); }}
+            className="w-full py-2 bg-card border border-dashed border-border rounded-lg text-sm text-muted-foreground hover:border-primary/50">+ Создать шаблон</button>
+          {tplLoading ? <LoadingSkeleton rows={2} /> : (
+            <div className="space-y-2">
+              {!(tplData?.data?.templates ?? []).length && !showAddTpl ? <EmptyState icon="📋" text="Нет шаблонов" /> :
+                (tplData?.data?.templates ?? []).map((t) => (
+                  <div key={String(t["id"])} className="bg-card rounded-lg border border-border p-3 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{String(t["name"] ?? "—")}</p>
+                      <p className="text-xs text-muted-foreground">{String(t["fileType"] ?? "—")}</p>
+                    </div>
+                    <button onClick={() => { haptic("medium"); tgConfirm("Удалить шаблон?", (ok) => { if (ok) deleteTplMut.mutate(String(t["id"])); }); }}
+                      className="text-xs text-red-400 px-2 py-1 rounded border border-red-500/20 ml-2">✕</button>
+                  </div>
+                ))
+              }
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
@@ -898,32 +1116,166 @@ function ContractsTab({ clinicId }: { clinicId: string }) {
 
 // ── Finances Tab ──
 function FinancesTab({ clinicId }: { clinicId: string }) {
+  const qc = useQueryClient();
+  const [section, setSection] = useState<"overview" | "payroll" | "expenses">("overview");
+  const now = new Date();
+  const [year, setYear] = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth() + 1);
+  const [showAddExp, setShowAddExp] = useState(false);
+  const [expAmount, setExpAmount] = useState("");
+  const [expCat, setExpCat] = useState("other");
+  const [expDesc, setExpDesc] = useState("");
+
   const { data, isLoading } = useQuery({
     queryKey: ["tma-clinic-finances", clinicId],
     queryFn: () => api.get<{ success: boolean; data: { revenue: number; expenses: number; payroll: number; profit: number; months: { month: string; revenue: number; expenses: number }[] } }>(`/clinics/${clinicId}/finances`),
+    enabled: section === "overview",
   });
-  if (isLoading) return <LoadingSkeleton rows={2} />;
+  const { data: payrollData, isLoading: payrollLoading } = useQuery({
+    queryKey: ["tma-clinic-payroll", clinicId, year, month],
+    queryFn: () => api.get<{ success: boolean; data: { records: Record<string, unknown>[]; salarySettings: Record<string, unknown>[] } }>(`/clinics/${clinicId}/payroll?year=${year}&month=${month}`),
+    enabled: section === "payroll",
+  });
+  const { data: expData, isLoading: expLoading } = useQuery({
+    queryKey: ["tma-clinic-expenses", clinicId],
+    queryFn: () => api.get<{ success: boolean; data: { expenses: Record<string, unknown>[]; total: number } }>(`/clinics/${clinicId}/expenses`),
+    enabled: section === "expenses",
+  });
+
+  const calcMut = useMutation({
+    mutationFn: () => api.post(`/clinics/${clinicId}/payroll/calculate`, { year, month }),
+    onSuccess: () => { hapticNotify("success"); qc.invalidateQueries({ queryKey: ["tma-clinic-payroll", clinicId, year, month] }); tgAlert("Расчёт выполнен"); },
+  });
+  const confirmMut = useMutation({
+    mutationFn: (recordId: string) => api.patch(`/clinics/${clinicId}/payroll/${recordId}/confirm`, { approvedAmount: null }),
+    onSuccess: () => { hapticNotify("success"); qc.invalidateQueries({ queryKey: ["tma-clinic-payroll", clinicId, year, month] }); },
+  });
+  const addExpMut = useMutation({
+    mutationFn: () => api.post(`/clinics/${clinicId}/expenses`, { amount: Number(expAmount), category: expCat, description: expDesc }),
+    onSuccess: () => { hapticNotify("success"); qc.invalidateQueries({ queryKey: ["tma-clinic-expenses", clinicId] }); setShowAddExp(false); setExpAmount(""); setExpDesc(""); },
+  });
+
   const d = data?.data;
+  const months = ["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
+  const payrollStatusColors: Record<string, string> = { calculated: "bg-yellow-500/20 text-yellow-400", approved: "bg-green-500/20 text-green-400", paid: "bg-blue-500/20 text-blue-400", draft: "bg-muted text-muted-foreground" };
+
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
-        <StatCard label="Выручка / мес" value={`${(d?.revenue ?? 0).toLocaleString()} ₸`} />
-        <StatCard label="Расходы / мес" value={`${(d?.expenses ?? 0).toLocaleString()} ₸`} />
-        <StatCard label="ФОТ / мес" value={`${(d?.payroll ?? 0).toLocaleString()} ₸`} />
-        <StatCard label="Прибыль / мес" value={`${(d?.profit ?? 0).toLocaleString()} ₸`} />
+    <div className="space-y-3">
+      <div className="flex rounded-lg bg-card border border-border overflow-hidden">
+        {(["overview", "payroll", "expenses"] as const).map((s) => (
+          <button key={s} onClick={() => setSection(s)}
+            className={`flex-1 py-2 text-xs font-medium ${section === s ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+            {s === "overview" ? "📊 Итоги" : s === "payroll" ? "💼 Зарплаты" : "🧾 Расходы"}
+          </button>
+        ))}
       </div>
-      {(d?.months ?? []).length > 0 && (
-        <div>
-          <p className="text-xs text-muted-foreground mb-2">По месяцам</p>
-          <div className="space-y-1">
-            {(d?.months ?? []).map((m) => (
-              <div key={m.month} className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">{m.month}</span>
-                <span className="text-green-400">{m.revenue.toLocaleString()} ₸</span>
-                <span className="text-red-400">-{m.expenses.toLocaleString()} ₸</span>
+
+      {section === "overview" && (
+        isLoading ? <LoadingSkeleton rows={2} /> : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <StatCard label="Выручка / мес" value={`${(d?.revenue ?? 0).toLocaleString()} ₸`} />
+              <StatCard label="Расходы / мес" value={`${(d?.expenses ?? 0).toLocaleString()} ₸`} />
+              <StatCard label="ФОТ / мес" value={`${(d?.payroll ?? 0).toLocaleString()} ₸`} />
+              <StatCard label="Прибыль / мес" value={`${(d?.profit ?? 0).toLocaleString()} ₸`} />
+            </div>
+            {(d?.months ?? []).length > 0 && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-2">По месяцам</p>
+                <div className="space-y-1">
+                  {(d?.months ?? []).map((m) => (
+                    <div key={m.month} className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">{m.month}</span>
+                      <span className="text-green-400">{m.revenue.toLocaleString()} ₸</span>
+                      <span className="text-red-400">-{m.expenses.toLocaleString()} ₸</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ))}
+            )}
           </div>
+        )
+      )}
+
+      {section === "payroll" && (
+        <div className="space-y-3">
+          <div className="flex gap-2">
+            <select value={year} onChange={(e) => setYear(Number(e.target.value))}
+              className="flex-1 bg-background border border-border rounded-lg px-2 py-1.5 text-sm text-foreground">
+              {[2024,2025,2026].map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+            <select value={month} onChange={(e) => setMonth(Number(e.target.value))}
+              className="flex-1 bg-background border border-border rounded-lg px-2 py-1.5 text-sm text-foreground">
+              {months.map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
+            </select>
+            <button onClick={() => calcMut.mutate()} disabled={calcMut.isPending}
+              className="px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs disabled:opacity-50">⚙️ Рассчитать</button>
+          </div>
+          {payrollLoading ? <LoadingSkeleton rows={2} /> : (
+            <div className="space-y-2">
+              {!(payrollData?.data?.records ?? []).length ? <EmptyState icon="💼" text="Нет записей за период" /> :
+                (payrollData?.data?.records ?? []).map((r) => (
+                  <div key={String(r["id"])} className="bg-card rounded-lg border border-border p-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{String(r["userName"] ?? "—")}</p>
+                        <p className="text-xs text-muted-foreground capitalize">{String(r["userRole"] ?? "—")} · {String(r["salaryType"] ?? "—")}</p>
+                      </div>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${payrollStatusColors[String(r["status"])] ?? "bg-muted text-muted-foreground"}`}>{String(r["status"] ?? "—")}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-bold text-primary">{Number(r["calculatedAmount"] ?? 0).toLocaleString()} ₸</p>
+                      {String(r["status"]) === "calculated" && (
+                        <button onClick={() => { haptic("medium"); tgConfirm("Утвердить выплату?", (ok) => { if (ok) confirmMut.mutate(String(r["id"])); }); }}
+                          className="text-xs px-2 py-1 bg-green-500/20 text-green-400 rounded-lg border border-green-500/30">✓ Утвердить</button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              }
+            </div>
+          )}
+        </div>
+      )}
+
+      {section === "expenses" && (
+        <div className="space-y-3">
+          {showAddExp && (
+            <div className="bg-card border border-border rounded-xl p-3 space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase">Новый расход</p>
+              <input value={expAmount} onChange={(e) => setExpAmount(e.target.value)} placeholder="Сумма (₸)" type="number" min="0"
+                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary" />
+              <select value={expCat} onChange={(e) => setExpCat(e.target.value)}
+                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground">
+                {["rent","utilities","supplies","equipment","salary","marketing","taxes","other"].map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <input value={expDesc} onChange={(e) => setExpDesc(e.target.value)} placeholder="Описание (опционально)"
+                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary" />
+              <div className="flex gap-2">
+                <button onClick={() => { setShowAddExp(false); setExpAmount(""); setExpDesc(""); }} className="flex-1 py-1.5 bg-muted text-muted-foreground rounded-lg text-sm">Отмена</button>
+                <button onClick={() => { if (expAmount && Number(expAmount) > 0) addExpMut.mutate(); }} disabled={!expAmount || Number(expAmount) <= 0 || addExpMut.isPending}
+                  className="flex-1 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm disabled:opacity-50">Добавить</button>
+              </div>
+            </div>
+          )}
+          <button onClick={() => { haptic("medium"); setShowAddExp(!showAddExp); }}
+            className="w-full py-2 bg-card border border-dashed border-border rounded-lg text-sm text-muted-foreground hover:border-primary/50">+ Добавить расход</button>
+          {expLoading ? <LoadingSkeleton rows={2} /> : (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">Всего: {expData?.data?.total ?? 0}</p>
+              {!(expData?.data?.expenses ?? []).length && !showAddExp ? <EmptyState icon="🧾" text="Нет расходов" /> :
+                (expData?.data?.expenses ?? []).map((e, i) => (
+                  <div key={i} className="bg-card rounded-lg border border-border p-3 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{Number(e["amount"] ?? 0).toLocaleString()} ₸</p>
+                      <p className="text-xs text-muted-foreground">{String(e["category"] ?? "—")}{e["description"] ? ` · ${String(e["description"])}` : ""}</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{e["expenseDate"] ? new Date(String(e["expenseDate"])).toLocaleDateString("ru") : "—"}</p>
+                  </div>
+                ))
+              }
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -976,14 +1328,27 @@ function NotificationsTab({ clinicId }: { clinicId: string }) {
     mutationFn: (id: string) => api.patch(`/clinics/${clinicId}/notifications/${id}`, { read: true }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["tma-clinic-notifications", clinicId] }),
   });
+  const markAllMut = useMutation({
+    mutationFn: () => api.post(`/clinics/${clinicId}/notifications/mark-all-read`),
+    onSuccess: () => { hapticNotify("success"); qc.invalidateQueries({ queryKey: ["tma-clinic-notifications", clinicId] }); },
+  });
 
   if (isLoading) return <LoadingSkeleton />;
   const items = data?.data?.notifications ?? [];
-  if (!items.length) return <EmptyState icon="🔔" text="Нет уведомлений" />;
+  const unreadCount = items.filter((n) => !n.read).length;
   const typeIcons: Record<string, string> = { red_alert: "🚨", new_message: "💬", appointment: "📅", system: "⚙️", appointment_reminder: "⏰", pending_payment: "💳" };
+  if (!items.length) return <EmptyState icon="🔔" text="Нет уведомлений" />;
   return (
     <div className="space-y-2">
-      <p className="text-xs text-muted-foreground">Всего: {data?.data?.total ?? 0}</p>
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">Всего: {data?.data?.total ?? 0} · Непрочитанных: {unreadCount}</p>
+        {unreadCount > 0 && (
+          <button onClick={() => { haptic("light"); markAllMut.mutate(); }} disabled={markAllMut.isPending}
+            className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-lg border border-primary/20 disabled:opacity-50">
+            ✓ Прочитать все
+          </button>
+        )}
+      </div>
       {items.map((n) => (
         <div key={n.id} className={`bg-card rounded-lg border p-3 ${n.read ? "border-border opacity-60" : "border-primary/30"}`}>
           <div className="flex items-start gap-2">
@@ -993,7 +1358,7 @@ function NotificationsTab({ clinicId }: { clinicId: string }) {
               <p className="text-xs text-muted-foreground mt-1">{new Date(n.createdAt).toLocaleString("ru", { dateStyle: "short", timeStyle: "short" })}</p>
             </div>
             {!n.read && (
-              <button onClick={() => { haptic("light"); markReadMut.mutate(n.id); }} className="text-xs text-primary flex-shrink-0">✓</button>
+              <button onClick={() => { haptic("light"); markReadMut.mutate(n.id); }} className="text-xs text-primary flex-shrink-0 px-1.5 py-1 rounded border border-primary/20">✓</button>
             )}
           </div>
         </div>
@@ -1044,7 +1409,15 @@ function FilesTab({ clinicId }: { clinicId: string }) {
 
 // ── Inventory Tab ──
 function InventoryTab({ clinicId }: { clinicId: string }) {
+  const qc = useQueryClient();
   const [category, setCategory] = useState("");
+  const [showAddItem, setShowAddItem] = useState(false);
+  const [newItemName, setNewItemName] = useState("");
+  const [newItemCat, setNewItemCat] = useState("materials");
+  const [newItemUnit, setNewItemUnit] = useState("шт");
+  const [adjustItemId, setAdjustItemId] = useState<string | null>(null);
+  const [adjustDelta, setAdjustDelta] = useState("");
+
   const { data, isLoading } = useQuery({
     queryKey: ["tma-inventory", clinicId, category],
     queryFn: () => api.get<{ success: boolean; data: { items: Record<string, unknown>[]; total: number } }>(
@@ -1055,9 +1428,20 @@ function InventoryTab({ clinicId }: { clinicId: string }) {
     queryKey: ["tma-inventory-consumption", clinicId],
     queryFn: () => api.get<{ success: boolean; data: Record<string, unknown> }>(`/clinics/${clinicId}/inventory/consumption`),
   });
+
+  const addItemMut = useMutation({
+    mutationFn: () => api.post(`/clinics/${clinicId}/inventory/items`, { name: newItemName, category: newItemCat, unit: newItemUnit }),
+    onSuccess: () => { hapticNotify("success"); qc.invalidateQueries({ queryKey: ["tma-inventory", clinicId, category] }); qc.invalidateQueries({ queryKey: ["tma-inventory-consumption", clinicId] }); setShowAddItem(false); setNewItemName(""); },
+  });
+  const adjustMut = useMutation({
+    mutationFn: ({ itemId, delta }: { itemId: string; delta: number }) => api.patch(`/clinics/${clinicId}/inventory/stock/${itemId}`, { delta }),
+    onSuccess: () => { hapticNotify("success"); qc.invalidateQueries({ queryKey: ["tma-inventory", clinicId, category] }); qc.invalidateQueries({ queryKey: ["tma-inventory-consumption", clinicId] }); setAdjustItemId(null); setAdjustDelta(""); },
+  });
+
   const items = data?.data?.items ?? [];
   const cons = consumption?.data;
   const categories = ["materials", "instruments", "medications", "consumables", "prosthetics", "implants", "other"];
+
   return (
     <div className="space-y-4">
       {cons && (
@@ -1076,30 +1460,71 @@ function InventoryTab({ clinicId }: { clinicId: string }) {
           </div>
         </div>
       )}
+
+      {showAddItem && (
+        <div className="bg-card border border-border rounded-xl p-3 space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase">Новая позиция</p>
+          <input value={newItemName} onChange={(e) => setNewItemName(e.target.value)} placeholder="Название"
+            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary" />
+          <div className="flex gap-2">
+            <select value={newItemCat} onChange={(e) => setNewItemCat(e.target.value)}
+              className="flex-1 bg-background border border-border rounded-lg px-2 py-1.5 text-sm text-foreground">
+              {categories.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <input value={newItemUnit} onChange={(e) => setNewItemUnit(e.target.value)} placeholder="Ед. изм." maxLength={10}
+              className="w-20 bg-background border border-border rounded-lg px-2 py-1.5 text-sm text-foreground focus:outline-none focus:border-primary" />
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => { setShowAddItem(false); setNewItemName(""); }} className="flex-1 py-1.5 bg-muted text-muted-foreground rounded-lg text-sm">Отмена</button>
+            <button onClick={() => { if (newItemName.trim()) addItemMut.mutate(); }} disabled={!newItemName.trim() || addItemMut.isPending}
+              className="flex-1 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm disabled:opacity-50">Добавить</button>
+          </div>
+        </div>
+      )}
+      <button onClick={() => { haptic("medium"); setShowAddItem(!showAddItem); }}
+        className="w-full py-2 bg-card border border-dashed border-border rounded-lg text-sm text-muted-foreground hover:border-primary/50">+ Добавить позицию</button>
+
       <div className="flex gap-1 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
         <button onClick={() => setCategory("")} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium ${!category ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground"}`}>Все</button>
         {categories.map((c) => (
           <button key={c} onClick={() => setCategory(c)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium capitalize ${category === c ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground"}`}>{c}</button>
         ))}
       </div>
+
       {isLoading ? <LoadingSkeleton /> : (
         <div className="space-y-2">
           {items.map((item) => {
+            const itemId = String(item["id"]);
             const qty = Number(item["quantity"] ?? 0);
             const min = Number(item["minQuantity"] ?? 0);
             const isLow = qty <= min && min > 0;
+            const isAdjusting = adjustItemId === itemId;
             return (
-              <div key={String(item["id"])} className="bg-card rounded-lg border border-border p-3">
+              <div key={itemId} className="bg-card rounded-lg border border-border p-3">
                 <div className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">{String(item["name"])}</p>
                     <p className="text-xs text-muted-foreground capitalize">{String(item["category"])} · {String(item["unit"])}</p>
                   </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className={`text-sm font-semibold ${isLow ? "text-destructive" : "text-foreground"}`}>{qty} {String(item["unit"])}</p>
-                    {min > 0 && <p className="text-xs text-muted-foreground">мин: {min}</p>}
+                  <div className="text-right flex-shrink-0 flex items-center gap-2">
+                    <div>
+                      <p className={`text-sm font-semibold ${isLow ? "text-destructive" : "text-foreground"}`}>{qty} {String(item["unit"])}</p>
+                      {min > 0 && <p className="text-xs text-muted-foreground">мин: {min}</p>}
+                    </div>
+                    <button onClick={() => { haptic("light"); setAdjustItemId(isAdjusting ? null : itemId); setAdjustDelta(""); }}
+                      className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-lg border border-primary/20">±</button>
                   </div>
                 </div>
+                {isAdjusting && (
+                  <div className="mt-2 flex gap-2">
+                    <input value={adjustDelta} onChange={(e) => setAdjustDelta(e.target.value)} placeholder="+5 или -3" type="number"
+                      className="flex-1 bg-background border border-border rounded-lg px-2 py-1 text-sm text-foreground focus:outline-none focus:border-primary" />
+                    <button onClick={() => { const d = Number(adjustDelta); if (!isNaN(d)) adjustMut.mutate({ itemId, delta: d }); }}
+                      disabled={!adjustDelta || isNaN(Number(adjustDelta)) || adjustMut.isPending}
+                      className="px-3 py-1 bg-primary text-primary-foreground rounded-lg text-xs disabled:opacity-50">OK</button>
+                    <button onClick={() => { setAdjustItemId(null); setAdjustDelta(""); }} className="px-2 py-1 bg-muted text-muted-foreground rounded-lg text-xs">✕</button>
+                  </div>
+                )}
               </div>
             );
           })}
