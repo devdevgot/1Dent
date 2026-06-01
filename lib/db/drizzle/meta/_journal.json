@@ -162,6 +162,20 @@
       "when": 1748736000000,
       "tag": "0022_platform_admins",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1748822400000,
+      "tag": "0023_platform_admins_username",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1748908800000,
+      "tag": "0024_clinics_is_active",
+      "breakpoints": true
     }
   ]
 }

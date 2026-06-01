@@ -1,44 +1,42 @@
-import { useState, useEffect, createContext, useContext } from "react";
+import { useEffect, useState, createContext, useContext } from "react";
+import { HashRouter, Routes, Route, useLocation } from "react-router-dom";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import WebApp from "@twa-dev/sdk";
 import { api, setInitData, type TmaUser } from "./lib/api";
 import BottomNav from "./components/BottomNav";
 import Dashboard from "./pages/Dashboard";
-import Clinics from "./pages/Clinics";
-import Activity from "./pages/Activity";
-import Logs from "./pages/Logs";
-import Settings from "./pages/Settings";
+import ClinicsPage from "./pages/ClinicsPage";
+import ClinicDetailPage from "./pages/ClinicDetailPage";
+import ActivityPage from "./pages/ActivityPage";
+import LogsPage from "./pages/LogsPage";
+import AdminsPage from "./pages/AdminsPage";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
 });
 
-type Tab = "dashboard" | "clinics" | "activity" | "logs" | "settings";
-
 interface AppCtx {
   user: TmaUser | null;
-  tab: Tab;
-  setTab: (t: Tab) => void;
 }
-
-export const AppContext = createContext<AppCtx>({ user: null, tab: "dashboard", setTab: () => {} });
+export const AppContext = createContext<AppCtx>({ user: null });
 export const useApp = () => useContext(AppContext);
 
+function BottomNavWrapper() {
+  const location = useLocation();
+  const isDetail = location.pathname.startsWith("/clinics/") && location.pathname.length > "/clinics/".length;
+  if (isDetail) return null;
+  return <BottomNav />;
+}
+
 function Inner() {
-  const [tab, setTab] = useState<Tab>("dashboard");
   const [initDataReady, setInitDataReady] = useState(false);
 
   useEffect(() => {
     try {
       WebApp.ready();
       WebApp.expand();
-      const initData = WebApp.initData;
-      if (initData) {
-        setInitData(initData);
-      } else {
-        // Dev mode fallback
-        setInitData("dev");
-      }
+      const d = WebApp.initData;
+      setInitData(d || "dev");
     } catch {
       setInitData("dev");
     }
@@ -64,7 +62,7 @@ function Inner() {
 
   if (isError) {
     const msg = error instanceof Error ? error.message : "Ошибка";
-    const isAccess = msg.toLowerCase().includes("access") || msg.toLowerCase().includes("denied");
+    const isAccess = msg.toLowerCase().includes("access") || msg.toLowerCase().includes("denied") || msg.toLowerCase().includes("401");
     return (
       <div className="flex items-center justify-center min-h-screen bg-background px-6">
         <div className="text-center space-y-4 max-w-xs">
@@ -75,9 +73,7 @@ function Inner() {
             {isAccess ? "Доступ запрещён" : "Ошибка"}
           </h2>
           <p className="text-sm text-muted-foreground">
-            {isAccess
-              ? "Вы не являетесь администратором платформы. Обратитесь к суперадминистратору."
-              : msg}
+            {isAccess ? "Вы не являетесь администратором платформы." : msg}
           </p>
         </div>
       </div>
@@ -86,21 +82,20 @@ function Inner() {
 
   const user = data?.data?.user ?? null;
 
-  const pages: Record<Tab, JSX.Element> = {
-    dashboard: <Dashboard />,
-    clinics: <Clinics />,
-    activity: <Activity />,
-    logs: <Logs />,
-    settings: <Settings />,
-  };
-
   return (
-    <AppContext.Provider value={{ user, tab, setTab }}>
+    <AppContext.Provider value={{ user }}>
       <div className="flex flex-col min-h-screen bg-background">
         <main className="flex-1 overflow-auto pb-20">
-          {pages[tab]}
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/clinics" element={<ClinicsPage />} />
+            <Route path="/clinics/:clinicId" element={<ClinicDetailPage />} />
+            <Route path="/activity" element={<ActivityPage />} />
+            <Route path="/logs" element={<LogsPage />} />
+            <Route path="/admins" element={<AdminsPage />} />
+          </Routes>
         </main>
-        <BottomNav tab={tab} setTab={setTab} />
+        <BottomNavWrapper />
       </div>
     </AppContext.Provider>
   );
@@ -109,7 +104,9 @@ function Inner() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Inner />
+      <HashRouter>
+        <Inner />
+      </HashRouter>
     </QueryClientProvider>
   );
 }

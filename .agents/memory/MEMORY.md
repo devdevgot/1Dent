@@ -2,3 +2,5 @@
 - [TMA static serving via api-server](tma-static-serving.md) — tg-admin-app built static files served from api-server at /tg-admin/; Replit port detection fails for sub-path (non-root) web artifacts.
 - [TMA route ordering in Express](tma-route-order.md) — /api/tma router must be mounted BEFORE /api router to bypass JWT auth middleware that covers all /api/* paths.
 - [TMA dev bypass setup](tma-dev-bypass.md) — dev auth requires TMA_DEV_BYPASS_TG_ID + PLATFORM_SUPERADMIN_TG_ID env vars (development scope only).
+- [Drizzle journal must be kept in sync](drizzle-journal-sync.md) — when applying migrations via raw psql (not via pnpm run migrate), must manually add entries to lib/db/drizzle/meta/_journal.json or future pnpm run migrate calls will re-apply them and fail.
+- [payrollRecordsTable field names](payroll-schema-fields.md) — payroll uses periodMonth/periodYear (not periodStart), calculatedAmount (not netPay); clinicExpenses uses description (not note).

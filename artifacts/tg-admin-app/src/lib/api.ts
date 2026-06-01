@@ -47,6 +47,7 @@ export interface Clinic {
   id: string;
   name: string;
   plan: string;
+  isActive: boolean;
   createdAt: string;
   usersCount?: number;
   patientsCount?: number;

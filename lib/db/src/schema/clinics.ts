@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -9,6 +9,7 @@ export const clinicsTable = pgTable("clinics", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   plan: text("plan", { enum: clinicPlans }).notNull().default("free"),
+  isActive: boolean("is_active").notNull().default(true),
   whatsappPhone: text("whatsapp_phone"),
   greenApiInstanceId: text("green_api_instance_id"),
   greenApiToken: text("green_api_token"),
