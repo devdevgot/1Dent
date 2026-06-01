@@ -1,1 +1,4 @@
 - [API client type exports](api-client-type-exports.md) — not all schema types re-exported from main @workspace/api-client-react index; use type inference instead.
+- [TMA static serving via api-server](tma-static-serving.md) — tg-admin-app built static files served from api-server at /tg-admin/; Replit port detection fails for sub-path (non-root) web artifacts.
+- [TMA route ordering in Express](tma-route-order.md) — /api/tma router must be mounted BEFORE /api router to bypass JWT auth middleware that covers all /api/* paths.
+- [TMA dev bypass setup](tma-dev-bypass.md) — dev auth requires TMA_DEV_BYPASS_TG_ID + PLATFORM_SUPERADMIN_TG_ID env vars (development scope only).

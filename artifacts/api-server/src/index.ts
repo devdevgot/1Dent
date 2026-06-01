@@ -147,11 +147,14 @@ app.listen(port, (err) => {
 
   logger.info({ port }, "Server listening");
 
-  // Register platform Telegram bot webhook
+  // Register platform Telegram bot webhook + menu button + commands
   const platformTgToken = process.env["PLATFORM_TG_BOT_TOKEN"];
   const webhookBase = getServerBaseUrl();
   if (platformTgToken && webhookBase) {
     const webhookUrl = `${webhookBase}/api/webhook/telegram/platform`;
+    const tmaUrl = `${webhookBase}/tg-admin`;
+
+    // Register webhook
     fetch(`https://api.telegram.org/bot${platformTgToken}/setWebhook`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -160,6 +163,33 @@ app.listen(port, (err) => {
       .then((r) => r.json())
       .then((r) => logger.info({ result: r }, "[PlatformBot] Webhook registered"))
       .catch((err) => logger.warn({ err }, "[PlatformBot] Failed to register webhook"));
+
+    // Set menu button to open TMA
+    fetch(`https://api.telegram.org/bot${platformTgToken}/setChatMenuButton`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        menu_button: { type: "web_app", text: "Панель управления", web_app: { url: tmaUrl } },
+      }),
+    })
+      .then((r) => r.json())
+      .then((r) => logger.info({ result: r }, "[PlatformBot] Menu button set"))
+      .catch((err) => logger.warn({ err }, "[PlatformBot] Failed to set menu button"));
+
+    // Set bot commands
+    fetch(`https://api.telegram.org/bot${platformTgToken}/setMyCommands`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        commands: [
+          { command: "start", description: "Открыть панель управления" },
+          { command: "admin", description: "Информация об администраторе" },
+        ],
+      }),
+    })
+      .then((r) => r.json())
+      .then((r) => logger.info({ result: r }, "[PlatformBot] Commands registered"))
+      .catch((err) => logger.warn({ err }, "[PlatformBot] Failed to set commands"));
   } else {
     if (!platformTgToken) logger.warn("[PlatformBot] PLATFORM_TG_BOT_TOKEN not set — platform bot disabled");
     if (!webhookBase) logger.warn("[PlatformBot] webhookBase not resolved — cannot register Telegram webhook");

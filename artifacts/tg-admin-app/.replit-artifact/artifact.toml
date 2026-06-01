@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/tg-admin/"
+title = "1Dent Platform Admin (TMA)"
+version = "1.0.0"
+id = "artifacts/tg-admin-app"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/tg-admin-dev/" ]
+localPort = 24344
+
+[services.development]
+run = "pnpm --filter @workspace/tg-admin-app run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/tg-admin-app", "run", "build" ]
+publicDir = "artifacts/tg-admin-app/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24344"
+BASE_PATH = "/tg-admin/"
