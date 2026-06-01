@@ -1242,7 +1242,7 @@ function FinancesTab({ clinicId }: { clinicId: string }) {
     onSuccess: () => { hapticNotify("success"); qc.invalidateQueries({ queryKey: ["tma-clinic-payroll", clinicId, year, month] }); tgAlert("Расчёт выполнен"); },
   });
   const confirmMut = useMutation({
-    mutationFn: (recordId: string) => api.patch(`/clinics/${clinicId}/payroll/${recordId}/confirm`, { approvedAmount: null }),
+    mutationFn: (recordId: string) => api.patch(`/clinics/${clinicId}/payroll/${recordId}/confirm`, {}),
     onSuccess: () => { hapticNotify("success"); qc.invalidateQueries({ queryKey: ["tma-clinic-payroll", clinicId, year, month] }); },
   });
   const addExpMut = useMutation({
@@ -1252,7 +1252,7 @@ function FinancesTab({ clinicId }: { clinicId: string }) {
 
   const d = data?.data;
   const months = ["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
-  const payrollStatusColors: Record<string, string> = { calculated: "bg-yellow-500/20 text-yellow-400", approved: "bg-green-500/20 text-green-400", paid: "bg-blue-500/20 text-blue-400", draft: "bg-muted text-muted-foreground" };
+  const payrollStatusColors: Record<string, string> = { pending: "bg-yellow-500/20 text-yellow-400", calculated: "bg-yellow-500/20 text-yellow-400", approved: "bg-green-500/20 text-green-400", paid: "bg-blue-500/20 text-blue-400", draft: "bg-muted text-muted-foreground" };
 
   return (
     <div className="space-y-3">
@@ -1320,7 +1320,7 @@ function FinancesTab({ clinicId }: { clinicId: string }) {
                     </div>
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-bold text-primary">{Number(r["calculatedAmount"] ?? 0).toLocaleString()} ₸</p>
-                      {String(r["status"]) === "calculated" && (
+                      {String(r["status"]) === "pending" && (
                         <button onClick={() => { haptic("medium"); tgConfirm("Утвердить выплату?", (ok) => { if (ok) confirmMut.mutate(String(r["id"])); }); }}
                           className="text-xs px-2 py-1 bg-green-500/20 text-green-400 rounded-lg border border-green-500/30">✓ Утвердить</button>
                       )}
