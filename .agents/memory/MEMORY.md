@@ -1,3 +1,4 @@
 - [Express 5 req.params typing](express5-params.md) — bracket indexing returns `string | string[]`, use `as string` cast or `as Record<string,string>` destructuring
 - [Drizzle TS2769 pattern](drizzle-ts2769.md) — `and()` result needs `as SQL<unknown>` cast when used in `.where()` with dynamic conditions
-- [TMA controller schema mismatches](tma-schema-facts.md) — procedureTemplatesTable uses `defaultPrice:real` not `price`; knowledgeSourcesTable uses `extractedText` not `content`
+- [TMA controller schema mismatches](tma-schema-facts.md) — procedureTemplatesTable uses `defaultPrice:real` not `price`; knowledgeSourcesTable uses `extractedText`; contractTemplatesTable.fileUrl is NOT NULL (use "" not null as default)
+- [TMA async middleware TS7030](express5-params.md) — Express 5 async middleware must return `Promise<void>`; replace `return res.json()` with `res.json(); return;` pattern

@@ -7,6 +7,7 @@ import BottomNav from "./components/BottomNav";
 import Dashboard from "./pages/Dashboard";
 import ClinicsPage from "./pages/ClinicsPage";
 import ClinicDetailPage from "./pages/ClinicDetailPage";
+import ClinicPickerPage from "./pages/ClinicPickerPage";
 import ActivityPage from "./pages/ActivityPage";
 import LogsPage from "./pages/LogsPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -23,8 +24,10 @@ export const useApp = () => useContext(AppContext);
 
 function BottomNavWrapper() {
   const location = useLocation();
-  const isDetail = location.pathname.startsWith("/clinics/") && location.pathname.length > "/clinics/".length;
-  if (isDetail) return null;
+  const hideNav =
+    (location.pathname.startsWith("/clinics/") && location.pathname.length > "/clinics/".length) ||
+    location.pathname.startsWith("/picker/");
+  if (hideNav) return null;
   return <BottomNav />;
 }
 
@@ -90,6 +93,17 @@ function Inner() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/clinics" element={<ClinicsPage />} />
             <Route path="/clinics/:clinicId" element={<ClinicDetailPage />} />
+
+            {/* Section-first clinic pickers */}
+            <Route path="/picker/sessions" element={<ClinicPickerPage title="Сессии" icon="💬" tab="sessions" />} />
+            <Route path="/picker/messages" element={<ClinicPickerPage title="Сообщения" icon="📨" tab="messages" />} />
+            <Route path="/picker/patients" element={<ClinicPickerPage title="Пациенты" icon="🦷" tab="patients" />} />
+            <Route path="/picker/analytics" element={<ClinicPickerPage title="Аналитика" icon="📊" tab="analytics" />} />
+            <Route path="/picker/broadcasts" element={<ClinicPickerPage title="Рассылки" icon="📢" tab="broadcasts" />} />
+            <Route path="/picker/contracts" element={<ClinicPickerPage title="Договоры" icon="📝" tab="contracts" />} />
+            <Route path="/picker/inventory" element={<ClinicPickerPage title="Инвентарь" icon="📦" tab="inventory" />} />
+            <Route path="/picker/finances" element={<ClinicPickerPage title="Финансы" icon="💰" tab="finances" />} />
+
             <Route path="/activity" element={<ActivityPage />} />
             <Route path="/logs" element={<LogsPage />} />
             <Route path="/settings" element={<SettingsPage />} />

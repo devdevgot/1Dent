@@ -75,15 +75,17 @@ export function invalidateAdminCache(telegramUserId: string) {
   adminCache.delete(telegramUserId);
 }
 
-export async function requireTmaAdmin(req: Request, res: Response, next: NextFunction) {
+export async function requireTmaAdmin(req: Request, res: Response, next: NextFunction): Promise<void> {
   const botToken = process.env["PLATFORM_TG_BOT_TOKEN"];
   if (!botToken) {
-    return res.status(503).json({ success: false, error: "Platform bot not configured" });
+    res.status(503).json({ success: false, error: "Platform bot not configured" });
+    return;
   }
 
   const initData = req.headers["x-telegram-init-data"] as string | undefined;
   if (!initData) {
-    return res.status(401).json({ success: false, error: "Missing Telegram initData" });
+    res.status(401).json({ success: false, error: "Missing Telegram initData" });
+    return;
   }
 
   // In dev mode allow bypassing auth with env var (never active in production)
@@ -99,34 +101,39 @@ export async function requireTmaAdmin(req: Request, res: Response, next: NextFun
   } else {
     const parsed = validateTelegramInitData(initData, botToken);
     if (!parsed) {
-      return res.status(401).json({ success: false, error: "Invalid Telegram initData signature" });
+      res.status(401).json({ success: false, error: "Invalid Telegram initData signature" });
+      return;
     }
 
     // Check freshness (5 minutes)
     const authDate = parseInt(parsed["auth_date"] ?? "0", 10);
     if (Date.now() / 1000 - authDate > 5 * 60) {
-      return res.status(401).json({ success: false, error: "Telegram initData expired" });
+      res.status(401).json({ success: false, error: "Telegram initData expired" });
+      return;
     }
 
     let userObj: { id?: number; first_name?: string } = {};
     try {
       userObj = JSON.parse(parsed["user"] ?? "{}") as { id?: number; first_name?: string };
     } catch {
-      return res.status(401).json({ success: false, error: "Invalid user data in initData" });
+      res.status(401).json({ success: false, error: "Invalid user data in initData" });
+      return;
     }
 
     telegramUserId = String(userObj.id ?? "");
     firstName = userObj.first_name ?? "Unknown";
     if (!telegramUserId) {
-      return res.status(401).json({ success: false, error: "Missing user ID in initData" });
+      res.status(401).json({ success: false, error: "Missing user ID in initData" });
+      return;
     }
   }
 
   try {
-    const { isAdmin, name } = await checkIsAdmin(telegramUserId);
+    const { isAdmin, name } = await checkIsAdmin(telegramUserId!);
     if (!isAdmin) {
       logger.warn({ telegramUserId }, "[TMA] Unauthorized access attempt");
-      return res.status(403).json({ success: false, error: "Access denied. You are not a platform admin." });
+      res.status(403).json({ success: false, error: "Access denied. You are not a platform admin." });
+      return;
     }
 
     req.tmaUser = {

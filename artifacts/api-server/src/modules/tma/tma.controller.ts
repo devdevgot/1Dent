@@ -16,14 +16,18 @@ import {
   chatbotSettingsTable,
   clinicChannelsTable,
   knowledgeSourcesTable,
+  knowledgeScriptsTable,
   contractTemplatesTable,
   patientContractsTable,
   clinicExpensesTable,
   payrollRecordsTable,
+  userSalarySettingsTable,
   notificationsTable,
   appointmentRemindersTable,
   postopFollowupsTable,
   doctorCapacityTable,
+  inventoryItemsTable,
+  inventoryStockTable,
 } from "@workspace/db";
 import { eq, desc, count, sum, gte, lte, and, sql, not, ilike, or, isNotNull, type SQL } from "drizzle-orm";
 import { requireTmaAdmin, invalidateAdminCache } from "./tma.middleware";
@@ -163,14 +167,33 @@ router.post("/clinics", async (req: Request, res: Response, next: NextFunction) 
     const schema = z.object({
       name: z.string().min(1).max(200),
       plan: z.enum(["free", "starter", "professional", "enterprise"]).default("free"),
+      ownerEmail: z.string().email().optional(),
+      ownerName: z.string().min(1).optional(),
     });
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+    const clinicId = randomUUID();
     const [clinic] = await db.insert(clinicsTable)
-      .values({ id: randomUUID(), isActive: true, ...parsed.data })
+      .values({ id: clinicId, isActive: true, name: parsed.data.name, plan: parsed.data.plan })
       .returning();
+    if (parsed.data.ownerEmail) {
+      const passwordHash = await bcrypt.hash("changeme123", 10);
+      await db.insert(usersTable).values({
+        id: randomUUID(),
+        clinicId,
+        name: parsed.data.ownerName ?? parsed.data.ownerEmail,
+        email: parsed.data.ownerEmail,
+        role: "owner",
+        passwordHash,
+        isActive: true,
+      } as never);
+    }
     res.status(201).json({ success: true, data: { clinic } });
-  } catch (err) { next(err); }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("unique") || msg.includes("duplicate")) return next(new ValidationError("Email уже используется"));
+    next(err);
+  }
 });
 
 router.get("/clinics/:clinicId", async (req: Request, res: Response, next: NextFunction) => {
@@ -1001,9 +1024,8 @@ router.post("/clinics/:clinicId/contracts/templates", async (req: Request, res: 
       id: randomUUID(),
       clinicId: req.params["clinicId"] as string,
       name: parsed.data.name,
-      content: parsed.data.content ?? null,
       fileType: parsed.data.fileType ?? "text",
-      fileUrl: parsed.data.fileUrl ?? null,
+      fileUrl: parsed.data.fileUrl ?? "",
     } as never).returning();
     res.status(201).json({ success: true, data: { template } });
   } catch (err) { next(err); }
@@ -1157,25 +1179,267 @@ router.get("/clinics/:clinicId/logs", async (req: Request, res: Response, next: 
   try {
     const clinicId = req.params["clinicId"] as string;
     const page = parseInt(String(req.query["page"] ?? "1"), 10);
+    const action = req.query["action"] as string | undefined;
+    const userId = req.query["userId"] as string | undefined;
+    const dateFrom = req.query["dateFrom"] as string | undefined;
+    const dateTo = req.query["dateTo"] as string | undefined;
+    const where = and(
+      eq(actionLogsTable.clinicId, clinicId),
+      action ? eq(actionLogsTable.actionType, action) : undefined,
+      userId ? eq(actionLogsTable.userId, userId) : undefined,
+      dateFrom ? gte(actionLogsTable.createdAt, new Date(dateFrom)) : undefined,
+      dateTo ? lte(actionLogsTable.createdAt, new Date(dateTo)) : undefined,
+    ) as SQL<unknown>;
     const logs = await db.select({
-      id: actionLogsTable.id, actionType: actionLogsTable.actionType,
-      entityType: actionLogsTable.entityType, entityId: actionLogsTable.entityId,
-      details: actionLogsTable.details, createdAt: actionLogsTable.createdAt,
-    }).from(actionLogsTable).where(eq(actionLogsTable.clinicId, clinicId))
+      id: actionLogsTable.id, userId: actionLogsTable.userId,
+      actionType: actionLogsTable.actionType, entityType: actionLogsTable.entityType,
+      entityId: actionLogsTable.entityId, details: actionLogsTable.details,
+      createdAt: actionLogsTable.createdAt,
+    }).from(actionLogsTable).where(where)
       .orderBy(desc(actionLogsTable.createdAt)).limit(50).offset((page - 1) * 50);
-    const [total] = await db.select({ count: count() }).from(actionLogsTable).where(eq(actionLogsTable.clinicId, clinicId));
+    const [total] = await db.select({ count: count() }).from(actionLogsTable).where(where);
     res.json({ success: true, data: { logs, total: total?.count ?? 0, page } });
   } catch (err) { next(err); }
 });
 
-// ── PLATFORM-WIDE LOGS ────────────────────────────────────────────────────────
+// ── INVENTORY ─────────────────────────────────────────────────────────────────
+router.get("/clinics/:clinicId/inventory", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const clinicId = req.params["clinicId"] as string;
+    const category = req.query["category"] as string | undefined;
+    const where = and(
+      eq(inventoryItemsTable.clinicId, clinicId),
+      category ? eq(inventoryItemsTable.category, category as never) : undefined,
+    ) as SQL<unknown>;
+    const items = await db.select({
+      id: inventoryItemsTable.id, name: inventoryItemsTable.name,
+      category: inventoryItemsTable.category, unit: inventoryItemsTable.unit,
+      unitPrice: inventoryItemsTable.unitPrice, isActive: inventoryItemsTable.isActive,
+      quantity: inventoryStockTable.quantity, minQuantity: inventoryStockTable.minQuantity,
+    })
+      .from(inventoryItemsTable)
+      .leftJoin(inventoryStockTable, eq(inventoryStockTable.itemId, inventoryItemsTable.id))
+      .where(where)
+      .orderBy(inventoryItemsTable.category, inventoryItemsTable.name);
+    const [total] = await db.select({ count: count() }).from(inventoryItemsTable).where(where);
+    res.json({ success: true, data: { items, total: total?.count ?? 0 } });
+  } catch (err) { next(err); }
+});
+
+router.get("/clinics/:clinicId/inventory/consumption", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const clinicId = req.params["clinicId"] as string;
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    // Low stock items
+    const lowStock = await db.select({
+      id: inventoryItemsTable.id, name: inventoryItemsTable.name,
+      category: inventoryItemsTable.category, unit: inventoryItemsTable.unit,
+      quantity: inventoryStockTable.quantity, minQuantity: inventoryStockTable.minQuantity,
+    })
+      .from(inventoryItemsTable)
+      .innerJoin(inventoryStockTable, eq(inventoryStockTable.itemId, inventoryItemsTable.id))
+      .where(and(
+        eq(inventoryItemsTable.clinicId, clinicId),
+        sql`${inventoryStockTable.quantity} <= ${inventoryStockTable.minQuantity}`,
+      ) as SQL<unknown>);
+    // Item counts and value
+    const [[itemCount], [stockValue]] = await Promise.all([
+      db.select({ count: count() }).from(inventoryItemsTable).where(eq(inventoryItemsTable.clinicId, clinicId)),
+      db.select({ total: sum(sql<number>`${inventoryStockTable.quantity} * ${inventoryItemsTable.unitPrice}`) })
+        .from(inventoryItemsTable)
+        .innerJoin(inventoryStockTable, eq(inventoryStockTable.itemId, inventoryItemsTable.id))
+        .where(eq(inventoryItemsTable.clinicId, clinicId)),
+    ]);
+    res.json({ success: true, data: {
+      lowStockItems: lowStock,
+      lowStockCount: lowStock.length,
+      totalItems: itemCount?.count ?? 0,
+      stockValueThisMonth: Number(stockValue?.total ?? 0),
+      periodStart: monthStart.toISOString(),
+    } });
+  } catch (err) { next(err); }
+});
+
+// ── PAYROLL ───────────────────────────────────────────────────────────────────
+router.get("/clinics/:clinicId/payroll", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const clinicId = req.params["clinicId"] as string;
+    const now = new Date();
+    const year = parseInt(String(req.query["year"] ?? now.getFullYear()), 10);
+    const month = parseInt(String(req.query["month"] ?? (now.getMonth() + 1)), 10);
+    const records = await db.select({
+      id: payrollRecordsTable.id, userId: payrollRecordsTable.userId,
+      userName: usersTable.name, userRole: usersTable.role,
+      periodMonth: payrollRecordsTable.periodMonth, periodYear: payrollRecordsTable.periodYear,
+      salaryType: payrollRecordsTable.salaryType, fixedAmount: payrollRecordsTable.fixedAmount,
+      commissionPercent: payrollRecordsTable.commissionPercent, revenueBase: payrollRecordsTable.revenueBase,
+      calculatedAmount: payrollRecordsTable.calculatedAmount, approvedAmount: payrollRecordsTable.approvedAmount,
+      status: payrollRecordsTable.status, notes: payrollRecordsTable.notes,
+    })
+      .from(payrollRecordsTable)
+      .innerJoin(usersTable, eq(usersTable.id, payrollRecordsTable.userId))
+      .where(and(
+        eq(payrollRecordsTable.clinicId, clinicId),
+        eq(payrollRecordsTable.periodYear, year),
+        eq(payrollRecordsTable.periodMonth, month),
+      ) as SQL<unknown>)
+      .orderBy(usersTable.name);
+    const [totalRow] = await db.select({ total: sum(payrollRecordsTable.calculatedAmount) })
+      .from(payrollRecordsTable)
+      .where(and(eq(payrollRecordsTable.clinicId, clinicId), eq(payrollRecordsTable.periodYear, year), eq(payrollRecordsTable.periodMonth, month)) as SQL<unknown>);
+    // Salary settings per user
+    const settings = await db.select().from(userSalarySettingsTable).where(eq(userSalarySettingsTable.clinicId, clinicId));
+    res.json({ success: true, data: { records, totalCalculated: Number(totalRow?.total ?? 0), period: { year, month }, settings } });
+  } catch (err) { next(err); }
+});
+
+router.post("/clinics/:clinicId/payroll/calculate", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const schema = z.object({
+      year: z.number().int().min(2020).max(2100),
+      month: z.number().int().min(1).max(12),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "year + month required"));
+    const clinicId = req.params["clinicId"] as string;
+    const { year, month } = parsed.data;
+    const periodStart = new Date(year, month - 1, 1);
+    const periodEnd = new Date(year, month, 0, 23, 59, 59, 999);
+    // Get doctors with salary settings
+    const doctors = await db.select({
+      userId: usersTable.id, name: usersTable.name,
+      salaryType: userSalarySettingsTable.salaryType,
+      fixedAmount: userSalarySettingsTable.fixedAmount,
+      commissionPercent: userSalarySettingsTable.commissionPercent,
+    })
+      .from(usersTable)
+      .innerJoin(userSalarySettingsTable, eq(userSalarySettingsTable.userId, usersTable.id))
+      .where(and(eq(usersTable.clinicId, clinicId), eq(usersTable.role, "doctor")) as SQL<unknown>);
+    const records = [];
+    for (const doc of doctors) {
+      // Revenue from completed procedures in this period
+      const [rev] = await db.select({ total: sum(proceduresTable.price) })
+        .from(proceduresTable)
+        .where(and(
+          eq(proceduresTable.clinicId, clinicId),
+          eq(proceduresTable.doctorId, doc.userId),
+          eq(proceduresTable.status, "completed"),
+          gte(proceduresTable.completedAt, periodStart),
+          lte(proceduresTable.completedAt, periodEnd),
+        ) as SQL<unknown>);
+      const revenueBase = Number(rev?.total ?? 0);
+      const fixed = Number(doc.fixedAmount ?? 0);
+      const commission = (Number(doc.commissionPercent ?? 0) / 100) * revenueBase;
+      const calculated = doc.salaryType === "fixed" ? fixed
+        : doc.salaryType === "commission" ? commission
+        : doc.salaryType === "fixed_plus_commission" ? fixed + commission
+        : fixed; // hourly treated as fixed for now
+      // Upsert payroll record
+      await db.insert(payrollRecordsTable).values({
+        id: randomUUID(), clinicId, userId: doc.userId,
+        periodYear: year, periodMonth: month,
+        salaryType: doc.salaryType ?? "fixed",
+        fixedAmount: String(fixed), commissionPercent: String(Number(doc.commissionPercent ?? 0)),
+        revenueBase: String(revenueBase), calculatedAmount: String(calculated),
+        status: "pending",
+      } as never).onConflictDoNothing();
+      records.push({ userId: doc.userId, name: doc.name, calculated });
+    }
+    res.json({ success: true, data: { calculated: records.length, records } });
+  } catch (err) { next(err); }
+});
+
+router.patch("/clinics/:clinicId/payroll/:recordId/confirm", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const schema = z.object({
+      approvedAmount: z.number().nonnegative().optional(),
+      notes: z.string().optional(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError("Invalid fields"));
+    const { clinicId, recordId } = req.params as Record<string, string>;
+    const [updated] = await db.update(payrollRecordsTable)
+      .set({
+        status: "approved",
+        approvedAmount: parsed.data.approvedAmount !== undefined ? String(parsed.data.approvedAmount) : undefined,
+        notes: parsed.data.notes,
+        approvedAt: new Date(),
+      } as never)
+      .where(and(eq(payrollRecordsTable.id, recordId), eq(payrollRecordsTable.clinicId, clinicId)) as SQL<unknown>)
+      .returning();
+    if (!updated) return next(new NotFoundError("Payroll record not found"));
+    res.json({ success: true, data: { record: updated } });
+  } catch (err) { next(err); }
+});
+
+// ── KNOWLEDGE SOURCES + SCRIPTS ───────────────────────────────────────────────
+router.get("/clinics/:clinicId/knowledge/sources", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const entries = await db.select({
+      id: knowledgeSourcesTable.id, name: knowledgeSourcesTable.name,
+      type: knowledgeSourcesTable.type, status: knowledgeSourcesTable.status,
+      url: knowledgeSourcesTable.url, createdAt: knowledgeSourcesTable.createdAt,
+    }).from(knowledgeSourcesTable)
+      .where(eq(knowledgeSourcesTable.clinicId, req.params["clinicId"] as string))
+      .orderBy(desc(knowledgeSourcesTable.createdAt));
+    res.json({ success: true, data: { entries } });
+  } catch (err) { next(err); }
+});
+
+router.get("/clinics/:clinicId/knowledge/scripts", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const [scripts] = await db.select().from(knowledgeScriptsTable)
+      .where(eq(knowledgeScriptsTable.clinicId, req.params["clinicId"] as string)).limit(1);
+    res.json({ success: true, data: { scripts: scripts ?? null } });
+  } catch (err) { next(err); }
+});
+
+// ── CONTRACTS — SIGNED ────────────────────────────────────────────────────────
+router.get("/clinics/:clinicId/contracts/signed", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const clinicId = req.params["clinicId"] as string;
+    const page = parseInt(String(req.query["page"] ?? "1"), 10);
+    const signed = await db.select({
+      id: patientContractsTable.id, patientId: patientContractsTable.patientId,
+      templateId: patientContractsTable.templateId, patientName: patientsTable.name,
+      patientPhone: patientsTable.phone, templateName: contractTemplatesTable.name,
+      signedAt: patientContractsTable.signedAt, status: patientContractsTable.status,
+      bundleToken: patientContractsTable.bundleToken, createdAt: patientContractsTable.createdAt,
+    })
+      .from(patientContractsTable)
+      .innerJoin(patientsTable, eq(patientContractsTable.patientId, patientsTable.id))
+      .innerJoin(contractTemplatesTable, eq(patientContractsTable.templateId, contractTemplatesTable.id))
+      .where(and(
+        eq(patientContractsTable.clinicId, clinicId),
+        eq(patientContractsTable.status, "signed"),
+      ) as SQL<unknown>)
+      .orderBy(desc(patientContractsTable.signedAt))
+      .limit(50).offset((page - 1) * 50);
+    const [total] = await db.select({ count: count() }).from(patientContractsTable)
+      .where(and(eq(patientContractsTable.clinicId, clinicId), eq(patientContractsTable.status, "signed")) as SQL<unknown>);
+    res.json({ success: true, data: { contracts: signed, total: total?.count ?? 0, page } });
+  } catch (err) { next(err); }
+});
+
+// ── PLATFORM-WIDE LOGS (with full filtering) ──────────────────────────────────
 router.get("/logs", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const page = parseInt(String(req.query["page"] ?? "1"), 10);
     const clinicId = req.query["clinicId"] as string | undefined;
-    const where = clinicId ? eq(actionLogsTable.clinicId, clinicId) : undefined;
+    const action = req.query["action"] as string | undefined;
+    const userId = req.query["userId"] as string | undefined;
+    const dateFrom = req.query["dateFrom"] as string | undefined;
+    const dateTo = req.query["dateTo"] as string | undefined;
+    const where = and(
+      clinicId ? eq(actionLogsTable.clinicId, clinicId) : undefined,
+      action ? eq(actionLogsTable.actionType, action) : undefined,
+      userId ? eq(actionLogsTable.userId, userId) : undefined,
+      dateFrom ? gte(actionLogsTable.createdAt, new Date(dateFrom)) : undefined,
+      dateTo ? lte(actionLogsTable.createdAt, new Date(dateTo)) : undefined,
+    ) as SQL<unknown>;
     const logs = await db.select({
-      id: actionLogsTable.id, clinicId: actionLogsTable.clinicId,
+      id: actionLogsTable.id, clinicId: actionLogsTable.clinicId, userId: actionLogsTable.userId,
       actionType: actionLogsTable.actionType, entityType: actionLogsTable.entityType,
       entityId: actionLogsTable.entityId, details: actionLogsTable.details,
       createdAt: actionLogsTable.createdAt,
@@ -1185,12 +1449,16 @@ router.get("/logs", async (req: Request, res: Response, next: NextFunction) => {
   } catch (err) { next(err); }
 });
 
-// ── PLATFORM-WIDE SESSIONS ────────────────────────────────────────────────────
+// ── PLATFORM-WIDE SESSIONS (with clinic-picker + global control) ──────────────
 router.get("/sessions", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const page = parseInt(String(req.query["page"] ?? "1"), 10);
     const clinicId = req.query["clinicId"] as string | undefined;
-    const where = clinicId ? eq(chatbotSessionsTable.clinicId, clinicId) : undefined;
+    const humanTakeover = req.query["humanTakeover"] === "true" ? true : req.query["humanTakeover"] === "false" ? false : undefined;
+    const where = and(
+      clinicId ? eq(chatbotSessionsTable.clinicId, clinicId) : undefined,
+      humanTakeover !== undefined ? eq(chatbotSessionsTable.humanTakeover, humanTakeover) : undefined,
+    ) as SQL<unknown>;
     const sessions = await db.select({
       id: chatbotSessionsTable.id, clinicId: chatbotSessionsTable.clinicId,
       phone: chatbotSessionsTable.phone, state: chatbotSessionsTable.state,
@@ -1201,19 +1469,56 @@ router.get("/sessions", async (req: Request, res: Response, next: NextFunction) 
   } catch (err) { next(err); }
 });
 
-// ── PLATFORM-WIDE MESSAGES ────────────────────────────────────────────────────
+router.post("/sessions/:sessionId/takeover", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const schema = z.object({ humanTakeover: z.boolean() });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError("humanTakeover (boolean) required"));
+    const [updated] = await db.update(chatbotSessionsTable)
+      .set({ humanTakeover: parsed.data.humanTakeover })
+      .where(eq(chatbotSessionsTable.id, req.params["sessionId"] as string))
+      .returning();
+    if (!updated) return next(new NotFoundError("Session not found"));
+    res.json({ success: true, data: { session: updated } });
+  } catch (err) { next(err); }
+});
+
+router.post("/sessions/reset-all", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const clinicId = req.query["clinicId"] as string | undefined;
+    const where = clinicId ? eq(chatbotSessionsTable.clinicId, clinicId) : undefined;
+    await db.update(chatbotSessionsTable).set({ humanTakeover: false }).where(where);
+    res.json({ success: true, data: { message: "All sessions reset" } });
+  } catch (err) { next(err); }
+});
+
+// ── PLATFORM-WIDE MESSAGES (with date-range + cursor) ─────────────────────────
 router.get("/messages", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const page = parseInt(String(req.query["page"] ?? "1"), 10);
     const clinicId = req.query["clinicId"] as string | undefined;
-    const where = clinicId ? eq(chatbotMessagesTable.clinicId, clinicId) : undefined;
+    const direction = req.query["direction"] as string | undefined;
+    const search = req.query["search"] as string | undefined;
+    const cursor = req.query["cursor"] as string | undefined;
+    const dateFrom = req.query["dateFrom"] as string | undefined;
+    const dateTo = req.query["dateTo"] as string | undefined;
+    const where = and(
+      clinicId ? eq(chatbotMessagesTable.clinicId, clinicId) : undefined,
+      direction ? eq(chatbotMessagesTable.direction, direction as never) : undefined,
+      search ? or(ilike(chatbotMessagesTable.content, `%${search}%`), ilike(chatbotMessagesTable.phone, `%${search}%`)) : undefined,
+      cursor ? lte(chatbotMessagesTable.createdAt, new Date(cursor)) : undefined,
+      dateFrom ? gte(chatbotMessagesTable.createdAt, new Date(dateFrom)) : undefined,
+      dateTo ? lte(chatbotMessagesTable.createdAt, new Date(dateTo)) : undefined,
+    ) as SQL<unknown>;
     const messages = await db.select({
       id: chatbotMessagesTable.id, clinicId: chatbotMessagesTable.clinicId,
       phone: chatbotMessagesTable.phone, direction: chatbotMessagesTable.direction,
       content: chatbotMessagesTable.content, createdAt: chatbotMessagesTable.createdAt,
-    }).from(chatbotMessagesTable).where(where).orderBy(desc(chatbotMessagesTable.createdAt)).limit(50).offset((page - 1) * 50);
+    }).from(chatbotMessagesTable).where(where).orderBy(desc(chatbotMessagesTable.createdAt))
+      .limit(50).offset(cursor ? 0 : (page - 1) * 50);
     const [total] = await db.select({ count: count() }).from(chatbotMessagesTable).where(where);
-    res.json({ success: true, data: { messages, total: total?.count ?? 0, page } });
+    const nextCursor = messages.length === 50 ? messages[messages.length - 1]?.createdAt?.toISOString() : null;
+    res.json({ success: true, data: { messages, total: total?.count ?? 0, page, nextCursor } });
   } catch (err) { next(err); }
 });
 

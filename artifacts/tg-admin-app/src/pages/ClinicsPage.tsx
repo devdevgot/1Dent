@@ -19,6 +19,8 @@ export default function ClinicsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
   const [newPlan, setNewPlan] = useState("free");
+  const [newOwnerEmail, setNewOwnerEmail] = useState("");
+  const [newOwnerName, setNewOwnerName] = useState("");
 
   const { data, isLoading } = useQuery({
     queryKey: ["tma-clinics", showInactive],
@@ -42,12 +44,16 @@ export default function ClinicsPage() {
   });
 
   const createMut = useMutation({
-    mutationFn: () => api.post<{ success: boolean; data: { clinic: Clinic } }>("/clinics", { name: newName, plan: newPlan }),
+    mutationFn: () => api.post<{ success: boolean; data: { clinic: Clinic } }>("/clinics", {
+      name: newName, plan: newPlan,
+      ownerEmail: newOwnerEmail.trim() || undefined,
+      ownerName: newOwnerName.trim() || undefined,
+    }),
     onSuccess: (res) => {
       hapticNotify("success");
       qc.invalidateQueries({ queryKey: ["tma-clinics"] });
       setShowCreate(false);
-      setNewName("");
+      setNewName(""); setNewOwnerEmail(""); setNewOwnerName("");
       tgAlert(`Клиника "${res.data?.clinic?.name}" создана`);
     },
     onError: (err) => {
@@ -79,7 +85,7 @@ export default function ClinicsPage() {
           <input
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            placeholder="Название клиники"
+            placeholder="Название клиники *"
             className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary"
           />
           <select
@@ -92,9 +98,24 @@ export default function ClinicsPage() {
             <option value="professional">Professional</option>
             <option value="enterprise">Enterprise</option>
           </select>
+          <input
+            value={newOwnerEmail}
+            onChange={(e) => setNewOwnerEmail(e.target.value)}
+            type="email"
+            placeholder="Email владельца (необязательно)"
+            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary"
+          />
+          {newOwnerEmail.trim() && (
+            <input
+              value={newOwnerName}
+              onChange={(e) => setNewOwnerName(e.target.value)}
+              placeholder="Имя владельца"
+              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary"
+            />
+          )}
           <div className="flex gap-2">
             <button
-              onClick={() => { setShowCreate(false); setNewName(""); }}
+              onClick={() => { setShowCreate(false); setNewName(""); setNewOwnerEmail(""); setNewOwnerName(""); }}
               className="flex-1 py-2 bg-muted text-muted-foreground rounded-lg text-sm"
             >Отмена</button>
             <button

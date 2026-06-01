@@ -66,7 +66,7 @@ router.get(
   docRoles,
   async (req: Request, res: Response, next: NextFunction) => {
     if (!(await checkPatient(req, res, next))) return;
-    const plans = await repo.listPlans(req.params["id"]!, req.user!.clinicId).catch(next);
+    const plans = await repo.listPlans(req.params["id"] as string, req.user!.clinicId).catch(next);
     if (!plans) return;
     res.json({ success: true, data: { plans } });
   },
@@ -79,7 +79,7 @@ router.get(
   docRoles,
   async (req: Request, res: Response, next: NextFunction) => {
     if (!(await checkPatient(req, res, next))) return;
-    const plan = await repo.getActivePlan(req.params["id"]!, req.user!.clinicId).catch(next);
+    const plan = await repo.getActivePlan(req.params["id"] as string, req.user!.clinicId).catch(next);
     if (plan === undefined) return;
     res.json({ success: true, data: { plan } });
   },
@@ -95,7 +95,7 @@ router.post(
     if (!parsed.success) return next(new ValidationError(parsed.error.message));
     if (!(await checkPatient(req, res, next))) return;
 
-    const patientId = req.params["id"]!;
+    const patientId = req.params["id"] as string;
     const clinicId = req.user!.clinicId;
 
     // Rule 1: must have at least one tooth record (diagnosis done)
@@ -122,7 +122,7 @@ router.post(
     const plan = await repo
       .createPlan(
         req.user!.clinicId,
-        req.params["id"]!,
+        req.params["id"] as string,
         req.user!.userId,
         pricesMap,
         parsed.data.items,
@@ -144,7 +144,7 @@ router.patch(
     if (!parsed.success) return next(new ValidationError(parsed.error.message));
 
     const plan = await repo
-      .updatePlan(req.params["planId"]!, req.user!.clinicId, req.params["id"]!, parsed.data)
+      .updatePlan(req.params["planId"] as string, req.user!.clinicId, req.params["id"] as string, parsed.data)
       .catch(next);
     if (plan === undefined) return;
     if (!plan) return next(new NotFoundError("Treatment plan not found"));
@@ -160,7 +160,7 @@ router.post(
   docRoles,
   async (req: Request, res: Response, next: NextFunction) => {
     const plan = await repo
-      .approvePlan(req.params["planId"]!, req.user!.clinicId, req.params["id"]!)
+      .approvePlan(req.params["planId"] as string, req.user!.clinicId, req.params["id"] as string)
       .catch(next);
     if (plan === undefined) return;
     if (!plan) return next(new NotFoundError("Treatment plan not found"));
@@ -177,7 +177,7 @@ router.post(
     const parsed = AddItemSchema.safeParse(req.body);
     if (!parsed.success) return next(new ValidationError(parsed.error.message));
 
-    const existingPlan = await repo.getActivePlan(req.params["id"]!, req.user!.clinicId).catch(next);
+    const existingPlan = await repo.getActivePlan(req.params["id"] as string, req.user!.clinicId).catch(next);
     if (existingPlan === undefined) return;
     if (!existingPlan || existingPlan.id !== req.params["planId"]) {
       return next(new NotFoundError("Treatment plan not found"));
@@ -190,7 +190,7 @@ router.post(
       item = await repo.addItem(
         existingPlan.id,
         req.user!.clinicId,
-        req.params["id"]!,
+        req.params["id"] as string,
         parsed.data,
         sortOrder,
       );
@@ -216,7 +216,7 @@ router.patch(
 
     let item: Awaited<ReturnType<typeof repo.updateItem>> | undefined;
     try {
-      item = await repo.updateItem(req.params["itemId"]!, req.user!.clinicId, req.params["planId"]!, req.params["id"]!, parsed.data);
+      item = await repo.updateItem(req.params["itemId"] as string, req.user!.clinicId, req.params["planId"] as string, req.params["id"] as string, parsed.data);
     } catch (err) {
       if (err instanceof PlanLockedError) {
         return res.status(409).json({ success: false, error: err.message, code: "PLAN_LOCKED" });
@@ -240,7 +240,7 @@ router.post(
   async (req: Request, res: Response, next: NextFunction) => {
     let result: Awaited<ReturnType<typeof repo.completeItem>> | undefined;
     try {
-      result = await repo.completeItem(req.params["itemId"]!, req.user!.clinicId, req.user!.userId, req.params["planId"]!, req.params["id"]!);
+      result = await repo.completeItem(req.params["itemId"] as string, req.user!.clinicId, req.user!.userId, req.params["planId"] as string, req.params["id"] as string);
     } catch (err) {
       if (err instanceof ItemAlreadyCompletedError) {
         return res.status(409).json({ success: false, error: err.message, code: "ITEM_ALREADY_COMPLETED" });

@@ -160,7 +160,7 @@ async function handleRefCode(
 router.get(
   "/r/:code",
   (req: Request, res: Response, next: NextFunction) => {
-    return handleRefCode(req, res, next, req.params.code!);
+    return handleRefCode(req, res, next, req.params["code"] as string);
   },
 );
 
@@ -168,7 +168,7 @@ router.get(
 router.get(
   "/ref/:code",
   (req: Request, res: Response, next: NextFunction) => {
-    return handleRefCode(req, res, next, req.params.code!);
+    return handleRefCode(req, res, next, req.params["code"] as string);
   },
 );
 
@@ -176,7 +176,7 @@ router.get(
 router.get(
   "/wa/:phone/ref/:code",
   (req: Request, res: Response, next: NextFunction) => {
-    return handleRefCode(req, res, next, req.params.code!, req.params.phone);
+    return handleRefCode(req, res, next, req.params["code"] as string, req.params["phone"] as string);
   },
 );
 

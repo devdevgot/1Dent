@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import WebApp from "@twa-dev/sdk";
 import { api, type ChatbotSession, type ChatbotMessage, type Notification, type Broadcast, type ClinicFile, type Contract, type KnowledgeEntry } from "../lib/api";
@@ -8,7 +8,7 @@ import { haptic, hapticNotify, tgConfirm, tgAlert } from "../hooks/useTgBackButt
 type Tab =
   | "info" | "users" | "patients" | "chatbot" | "sessions" | "messages"
   | "channels" | "procedures" | "analytics" | "broadcasts"
-  | "knowledge" | "contracts" | "finances" | "logs" | "notifications" | "files";
+  | "knowledge" | "contracts" | "inventory" | "finances" | "logs" | "notifications" | "files";
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: "info", label: "Инфо", icon: "ℹ️" },
@@ -23,6 +23,7 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: "broadcasts", label: "Рассылки", icon: "📢" },
   { id: "knowledge", label: "База знаний", icon: "📚" },
   { id: "contracts", label: "Договоры", icon: "📝" },
+  { id: "inventory", label: "Инвентарь", icon: "📦" },
   { id: "finances", label: "Финансы", icon: "💰" },
   { id: "logs", label: "Логи", icon: "📋" },
   { id: "notifications", label: "Уведомления", icon: "🔔" },
@@ -1041,11 +1042,81 @@ function FilesTab({ clinicId }: { clinicId: string }) {
   );
 }
 
+// ── Inventory Tab ──
+function InventoryTab({ clinicId }: { clinicId: string }) {
+  const [category, setCategory] = useState("");
+  const { data, isLoading } = useQuery({
+    queryKey: ["tma-inventory", clinicId, category],
+    queryFn: () => api.get<{ success: boolean; data: { items: Record<string, unknown>[]; total: number } }>(
+      `/clinics/${clinicId}/inventory${category ? `?category=${category}` : ""}`,
+    ),
+  });
+  const { data: consumption } = useQuery({
+    queryKey: ["tma-inventory-consumption", clinicId],
+    queryFn: () => api.get<{ success: boolean; data: Record<string, unknown> }>(`/clinics/${clinicId}/inventory/consumption`),
+  });
+  const items = data?.data?.items ?? [];
+  const cons = consumption?.data;
+  const categories = ["materials", "instruments", "medications", "consumables", "prosthetics", "implants", "other"];
+  return (
+    <div className="space-y-4">
+      {cons && (
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-card rounded-xl border border-border p-3 text-center">
+            <p className="text-xs text-muted-foreground">Позиций</p>
+            <p className="text-xl font-bold text-foreground">{String(cons["totalItems"] ?? 0)}</p>
+          </div>
+          <div className="bg-card rounded-xl border border-border p-3 text-center">
+            <p className="text-xs text-muted-foreground">Мало запаса</p>
+            <p className="text-xl font-bold text-destructive">{String(cons["lowStockCount"] ?? 0)}</p>
+          </div>
+          <div className="bg-card rounded-xl border border-border p-3 text-center">
+            <p className="text-xs text-muted-foreground">Стоимость</p>
+            <p className="text-xl font-bold text-foreground">{Number(cons["stockValueThisMonth"] ?? 0).toLocaleString("ru")}</p>
+          </div>
+        </div>
+      )}
+      <div className="flex gap-1 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+        <button onClick={() => setCategory("")} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium ${!category ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground"}`}>Все</button>
+        {categories.map((c) => (
+          <button key={c} onClick={() => setCategory(c)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium capitalize ${category === c ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground"}`}>{c}</button>
+        ))}
+      </div>
+      {isLoading ? <LoadingSkeleton /> : (
+        <div className="space-y-2">
+          {items.map((item) => {
+            const qty = Number(item["quantity"] ?? 0);
+            const min = Number(item["minQuantity"] ?? 0);
+            const isLow = qty <= min && min > 0;
+            return (
+              <div key={String(item["id"])} className="bg-card rounded-lg border border-border p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{String(item["name"])}</p>
+                    <p className="text-xs text-muted-foreground capitalize">{String(item["category"])} · {String(item["unit"])}</p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className={`text-sm font-semibold ${isLow ? "text-destructive" : "text-foreground"}`}>{qty} {String(item["unit"])}</p>
+                    {min > 0 && <p className="text-xs text-muted-foreground">мин: {min}</p>}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {!items.length && <EmptyState icon="📦" text="Инвентарь пуст" />}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main ClinicDetailPage ──
 export default function ClinicDetailPage() {
   const { clinicId } = useParams<{ clinicId: string }>();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<Tab>("info");
+  const [searchParams] = useSearchParams();
+  const initialTab = (searchParams.get("tab") ?? "info") as Tab;
+  const [tab, setTab] = useState<Tab>(TABS.some((t) => t.id === initialTab) ? initialTab : "info");
 
   const handleBack = useCallback(() => { haptic("light"); navigate("/clinics"); }, [navigate]);
 
@@ -1075,6 +1146,7 @@ export default function ClinicDetailPage() {
     broadcasts: <BroadcastsTab clinicId={clinicId} />,
     knowledge: <KnowledgeTab clinicId={clinicId} />,
     contracts: <ContractsTab clinicId={clinicId} />,
+    inventory: <InventoryTab clinicId={clinicId} />,
     finances: <FinancesTab clinicId={clinicId} />,
     logs: <ClinicLogsTab clinicId={clinicId} />,
     notifications: <NotificationsTab clinicId={clinicId} />,
