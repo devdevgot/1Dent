@@ -186,7 +186,7 @@ function InfoTab({ clinicId }: { clinicId: string }) {
 function UsersTab({ clinicId }: { clinicId: string }) {
   const qc = useQueryClient();
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", role: "doctor", specialty: "", phone: "" });
+  const [form, setForm] = useState({ name: "", email: "", role: "doctor", specialty: "", phone: "", password: "" });
 
   const { data, isLoading } = useQuery({
     queryKey: ["tma-clinic-users", clinicId],
@@ -202,12 +202,12 @@ function UsersTab({ clinicId }: { clinicId: string }) {
     onSuccess: () => { hapticNotify("warning"); qc.invalidateQueries({ queryKey: ["tma-clinic-users", clinicId] }); },
   });
   const createMut = useMutation({
-    mutationFn: () => api.post(`/clinics/${clinicId}/users`, { ...form, password: "changeme123" }),
+    mutationFn: () => api.post(`/clinics/${clinicId}/users`, { ...form }),
     onSuccess: () => {
       hapticNotify("success");
       qc.invalidateQueries({ queryKey: ["tma-clinic-users", clinicId] });
       setShowAdd(false);
-      setForm({ name: "", email: "", role: "doctor", specialty: "", phone: "" });
+      setForm({ name: "", email: "", role: "doctor", specialty: "", phone: "", password: "" });
     },
     onError: (err) => tgAlert(err instanceof Error ? err.message : "Ошибка"),
   });
@@ -229,6 +229,9 @@ function UsersTab({ clinicId }: { clinicId: string }) {
               placeholder={f === "name" ? "Имя*" : f === "email" ? "Email*" : "Телефон"}
               className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary" />
           ))}
+          <input value={form.password} onChange={(e) => setForm(p => ({ ...p, password: e.target.value }))}
+            placeholder="Пароль (мин. 8 символов)*" type="password" minLength={8}
+            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary" />
           <div className="flex gap-2">
             <select value={form.role} onChange={(e) => setForm(p => ({ ...p, role: e.target.value }))}
               className="flex-1 bg-background border border-border rounded-lg px-2 py-2 text-sm text-foreground">
@@ -239,8 +242,8 @@ function UsersTab({ clinicId }: { clinicId: string }) {
                 placeholder="Специальность" className="flex-1 bg-background border border-border rounded-lg px-2 py-2 text-sm text-foreground focus:outline-none focus:border-primary" />
             )}
           </div>
-          <button onClick={() => { if (form.name && form.email) { haptic("medium"); createMut.mutate(); } }}
-            disabled={!form.name.trim() || !form.email.trim() || createMut.isPending}
+          <button onClick={() => { if (form.name && form.email && form.password.length >= 8) { haptic("medium"); createMut.mutate(); } }}
+            disabled={!form.name.trim() || !form.email.trim() || form.password.length < 8 || createMut.isPending}
             className="w-full py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium disabled:opacity-50">
             {createMut.isPending ? "Сохранение..." : "Создать"}
           </button>
@@ -664,14 +667,21 @@ function ChannelsTab({ clinicId }: { clinicId: string }) {
   const [newName, setNewName] = useState("");
   const [newType, setNewType] = useState("other");
   const [pingStatus, setPingStatus] = useState<string | null>(null);
+  const [showWaForm, setShowWaForm] = useState(false);
+  const [waForm, setWaForm] = useState({ idInstance: "", apiToken: "", apiUrl: "" });
 
   const { data, isLoading } = useQuery({
     queryKey: ["tma-clinic-channels", clinicId],
     queryFn: () => api.get<{ success: boolean; data: { botChannels: Array<Record<string, unknown>>; marketingChannels: Record<string, unknown>[] } }>(`/clinics/${clinicId}/channels`),
   });
-  const createMut = useMutation({
-    mutationFn: () => api.post(`/clinics/${clinicId}/channels`, { name: newName, type: newType }),
+  const createMarketingMut = useMutation({
+    mutationFn: () => api.post(`/clinics/${clinicId}/channels/marketing`, { name: newName, type: newType }),
     onSuccess: () => { hapticNotify("success"); qc.invalidateQueries({ queryKey: ["tma-clinic-channels", clinicId] }); setShowAdd(false); setNewName(""); },
+  });
+  const saveWaMut = useMutation({
+    mutationFn: () => api.post(`/clinics/${clinicId}/channels`, { idInstance: waForm.idInstance, apiToken: waForm.apiToken, apiUrl: waForm.apiUrl || undefined }),
+    onSuccess: () => { hapticNotify("success"); qc.invalidateQueries({ queryKey: ["tma-clinic-channels", clinicId] }); setShowWaForm(false); },
+    onError: (err) => tgAlert(err instanceof Error ? err.message : "Ошибка"),
   });
   const deleteMut = useMutation({
     mutationFn: (id: string) => api.delete(`/clinics/${clinicId}/channels/${id}`),
@@ -710,6 +720,10 @@ function ChannelsTab({ clinicId }: { clinicId: string }) {
                 <span className={`ml-auto text-xs px-2 py-0.5 rounded-full ${configured ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
                   {configured ? "Настроен" : "Не настроен"}
                 </span>
+                {type === "whatsapp" && (
+                  <button onClick={() => { haptic("light"); setShowWaForm(v => !v); }}
+                    className="text-xs text-primary px-2 py-0.5 bg-primary/10 rounded-lg">⚙️</button>
+                )}
               </div>
               {type === "whatsapp" && (
                 <div className="space-y-0.5 mt-1">
@@ -721,6 +735,25 @@ function ChannelsTab({ clinicId }: { clinicId: string }) {
             </div>
           );
         })}
+        {showWaForm && (
+          <div className="bg-card border border-primary/20 rounded-xl p-3 space-y-2">
+            <p className="text-xs font-semibold text-primary">WhatsApp (Green-API) credentials</p>
+            {(["idInstance", "apiToken", "apiUrl"] as const).map((f) => (
+              <input key={f} value={waForm[f]} onChange={(e) => setWaForm(p => ({ ...p, [f]: e.target.value }))}
+                placeholder={f === "idInstance" ? "idInstance*" : f === "apiToken" ? "apiToken*" : "apiUrl (https://...)"}
+                type={f === "apiToken" ? "password" : "text"}
+                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground font-mono focus:outline-none focus:border-primary" />
+            ))}
+            <div className="flex gap-2">
+              <button onClick={() => setShowWaForm(false)} className="flex-1 py-1.5 bg-muted text-muted-foreground rounded-lg text-sm">Отмена</button>
+              <button onClick={() => { if (waForm.idInstance && waForm.apiToken) saveWaMut.mutate(); }}
+                disabled={!waForm.idInstance.trim() || !waForm.apiToken.trim() || saveWaMut.isPending}
+                className="flex-1 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm disabled:opacity-50">
+                {saveWaMut.isPending ? "Сохраняю..." : "Сохранить"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Marketing channels */}
@@ -736,7 +769,7 @@ function ChannelsTab({ clinicId }: { clinicId: string }) {
             </select>
             <div className="flex gap-2">
               <button onClick={() => { setShowAdd(false); setNewName(""); }} className="flex-1 py-1.5 bg-muted text-muted-foreground rounded-lg text-sm">Отмена</button>
-              <button onClick={() => { if (newName.trim()) createMut.mutate(); }} disabled={!newName.trim() || createMut.isPending}
+              <button onClick={() => { if (newName.trim()) createMarketingMut.mutate(); }} disabled={!newName.trim() || createMarketingMut.isPending}
                 className="flex-1 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm disabled:opacity-50">Создать</button>
             </div>
           </div>

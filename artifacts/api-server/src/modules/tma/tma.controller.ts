@@ -104,13 +104,12 @@ router.get("/dashboard", async (_req: Request, res: Response, next: NextFunction
         .where(and(eq(clinicsTable.isActive, true), not(eq(clinicsTable.telegramBotToken, "")))),
     ]);
 
-    const clinics = await db
+    const allClinics = await db
       .select({ id: clinicsTable.id, name: clinicsTable.name, plan: clinicsTable.plan, isActive: clinicsTable.isActive, createdAt: clinicsTable.createdAt })
       .from(clinicsTable)
-      .orderBy(desc(clinicsTable.createdAt))
-      .limit(20);
+      .orderBy(desc(clinicsTable.createdAt));
 
-    const withActivity = await Promise.all(clinics.map(async (c) => {
+    const withActivity = await Promise.all(allClinics.map(async (c) => {
       const [[procRow], [sesRow]] = await Promise.all([
         db.select({ count: count() }).from(proceduresTable)
           .where(and(eq(proceduresTable.clinicId, c.id), gte(proceduresTable.createdAt, sevenDaysAgo))),
@@ -121,7 +120,7 @@ router.get("/dashboard", async (_req: Request, res: Response, next: NextFunction
     }));
 
     const top5 = [...withActivity].sort((a, b) => b.activityScore - a.activityScore).slice(0, 5);
-    const recentClinics = [...clinics].slice(0, 5);
+    const recentClinics = allClinics.slice(0, 5);
 
     res.json({
       success: true,
@@ -177,8 +176,11 @@ router.post("/clinics", async (req: Request, res: Response, next: NextFunction) 
     const [clinic] = await db.insert(clinicsTable)
       .values({ id: clinicId, isActive: true, name: parsed.data.name, plan: parsed.data.plan })
       .returning();
+    let ownerInitialPassword: string | undefined;
     if (parsed.data.ownerEmail) {
-      const passwordHash = await bcrypt.hash("changeme123", 10);
+      const { randomBytes } = await import("node:crypto");
+      ownerInitialPassword = randomBytes(8).toString("hex"); // 16-char hex, one-time
+      const passwordHash = await bcrypt.hash(ownerInitialPassword, 10);
       await db.insert(usersTable).values({
         id: randomUUID(),
         clinicId,
@@ -189,7 +191,7 @@ router.post("/clinics", async (req: Request, res: Response, next: NextFunction) 
         isActive: true,
       } as never);
     }
-    res.status(201).json({ success: true, data: { clinic } });
+    res.status(201).json({ success: true, data: { clinic, ownerInitialPassword } });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     if (msg.includes("unique") || msg.includes("duplicate")) return next(new ValidationError("Email уже используется"));
@@ -697,7 +699,32 @@ router.post("/clinics/:clinicId/channels/ping", async (req: Request, res: Respon
   } catch (err) { next(err); }
 });
 
+// POST /clinics/:clinicId/channels — update WhatsApp tracker credentials on the clinic record
 router.post("/clinics/:clinicId/channels", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const schema = z.object({
+      idInstance: z.string().min(1),
+      apiToken: z.string().min(1),
+      apiUrl: z.string().url().optional().or(z.literal("")),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "idInstance and apiToken are required"));
+    const clinicId = req.params["clinicId"] as string;
+    const [updated] = await db.update(clinicsTable).set({
+      greenApiInstanceId: parsed.data.idInstance,
+      greenApiToken: parsed.data.apiToken,
+      greenApiUrl: parsed.data.apiUrl ?? null,
+    }).where(eq(clinicsTable.id, clinicId)).returning({
+      id: clinicsTable.id, greenApiInstanceId: clinicsTable.greenApiInstanceId,
+      greenApiToken: clinicsTable.greenApiToken, greenApiUrl: clinicsTable.greenApiUrl,
+    });
+    if (!updated) return next(new NotFoundError("Clinic not found"));
+    res.json({ success: true, data: { credentials: updated } });
+  } catch (err) { next(err); }
+});
+
+// POST /clinics/:clinicId/channels/marketing — create a marketing/referral channel
+router.post("/clinics/:clinicId/channels/marketing", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const schema = z.object({
       name: z.string().min(1).max(100),
