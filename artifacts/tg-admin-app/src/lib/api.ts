@@ -74,6 +74,7 @@ export interface PlatformAdmin {
 export interface LogEntry {
   id: string;
   clinicId?: string;
+  userId?: string | null;
   actionType: string;
   entityType: string;
   entityId: string | null;

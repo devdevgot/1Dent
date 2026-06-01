@@ -606,28 +606,53 @@ function SessionsTab({ clinicId }: { clinicId: string }) {
 // ── Messages Tab ──
 function MessagesTab({ clinicId }: { clinicId: string }) {
   const [page, setPage] = useState(1);
+  const [direction, setDirection] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const { data, isLoading } = useQuery({
-    queryKey: ["tma-clinic-messages", clinicId, page],
-    queryFn: () => api.get<{ success: boolean; data: { messages: ChatbotMessage[]; total: number } }>(`/clinics/${clinicId}/messages?page=${page}`),
+    queryKey: ["tma-clinic-messages", clinicId, page, direction, dateFrom, dateTo],
+    queryFn: () => {
+      const params = new URLSearchParams({ page: String(page) });
+      if (direction) params.set("direction", direction);
+      if (dateFrom) params.set("dateFrom", dateFrom);
+      if (dateTo) params.set("dateTo", dateTo);
+      return api.get<{ success: boolean; data: { messages: ChatbotMessage[]; total: number } }>(`/clinics/${clinicId}/messages?${params}`);
+    },
   });
-  if (isLoading) return <LoadingSkeleton />;
   const messages = data?.data?.messages ?? [];
   const total = data?.data?.total ?? 0;
   const pages = Math.ceil(total / 50);
-  if (!messages.length) return <EmptyState icon="📨" text="Нет сообщений" />;
   return (
     <div className="space-y-2">
-      <p className="text-xs text-muted-foreground">Всего: {total}</p>
-      {messages.map((m) => (
-        <div key={m.id} className={`flex gap-2 ${m.direction === "inbound" ? "flex-row" : "flex-row-reverse"}`}>
-          <div className={`max-w-[80%] rounded-xl px-3 py-2 ${m.direction === "inbound" ? "bg-card border border-border" : "bg-primary/20 border border-primary/30"}`}>
-            <p className="text-xs font-medium text-muted-foreground mb-0.5">{m.direction === "inbound" ? "📱 " + m.phone.slice(-4) : "🤖 Бот"}</p>
-            <p className="text-sm text-foreground">{m.content}</p>
-            <p className="text-xs text-muted-foreground mt-1">{new Date(m.createdAt).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}</p>
-          </div>
-        </div>
-      ))}
-      <Paginator page={page} pages={pages} onPage={setPage} />
+      <div className="flex gap-2">
+        <select value={direction} onChange={(e) => { setDirection(e.target.value); setPage(1); }}
+          className="flex-1 bg-card border border-border rounded-lg px-2 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary">
+          <option value="">Все направления</option>
+          <option value="inbound">⬇️ Входящие</option>
+          <option value="outbound">⬆️ Исходящие</option>
+        </select>
+      </div>
+      <div className="flex gap-2">
+        <input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+          className="flex-1 bg-card border border-border rounded-lg px-2 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary" />
+        <input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+          className="flex-1 bg-card border border-border rounded-lg px-2 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary" />
+      </div>
+      {isLoading ? <LoadingSkeleton /> : !messages.length ? <EmptyState icon="📨" text="Нет сообщений" /> : (
+        <>
+          <p className="text-xs text-muted-foreground">Всего: {total}</p>
+          {messages.map((m) => (
+            <div key={m.id} className={`flex gap-2 ${m.direction === "inbound" ? "flex-row" : "flex-row-reverse"}`}>
+              <div className={`max-w-[80%] rounded-xl px-3 py-2 ${m.direction === "inbound" ? "bg-card border border-border" : "bg-primary/20 border border-primary/30"}`}>
+                <p className="text-xs font-medium text-muted-foreground mb-0.5">{m.direction === "inbound" ? "📱 " + m.phone.slice(-4) : "🤖 Бот"}</p>
+                <p className="text-sm text-foreground">{m.content}</p>
+                <p className="text-xs text-muted-foreground mt-1">{new Date(m.createdAt).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}</p>
+              </div>
+            </div>
+          ))}
+          <Paginator page={page} pages={pages} onPage={setPage} />
+        </>
+      )}
     </div>
   );
 }
@@ -837,15 +862,14 @@ function AnalyticsTab({ clinicId }: { clinicId: string }) {
 // ── Broadcasts Tab ──
 function BroadcastsTab({ clinicId }: { clinicId: string }) {
   const qc = useQueryClient();
-  const [showAdd, setShowAdd] = useState(false);
-  const [bType, setBType] = useState<"appointment_reminder" | "postop_followup">("appointment_reminder");
+  const [statusFilter, setStatusFilter] = useState<string>("");
   const { data, isLoading } = useQuery({
-    queryKey: ["tma-clinic-broadcasts", clinicId],
-    queryFn: () => api.get<{ success: boolean; data: { broadcasts: Broadcast[]; total: number } }>(`/clinics/${clinicId}/broadcasts`),
-  });
-  const createMut = useMutation({
-    mutationFn: () => api.post(`/clinics/${clinicId}/broadcasts`, { type: bType }),
-    onSuccess: () => { hapticNotify("success"); qc.invalidateQueries({ queryKey: ["tma-clinic-broadcasts", clinicId] }); setShowAdd(false); },
+    queryKey: ["tma-clinic-broadcasts", clinicId, statusFilter],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (statusFilter) params.set("status", statusFilter);
+      return api.get<{ success: boolean; data: { broadcasts: Broadcast[]; total: number } }>(`/clinics/${clinicId}/broadcasts?${params}`);
+    },
   });
   const stopMut = useMutation({
     mutationFn: (id: string) => api.post(`/clinics/${clinicId}/broadcasts/${id}/stop`),
@@ -853,27 +877,22 @@ function BroadcastsTab({ clinicId }: { clinicId: string }) {
   });
   if (isLoading) return <LoadingSkeleton />;
   const items = data?.data?.broadcasts ?? [];
-  const statusColors: Record<string, string> = { pending: "bg-yellow-500/20 text-yellow-400", scheduled: "bg-yellow-500/20 text-yellow-400", sent: "bg-green-500/20 text-green-400", cancelled: "bg-muted text-muted-foreground" };
+  const statusColors: Record<string, string> = { pending: "bg-yellow-500/20 text-yellow-400", scheduled: "bg-yellow-500/20 text-yellow-400", sent: "bg-green-500/20 text-green-400", cancelled: "bg-muted text-muted-foreground", failed: "bg-red-500/20 text-red-400" };
   return (
     <div className="space-y-3">
-      {showAdd && (
-        <div className="bg-card border border-border rounded-xl p-3 space-y-2">
-          <p className="text-xs font-semibold text-muted-foreground uppercase">Новая рассылка</p>
-          <select value={bType} onChange={(e) => setBType(e.target.value as typeof bType)}
-            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground">
-            <option value="appointment_reminder">📅 Напоминание о записи</option>
-            <option value="postop_followup">🏥 Постоперационное</option>
-          </select>
-          <div className="flex gap-2">
-            <button onClick={() => setShowAdd(false)} className="flex-1 py-1.5 bg-muted text-muted-foreground rounded-lg text-sm">Отмена</button>
-            <button onClick={() => createMut.mutate()} disabled={createMut.isPending}
-              className="flex-1 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm disabled:opacity-50">Создать</button>
-          </div>
-        </div>
-      )}
-      <button onClick={() => { haptic("medium"); setShowAdd(!showAdd); }}
-        className="w-full py-2 bg-card border border-dashed border-border rounded-lg text-sm text-muted-foreground hover:border-primary/50">+ Создать рассылку</button>
-      {!items.length && !showAdd ? <EmptyState icon="📢" text="Нет рассылок" /> : (
+      <div className="bg-primary/10 border border-primary/20 rounded-lg p-2.5 text-xs text-primary">
+        📢 Рассылки создаются автоматически планировщиком при записи пациента. Суперадмин может отменять ожидающие рассылки.
+      </div>
+      <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); }}
+        className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary">
+        <option value="">Все статусы</option>
+        <option value="pending">⏳ Ожидают</option>
+        <option value="scheduled">📅 Запланированы</option>
+        <option value="sent">✅ Отправлены</option>
+        <option value="cancelled">🚫 Отменены</option>
+        <option value="failed">❌ Ошибка</option>
+      </select>
+      {!items.length ? <EmptyState icon="📢" text="Нет рассылок" /> : (
         <div className="space-y-2">
           <p className="text-xs text-muted-foreground">Всего: {data?.data?.total ?? 0}</p>
           {items.map((b) => (
@@ -883,8 +902,9 @@ function BroadcastsTab({ clinicId }: { clinicId: string }) {
                 <div className="flex items-center gap-2">
                   <span className={`text-xs px-2 py-0.5 rounded-full ${statusColors[b.status] ?? "bg-muted text-muted-foreground"}`}>{b.status}</span>
                   {(b.status === "pending" || b.status === "scheduled") && (
-                    <button onClick={() => { haptic("medium"); tgConfirm("Остановить рассылку?", (ok) => { if (ok) stopMut.mutate(b.id); }); }}
-                      className="text-xs text-red-400 px-1.5 py-0.5 rounded border border-red-500/20">■ Стоп</button>
+                    <button onClick={() => { haptic("medium"); tgConfirm("Отменить рассылку?", (ok) => { if (ok) stopMut.mutate(b.id); }); }}
+                      disabled={stopMut.isPending}
+                      className="text-xs text-red-400 px-1.5 py-0.5 rounded border border-red-500/20 hover:bg-red-500/10">■ Отменить</button>
                   )}
                 </div>
               </div>

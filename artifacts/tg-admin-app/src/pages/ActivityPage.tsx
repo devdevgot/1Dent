@@ -43,8 +43,15 @@ function MessageRow({ m }: { m: ChatbotMessage }) {
 export default function ActivityPage() {
   const [view, setView] = useState<View>("sessions");
   const [clinicId, setClinicId] = useState<string>("");
+  // sessions filters
+  const [humanTakeover, setHumanTakeover] = useState<string>("");
+  const [sessDateFrom, setSessDateFrom] = useState<string>("");
+  const [sessDateTo, setSessDateTo] = useState<string>("");
+  // messages filters
   const [direction, setDirection] = useState<string>("");
   const [search, setSearch] = useState<string>("");
+  const [msgDateFrom, setMsgDateFrom] = useState<string>("");
+  const [msgDateTo, setMsgDateTo] = useState<string>("");
   const [page, setPage] = useState(1);
 
   const { data: clinicsData } = useQuery({
@@ -55,10 +62,13 @@ export default function ActivityPage() {
   const clinics = clinicsData?.data?.clinics ?? [];
 
   const sessionsQ = useQuery({
-    queryKey: ["tma-activity-sessions", clinicId, page],
+    queryKey: ["tma-activity-sessions", clinicId, humanTakeover, sessDateFrom, sessDateTo, page],
     queryFn: () => {
       const params = new URLSearchParams({ page: String(page) });
       if (clinicId) params.set("clinicId", clinicId);
+      if (humanTakeover) params.set("humanTakeover", humanTakeover);
+      if (sessDateFrom) params.set("dateFrom", sessDateFrom);
+      if (sessDateTo) params.set("dateTo", sessDateTo);
       const endpoint = clinicId ? `/clinics/${clinicId}/sessions?${params}` : `/sessions?${params}`;
       return api.get<{ success: boolean; data: { sessions: ChatbotSession[]; total: number; page: number } }>(endpoint);
     },
@@ -67,11 +77,13 @@ export default function ActivityPage() {
   });
 
   const messagesQ = useQuery({
-    queryKey: ["tma-activity-messages", clinicId, direction, search, page],
+    queryKey: ["tma-activity-messages", clinicId, direction, search, msgDateFrom, msgDateTo, page],
     queryFn: () => {
       const params = new URLSearchParams({ page: String(page) });
       if (direction) params.set("direction", direction);
       if (search) params.set("search", search);
+      if (msgDateFrom) params.set("dateFrom", msgDateFrom);
+      if (msgDateTo) params.set("dateTo", msgDateTo);
       const endpoint = clinicId ? `/clinics/${clinicId}/messages?${params}` : `/messages?${params}`;
       return api.get<{ success: boolean; data: { messages: ChatbotMessage[]; total: number } }>(endpoint);
     },
@@ -98,37 +110,15 @@ export default function ActivityPage() {
         <p className="text-sm text-muted-foreground">Платформенные сессии и сообщения</p>
       </div>
 
-      {/* Filters */}
-      <div className="space-y-2">
-        <select
-          value={clinicId}
-          onChange={(e) => { setClinicId(e.target.value); setPage(1); }}
-          className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary"
-        >
-          <option value="">🏥 Все клиники</option>
-          {clinics.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-
-        {view === "messages" && (
-          <div className="flex gap-2">
-            <select
-              value={direction}
-              onChange={(e) => { setDirection(e.target.value); setPage(1); }}
-              className="flex-1 bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary"
-            >
-              <option value="">Все направления</option>
-              <option value="inbound">⬇️ Входящие</option>
-              <option value="outbound">⬆️ Исходящие</option>
-            </select>
-            <input
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              placeholder="Поиск..."
-              className="flex-1 bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary"
-            />
-          </div>
-        )}
-      </div>
+      {/* Clinic filter */}
+      <select
+        value={clinicId}
+        onChange={(e) => { setClinicId(e.target.value); setPage(1); }}
+        className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary"
+      >
+        <option value="">🏥 Все клиники</option>
+        {clinics.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+      </select>
 
       {/* Tabs */}
       <div className="flex gap-2">
@@ -142,6 +132,59 @@ export default function ActivityPage() {
           </button>
         ))}
       </div>
+
+      {/* Sessions filters */}
+      {view === "sessions" && (
+        <div className="space-y-2">
+          <select value={humanTakeover} onChange={(e) => { setHumanTakeover(e.target.value); setPage(1); }}
+            className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary">
+            <option value="">Все сессии</option>
+            <option value="true">👤 Только с оператором</option>
+            <option value="false">🤖 Только бот</option>
+          </select>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <p className="text-xs text-muted-foreground mb-1">С даты</p>
+              <input type="date" value={sessDateFrom} onChange={(e) => { setSessDateFrom(e.target.value); setPage(1); }}
+                className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary" />
+            </div>
+            <div className="flex-1">
+              <p className="text-xs text-muted-foreground mb-1">По дату</p>
+              <input type="date" value={sessDateTo} onChange={(e) => { setSessDateTo(e.target.value); setPage(1); }}
+                className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Messages filters */}
+      {view === "messages" && (
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <select value={direction} onChange={(e) => { setDirection(e.target.value); setPage(1); }}
+              className="flex-1 bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary">
+              <option value="">Все направления</option>
+              <option value="inbound">⬇️ Входящие</option>
+              <option value="outbound">⬆️ Исходящие</option>
+            </select>
+            <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              placeholder="Поиск..."
+              className="flex-1 bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary" />
+          </div>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <p className="text-xs text-muted-foreground mb-1">С даты</p>
+              <input type="date" value={msgDateFrom} onChange={(e) => { setMsgDateFrom(e.target.value); setPage(1); }}
+                className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary" />
+            </div>
+            <div className="flex-1">
+              <p className="text-xs text-muted-foreground mb-1">По дату</p>
+              <input type="date" value={msgDateTo} onChange={(e) => { setMsgDateTo(e.target.value); setPage(1); }}
+                className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary" />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <div className="space-y-2">

@@ -553,16 +553,25 @@ router.get("/clinics/:clinicId/sessions", async (req: Request, res: Response, ne
   try {
     const clinicId = req.params["clinicId"] as string;
     const page = parseInt(String(req.query["page"] ?? "1"), 10);
+    const humanTakeover = req.query["humanTakeover"] === "true" ? true : req.query["humanTakeover"] === "false" ? false : undefined;
+    const dateFrom = req.query["dateFrom"] as string | undefined;
+    const dateTo = req.query["dateTo"] as string | undefined;
+    const where = and(
+      eq(chatbotSessionsTable.clinicId, clinicId),
+      humanTakeover !== undefined ? eq(chatbotSessionsTable.humanTakeover, humanTakeover) : undefined,
+      dateFrom ? gte(chatbotSessionsTable.updatedAt, new Date(dateFrom)) : undefined,
+      dateTo ? lte(chatbotSessionsTable.updatedAt, new Date(dateTo)) : undefined,
+    ) as SQL<unknown>;
     const sessions = await db.select({
       id: chatbotSessionsTable.id, phone: chatbotSessionsTable.phone,
       state: chatbotSessionsTable.state, humanTakeover: chatbotSessionsTable.humanTakeover,
       updatedAt: chatbotSessionsTable.updatedAt,
     })
       .from(chatbotSessionsTable)
-      .where(eq(chatbotSessionsTable.clinicId, clinicId))
+      .where(where)
       .orderBy(desc(chatbotSessionsTable.updatedAt))
       .limit(50).offset((page - 1) * 50);
-    const [total] = await db.select({ count: count() }).from(chatbotSessionsTable).where(eq(chatbotSessionsTable.clinicId, clinicId));
+    const [total] = await db.select({ count: count() }).from(chatbotSessionsTable).where(where);
     res.json({ success: true, data: { sessions, total: total?.count ?? 0, page } });
   } catch (err) { next(err); }
 });
@@ -931,39 +940,15 @@ router.delete("/clinics/:clinicId/knowledge/:sourceId", async (req: Request, res
 });
 
 // ── BROADCASTS WRITE ─────────────────────────────────────────────────────────
-router.post("/clinics/:clinicId/broadcasts", async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const schema = z.object({
-      type: z.enum(["appointment_reminder", "postop_followup"]).default("appointment_reminder"),
-      patientId: z.string().uuid().optional(),
-      appointmentId: z.string().uuid().optional(),
-      sendAt: z.string().datetime().optional(),
-      message: z.string().optional(),
-    });
-    const parsed = schema.safeParse(req.body);
-    if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
-    const clinicId = req.params["clinicId"] as string;
-    const sendAt = parsed.data.sendAt ? new Date(parsed.data.sendAt) : new Date(Date.now() + 60_000);
-
-    if (parsed.data.type === "postop_followup") {
-      const [broadcast] = await db.insert(postopFollowupsTable).values({
-        id: randomUUID(),
-        clinicId,
-        patientId: parsed.data.patientId ?? null,
-        status: "scheduled",
-        sendAt,
-      } as never).returning();
-      return res.status(201).json({ success: true, data: { broadcast } });
-    }
-    const [broadcast] = await db.insert(appointmentRemindersTable).values({
-      id: randomUUID(),
-      clinicId,
-      appointmentId: parsed.data.appointmentId ?? null,
-      status: "scheduled",
-      sendAt,
-    } as never).returning();
-    res.status(201).json({ success: true, data: { broadcast } });
-  } catch (err) { next(err); }
+// NOTE: appointment_reminder and postop_followup records require patientId +
+// procedureId (NOT NULL FK). Superadmin can cancel/stop existing broadcasts
+// but cannot create new ones without a specific patient/procedure context —
+// those are created by the clinic-side scheduling system.
+router.post("/clinics/:clinicId/broadcasts", (_req: Request, res: Response) => {
+  res.status(422).json({
+    success: false,
+    error: "Broadcasts are created automatically by the scheduling system. Use the stop endpoint to cancel a pending broadcast.",
+  });
 });
 
 router.post("/clinics/:clinicId/broadcasts/:broadcastId/stop", async (req: Request, res: Response, next: NextFunction) => {
@@ -1209,12 +1194,14 @@ router.get("/clinics/:clinicId/logs", async (req: Request, res: Response, next: 
     const userId = req.query["userId"] as string | undefined;
     const dateFrom = req.query["dateFrom"] as string | undefined;
     const dateTo = req.query["dateTo"] as string | undefined;
+    const search = req.query["search"] as string | undefined;
     const where = and(
       eq(actionLogsTable.clinicId, clinicId),
       action ? eq(actionLogsTable.actionType, action) : undefined,
       userId ? eq(actionLogsTable.userId, userId) : undefined,
       dateFrom ? gte(actionLogsTable.createdAt, new Date(dateFrom)) : undefined,
       dateTo ? lte(actionLogsTable.createdAt, new Date(dateTo)) : undefined,
+      search ? or(ilike(actionLogsTable.details, `%${search}%`), ilike(actionLogsTable.entityId, `%${search}%`), ilike(actionLogsTable.actionType, `%${search}%`)) : undefined,
     ) as SQL<unknown>;
     const logs = await db.select({
       id: actionLogsTable.id, userId: actionLogsTable.userId,
@@ -1549,12 +1536,14 @@ router.get("/logs", async (req: Request, res: Response, next: NextFunction) => {
     const userId = req.query["userId"] as string | undefined;
     const dateFrom = req.query["dateFrom"] as string | undefined;
     const dateTo = req.query["dateTo"] as string | undefined;
+    const search = req.query["search"] as string | undefined;
     const where = and(
       clinicId ? eq(actionLogsTable.clinicId, clinicId) : undefined,
       action ? eq(actionLogsTable.actionType, action) : undefined,
       userId ? eq(actionLogsTable.userId, userId) : undefined,
       dateFrom ? gte(actionLogsTable.createdAt, new Date(dateFrom)) : undefined,
       dateTo ? lte(actionLogsTable.createdAt, new Date(dateTo)) : undefined,
+      search ? or(ilike(actionLogsTable.details, `%${search}%`), ilike(actionLogsTable.entityId, `%${search}%`), ilike(actionLogsTable.actionType, `%${search}%`)) : undefined,
     ) as SQL<unknown>;
     const logs = await db.select({
       id: actionLogsTable.id, clinicId: actionLogsTable.clinicId, userId: actionLogsTable.userId,
@@ -1573,9 +1562,13 @@ router.get("/sessions", async (req: Request, res: Response, next: NextFunction) 
     const page = parseInt(String(req.query["page"] ?? "1"), 10);
     const clinicId = req.query["clinicId"] as string | undefined;
     const humanTakeover = req.query["humanTakeover"] === "true" ? true : req.query["humanTakeover"] === "false" ? false : undefined;
+    const dateFrom = req.query["dateFrom"] as string | undefined;
+    const dateTo = req.query["dateTo"] as string | undefined;
     const where = and(
       clinicId ? eq(chatbotSessionsTable.clinicId, clinicId) : undefined,
       humanTakeover !== undefined ? eq(chatbotSessionsTable.humanTakeover, humanTakeover) : undefined,
+      dateFrom ? gte(chatbotSessionsTable.updatedAt, new Date(dateFrom)) : undefined,
+      dateTo ? lte(chatbotSessionsTable.updatedAt, new Date(dateTo)) : undefined,
     ) as SQL<unknown>;
     const sessions = await db.select({
       id: chatbotSessionsTable.id, clinicId: chatbotSessionsTable.clinicId,
