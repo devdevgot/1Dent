@@ -31,7 +31,7 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
   debt:           "Долг",
 };
 
-const BRAND_GREEN = "#98cc1c";
+const BRAND_BLUE = "#1f75fe";
 
 export default function AdminDashboard() {
   const { t } = useTranslation();
@@ -323,7 +323,7 @@ export default function AdminDashboard() {
                       <div className="w-full bg-gray-100 rounded-full h-1.5">
                         <div
                           className="h-1.5 rounded-full transition-all"
-                          style={{ width: `${pct}%`, backgroundColor: BRAND_GREEN }}
+                          style={{ width: `${pct}%`, backgroundColor: BRAND_BLUE }}
                         />
                       </div>
                       <p className="text-[10px] text-gray-400 mt-0.5">

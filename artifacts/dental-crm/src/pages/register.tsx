@@ -190,7 +190,7 @@ export default function Register() {
                   className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 shadow-sm"
                   style={{ backgroundColor: "#f0f9d6" }}
                 >
-                  <ShieldCheck className="w-7 h-7" style={{ color: "#98cc1c" }} />
+                  <ShieldCheck className="w-7 h-7" style={{ color: "#1f75fe" }} />
                 </div>
                 <h2 className="text-xl font-display font-bold text-gray-900 mb-3">
                   Прежде чем начать
@@ -208,7 +208,7 @@ export default function Register() {
               <button
                 onClick={() => goForward(1)}
                 className="w-full py-3 rounded-xl text-sm font-bold transition-all duration-200 active:scale-[0.98]"
-                style={{ backgroundColor: "#98cc1c", color: "#1a2204" }}
+                style={{ backgroundColor: "#1f75fe", color: "#ffffff" }}
               >
                 Я владелец клиники — продолжить
               </button>
@@ -291,7 +291,7 @@ export default function Register() {
                   type="button"
                   onClick={handleStep1Next}
                   className="w-full py-3 rounded-xl text-sm font-bold transition-all duration-200 active:scale-[0.98] mt-1"
-                  style={{ backgroundColor: "#98cc1c", color: "#1a2204" }}
+                  style={{ backgroundColor: "#1f75fe", color: "#ffffff" }}
                 >
                   Далее
                 </button>
@@ -390,7 +390,7 @@ export default function Register() {
                   type="submit"
                   disabled={registerMutation.isPending}
                   className="w-full py-3 rounded-xl text-sm font-bold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.98]"
-                  style={{ backgroundColor: "#98cc1c", color: "#1a2204" }}
+                  style={{ backgroundColor: "#1f75fe", color: "#ffffff" }}
                 >
                   {registerMutation.isPending ? t("register.submitting") : "Создать клинику"}
                 </button>

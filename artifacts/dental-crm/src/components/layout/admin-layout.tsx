@@ -190,7 +190,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       {!isMobile && (
         <aside
           className={cn(
-            "flex flex-col bg-[#1a2204] transition-all duration-200 ease-in-out shrink-0 z-30",
+            "flex flex-col bg-[#0c1e3d] transition-all duration-200 ease-in-out shrink-0 z-30",
             collapsed ? "w-16" : "w-60",
           )}
         >
@@ -205,7 +205,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             className="absolute inset-0 bg-black/50"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="relative z-10 bg-[#1a2204] flex flex-col">
+          <aside className="relative z-10 bg-[#0c1e3d] flex flex-col">
             <SidebarContent mobile />
           </aside>
           <button

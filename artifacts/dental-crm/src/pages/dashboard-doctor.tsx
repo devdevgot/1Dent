@@ -245,7 +245,7 @@ export default function DoctorDashboard() {
             <button
               onClick={() => navigate("/payroll/my")}
               className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-xl mt-1"
-              style={{ backgroundColor: "#98cc1c22", color: "#98cc1c" }}
+              style={{ backgroundColor: "#1f75fe22", color: "#1f75fe" }}
             >
               {t("payroll.history", "История")}
             </button>
@@ -267,7 +267,7 @@ export default function DoctorDashboard() {
             <button
               onClick={() => navigate("/doctor-analytics")}
               className="flex items-center gap-0.5 text-xs font-semibold"
-              style={{ color: "#98cc1c" }}
+              style={{ color: "#1f75fe" }}
             >
               {t("dashboard.details", "Подробнее")} <ChevronRight className="w-3.5 h-3.5" />
             </button>
@@ -280,15 +280,15 @@ export default function DoctorDashboard() {
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-4 pb-3">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-xl flex items-center justify-center" style={{ backgroundColor: "#98cc1c22" }}>
-              <Calendar className="w-4 h-4" style={{ color: "#98cc1c" }} />
+            <div className="w-7 h-7 rounded-xl flex items-center justify-center" style={{ backgroundColor: "#1f75fe22" }}>
+              <Calendar className="w-4 h-4" style={{ color: "#1f75fe" }} />
             </div>
             <span className="text-sm font-bold text-gray-800">Предстоящие записи</span>
           </div>
           <button
             onClick={() => navigate(`/schedule/${activeDayKey}`)}
             className="flex items-center gap-0.5 text-xs font-semibold"
-            style={{ color: "#98cc1c" }}
+            style={{ color: "#1f75fe" }}
           >
             Все <ChevronRight className="w-3.5 h-3.5" />
           </button>
@@ -308,7 +308,7 @@ export default function DoctorDashboard() {
                   "flex-1 flex flex-col items-center py-2 rounded-2xl transition-all",
                   isActive ? "text-white shadow-sm" : "bg-gray-50 text-gray-500",
                 )}
-                style={isActive ? { backgroundColor: "#98cc1c" } : undefined}
+                style={isActive ? { backgroundColor: "#1f75fe" } : undefined}
               >
                 <span className="text-[10px] font-semibold uppercase tracking-wide leading-none">
                   {isToday ? "Сегодня" : DOW_SHORT[d.getDay()]}
@@ -467,7 +467,7 @@ export default function DoctorDashboard() {
                       setShowCustom(false);
                     }}
                     className="w-full py-3.5 rounded-2xl text-sm font-bold text-white"
-                    style={{ backgroundColor: "#98cc1c" }}
+                    style={{ backgroundColor: "#1f75fe" }}
                   >
                     Применить
                   </button>
@@ -527,7 +527,7 @@ export default function DoctorDashboard() {
                       setShowCustom(false);
                     }}
                     className="w-full py-3.5 rounded-2xl text-sm font-bold text-white"
-                    style={{ backgroundColor: "#98cc1c" }}
+                    style={{ backgroundColor: "#1f75fe" }}
                   >
                     Применить
                   </button>

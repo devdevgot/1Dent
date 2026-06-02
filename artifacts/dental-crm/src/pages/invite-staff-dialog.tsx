@@ -353,8 +353,8 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                     transition={{ duration: 0.18 }}
                     className="flex flex-col items-center pt-4 pb-2"
                   >
-                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5" style={{ backgroundColor: "#98cc1c22" }}>
-                      <Mail className="w-7 h-7" style={{ color: "#98cc1c" }} />
+                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5" style={{ backgroundColor: "#1f75fe22" }}>
+                      <Mail className="w-7 h-7" style={{ color: "#1f75fe" }} />
                     </div>
                     <h3 className="text-lg font-bold text-gray-900 mb-1 text-center">Email сотрудника</h3>
                     <p className="text-sm text-gray-400 text-center mb-6 leading-relaxed">
@@ -619,7 +619,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                   >
                     <div className="flex flex-col items-center pt-2 pb-2">
                       <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 text-white text-xl font-bold"
-                        style={{ backgroundColor: "#98cc1c" }}>
+                        style={{ backgroundColor: "#1f75fe" }}>
                         {form.name.split(" ").map((w) => w[0]?.toUpperCase() ?? "").slice(0, 2).join("")}
                       </div>
                       <h3 className="text-lg font-bold text-gray-900">{form.name}</h3>
@@ -672,7 +672,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                     </div>
 
                     <div className="rounded-2xl bg-primary/5 border border-primary/20 px-4 py-3 flex items-start gap-3">
-                      <Send className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#98cc1c" }} />
+                      <Send className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#1f75fe" }} />
                       <p className="text-xs text-gray-600 leading-relaxed">
                         Сотрудник получит письмо с временным паролем и ссылкой для входа. После первого входа он сможет сменить пароль.
                       </p>
@@ -701,7 +701,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                     type="button"
                     onClick={goNext}
                     className="flex-1 py-3.5 rounded-2xl text-sm font-bold text-white flex items-center justify-center gap-2"
-                    style={{ backgroundColor: "#98cc1c" }}
+                    style={{ backgroundColor: "#1f75fe" }}
                   >
                     Далее
                     <ChevronDown className="w-4 h-4 -rotate-90" />
@@ -712,7 +712,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                     disabled={inviteMutation.isPending}
                     onClick={() => inviteMutation.mutate(form)}
                     className="flex-1 py-3.5 rounded-2xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-60"
-                    style={{ backgroundColor: "#98cc1c" }}
+                    style={{ backgroundColor: "#1f75fe" }}
                   >
                     <Send className="w-4 h-4" />
                     {inviteMutation.isPending ? "Добавление..." : "Добавить и отправить приглашение"}

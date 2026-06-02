@@ -80,7 +80,7 @@ export default function AccountChangeEmail() {
             <button
               onClick={() => setLocation("/account-settings")}
               className="mt-4 w-full py-3.5 rounded-2xl font-semibold text-[15px]"
-              style={{ backgroundColor: "#98cc1c", color: "#1a2204" }}
+              style={{ backgroundColor: "#1f75fe", color: "#ffffff" }}
             >
               Готово
             </button>
@@ -111,7 +111,7 @@ export default function AccountChangeEmail() {
               onClick={handleSendCode}
               disabled={sending}
               className="w-full py-3.5 rounded-2xl font-semibold text-[15px] flex items-center justify-center gap-2"
-              style={{ backgroundColor: "#98cc1c", color: "#1a2204" }}
+              style={{ backgroundColor: "#1f75fe", color: "#ffffff" }}
             >
               {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
               Отправить код подтверждения
@@ -148,7 +148,7 @@ export default function AccountChangeEmail() {
               onClick={handleVerify}
               disabled={mutation.isPending}
               className="w-full py-3.5 rounded-2xl font-semibold text-[15px] flex items-center justify-center gap-2"
-              style={{ backgroundColor: "#98cc1c", color: "#1a2204" }}
+              style={{ backgroundColor: "#1f75fe", color: "#ffffff" }}
             >
               {mutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
               Подтвердить

@@ -227,7 +227,7 @@ export function GlobalSearch() {
             <button
               onClick={() => setIsOpen(false)}
               className="text-[15px] font-medium shrink-0"
-              style={{ color: "#98cc1c" }}
+              style={{ color: "#1f75fe" }}
             >
               Отмена
             </button>

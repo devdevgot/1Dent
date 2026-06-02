@@ -236,8 +236,8 @@ export default function StaffDetailPage() {
           {/* ─── Score + Capacity block ─── */}
           <div className="bg-white rounded-xl border border-border/50 p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
-              <div className="h-8 w-8 rounded-lg bg-[#98cc1c]/10 flex items-center justify-center shrink-0">
-                <Gauge className="h-4 w-4 text-[#98cc1c]" />
+              <div className="h-8 w-8 rounded-lg bg-[#1f75fe]/10 flex items-center justify-center shrink-0">
+                <Gauge className="h-4 w-4 text-[#1f75fe]" />
               </div>
               <h3 className="text-sm font-semibold text-foreground">Рейтинг и ёмкость</h3>
             </div>
@@ -252,7 +252,7 @@ export default function StaffDetailPage() {
                 <div className="w-full bg-gray-100 rounded-full h-3">
                   <div
                     className="h-3 rounded-full transition-all duration-500"
-                    style={{ width: `${doctor.score ?? 0}%`, backgroundColor: "#98cc1c" }}
+                    style={{ width: `${doctor.score ?? 0}%`, backgroundColor: "#1f75fe" }}
                   />
                 </div>
                 <p className="text-[11px] text-muted-foreground mt-1.5">
@@ -286,7 +286,7 @@ export default function StaffDetailPage() {
                     <button
                       onClick={handleSaveCapacity}
                       disabled={savingCapacity || capacityInput === ""}
-                      className="ml-auto px-3 py-1.5 rounded-lg bg-[#98cc1c] text-white text-xs font-semibold disabled:opacity-50 hover:bg-[#7eb015] transition-colors"
+                      className="ml-auto px-3 py-1.5 rounded-lg bg-[#1f75fe] text-white text-xs font-semibold disabled:opacity-50 hover:bg-[#1a56d6] transition-colors"
                     >
                       {savingCapacity ? "..." : "Сохранить"}
                     </button>
@@ -439,8 +439,8 @@ export default function StaffDetailPage() {
           {canManagePayroll && doctorId && (
             <div className="bg-white rounded-xl border border-border/50 p-6 shadow-sm space-y-5">
               <div className="flex items-center gap-2 mb-1">
-                <div className="h-8 w-8 rounded-lg bg-[#98cc1c]/10 flex items-center justify-center shrink-0">
-                  <Banknote className="h-4 w-4 text-[#98cc1c]" />
+                <div className="h-8 w-8 rounded-lg bg-[#1f75fe]/10 flex items-center justify-center shrink-0">
+                  <Banknote className="h-4 w-4 text-[#1f75fe]" />
                 </div>
                 <h3 className="text-sm font-semibold text-foreground">{t("payroll.title")}</h3>
               </div>

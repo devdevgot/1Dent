@@ -32,8 +32,8 @@ import { useTranslation } from "react-i18next";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
 import { WhatsAppConnectModal, WhatsAppIcon, type WaStatus } from "@/components/whatsapp/whatsapp-connect-modal";
 
-const BRAND      = "#98cc1c";
-const BRAND_DARK = "#1a2204";
+const BRAND      = "#1f75fe";
+const BRAND_DARK = "#0c1e3d";
 const CHAT_BG    = "#ECE5DD";
 
 const DOT_PATTERN = `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='2' cy='2' r='1' fill='%23b2a898' fill-opacity='0.22'/%3E%3C/svg%3E")`;
@@ -713,7 +713,7 @@ export default function ChatPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t("chat.searchPlaceholder")}
-              className="w-full pl-9 pr-4 py-2.5 bg-white/80 border border-border/40 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#98cc1c]/40 transition-all"
+              className="w-full pl-9 pr-4 py-2.5 bg-white/80 border border-border/40 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/40 transition-all"
             />
           </div>
         </div>
@@ -829,7 +829,7 @@ function PatientListItem({
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <p className={cn("font-semibold text-sm truncate", isSelected ? "text-[#1a2204]" : "text-foreground")}>
+          <p className={cn("font-semibold text-sm truncate", isSelected ? "text-[#0c1e3d]" : "text-foreground")}>
             {patient.name}
           </p>
           {isActive && (

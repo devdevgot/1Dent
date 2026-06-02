@@ -250,7 +250,7 @@ export default function OwnerDashboard() {
                       <div className="w-full bg-gray-100 rounded-full h-1.5">
                         <div
                           className="h-1.5 rounded-full transition-all"
-                          style={{ width: `${kpi.score ?? 0}%`, backgroundColor: "#98cc1c" }}
+                          style={{ width: `${kpi.score ?? 0}%`, backgroundColor: "#1f75fe" }}
                         />
                       </div>
                     </div>
@@ -428,7 +428,7 @@ export default function OwnerDashboard() {
                       setShowCustom(false);
                     }}
                     className="w-full py-3.5 rounded-2xl text-sm font-bold text-white"
-                    style={{ backgroundColor: "#98cc1c" }}
+                    style={{ backgroundColor: "#1f75fe" }}
                   >
                     Применить
                   </button>
@@ -521,7 +521,7 @@ export default function OwnerDashboard() {
                       setShowCustom(false);
                     }}
                     className="w-full py-3.5 rounded-2xl text-sm font-bold text-white disabled:opacity-50"
-                    style={{ backgroundColor: "#98cc1c" }}
+                    style={{ backgroundColor: "#1f75fe" }}
                   >
                     Применить
                   </button>

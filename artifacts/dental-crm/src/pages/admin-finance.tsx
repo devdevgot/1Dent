@@ -16,8 +16,8 @@ import { format, startOfDay, startOfWeek, startOfMonth, startOfYear, parseISO, d
 
 type Period = "day" | "week" | "month" | "year" | "custom";
 
-const BRAND_GREEN = "#98cc1c";
-const PIE_COLORS = [BRAND_GREEN, "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
+const BRAND_BLUE = "#1f75fe";
+const PIE_COLORS = [BRAND_BLUE, "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   kaspi_transfer: "Kaspi Transfer",
@@ -484,7 +484,7 @@ export default function AdminFinancePage() {
                   formatter={(v: number) => [fmt(v), "Выручка"]}
                   contentStyle={{ borderRadius: 12, fontSize: 13 }}
                 />
-                <Bar dataKey="revenue" fill={BRAND_GREEN} radius={[6, 6, 0, 0]} />
+                <Bar dataKey="revenue" fill={BRAND_BLUE} radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}

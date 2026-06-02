@@ -18,7 +18,7 @@ import { FaInstagram, FaTelegram, FaWhatsapp } from "react-icons/fa";
 import { WhatsAppConnectModal, WhatsAppIcon, type WaStatus } from "@/components/whatsapp/whatsapp-connect-modal";
 import { customFetch } from "@workspace/api-client-react";
 
-const BRAND = "#98cc1c";
+const BRAND = "#1f75fe";
 
 function ChannelIcon({ type, size = 20 }: { type: string; size?: number }) {
   const props = { size, color: BRAND, style: { flexShrink: 0 } };
@@ -360,7 +360,7 @@ export function ChannelsSettings() {
                   value={phoneInput}
                   onChange={e => setPhoneInput(e.target.value)}
                   placeholder="77071234567"
-                  className="flex-1 h-8 px-3 rounded-lg border border-border text-xs font-mono focus:outline-none focus:ring-2 focus:ring-[#98cc1c]/50"
+                  className="flex-1 h-8 px-3 rounded-lg border border-border text-xs font-mono focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/50"
                   onKeyDown={e => { if (e.key === "Enter") handlePhoneSave(); if (e.key === "Escape") setPhoneEditing(false); }}
                   autoFocus
                 />
@@ -489,7 +489,7 @@ export function ChannelsSettings() {
                   <button
                     type="button"
                     onClick={() => setShowTypeDropdown((v) => !v)}
-                    className="w-full h-9 rounded-lg border border-border bg-white px-3 text-sm flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-[#98cc1c]/30"
+                    className="w-full h-9 rounded-lg border border-border bg-white px-3 text-sm flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/30"
                   >
                     <ChannelIcon type={newType} size={16} />
                     <span className="flex-1 text-left text-gray-800">
@@ -512,7 +512,7 @@ export function ChannelsSettings() {
                             setShowTypeDropdown(false);
                           }}
                           className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm transition-colors hover:bg-gray-50 ${
-                            newType === type ? "text-[#4a6b0a] font-medium bg-[#f7fce8]" : "text-gray-800"
+                            newType === type ? "text-[#1a56d6] font-medium bg-[#eff6ff]" : "text-gray-800"
                           }`}
                         >
                           <ChannelIcon type={type} size={16} />
@@ -533,7 +533,7 @@ export function ChannelsSettings() {
                     }}
                     placeholder="Например: TikTok, YouTube, Баннер..."
                     autoFocus
-                    className="mt-2 w-full h-9 rounded-lg border border-[#98cc1c]/50 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#98cc1c]/30"
+                    className="mt-2 w-full h-9 rounded-lg border border-[#1f75fe]/50 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/30"
                   />
                 )}
               </div>

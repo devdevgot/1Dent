@@ -133,7 +133,7 @@ export default function AccountEditProfile() {
           onClick={handleSave}
           disabled={mutation.isPending}
           className="w-full py-3.5 rounded-2xl font-semibold text-[15px] flex items-center justify-center gap-2"
-          style={{ backgroundColor: "#98cc1c", color: "#1a2204" }}
+          style={{ backgroundColor: "#1f75fe", color: "#ffffff" }}
         >
           {mutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
           Сохранить

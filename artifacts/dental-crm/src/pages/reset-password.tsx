@@ -67,7 +67,7 @@ export default function ResetPassword() {
           <button
             onClick={() => setLocation("/forgot-password")}
             className="w-full py-4 rounded-2xl text-base font-bold"
-            style={{ backgroundColor: "#98cc1c", color: "#1a2204" }}
+            style={{ backgroundColor: "#1f75fe", color: "#ffffff" }}
           >
             Запросить новую ссылку
           </button>
@@ -163,7 +163,7 @@ export default function ResetPassword() {
               type="submit"
               disabled={loading}
               className="w-full py-4 rounded-2xl text-base font-bold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.98] mt-2"
-              style={{ backgroundColor: "#98cc1c", color: "#1a2204" }}
+              style={{ backgroundColor: "#1f75fe", color: "#ffffff" }}
             >
               {loading ? "Сохраняем..." : "Сохранить"}
             </button>
@@ -192,7 +192,7 @@ export default function ResetPassword() {
 
               <div className="flex items-center justify-center mb-5">
                 <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: "#f0fad0" }}>
-                  <CheckCircle2 className="w-8 h-8" style={{ color: "#98cc1c" }} />
+                  <CheckCircle2 className="w-8 h-8" style={{ color: "#1f75fe" }} />
                 </div>
               </div>
 
@@ -205,7 +205,7 @@ export default function ResetPassword() {
               <button
                 onClick={() => setLocation("/login")}
                 className="text-base font-semibold transition-colors"
-                style={{ color: "#98cc1c" }}
+                style={{ color: "#1f75fe" }}
               >
                 Отлично!
               </button>

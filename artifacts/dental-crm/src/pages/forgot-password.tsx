@@ -97,7 +97,7 @@ export default function ForgotPassword() {
                   type="submit"
                   disabled={loading}
                   className="w-full py-4 rounded-2xl text-base font-bold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.98] mt-2"
-                  style={{ backgroundColor: "#98cc1c", color: "#1a2204" }}
+                  style={{ backgroundColor: "#1f75fe", color: "#ffffff" }}
                 >
                   {loading ? "Отправляем..." : "Восстановить"}
                 </button>
@@ -114,7 +114,7 @@ export default function ForgotPassword() {
             >
               <div className="flex items-center justify-center mb-6">
                 <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ backgroundColor: "#f0fad0" }}>
-                  <Mail className="w-9 h-9" style={{ color: "#98cc1c" }} />
+                  <Mail className="w-9 h-9" style={{ color: "#1f75fe" }} />
                 </div>
               </div>
 
@@ -139,7 +139,7 @@ export default function ForgotPassword() {
                   <button
                     onClick={() => setLocation(`/reset-password?token=${devToken}`)}
                     className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all"
-                    style={{ backgroundColor: "#98cc1c", color: "#1a2204" }}
+                    style={{ backgroundColor: "#1f75fe", color: "#ffffff" }}
                   >
                     Перейти к сбросу пароля →
                   </button>

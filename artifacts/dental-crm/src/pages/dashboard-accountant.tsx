@@ -189,8 +189,8 @@ export default function AccountantDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="bg-card rounded-2xl border border-border/50 p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
-            <div className="p-2 bg-[#98cc1c]/10 rounded-xl">
-              <Banknote className="w-5 h-5 text-[#98cc1c]" />
+            <div className="p-2 bg-[#1f75fe]/10 rounded-xl">
+              <Banknote className="w-5 h-5 text-[#1f75fe]" />
             </div>
             <div className="flex-1">
               <h3 className="text-sm font-bold font-display">{t("payroll.fot")}</h3>
