@@ -113,7 +113,7 @@ export default function ForgotPassword() {
               className="text-center"
             >
               <div className="flex items-center justify-center mb-6">
-                <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ backgroundColor: "#f0fad0" }}>
+                <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ backgroundColor: "#eff6ff" }}>
                   <Mail className="w-9 h-9" style={{ color: "#1f75fe" }} />
                 </div>
               </div>

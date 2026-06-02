@@ -135,10 +135,10 @@ const STAGE_CONFIGS: StageConfig[] = [
     label: "Имплантация",
     conditions: ["implant"],
     color: "#059669",
-    bgColor: "#f0fdf4",
+    bgColor: "#eff6ff",
     borderColor: "#059669",
     textColor: "#047857",
-    badgeBg: "#d1fae5",
+    badgeBg: "#dbeafe",
     Icon: Wrench,
   },
   {

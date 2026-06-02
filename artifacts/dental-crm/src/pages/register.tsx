@@ -188,7 +188,7 @@ export default function Register() {
               <div className="flex flex-col items-center text-center mb-6">
                 <div
                   className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 shadow-sm"
-                  style={{ backgroundColor: "#f0f9d6" }}
+                  style={{ backgroundColor: "#eff6ff" }}
                 >
                   <ShieldCheck className="w-7 h-7" style={{ color: "#1f75fe" }} />
                 </div>
