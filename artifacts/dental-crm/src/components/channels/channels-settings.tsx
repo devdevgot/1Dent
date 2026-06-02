@@ -288,7 +288,8 @@ export function ChannelsSettings() {
 
       {isOwner && (
         <div className="bg-white border border-border rounded-xl p-4">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col gap-3">
+            {/* Top: icon + label + phone */}
             <div className="flex items-center gap-2 min-w-0">
               <div
                 className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
@@ -316,7 +317,8 @@ export function ChannelsSettings() {
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            {/* Bottom: action buttons */}
+            <div className="flex items-center gap-2 flex-wrap">
               {waStatus?.connected && (
                 <button
                   onClick={handleRecheckWebhook}
