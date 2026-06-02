@@ -32,7 +32,7 @@ PLATFORM_SUPERADMIN_TG_ID = "1337923744"
 WEBHOOK_BASE_URL = "https://dental-crm-kz.replit.app"
 
 [userenv.development]
-TMA_DEV_BYPASS_TG_ID = "999999999"
+TMA_DEV_BYPASS_TG_ID = "1337923744"
 
   [nix]
   channel = "stable-25_05"
