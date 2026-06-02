@@ -11,18 +11,7 @@ import type {
 } from "@workspace/db";
 
 export class PatientsRepository {
-  async listByClinic(clinicId: string, doctorId?: string): Promise<Patient[]> {
-    if (doctorId) {
-      return db
-        .select()
-        .from(patientsTable)
-        .where(
-          and(
-            eq(patientsTable.clinicId, clinicId),
-            eq(patientsTable.doctorId, doctorId),
-          ),
-        );
-    }
+  async listByClinic(clinicId: string): Promise<Patient[]> {
     return db
       .select()
       .from(patientsTable)

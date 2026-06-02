@@ -31,11 +31,9 @@ export class PatientsService {
   async list(
     clinicId: string,
     requestingRole: UserRole,
-    requestingUserId: string,
+    _requestingUserId: string,
   ): Promise<PatientDTO[]> {
-    const doctorFilter =
-      requestingRole === "doctor" ? requestingUserId : undefined;
-    const patients = await this.repo.listByClinic(clinicId, doctorFilter);
+    const patients = await this.repo.listByClinic(clinicId);
     return patients.map((p) => ({
       ...p,
       phone: maskPhone(p.phone, requestingRole),
@@ -50,10 +48,6 @@ export class PatientsService {
   ): Promise<{ patient: PatientDTO; interactions: PatientInteraction[] }> {
     const patient = await this.repo.findById(id, clinicId);
     if (!patient) throw new NotFoundError("Patient not found");
-
-    if (requestingRole === "doctor" && patient.doctorId !== requestingUserId) {
-      throw new ForbiddenError("Access denied");
-    }
 
     const interactions = await this.repo.listInteractions(id, clinicId);
     return {
@@ -147,10 +141,6 @@ export class PatientsService {
     const existing = await this.repo.findById(id, clinicId);
     if (!existing) throw new NotFoundError("Patient not found");
 
-    if (requestingRole === "doctor" && existing.doctorId !== requestingUserId) {
-      throw new ForbiddenError("Access denied");
-    }
-
     const sanitizedData = { ...data };
     if (requestingRole === "doctor") {
       delete sanitizedData.doctorId;
@@ -183,10 +173,6 @@ export class PatientsService {
   ): Promise<PatientDTO> {
     const existing = await this.repo.findById(id, clinicId);
     if (!existing) throw new NotFoundError("Patient not found");
-
-    if (requestingRole === "doctor" && existing.doctorId !== requestingUserId) {
-      throw new ForbiddenError("Access denied");
-    }
 
     const updated = await this.repo.updateStatus(id, clinicId, status);
     if (!updated) throw new NotFoundError("Patient not found");
@@ -233,13 +219,6 @@ export class PatientsService {
   ): Promise<PatientInteraction> {
     const patient = await this.repo.findById(patientId, clinicId);
     if (!patient) throw new NotFoundError("Patient not found");
-
-    if (
-      requestingRole === "doctor" &&
-      patient.doctorId !== requestingUserId
-    ) {
-      throw new ForbiddenError("Access denied");
-    }
 
     return this.repo.createInteraction({
       id: randomUUID(),
