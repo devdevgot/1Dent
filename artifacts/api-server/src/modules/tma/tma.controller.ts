@@ -33,6 +33,7 @@ import {
 import { eq, desc, count, sum, gte, lte, and, sql, not, ilike, or, isNotNull, type SQL } from "drizzle-orm";
 import { requireTmaAdmin, invalidateAdminCache } from "./tma.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
+import { seedProcedureTemplates } from "../../seeds/procedure-templates.seed";
 
 const router = Router();
 router.use(requireTmaAdmin);
@@ -191,6 +192,8 @@ router.post("/clinics", async (req: Request, res: Response, next: NextFunction) 
         isActive: true,
       } as never);
     }
+    const seedResult = await seedProcedureTemplates(clinicId);
+    console.log(`[createClinic] Seeded ${seedResult.inserted} procedure templates for clinic ${clinicId}`);
     res.status(201).json({ success: true, data: { clinic, ownerInitialPassword } });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
