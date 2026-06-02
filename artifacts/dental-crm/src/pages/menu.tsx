@@ -198,7 +198,7 @@ export default function MenuPage() {
 
       {/* Footer */}
       <div className="mt-8 text-center">
-        <p className="text-xs text-gray-300">© 2025 Dental CRM</p>
+        <p className="text-xs text-gray-300">© 2025 1Dent</p>
       </div>
     </div>
   );

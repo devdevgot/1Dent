@@ -89,7 +89,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         </div>
         {(!collapsed || mobile) && (
           <div className="min-w-0">
-            <p className="font-bold text-white text-sm leading-tight truncate">DentalCRM</p>
+            <p className="font-bold text-white text-sm leading-tight truncate">1Dent</p>
             <p className="text-white/50 text-xs truncate">{t("adminNav.adminPanel")}</p>
           </div>
         )}
@@ -239,7 +239,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               );
               return (
                 <p className="text-sm font-semibold text-gray-700 truncate">
-                  {current?.name ?? "DentalCRM"}
+                  {current?.name ?? "1Dent"}
                 </p>
               );
             })()}
