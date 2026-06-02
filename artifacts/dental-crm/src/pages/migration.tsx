@@ -597,7 +597,7 @@ function ExportSection() {
     setError(null);
     setDone(null);
     try {
-      await triggerDownload();
+      // Single request: server generates XLSX, deletes data, returns the file
       const res = await fetch("/api/migration/wipe", {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token ?? ""}` },
@@ -606,6 +606,18 @@ function ExportSection() {
         const j = await res.json().catch(() => ({}));
         throw new Error((j as { message?: string }).message ?? `HTTP ${res.status}`);
       }
+      // Trigger download from the response blob
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const cd = res.headers.get("content-disposition") ?? "";
+      const match = cd.match(/filename="?([^"]+)"?/);
+      a.download = match?.[1] ?? `1dent_export_${new Date().toISOString().split("T")[0]}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
       setDone("wipe");
       setConfirmWipe(false);
     } catch (e) {

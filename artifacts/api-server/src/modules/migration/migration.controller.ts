@@ -348,18 +348,184 @@ router.get(
   },
 );
 
-// DELETE /migration/wipe  — delete all patient data for this clinic
+// DELETE /migration/wipe  — export full clinic data as XLSX, then delete everything
+// Returns the XLSX file so the client can download it in a single request.
 router.delete(
   "/wipe",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const clinicId = req.user!.clinicId;
-      // Deleting patients cascades to: tooth_records, tooth_treatments, treatment_plans,
-      // treatment_plan_items, procedures, patient_interactions, dental_ai_analyses
+
+      // 1. Generate XLSX backup (same logic as GET /export)
+      const [clinicRows, patients, toothRecords, plans, planItems, procedures, templates] =
+        await Promise.all([
+          db.select().from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1),
+          db.select().from(patientsTable).where(eq(patientsTable.clinicId, clinicId)),
+          db.select().from(toothRecordsTable).where(eq(toothRecordsTable.clinicId, clinicId)),
+          db.select().from(treatmentPlansTable).where(eq(treatmentPlansTable.clinicId, clinicId)),
+          db.select().from(treatmentPlanItemsTable).where(eq(treatmentPlanItemsTable.clinicId, clinicId)),
+          db.select().from(proceduresTable).where(eq(proceduresTable.clinicId, clinicId)),
+          db.select().from(procedureTemplatesTable).where(eq(procedureTemplatesTable.clinicId, clinicId)),
+        ]);
+
+      const clinic = clinicRows[0];
+      const wb = new ExcelJS.Workbook();
+      wb.creator = "1Dent CRM";
+      wb.created = new Date();
+
+      const style = (ws: ExcelJS.Worksheet) => {
+        const row = ws.getRow(1);
+        row.font = { bold: true };
+        row.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE8F0FE" } };
+        row.commit();
+      };
+
+      const clinicWs = wb.addWorksheet("Клиника");
+      clinicWs.columns = [
+        { header: "Поле", key: "field", width: 28 },
+        { header: "Значение", key: "value", width: 50 },
+      ];
+      if (clinic) {
+        [
+          ["Название", clinic.name],
+          ["ID клиники", clinic.id],
+          ["Тарифный план", clinic.plan],
+          ["WhatsApp номер", clinic.whatsappPhone ?? ""],
+          ["Дата регистрации", clinic.createdAt?.toISOString() ?? ""],
+        ].forEach(([field, value]) => clinicWs.addRow({ field, value }));
+      }
+      style(clinicWs);
+
+      const patWs = wb.addWorksheet("Пациенты");
+      patWs.columns = [
+        { header: "ID", key: "id", width: 30 },
+        { header: "Имя", key: "name", width: 25 },
+        { header: "Телефон", key: "phone", width: 18 },
+        { header: "ИИН", key: "iin", width: 14 },
+        { header: "Дата рождения", key: "dateOfBirth", width: 16 },
+        { header: "Пол", key: "gender", width: 10 },
+        { header: "Источник", key: "source", width: 15 },
+        { header: "Статус", key: "status", width: 22 },
+        { header: "Заметки", key: "notes", width: 40 },
+        { header: "Создан", key: "createdAt", width: 22 },
+      ];
+      patients.forEach((p) =>
+        patWs.addRow({
+          id: p.id, name: p.name, phone: p.phone, iin: p.iin ?? "",
+          dateOfBirth: p.dateOfBirth ?? "", gender: p.gender ?? "",
+          source: p.source, status: p.status, notes: p.notes ?? "",
+          createdAt: p.createdAt?.toISOString() ?? "",
+        }),
+      );
+      style(patWs);
+
+      const toothWs = wb.addWorksheet("Карта зубов");
+      toothWs.columns = [
+        { header: "ID пациента", key: "patientId", width: 30 },
+        { header: "Зуб (FDI)", key: "toothFdi", width: 12 },
+        { header: "Состояние", key: "condition", width: 20 },
+        { header: "Заметки", key: "notes", width: 35 },
+        { header: "ИИ-анализ", key: "aiAnalysis", width: 40 },
+        { header: "Обновлён", key: "updatedAt", width: 22 },
+      ];
+      toothRecords.forEach((t) =>
+        toothWs.addRow({
+          patientId: t.patientId, toothFdi: t.toothFdi, condition: t.condition,
+          notes: t.notes ?? "", aiAnalysis: t.aiAnalysis ?? "",
+          updatedAt: t.updatedAt?.toISOString() ?? "",
+        }),
+      );
+      style(toothWs);
+
+      const plansWs = wb.addWorksheet("Планы лечения");
+      plansWs.columns = [
+        { header: "ID плана", key: "id", width: 30 },
+        { header: "ID пациента", key: "patientId", width: 30 },
+        { header: "№ плана", key: "planNumber", width: 10 },
+        { header: "Статус", key: "status", width: 15 },
+        { header: "Итого (₸)", key: "totalCost", width: 14 },
+        { header: "Заметки", key: "notes", width: 40 },
+        { header: "Создан", key: "createdAt", width: 22 },
+      ];
+      plans.forEach((p) =>
+        plansWs.addRow({
+          id: p.id, patientId: p.patientId, planNumber: p.planNumber,
+          status: p.status, totalCost: p.totalCost, notes: p.notes ?? "",
+          createdAt: p.createdAt?.toISOString() ?? "",
+        }),
+      );
+      style(plansWs);
+
+      const itemsWs = wb.addWorksheet("Пункты планов");
+      itemsWs.columns = [
+        { header: "ID плана", key: "planId", width: 30 },
+        { header: "ID пациента", key: "patientId", width: 30 },
+        { header: "Зуб (FDI)", key: "toothFdi", width: 12 },
+        { header: "Состояние", key: "condition", width: 20 },
+        { header: "МКБ-10", key: "mkb10Code", width: 12 },
+        { header: "Название", key: "title", width: 30 },
+        { header: "Цена (₸)", key: "price", width: 12 },
+        { header: "Статус", key: "status", width: 15 },
+      ];
+      planItems.forEach((i) =>
+        itemsWs.addRow({
+          planId: i.planId, patientId: i.patientId, toothFdi: i.toothFdi ?? "",
+          condition: i.condition ?? "", mkb10Code: i.mkb10Code ?? "",
+          title: i.title, price: i.price, status: i.status,
+        }),
+      );
+      style(itemsWs);
+
+      const procWs = wb.addWorksheet("Процедуры");
+      procWs.columns = [
+        { header: "ID пациента", key: "patientId", width: 30 },
+        { header: "Название", key: "name", width: 30 },
+        { header: "Статус", key: "status", width: 20 },
+        { header: "Цена (₸)", key: "price", width: 12 },
+        { header: "Способ оплаты", key: "paymentMethod", width: 20 },
+        { header: "Запланирован", key: "scheduledAt", width: 22 },
+        { header: "Выполнен", key: "completedAt", width: 22 },
+        { header: "Заметки", key: "notes", width: 40 },
+      ];
+      procedures.forEach((p) =>
+        procWs.addRow({
+          patientId: p.patientId, name: p.name, status: p.status, price: p.price,
+          paymentMethod: p.paymentMethod ?? "",
+          scheduledAt: p.scheduledAt?.toISOString() ?? "",
+          completedAt: p.completedAt?.toISOString() ?? "",
+          notes: p.notes ?? "",
+        }),
+      );
+      style(procWs);
+
+      const tmplWs = wb.addWorksheet("Шаблоны услуг");
+      tmplWs.columns = [
+        { header: "Название", key: "name", width: 30 },
+        { header: "Категория", key: "category", width: 20 },
+        { header: "Цена по умолчанию (₸)", key: "defaultPrice", width: 22 },
+        { header: "Описание", key: "description", width: 40 },
+        { header: "Код", key: "code", width: 15 },
+      ];
+      templates.forEach((t) =>
+        tmplWs.addRow({
+          name: t.name, category: t.category, defaultPrice: t.defaultPrice,
+          description: t.description ?? "", code: t.code ?? "",
+        }),
+      );
+      style(tmplWs);
+
+      const buffer = await wb.xlsx.writeBuffer();
+
+      // 2. Delete all clinic data (XLSX is already in memory, safe to delete now)
       await db.delete(patientsTable).where(eq(patientsTable.clinicId, clinicId));
-      // Procedure templates are clinic-level, not patient-level — delete separately
       await db.delete(procedureTemplatesTable).where(eq(procedureTemplatesTable.clinicId, clinicId));
-      res.json({ success: true, data: { message: "Все данные клиники удалены" } });
+
+      // 3. Send the XLSX file as response
+      const date = new Date().toISOString().split("T")[0];
+      const filename = `1dent_export_${date}.xlsx`;
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.send(Buffer.from(buffer));
     } catch (err) {
       next(err);
     }
