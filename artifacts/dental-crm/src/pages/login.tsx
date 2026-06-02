@@ -63,17 +63,11 @@ export default function Login() {
       >
         {/* Logo */}
         <div className="flex flex-col items-center mb-7">
-          <div
-            className="w-16 h-16 rounded-[18px] flex items-center justify-center mb-3 shadow-lg bg-primary"
-          >
-            <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
-              <path
-                d="M20 6C16.5 6 14 8 13 10.5C12 9 10 8 8 8.5C5 9.5 4 13 5 16C6 19 9 20.5 9 22C9 24 8 28 9 31C10 34 13 35 15 33C16.5 31.5 17 28 18 26H22C23 28 23.5 31.5 25 33C27 35 30 34 31 31C32 28 31 24 31 22C31 20.5 34 19 35 16C36 13 35 9.5 32 8.5C30 8 28 9 27 10.5C26 8 23.5 6 20 6Z"
-                fill="white"
-                fillOpacity="0.95"
-              />
-            </svg>
-          </div>
+          <img
+            src="/logo.png"
+            alt="1Dent"
+            className="w-20 h-20 mb-3"
+          />
           <h1 className="text-lg font-display font-bold text-gray-900">1Dent</h1>
           <p className="text-xs text-gray-400 mt-0.5">Управление клиникой</p>
         </div>
