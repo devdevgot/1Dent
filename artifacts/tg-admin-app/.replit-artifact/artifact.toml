@@ -11,8 +11,8 @@ version = "1.0.0"
 
 [[services]]
 name = "web"
-paths = [ "/tg-admin-dev/" ]
-localPort = 24344
+paths = [ "/tg-admin/" ]
+localPort = 5173
 
 [services.development]
 run = "pnpm --filter @workspace/tg-admin-app run dev"
@@ -27,5 +27,5 @@ from = "/*"
 to = "/index.html"
 
 [services.env]
-PORT = "24344"
+PORT = "5173"
 BASE_PATH = "/tg-admin/"
