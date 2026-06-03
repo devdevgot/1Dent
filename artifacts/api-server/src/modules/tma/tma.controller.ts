@@ -235,11 +235,16 @@ router.patch("/clinics/:clinicId", async (req: Request, res: Response, next: Nex
 // Soft-delete: deactivate clinic instead of hard delete
 router.delete("/clinics/:clinicId", async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const clinicId = req.params["clinicId"] as string;
     const [clinic] = await db.update(clinicsTable)
       .set({ isActive: false })
-      .where(eq(clinicsTable.id, req.params["clinicId"] as string))
+      .where(eq(clinicsTable.id, clinicId))
       .returning({ id: clinicsTable.id });
     if (!clinic) return next(new NotFoundError("Clinic not found"));
+    // Deactivate all users of this clinic so their emails are freed for re-registration
+    await db.update(usersTable)
+      .set({ isActive: false })
+      .where(eq(usersTable.clinicId, clinicId));
     res.json({ success: true, data: { deactivated: true } });
   } catch (err) { next(err); }
 });

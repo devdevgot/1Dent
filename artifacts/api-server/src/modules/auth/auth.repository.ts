@@ -13,7 +13,7 @@ export class AuthRepository {
     const [user] = await db
       .select()
       .from(usersTable)
-      .where(eq(usersTable.email, email.toLowerCase()))
+      .where(and(eq(usersTable.email, email.toLowerCase()), eq(usersTable.isActive, true)))
       .limit(1);
     return user;
   }
