@@ -147,9 +147,10 @@ app.listen(port, (err) => {
 
   logger.info({ port }, "Server listening");
 
-  // Register platform Telegram bot webhook + menu button + commands
-  const platformTgToken = process.env["PLATFORM_TG_BOT_TOKEN"];
   const webhookBase = getServerBaseUrl();
+
+  // ── Platform admin bot (TMA superadmin) ─────────────────────────────────────
+  const platformTgToken = process.env["PLATFORM_TG_BOT_TOKEN"];
   if (platformTgToken && webhookBase) {
     const webhookUrl = `${webhookBase}/api/webhook/telegram/platform`;
     const tmaUrl = `${webhookBase}/tg-admin`;
@@ -193,6 +194,36 @@ app.listen(port, (err) => {
   } else {
     if (!platformTgToken) logger.warn("[PlatformBot] PLATFORM_TG_BOT_TOKEN not set — platform bot disabled");
     if (!webhookBase) logger.warn("[PlatformBot] webhookBase not resolved — cannot register Telegram webhook");
+  }
+
+  // ── Tracking bot (clinic geo-event notifications) ───────────────────────────
+  const trackingTgToken = process.env["TRACKING_TG_BOT_TOKEN"];
+  if (trackingTgToken && webhookBase) {
+    const trackingWebhookUrl = `${webhookBase}/api/webhook/telegram/tracking`;
+
+    // Register webhook
+    fetch(`https://api.telegram.org/bot${trackingTgToken}/setWebhook`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: trackingWebhookUrl }),
+    })
+      .then((r) => r.json())
+      .then((r) => logger.info({ result: r }, "[TrackingBot] Webhook registered"))
+      .catch((err) => logger.warn({ err }, "[TrackingBot] Failed to register webhook"));
+
+    // Set simple commands — no menu button (this is a notification-only bot)
+    fetch(`https://api.telegram.org/bot${trackingTgToken}/setMyCommands`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        commands: [{ command: "start", description: "Подключить Telegram-уведомления" }],
+      }),
+    })
+      .then((r) => r.json())
+      .then((r) => logger.info({ result: r }, "[TrackingBot] Commands registered"))
+      .catch((err) => logger.warn({ err }, "[TrackingBot] Failed to set commands"));
+  } else {
+    if (!trackingTgToken) logger.warn("[TrackingBot] TRACKING_TG_BOT_TOKEN not set — tracking notifications via platform bot disabled");
   }
 
   // Log resolved webhook base URL so it's immediately visible in deployment logs

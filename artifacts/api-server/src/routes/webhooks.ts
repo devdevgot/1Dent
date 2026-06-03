@@ -130,8 +130,15 @@ router.post(
 );
 
 // ─── POST /api/webhook/telegram/platform ─────────────────────────────────────
-// Platform bot webhook — receives /start <token> and saves owner's chat_id
+// Platform admin bot webhook — only used for TMA superadmin (no tracking here)
 router.post("/api/webhook/telegram/platform", async (req: Request, res: Response) => {
+  res.status(200).json({ ok: true });
+  // Platform bot is for admin TMA only — tracking connect is handled by the tracking bot
+});
+
+// ─── POST /api/webhook/telegram/tracking ─────────────────────────────────────
+// Tracking bot webhook — receives /start <token> and saves clinic owner's chat_id
+router.post("/api/webhook/telegram/tracking", async (req: Request, res: Response) => {
   res.status(200).json({ ok: true });
 
   try {
@@ -145,8 +152,10 @@ router.post("/api/webhook/telegram/platform", async (req: Request, res: Response
 
     if (!chatId) return;
 
-    const platformToken = process.env["PLATFORM_TG_BOT_TOKEN"];
-    if (!platformToken) return;
+    const trackingToken = process.env["TRACKING_TG_BOT_TOKEN"];
+    if (!trackingToken) return;
+
+    logger.info({ chatId: chatId.slice(0, 4) + "***", text: text.slice(0, 40) }, "[TrackingBot] webhook received");
 
     // Handle /start <token>
     if (text.startsWith("/start ")) {
@@ -155,7 +164,8 @@ router.post("/api/webhook/telegram/platform", async (req: Request, res: Response
 
       const clinic = await branchesRepo.getClinicByConnectToken(connectToken);
       if (!clinic) {
-        await sendPlatformMessage(platformToken, chatId,
+        logger.warn({ connectToken: connectToken.slice(0, 8) + "***" }, "[TrackingBot] connect token not found");
+        await sendPlatformMessage(trackingToken, chatId,
           "❌ Ссылка недействительна или уже использована. Сгенерируйте новую в настройках 1Dent CRM."
         );
         return;
@@ -167,21 +177,21 @@ router.post("/api/webhook/telegram/platform", async (req: Request, res: Response
         telegramConnectToken: null,
       });
 
-      await sendPlatformMessage(platformToken, chatId,
+      await sendPlatformMessage(trackingToken, chatId,
         `✅ <b>Telegram подключён!</b>\n\nПривет, ${firstName}! Теперь вы будете получать уведомления от 1Dent CRM о приходе и уходе сотрудников клиники <b>${clinic.name}</b>.`
       );
-      logger.info({ clinicId: clinic.id, chatId: chatId.slice(0, 4) + "***" }, "[PlatformBot] clinic connected");
+      logger.info({ clinicId: clinic.id, chatId: chatId.slice(0, 4) + "***" }, "[TrackingBot] clinic connected");
       return;
     }
 
-    // Handle /start without token — just welcome
+    // Handle /start without token
     if (text === "/start") {
-      await sendPlatformMessage(platformToken, chatId,
-        "👋 Добро пожаловать в 1Dent CRM!\n\nЧтобы подключить Telegram-уведомления, перейдите в настройки CRM и нажмите «Подключить Telegram»."
+      await sendPlatformMessage(trackingToken, chatId,
+        "👋 Привет! Я бот уведомлений 1Dent CRM.\n\nЧтобы подключить Telegram-уведомления о трекинге сотрудников, перейдите в настройки CRM и нажмите «Подключить Telegram»."
       );
     }
   } catch (err) {
-    logger.error({ err }, "[PlatformBot] webhook error");
+    logger.error({ err }, "[TrackingBot] webhook error");
   }
 });
 
