@@ -371,6 +371,21 @@ router.patch("/clinics/:clinicId/users/:userId/capacity", async (req: Request, r
   } catch (err) { next(err); }
 });
 
+router.patch("/clinics/:clinicId/users/:userId/password", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const schema = z.object({ password: z.string().min(6, "Пароль минимум 6 символов") });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+    const passwordHash = await bcrypt.hash(parsed.data.password, 10);
+    const [user] = await db.update(usersTable)
+      .set({ passwordHash, updatedAt: new Date() })
+      .where(and(eq(usersTable.id, req.params["userId"] as string), eq(usersTable.clinicId, req.params["clinicId"] as string)))
+      .returning({ id: usersTable.id, name: usersTable.name });
+    if (!user) return next(new NotFoundError("User not found"));
+    res.json({ success: true, data: { updated: true } });
+  } catch (err) { next(err); }
+});
+
 router.delete("/clinics/:clinicId/users/:userId", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const [user] = await db.update(usersTable)

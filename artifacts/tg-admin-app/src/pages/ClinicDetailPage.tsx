@@ -186,6 +186,9 @@ function InfoTab({ clinicId }: { clinicId: string }) {
 function UsersTab({ clinicId }: { clinicId: string }) {
   const qc = useQueryClient();
   const [showAdd, setShowAdd] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState<Record<string, string>>({});
+  const [showPwd, setShowPwd] = useState<Record<string, boolean>>({});
   const [form, setForm] = useState({ name: "", email: "", role: "doctor", specialty: "", phone: "", password: "" });
 
   const { data, isLoading } = useQuery({
@@ -210,6 +213,16 @@ function UsersTab({ clinicId }: { clinicId: string }) {
       setForm({ name: "", email: "", role: "doctor", specialty: "", phone: "", password: "" });
     },
     onError: (err) => tgAlert(err instanceof Error ? err.message : "Ошибка"),
+  });
+  const resetPwdMut = useMutation({
+    mutationFn: ({ userId, password }: { userId: string; password: string }) =>
+      api.patch(`/clinics/${clinicId}/users/${userId}/password`, { password }),
+    onSuccess: (_data, vars) => {
+      hapticNotify("success");
+      setNewPassword(p => ({ ...p, [vars.userId]: "" }));
+      tgAlert("✅ Пароль успешно изменён");
+    },
+    onError: (err) => tgAlert(err instanceof Error ? err.message : "Ошибка смены пароля"),
   });
 
   if (isLoading) return <LoadingSkeleton />;
@@ -252,30 +265,102 @@ function UsersTab({ clinicId }: { clinicId: string }) {
 
       {!users.length && !showAdd && <EmptyState icon="👥" text="Нет сотрудников" />}
       <div className="space-y-2">
-        {users.map((u, i) => (
-          <div key={i} className="bg-card rounded-lg border border-border p-3">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-sm font-medium text-foreground">{String(u["name"] ?? "—")}</p>
-                  <span className="text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground">{String(u["role"] ?? "")}</span>
-                  <span className={`text-xs px-1.5 py-0.5 rounded ${u["isActive"] ? "text-green-400" : "text-muted-foreground"}`}>
-                    {u["isActive"] ? "●" : "○"}
-                  </span>
+        {users.map((u, i) => {
+          const uid = String(u["id"]);
+          const isExpanded = expandedId === uid;
+          const pwd = newPassword[uid] ?? "";
+          const visible = showPwd[uid] ?? false;
+          return (
+            <div key={i} className="bg-card rounded-xl border border-border overflow-hidden">
+              {/* Header row — tap to expand */}
+              <button
+                onClick={() => { haptic("light"); setExpandedId(isExpanded ? null : uid); }}
+                className="w-full p-3 flex items-center justify-between gap-2 text-left"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-medium text-foreground">{String(u["name"] ?? "—")}</p>
+                    <span className="text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground">{String(u["role"] ?? "")}</span>
+                    <span className={`text-xs ${u["isActive"] ? "text-green-400" : "text-muted-foreground"}`}>
+                      {u["isActive"] ? "●" : "○"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate mt-0.5">{String(u["email"] ?? "—")}</p>
                 </div>
-                <p className="text-xs text-muted-foreground truncate">{String(u["email"] ?? "—")}{u["specialty"] ? ` · ${String(u["specialty"])}` : ""}</p>
-              </div>
-              <div className="flex gap-1 flex-shrink-0">
-                <button onClick={() => { haptic("medium"); toggleMut.mutate({ userId: String(u["id"]), isActive: !u["isActive"] }); }}
-                  className="text-xs px-2 py-1 rounded-lg border border-border text-muted-foreground hover:border-primary/50">
-                  {u["isActive"] ? "↓" : "↑"}
-                </button>
-                <button onClick={() => { haptic("heavy"); tgConfirm(`Деактивировать ${String(u["name"])}?`, (ok) => { if (ok) deleteMut.mutate(String(u["id"])); }); }}
-                  className="text-xs px-2 py-1 rounded-lg border border-red-500/20 text-red-400">✕</button>
-              </div>
+                <span className="text-muted-foreground text-xs">{isExpanded ? "▲" : "▼"}</span>
+              </button>
+
+              {/* Expanded panel */}
+              {isExpanded && (
+                <div className="border-t border-border px-3 pb-3 pt-2 space-y-3">
+                  {/* Login info */}
+                  <div className="bg-muted/50 rounded-lg p-3 space-y-1.5">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Данные для входа</p>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs text-muted-foreground">Логин (email):</span>
+                      <span className="text-xs font-mono font-medium text-foreground">{String(u["email"] ?? "—")}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs text-muted-foreground">Пароль:</span>
+                      <span className="text-xs text-muted-foreground italic">скрыт (задайте новый ниже)</span>
+                    </div>
+                  </div>
+
+                  {/* Change password */}
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Новый пароль</p>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <input
+                          value={pwd}
+                          onChange={(e) => setNewPassword(p => ({ ...p, [uid]: e.target.value }))}
+                          type={visible ? "text" : "password"}
+                          placeholder="Мин. 6 символов"
+                          className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary pr-8"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPwd(p => ({ ...p, [uid]: !visible }))}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs"
+                        >
+                          {visible ? "🙈" : "👁"}
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (pwd.length >= 6) {
+                            haptic("medium");
+                            resetPwdMut.mutate({ userId: uid, password: pwd });
+                          }
+                        }}
+                        disabled={pwd.length < 6 || resetPwdMut.isPending}
+                        className="px-3 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-medium disabled:opacity-40"
+                      >
+                        {resetPwdMut.isPending ? "…" : "Сохранить"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={() => { haptic("medium"); toggleMut.mutate({ userId: uid, isActive: !u["isActive"] }); }}
+                      className="flex-1 text-xs py-1.5 rounded-lg border border-border text-muted-foreground"
+                    >
+                      {u["isActive"] ? "⏸ Деактивировать" : "▶ Активировать"}
+                    </button>
+                    <button
+                      onClick={() => { haptic("heavy"); tgConfirm(`Деактивировать ${String(u["name"])}?`, (ok) => { if (ok) deleteMut.mutate(uid); }); }}
+                      className="px-3 py-1.5 rounded-lg border border-red-500/20 text-red-400 text-xs"
+                    >
+                      ✕ Удалить
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
