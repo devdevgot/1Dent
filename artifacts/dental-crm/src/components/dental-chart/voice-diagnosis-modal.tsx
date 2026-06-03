@@ -10,6 +10,9 @@ import {
   useListProcedureTemplates,
   useCreateProcedure,
   getListProceduresQueryKey,
+  useAddTreatmentPlanItem,
+  getGetActiveTreatmentPlanQueryKey,
+  getListTreatmentPlansQueryKey,
 } from "@workspace/api-client-react";
 import type { ProcedureTemplate } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -78,6 +81,7 @@ type Phase = "idle" | "recording" | "processing" | "review" | "applying";
 
 interface Props {
   patientId: string;
+  activePlanId?: string;
   onClose: () => void;
   onApplied?: () => void;
 }
@@ -95,12 +99,13 @@ function formatTime(ts: number) {
   return new Date(ts).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
 }
 
-export function VoiceDiagnosisModal({ patientId, onClose, onApplied }: Props) {
+export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplied }: Props) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const { user } = useAuthStore();
   const updateToothMutation = useUpdateTooth();
   const createProcedureMutation = useCreateProcedure();
+  const addPlanItemMutation = useAddTreatmentPlanItem();
 
   const [phase, setPhase] = useState<Phase>("idle");
   const [transcript, setTranscript] = useState("");
@@ -336,76 +341,109 @@ export function VoiceDiagnosisModal({ patientId, onClose, onApplied }: Props) {
     if (entries.length === 0) return;
     setPhase("applying");
 
-    let appliedTeeth = 0;
-    const toothErrors: string[] = [];
+    try {
+      let appliedTeeth = 0;
+      const toothErrors: string[] = [];
 
-    for (const entry of entries) {
-      try {
-        await updateToothMutation.mutateAsync({
-          id: patientId,
-          toothFdi: entry.fdi,
-          data: {
-            condition: entry.condition as ToothCondition,
-            notes: entry.notes || undefined,
-          },
-        });
-        appliedTeeth++;
-      } catch {
-        toothErrors.push(`Зуб ${entry.fdi}`);
-      }
-    }
-
-    await qc.invalidateQueries({ queryKey: getListTeethQueryKey(patientId) });
-
-    // Create procedures for selected services
-    let appliedServices = 0;
-    const serviceErrors: string[] = [];
-
-    for (const [fdiStr, ids] of Object.entries(selectedServiceIds)) {
-      const fdi = Number(fdiStr);
-      for (const id of ids) {
-        const tpl = allTemplates.find((t) => t.id === id);
-        if (!tpl) continue;
+      for (const entry of entries) {
         try {
-          await createProcedureMutation.mutateAsync({
+          await updateToothMutation.mutateAsync({
+            id: patientId,
+            toothFdi: entry.fdi,
             data: {
-              patientId,
-              doctorId: user?.id,
-              templateId: tpl.id,
-              name: `[Зуб ${fdi}] ${tpl.name}`,
-              price: tpl.defaultPrice,
+              condition: entry.condition as ToothCondition,
+              notes: entry.notes || undefined,
             },
           });
-          appliedServices++;
+          appliedTeeth++;
         } catch {
-          serviceErrors.push(tpl.name);
+          toothErrors.push(`Зуб ${entry.fdi}`);
         }
       }
-    }
 
-    if (appliedServices > 0) {
-      await qc.invalidateQueries({ queryKey: getListProceduresQueryKey() });
-    }
+      await qc.invalidateQueries({ queryKey: getListTeethQueryKey(patientId) });
 
-    clearDraft();
+      // Create procedures for selected services
+      let appliedServices = 0;
+      const serviceErrors: string[] = [];
 
-    const parts: string[] = [];
-    if (appliedTeeth > 0) parts.push(`${appliedTeeth} ${plural(appliedTeeth, "зуб", "зуба", "зубов")}`);
-    if (appliedServices > 0) parts.push(`${appliedServices} ${plural(appliedServices, "услуга", "услуги", "услуг")} добавлено`);
+      for (const [fdiStr, ids] of Object.entries(selectedServiceIds)) {
+        const fdi = Number(fdiStr);
+        const entry = entries.find((e) => e.fdi === fdi);
+        for (const id of ids) {
+          const tpl = allTemplates.find((t) => t.id === id);
+          if (!tpl) continue;
+          try {
+            await createProcedureMutation.mutateAsync({
+              data: {
+                patientId,
+                doctorId: user?.id,
+                templateId: tpl.id,
+                name: `[Зуб ${fdi}] ${tpl.name}`,
+                price: tpl.defaultPrice,
+              },
+            });
+            appliedServices++;
+          } catch {
+            serviceErrors.push(tpl.name);
+          }
 
-    if (toothErrors.length === 0 && serviceErrors.length === 0) {
-      toast({ title: `Диагностика применена: ${parts.join(", ")}` });
-    } else {
-      const errParts = [...toothErrors, ...serviceErrors].join(", ");
+          // Also add to active treatment plan if one exists
+          if (activePlanId) {
+            try {
+              await addPlanItemMutation.mutateAsync({
+                id: patientId,
+                planId: activePlanId,
+                data: {
+                  toothFdi: fdi,
+                  condition: entry?.condition,
+                  mkb10Code: entry?.mkb10Code,
+                  title: `[Зуб ${fdi}] ${tpl.name}`,
+                  price: tpl.defaultPrice,
+                },
+              });
+            } catch {
+              // Non-critical: plan might be locked or already have this item
+            }
+          }
+        }
+      }
+
+      if (appliedServices > 0) {
+        await qc.invalidateQueries({ queryKey: getListProceduresQueryKey() });
+        if (activePlanId) {
+          await qc.invalidateQueries({ queryKey: getGetActiveTreatmentPlanQueryKey(patientId) });
+          await qc.invalidateQueries({ queryKey: getListTreatmentPlansQueryKey(patientId) });
+        }
+      }
+
+      clearDraft();
+
+      const parts: string[] = [];
+      if (appliedTeeth > 0) parts.push(`${appliedTeeth} ${plural(appliedTeeth, "зуб", "зуба", "зубов")}`);
+      if (appliedServices > 0) parts.push(`${appliedServices} ${plural(appliedServices, "услуга", "услуги", "услуг")} добавлено`);
+
+      if (toothErrors.length === 0 && serviceErrors.length === 0) {
+        toast({ title: `Диагностика применена: ${parts.join(", ")}` });
+      } else {
+        const errParts = [...toothErrors, ...serviceErrors].join(", ");
+        toast({
+          title: `Применено частично: ${parts.join(", ")}`,
+          description: `Ошибки: ${errParts}`,
+          variant: "destructive",
+        });
+      }
+
+      onApplied?.();
+      onClose();
+    } catch (err) {
+      setPhase("review");
       toast({
-        title: `Применено частично: ${parts.join(", ")}`,
-        description: `Ошибки: ${errParts}`,
+        title: "Ошибка при применении",
+        description: err instanceof Error ? err.message : "Попробуйте ещё раз",
         variant: "destructive",
       });
     }
-
-    onApplied?.();
-    onClose();
   };
 
   // ── Per-entry service panel ──────────────────────────────────────────────────

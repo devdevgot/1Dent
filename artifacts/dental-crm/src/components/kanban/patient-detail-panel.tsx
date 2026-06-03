@@ -2471,6 +2471,7 @@ export function PatientDetailPanel() {
       {showVoiceModal && selectedPatientId && (
         <VoiceDiagnosisModal
           patientId={selectedPatientId}
+          activePlanId={activePlan?.id}
           onClose={() => setShowVoiceModal(false)}
           onApplied={() => {
             setShowVoiceModal(false);

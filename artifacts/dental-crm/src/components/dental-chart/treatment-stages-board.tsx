@@ -1556,15 +1556,24 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
   }, []);
 
   const handleToggleEditMode = useCallback(() => {
-    setIsEditMode((prev) => {
-      if (prev) {
-        // exiting edit mode — close any open edit form
-        setEditingItemId(null);
-        setEditDraft({ title: "", price: "" });
+    if (isEditMode) {
+      // Exiting edit mode: auto-save any open inline form
+      if (editingItemId && editDraft.title.trim() && planId) {
+        editMutation.mutate({
+          id: patientId,
+          planId,
+          itemId: editingItemId,
+          data: {
+            title: editDraft.title.trim(),
+            price: Number(editDraft.price) || 0,
+          },
+        });
       }
-      return !prev;
-    });
-  }, []);
+      setEditingItemId(null);
+      setEditDraft({ title: "", price: "" });
+    }
+    setIsEditMode((prev) => !prev);
+  }, [isEditMode, editingItemId, editDraft, planId, patientId, editMutation]);
 
   // ── Item action handlers ──────────────────────────────────────────────────
 
