@@ -111,12 +111,14 @@ router.post("/geo/event", allStaff, async (req: Request, res: Response, next: Ne
     const verb = eventType === "checkin" ? "пришёл в" : "ушёл из";
     const text = `${emoji} <b>${userName}</b> ${verb} <b>${branch.name}</b> — ${timeStr}`;
 
-    // Platform bot takes priority; fall back to per-clinic bot if available
-    const platformToken = process.env["PLATFORM_TG_BOT_TOKEN"];
-    if (platformToken && tg?.telegramPlatformChatId) {
-      void sendTelegramMessage(platformToken, tg.telegramPlatformChatId, text);
-    } else if (tg?.telegramBotToken && tg.telegramOwnerChatId) {
+    // Clinic's own bot takes priority; fall back to platform bot if not configured
+    if (tg?.telegramBotToken && tg.telegramOwnerChatId) {
       void sendTelegramMessage(tg.telegramBotToken, tg.telegramOwnerChatId, text);
+    } else {
+      const platformToken = process.env["PLATFORM_TG_BOT_TOKEN"];
+      if (platformToken && tg?.telegramPlatformChatId) {
+        void sendTelegramMessage(platformToken, tg.telegramPlatformChatId, text);
+      }
     }
 
     res.json({ success: true, data: { event } });
