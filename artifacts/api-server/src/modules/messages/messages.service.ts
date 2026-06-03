@@ -6,7 +6,7 @@ import { MessagesRepository } from "./messages.repository";
 import { isRedAlert } from "../../shared/whatsapp";
 import { sendToPatient } from "../../shared/messaging";
 import { getAlertQueue } from "../../shared/alert-queue";
-import { NotFoundError, ForbiddenError } from "../../shared/errors";
+import { NotFoundError } from "../../shared/errors";
 import { logger } from "../../lib/logger";
 import { ChatbotService } from "../chatbot/chatbot.service";
 import { debounceMessage } from "../../shared/message-debounce";
@@ -19,16 +19,11 @@ export class MessagesService {
   async listMessages(
     patientId: string,
     clinicId: string,
-    requestingRole: UserRole,
-    requestingUserId: string,
+    _requestingRole: UserRole,
+    _requestingUserId: string,
   ): Promise<Message[]> {
     const patient = await this.repo.findPatient(patientId, clinicId);
     if (!patient) throw new NotFoundError("Patient not found");
-
-    // Doctors can only view their own patients' messages
-    if (requestingRole === "doctor" && patient.doctorId !== requestingUserId) {
-      throw new ForbiddenError("Access denied");
-    }
 
     return this.repo.listByPatient(patientId, clinicId);
   }
@@ -42,10 +37,6 @@ export class MessagesService {
   ): Promise<Message> {
     const patient = await this.repo.findPatient(patientId, clinicId);
     if (!patient) throw new NotFoundError("Patient not found");
-
-    if (requestingRole === "doctor" && patient.doctorId !== requestingUserId) {
-      throw new ForbiddenError("Access denied");
-    }
 
     let whatsappMessageId: string | undefined;
 
