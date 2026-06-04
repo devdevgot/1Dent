@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { customFetch, getListUsersAllQueryKey } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 
-type Role = "admin" | "doctor" | "accountant" | "warehouse";
+type Role = "admin" | "doctor" | "accountant" | "warehouse" | "assistant" | "nurse";
 type SalaryType = "fixed" | "commission" | "fixed_plus_commission" | "hourly";
 
 interface InviteFormData {
@@ -86,6 +86,24 @@ const ROLE_DEFS: {
     bg: "bg-slate-50",
     border: "border-slate-200",
   },
+  {
+    value: "assistant",
+    icon: User2,
+    label: "Ассистент",
+    desc: "Помогает врачу на приёме",
+    color: "text-purple-600",
+    bg: "bg-purple-50",
+    border: "border-purple-200",
+  },
+  {
+    value: "nurse",
+    icon: User2,
+    label: "Медсестра",
+    desc: "Обеспечивает уход и порядок",
+    color: "text-pink-600",
+    bg: "bg-pink-50",
+    border: "border-pink-200",
+  },
 ];
 
 const SALARY_DEFS: {
@@ -105,6 +123,8 @@ const ROLE_LABEL: Record<Role, string> = {
   doctor: "Врач",
   accountant: "Бухгалтер",
   warehouse: "Склад",
+  assistant: "Ассистент",
+  nurse: "Медсестра",
 };
 
 const ROLE_COLOR: Record<Role, { bg: string; text: string; border: string }> = {
@@ -112,6 +132,8 @@ const ROLE_COLOR: Record<Role, { bg: string; text: string; border: string }> = {
   doctor:     { bg: "bg-emerald-100", text: "text-emerald-700", border: "border-emerald-200" },
   accountant: { bg: "bg-amber-100",   text: "text-amber-700",   border: "border-amber-200" },
   warehouse:  { bg: "bg-slate-100",   text: "text-slate-700",   border: "border-slate-200" },
+  assistant:  { bg: "bg-purple-100",  text: "text-purple-700",  border: "border-purple-200" },
+  nurse:      { bg: "bg-pink-100",    text: "text-pink-700",    border: "border-pink-200" },
 };
 
 function isValidEmail(e: string) {
@@ -182,7 +204,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
           email: data.email.trim().toLowerCase(),
           role: data.role,
           phone: data.phone || undefined,
-          specialty: data.role === "doctor" && data.specialty ? data.specialty : undefined,
+          specialty: (data.role === "doctor" || data.role === "assistant" || data.role === "nurse") && data.specialty ? data.specialty : undefined,
           maxPatientsPerDay: data.role === "doctor" && data.maxPatientsPerDay > 0 ? data.maxPatientsPerDay : undefined,
           hireDate: data.hireDate || undefined,
           salaryType: data.salaryType,
@@ -460,7 +482,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                     </div>
 
                     {/* Doctor-specific */}
-                    {form.role === "doctor" && (
+                    {(form.role === "doctor" || form.role === "assistant" || form.role === "nurse") && (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
@@ -479,17 +501,19 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                             />
                           </div>
                         </div>
-                        <div>
-                          <label className="block text-xs font-semibold text-gray-500 mb-1.5">
-                            Макс. пациентов в день
-                          </label>
-                          <NumericInput
-                            value={form.maxPatientsPerDay}
-                            onChange={(v) => set("maxPatientsPerDay", v)}
-                            placeholder="15"
-                            max={50}
-                          />
-                        </div>
+                        {form.role === "doctor" && (
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+                              Макс. пациентов в день
+                            </label>
+                            <NumericInput
+                              value={form.maxPatientsPerDay}
+                              onChange={(v) => set("maxPatientsPerDay", v)}
+                              placeholder="15"
+                              max={50}
+                            />
+                          </div>
+                        )}
                       </motion.div>
                     )}
 
@@ -648,7 +672,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                           </div>
                         </div>
                       )}
-                      {form.role === "doctor" && form.specialty && (
+                      {(form.role === "doctor" || form.role === "assistant" || form.role === "nurse") && form.specialty && (
                         <div className="flex items-center gap-3 px-4 py-3">
                           <Activity className="w-4 h-4 text-gray-400 shrink-0" />
                           <div>

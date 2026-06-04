@@ -1,43 +1,40 @@
 import { useParams, useLocation } from "wouter";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   ArrowLeft, Users, TrendingUp, DollarSign, Activity,
-  CalendarDays, UserCheck, Gauge, Banknote, CheckCircle, Clock,
+  Banknote, CheckCircle, Clock, Wallet,
 } from "lucide-react";
 import {
   useGetDoctorKpis,
-  useGetDoctorDetailedAnalytics,
-  usePatchUserCapacity,
   useGetPayrollRecords,
   useGetSalarySettings,
   useUpdateSalarySettings,
+  useListProcedures,
+  useListUsersAll,
+  useListExpenses,
   type DoctorKpi,
-  type DoctorDetailedAnalytics,
-  type DoctorDetailedAnalyticsRevenueByMonthItem,
-  type DoctorDetailedAnalyticsProceduresByNameItem,
   type PayrollRecord,
 } from "@workspace/api-client-react";
 import PayrollApproveModal from "./payroll-approve-modal";
-import { useQueryClient } from "@tanstack/react-query";
-import { getGetDoctorKpisQueryKey } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useTranslation } from "react-i18next";
-import {
-  BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, LineChart, Line,
-} from "recharts";
+import { cn } from "@/lib/utils";
 
-const COLORS = ["#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981"];
+interface GeoEvent {
+  id: string;
+  eventType: "checkin" | "checkout";
+  occurredAt: string;
+  userId: string;
+  userName: string;
+}
 
-const STATUS_LABEL_KEYS: Record<string, string> = {
-  new_request: "status.new_request",
-  initial_consultation: "status.initial_consultation",
-  diagnostics: "status.diagnostics",
-  treatment_assigned: "status.treatment_assigned",
-  treatment_in_progress: "status.treatment_in_progress",
-  post_op_monitoring: "status.post_op_monitoring",
-  completed: "status.completed",
+const ROLE_LABELS: Record<string, string> = {
+  admin: "Администратор",
+  doctor: "Врач",
+  accountant: "Бухгалтер",
+  warehouse: "Склад",
+  assistant: "Ассистент",
+  nurse: "Медсестра",
 };
 
 export default function StaffDetailPage() {
@@ -45,18 +42,16 @@ export default function StaffDetailPage() {
   const { doctorId } = useParams<{ doctorId: string }>();
   const [, setLocation] = useLocation();
   const { user } = useAuthStore();
-  const queryClient = useQueryClient();
 
   const { data: kpiData, isLoading: kpiLoading } = useGetDoctorKpis();
-  const { data: analyticsData, isLoading: analyticsLoading } = useGetDoctorDetailedAnalytics(doctorId ?? "");
-  const { mutateAsync: patchCapacity, isPending: savingCapacity } = usePatchUserCapacity();
+  const { data: usersData, isLoading: usersLoading } = useListUsersAll({ includeInactive: true });
 
   const doctors: DoctorKpi[] = kpiData?.data?.kpis ?? [];
-  const doctor = doctors.find((d) => d.doctorId === doctorId);
-  const analytics: DoctorDetailedAnalytics | undefined = analyticsData?.data?.analytics;
+  const doctorKpi = doctors.find((d) => d.doctorId === doctorId);
 
-  const [capacityInput, setCapacityInput] = useState<number | "">(20);
-  const canEditCapacity = user?.role === "owner" || user?.role === "admin";
+  const allUsers = usersData?.data?.users ?? [];
+  const selectedUser = allUsers.find((u) => u.id === doctorId);
+
   const canManagePayroll = user?.role === "owner" || user?.role === "accountant" || user?.role === "admin";
 
   const { data: payrollData, refetch: refetchPayroll } = useGetPayrollRecords(doctorId ?? "");
@@ -66,19 +61,70 @@ export default function StaffDetailPage() {
   const payrollRecords: PayrollRecord[] = payrollData?.data?.records ?? [];
   const salarySettings = salaryData?.data?.settings;
 
+  const { data: proceduresData, isLoading: proceduresLoading } = useListProcedures();
+
   const [showPayrollModal, setShowPayrollModal] = useState(false);
   const [editingSalary, setEditingSalary] = useState(false);
-  const [salaryType, setSalaryType] = useState<"fixed" | "commission" | "fixed_plus_commission">("fixed");
+  const [salaryType, setSalaryType] = useState<"fixed" | "commission" | "fixed_plus_commission" | "hourly">("fixed");
   const [fixedAmount, setFixedAmount] = useState(0);
   const [commissionPercent, setCommissionPercent] = useState(0);
+  const nowForDates = new Date();
+  const y = nowForDates.getFullYear();
+  const m = String(nowForDates.getMonth() + 1).padStart(2, "0");
+  const startOfMonthStr = `${y}-${m}-01`;
+  const lastDay = new Date(y, nowForDates.getMonth() + 1, 0).getDate();
+  const endOfMonthStr = `${y}-${m}-${String(lastDay).padStart(2, "0")}`;
+
+  const { data: expensesData, isLoading: expensesLoading } = useListExpenses({ dateFrom: startOfMonthStr, dateTo: endOfMonthStr });
+
+  const expenses = expensesData?.data?.expenses ?? [];
+  const advance = useMemo(() => {
+    return expenses
+      .filter((e) => e.category === "salary" && e.subcategory === `аванс:${doctorId}`)
+      .reduce((sum, e) => sum + Number(e.amount), 0);
+  }, [expenses, doctorId]);
+
+  const [geoEvents, setGeoEvents] = useState<GeoEvent[]>([]);
+  const [geoLoading, setGeoLoading] = useState(false);
 
   useEffect(() => {
     if (salarySettings) {
-      setSalaryType(salarySettings.salaryType);
+      setSalaryType(salarySettings.salaryType as typeof salaryType);
       setFixedAmount(Number(salarySettings.fixedAmount));
       setCommissionPercent(Number(salarySettings.commissionPercent));
     }
   }, [salarySettings?.userId]);
+
+  // Fetch geo events for the current month
+  useEffect(() => {
+    if (!doctorId) return;
+    const fetchGeoTracking = async () => {
+      setGeoLoading(true);
+      try {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const dateFrom = startOfMonth.toISOString().slice(0, 10) + "T00:00:00";
+        const dateTo = now.toISOString().slice(0, 10) + "T23:59:59";
+        const token = localStorage.getItem("auth_token");
+        const res = await fetch(`/api/geo/tracking?dateFrom=${dateFrom}&dateTo=${dateTo}`, {
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && json.data?.events) {
+            setGeoEvents(json.data.events);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch geo tracking", err);
+      } finally {
+        setGeoLoading(false);
+      }
+    };
+    fetchGeoTracking();
+  }, [doctorId]);
 
   const handleSaveSettings = async () => {
     if (!doctorId) return;
@@ -87,23 +133,52 @@ export default function StaffDetailPage() {
     setEditingSalary(false);
   };
 
-  // Sync capacity input when doctor data loads
-  useEffect(() => {
-    if (doctor) {
-      setCapacityInput(doctor.maxSlotsPerDay ?? 20);
-    }
-  }, [doctor?.maxSlotsPerDay, doctor?.doctorId]);
-
-  const handleSaveCapacity = async () => {
-    if (!doctorId || capacityInput === "") return;
-    await patchCapacity({ id: doctorId, data: { maxPatientsPerDay: Number(capacityInput) } });
-    await queryClient.invalidateQueries({ queryKey: getGetDoctorKpisQueryKey() });
-  };
-
   const getInitials = (name: string) =>
     name.split(" ").map((w: string) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
 
-  if (kpiLoading) {
+  const isDayTime = (dateStr?: string | null) => {
+    if (!dateStr) return true;
+    try {
+      const hour = new Date(dateStr).getHours();
+      return hour >= 8 && hour < 20;
+    } catch {
+      return true;
+    }
+  };
+
+  const workHours = useMemo(() => {
+    if (!doctorId || geoEvents.length === 0) return 0;
+    const userEvents = geoEvents
+      .filter((e) => e.userId === doctorId)
+      .sort((a, b) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime());
+
+    let totalMs = 0;
+    let activeCheckinTime: Date | null = null;
+
+    for (const event of userEvents) {
+      const eventTime = new Date(event.occurredAt);
+      if (event.eventType === "checkin") {
+        activeCheckinTime = eventTime;
+      } else if (event.eventType === "checkout") {
+        if (activeCheckinTime) {
+          totalMs += eventTime.getTime() - activeCheckinTime.getTime();
+          activeCheckinTime = null;
+        }
+      }
+    }
+
+    if (activeCheckinTime) {
+      const now = new Date();
+      const diff = now.getTime() - activeCheckinTime.getTime();
+      if (diff > 0 && diff < 18 * 60 * 60 * 1000) {
+        totalMs += diff;
+      }
+    }
+
+    return totalMs / (1000 * 60 * 60);
+  }, [geoEvents, doctorId]);
+
+  if (kpiLoading || proceduresLoading || usersLoading || geoLoading || expensesLoading) {
     return (
       <div className="h-full flex items-center justify-center bg-background">
         <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
@@ -111,7 +186,7 @@ export default function StaffDetailPage() {
     );
   }
 
-  if (!doctor) {
+  if (!selectedUser) {
     return (
       <div className="h-full flex items-center justify-center bg-background">
         <p className="text-muted-foreground">{t("staff.notFound")}</p>
@@ -119,86 +194,103 @@ export default function StaffDetailPage() {
     );
   }
 
-  const rev = Number(doctor.revenueTotal) || 0;
-  const proc = Number(doctor.proceduresCount) || 0;
-  const pat = Number(doctor.patientsCount) || 0;
-  const avgChk = Number(doctor.averageCheck) || 0;
-  const nps = Number(doctor.nps) || 0;
+  const isDoctor = selectedUser.role === "doctor";
+  const nps = isDoctor && doctorKpi ? Number(doctorKpi.nps) : 0;
 
-  const revenueByMonth: DoctorDetailedAnalyticsRevenueByMonthItem[] = analytics?.revenueByMonth ?? [];
-  const proceduresByName: DoctorDetailedAnalyticsProceduresByNameItem[] = analytics?.proceduresByName ?? [];
-  const patientsByStatus = analytics?.patientsByStatus ?? {};
-  const totalProcedures = Number(analytics?.totalProcedures ?? proc);
+  const allProcedures = proceduresData?.data?.procedures ?? [];
+  const doctorProcedures = allProcedures.filter((p) => p.doctorId === doctorId);
+  const completedDoctorProcedures = doctorProcedures.filter((p) => p.status === "completed");
+  const completedClinicProcedures = allProcedures.filter((p) => p.status === "completed");
 
-  const patientStatusData = Object.entries(patientsByStatus)
-    .map(([key, value]) => ({
-      name: t(STATUS_LABEL_KEYS[key] ?? key),
-      value: Number(value),
-    }))
-    .filter((e) => e.value > 0);
+  const targetAllProcedures = isDoctor ? doctorProcedures : allProcedures;
+  const targetCompletedProcedures = isDoctor ? completedDoctorProcedures : completedClinicProcedures;
 
-  const kpiCards = [
-    {
-      label: t("staff.patientsScheduled"),
-      value: pat,
-      sub: `${pat} ${t("staff.patients")}`,
-      subColor: "text-emerald-600",
-      icon: CalendarDays,
-      iconBg: "bg-blue-100",
-      iconColor: "text-blue-600",
-    },
-    {
-      label: t("staff.revenue"),
-      value: `₸${rev >= 1_000_000 ? (rev / 1_000_000).toFixed(1) + "M" : Math.floor(rev / 1000) + "K"}`,
-      sub: rev > 0 ? `₸${Math.floor(rev / (pat || 1)).toLocaleString()} ${t("staff.perPatient")}` : "₸0",
-      subColor: "text-emerald-600",
-      icon: DollarSign,
-      iconBg: "bg-yellow-100",
-      iconColor: "text-yellow-600",
-    },
-    {
-      label: t("staff.avgCheck"),
-      value: avgChk > 0 ? `₸${Math.floor(avgChk).toLocaleString()}` : "₸0",
-      sub: `${proc} ${t("staff.procedures")}`,
-      subColor: "text-emerald-600",
-      icon: TrendingUp,
-      iconBg: "bg-emerald-100",
-      iconColor: "text-emerald-600",
-    },
-    {
-      label: t("staff.procedures"),
-      value: totalProcedures,
-      sub: t("staff.completed"),
-      subColor: "text-muted-foreground",
-      icon: Activity,
-      iconBg: "bg-pink-100",
-      iconColor: "text-pink-600",
-    },
-    {
-      label: t("staff.nps"),
-      value: nps,
-      sub: nps >= 70 ? "Отлично" : nps >= 50 ? "Хорошо" : "Улучшить",
-      subColor: nps >= 70 ? "text-emerald-600" : nps >= 50 ? "text-amber-600" : "text-red-600",
-      icon: UserCheck,
-      iconBg: "bg-violet-100",
-      iconColor: "text-violet-600",
-    },
-    {
-      label: t("staff.patients"),
-      value: pat,
-      sub: `${patientStatusData.length} ${t("staff.completed")}`,
-      subColor: "text-muted-foreground",
-      icon: Users,
-      iconBg: "bg-sky-100",
-      iconColor: "text-sky-600",
-    },
-  ];
+  // 1. Всего пациентов
+  const totalPatientsSet = new Set<string>();
+  const totalPatientsDaySet = new Set<string>();
+  const totalPatientsNightSet = new Set<string>();
+
+  targetAllProcedures.forEach((p) => {
+    const time = p.scheduledAt || p.createdAt;
+    totalPatientsSet.add(p.patientId);
+    if (isDayTime(time)) {
+      totalPatientsDaySet.add(p.patientId);
+    } else {
+      totalPatientsNightSet.add(p.patientId);
+    }
+  });
+
+  const totalPatientsCount = totalPatientsSet.size;
+  const totalPatientsDay = totalPatientsDaySet.size;
+  const totalPatientsNight = totalPatientsNightSet.size;
+
+  // 2. Принятые пациенты
+  const completedPatientsSet = new Set<string>();
+  const completedPatientsDaySet = new Set<string>();
+  const completedPatientsNightSet = new Set<string>();
+
+  targetCompletedProcedures.forEach((p) => {
+    const time = p.completedAt || p.scheduledAt || p.createdAt;
+    completedPatientsSet.add(p.patientId);
+    if (isDayTime(time)) {
+      completedPatientsDaySet.add(p.patientId);
+    } else {
+      completedPatientsNightSet.add(p.patientId);
+    }
+  });
+
+  const completedPatientsCount = completedPatientsSet.size;
+  const completedPatientsDay = completedPatientsDaySet.size;
+  const completedPatientsNight = completedPatientsNightSet.size;
+
+  // 3. Конверсия
+  const conversionPercent = totalPatientsCount > 0 
+    ? Math.round((completedPatientsCount / totalPatientsCount) * 100) 
+    : 0;
+
+  // 4. Общая выручка
+  let totalRevenue = 0;
+  let dayRevenue = 0;
+  let nightRevenue = 0;
+
+  targetCompletedProcedures.forEach((p) => {
+    const time = p.completedAt || p.scheduledAt || p.createdAt;
+    totalRevenue += p.price;
+    if (isDayTime(time)) {
+      dayRevenue += p.price;
+    } else {
+      nightRevenue += p.price;
+    }
+  });
+
+  // 5. Средний чек
+  const avgCheckTotal = completedPatientsCount > 0 ? Math.round(totalRevenue / completedPatientsCount) : 0;
+  const avgCheckDay = completedPatientsDay > 0 ? Math.round(dayRevenue / completedPatientsDay) : 0;
+  const avgCheckNight = completedPatientsNight > 0 ? Math.round(nightRevenue / completedPatientsNight) : 0;
+
+  // Salary calculations
+  const fixedSal = Number(salarySettings?.fixedAmount) || 0;
+  const commPercent = Number(salarySettings?.commissionPercent) || 0;
+  const salType = salarySettings?.salaryType || "fixed";
+
+  let calculatedSalary = 0;
+  if (salType === "fixed") {
+    calculatedSalary = fixedSal;
+  } else if (salType === "commission") {
+    calculatedSalary = (totalRevenue * commPercent) / 100;
+  } else if (salType === "fixed_plus_commission") {
+    calculatedSalary = fixedSal + (totalRevenue * commPercent) / 100;
+  } else if (salType === "hourly") {
+    calculatedSalary = (fixedSal * workHours) + (totalRevenue * commPercent) / 100;
+  }
+
+  const finalSalary = calculatedSalary - advance;
 
   return (
     <div className="h-full flex flex-col overflow-hidden bg-[#f7f8fc]">
       <div className="shrink-0 border-b border-border/50 bg-white px-6 py-4">
         <button
-          onClick={() => setLocation("/staff")}
+          onClick={() => setLocation("/users")}
           className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors mb-3"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -206,11 +298,14 @@ export default function StaffDetailPage() {
         </button>
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-xl shrink-0">
-            {getInitials(doctor.doctorName)}
+            {getInitials(selectedUser.name)}
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">{doctor.doctorName}</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">{t("staff.doctor")}</p>
+            <h1 className="text-2xl font-bold text-foreground">{selectedUser.name}</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {ROLE_LABELS[selectedUser.role] ?? selectedUser.role}
+              {selectedUser.specialty && ` • ${selectedUser.specialty}`}
+            </p>
           </div>
         </div>
       </div>
@@ -218,276 +313,245 @@ export default function StaffDetailPage() {
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         <div className="p-6 space-y-6">
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {kpiCards.map((card) => (
-              <div key={card.label} className="bg-white rounded-xl border border-border/50 p-4 shadow-sm">
-                <div className="flex items-start justify-between mb-3">
-                  <p className="text-xs text-muted-foreground font-medium leading-snug">{card.label}</p>
-                  <div className={`h-8 w-8 rounded-lg ${card.iconBg} flex items-center justify-center shrink-0`}>
-                    <card.icon className={`h-4 w-4 ${card.iconColor}`} />
-                  </div>
-                </div>
-                <p className="text-2xl font-bold text-foreground">{card.value}</p>
-                <p className={`text-xs mt-1 ${card.subColor}`}>{card.sub}</p>
-              </div>
-            ))}
+          {/* Metrics Table */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr>
+                    <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Показатель</th>
+                    <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Всего</th>
+                    <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">День (до 20:00)</th>
+                    <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Ночь (после 20:00)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {(isDoctor || salType === "hourly") && (
+                    <>
+                      {/* Row 1: Всего пациентов */}
+                      <tr className="hover:bg-gray-50/30 transition-colors">
+                        <td className="px-6 py-4 font-semibold text-gray-800">Всего пациентов</td>
+                        <td className="px-6 py-4 font-bold text-gray-900">{totalPatientsCount}</td>
+                        <td className="px-6 py-4 text-gray-600 font-medium">{totalPatientsDay}</td>
+                        <td className="px-6 py-4 text-gray-600 font-medium">{totalPatientsNight}</td>
+                      </tr>
+
+                      {/* Row 2: Принятые пациенты */}
+                      <tr className="hover:bg-gray-50/30 transition-colors">
+                        <td className="px-6 py-4 font-semibold text-gray-800">Принятые пациенты</td>
+                        <td className="px-6 py-4 font-bold text-gray-900">{completedPatientsCount}</td>
+                        <td className="px-6 py-4 text-gray-600 font-medium">{completedPatientsDay}</td>
+                        <td className="px-6 py-4 text-gray-600 font-medium">{completedPatientsNight}</td>
+                      </tr>
+
+                      {/* Row 3: Конверсия приёма OR Часы работы */}
+                      <tr className="hover:bg-gray-50/30 transition-colors">
+                        <td className="px-6 py-4 font-semibold text-gray-800">
+                          {salType === "hourly" ? "Часы работы" : "Конверсия приёма"}
+                        </td>
+                        <td className="px-6 py-4 font-bold text-gray-900">
+                          {salType === "hourly" ? `${workHours.toFixed(1)} ч.` : `${conversionPercent}%`}
+                        </td>
+                        <td className="px-6 py-4 text-gray-600 font-medium">
+                          {salType === "hourly" ? `₸${fixedSal.toLocaleString("ru-KZ")}/ч` : "—"}
+                        </td>
+                        <td className="px-6 py-4 text-gray-600 font-medium">
+                          {salType === "hourly" ? `+${commPercent}%` : "—"}
+                        </td>
+                      </tr>
+
+                      {/* Row 4: Выручка */}
+                      <tr className="hover:bg-gray-50/30 transition-colors">
+                        <td className="px-6 py-4 font-semibold text-gray-800">
+                          {isDoctor ? "Общая выручка" : "Выручка клиники"}
+                        </td>
+                        <td className="px-6 py-4 font-bold text-gray-900">₸{totalRevenue.toLocaleString()}</td>
+                        <td className="px-6 py-4 text-gray-600 font-medium">₸{dayRevenue.toLocaleString()}</td>
+                        <td className="px-6 py-4 text-gray-600 font-medium">₸{nightRevenue.toLocaleString()}</td>
+                      </tr>
+
+                      {/* Row 5: Средний чек */}
+                      <tr className="hover:bg-gray-50/30 transition-colors">
+                        <td className="px-6 py-4 font-semibold text-gray-800">Средний чек</td>
+                        <td className="px-6 py-4 font-bold text-gray-900">₸{avgCheckTotal.toLocaleString()}</td>
+                        <td className="px-6 py-4 text-gray-600 font-medium">₸{avgCheckDay.toLocaleString()}</td>
+                        <td className="px-6 py-4 text-gray-600 font-medium">₸{avgCheckNight.toLocaleString()}</td>
+                      </tr>
+                    </>
+                  )}
+
+                  {/* Row 6: Выданный аванс (always visible) */}
+                  <tr className="hover:bg-gray-50/30 transition-colors">
+                    <td className="px-6 py-4 font-semibold text-gray-800">Выданный аванс</td>
+                    <td className="px-6 py-4 font-bold text-gray-900">₸{advance.toLocaleString()}</td>
+                    <td className="px-6 py-4 text-gray-400 font-medium" colSpan={2}>
+                      —
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div className="bg-gray-50/50 border-t border-gray-100 px-6 py-2.5 text-xs text-gray-400">
+              Показатели рассчитаны автоматически на основании гео-событий трекера и завершенных процедур.
+            </div>
           </div>
 
-          {/* ─── Score + Capacity block ─── */}
-          <div className="bg-white rounded-xl border border-border/50 p-5 shadow-sm">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="h-8 w-8 rounded-lg bg-[#1f75fe]/10 flex items-center justify-center shrink-0">
-                <Gauge className="h-4 w-4 text-[#1f75fe]" />
+          {/* Card 7: Зарплата (stretched full-width) */}
+          <div className="bg-white rounded-2xl border border-border/50 p-6 shadow-sm">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-gray-100">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+                  <Wallet className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900">Итого к выплате (ФОТ)</h3>
+                  <p className="text-[12px] text-gray-400 font-medium">С учётом выданного аванса и выполненных процедур</p>
+                </div>
               </div>
-              <h3 className="text-sm font-semibold text-foreground">Рейтинг и ёмкость</h3>
+
+              <div className="text-left lg:text-right">
+                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">Итоговая сумма</span>
+                <span className="text-4xl font-black text-primary block mt-1">₸{finalSalary.toLocaleString()}</span>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {/* Score */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-muted-foreground">Рейтинг врача</span>
-                  <span className="text-sm font-bold text-foreground">{doctor.score ?? 0}/100</span>
+            {/* Calculations and editing section */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-6">
+              
+              {/* Formula explanation */}
+              <div className="lg:col-span-2 space-y-4">
+                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Детализация начислений</h4>
+                
+                <div className="bg-gray-50 rounded-2xl p-4 space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500 font-medium">Схема начисления:</span>
+                    <span className="font-semibold text-gray-800">
+                      {salType === "fixed" && "Оклад"}
+                      {salType === "commission" && "Процент от выручки"}
+                      {salType === "fixed_plus_commission" && "Оклад + Процент"}
+                      {salType === "hourly" && "Почасовая оплата"}
+                    </span>
+                  </div>
+                  {salType === "fixed" && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500 font-medium">Фиксированный оклад:</span>
+                      <span className="font-semibold text-gray-800">₸{fixedSal.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {salType === "commission" && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500 font-medium">Комиссия ({commPercent}% от ₸{totalRevenue.toLocaleString()}):</span>
+                      <span className="font-semibold text-gray-800">₸{calculatedSalary.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {salType === "fixed_plus_commission" && (
+                    <>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500 font-medium">Фиксированный оклад:</span>
+                        <span className="font-semibold text-gray-800">₸{fixedSal.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500 font-medium">Комиссия ({commPercent}% от ₸{totalRevenue.toLocaleString()}):</span>
+                        <span className="font-semibold text-gray-800">₸{((totalRevenue * commPercent) / 100).toLocaleString()}</span>
+                      </div>
+                    </>
+                  )}
+                  {salType === "hourly" && (
+                    <>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500 font-medium">Отработано часов:</span>
+                        <span className="font-semibold text-gray-800">{workHours.toFixed(1)} ч.</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500 font-medium">Почасовая ставка:</span>
+                        <span className="font-semibold text-gray-800">₸{fixedSal.toLocaleString()}/час</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500 font-medium">Оплата за часы:</span>
+                        <span className="font-semibold text-gray-800">₸{Math.round(fixedSal * workHours).toLocaleString()}</span>
+                      </div>
+                      {commPercent > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-500 font-medium">Комиссия ({commPercent}% от ₸{totalRevenue.toLocaleString()}):</span>
+                          <span className="font-semibold text-gray-800">₸{Math.round((totalRevenue * commPercent) / 100).toLocaleString()}</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  <div className="flex justify-between text-sm border-t border-gray-200/60 pt-3">
+                    <span className="text-gray-500 font-semibold">Всего начислено:</span>
+                    <span className="font-bold text-gray-800">₸{calculatedSalary.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-rose-600">
+                    <span className="font-semibold">Вычтено авансом:</span>
+                    <span className="font-bold">- ₸{advance.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm border-t border-gray-200/60 pt-3 text-primary font-bold">
+                    <span>Итого к выплате:</span>
+                    <span>₸{finalSalary.toLocaleString()}</span>
+                  </div>
                 </div>
-                <div className="w-full bg-gray-100 rounded-full h-3">
-                  <div
-                    className="h-3 rounded-full transition-all duration-500"
-                    style={{ width: `${doctor.score ?? 0}%`, backgroundColor: "#1f75fe" }}
-                  />
-                </div>
-                <p className="text-[11px] text-muted-foreground mt-1.5">
-                  Выручка 35% · Процедуры 30% · Чек 20% · Конверсия 15%
-                </p>
-              </div>
 
-              {/* Capacity */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-muted-foreground">Слоты сегодня</span>
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                    (doctor.slotsUsedToday ?? 0) >= (doctor.maxSlotsPerDay ?? 20)
-                      ? "bg-red-100 text-red-600"
-                      : "bg-emerald-100 text-emerald-700"
-                  }`}>
-                    {doctor.slotsUsedToday ?? 0} / {doctor.maxSlotsPerDay ?? 20}
-                  </span>
-                </div>
-                {canEditCapacity ? (
-                  <div className="flex items-center gap-2 mt-2">
-                    <input
-                      type="number"
-                      min={1}
-                      max={50}
-                      value={capacityInput}
-                      onChange={(e) => setCapacityInput(e.target.value === "" ? "" : Number(e.target.value))}
-                      className="w-20 border border-border rounded-lg px-3 py-1.5 text-sm font-semibold text-center focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    />
-                    <span className="text-xs text-muted-foreground">пациентов/день</span>
+                {/* Approve FOT button inside details */}
+                {canManagePayroll && (
+                  <div className="pt-2">
                     <button
-                      onClick={handleSaveCapacity}
-                      disabled={savingCapacity || capacityInput === ""}
-                      className="ml-auto px-3 py-1.5 rounded-lg bg-[#1f75fe] text-white text-xs font-semibold disabled:opacity-50 hover:bg-[#1a56d6] transition-colors"
+                      onClick={() => setShowPayrollModal(true)}
+                      className="w-full py-3 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary/95 transition-colors flex items-center justify-center gap-2 shadow-md shadow-primary/20"
                     >
-                      {savingCapacity ? "..." : "Сохранить"}
+                      <Banknote className="w-4 h-4" />
+                      Утвердить выплату ФОТ
                     </button>
                   </div>
-                ) : (
-                  <p className="text-sm font-semibold text-foreground mt-1">
-                    Лимит: {doctor.maxSlotsPerDay ?? 20} пациентов/день
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {analyticsLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white rounded-xl border border-border/50 p-6 shadow-sm">
-                  <h3 className="text-sm font-semibold text-foreground mb-4">{t("staff.revenueTrend")}</h3>
-                  {revenueByMonth.length === 0 ? (
-                    <div className="h-[260px] flex items-center justify-center text-sm text-muted-foreground">{t("common.noData")}</div>
-                  ) : (
-                    <ResponsiveContainer width="100%" height={260}>
-                      <LineChart data={revenueByMonth}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                        <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                        <YAxis tickFormatter={(v: number) => `₸${Math.floor(v / 1000)}K`} tick={{ fontSize: 11 }} />
-                        <Tooltip formatter={(v: number) => [`₸${v.toLocaleString()}`, t("staff.revenue")]} />
-                        <Line
-                          type="monotone"
-                          dataKey="revenue"
-                          name={t("staff.revenue")}
-                          stroke="#3b82f6"
-                          strokeWidth={2}
-                          dot={{ fill: "#3b82f6", r: 4 }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  )}
-                </div>
-
-                <div className="bg-white rounded-xl border border-border/50 p-6 shadow-sm">
-                  <h3 className="text-sm font-semibold text-foreground mb-4">{t("staff.procedureCount")}</h3>
-                  {proceduresByName.length === 0 ? (
-                    <div className="h-[260px] flex items-center justify-center text-sm text-muted-foreground">{t("common.noData")}</div>
-                  ) : (
-                    <ResponsiveContainer width="100%" height={260}>
-                      <BarChart data={proceduresByName} layout="vertical">
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
-                        <XAxis type="number" tick={{ fontSize: 12 }} />
-                        <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 11 }} />
-                        <Tooltip />
-                        <Bar dataKey="count" fill="#10b981" radius={[0, 6, 6, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  )}
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl border border-border/50 p-6 shadow-sm">
-                <h3 className="text-sm font-semibold text-foreground mb-6">{t("staff.patientStatus")}</h3>
-                {patientStatusData.length === 0 ? (
-                  <div className="h-[200px] flex items-center justify-center text-sm text-muted-foreground">{t("common.noData")}</div>
-                ) : (
-                  <div className="flex flex-col lg:flex-row items-center gap-6">
-                    <ResponsiveContainer width="100%" height={240}>
-                      <PieChart>
-                        <Pie
-                          data={patientStatusData}
-                          cx="50%" cy="50%"
-                          innerRadius={60} outerRadius={110}
-                          paddingAngle={3}
-                          dataKey="value"
-                        >
-                          {patientStatusData.map((_, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: "#fff",
-                            border: "1px solid #e5e7eb",
-                            borderRadius: "8px",
-                            padding: "8px 12px",
-                          }}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className="w-full lg:w-64 grid grid-cols-2 gap-2">
-                      {patientStatusData.map((item, index) => (
-                        <div key={item.name} className="text-center p-3 bg-gray-50 rounded-lg border border-border/20">
-                          <div className="w-4 h-4 rounded-full mx-auto mb-2" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                          <p className="text-xs text-muted-foreground leading-tight">{item.name}</p>
-                          <p className="text-lg font-bold text-foreground mt-1">{item.value}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
                 )}
               </div>
 
-              <div className="bg-white rounded-xl border border-border/50 p-6 shadow-sm">
-                <h3 className="text-sm font-semibold text-foreground mb-4">{t("staff.proceduresByStatus")}</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {(
-                    [
-                      { key: "completed",   label: t("procedure.status.completed"),   bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700" },
-                      { key: "in_progress", label: t("procedure.status.in_progress"), bg: "bg-blue-50",    border: "border-blue-200",    text: "text-blue-700" },
-                      { key: "scheduled",   label: t("procedure.status.scheduled"),   bg: "bg-amber-50",   border: "border-amber-200",   text: "text-amber-700" },
-                      { key: "cancelled",   label: t("procedure.status.cancelled"),   bg: "bg-red-50",     border: "border-red-200",     text: "text-red-700" },
-                    ] as const
-                  ).map(({ key, label, bg, border, text }) => (
-                    <div key={key} className={`rounded-xl border ${border} ${bg} p-4 text-center`}>
-                      <p className={`text-2xl font-bold ${text}`}>
-                        {Number(analytics?.proceduresByStatus?.[key] ?? 0)}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">{label}</p>
-                    </div>
-                  ))}
-                </div>
-
-                {nps > 0 && (
-                  <div className="mt-6 pt-5 border-t border-border/30">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-medium text-muted-foreground">{t("staff.nps")}</span>
-                      <span className={`text-sm font-bold px-2 py-0.5 rounded-full ${
-                        nps >= 70 ? "bg-emerald-100 text-emerald-700" :
-                        nps >= 50 ? "bg-amber-100 text-amber-700" :
-                        "bg-red-100 text-red-700"
-                      }`}>{nps}/100</span>
-                    </div>
-                    <div className="w-full bg-gray-100 rounded-full h-2.5">
-                      <div
-                        className={`h-2.5 rounded-full transition-all ${
-                          nps >= 70 ? "bg-emerald-500" : nps >= 50 ? "bg-amber-500" : "bg-red-500"
-                        }`}
-                        style={{ width: `${nps}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-
-          {/* ─── Payroll Section ─── */}
-          {canManagePayroll && doctorId && (
-            <div className="bg-white rounded-xl border border-border/50 p-6 shadow-sm space-y-5">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="h-8 w-8 rounded-lg bg-[#1f75fe]/10 flex items-center justify-center shrink-0">
-                  <Banknote className="h-4 w-4 text-[#1f75fe]" />
-                </div>
-                <h3 className="text-sm font-semibold text-foreground">{t("payroll.title")}</h3>
-              </div>
-
-              {/* Salary settings */}
-              <div className="border border-border/50 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("payroll.settings")}</span>
+              {/* Action column (Edit settings / status) */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Параметры оплаты</h4>
                   {user?.role === "owner" && (
                     <button
                       onClick={() => setEditingSalary((v) => !v)}
                       className="text-xs text-primary font-semibold hover:underline"
                     >
-                      {editingSalary ? t("common.cancel") : t("common.edit")}
+                      {editingSalary ? "Отмена" : "Изменить"}
                     </button>
                   )}
                 </div>
 
                 {editingSalary ? (
-                  <div className="space-y-3">
+                  <div className="bg-gray-50 rounded-2xl p-4 space-y-4">
                     <div>
-                      <label className="text-xs text-muted-foreground">{t("payroll.salaryType")}</label>
+                      <label className="text-xs font-semibold text-gray-500">Тип начисления</label>
                       <select
                         value={salaryType}
                         onChange={(e) => setSalaryType(e.target.value as typeof salaryType)}
-                        className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white font-semibold text-gray-700"
                       >
-                        <option value="fixed">{t("payroll.fixed")}</option>
-                        <option value="commission">{t("payroll.commission")}</option>
-                        <option value="fixed_plus_commission">{t("payroll.fixedPlusCommission")}</option>
+                        <option value="fixed">Оклад</option>
+                        <option value="commission">Процент от выручки</option>
+                        <option value="fixed_plus_commission">Оклад + Процент</option>
+                        <option value="hourly">Почасовая оплата</option>
                       </select>
                     </div>
-                    {(salaryType === "fixed" || salaryType === "fixed_plus_commission") && (
+                    {(salaryType === "fixed" || salaryType === "fixed_plus_commission" || salaryType === "hourly") && (
                       <div>
-                        <label className="text-xs text-muted-foreground">{t("payroll.fixedAmount")} (₸)</label>
+                        <label className="text-xs font-semibold text-gray-500">
+                          {salaryType === "hourly" ? "Почасовая ставка (₸/час)" : "Сумма оклада (₸)"}
+                        </label>
                         <input
                           type="number"
                           min={0}
                           value={fixedAmount}
                           onChange={(e) => setFixedAmount(Number(e.target.value))}
-                          className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white font-bold text-gray-700"
                         />
                       </div>
                     )}
-                    {(salaryType === "commission" || salaryType === "fixed_plus_commission") && (
+                    {(salaryType === "commission" || salaryType === "fixed_plus_commission" || salaryType === "hourly") && (
                       <div>
-                        <label className="text-xs text-muted-foreground">{t("payroll.commissionPercent")} (%)</label>
+                        <label className="text-xs font-semibold text-gray-500">Процент комиссии (%)</label>
                         <input
                           type="number"
                           min={0}
@@ -495,109 +559,121 @@ export default function StaffDetailPage() {
                           step={0.5}
                           value={commissionPercent}
                           onChange={(e) => setCommissionPercent(Number(e.target.value))}
-                          className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white font-bold text-gray-700"
                         />
                       </div>
                     )}
                     <button
                       onClick={handleSaveSettings}
                       disabled={savingSettings}
-                      className="w-full py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                      className="w-full py-2 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary/95 disabled:opacity-50 transition-colors"
                     >
-                      {savingSettings ? t("common.saving") : t("common.save")}
+                      {savingSettings ? "Сохранение..." : "Сохранить"}
                     </button>
                   </div>
                 ) : salarySettings ? (
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="bg-slate-50 rounded-lg p-3 text-center">
-                      <p className="text-[11px] text-muted-foreground">{t("payroll.salaryType")}</p>
-                      <p className="text-sm font-semibold text-foreground mt-1">
-                        {salarySettings.salaryType === "fixed" ? t("payroll.fixed") :
-                         salarySettings.salaryType === "commission" ? t("payroll.commission") :
-                         t("payroll.fixedPlusCommission")}
+                  <div className="bg-gray-50 rounded-2xl p-4 space-y-3">
+                    <div>
+                      <p className="text-[11px] text-gray-400 font-semibold uppercase">Схема начисления</p>
+                      <p className="text-sm font-bold text-gray-800 mt-0.5">
+                        {salarySettings.salaryType === "fixed" ? "Оклад" :
+                         salarySettings.salaryType === "commission" ? "Процент от выручки" :
+                         salarySettings.salaryType === "fixed_plus_commission" ? "Оклад + Процент" :
+                         "Почасовая оплата"}
                       </p>
                     </div>
-                    <div className="bg-slate-50 rounded-lg p-3 text-center">
-                      <p className="text-[11px] text-muted-foreground">{t("payroll.fixedAmount")}</p>
-                      <p className="text-sm font-semibold text-foreground mt-1">₸{Number(salarySettings.fixedAmount).toLocaleString()}</p>
-                    </div>
-                    <div className="bg-slate-50 rounded-lg p-3 text-center">
-                      <p className="text-[11px] text-muted-foreground">{t("payroll.commissionPercent")}</p>
-                      <p className="text-sm font-semibold text-foreground mt-1">{salarySettings.commissionPercent}%</p>
-                    </div>
+                    {(salarySettings.salaryType === "fixed" || salarySettings.salaryType === "fixed_plus_commission" || salarySettings.salaryType === "hourly") && (
+                      <div>
+                        <p className="text-[11px] text-gray-400 font-semibold uppercase">
+                          {salarySettings.salaryType === "hourly" ? "Почасовая ставка" : "Размер оклада"}
+                        </p>
+                        <p className="text-sm font-bold text-gray-800 mt-0.5">
+                          ₸{Number(salarySettings.fixedAmount).toLocaleString()}
+                          {salarySettings.salaryType === "hourly" && " / час"}
+                        </p>
+                      </div>
+                    )}
+                    {(salarySettings.salaryType === "commission" || salarySettings.salaryType === "fixed_plus_commission" || salarySettings.salaryType === "hourly") && (
+                      <div>
+                        <p className="text-[11px] text-gray-400 font-semibold uppercase">Процентная ставка</p>
+                        <p className="text-sm font-bold text-gray-800 mt-0.5">{salarySettings.commissionPercent}%</p>
+                      </div>
+                    )}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">{t("payroll.noSettings")}</p>
-                )}
-              </div>
-
-              {/* Approve FOT button */}
-              {canManagePayroll && (
-                <div>
-                  <button
-                    onClick={() => setShowPayrollModal(true)}
-                    className="w-full py-2.5 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Banknote className="w-4 h-4" />
-                    {t("payroll.approveFot", "Утвердить ФОТ")}
-                  </button>
-                </div>
-              )}
-
-              {/* History table */}
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">{t("payroll.history")}</p>
-                {payrollRecords.length === 0 ? (
-                  <div className="text-center py-6 text-sm text-muted-foreground">{t("payroll.noRecords")}</div>
-                ) : (
-                  <div className="overflow-x-auto rounded-xl border border-border/50">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="bg-slate-50 border-b border-border/50">
-                          <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground">{t("payroll.period")}</th>
-                          <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground">{t("payroll.revenueBase")}</th>
-                          <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground">{t("payroll.calculated")}</th>
-                          <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground">{t("payroll.approved")}</th>
-                          <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground">{t("payroll.status")}</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border/30">
-                        {payrollRecords.map((r) => (
-                          <tr key={r.id} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="px-4 py-3 font-medium text-foreground">
-                              {r.periodMonth.toString().padStart(2, "0")}/{r.periodYear}
-                            </td>
-                            <td className="px-4 py-3 text-right text-muted-foreground">
-                              ₸{Number(r.revenueBase).toLocaleString("ru-KZ")}
-                            </td>
-                            <td className="px-4 py-3 text-right font-semibold text-foreground">
-                              ₸{Number(r.calculatedAmount).toLocaleString("ru-KZ")}
-                            </td>
-                            <td className="px-4 py-3 text-right text-emerald-700 font-semibold">
-                              {r.approvedAmount ? `₸${Number(r.approvedAmount).toLocaleString("ru-KZ")}` : "—"}
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                              {r.status === "approved" || r.status === "paid" ? (
-                                <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-                                  <CheckCircle className="w-3 h-3" />
-                                  {r.status === "paid" ? t("payroll.paid") : t("payroll.approved")}
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
-                                  <Clock className="w-3 h-3" />
-                                  {t("payroll.pending")}
-                                </span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <div className="bg-gray-50 rounded-2xl p-4 text-center">
+                    <p className="text-sm text-gray-400 font-medium">Схема оплаты не настроена</p>
                   </div>
                 )}
               </div>
+
             </div>
-          )}
+
+            {/* History collapse */}
+            {canManagePayroll && (
+              <div className="mt-8 pt-6 border-t border-gray-100">
+                <details className="group">
+                  <summary className="list-none flex items-center justify-between cursor-pointer select-none">
+                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">История начислений и выплат</span>
+                    <span className="text-xs text-primary font-semibold group-open:hidden">Показать историю</span>
+                    <span className="text-xs text-primary font-semibold hidden group-open:inline">Скрыть историю</span>
+                  </summary>
+
+                  <div className="mt-4 pt-2">
+                    {payrollRecords.length === 0 ? (
+                      <div className="text-center py-8 text-sm text-gray-400 font-medium">Записи о начислениях отсутствуют</div>
+                    ) : (
+                      <div className="overflow-x-auto rounded-xl border border-gray-100">
+                        <table className="w-full text-sm text-left">
+                          <thead>
+                            <tr className="bg-gray-50 border-b border-gray-100">
+                              <th className="px-4 py-3 text-xs font-bold text-gray-400 uppercase">Период</th>
+                              <th className="px-4 py-3 text-xs font-bold text-gray-400 uppercase text-right">Базовая выручка</th>
+                              <th className="px-4 py-3 text-xs font-bold text-gray-400 uppercase text-right">Расчитано</th>
+                              <th className="px-4 py-3 text-xs font-bold text-gray-400 uppercase text-right">Выплачено</th>
+                              <th className="px-4 py-3 text-xs font-bold text-gray-400 uppercase text-center">Статус</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {payrollRecords.map((r) => (
+                              <tr key={r.id} className="hover:bg-gray-50/50 transition-colors">
+                                <td className="px-4 py-3 font-semibold text-gray-700">
+                                  {r.periodMonth.toString().padStart(2, "0")}/{r.periodYear}
+                                </td>
+                                <td className="px-4 py-3 text-right text-gray-600 font-medium">
+                                  ₸{Number(r.revenueBase).toLocaleString("ru-KZ")}
+                                </td>
+                                <td className="px-4 py-3 text-right font-bold text-gray-800">
+                                  ₸{Number(r.calculatedAmount).toLocaleString("ru-KZ")}
+                                </td>
+                                <td className="px-4 py-3 text-right text-emerald-600 font-bold">
+                                  {r.approvedAmount ? `₸${Number(r.approvedAmount).toLocaleString("ru-KZ")}` : "—"}
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  {r.status === "approved" || r.status === "paid" ? (
+                                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                                      <CheckCircle className="w-3 h-3" />
+                                      {r.status === "paid" ? "Выплачено" : "Утверждено"}
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                                      <Clock className="w-3 h-3" />
+                                      Ожидает
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </details>
+              </div>
+            )}
+
+          </div>
 
         </div>
       </div>

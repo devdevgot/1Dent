@@ -48,6 +48,7 @@ import {
 } from "lucide-react";
 import { calculateAge, formatDateOfBirth, maskIIN } from "@workspace/api-zod";
 import { getBaseUrl } from "@/lib/base-url";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useKanbanStore } from "@/hooks/use-kanban";
 import { useAuthStore } from "@/hooks/use-auth";
@@ -806,6 +807,7 @@ export function PatientDetailPanel() {
   const activeTab = useKanbanStore((s) => s.activeTab);
   const setActiveTab = useKanbanStore((s) => s.setActiveTab);
   const { user } = useAuthStore();
+  const isAdmin = user?.role === "admin";
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedToothFdi, setSelectedToothFdi] = useState<number | null>(null);
@@ -894,10 +896,10 @@ export function PatientDetailPanel() {
       return resp.json() as Promise<{ success: boolean; data: { procedures: Array<Record<string, unknown>> } }>;
     },
   });
-  const { data: usersData } = useListUsers({ query: { staleTime: 5 * 60_000 } });
+  const { data: usersData } = useListUsers({ query: { queryKey: ["users"], staleTime: 5 * 60_000 } });
 
   const patientProcedures = useMemo(
-    () => (proceduresData?.data?.procedures ?? []) as Array<Record<string, unknown> & { patientId: string }>,
+    () => (proceduresData?.data?.procedures ?? []) as any[],
     [proceduresData],
   );
   const allProcedures = patientProcedures;
@@ -914,7 +916,10 @@ export function PatientDetailPanel() {
   const teethMap = new Map(teethRecords.map((t) => [t.toothFdi, t]));
 
   const { data: conditionPricesData } = useGetConditionPrices({
-    query: { enabled: isDiagnosisMode || activeTab === "treatment" },
+    query: {
+      queryKey: ["condition-prices"],
+      enabled: isDiagnosisMode || activeTab === "treatment",
+    },
   });
   const conditionPricesMap = conditionPricesData?.data?.prices ?? {};
 
@@ -1803,7 +1808,7 @@ export function PatientDetailPanel() {
                       </div>
                     )}
                     {/* Diagnosis mode (primary — no teeth yet, or manual re-diagnosis) */}
-                    {(isDiagnosisMode || (!dentalLoading && !hasDiagnosis)) && (
+                    {!isAdmin && (isDiagnosisMode || (!dentalLoading && !hasDiagnosis)) && (
                       <div className="space-y-3">
                         <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
                           <p className="text-xs text-amber-800 font-medium">
@@ -2014,22 +2019,24 @@ export function PatientDetailPanel() {
                     )}
 
                     {/* Normal mode — has diagnosis */}
-                    {!dentalLoading && hasDiagnosis && !isDiagnosisMode && (
+                    {!dentalLoading && (hasDiagnosis || isAdmin) && !isDiagnosisMode && (
                       <div className="space-y-3">
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-[11px] text-muted-foreground">
-                            {t("patient.clickTooth")}
+                            {isAdmin ? "Карта зубов (только чтение)" : t("patient.clickTooth")}
                           </p>
-                          <button
-                            onClick={() => setIsDiagnosisMode(true)}
-                            className="flex items-center gap-1.5 text-[11px] font-medium text-primary hover:bg-primary/10 px-2.5 py-1 rounded-lg border border-primary/30 transition-colors whitespace-nowrap"
-                          >
-                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                              <path d="M3 3v5h5"/>
-                            </svg>
-                            Повторная диагностика
-                          </button>
+                          {!isAdmin && (
+                            <button
+                              onClick={() => setIsDiagnosisMode(true)}
+                              className="flex items-center gap-1.5 text-[11px] font-medium text-primary hover:bg-primary/10 px-2.5 py-1 rounded-lg border border-primary/30 transition-colors whitespace-nowrap"
+                            >
+                              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                                <path d="M3 3v5h5"/>
+                              </svg>
+                              Повторная диагностика
+                            </button>
+                          )}
                         </div>
                         <FdiChart
                           teethData={teethMap}
@@ -2200,26 +2207,38 @@ export function PatientDetailPanel() {
                             </div>
                           </button>
                         ) : needsRediagnosis ? (
-                          <div className="bg-amber-50 border border-amber-100 rounded-2xl px-4 py-4 flex items-start gap-3">
-                            <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
-                              <svg className="w-4 h-4 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                          isAdmin ? (
+                            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-center">
+                              <p className="text-xs text-muted-foreground">Планы лечения отсутствуют</p>
                             </div>
-                            <div className="flex-1">
-                              <p className="text-sm font-semibold text-amber-800">Нужна повторная диагностика</p>
-                              <p className="text-xs text-amber-600 mt-0.5">Для создания плана {allPlans.length + 1} проведите повторный осмотр</p>
-                              <button onClick={() => { setPlanDetailId(null); setTreatmentStep(1); }} className="mt-2 text-xs font-semibold text-amber-700 underline underline-offset-2">Перейти к зубной карте →</button>
+                          ) : (
+                            <div className="bg-amber-50 border border-amber-100 rounded-2xl px-4 py-4 flex items-start gap-3">
+                              <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+                                <svg className="w-4 h-4 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-sm font-semibold text-amber-800">Нужна повторная диагностика</p>
+                                <p className="text-xs text-amber-600 mt-0.5">Для создания плана {allPlans.length + 1} проведите повторный осмотр</p>
+                                <button onClick={() => { setPlanDetailId(null); setTreatmentStep(1); }} className="mt-2 text-xs font-semibold text-amber-700 underline underline-offset-2">Перейти к зубной карте →</button>
+                              </div>
                             </div>
-                          </div>
+                          )
                         ) : (
-                          <button className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border border-dashed border-gray-200 text-sm font-medium text-gray-400 hover:bg-gray-50 transition-colors"
-                            onClick={() => createPlanMutation.mutate({ id: selectedPatientId, data: {} })}
-                            disabled={createPlanMutation.isPending}
-                          >
-                            {createPlanMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                            {pastPlans.length > 0 ? `Создать план ${allPlans.length + 1}` : "Составить план из диагностики"}
-                          </button>
+                          isAdmin ? (
+                            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-center">
+                              <p className="text-xs text-muted-foreground">Планы лечения отсутствуют</p>
+                            </div>
+                          ) : (
+                            <button className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border border-dashed border-gray-200 text-sm font-medium text-gray-400 hover:bg-gray-50 transition-colors"
+                              onClick={() => createPlanMutation.mutate({ id: selectedPatientId, data: {} })}
+                              disabled={createPlanMutation.isPending}
+                            >
+                              {createPlanMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                              {pastPlans.length > 0 ? `Создать план ${allPlans.length + 1}` : "Составить план из диагностики"}
+                            </button>
+                          )
                         )}
-                        {activePlan && (activePlan.status === "completed" || activePlan.status === "in_progress") && !needsRediagnosis && (
+                        {!isAdmin && activePlan && (activePlan.status === "completed" || activePlan.status === "in_progress") && !needsRediagnosis && (
                           <button className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-dashed border-gray-200 text-sm font-medium text-gray-400 hover:bg-gray-50 transition-colors mt-2"
                             onClick={() => createPlanMutation.mutate({ id: selectedPatientId, data: {} })} disabled={createPlanMutation.isPending}
                           >
@@ -2298,7 +2317,7 @@ export function PatientDetailPanel() {
                               </div>
                             </div>
                           </div>
-                          {isActive && activePlan && (activePlan.status === "completed" || activePlan.status === "in_progress") && (
+                          {!isAdmin && isActive && activePlan && (activePlan.status === "completed" || activePlan.status === "in_progress") && (
                             needsRediagnosis ? (
                               <Button variant="outline" className="w-full gap-2 border-amber-200 text-amber-700 hover:bg-amber-50" onClick={() => { setPlanDetailId(null); setTreatmentStep(1); setIsDiagnosisMode(true); }}>
                                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>

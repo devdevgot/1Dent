@@ -29,7 +29,7 @@ const ADMIN_NAV_ITEMS = [
   { nameKey: "nav.patients",             href: "/patients",                icon: Users,           badge: null },
   { nameKey: "nav.services",             href: "/services",                icon: Stethoscope,     badge: null },
   { nameKey: "nav.chat",                 href: "/chat",                    icon: FaWhatsapp,      badge: null },
-  { nameKey: "nav.settings",             href: "/settings",                icon: Settings,        badge: null },
+  { nameKey: "nav.users",                href: "/users",                   icon: Settings,        badge: null },
 ];
 
 interface AdminLayoutProps {
@@ -50,14 +50,13 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const { t } = useTranslation();
   const { user, clearAuth } = useAuthStore();
   const [location] = useLocation();
-  const [manualCollapsed, setManualCollapsed] = useState<boolean | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const width = useBreakpoint();
 
   const isTablet = width >= 768 && width < 1024;
   const isMobile = width < 768;
 
-  const collapsed = manualCollapsed !== null ? manualCollapsed : isTablet;
+  const collapsed = false;
 
   const navItems = ADMIN_NAV_ITEMS.map((item) => ({
     ...item,
@@ -161,24 +160,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         <div className="flex gap-1">
           <button
             onClick={handleLogout}
-            className={cn(
-              "flex items-center gap-2 rounded-xl text-white/60 hover:bg-white/10 hover:text-white transition-colors",
-              collapsed && !mobile ? "flex-1 justify-center p-2" : "flex-1 px-3 py-2",
-            )}
+            className="flex-1 px-3 py-2 flex items-center gap-2 rounded-xl text-white/60 hover:bg-white/10 hover:text-white transition-colors"
           >
             <LogOut className="w-4 h-4 shrink-0" />
-            {(!collapsed || mobile) && <span className="text-xs font-medium">{t("account.signOut")}</span>}
+            <span className="text-xs font-medium">{t("account.signOut")}</span>
           </button>
-
-          {!mobile && (
-            <button
-              onClick={() => setManualCollapsed((c) => (c === null ? !isTablet : !c))}
-              className="p-2 rounded-xl text-white/60 hover:bg-white/10 hover:text-white transition-colors"
-              title={collapsed ? t("adminNav.expand") : t("adminNav.collapse")}
-            >
-              {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-            </button>
-          )}
         </div>
       </div>
     </div>

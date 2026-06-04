@@ -305,6 +305,8 @@ function PlanItemCard({
   showTooth?: boolean;
   actions: ItemActions;
 }) {
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === "admin";
   const isDone = item.status === "completed";
   const isPending = item.status === "pending";
   const timerStart = actions.getTimerStart(item.id);
@@ -441,7 +443,7 @@ function PlanItemCard({
       </div>
 
       {/* Timer + action bar (only for pending items, not in edit mode) */}
-      {isPending && !actions.isEditMode && (
+      {isPending && !actions.isEditMode && !isAdmin && (
         <div
           className={cn(
             "flex items-center gap-2 px-3 pb-2.5",
@@ -1013,11 +1015,13 @@ function DetailProcedureCard({
 }: {
   item: TreatmentPlanItem;
   toothLabel?: string;
-  condCfg?: (typeof CONDITION_CONFIG)[string];
+  condCfg?: any;
   stage: StageConfig;
   doctorName?: string;
   actions: ItemActions;
 }) {
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === "admin";
   const isDone = item.status === "completed";
   const timerStart = actions.getTimerStart(item.id);
   const isRunning = timerStart !== undefined;
@@ -1131,7 +1135,7 @@ function DetailProcedureCard({
           </div>
 
           {/* Duration picker + start button */}
-          {!isDone && !isRunning && (
+          {!isDone && !isRunning && !isAdmin && (
             <div className="mt-3">
               {showPicker ? (
                 <div className="space-y-2">
@@ -1315,6 +1319,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
   const qc = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuthStore();
+  const isAdmin = user?.role === "admin";
   const { data: usersData } = useListUsers();
   const { data: allPlansData } = useListTreatmentPlans(patientId);
   const allUsers = useMemo(() => usersData?.data?.users ?? [], [usersData]);
@@ -1781,7 +1786,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
   return (
     <div className="mt-4 space-y-3">
       {/* Plan header */}
-      {activePlan && (
+      {activePlan && !isAdmin && (
         <div className="flex justify-end px-0.5">
           <button
             onClick={handleToggleEditMode}

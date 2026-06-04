@@ -1,11 +1,21 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
-import { useCreateExpense, useUpdateExpense, type ClinicExpense, type ExpenseCategory, type CreateExpenseRequest } from "@workspace/api-client-react";
+import { useCreateExpense, useUpdateExpense, useListUsersAll, type ClinicExpense, type ExpenseCategory, type CreateExpenseRequest } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
+const ROLE_LABELS: Record<string, string> = {
+  admin: "Администратор",
+  doctor: "Врач",
+  accountant: "Бухгалтер",
+  warehouse: "Склад",
+  assistant: "Ассистент",
+  nurse: "Медсестра",
+};
+
 const CATEGORIES: ExpenseCategory[] = ["salary", "materials", "rent", "utilities", "equipment", "marketing", "other"];
+const UI_CATEGORIES = ["salary", "advance", "materials", "rent", "utilities", "equipment", "marketing", "other"];
 
 interface ExpenseDialogProps {
   expense?: ClinicExpense | null;
@@ -17,8 +27,23 @@ export default function ExpenseDialog({ expense, onClose, onSuccess }: ExpenseDi
   const { t } = useTranslation();
   const { toast } = useToast();
 
+  const [uiCategory, setUiCategory] = useState<string>(() => {
+    if (expense?.category === "salary" && expense?.subcategory?.startsWith("аванс")) {
+      return "advance";
+    }
+    return expense?.category ?? "other";
+  });
   const [category, setCategory] = useState<ExpenseCategory>(expense?.category ?? "other");
   const [subcategory, setSubcategory] = useState(expense?.subcategory ?? "");
+  const [selectedUserId, setSelectedUserId] = useState<string>(() => {
+    if (expense?.subcategory?.startsWith("аванс:")) {
+      return expense.subcategory.split(":")[1] || "";
+    }
+    if (expense?.category === "salary" && expense?.subcategory?.startsWith("зарплата:")) {
+      return expense.subcategory.split(":")[1] || "";
+    }
+    return "";
+  });
   const [amount, setAmount] = useState(expense ? String(Number(expense.amount)) : "");
   const [description, setDescription] = useState(expense?.description ?? "");
   const [expenseDate, setExpenseDate] = useState(
@@ -31,6 +56,26 @@ export default function ExpenseDialog({ expense, onClose, onSuccess }: ExpenseDi
   const { mutateAsync: update, isPending: updating } = useUpdateExpense();
   const isPending = creating || updating;
 
+  const { data: usersData } = useListUsersAll({ includeInactive: false });
+  const allUsers = usersData?.data?.users ?? [];
+  const employees = allUsers.filter((u) => u.role !== "owner");
+
+  const handleUiCategoryChange = (val: string) => {
+    setUiCategory(val);
+    if (val === "advance") {
+      setCategory("salary");
+      setSubcategory(`аванс:${selectedUserId}`);
+    } else if (val === "salary") {
+      setCategory("salary");
+      setSubcategory(`зарплата:${selectedUserId}`);
+    } else {
+      setCategory(val as ExpenseCategory);
+      if (subcategory.startsWith("аванс") || subcategory.startsWith("зарплата")) {
+        setSubcategory("");
+      }
+    }
+  };
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const amountNum = Number(amount);
@@ -39,9 +84,23 @@ export default function ExpenseDialog({ expense, onClose, onSuccess }: ExpenseDi
       return;
     }
 
+    if (uiCategory === "advance" && !selectedUserId) {
+      toast({ title: t("expenses.selectEmployee"), variant: "destructive" });
+      return;
+    }
+
+    if (uiCategory === "salary" && !expense?.payrollRef && !selectedUserId) {
+      toast({ title: t("expenses.selectEmployee"), variant: "destructive" });
+      return;
+    }
+
     const payload: CreateExpenseRequest = {
       category,
-      subcategory: subcategory || undefined,
+      subcategory: uiCategory === "advance"
+        ? `аванс:${selectedUserId}`
+        : (uiCategory === "salary" && !expense?.payrollRef)
+          ? `зарплата:${selectedUserId}`
+          : (subcategory || undefined),
       amount: amountNum,
       description: description || undefined,
       expenseDate: new Date(expenseDate).toISOString(),
@@ -83,28 +142,51 @@ export default function ExpenseDialog({ expense, onClose, onSuccess }: ExpenseDi
               {t("expenses.category")}
             </label>
             <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value as ExpenseCategory)}
+              value={uiCategory}
+              onChange={(e) => handleUiCategoryChange(e.target.value)}
               className="w-full text-sm px-3 py-2.5 rounded-xl border border-border/50 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary/30"
             >
-              {CATEGORIES.map((c) => (
+              {UI_CATEGORIES.map((c) => (
                 <option key={c} value={c}>{t(`expenses.cat.${c}`)}</option>
               ))}
             </select>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">
-              {t("expenses.subcategory")}
-            </label>
-            <input
-              type="text"
-              value={subcategory}
-              onChange={(e) => setSubcategory(e.target.value)}
-              placeholder={t("expenses.subcategoryPlaceholder")}
-              className="w-full text-sm px-3 py-2.5 rounded-xl border border-border/50 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary/30"
-            />
-          </div>
+          {(uiCategory === "advance" || (uiCategory === "salary" && !expense?.payrollRef)) && (
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">
+                {t("expenses.employee")} *
+              </label>
+              <select
+                value={selectedUserId}
+                onChange={(e) => setSelectedUserId(e.target.value)}
+                required
+                className="w-full text-sm px-3 py-2.5 rounded-xl border border-border/50 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                <option value="">{t("expenses.selectEmployee")}</option>
+                {employees.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.name} ({ROLE_LABELS[emp.role] || emp.role})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {uiCategory !== "advance" && uiCategory !== "salary" && (
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">
+                {t("expenses.subcategory")}
+              </label>
+              <input
+                type="text"
+                value={subcategory}
+                onChange={(e) => setSubcategory(e.target.value)}
+                placeholder={t("expenses.subcategoryPlaceholder")}
+                className="w-full text-sm px-3 py-2.5 rounded-xl border border-border/50 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+            </div>
+          )}
 
           <div>
             <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">

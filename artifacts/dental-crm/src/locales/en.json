@@ -698,8 +698,11 @@
     "confirmDelete": "Delete expense?",
     "empty": "No expenses",
     "amountInvalid": "Enter a valid amount",
+    "employee": "Employee",
+    "selectEmployee": "Select employee",
     "cat": {
       "salary": "Salary",
+      "advance": "Advance",
       "materials": "Materials",
       "rent": "Rent",
       "utilities": "Utilities",

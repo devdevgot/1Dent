@@ -1,3 +1,4 @@
+
 import { useEffect } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -5,7 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-import { useGetMe, getGetMeQueryKey, setUnauthorizedHandler } from "@workspace/api-client-react";
+import { useGetMe, getGetMeQueryKey, setUnauthorizedHandler, setBaseUrl } from "@workspace/api-client-react";
 import { clearAuthToken, restoreAuthToken } from "@/lib/auth-token";
 import type { User, Clinic } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
@@ -34,12 +35,10 @@ import FinancialsPage from "@/pages/financials";
 import WarehousePage from "@/pages/warehouse";
 import UsersPage from "@/pages/users";
 import ChatbotPage from "@/pages/chatbot";
-import StaffPage from "@/pages/staff";
 import StaffDetailPage from "@/pages/staff-detail";
 import DoctorAnalyticsPage from "@/pages/doctor-analytics";
 import DoctorSchedulePage from "@/pages/doctor-schedule";
 import DoctorScheduleDayPage from "@/pages/doctor-schedule-day";
-import SettingsPage from "@/pages/settings";
 import AccountSettingsPage from "@/pages/account-settings";
 import AccountEditProfilePage from "@/pages/account-edit-profile";
 import AccountChangeEmailPage from "@/pages/account-change-email";
@@ -79,6 +78,9 @@ const DEV_MOCK_CLINIC: Clinic = {
   name: "Dev Clinic",
   createdAt: new Date().toISOString(),
 };
+
+// Set API base URL to the hosted Replit backend
+setBaseUrl("https://dental-crm-kz.replit.app");
 
 // Restore auth token from localStorage on page load
 restoreAuthToken();
@@ -268,7 +270,7 @@ function Router() {
 
       {/* Users management */}
       <Route path="/users">
-        <ProtectedRoute component={UsersPage} allowedRoles={['owner']} />
+        <ProtectedRoute component={UsersPage} allowedRoles={['owner', 'admin']} />
       </Route>
 
       {/* Chatbot management */}
@@ -277,10 +279,6 @@ function Router() {
       </Route>
 
 
-      {/* Staff management */}
-      <Route path="/staff">
-        <ProtectedRoute component={StaffPage} allowedRoles={['owner', 'admin']} />
-      </Route>
       <Route path="/staff/:doctorId">
         <ProtectedRoute component={StaffDetailPage} allowedRoles={['owner', 'admin']} />
       </Route>
@@ -305,10 +303,6 @@ function Router() {
         <ProtectedRoute component={MigrationPage} allowedRoles={['owner']} />
       </Route>
 
-      {/* Settings page */}
-      <Route path="/settings">
-        <ProtectedRoute component={SettingsPage} allowedRoles={['owner', 'admin', 'doctor', 'accountant', 'warehouse']} />
-      </Route>
 
       {/* Contract templates management */}
       <Route path="/contract-templates">

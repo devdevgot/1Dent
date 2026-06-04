@@ -11,7 +11,8 @@ export type ChatbotState =
   | "confirm_appointment"
   | "dental_qa"
   | "done"
-  | "human_takeover";
+  | "human_takeover"
+  | "reactivation";
 
 export interface ChatbotSessionData {
   patientName?: string;

@@ -164,7 +164,7 @@ router.post("/clinic/telegram-test", ownerOnly, async (req: Request, res: Respon
 
 // ── GET /api/geo/tracking ─────────────────────────────────────────────────────
 // Returns geo events for the clinic, optionally filtered by branchId and date range
-router.get("/geo/tracking", ownerOnly, async (req: Request, res: Response, next: NextFunction) => {
+router.get("/geo/tracking", roleGuard("owner", "admin"), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { branchId, dateFrom, dateTo } = req.query as Record<string, string | undefined>;
 

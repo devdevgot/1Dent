@@ -9,6 +9,7 @@ import { z } from "zod";
 import { randomUUID } from "crypto";
 import { ProceduresRepository } from "./procedures.repository";
 import { InventoryRepository } from "../inventory/inventory.repository";
+import { ChatbotService } from "../chatbot/chatbot.service";
 import { analyticsRepo } from "../analytics/analytics.controller";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError, ForbiddenError } from "../../shared/errors";
@@ -339,6 +340,13 @@ router.patch(
           procedureId: procedure.id,
         }).catch(() => {});
       }
+    }
+
+    if (parsed.data.status === "cancelled" && procedure.patientId) {
+      const chatbotService = new ChatbotService();
+      chatbotService.triggerReactivation(clinicId, procedure.patientId, procedure.id).catch((err) => {
+        logger.error({ err }, "[Procedures] Failed to trigger chatbot reactivation");
+      });
     }
 
     // Notify admins/owners when a procedure moves to pending_payment for the first time

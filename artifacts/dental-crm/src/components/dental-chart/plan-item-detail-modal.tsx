@@ -15,6 +15,7 @@ import {
 import type { TreatmentPlanItem } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useAuthStore } from "@/hooks/use-auth";
 
 type User = { id: string; name: string; role?: string };
 
@@ -209,6 +210,8 @@ export function PlanItemDetailModal({
   cancellingId,
   onClose,
 }: PlanItemDetailModalProps) {
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === "admin";
   const qc = useQueryClient();
   const { toast } = useToast();
   const [tab, setTab] = useState<"info" | "ai" | "files">("info");
@@ -372,7 +375,7 @@ export function PlanItemDetailModal({
     canvas.getContext("2d")?.drawImage(video, 0, 0);
     canvas.toBlob(async (blob) => {
       if (!blob) return;
-      const file = new File([blob], `photo_${Date.now()}.jpg`, { type: "image/jpeg" });
+      const file = new (window as any).File([blob], `photo_${Date.now()}.jpg`, { type: "image/jpeg" });
       stopCamera();
       await handleFileSelect(file);
     }, "image/jpeg", 0.92);
@@ -489,7 +492,7 @@ export function PlanItemDetailModal({
             <div className="px-4 py-4 space-y-4">
 
               {/* Timer section */}
-              {isPending && (
+              {isPending && !isAdmin && (
                 <div className="bg-gradient-to-br from-primary/5 to-blue-50 rounded-2xl p-4 border border-primary/10">
                   <div className="flex items-center gap-2 mb-3">
                     <Clock className="w-4 h-4 text-primary" />
@@ -541,8 +544,12 @@ export function PlanItemDetailModal({
                 <p className="text-[12px] font-semibold text-gray-500 uppercase tracking-wide mb-2">Врач</p>
                 <div className="relative">
                   <button
-                    onClick={() => setShowDoctorPicker(!showDoctorPicker)}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-gray-200 bg-white hover:border-primary/40 transition-colors"
+                    onClick={() => !isAdmin && setShowDoctorPicker(!showDoctorPicker)}
+                    disabled={isAdmin}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-gray-200 bg-white hover:border-primary/40 transition-colors",
+                      isAdmin && "cursor-default opacity-85 hover:border-gray-200"
+                    )}
                   >
                     <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                       <UserRound className="w-3.5 h-3.5 text-primary" />
@@ -550,7 +557,7 @@ export function PlanItemDetailModal({
                     <span className="flex-1 text-left text-[13px] font-medium text-gray-700">
                       {assignedUser?.name ?? "Не назначен"}
                     </span>
-                    <ChevronDown className={cn("w-4 h-4 text-gray-400 transition-transform", showDoctorPicker && "rotate-180")} />
+                    {!isAdmin && <ChevronDown className={cn("w-4 h-4 text-gray-400 transition-transform", showDoctorPicker && "rotate-180")} />}
                   </button>
                   {showDoctorPicker && (
                     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-100 rounded-xl shadow-lg z-10 overflow-hidden">
@@ -586,7 +593,7 @@ export function PlanItemDetailModal({
                   <p className="text-[12px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
                     <StickyNote className="w-3.5 h-3.5" /> Заметки
                   </p>
-                  {notesDirty && (
+                  {notesDirty && !isAdmin && (
                     <button
                       onClick={() => void handleSaveNotes()}
                       disabled={savingNotes}
@@ -598,10 +605,11 @@ export function PlanItemDetailModal({
                   )}
                 </div>
                 <textarea
+                  readOnly={isAdmin}
                   value={notes}
-                  onChange={(e) => { setNotes(e.target.value); setNotesDirty(true); }}
-                  onBlur={() => { if (notesDirty) void handleSaveNotes(); }}
-                  placeholder="Добавьте заметки по процедуре…"
+                  onChange={(e) => { if (!isAdmin) { setNotes(e.target.value); setNotesDirty(true); } }}
+                  onBlur={() => { if (notesDirty && !isAdmin) void handleSaveNotes(); }}
+                  placeholder={isAdmin ? "Нет заметок" : "Добавьте заметки по процедуре…"}
                   rows={4}
                   className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-[13px] text-gray-700 placeholder:text-gray-400 resize-none focus:outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary/40 transition-colors"
                 />
@@ -700,7 +708,7 @@ export function PlanItemDetailModal({
               )}
 
               {/* Action buttons row */}
-              {!showCamera && (
+              {!showCamera && !isAdmin && (
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => void handleOpenCamera("environment")}
@@ -775,12 +783,14 @@ export function PlanItemDetailModal({
                           <span className="text-[10px] text-gray-400">Изображение</span>
                         )}
                       </div>
-                      <button
-                        onClick={() => void handleRemoveAttachment(path)}
-                        className="w-7 h-7 rounded-full flex items-center justify-center text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors shrink-0"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {!isAdmin && (
+                        <button
+                          onClick={() => void handleRemoveAttachment(path)}
+                          className="w-7 h-7 rounded-full flex items-center justify-center text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors shrink-0"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>

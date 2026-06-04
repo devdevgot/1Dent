@@ -1,15 +1,22 @@
 import { useLocation } from "wouter";
 import { useAuthStore } from "@/hooks/use-auth";
-import { ChevronLeft, ChevronRight, User, Mail, Lock, Camera, Banknote, CheckCircle, Clock } from "lucide-react";
+import { ChevronLeft, ChevronRight, User, Mail, Lock, Camera, Banknote, CheckCircle, Clock, Globe } from "lucide-react";
 import { useGetMyPayrollRecords, type PayrollRecord } from "@workspace/api-client-react";
 import { useTranslation } from "react-i18next";
+import { cn } from "@/lib/utils";
 
 export default function AccountSettings() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [, setLocation] = useLocation();
   const { user } = useAuthStore();
   const { data: myPayrollData } = useGetMyPayrollRecords();
   const myRecords: PayrollRecord[] = myPayrollData?.data?.records ?? [];
+
+  const languages = [
+    { code: "ru", label: "RU" },
+    { code: "en", label: "EN" },
+    { code: "kz", label: "KZ" },
+  ] as const;
 
   const photoUrl = (user as typeof user & { photoUrl?: string | null })?.photoUrl;
   const initials = (user?.name ?? "?").charAt(0).toUpperCase();
@@ -136,6 +143,35 @@ export default function AccountSettings() {
             </div>
           )}
         </div>}
+
+        {/* Language switch */}
+        <div className="bg-white rounded-2xl overflow-hidden p-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center shrink-0">
+              <Globe className="w-[18px] h-[18px] text-white" />
+            </div>
+            <div>
+              <p className="text-[15px] font-semibold text-gray-900">{t("settingsPage.language")}</p>
+            </div>
+          </div>
+          <div className="flex gap-2 pt-1">
+            {languages.map((lang) => (
+              <button
+                key={lang.code}
+                onClick={() => i18n.changeLanguage(lang.code)}
+                className={cn(
+                  "flex-1 h-10 rounded-xl border text-sm font-semibold transition-all",
+                  i18n.language === lang.code
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-gray-200 bg-white text-gray-500 hover:border-primary/40",
+                )}
+              >
+                {lang.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
       </div>
     </div>
   );

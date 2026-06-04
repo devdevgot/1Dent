@@ -230,58 +230,127 @@ export default function AdminDashboard() {
 
         {/* Right column: Active Tasks + Top Doctors */}
         <div className="space-y-4">
-          {/* Active Tasks (in_progress procedures) */}
+          {/* Ожидают оплаты */}
           <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
             <h3 className="text-base font-bold text-gray-900 flex items-center gap-2 mb-4">
-              <Clock className="w-4 h-4 text-amber-500" />
-              {t("adminDashboard.activeTasks")}
-              {activeTasks.length > 0 && (
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 ml-1">
-                  {activeTasks.length}
+              <Wallet className="w-4 h-4 text-emerald-500" />
+              Оплата
+              {pendingPaymentQueue.length > 0 && (
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 ml-1">
+                  {pendingPaymentQueue.length}
                 </span>
               )}
             </h3>
-            {activeTasks.length === 0 ? (
-              <p className="text-sm text-gray-400 py-2">{t("adminDashboard.noActiveTasks")}</p>
+            {pendingPaymentQueue.length === 0 ? (
+              <p className="text-sm text-gray-400 py-2">Нет ожидающих оплат</p>
             ) : (
-              <div className="space-y-3">
-                {todayActiveTasks.length > 0 && (
+              <div className="space-y-4">
+                {todayPendingPayment.length > 0 && (
                   <div>
-                    <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wide mb-1.5">Сегодня</p>
-                    <div className="space-y-1.5">
-                      {todayActiveTasks.slice(0, 3).map((proc) => {
+                    <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wide mb-1.5">Сегодня</p>
+                    <div className="space-y-2">
+                      {todayPendingPayment.map((proc) => {
                         const patient = patients.find((p) => p.id === proc.patientId);
+                        const isSelecting = selectingPayment === proc.id;
+                        const isSaving = updatePayment.isPending;
                         return (
-                          <div key={proc.id} className="flex items-center gap-2 p-2 rounded-xl bg-amber-50 border border-amber-100">
-                            <div className="w-2 h-2 rounded-full bg-amber-400 shrink-0 animate-pulse" />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-semibold text-gray-900 truncate">{proc.name}</p>
-                              <p className="text-[10px] text-gray-500 truncate">
-                                {patient?.name ?? "—"}{proc.doctorName && ` · ${proc.doctorName}`}
-                              </p>
+                          <div key={proc.id} className="flex flex-col gap-2 p-3 rounded-xl bg-emerald-50/50 border border-emerald-100">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-semibold text-gray-900 truncate">{proc.name}</p>
+                                <p className="text-[10px] text-gray-500 truncate">
+                                  {patient?.name ?? "—"}{proc.doctorName && ` · ${proc.doctorName}`}
+                                </p>
+                                <p className="text-[10px] font-bold text-emerald-700 mt-0.5">
+                                  {proc.price ? formatMoney(proc.price) : "—"}
+                                </p>
+                              </div>
+                              {!isSelecting && (
+                                <button
+                                  onClick={() => setSelectingPayment(proc.id)}
+                                  className="shrink-0 flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold rounded-lg bg-emerald-100 text-emerald-800 hover:bg-emerald-200 transition-colors"
+                                >
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                  Оплата
+                                </button>
+                              )}
                             </div>
+                            {isSelecting && (
+                              <div className="flex flex-wrap gap-1 mt-1 pl-1">
+                                {(["cash", "kaspi_qr", "kaspi_transfer", "terminal", "kaspi_red", "debt"] as const).map((method) => (
+                                  <button
+                                    key={method}
+                                    disabled={isSaving}
+                                    onClick={() => updatePayment.mutate({ id: proc.id, data: { paymentMethod: method } })}
+                                    className="px-1.5 py-0.5 text-[9px] font-medium rounded-md border border-gray-200 bg-white hover:border-primary hover:bg-primary/10 hover:text-primary transition-colors disabled:opacity-50"
+                                  >
+                                    {PAYMENT_METHOD_LABELS[method]}
+                                  </button>
+                                ))}
+                                <button
+                                  onClick={() => setSelectingPayment(null)}
+                                  className="px-1.5 py-0.5 text-[9px] font-medium rounded-md border border-gray-200 text-gray-400 bg-white hover:bg-gray-50 transition-colors"
+                                >
+                                  Отмена
+                                </button>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
                     </div>
                   </div>
                 )}
-                {overdueActiveTasks.length > 0 && (
+                {overduePendingPayment.length > 0 && (
                   <div>
-                    <p className="text-[10px] font-bold text-orange-600 uppercase tracking-wide mb-1.5">Незакрытые</p>
-                    <div className="space-y-1.5">
-                      {overdueActiveTasks.slice(0, 3).map((proc) => {
+                    <p className="text-[10px] font-bold text-rose-600 uppercase tracking-wide mb-1.5">Незакрытые</p>
+                    <div className="space-y-2">
+                      {overduePendingPayment.map((proc) => {
                         const patient = patients.find((p) => p.id === proc.patientId);
+                        const isSelecting = selectingPayment === proc.id;
+                        const isSaving = updatePayment.isPending;
                         return (
-                          <div key={proc.id} className="flex items-center gap-2 p-2 rounded-xl bg-orange-50 border border-orange-100">
-                            <div className="w-2 h-2 rounded-full bg-orange-400 shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-semibold text-gray-900 truncate">{proc.name}</p>
-                              <p className="text-[10px] text-gray-500 truncate">
-                                {patient?.name ?? "—"}{proc.doctorName && ` · ${proc.doctorName}`}
-                              </p>
+                          <div key={proc.id} className="flex flex-col gap-2 p-3 rounded-xl bg-rose-50/50 border border-rose-100">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-semibold text-gray-900 truncate">{proc.name}</p>
+                                <p className="text-[10px] text-gray-500 truncate">
+                                  {patient?.name ?? "—"}{proc.doctorName && ` · ${proc.doctorName}`}
+                                </p>
+                                <p className="text-[10px] font-bold text-rose-700 mt-0.5">
+                                  {proc.price ? formatMoney(proc.price) : "—"} · <span className="text-[9px] text-rose-500 font-semibold">{fmtOverdueDate(proc)}</span>
+                                </p>
+                              </div>
+                              {!isSelecting && (
+                                <button
+                                  onClick={() => setSelectingPayment(proc.id)}
+                                  className="shrink-0 flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold rounded-lg bg-rose-100 text-rose-800 hover:bg-rose-200 transition-colors"
+                                >
+                                  <CheckCircle2 className="w-3 h-3 text-rose-600" />
+                                  Оплата
+                                </button>
+                              )}
                             </div>
-                            <span className="text-[10px] text-orange-500 font-semibold shrink-0">{fmtOverdueDate(proc)}</span>
+                            {isSelecting && (
+                              <div className="flex flex-wrap gap-1 mt-1 pl-1">
+                                {(["cash", "kaspi_qr", "kaspi_transfer", "terminal", "kaspi_red", "debt"] as const).map((method) => (
+                                  <button
+                                    key={method}
+                                    disabled={isSaving}
+                                    onClick={() => updatePayment.mutate({ id: proc.id, data: { paymentMethod: method } })}
+                                    className="px-1.5 py-0.5 text-[9px] font-medium rounded-md border border-gray-200 bg-white hover:border-primary hover:bg-primary/10 hover:text-primary transition-colors disabled:opacity-50"
+                                  >
+                                    {PAYMENT_METHOD_LABELS[method]}
+                                  </button>
+                                ))}
+                                <button
+                                  onClick={() => setSelectingPayment(null)}
+                                  className="px-1.5 py-0.5 text-[9px] font-medium rounded-md border border-gray-200 text-gray-400 bg-white hover:bg-gray-50 transition-colors"
+                                >
+                                  Отмена
+                                </button>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -338,90 +407,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Pending Payment Queue */}
-      {pendingPaymentQueue.length > 0 && (
-        <div className="bg-white rounded-2xl border border-orange-200 shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-orange-100 flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-orange-500" />
-            <h3 className="text-base font-bold text-gray-900">Ожидают оплаты</h3>
-            <span className="ml-1 text-xs font-bold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">
-              {pendingPaymentQueue.length}
-            </span>
-            {overduePendingPayment.length > 0 && (
-              <span className="text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
-                {overduePendingPayment.length} незакрытых
-              </span>
-            )}
-            <button
-              onClick={() => navigate("/admin/finance")}
-              className="ml-auto text-sm text-primary font-semibold flex items-center gap-1 hover:underline"
-            >
-              Все <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="divide-y divide-orange-50">
-            {pendingPaymentQueue.map((proc, i) => {
-              const patient = patients.find((p) => p.id === proc.patientId);
-              const isSelecting = selectingPayment === proc.id;
-              const isSaving = updatePayment.isPending;
-              const isOverdue = overduePendingPayment.some((o) => o.id === proc.id);
-              return (
-                <motion.div
-                  key={proc.id}
-                  initial={{ opacity: 0, x: -4 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.04 }}
-                  className={`flex items-center gap-4 px-5 py-3 ${isOverdue ? "bg-rose-50/40" : ""}`}
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{proc.name}</p>
-                    <p className="text-xs text-gray-500">
-                      {patient?.name ?? "—"}
-                      {proc.doctorName && ` · ${proc.doctorName}`}
-                      {proc.price ? ` · ${formatMoney(proc.price)}` : ""}
-                    </p>
-                    <p className="text-[10px] mt-0.5">
-                      {isOverdue
-                        ? <span className="text-rose-500 font-semibold">Незакрыто · {fmtOverdueDate(proc)}</span>
-                        : proc.scheduledAt
-                          ? <span className="text-orange-500">{format(parseISO(proc.scheduledAt), "d MMM, HH:mm")}</span>
-                          : null}
-                    </p>
-                  </div>
-                  {isSelecting ? (
-                    <div className="flex flex-wrap gap-1.5 justify-end">
-                      {(["cash", "kaspi_qr", "kaspi_transfer", "terminal", "kaspi_red", "debt"] as const).map((method) => (
-                        <button
-                          key={method}
-                          disabled={isSaving}
-                          onClick={() => updatePayment.mutate({ id: proc.id, data: { paymentMethod: method } })}
-                          className="px-2 py-1 text-xs rounded-lg border border-gray-200 hover:border-primary hover:bg-primary/10 hover:text-primary transition-colors disabled:opacity-50"
-                        >
-                          {PAYMENT_METHOD_LABELS[method]}
-                        </button>
-                      ))}
-                      <button
-                        onClick={() => setSelectingPayment(null)}
-                        className="px-2 py-1 text-xs rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 transition-colors"
-                      >
-                        Отмена
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setSelectingPayment(proc.id)}
-                      className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors"
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      Принять оплату
-                    </button>
-                  )}
-                </motion.div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+
 
       {/* Quick Links row */}
       <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">

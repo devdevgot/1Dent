@@ -134,53 +134,55 @@ export default function MenuPage() {
       </div>
 
       {/* Settings */}
-      <div className="px-4 mb-3">
-        <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Настройки</p>
-        <div className="bg-white rounded-2xl overflow-hidden divide-y divide-gray-100">
-          {/* Language */}
-          <div className="flex items-center justify-between px-4 py-3.5">
-            <span className="text-[15px] text-gray-800">Язык приложения</span>
-            <div className="flex items-center gap-1">
-              <span className="text-sm text-gray-400 mr-1">{LANG_LABEL[currentLang]}</span>
-              <div className="flex bg-gray-100 rounded-lg p-0.5">
-                {SUPPORTED_LANGS.map((lang) => (
-                  <button
-                    key={lang}
-                    onClick={() => handleLangChange(lang)}
-                    className={cn(
-                      "text-[11px] font-semibold px-2.5 py-1.5 rounded-md transition-all",
-                      currentLang === lang
-                        ? "bg-white text-primary shadow-sm"
-                        : "text-gray-400",
-                    )}
-                  >
-                    {LANG_LABEL[lang]}
-                  </button>
-                ))}
+      {user?.role !== "admin" && (
+        <div className="px-4 mb-3">
+          <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Настройки</p>
+          <div className="bg-white rounded-2xl overflow-hidden divide-y divide-gray-100">
+            {/* Language */}
+            <div className="flex items-center justify-between px-4 py-3.5">
+              <span className="text-[15px] text-gray-800">Язык приложения</span>
+              <div className="flex items-center gap-1">
+                <span className="text-sm text-gray-400 mr-1">{LANG_LABEL[currentLang]}</span>
+                <div className="flex bg-gray-100 rounded-lg p-0.5">
+                  {SUPPORTED_LANGS.map((lang) => (
+                    <button
+                      key={lang}
+                      onClick={() => handleLangChange(lang)}
+                      className={cn(
+                        "text-[11px] font-semibold px-2.5 py-1.5 rounded-md transition-all",
+                        currentLang === lang
+                          ? "bg-white text-primary shadow-sm"
+                          : "text-gray-400",
+                      )}
+                    >
+                      {LANG_LABEL[lang]}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Audit Log — owner only */}
-          {user?.role === "owner" && (
-            <Link href="/logs" className="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 transition-colors">
-              <div className="flex items-center gap-2.5">
-                <span className="text-[15px] text-gray-800">{t("nav.logs")}</span>
+            {/* Audit Log — owner only */}
+            {user?.role === "owner" && (
+              <Link href="/logs" className="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 transition-colors">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-[15px] text-gray-800">{t("nav.logs")}</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-gray-300" />
+              </Link>
+            )}
+
+            {/* Notifications */}
+            <div className="flex items-center justify-between px-4 py-3.5">
+              <span className="text-[15px] text-gray-800">Уведомления</span>
+              <div className="flex items-center gap-1 text-gray-400">
+                <Bell className="w-4 h-4" />
+                <ChevronRight className="w-4 h-4" />
               </div>
-              <ChevronRight className="w-4 h-4 text-gray-300" />
-            </Link>
-          )}
-
-          {/* Notifications */}
-          <div className="flex items-center justify-between px-4 py-3.5">
-            <span className="text-[15px] text-gray-800">Уведомления</span>
-            <div className="flex items-center gap-1 text-gray-400">
-              <Bell className="w-4 h-4" />
-              <ChevronRight className="w-4 h-4" />
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Logout */}
       <div className="px-4 mt-5">

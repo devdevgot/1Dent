@@ -698,8 +698,11 @@
     "confirmDelete": "Шығынды жою?",
     "empty": "Шығын жоқ",
     "amountInvalid": "Дұрыс соманы енгізіңіз",
+    "employee": "Қызметкер",
+    "selectEmployee": "Қызметкерді таңдаңыз",
     "cat": {
       "salary": "Жалақы",
+      "advance": "Аванс",
       "materials": "Материалдар",
       "rent": "Жалдау",
       "utilities": "Коммуналдық",

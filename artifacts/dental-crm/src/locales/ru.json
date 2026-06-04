@@ -109,7 +109,9 @@
     "admin": "Администратор",
     "doctor": "Врач",
     "accountant": "Бухгалтер",
-    "warehouse": "Склад"
+    "warehouse": "Склад",
+    "assistant": "Ассистент",
+    "nurse": "Медсестра"
   },
   "dashboard": {
     "welcomeBack": "С возвращением, {{name}}",
@@ -416,7 +418,9 @@
     "admin": "Администратор",
     "doctor": "Врач",
     "accountant": "Бухгалтер",
-    "warehouse": "Склад"
+    "warehouse": "Склад",
+    "assistant": "Ассистент",
+    "nurse": "Медсестра"
   },
   "adminCalendar": {
     "title": "Календарь клиники",
@@ -702,8 +706,11 @@
     "confirmDelete": "Удалить расход?",
     "empty": "Расходов нет",
     "amountInvalid": "Укажите корректную сумму",
+    "employee": "Сотрудник",
+    "selectEmployee": "Выберите сотрудника",
     "cat": {
       "salary": "Зарплата",
+      "advance": "Аванс",
       "materials": "Материалы",
       "rent": "Аренда",
       "utilities": "Коммунальные",

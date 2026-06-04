@@ -383,7 +383,17 @@ export default function FinancialsPage() {
                       <span className="inline-block w-2 h-2 rounded-full flex-none" style={{ backgroundColor: CATEGORY_COLORS[e.category] ?? "#B2BEC3" }} />
                       <p className="text-sm font-medium text-foreground">
                         {t(`expenses.cat.${e.category}`)}
-                        {e.subcategory && <span className="text-muted-foreground font-normal"> · {e.subcategory}</span>}
+                        {e.subcategory && (
+                          <span className="text-muted-foreground font-normal">
+                            {" "}
+                            ·{" "}
+                            {e.subcategory.startsWith("аванс:")
+                              ? `аванс (${users.find((u) => u.id === e.subcategory.split(":")[1])?.name || e.subcategory.split(":")[1]})`
+                              : e.subcategory.startsWith("зарплата:")
+                                ? `зарплата (${users.find((u) => u.id === e.subcategory.split(":")[1])?.name || e.subcategory.split(":")[1]})`
+                                : e.subcategory}
+                          </span>
+                        )}
                       </p>
                     </div>
                     {e.description && <p className="text-xs text-muted-foreground mt-0.5 ml-4 truncate">{e.description}</p>}

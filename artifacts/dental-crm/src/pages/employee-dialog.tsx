@@ -4,7 +4,7 @@ import { X, User2, Briefcase, Wallet, Eye, EyeOff, ToggleLeft, ToggleRight, Chev
 import { useTranslation } from "react-i18next";
 import type { User } from "@workspace/api-client-react";
 
-const ROLES = ["admin", "doctor", "accountant", "warehouse"] as const;
+const ROLES = ["admin", "doctor", "accountant", "warehouse", "assistant", "nurse"] as const;
 type Role = (typeof ROLES)[number];
 
 interface EmployeeDialogProps {
@@ -181,6 +181,8 @@ const ROLE_COLORS: Record<string, string> = {
   doctor:     "bg-emerald-100 text-emerald-700 border-emerald-200",
   accountant: "bg-amber-100 text-amber-700 border-amber-200",
   warehouse:  "bg-slate-100 text-slate-700 border-slate-200",
+  assistant:  "bg-purple-100 text-purple-700 border-purple-200",
+  nurse:      "bg-pink-100 text-pink-700 border-pink-200",
 };
 
 export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUser }: EmployeeDialogProps) {
@@ -449,7 +451,7 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                         </div>
                       </div>
 
-                      {form.role === "doctor" ? (
+                      {(form.role === "doctor" || form.role === "assistant" || form.role === "nurse") ? (
                         <div>
                           <label className="block text-xs font-semibold text-gray-500 mb-1.5">
                             {t("employees.specialty", "Должность / Специализация")}

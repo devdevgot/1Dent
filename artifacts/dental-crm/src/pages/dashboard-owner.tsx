@@ -5,6 +5,8 @@ import {
   useGetDoctorKpis,
   useListProcedures,
   useListPatients,
+  useGetFinancialSummary,
+  useListChannels,
   getGetOwnerAnalyticsQueryKey,
   getGetDoctorKpisQueryKey,
 } from "@workspace/api-client-react";
@@ -12,8 +14,9 @@ import {
   UserCog, Users, Bell, X, ChevronLeft,
   Stethoscope, Send, Banknote, QrCode, CreditCard,
   Clock, Wallet, CalendarDays, SlidersHorizontal, UserPlus, Layers,
-  TrendingUp,
+  TrendingUp, Globe, Handshake, Megaphone, MapPin,
 } from "lucide-react";
+import { FaInstagram, FaTelegram, FaWhatsapp } from "react-icons/fa";
 import { TasksBlock } from "@/components/dashboard/tasks-block";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
@@ -54,7 +57,49 @@ function todayLabel() {
 // ─── Donut Chart ──────────────────────────────────────────────────────────────
 type PaymentStat = { method: string; label: string; amount: number; percent: number; color: string };
 
-function DonutChart({ data, activePeriod }: { data: PaymentStat[]; activePeriod: string }) {
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  kaspi_transfer: "Kaspi Перевод",
+  cash:           "Наличные",
+  kaspi_qr:       "Kaspi QR",
+  terminal:       "Терминал",
+  kaspi_red:      "Kaspi RED",
+  debt:           "В долг",
+};
+
+const PAYMENT_COLORS: Record<string, string> = {
+  kaspi_qr:       "#ff5a00",
+  cash:           "#26de81",
+  kaspi_transfer: "#4B7BEC",
+  terminal:       "#a29bfe",
+  kaspi_red:      "#fc5c65",
+  debt:           "#a8a8a8",
+};
+
+function ChannelIcon({ type, size = 18 }: { type: string; size?: number }) {
+  const BRAND = "#1f75fe";
+  const props = { size, color: BRAND, style: { flexShrink: 0 } };
+  switch (type) {
+    case "instagram": return <FaInstagram {...props} />;
+    case "telegram":  return <FaTelegram {...props} />;
+    case "whatsapp":  return <FaWhatsapp {...props} />;
+    case "2gis":      return <MapPin size={size} color={BRAND} style={{ flexShrink: 0 }} />;
+    case "website":   return <Globe size={size} color={BRAND} style={{ flexShrink: 0 }} />;
+    case "referral":  return <Handshake size={size} color={BRAND} style={{ flexShrink: 0 }} />;
+    default:          return <Megaphone size={size} color={BRAND} style={{ flexShrink: 0 }} />;
+  }
+}
+
+function DonutChart({
+  data,
+  activePeriod,
+  realIncome,
+  onDetailsClick,
+}: {
+  data: PaymentStat[];
+  activePeriod: string;
+  realIncome: number;
+  onDetailsClick: () => void;
+}) {
   const SIZE = 260, cx = 130, cy = 130, r = 115, SW = 13;
   const circ = 2 * Math.PI * r;
   const total = data.reduce((s, d) => s + d.amount, 0);
@@ -94,12 +139,15 @@ function DonutChart({ data, activePeriod }: { data: PaymentStat[]; activePeriod:
           <span style={{ fontSize: 12, color: "#8e8e93" }}>Нет данных</span>
         ) : (
           <>
-            <span style={{ fontWeight: 700, fontSize: 25, lineHeight: "32px", color: "#1c1c1e" }}>
-              {total.toLocaleString("ru-KZ")} ₸
+            <span style={{ fontWeight: 700, fontSize: 24, lineHeight: "30px", color: "#1c1c1e" }}>
+              {realIncome.toLocaleString("ru-KZ")} ₸
             </span>
-            <span style={{ fontSize: 12, lineHeight: "16px", color: "#8e8e93", marginTop: 2 }}>
-              {activePeriod}
-            </span>
+            <button
+              onClick={onDetailsClick}
+              className="mt-1 px-3 py-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-full text-[10px] font-bold text-primary transition-colors cursor-pointer"
+            >
+              Подробнее
+            </button>
           </>
         )}
       </div>
@@ -172,17 +220,28 @@ export default function OwnerDashboard() {
   const filterLabel = FILTER_PRESETS.find(p => p.key === filterPreset)?.label ?? "Месяц";
   const dateRangeLabel = fmtDateRange(dateRange.from, dateRange.to);
 
-  const { data: analyticsData, isLoading } = useGetOwnerAnalytics({
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"channels" | "payments">("channels");
+
+  const dateFromStr = useMemo(() => format(dateRange.from, "yyyy-MM-dd"), [dateRange.from]);
+  const dateToStr = useMemo(() => format(dateRange.to, "yyyy-MM-dd"), [dateRange.to]);
+
+  const { data: analyticsData, isLoading: analyticsLoading } = useGetOwnerAnalytics({
     query: { queryKey: getGetOwnerAnalyticsQueryKey() },
   });
+  const { data: summaryData, isLoading: summaryLoading } = useGetFinancialSummary({ dateFrom: dateFromStr, dateTo: dateToStr });
   const { data: kpiData } = useGetDoctorKpis({
     query: { queryKey: getGetDoctorKpisQueryKey() },
   });
   const { data: proceduresData } = useListProcedures();
   const { data: patientsData } = useListPatients();
+  const { data: channelsRes } = useListChannels();
+
+  const isLoading = analyticsLoading || summaryLoading;
 
   const allProcedures = proceduresData?.data?.procedures ?? [];
   const allPatients   = patientsData?.data?.patients ?? [];
+  const channels      = channelsRes?.data?.channels ?? [];
 
   const rawAnalytics = (analyticsData?.data?.analytics ?? {}) as Record<string, unknown>;
   const rawKpis = kpiData?.data?.kpis ?? [];
@@ -204,7 +263,103 @@ export default function OwnerDashboard() {
   const totalPatients          = analytics.totalPatients;
   const redAlertCount          = analytics.redAlertCount;
 
-  const revenueByPayment = analytics.revenueByPaymentMethod;
+  const realIncome = summaryData?.data?.netProfit ?? 0;
+
+  const paymentStats = useMemo(() => {
+    const methodAmounts: Record<string, number> = {};
+    let total = 0;
+    allProcedures.forEach((p) => {
+      if (!p.completedAt || p.status !== "completed") return;
+      const d = new Date(p.completedAt);
+      const toWithTime = new Date(dateRange.to);
+      toWithTime.setHours(23, 59, 59, 999);
+      if (d >= dateRange.from && d <= toWithTime) {
+        const method = p.paymentMethod || "cash";
+        const amt = p.price ?? 0;
+        methodAmounts[method] = (methodAmounts[method] ?? 0) + amt;
+        total += amt;
+      }
+    });
+
+    return Object.entries(PAYMENT_METHOD_LABELS).map(([method, label]) => {
+      const amount = methodAmounts[method] ?? 0;
+      const percent = total > 0 ? Math.round((amount / total) * 100) : 0;
+      return {
+        method,
+        label,
+        amount,
+        percent,
+        color: PAYMENT_COLORS[method] || "#B2BEC3",
+      };
+    }).filter(stat => stat.amount > 0).sort((a, b) => b.amount - a.amount);
+  }, [allProcedures, dateRange]);
+
+  const patientSourceMap = useMemo(() => {
+    return new Map(allPatients.map((p) => [p.id, p.source]));
+  }, [allPatients]);
+
+  const channelStats = useMemo(() => {
+    const channelAmounts: Record<string, number> = {};
+    let total = 0;
+
+    allProcedures.forEach((p) => {
+      if (!p.completedAt || p.status !== "completed") return;
+      const d = new Date(p.completedAt);
+      const toWithTime = new Date(dateRange.to);
+      toWithTime.setHours(23, 59, 59, 999);
+      if (d >= dateRange.from && d <= toWithTime) {
+        const patientSource = patientSourceMap.get(p.patientId) || "other";
+        const amount = p.price ?? 0;
+        total += amount;
+
+        const matchedChannel = channels.find(
+          (ch) => ch.refCode === patientSource || patientSource === `ref:${ch.refCode}`
+        );
+
+        if (matchedChannel) {
+          channelAmounts[matchedChannel.id] = (channelAmounts[matchedChannel.id] ?? 0) + amount;
+        } else {
+          channelAmounts[patientSource] = (channelAmounts[patientSource] ?? 0) + amount;
+        }
+      }
+    });
+
+    const list: Array<{ name: string; type: string; amount: number; percent: number }> = [];
+
+    channels.forEach((ch) => {
+      const amount = channelAmounts[ch.id] ?? 0;
+      if (amount > 0) {
+        list.push({
+          name: ch.name,
+          type: ch.type,
+          amount,
+          percent: total > 0 ? Math.round((amount / total) * 100) : 0,
+        });
+      }
+    });
+
+    const defaultSources = ["instagram", "2gis", "whatsapp", "website", "referral", "walk_in", "other"];
+    defaultSources.forEach((src) => {
+      const amount = channelAmounts[src] ?? 0;
+      if (amount > 0) {
+        const translatedName = src === "instagram" ? "Instagram" :
+                               src === "2gis" ? "2GIS" :
+                               src === "whatsapp" ? "WhatsApp" :
+                               src === "website" ? "Сайт" :
+                               src === "referral" ? "Рекомендация" :
+                               src === "walk_in" ? "Визит в клинику" : "Другое";
+
+        list.push({
+          name: translatedName,
+          type: src,
+          amount,
+          percent: total > 0 ? Math.round((amount / total) * 100) : 0,
+        });
+      }
+    });
+
+    return list.sort((a, b) => b.amount - a.amount);
+  }, [allProcedures, patientSourceMap, channels, dateRange]);
 
 
   return (
@@ -289,14 +444,19 @@ export default function OwnerDashboard() {
               <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
             </div>
           ) : (
-            <DonutChart data={revenueByPayment} activePeriod={filterLabel} />
+            <DonutChart
+              data={paymentStats}
+              activePeriod={filterLabel}
+              realIncome={realIncome}
+              onDetailsClick={() => setDetailsOpen(true)}
+            />
           )}
         </div>
 
         {/* ─── Payment method list ─── */}
-        {!isLoading && revenueByPayment.length > 0 && (
+        {!isLoading && paymentStats.length > 0 && (
           <div className="px-5 pb-5 space-y-0 divide-y divide-gray-50">
-            {revenueByPayment.map((stat, idx) => {
+            {paymentStats.map((stat, idx) => {
               const Icon = PAYMENT_ICONS[stat.method] ?? Wallet;
               return (
                 <motion.div
@@ -323,14 +483,14 @@ export default function OwnerDashboard() {
               );
             })}
 
-            {revenueByPayment.length === 0 && (
+            {paymentStats.length === 0 && (
               <p className="py-4 text-center text-sm text-gray-400">Нет данных за этот период</p>
             )}
           </div>
         )}
 
-        {!isLoading && revenueByPayment.length === 0 && revenueThisMonth === 0 && (
-          <p className="py-6 text-center text-sm text-gray-400">Нет выручки в этом месяце</p>
+        {!isLoading && paymentStats.length === 0 && revenueThisMonth === 0 && (
+          <p className="py-6 text-center text-sm text-gray-400">Нет выручки в этом периоде</p>
         )}
       </div>
 
@@ -529,6 +689,145 @@ export default function OwnerDashboard() {
               </motion.div>
             )}
           </AnimatePresence>
+        </SheetContent>
+      </Sheet>
+
+      {/* ─── Detailed Analytics Sheet ─── */}
+      <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <SheetContent side="bottom" className="rounded-t-3xl px-0 pb-8 max-h-[85dvh] overflow-y-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 pt-4 pb-2">
+            <div>
+              <h2 className="text-base font-bold text-gray-900">Детальная аналитика</h2>
+              <p className="text-[11px] font-medium text-gray-400 mt-0.5">
+                Период: {dateRangeLabel}
+              </p>
+            </div>
+            <button
+              onClick={() => setDetailsOpen(false)}
+              className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Segmented Control */}
+          <div className="flex bg-gray-100 p-1 rounded-xl mx-5 mt-2 mb-4">
+            <button
+              onClick={() => setActiveTab("channels")}
+              className={cn(
+                "flex-1 py-2 text-xs font-bold rounded-lg transition-all",
+                activeTab === "channels"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-500 hover:text-gray-900"
+              )}
+            >
+              Каналы привлечения
+            </button>
+            <button
+              onClick={() => setActiveTab("payments")}
+              className={cn(
+                "flex-1 py-2 text-xs font-bold rounded-lg transition-all",
+                activeTab === "payments"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-500 hover:text-gray-900"
+              )}
+            >
+              Способы оплаты
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="px-5 max-h-[50dvh] overflow-y-auto">
+            {activeTab === "channels" ? (
+              <div className="space-y-1">
+                {channelStats.length > 0 ? (
+                  channelStats.map((stat) => (
+                    <motion.div
+                      key={stat.name}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0"
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                        <ChannelIcon type={stat.type} size={18} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-baseline mb-1">
+                          <p className="text-xs font-semibold text-gray-800 truncate pr-2">{stat.name}</p>
+                          <span className="text-xs font-bold text-gray-900 shrink-0">
+                            {fmtRevenue(stat.amount)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className="h-1.5 rounded-full bg-primary"
+                              style={{ width: `${stat.percent}%` }}
+                            />
+                          </div>
+                          <span className="text-[9px] font-bold text-gray-400 shrink-0 w-7 text-right">
+                            {stat.percent}%
+                          </span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))
+                ) : (
+                  <p className="py-8 text-center text-xs text-gray-400">
+                    Нет данных по источникам пациентов за этот период
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {paymentStats.length > 0 ? (
+                  paymentStats.map((stat, idx) => {
+                    const Icon = PAYMENT_ICONS[stat.method] ?? Wallet;
+                    return (
+                      <motion.div
+                        key={stat.method}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.03 }}
+                        className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0"
+                      >
+                        <div
+                          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                          style={{ backgroundColor: stat.color + "22" }}
+                        >
+                          <Icon className="w-4 h-4" style={{ color: stat.color }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-baseline mb-1">
+                            <p className="text-xs font-semibold text-gray-800 truncate pr-2">{stat.label}</p>
+                            <span className="text-xs font-bold text-gray-900 shrink-0">
+                              {fmtRevenue(stat.amount)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                              <div
+                                className="h-1.5 rounded-full"
+                                style={{ width: `${stat.percent}%`, backgroundColor: stat.color }}
+                              />
+                            </div>
+                            <span className="text-[9px] font-bold text-gray-400 shrink-0 w-7 text-right">
+                              {stat.percent}%
+                            </span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })
+                ) : (
+                  <p className="py-8 text-center text-xs text-gray-400">
+                    Нет данных по способам оплаты за этот период
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
         </SheetContent>
       </Sheet>
     </div>

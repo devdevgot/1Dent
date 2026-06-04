@@ -5,6 +5,7 @@ import { getRoleDashboardPath } from "@/lib/role-redirect";
 import { NotificationBell } from "./notification-bell";
 import { GlobalSearch } from "./global-search";
 import { AppointmentReminderModal } from "./appointment-reminder-modal";
+import { AttendanceCheckModal } from "./attendance-check-modal";
 import {
   LayoutDashboard,
   Users,
@@ -44,10 +45,9 @@ const ALL_NAV_ITEMS = [
   { nameKey: "nav.analytics",   href: "/analytics",          icon: BarChart3,       roles: ["owner"],                                           geoRestricted: true  },
   { nameKey: "nav.myAnalytics", href: "/doctor-analytics",   icon: BarChart3,       roles: ["doctor"],                                          geoRestricted: true  },
   { nameKey: "nav.financials",  href: "/financials",         icon: Wallet,          roles: ["owner","accountant"],                              geoRestricted: true  },
-  { nameKey: "nav.users",       href: "/users",              icon: Settings,        roles: ["owner"],                                           geoRestricted: true  },
+  { nameKey: "nav.users",       href: "/users",              icon: Settings,        roles: ["owner", "admin"],                                  geoRestricted: true  },
   { nameKey: "nav.chatbot",     href: "/chatbot",            icon: Bot,             roles: ["owner"],                                           geoRestricted: true  },
   { nameKey: "nav.logs",        href: "/logs",               icon: Activity,        roles: ["owner"],                                           geoRestricted: false },
-  { nameKey: "nav.settings",    href: "/settings",           icon: Settings,        roles: ["owner","admin","doctor","accountant","warehouse"],  geoRestricted: false },
 ];
 
 // Routes that are off-limits outside geo-zone (for non-owners)
@@ -90,6 +90,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex flex-col h-[100dvh] bg-background overflow-hidden">
       <AppointmentReminderModal />
+      <AttendanceCheckModal />
 
       {/* Home page header */}
       {isHomePage && (

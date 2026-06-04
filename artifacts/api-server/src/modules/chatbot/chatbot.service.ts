@@ -986,6 +986,7 @@ function buildSystemPrompt(
     dental_qa: `Пациент идентифицирован. Отвечай на вопросы о состоянии его зубов и лечении по данным карты. Если вопрос вне твоих данных — ответь ТОЛЬКО: OPERATOR_NEEDED`,
     done: `Запись подтверждена. Отвечай на вопросы о клинике используя блок «Ответы по услугам» или направляй к администратору.`,
     human_takeover: `Соединяй пациента с администратором — больше не отвечай.`,
+    reactivation: `Сейчас этап: РЕАКТИВАЦИЯ. Пациент не пришел на прием или отменил его. Твоя задача — вежливо выяснить причину (неудобное время, высокая цена, изменились планы) и предложить решение: перезапись на другое удобное время с предоставлением 10% скидки. Если пациент выражает готовность записаться — переводи его в выбор времени/даты.`,
   };
 
   // Optional state-specific override from clinic settings — appended as ADDITIONAL guidance
@@ -1004,6 +1005,7 @@ function buildSystemPrompt(
     dental_qa: null,
     done: null,
     human_takeover: null,
+    reactivation: null,
   };
   const stateKey = stateInstructionMap[state];
   const customInstruction = stateKey ? si[stateKey] : undefined;
@@ -1868,6 +1870,56 @@ export class ChatbotService {
         break;
       }
 
+      case "reactivation": {
+        // The patient replied to our reactivation message.
+        // Use AI to generate the next response.
+        const classification = await classifyPatientRequest(text, recentMessages);
+        
+        // If patient wants to reschedule / book:
+        const lowerText = text.toLowerCase();
+        const wantsBook = isYes(text) || /\b(перенести|записать|запись|время|дата|давай|хочу|жазылу|уақыт)\b/.test(lowerText);
+        
+        if (wantsBook) {
+          // If we have a doctor, show their slots
+          let slotsText = "";
+          if (data.suggestedDoctorId) {
+            const slots = await getAvailableSlots(clinicId, data.suggestedDoctorId).catch(() => [] as Date[]);
+            if (slots.length > 0) {
+              slotsText = `\n\nСвободные слоты к врачу *${data.suggestedDoctorName ?? ""}*:\n${formatSlots(slots)}\n\nИли укажите другое удобное время.`;
+            }
+          }
+          const aiReply = await generateChatbotResponse(
+            sp("collect_datetime"),
+            recentMessages,
+            `Пациент согласен перезаписаться. Спроси новую дату и время визита.`,
+            managerExamples,
+          );
+          response = (aiReply ?? `Отлично! Какое время и дата будут для вас удобны?`) + slotsText;
+          session.state = "collect_datetime";
+        } else if (isNo(text) || /\b(нет|не надо|жоқ|керек емес)\b/.test(lowerText)) {
+          // Patient does not want to book
+          const aiReply = await generateChatbotResponse(
+            sp("done"),
+            recentMessages,
+            `Пациент отказался от перезаписи. Вежливо попрощайся и скажи, что мы всегда на связи если он передумает.`,
+            managerExamples,
+          );
+          response = aiReply ?? `Хорошо, я вас понял. Если в будущем решите записаться — пишите нам в любое время. Всего вам доброго! 😊`;
+          session.state = "done";
+        } else {
+          // General AI response for explaining the reason of no-show / negotiation
+          const aiReply = await generateChatbotResponse(
+            sp("reactivation"),
+            recentMessages,
+            text,
+            managerExamples,
+          );
+          response = aiReply ?? `Я вас понял. Хотите ли вы выбрать другое время для визита? Мы сохраним для вас скидку 10%.`;
+          // Stay in reactivation state
+        }
+        break;
+      }
+
       default:
         response = null;
     }
@@ -1886,6 +1938,105 @@ export class ChatbotService {
     }
 
     return response;
+  }
+
+  async triggerReactivation(
+    clinicId: string,
+    patientId: string,
+    procedureId: string,
+  ): Promise<void> {
+    const settings = await getSettings(clinicId);
+    if (!settings.enabled) return;
+
+    const [patient] = await db
+      .select()
+      .from(patientsTable)
+      .where(and(eq(patientsTable.clinicId, clinicId), eq(patientsTable.id, patientId)))
+      .limit(1);
+
+    if (!patient || !patient.phone) return;
+
+    const [procedure] = await db
+      .select()
+      .from(proceduresTable)
+      .where(and(eq(proceduresTable.clinicId, clinicId), eq(proceduresTable.id, procedureId)))
+      .limit(1);
+
+    if (!procedure) return;
+
+    let doctorName = "врача";
+    if (procedure.doctorId) {
+      const [doc] = await db
+        .select({ name: usersTable.name })
+        .from(usersTable)
+        .where(eq(usersTable.id, procedure.doctorId))
+        .limit(1);
+      if (doc) doctorName = doc.name;
+    }
+
+    const patientName = patient.name;
+    const procedureName = procedure.name;
+
+    logger.info(
+      { clinicId, patientId, phone: patient.phone, procedureId },
+      "ChatbotService: triggering reactivation flow for patient"
+    );
+
+    // Load or initialize session
+    let session = await loadSession(clinicId, patient.phone);
+    if (!session) {
+      session = {
+        id: randomUUID(),
+        clinicId,
+        phone: patient.phone,
+        state: "reactivation",
+        data: {},
+        humanTakeover: false,
+      };
+    } else {
+      session.state = "reactivation";
+      // Clear human takeover so the bot can talk to them again
+      session.humanTakeover = false;
+    }
+
+    session.data = {
+      ...session.data,
+      existingPatientId: patientId,
+      patientName,
+      suggestedDoctorId: procedure.doctorId || undefined,
+      suggestedDoctorName: doctorName,
+      problemDescription: procedureName,
+    };
+
+    const sp = (state: ChatbotState, spOpts?: { clinicName?: string }) =>
+      buildSystemPrompt(state, settings, {
+        ...spOpts,
+        knowledgeContext: "",
+        doctorsContext: "",
+        priceListContext: "",
+      });
+
+    const managerExamples = await getManagerExamples(clinicId);
+
+    const context = `Пациент ${patientName} отменил или не пришел на процедуру "${procedureName}" к врачу ${doctorName}.
+Напиши очень вежливое, заботливое и ненавязчивое сообщение от лица клиники 1Dent.
+Спроси, все ли в порядке, по какой причине не получилось прийти (например, не подошло время или изменились планы), и предложи перенести запись на другое удобное время.
+Также упомяни, что мы дарим ему скидку 10% на эту процедуру при перезаписи.`;
+
+    const aiReply = await generateChatbotResponse(
+      sp("reactivation"),
+      [],
+      context,
+      managerExamples,
+    );
+
+    const reply = aiReply ?? `Здравствуйте, ${patientName}! Мы заметили, что ваш прием на процедуру «${procedureName}» был отменен. Всё ли у вас в порядке? Подскажите, пожалуйста, по какой причине не получилось прийти? Мы будем рады предложить вам перезапись на любое удобное время, а также специальную скидку 10% на эту процедуру. 😊`;
+
+    await saveSession(session);
+    await saveChatbotMessage(clinicId, patient.phone, "outbound", reply);
+    await sendToPatient(clinicId, patient.phone, reply).catch((err) =>
+      logger.error({ err }, "ChatbotService: failed to send WhatsApp reactivation reply"),
+    );
   }
 
   /** Get recent chatbot message history for AI context */

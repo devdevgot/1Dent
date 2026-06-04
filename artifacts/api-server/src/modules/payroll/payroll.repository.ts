@@ -5,6 +5,7 @@ import {
   payrollRecordsTable,
   proceduresTable,
   clinicExpensesTable,
+  geoEventsTable,
 } from "@workspace/db";
 import {
   eq,
@@ -109,16 +110,87 @@ export class PayrollRepository {
     return Number(result?.total ?? 0);
   }
 
+  private async getClinicRevenueForPeriod(
+    clinicId: string,
+    year: number,
+    month: number,
+  ): Promise<number> {
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 1);
+
+    const [result] = await db
+      .select({ total: sum(proceduresTable.price) })
+      .from(proceduresTable)
+      .where(
+        and(
+          eq(proceduresTable.clinicId, clinicId),
+          eq(proceduresTable.status, "completed"),
+          gte(proceduresTable.completedAt, startDate),
+          lt(proceduresTable.completedAt, endDate),
+        ),
+      );
+
+    return Number(result?.total ?? 0);
+  }
+
+  private async getUserWorkHoursForPeriod(
+    userId: string,
+    clinicId: string,
+    year: number,
+    month: number,
+  ): Promise<number> {
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 1);
+
+    const events = await db
+      .select({
+        eventType: geoEventsTable.eventType,
+        occurredAt: geoEventsTable.occurredAt,
+      })
+      .from(geoEventsTable)
+      .where(
+        and(
+          eq(geoEventsTable.userId, userId),
+          eq(geoEventsTable.clinicId, clinicId),
+          gte(geoEventsTable.occurredAt, startDate),
+          lt(geoEventsTable.occurredAt, endDate),
+        ),
+      )
+      .orderBy(geoEventsTable.occurredAt);
+
+    let totalMs = 0;
+    let activeCheckinTime: Date | null = null;
+
+    for (const e of events) {
+      const eventTime = new Date(e.occurredAt);
+      if (e.eventType === "checkin") {
+        activeCheckinTime = eventTime;
+      } else if (e.eventType === "checkout") {
+        if (activeCheckinTime) {
+          totalMs += eventTime.getTime() - activeCheckinTime.getTime();
+          activeCheckinTime = null;
+        }
+      }
+    }
+
+    return totalMs / (1000 * 60 * 60); // hours
+  }
+
   private calcSalary(
-    salaryType: "fixed" | "commission" | "fixed_plus_commission",
+    salaryType: "fixed" | "commission" | "fixed_plus_commission" | "hourly",
     fixedAmount: number,
     commissionPercent: number,
     revenueBase: number,
+    workHours: number = 0,
   ): number {
     if (salaryType === "fixed") return fixedAmount;
     if (salaryType === "commission")
       return (revenueBase * commissionPercent) / 100;
-    return fixedAmount + (revenueBase * commissionPercent) / 100;
+    if (salaryType === "fixed_plus_commission")
+      return fixedAmount + (revenueBase * commissionPercent) / 100;
+    if (salaryType === "hourly")
+      return (fixedAmount * workHours) + (revenueBase * commissionPercent) / 100;
+    return 0;
   }
 
   async previewPayrollForPeriod(
@@ -131,20 +203,22 @@ export class PayrollRepository {
 
     for (const s of settings) {
       if (!s.userId) continue;
-      const revenue = await this.getDoctorRevenueForPeriod(
-        s.userId,
-        clinicId,
-        year,
-        month,
-      );
+      const isDoctor = s.userRole === "doctor";
+      const revenue = isDoctor
+        ? await this.getDoctorRevenueForPeriod(s.userId, clinicId, year, month)
+        : await this.getClinicRevenueForPeriod(clinicId, year, month);
+      
+      const workHours = await this.getUserWorkHoursForPeriod(s.userId, clinicId, year, month);
+      
       const fixedAmount = Number(s.fixedAmount ?? 0);
       const commissionPercent = Number(s.commissionPercent ?? 0);
-      const salaryType = s.salaryType as "fixed" | "commission" | "fixed_plus_commission";
+      const salaryType = s.salaryType as "fixed" | "commission" | "fixed_plus_commission" | "hourly";
       const calculatedAmount = this.calcSalary(
         salaryType,
         fixedAmount,
         commissionPercent,
         revenue,
+        workHours,
       );
       rows.push({
         userId: s.userId,
@@ -261,12 +335,24 @@ export class PayrollRepository {
 
   async getMySalary(userId: string, clinicId: string, year: number, month: number) {
     const settings = await this.getSalarySettings(userId, clinicId);
-    const revenue = await this.getDoctorRevenueForPeriod(userId, clinicId, year, month);
+    
+    const [user] = await db
+      .select({ role: usersTable.role })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .limit(1);
 
-    const salaryType = (settings?.salaryType ?? "fixed") as "fixed" | "commission" | "fixed_plus_commission";
+    const isDoctor = user?.role === "doctor";
+    const revenue = isDoctor
+      ? await this.getDoctorRevenueForPeriod(userId, clinicId, year, month)
+      : await this.getClinicRevenueForPeriod(clinicId, year, month);
+
+    const workHours = await this.getUserWorkHoursForPeriod(userId, clinicId, year, month);
+
+    const salaryType = (settings?.salaryType ?? "fixed") as "fixed" | "commission" | "fixed_plus_commission" | "hourly";
     const fixedAmount = Number(settings?.fixedAmount ?? 0);
     const commissionPercent = Number(settings?.commissionPercent ?? 0);
-    const calculatedSalary = this.calcSalary(salaryType, fixedAmount, commissionPercent, revenue);
+    const calculatedSalary = this.calcSalary(salaryType, fixedAmount, commissionPercent, revenue, workHours);
 
     const [approvedRecord] = await db
       .select()
