@@ -8,6 +8,7 @@ export type ChatbotState =
   | "manage_appointment"
   | "show_slots"
   | "collect_datetime"
+  | "collect_branch"
   | "confirm_appointment"
   | "dental_qa"
   | "done"
@@ -29,6 +30,8 @@ export interface ChatbotSessionData {
   collectedIin?: string;
   collectedPhone?: string;
   preferredDatetime?: string;
+  selectedBranch?: string;
+  inactivityReminderSent?: boolean;
   // Existing appointment management
   existingProcedureId?: string;
   existingProcedureDate?: string;

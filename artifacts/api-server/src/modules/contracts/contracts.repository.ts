@@ -151,7 +151,7 @@ export class ContractsRepository {
           eq(patientContractsTable.clinicId, clinicId),
         ),
       )
-      .orderBy(desc(patientContractsTable.createdAt));
+      .orderBy(desc(patientContractsTable.createdAt)) as any;
   }
 
   async createPatientContract(data: {

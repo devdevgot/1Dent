@@ -3,6 +3,8 @@ import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Mail, CheckCircle2 } from "lucide-react";
 
+import { getBaseUrl } from "@/lib/base-url";
+
 type Step = "form" | "sent";
 
 export default function ForgotPassword() {
@@ -13,7 +15,7 @@ export default function ForgotPassword() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const apiBase = import.meta.env.BASE_URL.replace(/\/$/, "");
+  const apiBase = getBaseUrl();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -43,7 +43,7 @@ import {
   X, ChevronDown, ChevronRight, CheckCircle2, Clock, ArrowUpRight,
   Phone, User, Calendar, CreditCard, Stethoscope, Copy, Save, IdCard,
   ClipboardList, Plus, BadgeCheck, Circle, ArrowLeft, Square, CheckSquare, Loader2,
-  Scissors, Crown, Wrench, Baby, Sparkles, Activity, ScanLine, Paintbrush, Search, GripVertical, Mic,
+  Scissors, Crown, Wrench, Baby, Sparkles, Activity, ScanLine, Paintbrush, Search, GripVertical, Mic, Trash2,
   FileText, Ban,
 } from "lucide-react";
 import { calculateAge, formatDateOfBirth, maskIIN } from "@workspace/api-zod";
@@ -827,6 +827,36 @@ export function PatientDetailPanel() {
 
   const [isDiagnosisMode, setIsDiagnosisMode] = useState(false);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
+  const [voiceDraftExists, setVoiceDraftExists] = useState(false);
+  const [voiceDraftTime, setVoiceDraftTime] = useState<number | null>(null);
+  const [restoreVoiceDraft, setRestoreVoiceDraft] = useState(false);
+
+  const checkVoiceDraft = useCallback(() => {
+    if (!selectedPatientId) {
+      setVoiceDraftExists(false);
+      setVoiceDraftTime(null);
+      return;
+    }
+    const key = `1dent:voice-draft:${selectedPatientId}`;
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      try {
+        const draft = JSON.parse(raw);
+        if (Date.now() - draft.timestamp < 24 * 60 * 60 * 1000) {
+          setVoiceDraftExists(true);
+          setVoiceDraftTime(draft.timestamp);
+          return;
+        }
+      } catch {}
+    }
+    setVoiceDraftExists(false);
+    setVoiceDraftTime(null);
+  }, [selectedPatientId]);
+
+  useEffect(() => {
+    checkVoiceDraft();
+  }, [selectedPatientId, showVoiceModal, checkVoiceDraft]);
+
   const [diagnosisMap, setDiagnosisMap] = useState<DiagnosisMap>(new Map());
   const [diagnosisNotesMap, setDiagnosisNotesMap] = useState<DiagnosisNotesMap>(new Map());
   const [diagnosisToothFdi, setDiagnosisToothFdi] = useState<number | null>(null);
@@ -1009,7 +1039,7 @@ export function PatientDetailPanel() {
       return;
     }
     const _tok = localStorage.getItem("auth_token");
-    void fetch(`/api/contracts/patient/${selectedPatientId}`, {
+    void fetch(`${getBaseUrl()}/api/contracts/patient/${selectedPatientId}`, {
       credentials: "include",
       headers: _tok ? { Authorization: `Bearer ${_tok}` } : {},
     })
@@ -1204,7 +1234,7 @@ export function PatientDetailPanel() {
     setBundlePreparing(true);
     try {
       const tok = localStorage.getItem("auth_token");
-      const res = await fetch(`/api/contracts/patient/${pid}/prepare-extraction-bundle`, {
+      const res = await fetch(`${getBaseUrl()}/api/contracts/patient/${pid}/prepare-extraction-bundle`, {
         method: "POST",
         credentials: "include",
         headers: tok ? { Authorization: `Bearer ${tok}` } : {},
@@ -1229,7 +1259,7 @@ export function PatientDetailPanel() {
     setBundleSending(true);
     try {
       const tok = localStorage.getItem("auth_token");
-      const res = await fetch(`/api/contracts/bundle/${token}/send-whatsapp`, {
+      const res = await fetch(`${getBaseUrl()}/api/contracts/bundle/${token}/send-whatsapp`, {
         method: "POST",
         credentials: "include",
         headers: tok ? { Authorization: `Bearer ${tok}` } : {},
@@ -1838,6 +1868,46 @@ export function PatientDetailPanel() {
                           }}
                         />
 
+                        {voiceDraftExists && (
+                          <div className="mt-3 bg-slate-100 border border-slate-200 rounded-xl p-3 flex items-center justify-between gap-3 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-200">
+                            <div className="flex items-start gap-2.5">
+                              <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-700 shrink-0 mt-0.5">
+                                <Mic className="w-4.5 h-4.5" />
+                              </div>
+                              <div>
+                                <h4 className="text-xs font-semibold text-slate-900">Черновик голосовой диагностики</h4>
+                                <p className="text-[11px] text-slate-600 mt-0.5">
+                                  Найден сохраненный черновик от {voiceDraftTime ? new Date(voiceDraftTime).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }) : ""}.
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                onClick={() => {
+                                  setRestoreVoiceDraft(true);
+                                  setShowVoiceModal(true);
+                                }}
+                                className="text-[11px] font-medium text-slate-800 bg-slate-200 hover:bg-slate-300 px-3 py-1.5 rounded-lg transition-colors"
+                              >
+                                Восстановить
+                              </button>
+                              <button
+                                onClick={() => {
+                                  const key = `1dent:voice-draft:${selectedPatientId}`;
+                                  localStorage.removeItem(key);
+                                  setVoiceDraftExists(false);
+                                  setVoiceDraftTime(null);
+                                  setRestoreVoiceDraft(false);
+                                }}
+                                className="text-[11px] font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-200/50 p-1.5 rounded-lg transition-colors"
+                                title="Сбросить черновик"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
                         {diagnosisToothFdi !== null && (
                           <div className="bg-slate-50 rounded-xl p-3 border border-border/30 space-y-3">
                             <p className="text-xs font-semibold text-muted-foreground">
@@ -2044,6 +2114,46 @@ export function PatientDetailPanel() {
                           inProgressFdi={activeTreatmentFdi}
                           disabledFdis={disabledTreatmentFdis}
                         />
+
+                        {voiceDraftExists && (
+                          <div className="mt-3 bg-slate-100 border border-slate-200 rounded-xl p-3 flex items-center justify-between gap-3 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-200">
+                            <div className="flex items-start gap-2.5">
+                              <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-700 shrink-0 mt-0.5">
+                                <Mic className="w-4.5 h-4.5" />
+                              </div>
+                              <div>
+                                <h4 className="text-xs font-semibold text-slate-900">Черновик голосовой диагностики</h4>
+                                <p className="text-[11px] text-slate-600 mt-0.5">
+                                  Найден сохраненный черновик от {voiceDraftTime ? new Date(voiceDraftTime).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }) : ""}.
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                onClick={() => {
+                                  setRestoreVoiceDraft(true);
+                                  setShowVoiceModal(true);
+                                }}
+                                className="text-[11px] font-medium text-slate-800 bg-slate-200 hover:bg-slate-300 px-3 py-1.5 rounded-lg transition-colors"
+                              >
+                                Восстановить
+                              </button>
+                              <button
+                                onClick={() => {
+                                  const key = `1dent:voice-draft:${selectedPatientId}`;
+                                  localStorage.removeItem(key);
+                                  setVoiceDraftExists(false);
+                                  setVoiceDraftTime(null);
+                                  setRestoreVoiceDraft(false);
+                                }}
+                                className="text-[11px] font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-200/50 p-1.5 rounded-lg transition-colors"
+                                title="Сбросить черновик"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        )}
 
                       </div>
                     )}
@@ -2491,9 +2601,16 @@ export function PatientDetailPanel() {
         <VoiceDiagnosisModal
           patientId={selectedPatientId}
           activePlanId={activePlan?.id}
-          onClose={() => setShowVoiceModal(false)}
+          initialRestoreDraft={restoreVoiceDraft}
+          onClose={() => {
+            setShowVoiceModal(false);
+            setRestoreVoiceDraft(false);
+          }}
           onApplied={() => {
             setShowVoiceModal(false);
+            setRestoreVoiceDraft(false);
+            setVoiceDraftExists(false);
+            setVoiceDraftTime(null);
           }}
         />
       )}

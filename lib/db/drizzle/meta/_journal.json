@@ -183,6 +183,13 @@
       "when": 1748995200000,
       "tag": "0025_admin_broadcasts",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1780665000101,
+      "tag": "0026_melodic_morlocks",
+      "breakpoints": true
     }
   ]
 }

@@ -11,6 +11,8 @@ import multer from "multer";
 import { DentalRepository } from "./dental.repository";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
+import { db, patientsTable } from "@workspace/db";
+import { and, eq } from "drizzle-orm";
 import { PatientsRepository } from "../patients/patients.repository";
 import { ClinicPricesRepository } from "../clinic/clinic-prices.repository";
 import { ProceduresRepository } from "../procedures/procedures.repository";
@@ -249,6 +251,12 @@ router.post("/trigger-ai-analysis", writeRoles, async (req: Request, res: Respon
     logger.warn({ err }, "[DentalAI] Background analysis error from trigger endpoint"),
   );
 
+  // Move patient to diagnostics stage
+  await db
+    .update(patientsTable)
+    .set({ status: "diagnostics", updatedAt: new Date() })
+    .where(and(eq(patientsTable.id, patientId), eq(patientsTable.clinicId, req.user!.clinicId)));
+
   res.status(202).json({ success: true });
 });
 
@@ -278,6 +286,8 @@ router.post(
       const audioMime = req.file.mimetype || "audio/webm";
       const base64Audio = req.file.buffer.toString("base64");
 
+      const audioFormat = audioMime.includes("mp4") ? "mp4" : audioMime.includes("ogg") ? "ogg" : (audioMime.includes("wav") ? "wav" : "webm");
+
       const sttRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -295,10 +305,10 @@ router.post(
                   text: "Transcribe the following audio recording verbatim. The speaker is a dentist describing teeth conditions in Russian (may include Kazakh or English words). Return ONLY the transcribed text, with no preamble, comments, or formatting.",
                 },
                 {
-                  type: "file",
-                  file: {
-                    filename: `recording.${audioMime.includes("mp4") ? "mp4" : audioMime.includes("ogg") ? "ogg" : "webm"}`,
-                    file_data: `data:${audioMime};base64,${base64Audio}`,
+                  type: "input_audio",
+                  input_audio: {
+                    data: base64Audio,
+                    format: audioFormat,
                   },
                 },
               ],
@@ -517,6 +527,11 @@ router.post("/:toothFdi/treatments", writeRoles, async (req: Request, res: Respo
     })
     .catch(next);
   if (!treatment) return;
+
+  await patientsRepo.updateStatus(patientId, req.user!.clinicId, "treatment_in_progress").catch((err) => {
+    logger.warn({ err, patientId }, "Failed to update patient status to treatment_in_progress");
+  });
+
   res.status(201).json({ success: true, data: { treatment } });
 });
 
@@ -547,6 +562,10 @@ router.patch("/:toothFdi/treatments/:treatmentId", writeRoles, async (req: Reque
     .completeTreatmentAndUpdateTooth(existing, req.user!.clinicId, req.user!.userId)
     .catch(next);
   if (!result) return;
+
+  await patientsRepo.updateStatus(patientId, req.user!.clinicId, "payment_processing").catch((err) => {
+    logger.warn({ err, patientId }, "Failed to update patient status to payment_processing");
+  });
 
   res.json({ success: true, data: { treatment: result.completed } });
 });

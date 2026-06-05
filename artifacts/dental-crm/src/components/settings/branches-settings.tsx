@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { getBaseUrl } from "@/lib/base-url";
 
 interface Branch {
   id: string;
@@ -55,7 +56,7 @@ function getToken() {
 
 async function apiFetch(path: string, opts?: RequestInit) {
   const token = getToken();
-  const res = await fetch(path, {
+  const res = await fetch(`${getBaseUrl()}${path}`, {
     ...opts,
     headers: {
       "Content-Type": "application/json",
@@ -505,7 +506,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
     geoDebounceRef.current = setTimeout(async () => {
       setMapSearching(true);
       try {
-        const resp = await fetch(`/api/geo/search?q=${encodeURIComponent(q)}`);
+        const resp = await fetch(`${getBaseUrl()}/api/geo/search?q=${encodeURIComponent(q)}`);
         if (!resp.ok) throw new Error("geocode failed");
         const data = await resp.json() as { success: boolean; data: { results: { name: string; coords: number[] }[] } };
         setMapGeoResults(data.data.results);

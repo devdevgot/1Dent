@@ -55,8 +55,10 @@ const STATUS_ORDER: Record<PatientStatus, number> = {
   diagnostics: 2,
   treatment_assigned: 3,
   treatment_in_progress: 4,
-  post_op_monitoring: 5,
-  completed: 6,
+  payment_processing: 5,
+  post_op_monitoring: 6,
+  completed: 7,
+  repeat_sale: 8,
 };
 
 const ALL_SOURCES: PatientSource[] = [

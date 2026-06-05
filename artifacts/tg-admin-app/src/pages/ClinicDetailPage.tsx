@@ -371,10 +371,12 @@ const PATIENT_STATUSES = [
   { value: "new_request", label: "Новая заявка" },
   { value: "initial_consultation", label: "Консультация" },
   { value: "diagnostics", label: "Диагностика" },
-  { value: "treatment_assigned", label: "Назначено лечение" },
+  { value: "treatment_assigned", label: "Утверждено" },
   { value: "treatment_in_progress", label: "Лечение" },
+  { value: "payment_processing", label: "Принятие оплаты" },
   { value: "post_op_monitoring", label: "Мониторинг" },
   { value: "completed", label: "Завершён" },
+  { value: "repeat_sale", label: "Повторная продажа" },
 ];
 
 const statusColors: Record<string, string> = {
@@ -383,8 +385,10 @@ const statusColors: Record<string, string> = {
   diagnostics: "bg-yellow-500/20 text-yellow-400",
   treatment_assigned: "bg-orange-500/20 text-orange-400",
   treatment_in_progress: "bg-purple-500/20 text-purple-400",
+  payment_processing: "bg-indigo-500/20 text-indigo-400",
   post_op_monitoring: "bg-pink-500/20 text-pink-400",
   completed: "bg-green-500/20 text-green-400",
+  repeat_sale: "bg-teal-500/20 text-teal-400",
 };
 
 // ── Patients Tab ──

@@ -16,6 +16,7 @@ import type { TreatmentPlanItem } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/hooks/use-auth";
+import { getBaseUrl } from "@/lib/base-url";
 
 type User = { id: string; name: string; role?: string };
 
@@ -88,7 +89,7 @@ function AiToothSection({
     try {
       const tok = localStorage.getItem("auth_token");
       const qs = planTitle ? `?planTitle=${encodeURIComponent(planTitle)}` : "";
-      const res = await fetch(`/api/patients/${patientId}/teeth/${toothFdi}/tooth-ai-analysis${qs}`, {
+      const res = await fetch(`${getBaseUrl()}/api/patients/${patientId}/teeth/${toothFdi}/tooth-ai-analysis${qs}`, {
         headers: { Authorization: `Bearer ${tok ?? ""}` },
       });
       if (!res.ok) throw new Error(`${res.status}`);
@@ -276,7 +277,7 @@ export function PlanItemDetailModal({
     setUploadingFile(true);
     try {
       const tok = localStorage.getItem("auth_token");
-      const res = await fetch("/api/storage/uploads/request-url", {
+      const res = await fetch(`${getBaseUrl()}/api/storage/uploads/request-url`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

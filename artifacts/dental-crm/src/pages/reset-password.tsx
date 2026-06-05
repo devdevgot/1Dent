@@ -3,6 +3,8 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 
+import { getBaseUrl } from "@/lib/base-url";
+
 export default function ResetPassword() {
   const [location, setLocation] = useLocation();
 
@@ -18,7 +20,7 @@ export default function ResetPassword() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
-  const apiBase = import.meta.env.BASE_URL.replace(/\/$/, "");
+  const apiBase = getBaseUrl();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -293,8 +293,10 @@ export const PatientStatus = {
   diagnostics: "diagnostics",
   treatment_assigned: "treatment_assigned",
   treatment_in_progress: "treatment_in_progress",
+  payment_processing: "payment_processing",
   post_op_monitoring: "post_op_monitoring",
   completed: "completed",
+  repeat_sale: "repeat_sale",
 } as const;
 
 /**

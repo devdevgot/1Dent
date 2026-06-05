@@ -62,6 +62,10 @@ async function processFollowupJob(data: FollowupJobData): Promise<void> {
         "[FollowupQueue] WhatsApp disabled — post-op followup would have been sent",
       );
     }
+    await db
+      .update(patientsTable)
+      .set({ status: "post_op_monitoring", updatedAt: new Date() })
+      .where(eq(patientsTable.id, patientId));
   }
 
   await db

@@ -175,10 +175,12 @@ const PATIENT_STATUS_LABELS: Record<string, string> = {
   new_request:          "Новый запрос",
   initial_consultation: "Первичный осмотр",
   diagnostics:          "Диагностика",
-  treatment_assigned:   "Назначено лечение",
+  treatment_assigned:   "Утвержден план",
   treatment_in_progress:"Лечение в процессе",
+  payment_processing:   "Принятие оплаты",
   post_op_monitoring:   "Пост-оп наблюдение",
   completed:            "Завершено",
+  repeat_sale:          "Повторная продажа",
 };
 
 export default function AnalyticsPage() {

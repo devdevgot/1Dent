@@ -27,7 +27,7 @@ import { getAlertQueue } from "../../shared/alert-queue";
 import { logger } from "../../lib/logger";
 import { pickBestDoctorAdvanced, type AdvancedScoringOptions } from "../analytics/analytics.repository";
 import { ChannelsRepository } from "../channels/channels.repository";
-import { classifyPatientRequest, generateChatbotResponse, extractDatetimeFromText, type ChatMessage, type ManagerExample } from "./ai-classifier";
+import { classifyPatientRequest, generateChatbotResponse, extractDatetimeFromText, extractBranchFromText, type ChatMessage, type ManagerExample } from "./ai-classifier";
 import type { ChatbotState, ChatbotSessionData } from "./chatbot.types";
 import type { ChatbotSettings } from "@workspace/db";
 import { STANDARD_SCRIPT_BLOCKS, type ScriptBlock } from "./script-templates";
@@ -906,17 +906,18 @@ function buildPlaygroundPrompt(
   // When a mind map exists it IS the script — skip standard/custom blocks to avoid conflict
   const effectiveScriptContext = mindMapSection ? "" : scriptContext;
 
-  return `Ты — AI-ассистент стоматологической клиники. Сейчас ТЕСТОВЫЙ РЕЖИМ (симуляция для проверки скрипта).
+    const systemPrompt = `Ты — AI-ассистент стоматологической клиники. Сейчас ТЕСТОВЫЙ РЕЖИМ (симуляция для проверки скрипта).
 Текущее время: ${nowDateStr}, ${nowTimeStr} (Алматы/Астана).
 
 ⚠️ ЖЁСТКИЕ ПРАВИЛА ТЕСТОВОГО РЕЖИМА (приоритет выше скрипта):
 1. НИ ПРИ КАКИХ УСЛОВИЯХ не проси ИИН, удостоверение или любой идентификатор — пациент уже идентифицирован
 2. НЕ спрашивай имя или телефон в начале диалога — сразу узнай проблему
-3. Если пациент согласился на запись и назвал время — подтверди: "✅ Записал вас! (это симуляция — реальная запись не создаётся)"
+3. Если пациент согласился на запись и выбрал время — предложи ему выбрать филиал/адрес клиники из материалов, и только после выбора филиала подтверди запись с коротким саммари деталей
 4. Отвечай коротко: 1–3 предложения максимум
 5. Используй только информацию из материалов клиники и списка врачей — не придумывай
 6. НИКОГДА не предлагай и не подтверждай время которое уже прошло (сейчас ${nowTimeStr}). Если пациент называет прошедшее время сегодня — объясни что оно уже прошло и предложи ближайший доступный слот. Все слоты в списке врачей уже являются будущими.
 ${kazakhNote}${doctorsSection}${priceListPlaygroundSection}${mindMapSection}${effectiveScriptContext}${knowledgeSection}`;
+    return systemPrompt;
 }
 
 /** Renders the clinic's script blocks (same as playground) for injection into prompts. */
@@ -982,6 +983,7 @@ function buildSystemPrompt(
     manage_appointment: `${nowContext} Сейчас этап: УПРАВЛЕНИЕ ЗАПИСЬЮ. У пациента есть ближайшая запись — спроси что он хочет сделать: перенести на другую дату, отменить запись или оставить как есть.`,
     show_slots: `${nowContext} Сейчас этап: ВЫБОР СЛОТА. Помоги пациенту выбрать удобное время из предложенных слотов. ${timeRule}`,
     collect_datetime: `${nowContext} Сейчас этап: ВЫБОР ВРЕМЕНИ. Жди от пациента дату и время визита. ${timeRule} Казахские слова: ертең=завтра, бүгін=сегодня, жұма/жума=пятница, дүйсенбі=понедельник, сейсенбі=вторник, сәрсенбі=среда, бейсенбі=четверг, сенбі=суббота.`,
+    collect_branch: `Сейчас этап: ВЫБОР ФИЛИАЛА/АДРЕСА. Пациент выбрал время. Предложи ему доступные адреса/филиалы клиники (возьми их из источников/материалов клиники) и попроси выбрать удобный филиал.`,
     confirm_appointment: `${nowContext} Сейчас этап: ПОДТВЕРЖДЕНИЕ. Пациент готов записаться. Попроси финальное подтверждение деталей записи согласно блоку «Перевод в запись». ${timeRule}`,
     dental_qa: `Пациент идентифицирован. Отвечай на вопросы о состоянии его зубов и лечении по данным карты. Если вопрос вне твоих данных — ответь ТОЛЬКО: OPERATOR_NEEDED`,
     done: `Запись подтверждена. Отвечай на вопросы о клинике используя блок «Ответы по услугам» или направляй к администратору.`,
@@ -1001,6 +1003,7 @@ function buildSystemPrompt(
     manage_appointment: null,
     show_slots: null,
     collect_datetime: null,
+    collect_branch: null,
     confirm_appointment: "confirm",
     dental_qa: null,
     done: null,
@@ -1031,6 +1034,95 @@ function buildSystemPrompt(
     : "";
 
   return `${base}\n\n${stateGuidance[state] ?? ""}${customExtra}${mindMapSection}${effectiveScriptContext}${doctorsSection}${priceListSection}${knowledgeSection}`;
+}
+
+async function isComplaintReply(text: string): Promise<boolean> {
+  const systemPrompt = `Ты — AI-ассистент стоматологической клиники.
+Пациент ответил на сообщение послеоперационного контроля (после удаления или лечения зуба).
+Определи, есть ли у пациента жалобы на здоровье, боль, дискомфорт, кровотечение, температуру, отек или другие проблемы после процедуры.
+Примеры жалоб: "болит зуб", "температура поднялась", "кровоточит десна", "мне плохо", "ісіп кетті", "ауырып тұр", "ноет десна".
+Примеры нормы (всё хорошо): "всё хорошо", "спасибо, всё нормально", "рахмет, бәрі жақсы", "не болит", "отлично", "нормально всё".
+
+Ответь строго JSON объектом:
+{
+  "hasComplaint": true или false
+}`;
+
+  try {
+    const response = await withTimeout(
+      openrouter.chat.completions.create({
+        model: FAST_MODEL,
+        max_tokens: 100,
+        temperature: 0.1,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: text },
+        ],
+      }),
+      10000,
+      "isComplaintReply",
+    );
+    const content = response.choices[0]?.message?.content ?? "{}";
+    const parsed = parseLlmJson<{ hasComplaint?: boolean }>(content);
+    return !!parsed?.hasComplaint;
+  } catch (err) {
+    logger.warn({ err, text }, "[ChatbotService] isComplaintReply LLM check failed, falling back to keywords");
+    const lower = text.toLowerCase();
+    const hasNegation = /\b(не|нет|жоқ|жок|нормально|норма|отлично|жақсы|жаксы|рахмет|спасибо)\b/.test(lower);
+    if (hasNegation) {
+      return false;
+    }
+    const extraComplaintKeywords = [
+      "болит", "ауырады", "температура", "қызу", "сыздап", "қан", "ісіп", "аурып", "мазалап", "ноет",
+      "плохо", "жаман", "жәдім", "дерт", "дерті", "қызуым", "ыстық", "ауру", "ісік", "ауырды", "отек", "отёк", "пух"
+    ];
+    return extraComplaintKeywords.some((kw) => lower.includes(kw));
+  }
+}
+
+async function isPositiveRepeatSaleReply(text: string): Promise<boolean> {
+  const systemPrompt = `Ты — классификатор сообщений пациента стоматологии.
+Определи, соглашается ли пациент на повторный прием, хочет ли записаться на консультацию/прием, или проявляет ли интерес к визиту в клинику в ответ на рассылку.
+Примеры положительного ответа: "да", "давайте", "хочу записаться", "какое время есть", "жазылайын деп едім", "иә", "жазыңыз", "ok", "хорошо", "хочу прийти".
+Примеры отрицательного/нейтрального ответа: "нет", "не надо", "спасибо, не хочу", "пока нет", "жоқ", "сызып тастаңыз".
+
+Ответь строго JSON объектом:
+{
+  "agreed": true или false
+}`;
+
+  try {
+    const response = await withTimeout(
+      openrouter.chat.completions.create({
+        model: FAST_MODEL,
+        max_tokens: 100,
+        temperature: 0.1,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: text },
+        ],
+      }),
+      10000,
+      "isPositiveRepeatSaleReply",
+    );
+    const content = response.choices[0]?.message?.content ?? "{}";
+    const parsed = parseLlmJson<{ agreed?: boolean }>(content);
+    return !!parsed?.agreed;
+  } catch (err) {
+    logger.warn({ err, text }, "[ChatbotService] isPositiveRepeatSaleReply classification failed, fallback to keyword check");
+    const lower = text.toLowerCase();
+    const positiveKeywords = ["да", "давайте", "запис", "хочу", "время", "ок", "хорошо", "иә", "жазы", "кел", "прийти", "приду", "yes", "ok", "agree"];
+    const negativeKeywords = ["нет", "не надо", "не хочу", "жоқ", "кет", "отказ", "no", "stop"];
+    for (const neg of negativeKeywords) {
+      if (lower.includes(neg)) return false;
+    }
+    for (const pos of positiveKeywords) {
+      if (lower.includes(pos)) return true;
+    }
+    return false;
+  }
 }
 
 // ─── ChatbotService (main export) ───────────────────────────────────────────
@@ -1083,8 +1175,14 @@ export class ChatbotService {
 
     if (session.humanTakeover) return null;
 
-    const state = session.state;
-    const data = { ...session.data };
+    const [patientDb] = await db
+      .select()
+      .from(patientsTable)
+      .where(and(eq(patientsTable.clinicId, clinicId), eq(patientsTable.phone, phone)))
+      .limit(1);
+
+    let state = session.state;
+    let data = { ...session.data };
 
     // Operator request always takes priority
     if (isOperatorRequest(text)) {
@@ -1097,6 +1195,67 @@ export class ChatbotService {
       saveChatbotMessage(clinicId, phone, "outbound", takoverReply).catch(() => {});
       sendToPatient(clinicId, phone, takoverReply).catch(() => {});
       return takoverReply;
+    }
+
+    if (patientDb) {
+      if (patientDb.status === "post_op_monitoring") {
+        const hasComplaint = await isComplaintReply(text);
+        if (hasComplaint) {
+          await triggerRedAlert(clinicId, phone, text, patientDb.id);
+          session.state = "human_takeover";
+          session.humanTakeover = true;
+          session.data = data;
+          await saveSession(session);
+          await this.notifyHumanTakeover(clinicId, phone, patientDb.name);
+
+          const replyText = "Мы видим, что вас беспокоит самочувствие после процедуры. Я уже передал эту информацию нашему дежурному администратору, он свяжется с вами в приоритетном порядке! Пожалуйста, будьте на связи.";
+          saveChatbotMessage(clinicId, phone, "outbound", replyText).catch(() => {});
+          sendToPatient(clinicId, phone, replyText).catch(() => {});
+          return replyText;
+        } else {
+          await db
+            .update(patientsTable)
+            .set({ status: "completed", updatedAt: new Date() })
+            .where(eq(patientsTable.id, patientDb.id));
+
+          session.state = "done";
+          session.data = data;
+          await saveSession(session);
+
+          const replyText = "Отлично! Рады, что у вас всё хорошо. Желаем вам скорейшего восстановления и крепкого здоровья! Если возникнут вопросы — пишите, мы всегда рядом.";
+          saveChatbotMessage(clinicId, phone, "outbound", replyText).catch(() => {});
+          sendToPatient(clinicId, phone, replyText).catch(() => {});
+          return replyText;
+        }
+      } else if (patientDb.status === "repeat_sale") {
+        const agreed = await isPositiveRepeatSaleReply(text);
+        if (agreed) {
+          await db
+            .update(patientsTable)
+            .set({ status: "initial_consultation", updatedAt: new Date() })
+            .where(eq(patientsTable.id, patientDb.id));
+
+          session.state = "collect_problem";
+          session.data = {
+            ...data,
+            existingPatientId: patientDb.id,
+            patientName: patientDb.name,
+          };
+          await saveSession(session);
+
+          state = session.state;
+          data = session.data;
+        } else {
+          session.state = "done";
+          session.data = data;
+          await saveSession(session);
+
+          const replyText = "Хорошо! Если решите записаться на осмотр позже, просто напишите нам. Будем рады помочь вам в любое время!";
+          saveChatbotMessage(clinicId, phone, "outbound", replyText).catch(() => {});
+          sendToPatient(clinicId, phone, replyText).catch(() => {});
+          return replyText;
+        }
+      }
     }
 
     if (state === "done") {
@@ -1622,12 +1781,64 @@ export class ChatbotService {
         const extractedDate = await extractDatetimeFromText(text).catch(() => null);
         if (extractedDate) {
           data.confusedCount = 0;
+          data.preferredDatetime = extractedDate.toISOString();
+          session.data = data;
+
+          const formattedDate = extractedDate.toLocaleDateString("ru-KZ", {
+            weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty",
+          });
+
+          // Propose the branch/address first
+          const aiReplyBranch = await generateChatbotResponse(
+            sp("collect_branch"),
+            recentMessages,
+            `Пациент выбрал время: ${formattedDate}. Теперь вежливо предложи ему выбрать один из адресов/филиалов клиники из материалов клиники.`,
+            managerExamples,
+          );
+          response = aiReplyBranch ?? `В какой из наших филиалов вам будет удобнее подойти?`;
+          session.state = "collect_branch";
+        } else {
+          // Date not recognized
+          const count = (Number(data.confusedCount) || 0) + 1;
+          data.confusedCount = count;
+          if (count >= 3) {
+            session.state = "human_takeover";
+            session.humanTakeover = true;
+            await this.notifyHumanTakeover(clinicId, phone, data.patientName);
+            response = "Соединяю вас с администратором — он поможет выбрать удобное время.";
+          } else {
+            const aiDateRetry = await generateChatbotResponse(
+              sp("collect_datetime"),
+              recentMessages,
+              text,
+              managerExamples,
+            );
+            response = aiDateRetry ?? `Не смог разобрать дату. Пожалуйста, напишите, например: «завтра в 11:00» или «пятница в 14:30».`;
+          }
+          session.data = data;
+        }
+        break;
+      }
+
+      case "collect_branch": {
+        const selectedBranch = await extractBranchFromText(text, knowledgeContext).catch(() => null);
+
+        if (selectedBranch || text.trim().length > 3) {
+          data.confusedCount = 0;
+          const branchToSave = selectedBranch || text.trim();
+          data.selectedBranch = branchToSave;
+
+          const preferredDate = data.preferredDatetime ? new Date(data.preferredDatetime) : new Date();
+
           try {
             if (data.isReschedule && data.existingProcedureId) {
-              // Reschedule: update existing procedure's scheduledAt
+              // Reschedule: update existing procedure
               await db
                 .update(proceduresTable)
-                .set({ scheduledAt: extractedDate })
+                .set({ 
+                  scheduledAt: preferredDate,
+                  notes: `Перенос. Филиал: ${branchToSave}`
+                })
                 .where(
                   and(
                     eq(proceduresTable.id, data.existingProcedureId),
@@ -1635,12 +1846,12 @@ export class ChatbotService {
                   ),
                 );
               logger.info(
-                { procedureId: data.existingProcedureId, scheduledAt: extractedDate },
-                "ChatbotService: procedure rescheduled via chatbot",
+                { procedureId: data.existingProcedureId, scheduledAt: preferredDate, branch: branchToSave },
+                "ChatbotService: procedure rescheduled via chatbot with branch",
               );
               data.createdPatientId = data.existingPatientId;
             } else {
-              // New booking: ensure patient exists, then create procedure
+              // New booking
               let patientId = data.existingPatientId ?? data.createdPatientId;
 
               if (!patientId && data.patientName && data.suggestedDoctorId) {
@@ -1656,7 +1867,6 @@ export class ChatbotService {
                 patientId = newPatient.id;
                 data.createdPatientId = newPatient.id;
               } else if (patientId && data.existingPatientId && data.suggestedDoctorId) {
-                // Existing patient booking — update their doctor and kanban status
                 await db
                   .update(patientsTable)
                   .set({ doctorId: data.suggestedDoctorId, status: "initial_consultation", updatedAt: new Date() })
@@ -1681,25 +1891,26 @@ export class ChatbotService {
                   patientId,
                   doctorId: data.suggestedDoctorId,
                   name: serviceLabel,
-                  scheduledAt: extractedDate,
+                  scheduledAt: preferredDate,
                   price: 0,
                   status: "scheduled",
+                  notes: `Филиал: ${branchToSave}`,
                 });
                 logger.info(
-                  { patientId, doctorId: data.suggestedDoctorId, scheduledAt: extractedDate },
-                  "ChatbotService: procedure created via chatbot",
+                  { patientId, doctorId: data.suggestedDoctorId, scheduledAt: preferredDate, branch: branchToSave },
+                  "ChatbotService: procedure created via chatbot with branch",
                 );
 
-                // Notify clinic staff about the new auto-booked appointment
+                // Notify staff
                 const staffRecipients = await db
                   .select({ id: usersTable.id })
                   .from(usersTable)
                   .where(and(eq(usersTable.clinicId, clinicId), inArray(usersTable.role, ["owner", "admin"])));
                 if (staffRecipients.length > 0) {
-                  const apptDateStr = extractedDate.toLocaleDateString("ru-KZ", {
+                  const apptDateStr = preferredDate.toLocaleDateString("ru-KZ", {
                     weekday: "short", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty",
                   });
-                  const notifMsg = `📅 Новая запись через чатбот: ${data.patientName ?? phone} → ${data.suggestedDoctorName ?? "врач"} (${serviceLabel}), ${apptDateStr}`;
+                  const notifMsg = `📅 Новая запись: ${data.patientName ?? phone} → ${data.suggestedDoctorName ?? "врач"} (${serviceLabel}), ${apptDateStr}. Филиал: ${branchToSave}`;
                   await db.insert(notificationsTable).values(
                     staffRecipients.map((r) => ({
                       id: randomUUID(),
@@ -1711,49 +1922,54 @@ export class ChatbotService {
                       patientId: patientId ?? null,
                       messageId: null,
                     })),
-                  ).catch((err) => logger.warn({ err }, "ChatbotService: failed to insert appointment notification"));
+                  ).catch((err) => logger.warn({ err }, "ChatbotService: failed to insert notification"));
                 }
               }
             }
             session.data = data;
           } catch (err) {
-            logger.error({ err }, "ChatbotService: failed to save procedure in collect_datetime");
+            logger.error({ err }, "ChatbotService: failed to save procedure in collect_branch");
           }
 
-          const formattedDate = extractedDate.toLocaleDateString("ru-KZ", {
+          const formattedDate = preferredDate.toLocaleDateString("ru-KZ", {
             weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty",
           });
           const doctorName = data.suggestedDoctorName ?? data.existingProcedureDoctorName ?? "врача";
+
+          const summaryInstruction = data.isReschedule
+            ? `Запись успешно ПЕРЕНЕСЕНА. Подтверди детали записи (Филиал: ${branchToSave}, Врач: ${doctorName}, Дата и время: ${formattedDate}). Выдай финальное краткое саммари.`
+            : `Запись успешно ПОДТВЕРЖДЕНА. Поздравь пациента, укажи филиал: ${branchToSave}, врача: ${doctorName}, дату и время: ${formattedDate}. Предоставь краткое понятное саммари записи.`;
+
           const aiDone = await generateChatbotResponse(
             sp("done"),
             recentMessages,
-            data.isReschedule
-              ? `Запись перенесена на ${formattedDate} к врачу ${doctorName}. Подтверди перенос.`
-              : `Запись создана к врачу ${doctorName} на ${formattedDate}. Поздравь пациента.`,
+            summaryInstruction,
             managerExamples,
           );
+
           response = aiDone ??
             (data.isReschedule
-              ? `✅ Ваша запись перенесена на *${formattedDate}* к врачу *${doctorName}*.\n\nЕсли нужно что-то ещё — пишите! 😊`
-              : `✅ Запись подтверждена!\n\n👨‍⚕️ Врач: *${doctorName}*\n📅 Дата: *${formattedDate}*\n\nДо встречи в клинике 1Dent! Если возникнут вопросы — пишите сюда. 😊`);
+              ? `✅ Ваша запись успешно перенесена!\n\n📅 Время: *${formattedDate}*\n👨‍⚕️ Врач: *${doctorName}*\n📍 Филиал: *${branchToSave}*\n\nБудем ждать вас! 😊`
+              : `✅ Запись успешно подтверждена!\n\n📅 Дата и время: *${formattedDate}*\n👨‍⚕️ Врач: *${doctorName}*\n📍 Филиал: *${branchToSave}*\n\nДо встречи в клинике! 😊`);
+
           session.state = "done";
         } else {
-          // Date not recognized
+          // Branch not recognized
           const count = (Number(data.confusedCount) || 0) + 1;
           data.confusedCount = count;
           if (count >= 3) {
             session.state = "human_takeover";
             session.humanTakeover = true;
             await this.notifyHumanTakeover(clinicId, phone, data.patientName);
-            response = "Соединяю вас с администратором — он поможет выбрать удобное время.";
+            response = "Соединяю вас с администратором — он поможет выбрать удобный филиал.";
           } else {
-            const aiDateRetry = await generateChatbotResponse(
-              sp("collect_datetime"),
+            const aiBranchRetry = await generateChatbotResponse(
+              sp("collect_branch"),
               recentMessages,
-              text,
+              `Пациент написал неразборчивый ответ: "${text}". Вежливо переспроси, какой филиал/адрес клиники он выбирает.`,
               managerExamples,
             );
-            response = aiDateRetry ?? `Не смог разобрать дату. Пожалуйста, напишите, например: «завтра в 11:00» или «пятница в 14:30».`;
+            response = aiBranchRetry ?? `Пожалуйста, уточните филиал/адрес из списка предложенных.`;
           }
           session.data = data;
         }
@@ -2285,5 +2501,99 @@ export class ChatbotService {
     if (!row) return false;
     const age = Date.now() - new Date(row.updatedAt).getTime();
     return age <= SESSION_TTL_SECONDS * 1000;
+  }
+
+  async checkInactivityReminders() {
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+    const inactiveSessions = await db
+      .select()
+      .from(chatbotSessionsTable)
+      .where(
+        and(
+          ne(chatbotSessionsTable.state, "done"),
+          ne(chatbotSessionsTable.state, "human_takeover"),
+          lte(chatbotSessionsTable.updatedAt, thirtyMinutesAgo)
+        )
+      );
+
+    for (const session of inactiveSessions) {
+      const data = session.data as ChatbotSessionData;
+      if (data.inactivityReminderSent) {
+        continue;
+      }
+
+      // Mark as sent immediately to avoid multiple ticks overlapping
+      data.inactivityReminderSent = true;
+      await saveSession({
+        id: session.id,
+        clinicId: session.clinicId,
+        phone: session.phone,
+        state: session.state as ChatbotState,
+        data,
+        humanTakeover: session.humanTakeover,
+      });
+
+      logger.info({ phone: session.phone, state: session.state }, "[ChatbotService] Sending inactivity reminder");
+
+      let settings: Awaited<ReturnType<typeof getSettings>>;
+      let managerExamples: ManagerExample[];
+      let knowledgeContext: string;
+      let doctorsContext: string;
+      let priceListContext: string;
+      let clinicName: string | undefined;
+
+      try {
+        const [settingsRow, managerExamplesRow, knowledgeContextRow, doctorsContextRow, priceListContextRow, clinicRow] = await Promise.all([
+          getSettings(session.clinicId),
+          getManagerExamples(session.clinicId),
+          loadKnowledgeContext(session.clinicId),
+          loadDoctorsContext(session.clinicId),
+          loadPriceListContext(session.clinicId),
+          db.select({ name: clinicsTable.name }).from(clinicsTable).where(eq(clinicsTable.id, session.clinicId)).limit(1).catch(() => []),
+        ]);
+        settings = settingsRow;
+        managerExamples = managerExamplesRow;
+        knowledgeContext = knowledgeContextRow;
+        doctorsContext = doctorsContextRow;
+        priceListContext = priceListContextRow;
+        clinicName = clinicRow[0]?.name ?? undefined;
+      } catch (err) {
+        logger.error({ err }, "[ChatbotService] Failed to load context for inactivity reminder");
+        continue;
+      }
+
+      if (!settings.enabled) continue;
+
+      const stateGuidance = `Пациент начал процесс записи в клинику, но остановился на этапе «${session.state}» и не отвечает более 30 минут. 
+Вежливо обратись к нему, напомни, что вы остановились на записи, и предложи продолжить. Спроси, нужна ли помощь, или предложи свободный слот, если вы дошли до выбора времени/врача.
+Отвечай вежливо, ненавязчиво, коротко (1–3 предложения).`;
+
+      // Load recent messages
+      const recentRows = await db
+        .select()
+        .from(chatbotMessagesTable)
+        .where(and(eq(chatbotMessagesTable.clinicId, session.clinicId), eq(chatbotMessagesTable.phone, session.phone)))
+        .orderBy(asc(chatbotMessagesTable.createdAt))
+        .limit(20);
+
+      const recentMessages = recentRows.map((r) => ({
+        role: r.direction === "inbound" ? "user" as const : "assistant" as const,
+        content: r.content,
+      }));
+
+      const systemPrompt = buildSystemPrompt(session.state as ChatbotState, settings, { clinicName, knowledgeContext, doctorsContext, priceListContext });
+      const helperPrompt = `${systemPrompt}\n\n⚠️ ДОПОЛНИТЕЛЬНОЕ РУКОВОДСТВО ДЛЯ НАПОМИНАНИЯ:\n${stateGuidance}`;
+
+      const reply = await generateChatbotResponse(helperPrompt, recentMessages, "Отправь вежливое напоминание (reminder)", managerExamples);
+      
+      if (reply) {
+        // Send message to patient
+        await sendToPatient(session.clinicId, session.phone, reply).catch((err) =>
+          logger.error({ err }, "[ChatbotService] Failed to send inactivity reminder")
+        );
+        // Persist message
+        await saveChatbotMessage(session.clinicId, session.phone, "outbound", reply);
+      }
+    }
   }
 }

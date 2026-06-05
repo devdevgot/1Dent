@@ -7,6 +7,7 @@ import {
 import { ScriptMindMap, ScriptMindMapModal, type ScriptMindMapData } from "./script-mindmap";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { getBaseUrl } from "@/lib/base-url";
 
 // ── Error message helper ──────────────────────────────────────────────────────
 function friendlyError(msg: string | null | undefined): string {
@@ -29,7 +30,7 @@ function getToken() {
 }
 async function apiFetch(path: string, opts?: RequestInit) {
   const token = getToken();
-  const res = await fetch(path, {
+  const res = await fetch(`${getBaseUrl()}${path}`, {
     ...opts,
     headers: {
       "Content-Type": "application/json",
@@ -250,7 +251,7 @@ export function KnowledgeTab({
     const timer = setTimeout(() => controller.abort(), 95000);
     try {
       const token = getToken();
-      const res = await fetch("/api/knowledge/generate", {
+      const res = await fetch(`${getBaseUrl()}/api/knowledge/generate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

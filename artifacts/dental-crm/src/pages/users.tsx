@@ -297,9 +297,6 @@ export default function StaffPage() {
     <div className="min-h-full bg-[#f7f8fc]">
       {/* ── Premium Header ───────────────────────────────────── */}
       <div className="bg-white border-b border-gray-100">
-        {/* Top accent line */}
-        <div className="h-1 w-full bg-gradient-to-r from-primary via-primary/80 to-primary/40" />
-
         <div className="px-5 pt-5 pb-5">
           {/* Title + Actions row */}
           <div className="flex items-center justify-between">

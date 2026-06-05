@@ -58,7 +58,7 @@ router.put("/branches/:id", ownerOnly, async (req: Request, res: Response, next:
   try {
     const parsed = branchSchema.partial().safeParse(req.body);
     if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
-    const branch = await repo.updateBranch(req.params["id"]!, req.user!.clinicId, parsed.data);
+    const branch = await repo.updateBranch(req.params["id"] as string, req.user!.clinicId, parsed.data);
     if (!branch) return next(new NotFoundError("Branch not found"));
     res.json({ success: true, data: { branch } });
   } catch (err) { next(err); }
@@ -66,7 +66,7 @@ router.put("/branches/:id", ownerOnly, async (req: Request, res: Response, next:
 
 router.delete("/branches/:id", ownerOnly, async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const deleted = await repo.deleteBranch(req.params["id"]!, req.user!.clinicId);
+    const deleted = await repo.deleteBranch(req.params["id"] as string, req.user!.clinicId);
     if (!deleted) return next(new NotFoundError("Branch not found"));
     res.json({ success: true });
   } catch (err) { next(err); }

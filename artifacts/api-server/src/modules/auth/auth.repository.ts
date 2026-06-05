@@ -15,7 +15,7 @@ export class AuthRepository {
       .from(usersTable)
       .where(and(eq(usersTable.email, email.toLowerCase()), eq(usersTable.isActive, true)))
       .limit(1);
-    return user;
+    return user as any;
   }
 
   async findUserById(id: string): Promise<User | undefined> {
@@ -24,7 +24,7 @@ export class AuthRepository {
       .from(usersTable)
       .where(eq(usersTable.id, id))
       .limit(1);
-    return user;
+    return user as any;
   }
 
   async findUserByIdAndClinic(id: string, clinicId: string): Promise<User | undefined> {
@@ -33,7 +33,7 @@ export class AuthRepository {
       .from(usersTable)
       .where(and(eq(usersTable.id, id), eq(usersTable.clinicId, clinicId)))
       .limit(1);
-    return user;
+    return user as any;
   }
 
   async findClinicById(id: string): Promise<SafeClinic | undefined> {
@@ -48,7 +48,7 @@ export class AuthRepository {
       .from(clinicsTable)
       .where(eq(clinicsTable.id, id))
       .limit(1);
-    return clinic;
+    return clinic as any;
   }
 
   async createClinic(data: InsertClinic): Promise<Clinic> {
@@ -58,7 +58,7 @@ export class AuthRepository {
 
   async createUser(data: InsertUser): Promise<User> {
     const [user] = await db.insert(usersTable).values(data).returning();
-    return user!;
+    return user as any;
   }
 
   async listUsersByClinic(clinicId: string, includeInactive = false): Promise<User[]> {
@@ -99,7 +99,7 @@ export class AuthRepository {
       .set(setData)
       .where(and(eq(usersTable.id, id), eq(usersTable.clinicId, clinicId)))
       .returning();
-    return user;
+    return user as any;
   }
 
   async updateUserStatus(id: string, clinicId: string, isActive: boolean): Promise<User | undefined> {
@@ -108,7 +108,7 @@ export class AuthRepository {
       .set({ isActive, updatedAt: new Date() })
       .where(and(eq(usersTable.id, id), eq(usersTable.clinicId, clinicId)))
       .returning();
-    return user;
+    return user as any;
   }
 
   async deleteUser(id: string, clinicId: string): Promise<void> {
@@ -133,6 +133,6 @@ export class AuthRepository {
       .set({ ...data, updatedAt: new Date() })
       .where(eq(usersTable.id, id))
       .returning();
-    return user;
+    return user as any;
   }
 }

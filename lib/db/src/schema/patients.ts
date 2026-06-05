@@ -9,8 +9,10 @@ export const patientStatusEnum = pgEnum("patient_status", [
   "diagnostics",
   "treatment_assigned",
   "treatment_in_progress",
+  "payment_processing",
   "post_op_monitoring",
   "completed",
+  "repeat_sale",
 ]);
 
 export const defaultPatientSources = [

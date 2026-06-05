@@ -104,6 +104,7 @@ router.post(
       } else {
         // Import internal module directly to bypass pdf-parse's test-file check
         // (top-level index.js tries to open './test/data/05-versions-space.pdf' on load)
+        // @ts-ignore
         const pdfParse = (await import("pdf-parse/lib/pdf-parse.js")).default;
         const result = await pdfParse(file.buffer);
         extractedText = result.text;

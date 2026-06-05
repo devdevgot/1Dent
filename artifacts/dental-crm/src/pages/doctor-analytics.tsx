@@ -33,8 +33,10 @@ const STATUS_LABEL_KEYS: Record<string, string> = {
   diagnostics: "status.diagnostics",
   treatment_assigned: "status.treatment_assigned",
   treatment_in_progress: "status.treatment_in_progress",
+  payment_processing: "status.payment_processing",
   post_op_monitoring: "status.post_op_monitoring",
   completed: "status.completed",
+  repeat_sale: "status.repeat_sale",
 };
 
 type Preset = "all" | "7d" | "30d" | "3m" | "6m" | "1y" | "custom";

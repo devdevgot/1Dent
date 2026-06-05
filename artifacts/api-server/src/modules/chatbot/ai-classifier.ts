@@ -296,3 +296,40 @@ export async function extractDatetimeFromText(text: string): Promise<Date | null
     return null;
   }
 }
+
+// ─── Branch/address extractor ──────────────────────────────────────────────────
+
+export async function extractBranchFromText(text: string, knowledgeContext: string): Promise<string | null> {
+  const systemPrompt = `Тебе предоставлена информация о клинике, включая её филиалы и адреса:
+${knowledgeContext}
+
+Твоя задача — определить, какой именно филиал или адрес выбрал пациент в своем сообщении.
+Если пациент выбрал конкретный филиал/адрес из списка, верни JSON: {"branch": "Краткое название филиала/адреса"}.
+Если в тексте нет явного выбора филиала или указанный адрес не соответствует материалам клиники, верни {"branch": null}.
+
+Отвечай ТОЛЬКО валидным JSON без markdown-обёрток.`;
+
+  try {
+    const response = await withTimeout(
+      openrouter.chat.completions.create({
+        model: FAST_MODEL,
+        max_tokens: 100,
+        temperature: 0.1,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: text },
+        ],
+        response_format: { type: "json_object" },
+      }),
+      12_000,
+      "extractBranchFromText",
+    );
+
+    const raw = response.choices[0]?.message?.content ?? "{}";
+    const parsed = parseLlmJson<{ branch?: string | null }>(raw);
+    return parsed?.branch || null;
+  } catch (err) {
+    logger.error({ err }, "[AIClassifier] extractBranchFromText failed");
+    return null;
+  }
+}

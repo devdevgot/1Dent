@@ -278,6 +278,10 @@ async function executeBroadcastRun(runId: string, clinicId: string): Promise<voi
             { patientId: patient.id, msgId, toothCount: problems.length },
             "[DentalBroadcast] Message delivered",
           );
+          await db
+            .update(patientsTable)
+            .set({ status: "repeat_sale", updatedAt: new Date() })
+            .where(eq(patientsTable.id, patient.id));
         } else {
           logger.warn(
             { patientId: patient.id },

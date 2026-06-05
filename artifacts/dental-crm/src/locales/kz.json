@@ -349,10 +349,12 @@
     "new_request": "Жаңа өтінім",
     "initial_consultation": "Консультация",
     "diagnostics": "Диагностика",
-    "treatment_assigned": "Тағайындалды",
+    "treatment_assigned": "Бекітілді",
     "treatment_in_progress": "Емдеу",
+    "payment_processing": "Төлем қабылдау",
     "post_op_monitoring": "Операциядан кейінгі бақылау",
-    "completed": "Аяқталды"
+    "completed": "Аяқталды",
+    "repeat_sale": "Қайта сату"
   },
   "category": {
     "materials": "Материалдар",

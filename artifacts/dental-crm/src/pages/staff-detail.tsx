@@ -20,6 +20,7 @@ import PayrollApproveModal from "./payroll-approve-modal";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
+import { getBaseUrl } from "@/lib/base-url";
 
 interface GeoEvent {
   id: string;
@@ -165,7 +166,7 @@ export default function StaffDetailPage() {
       setGeoLoading(true);
       try {
         const token = localStorage.getItem("auth_token");
-        const res = await fetch(`/api/geo/tracking?dateFrom=${dates.dateFromStrGeo}&dateTo=${dates.dateToStrGeo}`, {
+        const res = await fetch(`${getBaseUrl()}/api/geo/tracking?dateFrom=${dates.dateFromStrGeo}&dateTo=${dates.dateToStrGeo}`, {
           headers: {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },

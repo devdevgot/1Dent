@@ -349,10 +349,12 @@
     "new_request": "New Request",
     "initial_consultation": "Consultation",
     "diagnostics": "Diagnostics",
-    "treatment_assigned": "Assigned",
+    "treatment_assigned": "Approved",
     "treatment_in_progress": "In Treatment",
+    "payment_processing": "Payment Processing",
     "post_op_monitoring": "Post-op",
-    "completed": "Completed"
+    "completed": "Completed",
+    "repeat_sale": "Repeat Sale"
   },
   "category": {
     "materials": "Materials",

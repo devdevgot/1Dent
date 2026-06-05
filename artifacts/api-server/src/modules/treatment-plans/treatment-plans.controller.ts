@@ -52,7 +52,7 @@ const AddItemSchema = z.object({
 });
 
 async function checkPatient(req: Request, res: Response, next: NextFunction): Promise<boolean> {
-  const patientId = req.params["id"] ?? req.params["patientId"] ?? "";
+  const patientId = String(req.params["id"] ?? req.params["patientId"] ?? "");
   const patient = await patientsRepo.findById(patientId, req.user!.clinicId).catch(next);
   if (patient === undefined) return false;
   if (!patient) { next(new NotFoundError("Patient not found")); return false; }
@@ -164,6 +164,9 @@ router.post(
       .catch(next);
     if (plan === undefined) return;
     if (!plan) return next(new NotFoundError("Treatment plan not found"));
+
+    await patientsRepo.updateStatus(req.params["id"] as string, req.user!.clinicId, "treatment_assigned").catch(() => {});
+
     res.json({ success: true, data: { plan } });
   },
 );

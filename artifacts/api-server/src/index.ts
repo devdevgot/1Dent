@@ -6,6 +6,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { startAlertWorker } from "./shared/alert-queue";
 import { startDentalBroadcastScheduler } from "./modules/dental-broadcast/dental-broadcast.scheduler";
+import { startChatbotInactivityScheduler } from "./modules/chatbot/chatbot-inactivity.scheduler";
 import { getServerBaseUrl } from "./shared/green-api";
 import { seedAllClinics } from "./seeds/procedure-templates.seed";
 
@@ -249,6 +250,12 @@ app.listen(port, (err) => {
     startDentalBroadcastScheduler();
   } catch (err) {
     logger.warn({ err }, "Dental broadcast scheduler failed to start");
+  }
+
+  try {
+    startChatbotInactivityScheduler();
+  } catch (err) {
+    logger.warn({ err }, "Chatbot inactivity scheduler failed to start");
   }
 
   // Start BullMQ worker only if Redis is configured

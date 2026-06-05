@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuthStore } from "@/hooks/use-auth";
+import { getBaseUrl } from "@/lib/base-url";
 
 export interface ClinicBranch {
   id: string;
@@ -28,7 +29,7 @@ function getToken() {
 async function postGeoEvent(branchId: string, eventType: "checkin" | "checkout") {
   try {
     const token = getToken();
-    await fetch("/api/geo/event", {
+    await fetch(`${getBaseUrl()}/api/geo/event`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -45,7 +46,7 @@ async function postGeoEvent(branchId: string, eventType: "checkin" | "checkout")
 async function fetchBranches(): Promise<ClinicBranch[]> {
   try {
     const token = getToken();
-    const res = await fetch("/api/branches", {
+    const res = await fetch(`${getBaseUrl()}/api/branches`, {
       headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       credentials: "include",
     });

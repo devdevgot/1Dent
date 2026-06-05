@@ -53,8 +53,8 @@ router.delete(
   "/channels/:id",
   ownerAdminRoles,
   async (req: Request, res: Response, next: NextFunction) => {
-    const { id } = req.params;
-    const deleted = await repo.delete(id!, req.user!.clinicId).catch(next);
+    const id = req.params["id"] as string;
+    const deleted = await repo.delete(id, req.user!.clinicId).catch(next);
     if (deleted === undefined) return;
     if (!deleted) return next(new NotFoundError("Channel not found"));
     res.json({ success: true });
@@ -243,7 +243,7 @@ router.post(
     // If Green API takes longer we return "provisioning" immediately and finish in the background —
     // the frontend polls /status every 5 s and will pick up the instance once it appears in the DB.
     const EARLY_RESPONSE_MS = 20_000;
-    let earlyResult: { idInstance: number; apiTokenInstance: string } | null = null;
+    let earlyResult: { idInstance: number; apiTokenInstance: string; apiUrl: string } | null = null;
     let timedOut = false;
 
     try {
@@ -475,7 +475,7 @@ router.get(
       .where(eq(clinicsTable.id, req.user!.clinicId))
       .limit(1)
       .catch(next) ?? [];
-    if (!clinic) return;
+    if (!clinic) return res.status(404).end();
     if (!clinic.greenApiInstanceId || !clinic.greenApiToken) {
       return res.json({ success: true, data: { configured: false, connected: false, phone: clinic.whatsappPhone ?? null } });
     }
@@ -551,7 +551,7 @@ router.get(
 
     // Disable ETag/304 caching — state can change at any moment (QR scan)
     res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
-    res.json({ success: true, data: { configured: true, connected, phone: finalPhone, stateInstance: state.stateInstance } });
+    return res.json({ success: true, data: { configured: true, connected, phone: finalPhone, stateInstance: state.stateInstance } });
   },
 );
 
@@ -566,7 +566,7 @@ router.post(
       .where(eq(clinicsTable.id, req.user!.clinicId))
       .limit(1)
       .catch(next) ?? [];
-    if (!clinic) return;
+    if (!clinic) return res.status(404).end();
     if (!clinic.greenApiInstanceId || !clinic.greenApiToken) {
       return res.status(400).json({ success: false, error: "Green API not configured" });
     }
@@ -583,7 +583,7 @@ router.post(
     logger.info({ webhookUrl, clinicId: req.user!.clinicId }, "Force-registering Green API webhook URL");
     await setGreenApiWebhookUrl(clinic.greenApiInstanceId, clinic.greenApiToken, webhookUrl).catch(next);
     logger.info({ webhookUrl }, "Green API webhook URL force-registered successfully");
-    res.json({ success: true, data: { webhookUrl } });
+    return res.json({ success: true, data: { webhookUrl } });
   },
 );
 

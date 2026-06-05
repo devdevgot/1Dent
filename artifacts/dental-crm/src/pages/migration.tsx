@@ -28,6 +28,7 @@ import {
   useConfirmAiImport,
 } from "@workspace/api-client-react";
 import type { MigrationJob, AiDetectedCategory } from "@workspace/api-client-react";
+import { getBaseUrl } from "@/lib/base-url";
 
 const AI_FIELD_LABELS: Record<string, string> = {
   "": "— не указано —",
@@ -557,7 +558,7 @@ function ExportSection() {
   const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
 
   const triggerDownload = async (): Promise<boolean> => {
-    const res = await fetch("/api/migration/export", {
+    const res = await fetch(`${getBaseUrl()}/api/migration/export`, {
       headers: { Authorization: `Bearer ${token ?? ""}` },
     });
     if (!res.ok) {
@@ -598,7 +599,7 @@ function ExportSection() {
     setDone(null);
     try {
       // Single request: server generates XLSX, deletes data, returns the file
-      const res = await fetch("/api/migration/wipe", {
+      const res = await fetch(`${getBaseUrl()}/api/migration/wipe`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token ?? ""}` },
       });

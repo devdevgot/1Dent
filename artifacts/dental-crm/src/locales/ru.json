@@ -353,10 +353,12 @@
     "new_request": "Новая заявка",
     "initial_consultation": "Консультация",
     "diagnostics": "Диагностика",
-    "treatment_assigned": "Назначено",
+    "treatment_assigned": "Утверждено",
     "treatment_in_progress": "Лечение",
+    "payment_processing": "Принятие оплаты",
     "post_op_monitoring": "Постоп контроль",
-    "completed": "Завершено"
+    "completed": "Завершено",
+    "repeat_sale": "Повторная продажа"
   },
   "category": {
     "materials": "Материалы",

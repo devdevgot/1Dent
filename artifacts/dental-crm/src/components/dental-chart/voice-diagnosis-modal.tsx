@@ -84,6 +84,7 @@ interface Props {
   activePlanId?: string;
   onClose: () => void;
   onApplied?: () => void;
+  initialRestoreDraft?: boolean;
 }
 
 function plural(n: number, one: string, few: string, many: string) {
@@ -99,7 +100,7 @@ function formatTime(ts: number) {
   return new Date(ts).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
 }
 
-export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplied }: Props) {
+export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplied, initialRestoreDraft }: Props) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const { user } = useAuthStore();
@@ -118,7 +119,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
   const [selectedServiceIds, setSelectedServiceIds] = useState<Record<number, Set<string>>>({});
   // Per-tooth: expanded service panel
   const [expandedFdi, setExpandedFdi] = useState<number | null>(null);
-  // Per-tooth category browser (keyed by FDI number)
+  // Per-tooth: category browser (keyed by FDI number)
   const [browseCategoryMap, setBrowseCategoryMap] = useState<Record<number, string | null>>({});
 
   // Draft state
@@ -146,14 +147,25 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
     try {
       const draft: VoiceDraft = JSON.parse(raw);
       if (Date.now() - draft.timestamp < 24 * 60 * 60 * 1000) {
-        setDraftInfo({ ts: draft.timestamp });
+        if (initialRestoreDraft) {
+          setTranscript(draft.transcript);
+          setEntries(draft.entries);
+          const restored: Record<number, Set<string>> = {};
+          for (const [k, v] of Object.entries(draft.selectedServiceIds)) {
+            restored[Number(k)] = new Set(v as string[]);
+          }
+          setSelectedServiceIds(restored);
+          setPhase("review");
+        } else {
+          setDraftInfo({ ts: draft.timestamp });
+        }
       } else {
         localStorage.removeItem(DRAFT_KEY);
       }
     } catch {
       localStorage.removeItem(DRAFT_KEY);
     }
-  }, [DRAFT_KEY]);
+  }, [DRAFT_KEY, initialRestoreDraft]);
 
   const saveDraft = useCallback(() => {
     if (entries.length === 0) return;
