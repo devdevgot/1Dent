@@ -11,7 +11,7 @@ import {
   getGetDoctorKpisQueryKey,
 } from "@workspace/api-client-react";
 import {
-  UserCog, Users, Bell, X, ChevronLeft,
+  Contact, Users, Bell, X, ChevronLeft,
   Stethoscope, Send, Banknote, QrCode, CreditCard,
   Clock, Wallet, CalendarDays, SlidersHorizontal, UserPlus, Layers,
   TrendingUp, Globe, Handshake, Megaphone, MapPin,
@@ -371,9 +371,12 @@ export default function OwnerDashboard() {
         {kpis.length > 0 && (
           <div className="px-4 pt-3 pb-2">
             <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Рейтинг врачей</p>
-            <div className="flex flex-col gap-1.5">
+            <div 
+              className="flex items-start gap-4 overflow-x-auto pb-2 pt-1"
+              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+            >
               {[...kpis].sort((a, b) => b.score - a.score).map((kpi, i) => {
-                const initials = kpi.doctorName
+                const initials = (kpi.doctorName || "")
                   .split(" ").map((w: string) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
                 const bg = DOCTOR_BG[i % DOCTOR_BG.length];
                 const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}`;
@@ -382,34 +385,54 @@ export default function OwnerDashboard() {
                 return (
                   <motion.button
                     key={kpi.doctorId}
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1, x: 0 }}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: i * 0.04 }}
-                    onClick={() => navigate(`/staff/${kpi.doctorId}`)}
-                    className="flex items-center gap-2.5 w-full text-left rounded-xl px-2 py-1.5 hover:bg-gray-50 transition-colors"
+                    onClick={() => navigate(`/users/${kpi.doctorId}`)}
+                    className="flex flex-col items-center shrink-0 w-[88px] p-1.5 hover:bg-gray-50 rounded-2xl transition-colors"
                   >
-                    <span className="text-base w-7 text-center shrink-0">{medal}</span>
-                    <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0"
-                      style={{ backgroundColor: bg }}
-                    >
-                      {initials}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-0.5">
-                        <span className="text-[12px] font-semibold text-gray-700 truncate pr-2">{kpi.doctorName.split(" ")[0]}</span>
-                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${slotsFull ? "bg-red-100 text-red-600" : "bg-emerald-100 text-emerald-700"}`}>
-                          {kpi.slotsUsedToday ?? 0}/{kpi.maxSlotsPerDay ?? 20}
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-100 rounded-full h-1.5">
-                        <div
-                          className="h-1.5 rounded-full transition-all"
-                          style={{ width: `${kpi.score ?? 0}%`, backgroundColor: "#1f75fe" }}
+                    {/* circular progress + avatar container */}
+                    <div className="relative w-16 h-16 flex items-center justify-center">
+                      <svg className="absolute inset-0 w-full h-full transform -rotate-90" viewBox="0 0 64 64">
+                        {/* Background circle */}
+                        <circle
+                          cx="32"
+                          cy="32"
+                          r="28"
+                          className="stroke-gray-100"
+                          strokeWidth="3.5"
+                          fill="transparent"
                         />
+                        {/* Progress circle */}
+                        <circle
+                          cx="32"
+                          cy="32"
+                          r="28"
+                          className="stroke-[#1f75fe] transition-all duration-500 ease-out"
+                          strokeWidth="3.5"
+                          fill="transparent"
+                          strokeDasharray={2 * Math.PI * 28}
+                          strokeDashoffset={2 * Math.PI * 28 * (1 - (kpi.score ?? 0) / 100)}
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      {/* Avatar */}
+                      <div
+                        className="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-xs select-none shadow-inner"
+                        style={{ backgroundColor: bg }}
+                      >
+                        {initials}
                       </div>
+                      {/* Medal badge */}
+                      <span className="absolute bottom-0.5 right-0.5 text-[11px] bg-white rounded-full w-[18px] h-[18px] flex items-center justify-center shadow-md border border-gray-100 select-none">
+                        {medal}
+                      </span>
                     </div>
-                    <span className="text-[11px] font-bold text-gray-500 shrink-0 w-8 text-right">{kpi.score ?? 0}</span>
+
+                    {/* Doctor name under avatar */}
+                    <span className="text-[12px] font-semibold text-gray-700 mt-2 text-center truncate w-full px-1">
+                      {(kpi.doctorName || "").split(" ")[0]}
+                    </span>
                   </motion.button>
                 );
               })}
@@ -503,7 +526,7 @@ export default function OwnerDashboard() {
         </p>
         <div className="grid grid-cols-2 gap-2">
           {[
-            { label: t("ownerDashboard.manageStaff"), icon: UserCog,    path: "/users",      color: "bg-slate-50 text-slate-600" },
+            { label: t("ownerDashboard.manageStaff"), icon: Contact,    path: "/users",      color: "bg-slate-50 text-slate-600" },
             { label: t("nav.patients"),               icon: Users,       path: "/patients",   color: "bg-blue-50 text-blue-600" },
             { label: t("nav.procedures"),             icon: Stethoscope, path: "/procedures", color: "bg-violet-50 text-violet-600" },
           ].map((item) => (

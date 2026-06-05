@@ -279,7 +279,7 @@ function Router() {
       </Route>
 
 
-      <Route path="/staff/:doctorId">
+      <Route path="/users/:doctorId">
         <ProtectedRoute component={StaffDetailPage} allowedRoles={['owner', 'admin']} />
       </Route>
 

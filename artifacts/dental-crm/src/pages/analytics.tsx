@@ -92,6 +92,82 @@ function QACard({ question, value, sub, hint, level, loading }: QACardProps) {
   );
 }
 
+function DoctorCard({ doctor, index, t }: { doctor: any; index: number; t: any }) {
+  const initials = (doctor.doctorName || "")
+    .split(" ")
+    .map((w: string) => w[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+  const bg = COLORS[index % COLORS.length];
+  const npsVal = doctor.nps ?? 0;
+
+  return (
+    <div className="bg-white rounded-2xl border border-border/50 p-5 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between space-y-4">
+      {/* Header: Avatar, Name, NPS */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div
+            className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0 select-none shadow-sm"
+            style={{ backgroundColor: bg }}
+          >
+            {initials}
+          </div>
+          <div>
+            <h4 className="font-semibold text-gray-800 text-sm leading-tight">{doctor.doctorName || ""}</h4>
+            <p className="text-[11px] text-muted-foreground mt-0.5">{t("analytics.doctorName")}</p>
+          </div>
+        </div>
+        <div className="flex flex-col items-end">
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
+            npsVal >= 70 ? "bg-emerald-50 text-emerald-700 border border-emerald-100" :
+            npsVal >= 50 ? "bg-amber-50 text-amber-700 border border-amber-100"    : "bg-red-50 text-red-700 border border-red-100"
+          }`}>
+            NPS: {npsVal}%
+          </span>
+        </div>
+      </div>
+
+      {/* Grid of stats */}
+      <div className="grid grid-cols-2 gap-3 pt-3 border-t border-border/30">
+        <div>
+          <span className="text-[10px] text-muted-foreground font-medium block uppercase tracking-wider">
+            {t("analytics.revenue")}
+          </span>
+          <span className="text-sm font-bold text-gray-900 block mt-0.5">
+            ₸{(doctor.revenueTotal ?? 0).toLocaleString()}
+          </span>
+        </div>
+        <div>
+          <span className="text-[10px] text-muted-foreground font-medium block uppercase tracking-wider">
+            {t("analytics.avgCheck")}
+          </span>
+          <span className="text-sm font-bold text-gray-900 block mt-0.5">
+            ₸{Math.round(doctor.averageCheck ?? 0).toLocaleString()}
+          </span>
+        </div>
+        <div>
+          <span className="text-[10px] text-muted-foreground font-medium block uppercase tracking-wider">
+            {t("analytics.patients")}
+          </span>
+          <span className="text-sm font-semibold text-gray-700 block mt-0.5">
+            {doctor.patientsCount ?? 0}
+          </span>
+        </div>
+        <div>
+          <span className="text-[10px] text-muted-foreground font-medium block uppercase tracking-wider">
+            {t("analytics.procedures")}
+          </span>
+          <span className="text-sm font-semibold text-gray-700 block mt-0.5">
+            {doctor.proceduresCount ?? 0}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const _statusLevelUnused = null;
 
@@ -476,42 +552,25 @@ export default function AnalyticsPage() {
             </div>
           )}
 
-          {/* ── Section 4: Doctor KPIs table ── */}
+          {/* ── Section 4: Doctor KPIs (Cards Layout) ── */}
           {doctorKpis.length > 0 && (
-            <div className="bg-white rounded-2xl border border-border/50 p-5 shadow-sm">
-              <h3 className="text-sm font-bold text-foreground mb-4">{t("analytics.doctorKpis")}</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border/30">
-                      <th className="text-left text-xs font-semibold text-muted-foreground py-3 px-3">{t("analytics.doctorName")}</th>
-                      <th className="text-right text-xs font-semibold text-muted-foreground py-3 px-3">{t("analytics.patients")}</th>
-                      <th className="text-right text-xs font-semibold text-muted-foreground py-3 px-3">{t("analytics.procedures")}</th>
-                      <th className="text-right text-xs font-semibold text-muted-foreground py-3 px-3">{t("analytics.revenue")}</th>
-                      <th className="text-right text-xs font-semibold text-muted-foreground py-3 px-3">{t("analytics.avgCheck")}</th>
-                      <th className="text-right text-xs font-semibold text-muted-foreground py-3 px-3">{t("analytics.nps")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {doctorKpis.map((doctor) => (
-                      <tr key={doctor.doctorId} className="border-b border-border/30 hover:bg-muted/50 transition-colors">
-                        <td className="text-sm text-foreground py-3 px-3 font-medium">{doctor.doctorName}</td>
-                        <td className="text-sm text-foreground py-3 px-3 text-right">{doctor.patientsCount}</td>
-                        <td className="text-sm text-foreground py-3 px-3 text-right">{doctor.proceduresCount}</td>
-                        <td className="text-sm text-foreground py-3 px-3 text-right">₸{doctor.revenueTotal.toLocaleString()}</td>
-                        <td className="text-sm text-foreground py-3 px-3 text-right">₸{Math.round(doctor.averageCheck).toLocaleString()}</td>
-                        <td className="text-sm text-foreground py-3 px-3 text-right">
-                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${
-                            doctor.nps >= 70 ? "bg-emerald-100 text-emerald-700" :
-                            doctor.nps >= 50 ? "bg-amber-100 text-amber-700"    : "bg-red-100 text-red-700"
-                          }`}>
-                            {doctor.nps}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-foreground">{t("analytics.doctorKpis")}</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Left side: first 3 rows */}
+                <div className="space-y-4">
+                  {doctorKpis.slice(0, 3).map((doctor, idx) => (
+                    <DoctorCard key={doctor.doctorId} doctor={doctor} index={idx} t={t} />
+                  ))}
+                </div>
+
+                {/* Right side: other 4,5,6 rows */}
+                <div className="space-y-4">
+                  {doctorKpis.slice(3, 6).map((doctor, idx) => (
+                    <DoctorCard key={doctor.doctorId} doctor={doctor} index={idx + 3} t={t} />
+                  ))}
+                </div>
               </div>
             </div>
           )}

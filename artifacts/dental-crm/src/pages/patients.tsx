@@ -207,7 +207,7 @@ function PatientsListView({
             </thead>
             <tbody className="divide-y divide-gray-50">
               {filtered.map((patient, idx) => {
-                const initials = patient.name
+                const initials = (patient.name || "")
                   .split(" ")
                   .map((w) => w[0])
                   .filter(Boolean)

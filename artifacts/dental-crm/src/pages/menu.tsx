@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import {
   Users,
   BarChart3,
-  Settings,
+  Contact,
   LogOut,
   Calendar,
   Wallet,
@@ -34,7 +34,7 @@ const ALL_NAV_ITEMS = [
   { nameKey: "nav.myAnalytics",  href: "/doctor-analytics",   icon: BarChart3,       roles: ["doctor"] },
   { nameKey: "nav.financials",   href: "/financials",         icon: Wallet,          roles: ["owner","accountant"] },
   { nameKey: "nav.services",     href: "/services",           icon: ClipboardList,   roles: ["owner","admin","doctor","accountant"] },
-  { nameKey: "nav.users",        href: "/users",              icon: Settings,        roles: ["owner"] },
+  { nameKey: "nav.users",        href: "/users",              icon: Contact,         roles: ["owner"] },
   { nameKey: "nav.chatbot",      href: "/chatbot",            icon: Bot,             roles: ["owner"] },
   { nameKey: "nav.channels",     href: "/channels",           icon: Radio,           roles: ["owner","admin"] },
   { nameKey: "nav.migration",    href: "/migration",          icon: DatabaseZap,     roles: ["owner"] },

@@ -55,8 +55,9 @@ function getAvatarColor(name: string) {
 }
 
 function Avatar({ name, size = 40 }: { name: string; size?: number }) {
-  const { bg, text } = getAvatarColor(name);
-  const initials = name
+  const safeName = name || "User";
+  const { bg, text } = getAvatarColor(safeName);
+  const initials = safeName
     .split(" ")
     .slice(0, 2)
     .map((w) => w[0]?.toUpperCase() ?? "")
@@ -794,8 +795,9 @@ function PatientListItem({
   isActive: boolean;
   onSelect: () => void;
 }) {
-  const { bg, text } = getAvatarColor(patient.name);
-  const initials = patient.name
+  const safeName = patient.name || "Patient";
+  const { bg, text } = getAvatarColor(safeName);
+  const initials = safeName
     .split(" ")
     .slice(0, 2)
     .map((w) => w[0]?.toUpperCase() ?? "")

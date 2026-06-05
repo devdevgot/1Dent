@@ -154,7 +154,7 @@ export default function AdminDashboard() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">
-            {t("dashboard.welcomeBack", { name: user?.name.split(" ")[0] })}
+            {t("dashboard.welcomeBack", { name: (user?.name || "").split(" ")[0] })}
           </h2>
           <p className="text-gray-500 mt-1">
             {t("adminDashboard.subtitle", { clinic: clinic?.name })}

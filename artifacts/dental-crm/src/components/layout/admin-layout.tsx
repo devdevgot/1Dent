@@ -7,7 +7,7 @@ import {
   Users,
   Stethoscope,
   BarChart3,
-  Settings,
+  Contact,
   Calendar,
   Wallet,
   ChevronLeft,
@@ -29,7 +29,7 @@ const ADMIN_NAV_ITEMS = [
   { nameKey: "nav.patients",             href: "/patients",                icon: Users,           badge: null },
   { nameKey: "nav.services",             href: "/services",                icon: Stethoscope,     badge: null },
   { nameKey: "nav.chat",                 href: "/chat",                    icon: FaWhatsapp,      badge: null },
-  { nameKey: "nav.users",                href: "/users",                   icon: Settings,        badge: null },
+  { nameKey: "nav.users",                href: "/users",                   icon: Contact,        badge: null },
 ];
 
 interface AdminLayoutProps {

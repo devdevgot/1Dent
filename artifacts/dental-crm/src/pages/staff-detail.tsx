@@ -1,9 +1,10 @@
 import { useParams, useLocation } from "wouter";
 import { useState, useEffect, useMemo } from "react";
 import {
-  ArrowLeft, Users, TrendingUp, DollarSign, Activity,
-  Banknote, CheckCircle, Clock, Wallet,
+  ChevronLeft, Users, TrendingUp, DollarSign, Activity,
+  Banknote, CheckCircle, Clock, Wallet, SlidersHorizontal,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   useGetDoctorKpis,
   useGetPayrollRecords,
@@ -47,10 +48,10 @@ export default function StaffDetailPage() {
   const { data: usersData, isLoading: usersLoading } = useListUsersAll({ includeInactive: true });
 
   const doctors: DoctorKpi[] = kpiData?.data?.kpis ?? [];
-  const doctorKpi = doctors.find((d) => d.doctorId === doctorId);
+  const doctorKpi = doctors.find((d) => d && d.doctorId === doctorId);
 
   const allUsers = usersData?.data?.users ?? [];
-  const selectedUser = allUsers.find((u) => u.id === doctorId);
+  const selectedUser = allUsers.find((u) => u && u.id === doctorId);
 
   const canManagePayroll = user?.role === "owner" || user?.role === "accountant" || user?.role === "admin";
 
@@ -60,6 +61,7 @@ export default function StaffDetailPage() {
 
   const payrollRecords: PayrollRecord[] = payrollData?.data?.records ?? [];
   const salarySettings = salaryData?.data?.settings;
+  const settings = salarySettings as any;
 
   const { data: proceduresData, isLoading: proceduresLoading } = useListProcedures();
 
@@ -68,45 +70,102 @@ export default function StaffDetailPage() {
   const [salaryType, setSalaryType] = useState<"fixed" | "commission" | "fixed_plus_commission" | "hourly">("fixed");
   const [fixedAmount, setFixedAmount] = useState(0);
   const [commissionPercent, setCommissionPercent] = useState(0);
-  const nowForDates = new Date();
-  const y = nowForDates.getFullYear();
-  const m = String(nowForDates.getMonth() + 1).padStart(2, "0");
-  const startOfMonthStr = `${y}-${m}-01`;
-  const lastDay = new Date(y, nowForDates.getMonth() + 1, 0).getDate();
-  const endOfMonthStr = `${y}-${m}-${String(lastDay).padStart(2, "0")}`;
+  const [dateFilter, setDateFilter] = useState<"today" | "week" | "month" | "halfYear" | "year">("month");
+  const [showFilters, setShowFilters] = useState(false);
 
-  const { data: expensesData, isLoading: expensesLoading } = useListExpenses({ dateFrom: startOfMonthStr, dateTo: endOfMonthStr });
+  const dates = useMemo(() => {
+    const now = new Date();
+    
+    // Format helper to YYYY-MM-DD
+    const formatDate = (d: Date) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    let fromDate: Date;
+    let toDate: Date;
+
+    switch (dateFilter) {
+      case "today": {
+        fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+        toDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        break;
+      }
+      case "week": {
+        const past = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
+        fromDate = new Date(past.getFullYear(), past.getMonth(), past.getDate(), 0, 0, 0, 0);
+        toDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        break;
+      }
+      case "month": {
+        fromDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+        toDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        break;
+      }
+      case "halfYear": {
+        fromDate = new Date(now.getFullYear(), now.getMonth() - 5, 1, 0, 0, 0, 0);
+        toDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        break;
+      }
+      case "year": {
+        fromDate = new Date(now.getFullYear() - 1, now.getMonth() + 1, 1, 0, 0, 0, 0);
+        toDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        break;
+      }
+      default: {
+        fromDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+        toDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      }
+    }
+
+    const dateFromStrGeo = formatDate(fromDate) + "T00:00:00";
+    const dateToStrGeo = formatDate(toDate) + "T23:59:59";
+    const dateFromShort = formatDate(fromDate);
+    const dateToShort = formatDate(toDate);
+
+    return {
+      fromDate,
+      toDate,
+      dateFromStrGeo,
+      dateToStrGeo,
+      dateFromShort,
+      dateToShort,
+    };
+  }, [dateFilter]);
+
+  const { data: expensesData, isLoading: expensesLoading } = useListExpenses({
+    dateFrom: dates.dateFromShort,
+    dateTo: dates.dateToShort,
+  });
 
   const expenses = expensesData?.data?.expenses ?? [];
   const advance = useMemo(() => {
     return expenses
-      .filter((e) => e.category === "salary" && e.subcategory === `аванс:${doctorId}`)
-      .reduce((sum, e) => sum + Number(e.amount), 0);
+      .filter((e) => e && e.category === "salary" && e.subcategory === `аванс:${doctorId}`)
+      .reduce((sum, e) => sum + (e ? Number(e.amount) || 0 : 0), 0);
   }, [expenses, doctorId]);
 
   const [geoEvents, setGeoEvents] = useState<GeoEvent[]>([]);
   const [geoLoading, setGeoLoading] = useState(false);
 
   useEffect(() => {
-    if (salarySettings) {
-      setSalaryType(salarySettings.salaryType as typeof salaryType);
-      setFixedAmount(Number(salarySettings.fixedAmount));
-      setCommissionPercent(Number(salarySettings.commissionPercent));
+    if (settings) {
+      setSalaryType((settings.salaryType as typeof salaryType) || "fixed");
+      setFixedAmount(Number(settings.fixedAmount) || 0);
+      setCommissionPercent(Number(settings.commissionPercent) || 0);
     }
-  }, [salarySettings?.userId]);
+  }, [settings?.userId]);
 
-  // Fetch geo events for the current month
+  // Fetch geo events for the selected date filter
   useEffect(() => {
     if (!doctorId) return;
     const fetchGeoTracking = async () => {
       setGeoLoading(true);
       try {
-        const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const dateFrom = startOfMonth.toISOString().slice(0, 10) + "T00:00:00";
-        const dateTo = now.toISOString().slice(0, 10) + "T23:59:59";
         const token = localStorage.getItem("auth_token");
-        const res = await fetch(`/api/geo/tracking?dateFrom=${dateFrom}&dateTo=${dateTo}`, {
+        const res = await fetch(`/api/geo/tracking?dateFrom=${dates.dateFromStrGeo}&dateTo=${dates.dateToStrGeo}`, {
           headers: {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
@@ -124,17 +183,19 @@ export default function StaffDetailPage() {
       }
     };
     fetchGeoTracking();
-  }, [doctorId]);
+  }, [doctorId, dates.dateFromStrGeo, dates.dateToStrGeo]);
 
   const handleSaveSettings = async () => {
     if (!doctorId) return;
-    await saveSettings({ userId: doctorId, data: { salaryType, fixedAmount, commissionPercent } });
+    await saveSettings({ userId: doctorId, data: { salaryType: salaryType as any, fixedAmount, commissionPercent } });
     await refetchSalary();
     setEditingSalary(false);
   };
 
-  const getInitials = (name: string) =>
-    name.split(" ").map((w: string) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
+  const getInitials = (name: string | null | undefined) => {
+    if (!name) return "";
+    return name.split(" ").map((w: string) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
+  };
 
   const isDayTime = (dateStr?: string | null) => {
     if (!dateStr) return true;
@@ -149,8 +210,11 @@ export default function StaffDetailPage() {
   const workHours = useMemo(() => {
     if (!doctorId || geoEvents.length === 0) return 0;
     const userEvents = geoEvents
-      .filter((e) => e.userId === doctorId)
-      .sort((a, b) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime());
+      .filter((e) => e && e.userId === doctorId)
+      .sort((a, b) => {
+        if (!a || !b) return 0;
+        return new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime();
+      });
 
     let totalMs = 0;
     let activeCheckinTime: Date | null = null;
@@ -178,6 +242,32 @@ export default function StaffDetailPage() {
     return totalMs / (1000 * 60 * 60);
   }, [geoEvents, doctorId]);
 
+  const allProcedures = proceduresData?.data?.procedures ?? [];
+  
+  const filteredProcedures = useMemo(() => {
+    const fromTime = dates.fromDate.getTime();
+    const toTime = dates.toDate.getTime();
+    return allProcedures.filter((p) => {
+      if (!p) return false;
+      const timeStr = p.completedAt || p.scheduledAt || p.createdAt;
+      if (!timeStr) return false;
+      const time = new Date(timeStr).getTime();
+      return time >= fromTime && time <= toTime;
+    });
+  }, [allProcedures, dates.fromDate, dates.toDate]);
+
+  const doctorProcedures = useMemo(() => {
+    return filteredProcedures.filter((p) => p && p.doctorId === doctorId);
+  }, [filteredProcedures, doctorId]);
+
+  const completedDoctorProcedures = useMemo(() => {
+    return doctorProcedures.filter((p) => p && p.status === "completed");
+  }, [doctorProcedures]);
+
+  const completedClinicProcedures = useMemo(() => {
+    return filteredProcedures.filter((p) => p && p.status === "completed");
+  }, [filteredProcedures]);
+
   if (kpiLoading || proceduresLoading || usersLoading || geoLoading || expensesLoading) {
     return (
       <div className="h-full flex items-center justify-center bg-background">
@@ -195,14 +285,10 @@ export default function StaffDetailPage() {
   }
 
   const isDoctor = selectedUser.role === "doctor";
+  const isAssistant = (selectedUser.role as any) === "assistant";
   const nps = isDoctor && doctorKpi ? Number(doctorKpi.nps) : 0;
 
-  const allProcedures = proceduresData?.data?.procedures ?? [];
-  const doctorProcedures = allProcedures.filter((p) => p.doctorId === doctorId);
-  const completedDoctorProcedures = doctorProcedures.filter((p) => p.status === "completed");
-  const completedClinicProcedures = allProcedures.filter((p) => p.status === "completed");
-
-  const targetAllProcedures = isDoctor ? doctorProcedures : allProcedures;
+  const targetAllProcedures = isDoctor ? doctorProcedures : filteredProcedures;
   const targetCompletedProcedures = isDoctor ? completedDoctorProcedures : completedClinicProcedures;
 
   // 1. Всего пациентов
@@ -211,12 +297,15 @@ export default function StaffDetailPage() {
   const totalPatientsNightSet = new Set<string>();
 
   targetAllProcedures.forEach((p) => {
+    if (!p) return;
     const time = p.scheduledAt || p.createdAt;
-    totalPatientsSet.add(p.patientId);
-    if (isDayTime(time)) {
-      totalPatientsDaySet.add(p.patientId);
-    } else {
-      totalPatientsNightSet.add(p.patientId);
+    if (p.patientId) {
+      totalPatientsSet.add(p.patientId);
+      if (isDayTime(time)) {
+        totalPatientsDaySet.add(p.patientId);
+      } else {
+        totalPatientsNightSet.add(p.patientId);
+      }
     }
   });
 
@@ -230,12 +319,15 @@ export default function StaffDetailPage() {
   const completedPatientsNightSet = new Set<string>();
 
   targetCompletedProcedures.forEach((p) => {
+    if (!p) return;
     const time = p.completedAt || p.scheduledAt || p.createdAt;
-    completedPatientsSet.add(p.patientId);
-    if (isDayTime(time)) {
-      completedPatientsDaySet.add(p.patientId);
-    } else {
-      completedPatientsNightSet.add(p.patientId);
+    if (p.patientId) {
+      completedPatientsSet.add(p.patientId);
+      if (isDayTime(time)) {
+        completedPatientsDaySet.add(p.patientId);
+      } else {
+        completedPatientsNightSet.add(p.patientId);
+      }
     }
   });
 
@@ -254,12 +346,14 @@ export default function StaffDetailPage() {
   let nightRevenue = 0;
 
   targetCompletedProcedures.forEach((p) => {
+    if (!p) return;
     const time = p.completedAt || p.scheduledAt || p.createdAt;
-    totalRevenue += p.price;
+    const price = Number(p.price) || 0;
+    totalRevenue += price;
     if (isDayTime(time)) {
-      dayRevenue += p.price;
+      dayRevenue += price;
     } else {
-      nightRevenue += p.price;
+      nightRevenue += price;
     }
   });
 
@@ -269,9 +363,9 @@ export default function StaffDetailPage() {
   const avgCheckNight = completedPatientsNight > 0 ? Math.round(nightRevenue / completedPatientsNight) : 0;
 
   // Salary calculations
-  const fixedSal = Number(salarySettings?.fixedAmount) || 0;
-  const commPercent = Number(salarySettings?.commissionPercent) || 0;
-  const salType = salarySettings?.salaryType || "fixed";
+  const fixedSal = Number(settings?.fixedAmount) || 0;
+  const commPercent = Number(settings?.commissionPercent) || 0;
+  const salType = (settings?.salaryType as any) || "fixed";
 
   let calculatedSalary = 0;
   if (salType === "fixed") {
@@ -289,112 +383,246 @@ export default function StaffDetailPage() {
   return (
     <div className="h-full flex flex-col overflow-hidden bg-[#f7f8fc]">
       <div className="shrink-0 border-b border-border/50 bg-white px-6 py-4">
-        <button
-          onClick={() => setLocation("/users")}
-          className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors mb-3"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          {t("common.back")}
-        </button>
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-xl shrink-0">
-            {getInitials(selectedUser.name)}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setLocation("/users")}
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-500 shrink-0"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-base shrink-0 shadow-sm">
+              {getInitials(selectedUser.name)}
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-gray-900 leading-tight">{selectedUser.name}</h1>
+              <p className="text-xs text-gray-400 mt-0.5 font-medium">
+                {ROLE_LABELS[selectedUser.role] ?? selectedUser.role}
+                {selectedUser.specialty && ` • ${selectedUser.specialty}`}
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">{selectedUser.name}</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              {ROLE_LABELS[selectedUser.role] ?? selectedUser.role}
-              {selectedUser.specialty && ` • ${selectedUser.specialty}`}
-            </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowFilters((v) => !v)}
+              className={cn(
+                "relative transition-colors p-1.5",
+                showFilters || dateFilter !== "month" ? "text-primary" : "text-gray-400 hover:text-primary",
+              )}
+              title="Фильтры"
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              {dateFilter !== "month" && (
+                <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-primary rounded-full" />
+              )}
+            </button>
           </div>
         </div>
       </div>
 
+      <AnimatePresence>
+        {showFilters && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden bg-white border-b border-border/50 px-6 shrink-0"
+          >
+            <div className="py-3 flex flex-wrap gap-2 items-center">
+              <span className="text-xs font-bold text-gray-400 mr-2 uppercase tracking-wider">Период:</span>
+              {[
+                { value: "today", label: "Сегодня" },
+                { value: "week", label: "На неделю" },
+                { value: "month", label: "На месяц" },
+                { value: "halfYear", label: "На полгода" },
+                { value: "year", label: "На год" },
+              ].map((item) => {
+                const isActive = dateFilter === item.value;
+                return (
+                  <button
+                    key={item.value}
+                    onClick={() => setDateFilter(item.value as any)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200",
+                      isActive
+                        ? "bg-primary text-white shadow-sm"
+                        : "bg-gray-50 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                    )}
+                  >
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         <div className="p-6 space-y-6">
 
-          {/* Metrics Table */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-100">
-                  <tr>
-                    <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Показатель</th>
-                    <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Всего</th>
-                    <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">День (до 20:00)</th>
-                    <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Ночь (после 20:00)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {(isDoctor || salType === "hourly") && (
-                    <>
-                      {/* Row 1: Всего пациентов */}
-                      <tr className="hover:bg-gray-50/30 transition-colors">
-                        <td className="px-6 py-4 font-semibold text-gray-800">Всего пациентов</td>
-                        <td className="px-6 py-4 font-bold text-gray-900">{totalPatientsCount}</td>
-                        <td className="px-6 py-4 text-gray-600 font-medium">{totalPatientsDay}</td>
-                        <td className="px-6 py-4 text-gray-600 font-medium">{totalPatientsNight}</td>
-                      </tr>
+          {/* Metrics Cards */}
+          {(isDoctor || isAssistant) ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 sm:gap-6">
+                
+                {/* Left Column: Rows 1, 2, 3 */}
+                <div className="flex flex-col gap-4">
+                  {/* Card 1: Всего пациентов */}
+                  <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between h-[130px]">
+                    <div>
+                      <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider truncate">Всего пациентов</h4>
+                      <span className="text-xl sm:text-2xl font-black text-gray-900 block mt-1 truncate">{totalPatientsCount}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-50 items-center">
+                      <div>
+                        <span className="text-[9px] text-gray-400 block font-medium uppercase tracking-tight truncate">День</span>
+                        <span className="text-xs sm:text-sm font-semibold text-gray-700 block mt-0.5 truncate">{totalPatientsDay}</span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-gray-400 block font-medium uppercase tracking-tight truncate">Ночь</span>
+                        <span className="text-xs sm:text-sm font-semibold text-gray-700 block mt-0.5 truncate">{totalPatientsNight}</span>
+                      </div>
+                    </div>
+                  </div>
 
-                      {/* Row 2: Принятые пациенты */}
-                      <tr className="hover:bg-gray-50/30 transition-colors">
-                        <td className="px-6 py-4 font-semibold text-gray-800">Принятые пациенты</td>
-                        <td className="px-6 py-4 font-bold text-gray-900">{completedPatientsCount}</td>
-                        <td className="px-6 py-4 text-gray-600 font-medium">{completedPatientsDay}</td>
-                        <td className="px-6 py-4 text-gray-600 font-medium">{completedPatientsNight}</td>
-                      </tr>
+                  {/* Card 2: Принятые пациенты */}
+                  <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between h-[130px]">
+                    <div>
+                      <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider truncate">Принятые пациенты</h4>
+                      <span className="text-xl sm:text-2xl font-black text-gray-900 block mt-1 truncate">{completedPatientsCount}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-50 items-center">
+                      <div>
+                        <span className="text-[9px] text-gray-400 block font-medium uppercase tracking-tight truncate">День</span>
+                        <span className="text-xs sm:text-sm font-semibold text-gray-700 block mt-0.5 truncate">{completedPatientsDay}</span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-gray-400 block font-medium uppercase tracking-tight truncate">Ночь</span>
+                        <span className="text-xs sm:text-sm font-semibold text-gray-700 block mt-0.5 truncate">{completedPatientsNight}</span>
+                      </div>
+                    </div>
+                  </div>
 
-                      {/* Row 3: Конверсия приёма OR Часы работы */}
-                      <tr className="hover:bg-gray-50/30 transition-colors">
-                        <td className="px-6 py-4 font-semibold text-gray-800">
-                          {salType === "hourly" ? "Часы работы" : "Конверсия приёма"}
-                        </td>
-                        <td className="px-6 py-4 font-bold text-gray-900">
-                          {salType === "hourly" ? `${workHours.toFixed(1)} ч.` : `${conversionPercent}%`}
-                        </td>
-                        <td className="px-6 py-4 text-gray-600 font-medium">
-                          {salType === "hourly" ? `₸${fixedSal.toLocaleString("ru-KZ")}/ч` : "—"}
-                        </td>
-                        <td className="px-6 py-4 text-gray-600 font-medium">
-                          {salType === "hourly" ? `+${commPercent}%` : "—"}
-                        </td>
-                      </tr>
+                  {/* Card 3: Конверсия приёма / Часы работы */}
+                  <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between h-[130px]">
+                    <div>
+                      <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider truncate">
+                        {(isAssistant || salType === "hourly") ? "Часы работы" : "Конверсия приёма"}
+                      </h4>
+                      <span className="text-xl sm:text-2xl font-black text-gray-900 block mt-1 truncate">
+                        {(isAssistant || salType === "hourly") ? `${workHours.toFixed(1)} ч.` : `${conversionPercent}%`}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-50 items-center">
+                      <div>
+                        <span className="text-[9px] text-gray-400 block font-medium uppercase tracking-tight truncate">
+                          {(isAssistant || salType === "hourly") ? "Ставка" : "День"}
+                        </span>
+                        <span className="text-xs sm:text-sm font-semibold text-gray-700 block mt-0.5 truncate">
+                          {(isAssistant || salType === "hourly") ? `₸${fixedSal.toLocaleString()}` : "—"}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-gray-400 block font-medium uppercase tracking-tight truncate">
+                          {(isAssistant || salType === "hourly") ? "Бонус" : "Ночь"}
+                        </span>
+                        <span className="text-xs sm:text-sm font-semibold text-gray-700 block mt-0.5 truncate">
+                          {(isAssistant || salType === "hourly") ? `+${commPercent}%` : "—"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-                      {/* Row 4: Выручка */}
-                      <tr className="hover:bg-gray-50/30 transition-colors">
-                        <td className="px-6 py-4 font-semibold text-gray-800">
-                          {isDoctor ? "Общая выручка" : "Выручка клиники"}
-                        </td>
-                        <td className="px-6 py-4 font-bold text-gray-900">₸{totalRevenue.toLocaleString()}</td>
-                        <td className="px-6 py-4 text-gray-600 font-medium">₸{dayRevenue.toLocaleString()}</td>
-                        <td className="px-6 py-4 text-gray-600 font-medium">₸{nightRevenue.toLocaleString()}</td>
-                      </tr>
+                {/* Right Column: Rows 4, 5, 6 */}
+                <div className="flex flex-col gap-4">
+                  {/* Card 4: Выручка */}
+                  <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between h-[130px]">
+                    <div>
+                      <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider truncate">
+                        {isDoctor ? "Общая выручка" : "Выручка клиники"}
+                      </h4>
+                      <span className="text-xl sm:text-2xl font-black text-gray-900 block mt-1 truncate">₸{totalRevenue.toLocaleString()}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-50 items-center">
+                      <div>
+                        <span className="text-[9px] text-gray-400 block font-medium uppercase tracking-tight truncate">День</span>
+                        <span className="text-xs sm:text-sm font-semibold text-gray-700 block mt-0.5 truncate">₸{dayRevenue.toLocaleString()}</span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-gray-400 block font-medium uppercase tracking-tight truncate">Ночь</span>
+                        <span className="text-xs sm:text-sm font-semibold text-gray-700 block mt-0.5 truncate">₸{nightRevenue.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
 
-                      {/* Row 5: Средний чек */}
-                      <tr className="hover:bg-gray-50/30 transition-colors">
-                        <td className="px-6 py-4 font-semibold text-gray-800">Средний чек</td>
-                        <td className="px-6 py-4 font-bold text-gray-900">₸{avgCheckTotal.toLocaleString()}</td>
-                        <td className="px-6 py-4 text-gray-600 font-medium">₸{avgCheckDay.toLocaleString()}</td>
-                        <td className="px-6 py-4 text-gray-600 font-medium">₸{avgCheckNight.toLocaleString()}</td>
-                      </tr>
-                    </>
-                  )}
+                  {/* Card 5: Средний чек */}
+                  <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between h-[130px]">
+                    <div>
+                      <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider truncate">Средний чек</h4>
+                      <span className="text-xl sm:text-2xl font-black text-gray-900 block mt-1 truncate">₸{avgCheckTotal.toLocaleString()}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-50 items-center">
+                      <div>
+                        <span className="text-[9px] text-gray-400 block font-medium uppercase tracking-tight truncate">День</span>
+                        <span className="text-xs sm:text-sm font-semibold text-gray-700 block mt-0.5 truncate">₸{avgCheckDay.toLocaleString()}</span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-gray-400 block font-medium uppercase tracking-tight truncate">Ночь</span>
+                        <span className="text-xs sm:text-sm font-semibold text-gray-700 block mt-0.5 truncate">₸{avgCheckNight.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
 
-                  {/* Row 6: Выданный аванс (always visible) */}
-                  <tr className="hover:bg-gray-50/30 transition-colors">
-                    <td className="px-6 py-4 font-semibold text-gray-800">Выданный аванс</td>
-                    <td className="px-6 py-4 font-bold text-gray-900">₸{advance.toLocaleString()}</td>
-                    <td className="px-6 py-4 text-gray-400 font-medium" colSpan={2}>
-                      —
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+                  {/* Card 6: Выданный аванс */}
+                  <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between h-[130px]">
+                    <div>
+                      <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider truncate">Выданный аванс</h4>
+                      <span className="text-xl sm:text-2xl font-black text-gray-900 block mt-1 truncate">₸{advance.toLocaleString()}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-50 items-center">
+                      <div>
+                        <span className="text-[9px] text-gray-400 block font-medium uppercase tracking-tight truncate">День</span>
+                        <span className="text-xs sm:text-sm font-semibold text-gray-400 block mt-0.5 truncate">—</span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-gray-400 block font-medium uppercase tracking-tight truncate">Ночь</span>
+                        <span className="text-xs sm:text-sm font-semibold text-gray-400 block mt-0.5 truncate">—</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              <div className="text-right text-xs text-gray-400 mt-2">
+                Показатели рассчитаны автоматически на основании гео-событий трекера и завершенных процедур.
+              </div>
             </div>
-            <div className="bg-gray-50/50 border-t border-gray-100 px-6 py-2.5 text-xs text-gray-400">
-              Показатели рассчитаны автоматически на основании гео-событий трекера и завершенных процедур.
+          ) : (
+            <div className="grid grid-cols-2 gap-4 sm:gap-6">
+              {/* Card 6: Выданный аванс for other employees */}
+              <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between h-[130px]">
+                <div>
+                  <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider truncate">Выданный аванс</h4>
+                  <span className="text-xl sm:text-2xl font-black text-gray-900 block mt-1 truncate">₸{advance.toLocaleString()}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-50 items-center">
+                  <div>
+                    <span className="text-[9px] text-gray-400 block font-medium uppercase tracking-tight truncate">День</span>
+                    <span className="text-xs sm:text-sm font-semibold text-gray-400 block mt-0.5 truncate">—</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-gray-400 block font-medium uppercase tracking-tight truncate">Ночь</span>
+                    <span className="text-xs sm:text-sm font-semibold text-gray-400 block mt-0.5 truncate">—</span>
+                  </div>
+                </div>
+              </div>
+              <div className="hidden sm:block" />
             </div>
-          </div>
+          )}
 
           {/* Card 7: Зарплата (stretched full-width) */}
           <div className="bg-white rounded-2xl border border-border/50 p-6 shadow-sm">
@@ -571,32 +799,32 @@ export default function StaffDetailPage() {
                       {savingSettings ? "Сохранение..." : "Сохранить"}
                     </button>
                   </div>
-                ) : salarySettings ? (
+                ) : settings ? (
                   <div className="bg-gray-50 rounded-2xl p-4 space-y-3">
                     <div>
                       <p className="text-[11px] text-gray-400 font-semibold uppercase">Схема начисления</p>
                       <p className="text-sm font-bold text-gray-800 mt-0.5">
-                        {salarySettings.salaryType === "fixed" ? "Оклад" :
-                         salarySettings.salaryType === "commission" ? "Процент от выручки" :
-                         salarySettings.salaryType === "fixed_plus_commission" ? "Оклад + Процент" :
+                        {settings.salaryType === "fixed" ? "Оклад" :
+                         settings.salaryType === "commission" ? "Процент от выручки" :
+                         settings.salaryType === "fixed_plus_commission" ? "Оклад + Процент" :
                          "Почасовая оплата"}
                       </p>
                     </div>
-                    {(salarySettings.salaryType === "fixed" || salarySettings.salaryType === "fixed_plus_commission" || salarySettings.salaryType === "hourly") && (
+                    {(settings.salaryType === "fixed" || settings.salaryType === "fixed_plus_commission" || settings.salaryType === "hourly") && (
                       <div>
                         <p className="text-[11px] text-gray-400 font-semibold uppercase">
-                          {salarySettings.salaryType === "hourly" ? "Почасовая ставка" : "Размер оклада"}
+                          {settings.salaryType === "hourly" ? "Почасовая ставка" : "Размер оклада"}
                         </p>
                         <p className="text-sm font-bold text-gray-800 mt-0.5">
-                          ₸{Number(salarySettings.fixedAmount).toLocaleString()}
-                          {salarySettings.salaryType === "hourly" && " / час"}
+                          ₸{Number(settings.fixedAmount).toLocaleString()}
+                          {settings.salaryType === "hourly" && " / час"}
                         </p>
                       </div>
                     )}
-                    {(salarySettings.salaryType === "commission" || salarySettings.salaryType === "fixed_plus_commission" || salarySettings.salaryType === "hourly") && (
+                    {(settings.salaryType === "commission" || settings.salaryType === "fixed_plus_commission" || settings.salaryType === "hourly") && (
                       <div>
                         <p className="text-[11px] text-gray-400 font-semibold uppercase">Процентная ставка</p>
-                        <p className="text-sm font-bold text-gray-800 mt-0.5">{salarySettings.commissionPercent}%</p>
+                        <p className="text-sm font-bold text-gray-800 mt-0.5">{settings.commissionPercent}%</p>
                       </div>
                     )}
                   </div>
@@ -635,35 +863,38 @@ export default function StaffDetailPage() {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-100">
-                            {payrollRecords.map((r) => (
-                              <tr key={r.id} className="hover:bg-gray-50/50 transition-colors">
-                                <td className="px-4 py-3 font-semibold text-gray-700">
-                                  {r.periodMonth.toString().padStart(2, "0")}/{r.periodYear}
-                                </td>
-                                <td className="px-4 py-3 text-right text-gray-600 font-medium">
-                                  ₸{Number(r.revenueBase).toLocaleString("ru-KZ")}
-                                </td>
-                                <td className="px-4 py-3 text-right font-bold text-gray-800">
-                                  ₸{Number(r.calculatedAmount).toLocaleString("ru-KZ")}
-                                </td>
-                                <td className="px-4 py-3 text-right text-emerald-600 font-bold">
-                                  {r.approvedAmount ? `₸${Number(r.approvedAmount).toLocaleString("ru-KZ")}` : "—"}
-                                </td>
-                                <td className="px-4 py-3 text-center">
-                                  {r.status === "approved" || r.status === "paid" ? (
-                                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-                                      <CheckCircle className="w-3 h-3" />
-                                      {r.status === "paid" ? "Выплачено" : "Утверждено"}
-                                    </span>
-                                  ) : (
-                                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
-                                      <Clock className="w-3 h-3" />
-                                      Ожидает
-                                    </span>
-                                  )}
-                                </td>
-                              </tr>
-                            ))}
+                            {payrollRecords.map((r) => {
+                              if (!r) return null;
+                              return (
+                                <tr key={r.id} className="hover:bg-gray-50/50 transition-colors">
+                                  <td className="px-4 py-3 font-semibold text-gray-700">
+                                    {(r.periodMonth ?? "").toString().padStart(2, "0")}/{r.periodYear ?? ""}
+                                  </td>
+                                  <td className="px-4 py-3 text-right text-gray-600 font-medium">
+                                    ₸{Number(r.revenueBase).toLocaleString("ru-KZ")}
+                                  </td>
+                                  <td className="px-4 py-3 text-right font-bold text-gray-800">
+                                    ₸{Number(r.calculatedAmount).toLocaleString("ru-KZ")}
+                                  </td>
+                                  <td className="px-4 py-3 text-right text-emerald-600 font-bold">
+                                    {r.approvedAmount ? `₸${Number(r.approvedAmount).toLocaleString("ru-KZ")}` : "—"}
+                                  </td>
+                                  <td className="px-4 py-3 text-center">
+                                    {r.status === "approved" || r.status === "paid" ? (
+                                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                                        <CheckCircle className="w-3 h-3" />
+                                        {r.status === "paid" ? "Выплачено" : "Утверждено"}
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                                        <Clock className="w-3 h-3" />
+                                        Ожидает
+                                      </span>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>

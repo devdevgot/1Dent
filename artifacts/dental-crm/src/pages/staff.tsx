@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { ArrowLeft } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { useGetDoctorKpis } from "@workspace/api-client-react";
 import { useTranslation } from "react-i18next";
 
@@ -10,7 +10,8 @@ export default function StaffPage() {
   
   const doctors = kpiData?.data?.kpis ?? [];
 
-  const getInitials = (name: string) => {
+  const getInitials = (name: string | null | undefined) => {
+    if (!name) return "";
     return name.split(" ").map((w: string) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
   };
 
@@ -26,15 +27,18 @@ export default function StaffPage() {
     <div className="h-full flex flex-col overflow-hidden bg-background">
       {/* Header */}
       <div className="shrink-0 border-b border-border/50 bg-white px-6 py-4">
-        <button
-          onClick={() => setLocation("/dashboard")}
-          className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors mb-3"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          {t("common.back")}
-        </button>
-        <h1 className="text-2xl font-bold text-foreground">{t("staff.title")}</h1>
-        <p className="text-sm text-muted-foreground mt-1">{t("staff.subtitle")}</p>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => window.history.back()}
+            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-500 shrink-0"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">{t("staff.title")}</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">{t("staff.subtitle")}</p>
+          </div>
+        </div>
       </div>
 
       {/* Content */}

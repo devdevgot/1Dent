@@ -15,7 +15,7 @@ import {
   Plus, Search, Phone, Calendar, Briefcase,
   ChevronRight, ChevronLeft, MoreVertical, UserCheck, UserX,
   Trash2, Users, SlidersHorizontal, BarChart2,
-  Mail, Shield, Activity, TrendingUp,
+  Mail, Shield, Activity, TrendingUp, RefreshCw,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
@@ -50,7 +50,8 @@ const ROLE_ICONS: Record<string, typeof Shield> = {
   nurse: Activity,
 };
 
-function initials(name: string) {
+function initials(name: string | null | undefined) {
+  if (!name) return "";
   return name.split(" ").map((w) => w[0]?.toUpperCase() ?? "").slice(0, 2).join("");
 }
 
@@ -177,6 +178,7 @@ export default function StaffPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const hasActiveFilter = !!(search || roleFilter !== "all" || showInactive);
 
   const { data, isLoading } = useListUsersAll(
     { includeInactive: showInactive },
@@ -187,7 +189,7 @@ export default function StaffPage() {
 
   const filtered = rawUsers.filter((u) => {
     const q = search.toLowerCase();
-    const matchSearch = u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
+    const matchSearch = (u.name || "").toLowerCase().includes(q) || (u.email || "").toLowerCase().includes(q);
     const matchRole = roleFilter === "all" || u.role === roleFilter;
     return matchSearch && matchRole;
   });
@@ -256,7 +258,7 @@ export default function StaffPage() {
       id: editingUser.id,
       data: {
         name: formData.name,
-        role: formData.role,
+        role: formData.role as any,
         phone: formData.phone || null,
         position: (formData.role === "doctor" || formData.role === "assistant" || formData.role === "nurse")
           ? (formData.specialties[0] || null)
@@ -301,37 +303,50 @@ export default function StaffPage() {
         <div className="px-5 pt-5 pb-5">
           {/* Title + Actions row */}
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold text-gray-900 font-display tracking-tight">
-                Сотрудники
-              </h1>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {!isLoading && `${rawUsers.length} сотрудников в системе`}
-              </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => window.history.back()}
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-500 shrink-0"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900 font-display tracking-tight">
+                  Сотрудники
+                </h1>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {!isLoading && `${rawUsers.length} сотрудников в системе`}
+                </p>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <button
+                onClick={() => queryClient.invalidateQueries({ queryKey: getListUsersAllQueryKey(showInactive) })}
+                className="text-gray-400 hover:text-primary transition-colors p-1.5"
+                title="Обновить"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
+              <button
                 onClick={() => setShowFilters((v) => !v)}
                 className={cn(
-                  "relative w-9 h-9 rounded-xl flex items-center justify-center border transition-all duration-200",
-                  showFilters || search || roleFilter !== "all" || showInactive
-                    ? "bg-primary/10 text-primary border-primary/20"
-                    : "bg-white text-gray-400 border-gray-200/80 hover:text-primary hover:border-primary/20",
+                  "relative transition-colors p-1.5",
+                  showFilters || hasActiveFilter ? "text-primary" : "text-gray-400 hover:text-primary",
                 )}
                 title="Фильтры"
               >
                 <SlidersHorizontal className="w-4 h-4" />
-                {(search || roleFilter !== "all" || showInactive) && (
-                  <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-primary rounded-full border-2 border-white" />
+                {hasActiveFilter && (
+                  <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-primary rounded-full" />
                 )}
               </button>
               {isOwnerOrAdmin && (
                 <Button
                   onClick={() => setInviteOpen(true)}
-                  size="icon"
-                  className="w-9 h-9 rounded-xl shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-all duration-200"
+                  className="gap-1.5 h-8 text-xs px-2.5 sm:px-3"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-3.5 h-3.5 shrink-0" />
+                  <span className="hidden sm:inline">Пригласить</span>
                 </Button>
               )}
             </div>
@@ -455,7 +470,7 @@ export default function StaffPage() {
                           key={u.id}
                           onClick={() => {
                             if (u.role !== "owner") {
-                              navigate(`/staff/${u.id}`);
+                              navigate(`/users/${u.id}`);
                             }
                           }}
                           className={cn(
@@ -563,7 +578,7 @@ export default function StaffPage() {
                               onEdit={() => { setEditingUser(u); setEditDialogOpen(true); }}
                               onDelete={() => setDeleteConfirmId(u.id)}
                               onToggleActive={() => statusMutation.mutate({ id: u.id, isActive: !u.isActive })}
-                              onNavigate={() => navigate(`/staff/${u.id}`)}
+                              onNavigate={() => navigate(`/users/${u.id}`)}
                             />
                           </td>
                         </tr>

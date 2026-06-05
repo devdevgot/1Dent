@@ -11,7 +11,7 @@ import {
   Users,
   Stethoscope,
   BarChart3,
-  Settings,
+  Contact,
   Activity,
   Calendar,
   Wallet,
@@ -45,7 +45,7 @@ const ALL_NAV_ITEMS = [
   { nameKey: "nav.analytics",   href: "/analytics",          icon: BarChart3,       roles: ["owner"],                                           geoRestricted: true  },
   { nameKey: "nav.myAnalytics", href: "/doctor-analytics",   icon: BarChart3,       roles: ["doctor"],                                          geoRestricted: true  },
   { nameKey: "nav.financials",  href: "/financials",         icon: Wallet,          roles: ["owner","accountant"],                              geoRestricted: true  },
-  { nameKey: "nav.users",       href: "/users",              icon: Settings,        roles: ["owner", "admin"],                                  geoRestricted: true  },
+  { nameKey: "nav.users",       href: "/users",              icon: Contact,         roles: ["owner", "admin"],                                  geoRestricted: true  },
   { nameKey: "nav.chatbot",     href: "/chatbot",            icon: Bot,             roles: ["owner"],                                           geoRestricted: true  },
   { nameKey: "nav.logs",        href: "/logs",               icon: Activity,        roles: ["owner"],                                           geoRestricted: false },
 ];
