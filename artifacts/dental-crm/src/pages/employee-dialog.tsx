@@ -124,6 +124,13 @@ function SpecialtyTagInput({
               e.preventDefault();
               if (inputValue.trim()) addTag(inputValue.trim());
             }
+            if (e.key === " " || e.key === "Spacebar") {
+              const val = inputValue.trim();
+              if (val) {
+                e.preventDefault();
+                addTag(val);
+              }
+            }
             if (e.key === "Escape") setIsOpen(false);
           }}
           className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/30"

@@ -12,6 +12,8 @@ import {
 } from "../../shared/errors";
 import type { UserRole, User } from "@workspace/db";
 import type { SafeClinic } from "./auth.repository";
+import { sendPasswordResetEmail, sendStaffInvitationEmail } from "../../lib/email";
+import { logger } from "../../lib/logger";
 
 const resetTokens = new Map<string, { email: string; expiresAt: number }>();
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
@@ -121,6 +123,11 @@ export class AuthService {
     const token = randomUUID();
     resetTokens.set(token, { email, expiresAt: Date.now() + RESET_TOKEN_TTL_MS });
     console.log(`[PasswordReset] Token for ${email}: ${token}`);
+    
+    sendPasswordResetEmail(email, token).catch((err) => {
+      logger.error({ err, email }, "Failed to send password reset email");
+    });
+
     return { token };
   }
 
@@ -291,6 +298,10 @@ export class AuthService {
       `  Login URL: ${process.env["FRONTEND_URL"] ?? "https://app.1dent.kz"}\n` +
       `  Instruction: Please change your password after first login.`,
     );
+
+    sendStaffInvitationEmail(data.email, data.name, tempPassword, clinicName).catch((err) => {
+      logger.error({ err, email: data.email }, "Failed to send staff invitation email");
+    });
 
     return { userId: user.id, tempPassword, clinicName };
   }

@@ -41,6 +41,8 @@ const UpdateItemSchema = z.object({
   notes: z.string().nullable().optional(),
   attachments: z.array(z.string()).optional(),
   assignedDoctorId: z.string().nullable().optional(),
+  stage: z.string().nullable().optional(),
+  discount: z.number().int().min(0).max(100).optional(),
 });
 
 const AddItemSchema = z.object({

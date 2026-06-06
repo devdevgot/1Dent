@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -12,6 +12,147 @@ import { cn } from "@/lib/utils";
 
 type Role = "admin" | "doctor" | "accountant" | "warehouse" | "assistant" | "nurse";
 type SalaryType = "fixed" | "commission" | "fixed_plus_commission" | "hourly";
+
+const DENTAL_SPECIALTIES = [
+  "Терапевт",
+  "Ортодонт",
+  "Хирург",
+  "Имплантолог",
+  "Ортопед",
+  "Пародонтолог",
+  "Эндодонтист",
+  "Детский стоматолог",
+  "Рентгенолог",
+  "Стоматолог общей практики",
+  "Гигиенист",
+  "Анестезиолог",
+];
+
+function SpecialtyTagInput({
+  values,
+  onChange,
+  placeholder,
+}: {
+  values: string[];
+  onChange: (v: string[]) => void;
+  placeholder?: string;
+}) {
+  const [inputValue, setInputValue] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const filtered = DENTAL_SPECIALTIES.filter(
+    (s) => !values.includes(s) && s.toLowerCase().includes(inputValue.toLowerCase()),
+  );
+  const customNotInList =
+    inputValue.trim() !== "" &&
+    !DENTAL_SPECIALTIES.some((s) => s.toLowerCase() === inputValue.trim().toLowerCase()) &&
+    !values.includes(inputValue.trim());
+
+  const addTag = (tag: string) => {
+    const trimmed = tag.trim();
+    if (trimmed && !values.includes(trimmed)) {
+      onChange([...values, trimmed]);
+    }
+    setInputValue("");
+    setIsOpen(false);
+    inputRef.current?.focus();
+  };
+
+  const removeTag = (tag: string) => {
+    onChange(values.filter((v) => v !== tag));
+  };
+
+  return (
+    <div>
+      {values.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-2 animate-fade-in">
+          {values.map((tag) => (
+            <span
+              key={tag}
+              className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full text-xs font-semibold"
+            >
+              {tag}
+              <button
+                type="button"
+                onClick={() => removeTag(tag)}
+                className="text-emerald-500 hover:text-emerald-700 ml-0.5"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="relative">
+        <input
+          ref={inputRef}
+          type="text"
+          value={inputValue}
+          placeholder={placeholder ?? "Введите или выберите..."}
+          onChange={(e) => {
+            setInputValue(e.target.value);
+            setIsOpen(true);
+          }}
+          onFocus={() => setIsOpen(true)}
+          onBlur={() => setTimeout(() => setIsOpen(false), 150)}
+          onKeyDown={(e) => {
+            e.stopPropagation();
+            if (e.key === "Enter") {
+              e.preventDefault();
+              if (inputValue.trim()) addTag(inputValue.trim());
+            }
+            if (e.key === " " || e.key === "Spacebar") {
+              const val = inputValue.trim();
+              if (val) {
+                e.preventDefault();
+                addTag(val);
+              }
+            }
+            if (e.key === "Escape") setIsOpen(false);
+          }}
+          className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/30"
+        />
+        <button
+          type="button"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            setIsOpen((o) => !o);
+            inputRef.current?.focus();
+          }}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+        >
+          <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+        </button>
+
+        {isOpen && (filtered.length > 0 || customNotInList) && (
+          <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 max-h-52 overflow-y-auto">
+            {filtered.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onMouseDown={() => addTag(s)}
+                className="w-full text-left px-4 py-2.5 text-sm text-gray-800 hover:bg-gray-50 transition-colors"
+              >
+                {s}
+              </button>
+            ))}
+            {customNotInList && (
+              <button
+                type="button"
+                onMouseDown={() => addTag(inputValue.trim())}
+                className="w-full text-left px-4 py-2.5 text-sm font-semibold border-t border-gray-100 hover:bg-gray-50 transition-colors text-primary"
+              >
+                + Добавить «{inputValue.trim()}»
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 interface InviteFormData {
   email: string;
@@ -492,14 +633,11 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                           <label className="block text-xs font-semibold text-gray-500 mb-1.5">
                             Специализация
                           </label>
-                          <div className="relative">
-                            <input
-                              value={form.specialty}
-                              onChange={(e) => set("specialty", e.target.value)}
-                              placeholder="Терапевт, Ортодонт..."
-                              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                            />
-                          </div>
+                          <SpecialtyTagInput
+                            values={form.specialty ? form.specialty.split(",").map(s => s.trim()).filter(Boolean) : []}
+                            onChange={(tags) => set("specialty", tags.join(", "))}
+                            placeholder="Терапевт, Ортодонт..."
+                          />
                         </div>
                         {form.role === "doctor" && (
                           <div>

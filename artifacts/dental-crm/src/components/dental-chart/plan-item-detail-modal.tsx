@@ -454,9 +454,17 @@ export function PlanItemDetailModal({
                 )}>
                   {isCompleted ? "Завершена" : isCancelled ? "Отменена" : "В ожидании"}
                 </span>
-                <span className="text-[12px] font-semibold text-gray-700">
-                  {item.price.toLocaleString("ru-KZ")} ₸
-                </span>
+                {item.discount > 0 ? (
+                  <span className="text-[12px] font-semibold text-gray-700 flex items-center gap-1.5">
+                    <span className="line-through text-gray-400">{item.price.toLocaleString("ru-KZ")} ₸</span>
+                    <span className="text-emerald-600 font-bold">{(item.price * (1 - item.discount / 100)).toLocaleString("ru-KZ")} ₸</span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-rose-50 text-rose-600 border border-rose-100">-{item.discount}%</span>
+                  </span>
+                ) : (
+                  <span className="text-[12px] font-semibold text-gray-700">
+                    {item.price.toLocaleString("ru-KZ")} ₸
+                  </span>
+                )}
               </div>
             </div>
             <button

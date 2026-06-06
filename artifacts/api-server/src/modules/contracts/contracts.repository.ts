@@ -5,8 +5,10 @@ import {
   patientsTable,
   usersTable,
   clinicsTable,
+  treatmentPlansTable,
+  treatmentPlanItemsTable,
 } from "@workspace/db";
-import { eq, and, desc, isNotNull } from "drizzle-orm";
+import { eq, and, desc, isNotNull, inArray, ne } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import type { ContractTemplate, PatientContract, FieldMapping } from "@workspace/db";
 import {
@@ -14,6 +16,133 @@ import {
   renderExtractionTemplate,
   textToHtml,
 } from "./extraction-templates";
+
+function matchServiceToSubcategory(title: string): string[] {
+  const lower = title.toLowerCase();
+  const matched: string[] = [];
+
+  // Детская терапия
+  if (
+    (lower.includes("детск") || lower.includes("ребен") || lower.includes("молочн") || lower.includes("дет.")) &&
+    (lower.includes("терап") || lower.includes("лечен") || lower.includes("кариес") || lower.includes("пульп") || lower.includes("пломб") || lower.includes("десн") || lower.includes("парод"))
+  ) {
+    matched.push("Детская терапия");
+  }
+
+  // Детская хирургия
+  if (
+    (lower.includes("детск") || lower.includes("ребен") || lower.includes("молочн") || lower.includes("дет.")) &&
+    (lower.includes("хирур") || lower.includes("удален") || lower.includes("экстрак"))
+  ) {
+    matched.push("Детская хирургия");
+  }
+
+  // Синуслифтинг
+  if (lower.includes("синус") || lower.includes("sinus")) {
+    matched.push("Синуслифтинг");
+  }
+
+  // Имплантация
+  if (lower.includes("имплант") || lower.includes("implant")) {
+    matched.push("Имплантация");
+  }
+
+  // Ортодонтия для детей
+  if (
+    (lower.includes("ортодонт") || lower.includes("брекет") || lower.includes("элайнер") || lower.includes("пластинк") || lower.includes("капп")) &&
+    (lower.includes("детск") || lower.includes("ребен") || lower.includes("молочн") || lower.includes("дет."))
+  ) {
+    matched.push("Ортодонтия для детей");
+  }
+
+  // Ортодонтия для взрослых
+  if (
+    (lower.includes("ортодонт") || lower.includes("брекет") || lower.includes("элайнер") || lower.includes("капп")) &&
+    !matched.includes("Ортодонтия для детей")
+  ) {
+    matched.push("Ортодонтия для взрослых");
+  }
+
+  // Виниры
+  if (lower.includes("видир") || lower.includes("винир") || lower.includes("veneer")) {
+    matched.push("Виниры");
+  }
+
+  // Съемные конструкции
+  if (lower.includes("съемн") || lower.includes("бюгел") || (lower.includes("протез") && lower.includes("съем"))) {
+    matched.push("Съемные констукций");
+  }
+
+  // Несъемные конструкции
+  if (
+    (lower.includes("коронка") || lower.includes("металлокерам") || lower.includes("циркон") || lower.includes("несъемн") || lower.includes("мостовид") || lower.includes("протез")) &&
+    !matched.includes("Съемные констукций")
+  ) {
+    matched.push("Несъемные контрукций");
+  }
+
+  // Глубокий кариес
+  if (lower.includes("глубок") && lower.includes("кариес")) {
+    matched.push("Глубокий карис");
+  }
+
+  // Средний кариес
+  if (
+    (lower.includes("средн") && lower.includes("кариес")) ||
+    (lower.includes("поверхн") && lower.includes("кариес")) ||
+    (lower.includes("кариес") && !lower.includes("глубок"))
+  ) {
+    matched.push("Средний карис");
+  }
+
+  // Депульпирование зуба
+  if (lower.includes("депульп")) {
+    matched.push("Депульпирование зуба");
+  }
+
+  // Клиновидный дефект
+  if (lower.includes("клиновид")) {
+    matched.push("Клиновидный дефект");
+  }
+
+  // Лечение десен
+  if (lower.includes("десен") || lower.includes("пародонт") || lower.includes("вектор") || (lower.includes("лечение") && lower.includes("дес"))) {
+    matched.push("Лечение десен");
+  }
+
+  // Периодонтит
+  if (lower.includes("периодонтит") || lower.includes("периодонт")) {
+    matched.push("Периодонтит");
+  }
+
+  // Пульпит
+  if (lower.includes("пульпит")) {
+    matched.push("Пулпит");
+  }
+
+  // Резекция верхушки корня
+  if (lower.includes("резекц")) {
+    matched.push("Резекция верхушки корня");
+  }
+
+  // Удаление зуба
+  if ((lower.includes("удален") || lower.includes("экстрак")) && !matched.includes("Детская хирургия") && !lower.includes("молочн")) {
+    matched.push("Удаление зуба");
+  }
+
+  // Операций
+  if (
+    (lower.includes("операц") || lower.includes("хирург") || lower.includes("пластика") || lower.includes("иссечен")) &&
+    !matched.includes("Удаление зуба") &&
+    !matched.includes("Резекция верхушки корня") &&
+    !matched.includes("Детская хирургия")
+  ) {
+    matched.push("Операций");
+  }
+
+  return matched;
+}
+
 
 export class ContractsRepository {
   // ── Templates ──────────────────────────────────────────────────────────────
@@ -81,13 +210,28 @@ export class ContractsRepository {
    * don't already exist, then returns all 4 in definition order.
    */
   async ensureSystemExtractionTemplates(clinicId: string): Promise<ContractTemplate[]> {
-    const existing = await db
+    let existing = await db
       .select()
       .from(contractTemplatesTable)
       .where(and(eq(contractTemplatesTable.clinicId, clinicId), eq(contractTemplatesTable.isSystem, true)));
 
-    const existingTypes = new Set(existing.map((t) => t.systemType));
+    // 1. Delete obsolete system templates
+    const activeSystemIds = new Set(EXTRACTION_TEMPLATES.map((def) => def.id));
+    const obsolete = existing.filter((t) => t.systemType && !activeSystemIds.has(t.systemType));
+    
+    if (obsolete.length > 0) {
+      const obsoleteIds = obsolete.map((o) => o.id);
+      await db.delete(contractTemplatesTable).where(
+        and(
+          eq(contractTemplatesTable.clinicId, clinicId),
+          eq(contractTemplatesTable.isSystem, true),
+          inArray(contractTemplatesTable.id, obsoleteIds)
+        )
+      );
+      existing = existing.filter((t) => !obsoleteIds.includes(t.id));
+    }
 
+    const existingTypes = new Set(existing.map((t) => t.systemType));
     const toCreate = EXTRACTION_TEMPLATES.filter((def) => !existingTypes.has(def.id));
 
     if (toCreate.length > 0) {
@@ -186,8 +330,56 @@ export class ContractsRepository {
     doctorName: string;
     date: string;
     year: string;
+    serviceNames?: string[];
   }): Promise<{ bundleToken: string; contracts: PatientContract[] }> {
-    const templates = await this.ensureSystemExtractionTemplates(data.clinicId);
+    const allTemplates = await this.ensureSystemExtractionTemplates(data.clinicId);
+
+    // 1. Identify relevant subcategories
+    const matchedSubcategories = new Set<string>();
+    
+    // Check passed service names
+    if (data.serviceNames && data.serviceNames.length > 0) {
+      for (const name of data.serviceNames) {
+        matchServiceToSubcategory(name).forEach(sc => matchedSubcategories.add(sc));
+      }
+    }
+    
+    // Check active plan items
+    const activePlan = await db
+      .select({ id: treatmentPlansTable.id })
+      .from(treatmentPlansTable)
+      .where(
+        and(
+          eq(treatmentPlansTable.patientId, data.patientId),
+          eq(treatmentPlansTable.clinicId, data.clinicId),
+          ne(treatmentPlansTable.status, "completed"),
+          ne(treatmentPlansTable.status, "cancelled")
+        )
+      )
+      .orderBy(desc(treatmentPlansTable.createdAt))
+      .limit(1);
+
+    if (activePlan.length > 0) {
+      const items = await db
+        .select({ title: treatmentPlanItemsTable.title })
+        .from(treatmentPlanItemsTable)
+        .where(eq(treatmentPlanItemsTable.planId, activePlan[0]!.id));
+      
+      items.forEach((it) => {
+        matchServiceToSubcategory(it.title).forEach(sc => matchedSubcategories.add(sc));
+      });
+    }
+
+    // Default fallback: if no subcategories matched, default to "Удаление зуба" templates
+    if (matchedSubcategories.size === 0) {
+      matchedSubcategories.add("Удаление зуба");
+    }
+
+    // 2. Filter templates matching the matched subcategories
+    const templates = allTemplates.filter((tmpl) => {
+      const def = EXTRACTION_TEMPLATES.find((d) => d.id === tmpl.systemType);
+      return def && def.subcategory && matchedSubcategories.has(def.subcategory);
+    });
 
     const vars: Record<string, string> = {
       patient_name: data.patientName,
@@ -201,6 +393,10 @@ export class ContractsRepository {
     };
 
     const bundleToken = randomUUID();
+
+    if (templates.length === 0) {
+      return { bundleToken, contracts: [] };
+    }
 
     const rows = await db
       .insert(patientContractsTable)

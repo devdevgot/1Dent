@@ -6,6 +6,7 @@ import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError, WhatsappNotConnectedError } from "../../shared/errors";
 import { ContractsRepository } from "./contracts.repository";
 import { analyzeContractFields, renderContractHtml, PATIENT_FIELDS } from "./contracts.ai";
+import { EXTRACTION_TEMPLATES } from "./extraction-templates";
 import { sendToPatient } from "../../shared/messaging";
 import { getServerBaseUrl } from "../../shared/green-api";
 import { logger } from "../../lib/logger";
@@ -36,6 +37,7 @@ const upload = multer({
 });
 
 const ownerAdminRoles = roleGuard("owner", "admin");
+const docRoles = roleGuard("owner", "admin", "doctor");
 
 /** Safely parse fieldMappings JSONB column value into a typed array. */
 function parseFieldMappings(raw: unknown): FieldMapping[] {
@@ -56,11 +58,27 @@ function parseFieldMappings(raw: unknown): FieldMapping[] {
 router.get(
   "/templates",
   authMiddleware,
-  ownerAdminRoles,
+  docRoles,
   async (req: Request, res: Response, next: NextFunction) => {
     const templates = await repo.listTemplates(req.user!.clinicId).catch(next);
     if (!templates) return;
-    res.json({ success: true, data: { templates } });
+
+    // Enrich system templates with category & subcategory
+    const enriched = templates.map((tmpl) => {
+      if (tmpl.isSystem && tmpl.systemType) {
+        const def = EXTRACTION_TEMPLATES.find((d) => d.id === tmpl.systemType);
+        if (def) {
+          return {
+            ...tmpl,
+            category: def.category,
+            subcategory: def.subcategory,
+          };
+        }
+      }
+      return tmpl;
+    });
+
+    res.json({ success: true, data: { templates: enriched } });
   },
 );
 
@@ -68,7 +86,7 @@ router.get(
 router.get(
   "/templates/:id",
   authMiddleware,
-  ownerAdminRoles,
+  docRoles,
   async (req: Request, res: Response, next: NextFunction) => {
     const id = String(req.params["id"]);
     const template = await repo.findTemplate(id, req.user!.clinicId).catch(next);
@@ -208,7 +226,7 @@ router.delete(
 router.get(
   "/patient/:patientId",
   authMiddleware,
-  ownerAdminRoles,
+  docRoles,
   async (req: Request, res: Response, next: NextFunction) => {
     const contracts = await repo
       .listPatientContracts(String(req.params["patientId"]), req.user!.clinicId)
@@ -222,7 +240,7 @@ router.get(
 router.post(
   "/patient/:patientId/send",
   authMiddleware,
-  ownerAdminRoles,
+  docRoles,
   async (req: Request, res: Response, next: NextFunction) => {
     const patientId = String(req.params["patientId"]);
     const parsed = z.object({ templateId: z.string() }).safeParse(req.body);
@@ -397,6 +415,7 @@ router.post(
     const today = new Date();
     const dateStr = today.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" });
 
+    const { serviceNames } = req.body;
     const { bundleToken, contracts } = await repo
       .createExtractionBundle({
         clinicId,
@@ -410,6 +429,7 @@ router.post(
         doctorName: ctx.doctorName,
         date: dateStr,
         year: String(today.getFullYear()),
+        serviceNames: serviceNames && Array.isArray(serviceNames) ? serviceNames : undefined,
       })
       .catch(next as (e: unknown) => never);
     if (!contracts) return;
@@ -510,6 +530,7 @@ router.post(
     const today = new Date();
     const dateStr = today.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" });
 
+    const { serviceNames } = req.body;
     const { bundleToken, contracts } = await repo
       .createExtractionBundle({
         clinicId,
@@ -523,6 +544,7 @@ router.post(
         doctorName: ctx.doctorName,
         date: dateStr,
         year: String(today.getFullYear()),
+        serviceNames: serviceNames && Array.isArray(serviceNames) ? serviceNames : undefined,
       })
       .catch(next as (e: unknown) => never);
     if (!contracts) return;
@@ -530,11 +552,12 @@ router.post(
     const baseUrl = getServerBaseUrl() ?? "";
     const bundleUrl = baseUrl ? `${baseUrl}/p/bundle/${bundleToken}` : `/p/bundle/${bundleToken}`;
 
+    const bundleContracts = await repo.findContractsByBundleToken(bundleToken);
+    const docList = bundleContracts.map((c, i) => `${i + 1}. ${c.templateName}`).join("\n");
+
     const message =
-      `📋 *Пакет документов — Удаление зуба*\n\nУважаемый(-ая) ${ctx.patientName}!\n\n` +
-      `Вам отправлены 4 документа для ознакомления и подписи:\n` +
-      `1. Договор на оказание услуг\n2. Согласие на удаление зуба\n` +
-      `3. Согласие на выполнение рекомендаций\n4. Памятка после удаления\n\n` +
+      `📋 *Пакет документов для лечения*\n\nУважаемый(-ая) ${ctx.patientName}!\n\n` +
+      `Вам отправлен пакет документов для ознакомления и подписи:\n${docList}\n\n` +
       `Откройте все документы и подпишите по ссылке:\n${bundleUrl}\n\nКлиника: ${ctx.clinicName}`;
 
     await sendToPatient(clinicId, ctx.patientPhone, message)

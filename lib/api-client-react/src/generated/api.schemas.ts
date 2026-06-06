@@ -1273,6 +1273,8 @@ export interface TreatmentPlanItem {
   notes?: string | null;
   attachments?: string[] | null;
   assignedDoctorId?: string | null;
+  stage?: string | null;
+  discount: number;
   createdAt: string;
 }
 
@@ -1376,6 +1378,8 @@ export interface UpdateTreatmentPlanItemRequest {
   notes?: string | null;
   attachments?: string[];
   assignedDoctorId?: string | null;
+  stage?: string | null;
+  discount?: number;
 }
 
 export type GetInventoryConsumptionParams = {

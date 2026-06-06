@@ -17,8 +17,91 @@ import type {
   ToothCondition,
 } from "@workspace/db";
 import type { ConditionPricesMap } from "../clinic/clinic-prices.repository";
+import { openrouter, FAST_MODEL, parseLlmJson } from "../../lib/openrouter-client";
 
 export type TreatmentPlanWithItems = TreatmentPlan & { items: TreatmentPlanItem[] };
+
+function conditionToStageId(condition: string): string {
+  const map: Record<string, string> = {
+    cavity: "prevention_treatment",
+    treated: "prevention_treatment",
+    root_canal: "prevention_treatment",
+    crown: "orthopedics",
+    implant: "surgery",
+    extraction_needed: "surgery",
+    missing: "surgery",
+  };
+  return map[condition] ?? "other";
+}
+
+async function generateAiPlanItems(
+  teeth: { toothFdi: number; condition: string; notes: string | null }[],
+  pricesMap: ConditionPricesMap,
+): Promise<Array<{ toothFdi: number | null; condition: string | null; title: string; price: number; stage: string }>> {
+  const systemPrompt = `Ты — искусственный интеллект для планирования стоматологического лечения.
+Тебе на вход дается список проблемных зубов пациента с их текущим состоянием (condition) и заметками врача.
+Также тебе дается карта цен клиники для каждого состояния зуба.
+Твоя задача — составить оптимальный, последовательный план лечения, разделенный на этапы.
+
+Доступные этапы (stage):
+1. 'prevention_treatment' (Этап 1. Профилактика и лечение зубов) — включает профессиональную гигиену полости рта (всегда планируй ее самой первой процедурой), лечение кариеса (кариес / терапия), лечение пульпита и периодонтита (каналы).
+2. 'surgery' (Этап 2. Хирургия) — включает удаление зубов и имплантацию (установку имплантатов). Должно идти ПОСЛЕ этапа профилактики и лечения.
+3. 'orthopedics' (Этап 3. Ортопедическое лечение) — включает установку коронок на зубы или коронки на импланты, протезирование. Идет в конце (ПОСЛЕ хирургии).
+4. 'other' — прочее.
+
+Важно соблюдать логический порядок этапов:
+1. Сначала профессиональная гигиена, терапия и лечение каналов ('prevention_treatment').
+2. Затем удаление и имплантация ('surgery').
+3. В конце — протезирование, коронки ('orthopedics').
+
+Для каждого зуба из списка выбери правильную процедуру и цену на основе карты цен клиники:
+${JSON.stringify(pricesMap, null, 2)}
+
+Если в карте цен нет специальной цены для конкретного состояния, используй цену по умолчанию (default) или 0.
+
+Выдай ответ строго в формате JSON массива объектов:
+[
+  {
+    "toothFdi": 16,
+    "condition": "cavity",
+    "title": "Лечение кариеса — зуб #16",
+    "price": 15000,
+    "stage": "prevention_treatment"
+  }
+]
+Не пиши никакого другого текста вокруг JSON.`;
+
+  const userPrompt = `Список проблемных зубов пациента:
+${JSON.stringify(teeth, null, 2)}`;
+
+  try {
+    const response = await openrouter.chat.completions.create({
+      model: FAST_MODEL,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      temperature: 0.2,
+    });
+
+    const content = response.choices[0]?.message?.content ?? "[]";
+    const result = parseLlmJson<any[]>(content);
+    if (Array.isArray(result)) {
+      return result;
+    }
+    if (result && typeof result === "object") {
+      const keys = Object.keys(result);
+      for (const k of keys) {
+        if (Array.isArray(result[k])) return result[k];
+      }
+    }
+    return [];
+  } catch (err) {
+    console.error("[AiTreatmentPlan] LLM call failed:", err);
+    return [];
+  }
+}
+
 
 const CONDITION_LABEL: Record<string, string> = {
   healthy: "Здоровый зуб",
@@ -235,7 +318,7 @@ export class TreatmentPlansRepository {
         id: string; planId: string; clinicId: string; patientId: string;
         toothFdi: number | null; condition: ToothCondition | null; mkb10Code: string | null;
         title: string; price: number; status: TreatmentPlanItemStatus; sortOrder: number;
-        procedureId: string | null; createdAt: Date;
+        procedureId: string | null; stage: string | null; createdAt: Date;
       }> = [];
 
       if (manualItems && manualItems.length > 0) {
@@ -252,6 +335,7 @@ export class TreatmentPlansRepository {
           status: "pending" as TreatmentPlanItemStatus,
           sortOrder: idx,
           procedureId: null,
+          stage: null,
           createdAt: new Date(),
         }));
       } else {
@@ -265,34 +349,78 @@ export class TreatmentPlansRepository {
             ),
           );
 
-        const problemTeeth = teeth
-          .filter((t) => t.condition !== "healthy" && t.condition !== "treated" && t.condition !== "missing")
-          .sort((a, b) => {
-            const pa = CONDITION_PRIORITY[a.condition as string] ?? 9;
-            const pb = CONDITION_PRIORITY[b.condition as string] ?? 9;
-            if (pa !== pb) return pa - pb;
-            return a.toothFdi - b.toothFdi;
-          });
+        // Try AI planning first
+        let aiItems: any[] = [];
+        try {
+          const formattedTeeth = teeth
+            .filter((t) => t.condition !== "healthy")
+            .map((t) => ({
+              toothFdi: t.toothFdi,
+              condition: t.condition,
+              notes: t.notes,
+            }));
+          
+          if (formattedTeeth.length > 0) {
+            aiItems = await generateAiPlanItems(formattedTeeth, pricesMap);
+          }
+        } catch (e) {
+          console.warn("[AiTreatmentPlan] Failed to generate AI plan, falling back to local:", e);
+        }
 
-        itemsData = problemTeeth.map((tooth, idx) => {
-          const cond = tooth.condition as string;
-          const priceEntry = pricesMap[cond];
-          return {
-            id: randomUUID(),
-            planId,
-            clinicId,
-            patientId,
-            toothFdi: tooth.toothFdi,
-            condition: tooth.condition as ToothCondition | null,
-            mkb10Code: priceEntry?.mkb10 ?? CONDITION_MKB10[cond] ?? null,
-            title: `${CONDITION_LABEL[cond] ?? cond} — зуб #${tooth.toothFdi}`,
-            price: priceEntry?.price ?? 0,
-            status: "pending" as TreatmentPlanItemStatus,
-            sortOrder: idx,
-            procedureId: null,
-            createdAt: new Date(),
-          };
-        });
+        if (aiItems.length > 0) {
+          itemsData = aiItems.map((item, idx) => {
+            const cond = item.condition;
+            const priceEntry = cond ? pricesMap[cond] : null;
+            return {
+              id: randomUUID(),
+              planId,
+              clinicId,
+              patientId,
+              toothFdi: item.toothFdi ?? null,
+              condition: (item.condition ?? null) as ToothCondition | null,
+              mkb10Code: (cond && (priceEntry?.mkb10 ?? CONDITION_MKB10[cond])) ?? null,
+              title: item.title,
+              price: typeof item.price === "number" ? item.price : (priceEntry?.price ?? 0),
+              status: "pending" as TreatmentPlanItemStatus,
+              sortOrder: idx,
+              procedureId: null,
+              stage: item.stage ?? null,
+              createdAt: new Date(),
+            };
+          });
+        } else {
+          // Fallback to local logic
+          const problemTeeth = teeth
+            .filter((t) => t.condition !== "healthy" && t.condition !== "treated" && t.condition !== "missing")
+            .sort((a, b) => {
+              const pa = CONDITION_PRIORITY[a.condition as string] ?? 9;
+              const pb = CONDITION_PRIORITY[b.condition as string] ?? 9;
+              if (pa !== pb) return pa - pb;
+              return a.toothFdi - b.toothFdi;
+            });
+
+          itemsData = problemTeeth.map((tooth, idx) => {
+            const cond = tooth.condition as string;
+            const priceEntry = pricesMap[cond];
+            const stage = conditionToStageId(cond);
+            return {
+              id: randomUUID(),
+              planId,
+              clinicId,
+              patientId,
+              toothFdi: tooth.toothFdi,
+              condition: tooth.condition as ToothCondition | null,
+              mkb10Code: priceEntry?.mkb10 ?? CONDITION_MKB10[cond] ?? null,
+              title: `${CONDITION_LABEL[cond] ?? cond} — зуб #${tooth.toothFdi}`,
+              price: priceEntry?.price ?? 0,
+              status: "pending" as TreatmentPlanItemStatus,
+              sortOrder: idx,
+              procedureId: null,
+              stage,
+              createdAt: new Date(),
+            };
+          });
+        }
       }
 
       const totalCost = itemsData.reduce((sum, i) => sum + i.price, 0);
@@ -428,7 +556,7 @@ export class TreatmentPlansRepository {
     clinicId: string,
     planId: string,
     patientId: string,
-    updates: { title?: string; price?: number; sortOrder?: number; status?: "cancelled"; notes?: string | null; attachments?: string[]; assignedDoctorId?: string | null },
+    updates: { title?: string; price?: number; sortOrder?: number; status?: "cancelled"; notes?: string | null; attachments?: string[]; assignedDoctorId?: string | null; stage?: string | null; discount?: number },
   ): Promise<TreatmentPlanItem | null> {
     const [item] = await db
       .select()
@@ -460,7 +588,7 @@ export class TreatmentPlansRepository {
       .where(and(eq(treatmentPlanItemsTable.id, itemId), eq(treatmentPlanItemsTable.clinicId, clinicId)))
       .returning();
 
-    if (updated && (updates.price !== undefined)) {
+    if (updated && (updates.price !== undefined || updates.discount !== undefined)) {
       await this._recalcTotalCost(updated.planId, clinicId);
     }
 
@@ -489,6 +617,9 @@ export class TreatmentPlansRepository {
         throw new ItemAlreadyCompletedError();
       }
 
+      const discount = item.discount ?? 0;
+      const finalPrice = discount > 0 ? item.price * (1 - discount / 100) : item.price;
+
       const procedureId = randomUUID();
       await tx.insert(proceduresTable).values({
         id: procedureId,
@@ -497,7 +628,7 @@ export class TreatmentPlansRepository {
         doctorId,
         name: item.title,
         status: "pending_payment",
-        price: item.price,
+        price: finalPrice,
         notes: item.mkb10Code ? `МКБ-10: ${item.mkb10Code}` : null,
         paymentMethod: null,
         scheduledAt: new Date(),
@@ -600,7 +731,11 @@ export class TreatmentPlansRepository {
           ne(treatmentPlanItemsTable.status, "cancelled"),
         ),
       );
-    const totalCost = items.reduce((sum, i) => sum + (i.price ?? 0), 0);
+    const totalCost = items.reduce((sum, i) => {
+      const discount = i.discount ?? 0;
+      const discountedPrice = (i.price ?? 0) * (1 - discount / 100);
+      return sum + discountedPrice;
+    }, 0);
     await db
       .update(treatmentPlansTable)
       .set({ totalCost, updatedAt: new Date() })

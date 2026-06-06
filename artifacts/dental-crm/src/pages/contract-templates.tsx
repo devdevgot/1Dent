@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   FileText, Upload, Trash2, ChevronLeft, Loader2, AlertCircle, CheckCircle2, Plus,
-  ChevronDown, ChevronUp, Pencil, Save, X, Lock, Eye,
+  ChevronDown, ChevronUp, Pencil, Save, X, Lock, Eye, Folder, FolderOpen, ChevronRight,
 } from "lucide-react";
 import { useLocation } from "wouter";
 
@@ -163,6 +163,37 @@ export default function ContractTemplatesPage() {
   const allTemplates = data?.data?.templates ?? [];
   const systemTemplates = allTemplates.filter((t: ContractTemplate) => t.isSystem);
   const templates = allTemplates.filter((t: ContractTemplate) => !t.isSystem);
+
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
+    "Имплантация": true, // Expand Implantation by default as requested
+  });
+  const [expandedSubcategories, setExpandedSubcategories] = useState<Record<string, boolean>>({});
+
+  const toggleCategory = (cat: string) => {
+    setExpandedCategories((prev) => ({ ...prev, [cat]: !prev[cat] }));
+  };
+
+  const toggleSubcategory = (sub: string) => {
+    setExpandedSubcategories((prev) => ({ ...prev, [sub]: !prev[sub] }));
+  };
+
+  const SYSTEM_CATEGORIES = ["Детская стоматология", "Имплантация", "Ортодонтия", "Ортопедия", "Терапия", "Хирургия"];
+
+  const groupedSystemTemplates = useMemo(() => {
+    const groups: Record<string, Record<string, ContractTemplate[]>> = {};
+    for (const tmpl of systemTemplates) {
+      const category = (tmpl as any).category || "Другое";
+      const subcategory = (tmpl as any).subcategory || "Общие";
+      if (!groups[category]) {
+        groups[category] = {};
+      }
+      if (!groups[category][subcategory]) {
+        groups[category][subcategory] = [];
+      }
+      groups[category][subcategory].push(tmpl);
+    }
+    return groups;
+  }, [systemTemplates]);
 
   const handleFile = (file: File) => {
     const allowed = [
@@ -322,53 +353,106 @@ export default function ContractTemplatesPage() {
 
         {/* System (built-in) templates — read-only */}
         {!isLoading && systemTemplates.length > 0 && (
-          <div className="mb-6">
+          <div className="mb-8">
             <div className="flex items-center gap-2 mb-3">
-              <h2 className="font-semibold text-gray-700">Встроенные шаблоны</h2>
+              <h2 className="font-semibold text-gray-700">Встроенные пакеты документов</h2>
               <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
                 <Lock className="w-2.5 h-2.5" />
                 Только просмотр
               </span>
             </div>
-            <p className="text-xs text-gray-400 mb-3">
-              Автоматически заполняются при удалении зуба. Редактирование недоступно.
+            <p className="text-xs text-gray-400 mb-4">
+              Пакеты документов готовятся автоматически в зависимости от услуг в плане лечения.
             </p>
-            <div className="space-y-2">
-              {systemTemplates.map((tmpl: ContractTemplate) => {
-                const isExpanded = expandedId === tmpl.id;
+
+            <div className="space-y-3">
+              {SYSTEM_CATEGORIES.map((category) => {
+                const subcategories = groupedSystemTemplates[category];
+                if (!subcategories) return null;
+
+                const isCatExpanded = !!expandedCategories[category];
+                const totalDocs = Object.values(subcategories).reduce((sum, list) => sum + list.length, 0);
+
                 return (
-                  <div key={tmpl.id} className="bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden">
-                    <div className="p-4 flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
-                        <FileText className="w-5 h-5 text-amber-500" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold text-gray-700 truncate">{tmpl.name}</p>
-                          <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-100 border border-amber-200 px-1.5 py-0.5 rounded-full">
-                            Удаление зуба
-                          </span>
+                  <div key={category} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:border-slate-300 transition-colors">
+                    {/* Category Header */}
+                    <button
+                      onClick={() => toggleCategory(category)}
+                      className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-slate-50/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary shrink-0">
+                          {isCatExpanded ? <FolderOpen className="w-5 h-5" /> : <Folder className="w-5 h-5" />}
                         </div>
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          Встроенный · {tmpl.systemType ?? "system"}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => setExpandedId(isExpanded ? null : tmpl.id)}
-                        className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors shrink-0"
-                        title="Посмотреть содержимое"
-                      >
-                        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                    {isExpanded && tmpl.extractedText && (
-                      <div className="px-4 pb-4 border-t border-slate-200 pt-3">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Содержимое шаблона</p>
-                        <div className="bg-white rounded-xl border border-slate-100 p-3 max-h-64 overflow-y-auto">
-                          <pre className="text-xs text-gray-600 whitespace-pre-wrap font-sans leading-relaxed">
-                            {tmpl.extractedText}
-                          </pre>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-800">{category}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">{totalDocs} документов в пакете</p>
                         </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {isCatExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                      </div>
+                    </button>
+
+                    {/* Subcategories & Files */}
+                    {isCatExpanded && (
+                      <div className="border-t border-slate-100 bg-slate-50/30 px-5 py-4 space-y-4">
+                        {Object.keys(subcategories).sort().map((subcategory) => {
+                          const docs = subcategories[subcategory]!;
+                          const subKey = `${category}:${subcategory}`;
+                          const isSubExpanded = !!expandedSubcategories[subKey];
+
+                          return (
+                            <div key={subcategory} className="space-y-2">
+                              {/* Subcategory Header */}
+                              <button
+                                onClick={() => toggleSubcategory(subKey)}
+                                className="flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-slate-700 transition-colors py-1 outline-none"
+                              >
+                                {isSubExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                                <span>{subcategory}</span>
+                                <span className="bg-slate-200 text-slate-600 px-1.5 py-0.2 rounded-full text-[10px]">
+                                  {docs.length}
+                                </span>
+                              </button>
+
+                              {/* Document list under Subcategory */}
+                              {isSubExpanded && (
+                                <div className="pl-4 space-y-2 border-l-2 border-dashed border-slate-200 ml-1.5 py-1">
+                                  {docs.map((tmpl) => {
+                                    const isExpanded = expandedId === tmpl.id;
+                                    return (
+                                      <div key={tmpl.id} className="bg-white rounded-xl border border-slate-150 overflow-hidden shadow-xs">
+                                        <div className="p-3 flex items-center justify-between gap-4">
+                                          <div className="flex items-center gap-2.5 min-w-0">
+                                            <FileText className="w-4 h-4 text-amber-500 shrink-0" />
+                                            <p className="text-xs font-medium text-gray-700 truncate">{tmpl.name}</p>
+                                          </div>
+                                          <button
+                                            onClick={() => setExpandedId(isExpanded ? null : tmpl.id)}
+                                            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors shrink-0"
+                                            title="Посмотреть содержимое"
+                                          >
+                                            {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                          </button>
+                                        </div>
+                                        {isExpanded && tmpl.extractedText && (
+                                          <div className="px-3 pb-3 border-t border-slate-100 pt-2 bg-slate-50/50">
+                                            <div className="bg-white rounded-lg border border-slate-100 p-2.5 max-h-48 overflow-y-auto">
+                                              <pre className="text-[11px] text-gray-600 whitespace-pre-wrap font-sans leading-relaxed">
+                                                {tmpl.extractedText}
+                                              </pre>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>

@@ -30,6 +30,9 @@ VITE_YANDEX_GEOCODER_KEY = "9b325167-ed8c-45dc-9bd2-01d4afb2c8ab"
 YANDEX_GEOCODER_KEY = "9b325167-ed8c-45dc-9bd2-01d4afb2c8ab"
 PLATFORM_SUPERADMIN_TG_ID = "1337923744"
 WEBHOOK_BASE_URL = "https://dental-crm-kz.replit.app"
+RESEND_API_KEY = "re_UC7XF2eo_Jp8NT9pfTTrmcy7e2Pk9vdMW"
+RESEND_FROM_EMAIL = "1Dent <noreply@1dent.kz>"
+FRONTEND_URL = "https://1dent.kz"
 
 [userenv.development]
 TMA_DEV_BYPASS_TG_ID = "1337923744"

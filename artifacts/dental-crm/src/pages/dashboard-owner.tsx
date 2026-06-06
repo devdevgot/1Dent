@@ -14,7 +14,7 @@ import {
   Contact, Users, Bell, X, ChevronLeft,
   Stethoscope, Send, Banknote, QrCode, CreditCard,
   Clock, Wallet, CalendarDays, SlidersHorizontal, UserPlus, Layers,
-  TrendingUp, Globe, Handshake, Megaphone, MapPin,
+  TrendingUp, Globe, Handshake, Megaphone, MapPin, Sparkles, ChevronRight,
 } from "lucide-react";
 import { FaInstagram, FaTelegram, FaWhatsapp } from "react-icons/fa";
 import { TasksBlock } from "@/components/dashboard/tasks-block";
@@ -24,6 +24,7 @@ import { useLocation } from "wouter";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
+import { OnboardingWizard } from "@/components/dashboard/onboarding-wizard";
 
 const PAYMENT_ICONS: Record<string, React.ElementType> = {
   kaspi_transfer: Send,
@@ -201,6 +202,12 @@ export default function OwnerDashboard() {
   const { t } = useTranslation();
   const { user, clinic } = useAuthStore();
   const [, navigate] = useLocation();
+  const [onboardingOpen, setOnboardingOpen] = useState(() => {
+    return localStorage.getItem("show_onboarding_wizard") === "true";
+  });
+  const [isOnboardingCompleted, setIsOnboardingCompleted] = useState(() => {
+    return localStorage.getItem("onboarding_completed") === "true";
+  });
   // ── Date filter state ──
   const [filterOpen, setFilterOpen]     = useState(false);
   const [showCustom, setShowCustom]     = useState(false);
@@ -456,6 +463,24 @@ export default function OwnerDashboard() {
         </div>
       </div>{/* end white top strip */}
 
+      {/* ─── Setup Wizard Call-to-Action Card ─── */}
+      {!isOnboardingCompleted && (
+        <div className="mx-4 mt-4 bg-white border border-amber-200/80 rounded-3xl p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h4 className="text-sm sm:text-base font-extrabold text-slate-800">Мастер настроек 1Dent</h4>
+            <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+              Настройте сотрудников, ИИ чат-бота, геолокацию и Telegram-бота для полноценного старта клиники.
+            </p>
+          </div>
+          <button
+            onClick={() => setOnboardingOpen(true)}
+            className="w-full sm:w-auto px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs sm:text-sm font-bold shrink-0 transition-colors shadow-sm flex items-center justify-center gap-1.5"
+          >
+            Продолжить настройку
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* ─── Revenue Donut Card ─── */}
       <div className="mx-4 mt-3 bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
@@ -853,6 +878,13 @@ export default function OwnerDashboard() {
           </div>
         </SheetContent>
       </Sheet>
+      <OnboardingWizard
+        open={onboardingOpen}
+        onClose={() => {
+          setOnboardingOpen(false);
+          setIsOnboardingCompleted(localStorage.getItem("onboarding_completed") === "true");
+        }}
+      />
     </div>
   );
 }

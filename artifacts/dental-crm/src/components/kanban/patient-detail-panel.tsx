@@ -139,13 +139,13 @@ const CONDITION_SERVICE_KEYWORDS: Record<string, string[]> = {
 };
 
 const CATEGORY_TO_CONDITION: Record<string, ToothCondition> = {
-  therapy:        "caries",
+  therapy:        "cavity",
   surgery:        "missing",
   orthopedics:    "crown",
   implantation:   "implant",
-  pediatric:      "caries",
+  pediatric:      "cavity",
   hygiene:        "healthy",
-  periodontology: "caries",
+  periodontology: "cavity",
   radiology:      "healthy",
   restoration:    "treated",
 };
@@ -157,6 +157,34 @@ function isExtractionItem(title: string) {
     lower.includes("экстракц") ||
     lower.includes("удалить зуб")
   );
+}
+
+function getMatchedCategories(title: string): string[] {
+  const lower = title.toLowerCase();
+  const cats: string[] = [];
+  
+  if (lower.includes("детск") || lower.includes("ребен") || lower.includes("молочн") || lower.includes("дет.")) {
+    cats.push("Детская стоматология");
+  }
+  if (lower.includes("имплант") || lower.includes("implant") || lower.includes("синус") || lower.includes("sinus")) {
+    cats.push("Имплантация");
+  }
+  if (lower.includes("ортодонт") || lower.includes("брекет") || lower.includes("элайнер") || lower.includes("капп") || lower.includes("пластинк")) {
+    cats.push("Ортодонтия");
+  }
+  if (lower.includes("коронка") || lower.includes("винир") || lower.includes("протез") || lower.includes("металлокерам") || lower.includes("циркон") || lower.includes("несъемн") || lower.includes("съемн") || lower.includes("бюгел")) {
+    cats.push("Ортопедия");
+  }
+  if (lower.includes("кариес") || lower.includes("пульпит") || lower.includes("периодонтит") || lower.includes("депульп") || lower.includes("клиновид") || lower.includes("десен") || lower.includes("пародонт") || lower.includes("лечение зуба") || lower.includes("пломб")) {
+    cats.push("Терапия");
+  }
+  if (lower.includes("удален") || lower.includes("резекц") || lower.includes("операц") || lower.includes("хирург")) {
+    if (!(lower.includes("детск") || lower.includes("ребен") || lower.includes("молочн") || lower.includes("дет."))) {
+      cats.push("Хирургия");
+    }
+  }
+  
+  return cats;
 }
 
 type PlanItemData = { id: string; title: string; price: number; status: string };
@@ -824,6 +852,7 @@ export function PatientDetailPanel() {
   const [bundlePreviewOpen, setBundlePreviewOpen] = useState(false);
   const [bundleRequiredModalOpen, setBundleRequiredModalOpen] = useState(false);
   const [whatsappNotConnectedOpen, setWhatsappNotConnectedOpen] = useState(false);
+  const [matchedCatsState, setMatchedCatsState] = useState<string[]>([]);
 
   const [isDiagnosisMode, setIsDiagnosisMode] = useState(false);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
@@ -1230,14 +1259,20 @@ export function PatientDetailPanel() {
 
   // Silently prepares the bundle (no WhatsApp send) — called right after saving diagnosis.
   // Returns the bundleToken on success so the caller can chain a WhatsApp send.
-  const handlePrepareBundle = useCallback(async (pid: string): Promise<string | null> => {
+  const handlePrepareBundle = useCallback(async (pid: string, services?: string[]): Promise<string | null> => {
     setBundlePreparing(true);
     try {
       const tok = localStorage.getItem("auth_token");
       const res = await fetch(`${getBaseUrl()}/api/contracts/patient/${pid}/prepare-extraction-bundle`, {
         method: "POST",
         credentials: "include",
-        headers: tok ? { Authorization: `Bearer ${tok}` } : {},
+        headers: tok ? {
+          Authorization: `Bearer ${tok}`,
+          "Content-Type": "application/json",
+        } : {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ serviceNames: services }),
       });
       const responseData = await res.json() as { success: boolean; data?: { bundleUrl: string; bundleToken: string } };
       if (responseData.success && responseData.data) {
@@ -1288,10 +1323,11 @@ export function PatientDetailPanel() {
   const handleSaveDiagnosis = useCallback(async () => {
     if (!selectedPatientId) return;
 
-    // Capture extraction status BEFORE clearing the service maps
-    const hasExtractionSelected = Array.from(diagnosisServicesMap.values())
-      .flat()
-      .some((s) => isExtractionItem(s.name));
+    // Capture matched categories BEFORE clearing the service maps
+    const selectedServices = Array.from(diagnosisServicesMap.values()).flat();
+    const matchedCats = Array.from(new Set(selectedServices.flatMap(s => getMatchedCategories(s.name))));
+    const hasExtractionSelected = matchedCats.length > 0;
+    setMatchedCatsState(matchedCats);
 
     // 1. Save tooth conditions
     const allFdis = new Set([...diagnosisMap.keys(), ...diagnosisNotesMap.keys()]);
@@ -1373,12 +1409,12 @@ export function PatientDetailPanel() {
       setBundleUrl(null);
       setBundleSent(false);
       setBundleRequiredModalOpen(true);
-      void handlePrepareBundle(selectedPatientId);
+      void handlePrepareBundle(selectedPatientId, selectedServices.map(s => s.name));
     } else {
       setActiveTab("treatment");
       setTreatmentStep(2);
     }
-  }, [selectedPatientId, diagnosisMap, diagnosisNotesMap, diagnosisServicesMap, teethMap, activePlan, updateToothMutation, triggerAnalysisMutation, createPlanMutation, addPlanItemMutation, refetchTeeth, toast, t, queryClient, setActiveTab, handlePrepareBundle]);
+  }, [selectedPatientId, diagnosisMap, diagnosisNotesMap, diagnosisServicesMap, teethMap, activePlan, updateToothMutation, triggerAnalysisMutation, createPlanMutation, addPlanItemMutation, refetchTeeth, toast, t, queryClient, setActiveTab, handlePrepareBundle, setMatchedCatsState]);
 
   const diagnosisSummaryEntries = useMemo((): DiagnosisSummaryEntry[] => {
     // Only show teeth being actively diagnosed in this session (diagnosisMap).
@@ -1430,7 +1466,7 @@ export function PatientDetailPanel() {
 
   const hasExtractionInPlan = useMemo(() => {
     if (!activePlan) return false;
-    return activePlan.items.some((item) => isExtractionItem(item.title));
+    return activePlan.items.some((item) => getMatchedCategories(item.title).length > 0);
   }, [activePlan]);
 
   if (!selectedPatientId) return null;
@@ -2252,7 +2288,7 @@ export function PatientDetailPanel() {
                   const apItems = activePlan?.items.filter((i) => i.status !== "cancelled") ?? [];
                   const apDone = apItems.filter((i) => i.status === "completed").length;
                   const apPct = apItems.length > 0 ? Math.round((apDone / apItems.length) * 100) : 0;
-                  const apPaid = apItems.filter((i) => i.status === "completed").reduce((s, i) => s + i.price, 0);
+                  const apPaid = apItems.filter((i) => i.status === "completed").reduce((s, i) => s + i.price * (1 - (i.discount ?? 0) / 100), 0);
                   return (
                     <div className="flex-1 overflow-y-auto custom-scrollbar">
                       <div className="px-6 py-5 space-y-3">
@@ -2370,7 +2406,7 @@ export function PatientDetailPanel() {
                   const nc = detailPlan.items.filter((i) => i.status !== "cancelled");
                   const done = nc.filter((i) => i.status === "completed").length;
                   const pct = nc.length > 0 ? Math.round((done / nc.length) * 100) : 0;
-                  const paid = nc.filter((i) => i.status === "completed").reduce((s, i) => s + i.price, 0);
+                  const paid = nc.filter((i) => i.status === "completed").reduce((s, i) => s + i.price * (1 - (i.discount ?? 0) / 100), 0);
                   const badge = isActive && activePlan
                     ? activePlan.status === "draft" ? { label: "Черновик", cls: "bg-slate-50 text-slate-600 border-slate-200" }
                       : activePlan.status === "approved" ? { label: "Согласован", cls: "bg-blue-50 text-blue-700 border-blue-200" }
@@ -2468,9 +2504,22 @@ export function PatientDetailPanel() {
                                         <p className="text-[11px] text-gray-400 mt-0.5">Зуб №{item.toothFdi}</p>
                                       )}
                                     </div>
-                                    <span className={`text-[13px] font-semibold shrink-0 ${item.status === "completed" ? "text-emerald-600" : "text-gray-600"}`}>
-                                      {item.price.toLocaleString("ru-KZ")} ₸
-                                    </span>
+                                    <div className="text-right flex flex-col items-end shrink-0">
+                                      {item.discount > 0 ? (
+                                        <>
+                                          <span className="text-[10px] text-gray-400 line-through leading-none">
+                                            {item.price.toLocaleString("ru-KZ")} ₸
+                                          </span>
+                                          <span className={`text-[13px] font-bold leading-tight mt-0.5 ${item.status === "completed" ? "text-emerald-600" : "text-gray-800"}`}>
+                                            {(item.price * (1 - item.discount / 100)).toLocaleString("ru-KZ")} ₸
+                                          </span>
+                                        </>
+                                      ) : (
+                                        <span className={`text-[13px] font-semibold shrink-0 ${item.status === "completed" ? "text-emerald-600" : "text-gray-600"}`}>
+                                          {item.price.toLocaleString("ru-KZ")} ₸
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
                                 ))
                               )}
@@ -2638,7 +2687,7 @@ export function PatientDetailPanel() {
               </div>
               <h3 className="text-[15px] font-bold text-gray-900">Отправьте договоры пациенту</h3>
               <p className="text-[12px] text-muted-foreground mt-1.5 leading-relaxed">
-                Перед началом лечения удаления зуба необходимо отправить пакет документов и получить согласие пациента.
+                Перед началом лечения ({matchedCatsState.join(", ")}) необходимо отправить пакет документов и получить согласие пациента.
               </p>
             </div>
 
@@ -2651,7 +2700,7 @@ export function PatientDetailPanel() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[12px] font-bold text-gray-900">Пакет договоров</p>
-                    <p className="text-[10px] text-gray-400">Договор · ИДС · Вкладыш · Памятка</p>
+                    <p className="text-[10px] text-gray-400">Договоры, согласия и памятки для пациента</p>
                   </div>
                   {bundleSent && (
                     <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />

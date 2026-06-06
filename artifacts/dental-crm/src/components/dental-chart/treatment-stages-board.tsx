@@ -20,7 +20,10 @@ import {
   TouchSensor,
   useSensor,
   useSensors,
+  useDroppable,
+  DragOverlay,
   type DragEndEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -56,6 +59,7 @@ import {
   Pencil,
   Check,
   X,
+  Percent,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -65,10 +69,11 @@ import {
   getGetActiveTreatmentPlanQueryKey,
   getListTreatmentPlansQueryKey,
   getListTeethQueryKey,
+  updateTreatmentPlanItem,
 } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import type { ToothRecord, TreatmentPlan, TreatmentPlanItem } from "@workspace/api-client-react";
+import type { ToothRecord, TreatmentPlan, TreatmentPlanItem, UpdateTreatmentPlanItemRequest } from "@workspace/api-client-react";
 import { CONDITION_CONFIG } from "./fdi-chart";
 
 // ── Stage definitions ─────────────────────────────────────────────────────────
@@ -83,79 +88,50 @@ interface StageConfig {
   textColor: string;
   badgeBg: string;
   Icon: React.ComponentType<{ className?: string }>;
+  indexNumber?: number;
 }
 
 const STAGE_CONFIGS: StageConfig[] = [
   {
-    id: "hygiene",
-    label: "Гигиена",
-    conditions: [],
-    color: "#7c3aed",
-    bgColor: "#faf5ff",
-    borderColor: "#7c3aed",
-    textColor: "#6d28d9",
-    badgeBg: "#ede9fe",
-    Icon: Sparkles,
+    id: "prevention_treatment",
+    label: "Этап 1. Профилактика и лечение зубов",
+    conditions: ["cavity", "treated", "root_canal"],
+    color: "#10b981",
+    bgColor: "#f0fdf4",
+    borderColor: "#10b981",
+    textColor: "#047857",
+    badgeBg: "#d1fae5",
+    Icon: Stethoscope,
+    indexNumber: 1,
   },
   {
-    id: "therapy",
-    label: "Кариес / Терапия",
-    conditions: ["cavity", "treated"],
+    id: "surgery",
+    label: "Этап 2. Хирургия",
+    conditions: ["extraction_needed", "implant", "missing"],
     color: "#2563eb",
     bgColor: "#eff6ff",
     borderColor: "#2563eb",
     textColor: "#1d4ed8",
     badgeBg: "#dbeafe",
-    Icon: Stethoscope,
-  },
-  {
-    id: "root_canal",
-    label: "Каналы",
-    conditions: ["root_canal"],
-    color: "#ea580c",
-    bgColor: "#fff7ed",
-    borderColor: "#ea580c",
-    textColor: "#c2410c",
-    badgeBg: "#ffedd5",
-    Icon: Activity,
+    Icon: Scissors,
+    indexNumber: 2,
   },
   {
     id: "orthopedics",
-    label: "Коронки / Ортопедия",
+    label: "Этап 3. Ортопедическое лечение",
     conditions: ["crown"],
-    color: "#d97706",
-    bgColor: "#fffbeb",
-    borderColor: "#d97706",
-    textColor: "#b45309",
-    badgeBg: "#fef3c7",
+    color: "#7c3aed",
+    bgColor: "#faf5ff",
+    borderColor: "#7c3aed",
+    textColor: "#6d28d9",
+    badgeBg: "#ede9fe",
     Icon: Crown,
-  },
-  {
-    id: "implantation",
-    label: "Имплантация",
-    conditions: ["implant"],
-    color: "#059669",
-    bgColor: "#eff6ff",
-    borderColor: "#059669",
-    textColor: "#047857",
-    badgeBg: "#dbeafe",
-    Icon: Wrench,
-  },
-  {
-    id: "surgery",
-    label: "Удаление",
-    conditions: ["extraction_needed"],
-    color: "#dc2626",
-    bgColor: "#fef2f2",
-    borderColor: "#dc2626",
-    textColor: "#b91c1c",
-    badgeBg: "#fee2e2",
-    Icon: Scissors,
+    indexNumber: 3,
   },
   {
     id: "other",
     label: "Прочее",
-    conditions: ["missing"],
+    conditions: [],
     color: "#6b7280",
     bgColor: "#f9fafb",
     borderColor: "#9ca3af",
@@ -168,12 +144,18 @@ const STAGE_CONFIGS: StageConfig[] = [
 const DEFAULT_ORDER = STAGE_CONFIGS.map((s) => s.id);
 
 const STAGE_TITLE_KEYWORDS: Record<string, string[]> = {
-  hygiene:      ["гигиен", "чистк", "профилактик", "отбелива"],
-  therapy:      ["кариес", "пломб", "реставрац", "препарир", "герметик", "шлифовк", "полировк"],
-  root_canal:   ["канал", "пульп", "эндодонт", "штифт", "культ", "депульп", "апекс", "корнев"],
-  orthopedics:  ["коронк", "ортопед", "слепок", "примерк", "цементир", "вкладк", "протез", "люминир"],
-  implantation: ["имплант", "абатмент", "синус", "остеотом"],
-  surgery:      ["удален", "экстракц", "альвеол", "лунк", "кюретаж"],
+  prevention_treatment: [
+    "гигиен", "чистк", "профилактик", "отбелива",
+    "кариес", "пломб", "реставрац", "препарир", "герметик", "шлифовк", "полировк",
+    "канал", "пульп", "эндодонт", "штифт", "культ", "депульп", "апекс", "корнев", "периодонт"
+  ],
+  surgery: [
+    "удален", "экстракц", "альвеол", "лунк", "кюретаж",
+    "имплант", "абатмент", "синус", "остеотом"
+  ],
+  orthopedics: [
+    "коронк", "ортопед", "слепок", "примерк", "цементир", "вкладк", "протез", "люминир"
+  ],
 };
 
 function conditionToStageId(condition: string | null | undefined): string | null {
@@ -419,7 +401,16 @@ function PlanItemCard({
             )}
             {item.price > 0 && (
               <span className="text-[10px] text-gray-400 font-medium">
-                {formatPrice(item.price)}
+                {item.discount > 0 ? (
+                  <span className="flex items-center gap-1">
+                    <span className="line-through">{formatPrice(item.price)}</span>
+                    <span className="text-emerald-600 font-semibold bg-emerald-50 px-1 rounded">
+                      {formatPrice(item.price * (1 - item.discount / 100))}
+                    </span>
+                  </span>
+                ) : (
+                  formatPrice(item.price)
+                )}
               </span>
             )}
             {isDone && (
@@ -557,7 +548,12 @@ function SortableSection({
 
   const pendingItems = planItems.filter((p) => p.status === "pending");
   const completedItems = planItems.filter((p) => p.status === "completed");
-  const sectionTotal = planItems.reduce((sum, item) => sum + item.price, 0);
+  const sectionOriginalTotal = planItems.reduce((sum, item) => sum + item.price, 0);
+  const sectionDiscountedTotal = planItems.reduce((sum, item) => {
+    const discount = item.discount ?? 0;
+    return sum + item.price * (1 - discount / 100);
+  }, 0);
+  const stageDiscount = planItems.length > 0 ? (planItems[0].discount ?? 0) : 0;
   const runningCount = planItems.filter(
     (p) => p.status === "pending" && actions.getTimerStart(p.id) !== undefined,
   ).length;
@@ -618,10 +614,18 @@ function SortableSection({
 
           {/* Сумма этапа / Заработано */}
           <div className="flex items-center justify-between py-1.5 border-t border-gray-100">
-            {sectionTotal > 0 ? (
+            {sectionOriginalTotal > 0 ? (
               <>
                 <span className="text-[11px] text-gray-400">Сумма этапа</span>
-                <span className="text-[11px] font-semibold text-gray-600">{formatPrice(sectionTotal)}</span>
+                {stageDiscount > 0 ? (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] text-gray-400 line-through">{formatPrice(sectionOriginalTotal)}</span>
+                    <span className="text-[11px] font-bold text-emerald-600">{formatPrice(sectionDiscountedTotal)}</span>
+                    <span className="text-[9px] font-bold px-1 py-0.2 rounded bg-rose-50 text-rose-600 border border-rose-100">-{stageDiscount}%</span>
+                  </div>
+                ) : (
+                  <span className="text-[11px] font-semibold text-gray-600">{formatPrice(sectionOriginalTotal)}</span>
+                )}
               </>
             ) : earnedTotal && earnedTotal > 0 ? (
               <>
@@ -698,7 +702,12 @@ function CompletedStageSection({
   const orphanItems = planItems.filter(
     (p) => p.toothFdi == null || !toothFdiSet.has(p.toothFdi),
   );
-  const sectionTotal = planItems.reduce((sum, item) => sum + item.price, 0);
+  const sectionOriginalTotal = planItems.reduce((sum, item) => sum + item.price, 0);
+  const sectionDiscountedTotal = planItems.reduce((sum, item) => {
+    const discount = item.discount ?? 0;
+    return sum + item.price * (1 - discount / 100);
+  }, 0);
+  const stageDiscount = planItems.length > 0 ? (planItems[0].discount ?? 0) : 0;
 
   return (
     <div className="select-none opacity-75 hover:opacity-100 transition-opacity">
@@ -725,9 +734,17 @@ function CompletedStageSection({
           {/* Сумма этапа */}
           <div className="flex items-center justify-between py-1.5 border-t border-gray-100">
             <span className="text-[11px] text-gray-400">Сумма этапа</span>
-            <span className="text-[11px] font-semibold text-gray-400">
-              {sectionTotal > 0 ? formatPrice(sectionTotal) : "—"}
-            </span>
+            {stageDiscount > 0 ? (
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] text-gray-400 line-through">{formatPrice(sectionOriginalTotal)}</span>
+                <span className="text-[11px] font-bold text-emerald-600">{formatPrice(sectionDiscountedTotal)}</span>
+                <span className="text-[9px] font-bold px-1 py-0.2 rounded bg-rose-50 text-rose-600 border border-rose-100">-{stageDiscount}%</span>
+              </div>
+            ) : (
+              <span className="text-[11px] font-semibold text-gray-400">
+                {sectionOriginalTotal > 0 ? formatPrice(sectionOriginalTotal) : "—"}
+              </span>
+            )}
           </div>
         </button>
 
@@ -820,7 +837,13 @@ function StageDetailSheet({
   const displayItems = showHistorical ? historicalItems : activeProcedures;
   const completedCount = displayItems.filter((p) => p.status === "completed").length;
   const totalCount = displayItems.length;
-  const sectionTotal = displayItems.reduce((sum, item) => sum + item.price, 0);
+  const sectionOriginalTotal = displayItems.reduce((sum, item) => sum + item.price, 0);
+  const sectionDiscountedTotal = displayItems.reduce((sum, item) => {
+    const discount = item.discount ?? 0;
+    return sum + item.price * (1 - discount / 100);
+  }, 0);
+  const stageHasDiscount = displayItems.some((item) => (item.discount ?? 0) > 0);
+  const sheetStageDiscount = displayItems.length > 0 ? (displayItems[0].discount ?? 0) : 0;
   const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
   const runningCount = activeProcedures.filter(
     (p) => p.status === "pending" && actions.getTimerStart(p.id) !== undefined,
@@ -875,9 +898,25 @@ function StageDetailSheet({
           <div className="bg-gray-50 rounded-2xl p-4 space-y-3">
             <div>
               <p className="text-[11px] text-gray-400 mb-0.5">Сумма этапа</p>
-              <p className="text-[24px] font-bold text-gray-900 leading-tight">
-                {sectionTotal > 0 ? formatPrice(sectionTotal) : "—"}
-              </p>
+              {stageHasDiscount ? (
+                <div className="space-y-0.5">
+                  <p className="text-[14px] text-gray-400 line-through leading-none">
+                    {sectionOriginalTotal > 0 ? formatPrice(sectionOriginalTotal) : "—"}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-[24px] font-bold text-emerald-600 leading-none">
+                      {sectionDiscountedTotal > 0 ? formatPrice(sectionDiscountedTotal) : "—"}
+                    </p>
+                    <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-100">
+                      -{sheetStageDiscount}%
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[24px] font-bold text-gray-900 leading-tight">
+                  {sectionOriginalTotal > 0 ? formatPrice(sectionOriginalTotal) : "—"}
+                </p>
+              )}
             </div>
             {totalCount > 0 && (
               <>
@@ -1113,7 +1152,21 @@ function DetailProcedureCard({
             )}
             <div className="flex items-center gap-4 text-[12px] text-gray-500">
               <span className="text-gray-400 w-16 shrink-0">Стоимость:</span>
-              <span className="font-semibold text-gray-700">{formatPrice(item.price)}</span>
+              {item.discount > 0 ? (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-gray-400 line-through text-[11px]">
+                    {formatPrice(item.price)}
+                  </span>
+                  <span className="font-bold text-emerald-600">
+                    {formatPrice(item.price * (1 - item.discount / 100))}
+                  </span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-rose-50 text-rose-600 border border-rose-100">
+                    -{item.discount}%
+                  </span>
+                </div>
+              ) : (
+                <span className="font-semibold text-gray-700">{formatPrice(item.price)}</span>
+              )}
             </div>
           </div>
 
@@ -1216,6 +1269,16 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, ac
     transition: isDragging ? undefined : transition,
   };
 
+  if (isDragging) {
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        className="h-[52px] border border-dashed border-primary/30 bg-primary/5 rounded-xl opacity-40"
+      />
+    );
+  }
+
   const isPending = item.status === "pending";
   const isCompleted = item.status === "completed";
   const isCancellingThis = cancellingId === item.id;
@@ -1285,12 +1348,28 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, ac
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
-        <span className={cn(
-          "text-[13px] font-semibold",
-          isCompleted ? "text-emerald-600" : isActive ? "text-blue-600" : isBlocked ? "text-amber-600" : "text-gray-600",
-        )}>
-          {item.price.toLocaleString("ru-KZ")} ₸
-        </span>
+        <div className="text-right flex flex-col items-end">
+          {item.discount > 0 ? (
+            <>
+              <span className="text-[10px] text-gray-400 line-through leading-none">
+                {item.price.toLocaleString("ru-KZ")} ₸
+              </span>
+              <span className={cn(
+                "text-[13px] font-bold leading-tight mt-0.5",
+                isCompleted ? "text-emerald-600" : isActive ? "text-blue-600" : isBlocked ? "text-amber-600" : "text-gray-800",
+              )}>
+                {(item.price * (1 - item.discount / 100)).toLocaleString("ru-KZ")} ₸
+              </span>
+            </>
+          ) : (
+            <span className={cn(
+              "text-[13px] font-semibold",
+              isCompleted ? "text-emerald-600" : isActive ? "text-blue-600" : isBlocked ? "text-amber-600" : "text-gray-600",
+            )}>
+              {item.price.toLocaleString("ru-KZ")} ₸
+            </span>
+          )}
+        </div>
 
         {isEditMode && isPending && !isBlocked && (
           <button
@@ -1306,7 +1385,190 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, ac
   );
 }
 
+// ── StageContainer ────────────────────────────────────────────────────────────
+
+interface StageContainerProps {
+  stage: StageConfig;
+  items: TreatmentPlanItem[];
+  isEditMode: boolean;
+  completingId: string | null;
+  cancellingId: string | null;
+  activeTimers: Map<string, number>;
+  handleComplete: (id: string) => void;
+  handleCancel: (id: string) => void;
+  setModalItemId: (id: string) => void;
+  onOpenDiscount?: (stageId: string) => void;
+}
+
+function StageContainer({
+  stage,
+  items,
+  isEditMode,
+  completingId,
+  cancellingId,
+  activeTimers,
+  handleComplete,
+  handleCancel,
+  setModalItemId,
+  onOpenDiscount,
+}: StageContainerProps) {
+  const { setNodeRef } = useDroppable({
+    id: stage.id,
+  });
+
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === "admin";
+
+  const stageOriginalTotal = items.reduce((sum, item) => sum + item.price, 0);
+  const stageDiscountedTotal = items.reduce((sum, item) => {
+    const discount = item.discount ?? 0;
+    return sum + item.price * (1 - discount / 100);
+  }, 0);
+  const stageDiscount = items.length > 0 ? (items[0].discount ?? 0) : 0;
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "rounded-2xl border p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] space-y-3 transition-all",
+        isEditMode ? "border-dashed border-gray-200 bg-gray-50/10" : "border-gray-100 bg-white"
+      )}
+      style={{ borderLeft: `4px solid ${stage.color}` }}
+    >
+      {/* Header of the Stage */}
+      <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-full flex items-center justify-center text-white shrink-0 font-semibold text-[13.5px]" style={{ backgroundColor: stage.color }}>
+            {stage.indexNumber ? (
+              stage.indexNumber
+            ) : (
+              <stage.Icon className="w-4 h-4 text-white" />
+            )}
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <h3 className="font-bold text-gray-900 text-[13.5px] leading-tight">{stage.label}</h3>
+              {stageDiscount > 0 && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-100 shrink-0">
+                  -{stageDiscount}%
+                </span>
+              )}
+            </div>
+            <span className="text-[10px] text-gray-400 font-medium">
+              Процедур: {items.length}
+            </span>
+          </div>
+        </div>
+        
+        <div className="text-right flex flex-col items-end">
+          <span className="text-[9px] text-gray-400 block font-semibold uppercase tracking-wider">Сумма этапа</span>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            {!isAdmin && items.length > 0 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenDiscount?.(stage.id);
+                }}
+                className={cn(
+                  "p-1 rounded-md transition-colors shrink-0",
+                  stageDiscount > 0
+                    ? "bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200"
+                    : "text-gray-400 hover:text-blue-500 hover:bg-gray-100 border border-gray-100"
+                )}
+                title="Указать скидку этапа"
+              >
+                <Percent className="w-3 h-3" />
+              </button>
+            )}
+            
+            <div className="flex flex-col items-end shrink-0">
+              {stageDiscount > 0 ? (
+                <>
+                  <span className="text-[10px] text-gray-400 line-through leading-none">
+                    {stageOriginalTotal.toLocaleString("ru-KZ")} ₸
+                  </span>
+                  <span className="font-bold text-emerald-600 text-[13.5px] leading-tight mt-0.5">
+                    {stageDiscountedTotal.toLocaleString("ru-KZ")} ₸
+                  </span>
+                </>
+              ) : (
+                <span className="font-bold text-gray-800 text-[13.5px]">
+                  {stageOriginalTotal > 0 ? stageOriginalTotal.toLocaleString("ru-KZ") + " ₸" : "—"}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Items list */}
+      <SortableContext id={stage.id} items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+        <div className="space-y-2 min-h-[50px]">
+          {items.map((item) => (
+            <SortablePlanItemCard
+              key={item.id}
+              item={item}
+              isEditMode={isEditMode}
+              completingId={completingId}
+              cancellingId={cancellingId}
+              activeTimerItemId={activeTimers.size > 0 ? (activeTimers.keys().next().value ?? null) : null}
+              onComplete={handleComplete}
+              onCancel={handleCancel}
+              onOpenModal={setModalItemId}
+            />
+          ))}
+          {items.length === 0 && (
+            <div className="flex items-center justify-center py-4 border border-dashed border-gray-200/50 rounded-xl bg-slate-50/30">
+              <span className="text-[11px] text-gray-400 italic">Перетащите сюда процедуры</span>
+            </div>
+          )}
+        </div>
+      </SortableContext>
+    </div>
+  );
+}
+
+// ── PlanItemCardOverlay ────────────────────────────────────────────────────────
+
+function PlanItemCardOverlay({ item }: { item: TreatmentPlanItem }) {
+  return (
+    <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-primary/20 bg-white shadow-xl select-none cursor-grabbing">
+      <div className="shrink-0 text-gray-400">
+        <GripVertical className="w-4 h-4" />
+      </div>
+      <div className="flex-1 min-w-0 flex flex-col justify-center">
+        <p className="text-[13px] font-semibold leading-snug truncate text-gray-800">
+          {item.title}
+        </p>
+        {item.toothFdi != null && (
+          <p className="text-[11px] mt-0.5 text-gray-400">
+            Зуб №{item.toothFdi}
+          </p>
+        )}
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        {item.discount > 0 ? (
+          <div className="text-right flex flex-col items-end">
+            <span className="text-[10px] text-gray-400 line-through leading-none">
+              {item.price.toLocaleString("ru-KZ")} ₸
+            </span>
+            <span className="text-[13px] font-bold text-primary leading-tight mt-0.5">
+              {(item.price * (1 - item.discount / 100)).toLocaleString("ru-KZ")} ₸
+            </span>
+          </div>
+        ) : (
+          <span className="text-[13px] font-bold text-primary">
+            {item.price.toLocaleString("ru-KZ")} ₸
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── TreatmentStagesBoard ──────────────────────────────────────────────────────
+
 
 interface TreatmentStagesBoardProps {
   patientId: string;
@@ -1317,6 +1579,8 @@ interface TreatmentStagesBoardProps {
 export function TreatmentStagesBoard({ patientId, teeth, activePlan }: TreatmentStagesBoardProps) {
   const STORAGE_KEY = `1dent:stages-order:${patientId}`;
   const qc = useQueryClient();
+  const [discountModalStageId, setDiscountModalStageId] = useState<string | null>(null);
+  const [discountValue, setDiscountValue] = useState<string>("");
   const { toast } = useToast();
   const { user } = useAuthStore();
   const isAdmin = user?.role === "admin";
@@ -1348,6 +1612,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [expandedCompletedIds, setExpandedCompletedIds] = useState<Set<string>>(new Set());
   const [detailStageId, setDetailStageId] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -1440,14 +1705,23 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
 
   // ── Local items order (for optimistic DnD reordering) ─────────────────────
 
-  const [localItems, setLocalItems] = useState<TreatmentPlanItem[]>(() =>
-    activePlan?.items.filter((i) => i.status === "pending") ?? [],
-  );
+  const [localItems, setLocalItems] = useState<TreatmentPlanItem[]>(() => {
+    const items = activePlan?.items.filter((i) => i.status === "pending") ?? [];
+    return items.map((item) => ({
+      ...item,
+      stage: item.stage || conditionToStageId(item.condition) || titleToStageId(item.title) || "other",
+    }));
+  });
   const pendingReorderCountRef = useRef(0);
 
   useEffect(() => {
     if (pendingReorderCountRef.current > 0) return;
-    setLocalItems(activePlan?.items.filter((i) => i.status === "pending") ?? []);
+    const items = activePlan?.items.filter((i) => i.status === "pending") ?? [];
+    const enriched = items.map((item) => ({
+      ...item,
+      stage: item.stage || conditionToStageId(item.condition) || titleToStageId(item.title) || "other",
+    }));
+    setLocalItems(enriched);
   }, [activePlan?.items]);
 
   const archivedItems = useMemo(
@@ -1516,21 +1790,64 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
     },
   });
 
-  const reorderMutation = useUpdateTreatmentPlanItem({
-    mutation: {
-      onSettled: () => {
-        pendingReorderCountRef.current = Math.max(0, pendingReorderCountRef.current - 1);
-        if (pendingReorderCountRef.current === 0) {
-          qc.invalidateQueries({ queryKey: getGetActiveTreatmentPlanQueryKey(patientId) });
-        }
-      },
-      onError: () => {
-        toast({ title: "Не удалось сохранить порядок", variant: "destructive" });
-      },
+  const reorderMutation = useMutation({
+    mutationFn: async (updates: Array<{ itemId: string; data: any }>) => {
+      pendingReorderCountRef.current = 1;
+      await Promise.all(
+        updates.map(({ itemId, data }) =>
+          updateTreatmentPlanItem(patientId, planId, itemId, data)
+        )
+      );
+    },
+    onSettled: () => {
+      pendingReorderCountRef.current = 0;
+      qc.invalidateQueries({ queryKey: getGetActiveTreatmentPlanQueryKey(patientId) });
+    },
+    onError: () => {
+      toast({ title: "Не удалось сохранить порядок", variant: "destructive" });
     },
   });
 
   // ── Edit handlers ─────────────────────────────────────────────────────────
+
+  const handleSaveStageDiscount = useCallback(() => {
+    if (!discountModalStageId || !planId) return;
+
+    const discountNum = Math.max(0, Math.min(100, Number(discountValue) || 0));
+
+    // Get all pending/local items in this stage
+    const itemsToUpdate = localItems.filter((item) => item.stage === discountModalStageId);
+    
+    if (itemsToUpdate.length === 0) {
+      setDiscountModalStageId(null);
+      setDiscountValue("");
+      return;
+    }
+
+    // Optimistically update local items
+    const updatedLocalItems = localItems.map((item) => {
+      if (item.stage === discountModalStageId) {
+        return { ...item, discount: discountNum };
+      }
+      return item;
+    });
+    setLocalItems(updatedLocalItems);
+
+    // Prepare updates for the API
+    const updates = itemsToUpdate.map((item) => ({
+      itemId: item.id,
+      data: {
+        discount: discountNum,
+      },
+    }));
+
+    // Trigger mutation
+    reorderMutation.mutate(updates);
+
+    setDiscountModalStageId(null);
+    setDiscountValue("");
+    toast({ title: "Скидка применилась к этапу" });
+  }, [discountModalStageId, discountValue, planId, localItems, reorderMutation, toast]);
 
   const handleEditStart = useCallback((item: TreatmentPlanItem) => {
     setEditingItemId(item.id);
@@ -1727,28 +2044,127 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
     [STORAGE_KEY],
   );
 
+  const handleItemDragStart = useCallback((event: DragStartEvent) => {
+    setActiveId(String(event.active.id));
+  }, []);
+
+  const handleItemDragCancel = useCallback(() => {
+    setActiveId(null);
+  }, []);
+
   const handleItemDragEnd = useCallback(
     (event: DragEndEvent) => {
+      setActiveId(null);
       const { active, over } = event;
       if (!over || active.id === over.id) return;
-      const oldIdx = localItems.findIndex((i) => i.id === String(active.id));
-      const newIdx = localItems.findIndex((i) => i.id === String(over.id));
-      if (oldIdx === -1 || newIdx === -1) return;
-      const next = arrayMove(localItems, oldIdx, newIdx);
-      setLocalItems(next);
-      // Send mutations only for items whose sortOrder actually changed
-      const toUpdate = next
-        .map((item, idx) => ({ item, idx }))
-        .filter(({ item, idx }) => (item.sortOrder ?? 0) !== idx);
-      if (toUpdate.length === 0) return;
-      pendingReorderCountRef.current += toUpdate.length;
-      for (const { item, idx } of toUpdate) {
-        reorderMutation.mutate({
-          id: patientId,
-          planId,
-          itemId: item.id,
-          data: { sortOrder: idx },
-        });
+
+      const activeId = String(active.id);
+      const overId = String(over.id);
+
+      // Find the dragged item
+      const draggedItem = localItems.find((i) => i.id === activeId);
+      if (!draggedItem) return;
+
+      // Determine target stage and position
+      let targetStageId = "";
+
+      // Is the drop target a stage container itself?
+      const targetStage = STAGE_CONFIGS.find((s) => s.id === overId);
+      if (targetStage) {
+        targetStageId = targetStage.id;
+        
+        // Dropped directly on a stage container (e.g. empty stage drop zone)
+        // Put it at the end of items for this stage
+        const otherStageItems = localItems.filter((i) => i.stage !== targetStageId && i.id !== activeId);
+        const thisStageItems = localItems.filter((i) => i.stage === targetStageId && i.id !== activeId);
+        
+        const targetDiscount = thisStageItems.length > 0 ? (thisStageItems[0].discount ?? 0) : 0;
+        
+        const next = [...otherStageItems, ...thisStageItems, { ...draggedItem, stage: targetStageId, discount: targetDiscount }];
+        const reordered = next.map((item, idx) => ({ ...item, sortOrder: idx }));
+        setLocalItems(reordered);
+
+        // Build updates list
+        const updates: Array<{ itemId: string; data: UpdateTreatmentPlanItemRequest }> = [
+          {
+            itemId: activeId,
+            data: {
+              stage: targetStageId,
+              sortOrder: reordered.findIndex((i) => i.id === activeId),
+              discount: targetDiscount,
+            },
+          },
+        ];
+
+        // Other items whose indexes shifted
+        const toUpdate = reordered
+          .map((item, idx) => ({ item, idx }))
+          .filter(({ item, idx }) => (item.sortOrder ?? 0) !== idx && item.id !== activeId);
+        
+        for (const { item, idx } of toUpdate) {
+          updates.push({
+            itemId: item.id,
+            data: { sortOrder: idx },
+          });
+        }
+
+        reorderMutation.mutate(updates);
+        return;
+      }
+
+      // Is the drop target another item?
+      const targetItem = localItems.find((i) => i.id === overId);
+      if (targetItem) {
+        targetStageId = targetItem.stage || "other";
+        const oldIdx = localItems.findIndex((i) => i.id === activeId);
+        const newIdx = localItems.findIndex((i) => i.id === overId);
+        
+        if (oldIdx === -1 || newIdx === -1) return;
+        
+        // Move item to new stage and insert at new index
+        const next = [...localItems];
+        // Remove active
+        next.splice(oldIdx, 1);
+        
+        // Find existing items in target stage to determine target discount
+        const targetStageItems = next.filter((i) => i.stage === targetStageId);
+        const targetDiscount = targetStageItems.length > 0 ? (targetStageItems[0].discount ?? 0) : 0;
+        
+        // Insert active with updated stage and discount
+        const updatedActive = { ...draggedItem, stage: targetStageId, discount: targetDiscount };
+        
+        // Find insert position relative to newIdx in the array without active
+        const insertIdx = next.findIndex((i) => i.id === overId);
+        next.splice(insertIdx, 0, updatedActive);
+
+        const reordered = next.map((item, idx) => ({ ...item, sortOrder: idx }));
+        setLocalItems(reordered);
+
+        // Build updates list
+        const updates: Array<{ itemId: string; data: UpdateTreatmentPlanItemRequest }> = [
+          {
+            itemId: activeId,
+            data: {
+              stage: targetStageId,
+              sortOrder: reordered.findIndex((i) => i.id === activeId),
+              discount: targetDiscount,
+            },
+          },
+        ];
+
+        // Other items whose indexes shifted
+        const toUpdate = reordered
+          .map((item, idx) => ({ item, idx }))
+          .filter(({ item, idx }) => (item.sortOrder ?? 0) !== idx && item.id !== activeId);
+        
+        for (const { item, idx } of toUpdate) {
+          updates.push({
+            itemId: item.id,
+            data: { sortOrder: idx },
+          });
+        }
+
+        reorderMutation.mutate(updates);
       }
     },
     [patientId, planId, reorderMutation, localItems],
@@ -1830,57 +2246,69 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
         </div>
       )}
 
-      {/* Flat item cards with DnD reordering */}
+      {/* Stages columns with DnD reordering */}
       {localItems.length === 0 && archivedItems.length === 0 ? (
         <p className="text-sm text-gray-400 text-center py-6">Нет позиций в плане</p>
       ) : (
-        <>
-          {localItems.length > 0 && (
-            <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[restrictToVerticalAxis, restrictToParentElement]} onDragEnd={handleItemDragEnd}>
-              <SortableContext items={localItems.map((i) => i.id)} strategy={verticalListSortingStrategy}>
-                <div className="space-y-2">
-                  {localItems.map((item) => (
-                    <SortablePlanItemCard
-                      key={item.id}
-                      item={item}
-                      isEditMode={isEditMode}
-                      completingId={completingId}
-                      cancellingId={cancellingId}
-                      activeTimerItemId={activeTimers.size > 0 ? (activeTimers.keys().next().value ?? null) : null}
-                      onComplete={handleComplete}
-                      onCancel={handleCancel}
-                      onOpenModal={setModalItemId}
-                    />
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
-          )}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleItemDragStart}
+          onDragEnd={handleItemDragEnd}
+          onDragCancel={handleItemDragCancel}
+        >
+          <div className="space-y-4">
+            {STAGE_CONFIGS.filter((stage) => {
+              if (isEditMode) return true; // Show all stages in edit mode so they can drag items to empty stages
+              // Otherwise show only stages that have items (pending or completed)
+              const hasPending = localItems.some((item) => item.stage === stage.id);
+              const hasArchived = archivedItems.some((item) => {
+                const resolved = item.stage || conditionToStageId(item.condition) || titleToStageId(item.title) || "other";
+                return resolved === stage.id;
+              });
+              return hasPending || hasArchived;
+            }).map((stage) => {
+              const stagePending = localItems.filter((item) => item.stage === stage.id);
+              const stageArchived = archivedItems.filter((item) => {
+                const resolved = item.stage || conditionToStageId(item.condition) || titleToStageId(item.title) || "other";
+                return resolved === stage.id;
+              });
+              const stageItems = [...stagePending, ...stageArchived];
 
-          {/* ── Archive: completed + cancelled ── */}
-          {archivedItems.length > 0 && (
-            <div className="mt-4 border-t border-dashed border-gray-200 pt-3">
-              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1">
-                Архив ({archivedItems.length})
-              </p>
-              <div className="space-y-2">
-                {archivedItems.map((item) => (
-                  <SortablePlanItemCard
-                    key={item.id}
-                    item={item}
-                    isEditMode={false}
-                    completingId={completingId}
-                    cancellingId={cancellingId}
-                    activeTimerItemId={null}
-                    onComplete={handleComplete}
-                    onCancel={handleCancel}
-                    onOpenModal={setModalItemId}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-        </>
+              return (
+                <StageContainer
+                  key={stage.id}
+                  stage={stage}
+                  items={stageItems}
+                  isEditMode={isEditMode}
+                  completingId={completingId}
+                  cancellingId={cancellingId}
+                  activeTimers={activeTimers}
+                  handleComplete={handleComplete}
+                  handleCancel={handleCancel}
+                  setModalItemId={setModalItemId}
+                  onOpenDiscount={(stageId) => {
+                    setDiscountModalStageId(stageId);
+                    const stageItemsList = localItems.filter((i) => i.stage === stageId);
+                    const currentDiscount = stageItemsList.length > 0 ? (stageItemsList[0].discount ?? 0) : 0;
+                    setDiscountValue(currentDiscount > 0 ? String(currentDiscount) : "");
+                  }}
+                />
+              );
+            })}
+          </div>
+          <DragOverlay adjustScale={false}>
+            {activeId ? (() => {
+              const activeItem = localItems.find((i) => i.id === activeId);
+              if (!activeItem) return null;
+              return (
+                <div className="w-[calc(100vw-32px)] max-w-[400px] shadow-2xl opacity-95 pointer-events-none rotate-2">
+                  <PlanItemCardOverlay item={activeItem} />
+                </div>
+              );
+            })() : null}
+          </DragOverlay>
+        </DndContext>
       )}
 
       {/* Stage detail sheet */}
@@ -1902,6 +2330,80 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
           />
         );
       })()}
+
+      {/* Discount Dialog */}
+      <Dialog
+        open={discountModalStageId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDiscountModalStageId(null);
+            setDiscountValue("");
+          }
+        }}
+      >
+        <DialogContent className="max-w-[90vw] sm:max-w-[400px] rounded-2xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-[17px] font-bold text-gray-900">
+              Указать скидку для этапа
+            </DialogTitle>
+            <DialogDescription className="text-[13px] text-gray-500 pt-1">
+              Скидка будет применена ко всем процедурам в этом этапе.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-1.5">
+              <label className="block text-[12px] font-medium text-gray-700">
+                Процент скидки (0-100%)
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={discountValue}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "") {
+                      setDiscountValue("");
+                    } else {
+                      const num = parseInt(val, 10);
+                      if (!isNaN(num)) {
+                        setDiscountValue(String(Math.max(0, Math.min(100, num))));
+                      }
+                    }
+                  }}
+                  className="w-full text-[14px] border border-gray-200 rounded-xl px-3.5 py-2.5 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                  placeholder="0"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSaveStageDiscount();
+                  }}
+                />
+                <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none">
+                  <Percent className="w-4 h-4 text-gray-400" />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-3 justify-end">
+            <button
+              onClick={() => {
+                setDiscountModalStageId(null);
+                setDiscountValue("");
+              }}
+              className="px-4 py-2 text-[13px] font-medium border border-gray-200 rounded-xl text-gray-500 hover:bg-gray-50 transition-colors"
+            >
+              Отмена
+            </button>
+            <button
+              onClick={handleSaveStageDiscount}
+              className="px-4 py-2 text-[13px] font-semibold bg-blue-600 text-white hover:bg-blue-700 rounded-xl transition-colors"
+            >
+              Применить
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Completion prompt modal (timer expiry) */}
       {(() => {

@@ -1001,9 +1001,10 @@ export interface PatientContract {
   templateId: string;
   sentById: string | null;
   token: string;
+  bundleToken: string | null;
   renderedHtml: string | null;
   filledData: Record<string, string>;
-  status: "sent" | "viewed" | "signed";
+  status: "created" | "sent" | "viewed" | "signed";
   signedAt: string | null;
   signedIp: string | null;
   createdAt: string;

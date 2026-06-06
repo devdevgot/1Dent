@@ -4234,6 +4234,12 @@ components:
         procedureId:
           type: string
           nullable: true
+        stage:
+          type: string
+          nullable: true
+        discount:
+          type: integer
+          default: 0
         createdAt:
           type: string
           format: date-time
@@ -4442,3 +4448,9 @@ components:
           type: string
           enum:
             - cancelled
+        stage:
+          type: string
+          nullable: true
+        discount:
+          type: integer
+          minimum: 0
