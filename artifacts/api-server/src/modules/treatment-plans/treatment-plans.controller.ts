@@ -45,6 +45,7 @@ const UpdateItemSchema = z.object({
   stage: z.string().nullable().optional(),
   discount: z.number().int().min(0).max(100).optional(),
   procedureId: z.string().nullable().optional(),
+  scheduledAt: z.string().nullable().optional(),
 });
 
 const AddItemSchema = z.object({

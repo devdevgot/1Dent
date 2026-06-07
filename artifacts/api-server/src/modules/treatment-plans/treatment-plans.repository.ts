@@ -556,7 +556,7 @@ export class TreatmentPlansRepository {
     clinicId: string,
     planId: string,
     patientId: string,
-    updates: { title?: string; price?: number; sortOrder?: number; status?: "cancelled"; notes?: string | null; attachments?: string[]; assignedDoctorId?: string | null; bundleToken?: string | null; stage?: string | null; discount?: number; procedureId?: string | null },
+    updates: { title?: string; price?: number; sortOrder?: number; status?: "cancelled"; notes?: string | null; attachments?: string[]; assignedDoctorId?: string | null; bundleToken?: string | null; stage?: string | null; discount?: number; procedureId?: string | null; scheduledAt?: string | null },
   ): Promise<TreatmentPlanItem | null> {
     const [item] = await db
       .select()
@@ -582,9 +582,14 @@ export class TreatmentPlansRepository {
       if (!plan || plan.status !== "draft") throw new PlanLockedError();
     }
 
+    const dbUpdates: Record<string, any> = { ...updates };
+    if (updates.scheduledAt !== undefined) {
+      dbUpdates.scheduledAt = updates.scheduledAt ? new Date(updates.scheduledAt) : null;
+    }
+
     const [updated] = await db
       .update(treatmentPlanItemsTable)
-      .set(updates)
+      .set(dbUpdates)
       .where(and(eq(treatmentPlanItemsTable.id, itemId), eq(treatmentPlanItemsTable.clinicId, clinicId)))
       .returning();
 
@@ -592,7 +597,67 @@ export class TreatmentPlansRepository {
       await this._recalcTotalCost(updated.planId, clinicId);
     }
 
+    if (updated && updates.scheduledAt !== undefined) {
+      await this._syncScheduledProcedure(updated, clinicId);
+    }
+
     return updated ?? null;
+  }
+
+  private async _syncScheduledProcedure(item: TreatmentPlanItem, clinicId: string): Promise<void> {
+    const doctorId = item.assignedDoctorId ?? null;
+
+    if (item.procedureId) {
+      const [existing] = await db
+        .select()
+        .from(proceduresTable)
+        .where(eq(proceduresTable.id, item.procedureId))
+        .limit(1);
+
+      if (existing && existing.status === "scheduled") {
+        if (item.scheduledAt) {
+          await db
+            .update(proceduresTable)
+            .set({
+              scheduledAt: item.scheduledAt,
+              doctorId,
+              name: item.title,
+            })
+            .where(eq(proceduresTable.id, item.procedureId));
+        } else {
+          await db
+            .delete(proceduresTable)
+            .where(eq(proceduresTable.id, item.procedureId));
+          await db
+            .update(treatmentPlanItemsTable)
+            .set({ procedureId: null })
+            .where(eq(treatmentPlanItemsTable.id, item.id));
+        }
+        return;
+      }
+    }
+
+    if (!item.scheduledAt) return;
+
+    const procId = randomUUID();
+    await db.insert(proceduresTable).values({
+      id: procId,
+      clinicId,
+      patientId: item.patientId,
+      doctorId,
+      name: item.title,
+      status: "scheduled",
+      price: 0,
+      notes: item.toothFdi ? `Зуб №${item.toothFdi}` : null,
+      scheduledAt: item.scheduledAt,
+      completedAt: null,
+      createdAt: new Date(),
+    });
+
+    await db
+      .update(treatmentPlanItemsTable)
+      .set({ procedureId: procId })
+      .where(eq(treatmentPlanItemsTable.id, item.id));
   }
 
   async completeItem(
@@ -620,21 +685,61 @@ export class TreatmentPlansRepository {
       const discount = item.discount ?? 0;
       const finalPrice = discount > 0 ? item.price * (1 - discount / 100) : item.price;
 
-      const procedureId = randomUUID();
-      await tx.insert(proceduresTable).values({
-        id: procedureId,
-        clinicId,
-        patientId: item.patientId,
-        doctorId,
-        name: item.title,
-        status: "pending_payment",
-        price: finalPrice,
-        notes: item.mkb10Code ? `МКБ-10: ${item.mkb10Code}` : null,
-        paymentMethod: null,
-        scheduledAt: new Date(),
-        completedAt: null,
-        createdAt: new Date(),
-      });
+      let procedureId: string;
+
+      if (item.procedureId) {
+        const [existingProc] = await tx
+          .select()
+          .from(proceduresTable)
+          .where(eq(proceduresTable.id, item.procedureId))
+          .limit(1);
+
+        if (existingProc && (existingProc.status === "scheduled" || existingProc.status === "in_progress")) {
+          procedureId = existingProc.id;
+          await tx
+            .update(proceduresTable)
+            .set({
+              status: "pending_payment",
+              price: finalPrice,
+              doctorId,
+              notes: item.mkb10Code ? `МКБ-10: ${item.mkb10Code}` : null,
+              completedAt: new Date(),
+            })
+            .where(eq(proceduresTable.id, procedureId));
+        } else {
+          procedureId = randomUUID();
+          await tx.insert(proceduresTable).values({
+            id: procedureId,
+            clinicId,
+            patientId: item.patientId,
+            doctorId,
+            name: item.title,
+            status: "pending_payment",
+            price: finalPrice,
+            notes: item.mkb10Code ? `МКБ-10: ${item.mkb10Code}` : null,
+            paymentMethod: null,
+            scheduledAt: new Date(),
+            completedAt: null,
+            createdAt: new Date(),
+          });
+        }
+      } else {
+        procedureId = randomUUID();
+        await tx.insert(proceduresTable).values({
+          id: procedureId,
+          clinicId,
+          patientId: item.patientId,
+          doctorId,
+          name: item.title,
+          status: "pending_payment",
+          price: finalPrice,
+          notes: item.mkb10Code ? `МКБ-10: ${item.mkb10Code}` : null,
+          paymentMethod: null,
+          scheduledAt: new Date(),
+          completedAt: null,
+          createdAt: new Date(),
+        });
+      }
 
       if (item.toothFdi) {
         const toothTreatmentId = randomUUID();

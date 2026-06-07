@@ -1168,6 +1168,7 @@ export interface TreatmentPlanItem {
   stage?: string | null;
   bundleToken?: string | null;
   discount?: number;
+  scheduledAt?: string | null;
   createdAt: string;
 }
 
@@ -1276,6 +1277,7 @@ export interface UpdateTreatmentPlanItemRequest {
   attachments?: string[];
   assignedDoctorId?: string | null;
   procedureId?: string | null;
+  scheduledAt?: string | null;
 }
 
 export type GetInventoryConsumptionParams = {

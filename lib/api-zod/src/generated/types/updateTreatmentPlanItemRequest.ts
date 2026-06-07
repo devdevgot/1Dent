@@ -21,4 +21,5 @@ export interface UpdateTreatmentPlanItemRequest {
   attachments?: string[];
   assignedDoctorId?: string | null;
   procedureId?: string | null;
+  scheduledAt?: Date | null;
 }

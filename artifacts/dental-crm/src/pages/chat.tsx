@@ -175,11 +175,14 @@ function MessageBubble({ message, isOutbound }: { message: Message; isOutbound: 
   const isAlert          = message.isRedAlert;
 
   return (
-    <div className={cn("flex mb-1 px-3", isOutbound ? "justify-end" : "justify-start")}>
+    <div className={cn(
+      "flex mb-1",
+      isOutbound ? "justify-end pl-10 pr-3" : "justify-start pr-10 pl-3",
+    )}>
       <div
         className={cn(
-          "relative max-w-[76%] px-3.5 py-2 shadow-sm",
-          isOutbound ? "rounded-2xl rounded-tr-none" : "rounded-2xl rounded-tl-none",
+          "relative min-w-0 max-w-full px-3.5 py-2 shadow-sm",
+          isOutbound ? "rounded-2xl rounded-tr-none mr-1.5" : "rounded-2xl rounded-tl-none ml-1.5",
           isAlert && !isOutbound && "border border-red-300",
         )}
         style={
@@ -200,7 +203,7 @@ function MessageBubble({ message, isOutbound }: { message: Message; isOutbound: 
             <span>{t("chat.redAlert")}</span>
           </div>
         )}
-        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
+        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words" style={{ overflowWrap: "anywhere" }}>{message.content}</p>
         <div
           className={cn(
             "flex items-center justify-end gap-0.5 mt-0.5 text-[10px] select-none",
@@ -386,7 +389,7 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
   const hasRedAlert = messages.some((m) => m.isRedAlert);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-w-0">
       {/* ── Header ── */}
       <div
         className="flex items-center gap-3 px-4 py-3 border-b border-border/30 shrink-0"
@@ -430,7 +433,7 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
 
       {/* ── Message feed ── */}
       <div
-        className="flex-1 overflow-y-auto py-3"
+        className="flex-1 overflow-y-auto overflow-x-hidden py-3"
         style={{ backgroundColor: CHAT_BG, backgroundImage: DOT_PATTERN }}
       >
         {isLoading && (
@@ -668,7 +671,7 @@ export default function ChatPage() {
   const waConfigured = waStatus?.configured ?? false;
 
   return (
-    <div className="flex overflow-hidden h-full">
+    <div className="flex overflow-hidden h-full w-full max-w-full">
       <aside
         className={cn(
           "flex flex-col border-r border-border/40",

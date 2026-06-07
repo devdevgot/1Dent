@@ -4243,6 +4243,10 @@ components:
         discount:
           type: integer
           default: 0
+        scheduledAt:
+          type: string
+          format: date-time
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -4472,4 +4476,8 @@ components:
           nullable: true
         procedureId:
           type: string
+          nullable: true
+        scheduledAt:
+          type: string
+          format: date-time
           nullable: true
