@@ -93,7 +93,7 @@ const RADIUS_PRESETS = [
   { label: "1 км", value: 1000 },
 ];
 
-export function BranchesSettings() {
+export function BranchesSettings({ hideTracking = false }: { hideTracking?: boolean }) {
   const { toast } = useToast();
 
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -745,13 +745,15 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    onClick={() => openJournal(b)}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-primary transition-colors"
-                    title="Журнал трекинга"
-                  >
-                    <ClipboardList className="w-3.5 h-3.5" />
-                  </button>
+                  {!hideTracking && (
+                    <button
+                      onClick={() => openJournal(b)}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-primary transition-colors"
+                      title="Журнал трекинга"
+                    >
+                      <ClipboardList className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                   <button
                     onClick={() => openEditModal(b)}
                     className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
@@ -1241,8 +1243,8 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
         </DialogContent>
       </Dialog>
 
-      {/* ── Telegram notifications ─────────────────────────────────────── */}
-      <div className="bg-card rounded-2xl border border-border/60 overflow-hidden">
+      {/* ── Telegram notifications (tracking-related) ──────────────────── */}
+      {!hideTracking && <div className="bg-card rounded-2xl border border-border/60 overflow-hidden">
         <div className="flex items-center gap-3 px-5 py-4 border-b border-border/40">
           <div className="flex-1">
             <h2 className="font-semibold text-base text-foreground">Telegram-уведомления</h2>
@@ -1318,7 +1320,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
             </div>
           )}
         </div>
-      </div>
+      </div>}
 
     </div>
   );
