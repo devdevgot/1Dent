@@ -1138,7 +1138,19 @@ export function PatientDetailPanel() {
         queryClient.invalidateQueries({ queryKey: getListTreatmentPlansQueryKey(selectedPatientId ?? "") });
         toast({ title: "План лечения создан" });
       },
-      onError: () => toast({ title: t("account.errorTitle"), variant: "destructive" }),
+      onError: (err: any) => {
+        const apiMsg = err?.data?.error ?? err?.data?.message ?? err?.message;
+        const description = typeof apiMsg === "string" && !apiMsg.startsWith("HTTP ")
+          ? apiMsg
+          : typeof apiMsg === "string"
+          ? apiMsg.replace(/^HTTP \d{3} [^:]+:\s*/, "")
+          : undefined;
+        toast({
+          title: "Не удалось создать план лечения",
+          description,
+          variant: "destructive",
+        });
+      },
     },
   });
 
@@ -1148,7 +1160,14 @@ export function PatientDetailPanel() {
         queryClient.invalidateQueries({ queryKey: getGetActiveTreatmentPlanQueryKey(selectedPatientId ?? "") });
         toast({ title: "План согласован с пациентом" });
       },
-      onError: () => toast({ title: t("account.errorTitle"), variant: "destructive" }),
+      onError: (err: any) => {
+        const apiMsg = err?.data?.error ?? err?.data?.message ?? err?.message;
+        toast({
+          title: "Ошибка согласования плана",
+          description: typeof apiMsg === "string" ? apiMsg.replace(/^HTTP \d{3} [^:]+:\s*/, "") : undefined,
+          variant: "destructive",
+        });
+      },
     },
   });
 
