@@ -13,6 +13,7 @@ export const patientStatusEnum = pgEnum("patient_status", [
   "post_op_monitoring",
   "completed",
   "repeat_sale",
+  "rejected",
 ]);
 
 export const defaultPatientSources = [

@@ -355,7 +355,8 @@
     "payment_processing": "Payment Processing",
     "post_op_monitoring": "Post-op",
     "completed": "Completed",
-    "repeat_sale": "Repeat Sale"
+    "repeat_sale": "Repeat Sale",
+    "rejected": "Rejected"
   },
   "category": {
     "materials": "Materials",

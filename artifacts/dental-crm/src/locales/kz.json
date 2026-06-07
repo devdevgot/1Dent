@@ -355,7 +355,8 @@
     "payment_processing": "Төлем қабылдау",
     "post_op_monitoring": "Операциядан кейінгі бақылау",
     "completed": "Аяқталды",
-    "repeat_sale": "Қайта сату"
+    "repeat_sale": "Қайта сату",
+    "rejected": "Бас тарту"
   },
   "category": {
     "materials": "Материалдар",

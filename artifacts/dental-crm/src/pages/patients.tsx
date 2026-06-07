@@ -59,6 +59,7 @@ const STATUS_ORDER: Record<PatientStatus, number> = {
   post_op_monitoring: 6,
   completed: 7,
   repeat_sale: 8,
+  rejected: 9,
 };
 
 const ALL_SOURCES: PatientSource[] = [
@@ -431,7 +432,7 @@ function PatientsKanbanView({
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-            <div className="flex gap-3 overflow-x-auto pb-4 flex-1 items-start custom-scrollbar">
+            <div className="flex gap-3 overflow-x-auto pb-4 flex-1 items-stretch snap-x snap-mandatory sm:snap-none custom-scrollbar">
               {KANBAN_COLUMNS.map((col) => (
                 <KanbanColumn
                   key={col.id}
