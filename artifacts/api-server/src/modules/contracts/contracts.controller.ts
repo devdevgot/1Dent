@@ -63,7 +63,7 @@ router.get(
     const templates = await repo.listTemplates(req.user!.clinicId).catch(next);
     if (!templates) return;
 
-    // Enrich system templates with category & subcategory
+    // Enrich system templates with category & subcategory, and ensure extractedText fallback
     const enriched = templates.map((tmpl) => {
       if (tmpl.isSystem && tmpl.systemType) {
         const def = EXTRACTION_TEMPLATES.find((d) => d.id === tmpl.systemType);
@@ -72,6 +72,7 @@ router.get(
             ...tmpl,
             category: def.category,
             subcategory: def.subcategory,
+            extractedText: tmpl.extractedText || def.text,
           };
         }
       }
@@ -92,7 +93,19 @@ router.get(
     const template = await repo.findTemplate(id, req.user!.clinicId).catch(next);
     if (template === undefined) return;
     if (!template) return next(new NotFoundError("Шаблон не найден"));
-    res.json({ success: true, data: { template } });
+
+    let enriched = template;
+    if (template.isSystem && template.systemType) {
+      const def = EXTRACTION_TEMPLATES.find((d) => d.id === template.systemType);
+      if (def) {
+        enriched = {
+          ...template,
+          extractedText: template.extractedText || def.text,
+        } as any;
+      }
+    }
+
+    res.json({ success: true, data: { template: enriched } });
   },
 );
 

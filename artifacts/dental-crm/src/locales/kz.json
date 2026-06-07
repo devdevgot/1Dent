@@ -636,7 +636,7 @@
   },
   "logs": {
     "title": "Әрекеттер журналы",
-    "subtitle": "Жүйедегі барлық өзгерістердің аудиті",
+    "subtitle": "Жүйедегі барлық өзгерістердин аудити",
     "filters": "Сүзгілер",
     "allUsers": "Барлық пайдаланушылар",
     "allActions": "Барлық әрекеттер",
@@ -646,7 +646,58 @@
     "clearFilters": "Тазалау",
     "total": "Жалпы жазбалар",
     "empty": "Жазба табылмады",
-    "unknownUser": "Белгісіз"
+    "unknownUser": "Белгісіз қызметкер",
+    "unknownPatient": "науқас",
+    "unknownItem": "тауар",
+    "filterUserLabel": "Қызметкер",
+    "filterActionLabel": "Әрекет",
+    "filterEntityLabel": "Нысан",
+    "actions": {
+      "CREATE": "Жасалды",
+      "UPDATE": "Өзгертілді",
+      "DELETE": "Өшірілді"
+    },
+    "entities": {
+      "patients": "Науқастар",
+      "procedures": "Процедуралар",
+      "inventory": "Қойма/Тауарлар",
+      "users": "Қызметкерлер",
+      "followups": "Тексерулер"
+    },
+    "descriptions": {
+      "patients": {
+        "create": "{{actor}} {{name}} науқасының карточкасын жасады",
+        "update": "{{actor}} {{name}} науқасының деректерін өзгертті",
+        "delete": "{{actor}} {{name}} науқасының карточкасын өшірді",
+        "proceduresAdd": "{{actor}} {{name}} науқасының емдеу жоспарына процедура қосты",
+        "proceduresUpdate": "{{actor}} {{name}} науқасының процедурасын өзгертті",
+        "proceduresDelete": "{{actor}} {{name}} науқасының процедурасын өшірді",
+        "teethUpdate": "{{actor}} {{name}} науқасының тіс жағдайын өзгертті",
+        "planUpdate": "{{actor}} {{name}} науқасының емдеу жоспарын жаңартты",
+        "contractCreate": "{{actor}} {{name}} науқасына құжаттар пакетін дайындады"
+      },
+      "procedures": {
+        "create": "{{actor}} жаңа процедура қосты (ID: {{id}})",
+        "update": "{{actor}} процедура мәртебесін жаңартты (ID: {{id}})",
+        "delete": "{{actor}} процедураны өшірді (ID: {{id}})"
+      },
+      "inventory": {
+        "create": "{{actor}} қоймаға {{name}} тауарын қосты",
+        "update": "{{actor}} қоймадағы {{name}} тауарының деректерін жаңартылды",
+        "delete": "{{actor}} қоймадан {{name}} тауарын өшірді"
+      },
+      "users": {
+        "create": "{{actor}} жүйеге {{name}} қызметкерін шақырды",
+        "update": "{{actor}} {{name}} қызметкерінің профилін/құқықтарын өзгертті",
+        "delete": "{{actor}} {{name}} қызметкерін жүйеден өшірді"
+      },
+      "followups": {
+        "create": "{{actor}} отадан кейінгі тексеруді жоспарлады (ID: {{id}})",
+        "update": "{{actor}} тексеру мәртебесін өзгертті (ID: {{id}})",
+        "delete": "{{actor}} тексеруді өшірді (ID: {{id}})"
+      },
+      "unknown": "{{actor}} {{entity}} объектісінде {{action}} әрекетін орындады"
+    }
   },
   "financials": {
     "title": "Қаржы",
@@ -722,10 +773,48 @@
     "sessionsEmpty": "Бот диалогтары жоқ",
     "operatorMode": "Оператор",
     "resetSession": "Сессияны қалпына келтіру",
+    "messagesCount": "{{count}} хабарлама",
+    "loading": "Жүктелуде...",
+    "noMessages": "Әзірге хабарламалар жоқ",
+    "botLabel": "🤖 Бот",
+    "clientLabel": "👤 Клиент",
     "tab": {
       "sessions": "Диалогтар",
       "settings": "Баптаулар",
       "managerStyle": "Менеджер стилі"
+    },
+    "states": {
+      "greeting": "Сәлемдесу",
+      "collect_iin": "ЖСН жинау",
+      "collect_name": "Есімді жинау",
+      "collect_phone": "Телефон жинау",
+      "collect_problem": "Мәселені жинау",
+      "suggest_doctor": "Дәрігерді ұсыну",
+      "manage_appointment": "Жазылуды басқару",
+      "show_slots": "Уақытты таңдау",
+      "collect_datetime": "Күнді/уақытты енгізу",
+      "collect_branch": "Филиалды таңдау",
+      "confirm_appointment": "Растау",
+      "dental_qa": "Кеңес беру",
+      "done": "Аяқталды",
+      "human_takeover": "Оператор",
+      "reactivation": "Реактивация"
+    },
+    "dataFields": {
+      "patientName": "Есімі",
+      "collectedIin": "ЖСН",
+      "collectedPhone": "Телефон",
+      "problemDescription": "Мәселе",
+      "suggestedDoctorName": "Дәрігер",
+      "selectedBranch": "Филиал",
+      "preferredDatetime": "Уақыты",
+      "urgency": "Шұғылдығы",
+      "serviceType": "Қызмет түрі",
+      "inactivityReminderSent": "Әрекетсіздік ескертуі жіберілді",
+      "isReschedule": "Жазылуды ауыстыру",
+      "clickId": "Жарнама ID-і",
+      "patientType": "Науқас түрі",
+      "aiConfidence": "AI сенімділігі"
     },
     "settings": {
       "enableBot": "Чатботты қосу",

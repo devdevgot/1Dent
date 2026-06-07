@@ -269,9 +269,20 @@ export async function pickBestDoctorAdvanced(
   // Sort by score desc
   pool.sort((a, b) => b.score - a.score);
 
-  // exploration_factor: 60% best, 40% random from top-3
-  const top3 = pool.slice(0, Math.min(3, pool.length));
-  const pick = Math.random() < 0.6 ? top3[0]! : top3[Math.floor(Math.random() * top3.length)]!;
+  // Pick doctor based on the 50%-30%-20% motivation algorithm, generalized for N doctors using weights w_i = 0.6^i
+  let pick = pool[0]!;
+  if (pool.length > 1) {
+    const weights = pool.map((_, idx) => Math.pow(0.6, idx));
+    const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+    let r = Math.random() * totalWeight;
+    for (let i = 0; i < pool.length; i++) {
+      r -= weights[i]!;
+      if (r <= 0) {
+        pick = pool[i]!;
+        break;
+      }
+    }
+  }
 
   return { id: pick.doctorId, name: pick.doctorName };
 }

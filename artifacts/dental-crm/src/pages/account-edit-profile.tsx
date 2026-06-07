@@ -4,27 +4,7 @@ import { useAuthStore } from "@/hooks/use-auth";
 import { useUpdateProfile } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, Camera, Loader2 } from "lucide-react";
-
-const PHOTO_SIZE = 200;
-
-function resizeToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      const canvas = document.createElement("canvas");
-      const size = Math.min(img.width, img.height);
-      canvas.width = PHOTO_SIZE;
-      canvas.height = PHOTO_SIZE;
-      const ctx = canvas.getContext("2d")!;
-      ctx.drawImage(img, (img.width - size) / 2, (img.height - size) / 2, size, size, 0, 0, PHOTO_SIZE, PHOTO_SIZE);
-      resolve(canvas.toDataURL("image/jpeg", 0.8));
-    };
-    img.onerror = reject;
-    img.src = url;
-  });
-}
+import PhotoCropModal from "@/components/account/photo-crop-modal";
 
 export default function AccountEditProfile() {
   const [, setLocation] = useLocation();
@@ -35,13 +15,15 @@ export default function AccountEditProfile() {
   const [name, setName] = useState(user?.name ?? "");
   const [photoPreview, setPhotoPreview] = useState<string | null>(photoUrl);
   const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isCropOpen, setIsCropOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const mutation = useUpdateProfile({
     mutation: {
       onSuccess: (res) => {
         if (res.success && user && clinic) {
-          setAuth({ ...user, ...(res.data.user as typeof user) }, clinic);
+          setAuth({ ...user, ...(res.data.user as any) }, clinic);
         }
         toast({ title: "Профиль обновлён" });
         setLocation("/account-settings");
@@ -53,17 +35,21 @@ export default function AccountEditProfile() {
     },
   });
 
-  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    try {
-      const base64 = await resizeToBase64(file);
-      setPhotoPreview(base64);
-      setPendingPhoto(base64);
-    } catch {
-      toast({ title: "Ошибка загрузки фото", variant: "destructive" });
-    }
-  }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setSelectedImage(reader.result as string);
+      setIsCropOpen(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCropComplete = (croppedBase64: string) => {
+    setPhotoPreview(croppedBase64);
+    setPendingPhoto(croppedBase64);
+  };
 
   function handleSave() {
     const updates: { name?: string; photoUrl?: string | null } = {};
@@ -80,7 +66,7 @@ export default function AccountEditProfile() {
 
   return (
     <div className="min-h-full bg-[#f2f2f7]">
-      <div className="bg-white px-4 pt-12 pb-3 flex items-center gap-3 border-b border-gray-100">
+      <div className="bg-white px-4 pt-12 pb-3 flex items-center gap-3 border-b border-gray-100 shadow-sm">
         <button onClick={() => setLocation("/account-settings")} className="p-1 -ml-1 text-gray-500">
           <ChevronLeft className="w-6 h-6" />
         </button>
@@ -91,7 +77,7 @@ export default function AccountEditProfile() {
         {/* Avatar */}
         <div className="flex flex-col items-center gap-2">
           <div className="relative">
-            <div className="w-24 h-24 rounded-full overflow-hidden bg-primary/15 flex items-center justify-center text-primary font-bold text-3xl">
+            <div className="w-24 h-24 rounded-full overflow-hidden bg-primary/15 flex items-center justify-center text-primary font-bold text-3xl border border-slate-100 shadow-sm transition-transform active:scale-95 duration-100">
               {photoPreview ? (
                 <img src={photoPreview} alt="avatar" className="w-full h-full object-cover" />
               ) : (
@@ -100,7 +86,7 @@ export default function AccountEditProfile() {
             </div>
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-lg"
+              className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-lg border border-white hover:bg-primary/95 transition-colors"
             >
               <Camera className="w-4 h-4 text-white" />
             </button>
@@ -108,14 +94,14 @@ export default function AccountEditProfile() {
           </div>
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="text-[13px] text-primary font-medium"
+            className="text-[13px] text-primary font-semibold hover:underline"
           >
             Изменить фото
           </button>
         </div>
 
         {/* Name */}
-        <div className="bg-white rounded-2xl overflow-hidden">
+        <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100">
           <label className="flex flex-col px-4 py-3.5 gap-0.5">
             <span className="text-[11px] text-gray-400 uppercase tracking-wider font-medium">Ваше имя</span>
             <input
@@ -132,13 +118,26 @@ export default function AccountEditProfile() {
         <button
           onClick={handleSave}
           disabled={mutation.isPending}
-          className="w-full py-3.5 rounded-2xl font-semibold text-[15px] flex items-center justify-center gap-2"
+          className="w-full py-3.5 rounded-2xl font-semibold text-[15px] flex items-center justify-center gap-2 hover:bg-primary/95 transition-colors shadow-sm disabled:opacity-50"
           style={{ backgroundColor: "#1f75fe", color: "#ffffff" }}
         >
           {mutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
           Сохранить
         </button>
       </div>
+
+      {selectedImage && (
+        <PhotoCropModal
+          isOpen={isCropOpen}
+          onClose={() => {
+            setIsCropOpen(false);
+            setSelectedImage(null);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+          }}
+          imageSrc={selectedImage}
+          onCrop={handleCropComplete}
+        />
+      )}
     </div>
   );
 }

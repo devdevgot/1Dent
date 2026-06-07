@@ -38,7 +38,7 @@ const ALL_NAV_ITEMS = [
   { nameKey: "nav.chatbot",      href: "/chatbot",            icon: Bot,             roles: ["owner"] },
   { nameKey: "nav.channels",     href: "/channels",           icon: Radio,           roles: ["owner","admin"] },
   { nameKey: "nav.migration",    href: "/migration",          icon: DatabaseZap,     roles: ["owner"] },
-  { nameKey: "nav.contractTemplates", href: "/contract-templates", icon: FileText,    roles: ["owner","admin"] },
+  { nameKey: "nav.contractTemplates", href: "/contract-templates", icon: FileText,    roles: ["owner","admin","doctor"] },
   { nameKey: "nav.branches",          href: "/branches",           icon: MapPin,       roles: ["owner"] },
 ];
 

@@ -556,7 +556,7 @@ export class TreatmentPlansRepository {
     clinicId: string,
     planId: string,
     patientId: string,
-    updates: { title?: string; price?: number; sortOrder?: number; status?: "cancelled"; notes?: string | null; attachments?: string[]; assignedDoctorId?: string | null; stage?: string | null; discount?: number },
+    updates: { title?: string; price?: number; sortOrder?: number; status?: "cancelled"; notes?: string | null; attachments?: string[]; assignedDoctorId?: string | null; bundleToken?: string | null; stage?: string | null; discount?: number; procedureId?: string | null },
   ): Promise<TreatmentPlanItem | null> {
     const [item] = await db
       .select()

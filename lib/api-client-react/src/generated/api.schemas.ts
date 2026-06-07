@@ -151,20 +151,7 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
-  photoUrl?: string | null;
-  phone?: string | null;
-  position?: string | null;
-  specialty?: string | null;
-  hireDate?: string | null;
-  isActive: boolean;
   createdAt: string;
-  updatedAt?: string;
-  salarySettings?: {
-    salaryType: "fixed" | "commission" | "fixed_plus_commission";
-    fixedAmount: string;
-    commissionPercent: string;
-    updatedAt?: string;
-  } | null;
 }
 
 export interface Clinic {
@@ -203,39 +190,11 @@ export interface CreateUserRequest {
   /** @minLength 6 */
   password: string;
   role: UserRole;
-  phone?: string;
-  position?: string;
-  specialty?: string;
-  hireDate?: string;
-  maxPatientsPerDay?: number;
 }
 
 export interface UpdateUserRequest {
   name?: string;
   role?: UserRole;
-  phone?: string | null;
-  position?: string | null;
-  specialty?: string | null;
-  hireDate?: string | null;
-  password?: string;
-}
-
-export interface UpdateUserStatusRequest {
-  isActive: boolean;
-}
-
-export interface MySalaryResponse {
-  success: boolean;
-  data: {
-    salaryType: "fixed" | "commission" | "fixed_plus_commission";
-    fixedAmount: number;
-    commissionPercent: number;
-    revenueThisMonth: number;
-    calculatedSalary: number;
-    approvedAmount: number | null;
-    status: "pending" | "approved" | "paid";
-    period: { year: number; month: number };
-  };
 }
 
 export interface PatchUserCapacityRequest {
@@ -793,34 +752,6 @@ export interface ProcedureMaterialLineItem {
   quantity: number;
 }
 
-export interface ChatbotStepInstructions {
-  general?: string;
-  greeting?: string;
-  collectName?: string;
-  collectProblem?: string;
-  suggestDoctor?: string;
-  confirm?: string;
-}
-
-export interface ScriptMindMapNode {
-  id: string;
-  label: string;
-  content: string;
-  isRoot?: boolean;
-}
-
-export interface ScriptMindMapEdge {
-  id: string;
-  source: string;
-  target: string;
-  label?: string;
-}
-
-export interface ScriptMindMapData {
-  nodes: ScriptMindMapNode[];
-  edges: ScriptMindMapEdge[];
-}
-
 export interface ChatbotSettings {
   id: string;
   clinicId: string;
@@ -829,8 +760,6 @@ export interface ChatbotSettings {
   followup24hTemplate: string;
   followup72hTemplate: string;
   followup168hTemplate: string;
-  stepInstructions?: ChatbotStepInstructions;
-  scriptMindMap?: ScriptMindMapData;
   createdAt: string;
   updatedAt: string;
 }
@@ -841,8 +770,6 @@ export interface ChatbotSettingsUpdate {
   followup24hTemplate?: string;
   followup72hTemplate?: string;
   followup168hTemplate?: string;
-  stepInstructions?: ChatbotStepInstructions;
-  scriptMindMap?: ScriptMindMapData;
 }
 
 export type ChatbotSessionData = { [key: string]: unknown };
@@ -1149,39 +1076,7 @@ export type MigrationJobType =
 export const MigrationJobType = {
   "excel-import": "excel-import",
   "trello-import": "trello-import",
-  "ai-smart-import": "ai-smart-import",
 } as const;
-
-export type AiFileType = "xlsx" | "csv" | "pdf";
-export type AiDetectedCategory = "patients" | "procedures" | "templates";
-
-export interface AiAnalyzeRequest {
-  fileBase64: string;
-  fileType: AiFileType;
-}
-
-export interface AiAnalyzeResponseData {
-  mapping: Record<string, string>;
-  detectedCategories: AiDetectedCategory[];
-  headers: string[];
-  previewRows: Record<string, string>[];
-  totalRows: number;
-  isPdf: boolean;
-}
-
-export interface AiAnalyzeResponse {
-  success: boolean;
-  data: AiAnalyzeResponseData;
-}
-
-export interface AiConfirmRequest {
-  fileBase64: string;
-  fileType: AiFileType;
-  mapping: Record<string, string>;
-  detectedCategories: AiDetectedCategory[];
-  /** Pre-extracted rows from the analyze step. Required for PDF to avoid re-running AI extraction. */
-  rows?: Record<string, string>[];
-}
 
 export type MigrationJobStatus =
   (typeof MigrationJobStatus)[keyof typeof MigrationJobStatus];
@@ -1270,11 +1165,9 @@ export interface TreatmentPlanItem {
   status: TreatmentPlanItemStatus;
   sortOrder: number;
   procedureId?: string | null;
-  notes?: string | null;
-  attachments?: string[] | null;
-  assignedDoctorId?: string | null;
   stage?: string | null;
-  discount: number;
+  bundleToken?: string | null;
+  discount?: number;
   createdAt: string;
 }
 
@@ -1375,11 +1268,14 @@ export interface UpdateTreatmentPlanItemRequest {
   /** @minimum 0 */
   sortOrder?: number;
   status?: UpdateTreatmentPlanItemRequestStatus;
+  stage?: string | null;
+  bundleToken?: string | null;
+  /** @minimum 0 */
+  discount?: number;
   notes?: string | null;
   attachments?: string[];
   assignedDoctorId?: string | null;
-  stage?: string | null;
-  discount?: number;
+  procedureId?: string | null;
 }
 
 export type GetInventoryConsumptionParams = {

@@ -654,7 +654,58 @@
     "clearFilters": "Сбросить",
     "total": "Всего записей",
     "empty": "Записей не найдено",
-    "unknownUser": "Неизвестно"
+    "unknownUser": "Неизвестный пользователь",
+    "unknownPatient": "пациент",
+    "unknownItem": "товар",
+    "filterUserLabel": "Сотрудник",
+    "filterActionLabel": "Действие",
+    "filterEntityLabel": "Объект",
+    "actions": {
+      "CREATE": "Создано",
+      "UPDATE": "Изменено",
+      "DELETE": "Удалено"
+    },
+    "entities": {
+      "patients": "Пациенты",
+      "procedures": "Процедуры",
+      "inventory": "Товары/Склад",
+      "users": "Сотрудники",
+      "followups": "Осмотры"
+    },
+    "descriptions": {
+      "patients": {
+        "create": "{{actor}} создал(а) карточку пациента {{name}}",
+        "update": "{{actor}} обновил(а) данные пациента {{name}}",
+        "delete": "{{actor}} удалил(а) карточку пациента {{name}}",
+        "proceduresAdd": "{{actor}} добавил(а) процедуру в план лечения пациента {{name}}",
+        "proceduresUpdate": "{{actor}} обновил(а) процедуру пациента {{name}}",
+        "proceduresDelete": "{{actor}} удалил(а) процедуру пациента {{name}}",
+        "teethUpdate": "{{actor}} изменил(а) состояние зубов у пациента {{name}}",
+        "planUpdate": "{{actor}} обновил(а) план лечения пациента {{name}}",
+        "contractCreate": "{{actor}} сформировал(а) пакет документов для пациента {{name}}"
+      },
+      "procedures": {
+        "create": "{{actor}} добавил(а) новую процедуру (ID: {{id}})",
+        "update": "{{actor}} обновил(а) статус процедуры (ID: {{id}})",
+        "delete": "{{actor}} удалил(а) процедуру (ID: {{id}})"
+      },
+      "inventory": {
+        "create": "{{actor}} добавил(а) товар {{name}} на склад",
+        "update": "{{actor}} обновил(а) данные товара {{name}} на складе",
+        "delete": "{{actor}} удалил(а) товар {{name}} со склада"
+      },
+      "users": {
+        "create": "{{actor}} пригласил(а) сотрудника {{name}} в систему",
+        "update": "{{actor}} обновил(а) профиль/права сотрудника {{name}}",
+        "delete": "{{actor}} удалил(а) сотрудника {{name}} из системы"
+      },
+      "followups": {
+        "create": "{{actor}} запланировал(а) послеоперационный осмотр (ID: {{id}})",
+        "update": "{{actor}} обновил(а) статус осмотра (ID: {{id}})",
+        "delete": "{{actor}} удалил(а) осмотр (ID: {{id}})"
+      },
+      "unknown": "{{actor}} совершил(а) действие {{action}} над объектом {{entity}}"
+    }
   },
   "financials": {
     "title": "Финансы",
@@ -730,10 +781,48 @@
     "sessionsEmpty": "Нет активных диалогов с ботом",
     "operatorMode": "Оператор",
     "resetSession": "Сбросить сессию",
+    "messagesCount": "{{count}} сообщений",
+    "loading": "Загрузка...",
+    "noMessages": "Сообщений пока нет",
+    "botLabel": "🤖 Бот",
+    "clientLabel": "👤 Клиент",
     "tab": {
       "sessions": "Диалоги",
       "settings": "Настройки",
       "managerStyle": "Стиль менеджера"
+    },
+    "states": {
+      "greeting": "Приветствие",
+      "collect_iin": "Сбор ИИН",
+      "collect_name": "Сбор имени",
+      "collect_phone": "Сбор телефона",
+      "collect_problem": "Сбор проблемы",
+      "suggest_doctor": "Предложение врача",
+      "manage_appointment": "Управление записью",
+      "show_slots": "Выбор времени",
+      "collect_datetime": "Ввод даты/время",
+      "collect_branch": "Выбор филиала",
+      "confirm_appointment": "Подтверждение",
+      "dental_qa": "Консультация",
+      "done": "Завершено",
+      "human_takeover": "Оператор",
+      "reactivation": "Реактивация"
+    },
+    "dataFields": {
+      "patientName": "Имя",
+      "collectedIin": "ИИН",
+      "collectedPhone": "Телефон",
+      "problemDescription": "Проблема",
+      "suggestedDoctorName": "Врач",
+      "selectedBranch": "Филиал",
+      "preferredDatetime": "Время",
+      "urgency": "Срочность",
+      "serviceType": "Тип услуги",
+      "inactivityReminderSent": "Напоминание о неактивности отправлено",
+      "isReschedule": "Перенос записи",
+      "clickId": "ID рекламы",
+      "patientType": "Тип пациента",
+      "aiConfidence": "Уверенность ИИ"
     },
     "settings": {
       "enableBot": "Включить чатбот",

@@ -1,22 +1,55 @@
+import { useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { useAuthStore } from "@/hooks/use-auth";
-import { ChevronLeft, ChevronRight, User, Mail, Lock, Camera, Banknote, CheckCircle, Clock, Globe } from "lucide-react";
-import { useGetMyPayrollRecords, type PayrollRecord } from "@workspace/api-client-react";
+import { ChevronLeft, ChevronRight, User, Mail, Lock, Camera, Banknote, CheckCircle, Clock } from "lucide-react";
+import { useGetMyPayrollRecords, useUpdateProfile, type PayrollRecord } from "@workspace/api-client-react";
 import { useTranslation } from "react-i18next";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import PhotoCropModal from "@/components/account/photo-crop-modal";
 
 export default function AccountSettings() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [, setLocation] = useLocation();
-  const { user } = useAuthStore();
+  const { user, clinic, setAuth } = useAuthStore();
+  const { toast } = useToast();
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isCropOpen, setIsCropOpen] = useState(false);
+
   const { data: myPayrollData } = useGetMyPayrollRecords();
   const myRecords: PayrollRecord[] = myPayrollData?.data?.records ?? [];
 
-  const languages = [
-    { code: "ru", label: "RU" },
-    { code: "en", label: "EN" },
-    { code: "kz", label: "KZ" },
-  ] as const;
+  const updateMutation = useUpdateProfile({
+    mutation: {
+      onSuccess: (res) => {
+        if (res.success && user && clinic) {
+          setAuth({ ...user, ...(res.data.user as any) }, clinic);
+        }
+        toast({ title: t("settingsPage.photoUpdated", "Фото профиля обновлено") });
+      },
+      onError: (err) => {
+        const msg = (err as { data?: { error?: string } }).data?.error;
+        toast({ title: t("common.error", "Ошибка"), description: msg ?? t("settingsPage.photoUpdateError", "Не удалось обновить фото"), variant: "destructive" });
+      },
+    },
+  });
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setSelectedImage(reader.result as string);
+      setIsCropOpen(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCropComplete = async (croppedBase64: string) => {
+    updateMutation.mutate({ photoUrl: croppedBase64 });
+  };
 
   const photoUrl = (user as typeof user & { photoUrl?: string | null })?.photoUrl;
   const initials = (user?.name ?? "?").charAt(0).toUpperCase();
@@ -48,7 +81,7 @@ export default function AccountSettings() {
   return (
     <div className="min-h-full bg-[#f2f2f7]">
       <div className="bg-white px-4 pt-12 pb-3 flex items-center gap-3 border-b border-gray-100">
-        <button onClick={() => window.history.back()} className="p-1 -ml-1 text-gray-500">
+        <button onClick={() => setLocation("/menu")} className="p-1 -ml-1 text-gray-500">
           <ChevronLeft className="w-6 h-6" />
         </button>
         <h1 className="text-lg font-semibold text-gray-900">Настройки аккаунта</h1>
@@ -58,25 +91,37 @@ export default function AccountSettings() {
         {/* Avatar block */}
         <div className="flex flex-col items-center gap-2 pb-2">
           <button
-            onClick={() => setLocation("/account/edit-profile")}
-            className="relative"
+            onClick={() => fileInputRef.current?.click()}
+            className="relative group focus:outline-none"
           >
-            <div className="w-20 h-20 rounded-full overflow-hidden bg-primary/15 flex items-center justify-center text-primary font-bold text-2xl">
+            <div className="w-20 h-20 rounded-full overflow-hidden bg-primary/15 flex items-center justify-center text-primary font-bold text-2xl border border-slate-100 transition-transform active:scale-95 duration-100">
               {photoUrl ? (
                 <img src={photoUrl} alt="avatar" className="w-full h-full object-cover" />
               ) : (
                 initials
               )}
             </div>
-            <div className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-primary flex items-center justify-center shadow-md">
+            <div className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-primary flex items-center justify-center shadow-md border border-white hover:bg-primary/95 transition-colors">
               <Camera className="w-3.5 h-3.5 text-white" />
             </div>
           </button>
-          <p className="text-[13px] text-primary font-medium">Изменить фото</p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handlePhotoSelect}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="text-[13px] text-primary font-semibold hover:underline"
+          >
+            {t("settingsPage.changePhoto", "Изменить фото")}
+          </button>
         </div>
 
         {/* Settings list */}
-        <div className="bg-white rounded-2xl overflow-hidden divide-y divide-gray-100">
+        <div className="bg-white rounded-2xl overflow-hidden divide-y divide-gray-100 shadow-sm border border-slate-100">
           {items.map((item) => (
             <button
               key={item.href}
@@ -96,7 +141,7 @@ export default function AccountSettings() {
         </div>
 
         {/* Моя зарплата — for admin, accountant, warehouse roles */}
-        {(user?.role === "admin" || user?.role === "accountant" || user?.role === "warehouse") && <div className="bg-white rounded-2xl overflow-hidden">
+        {(user?.role === "admin" || user?.role === "accountant" || user?.role === "warehouse") && <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100">
           <div className="flex items-center gap-3 px-4 py-4 border-b border-gray-100">
             <div className="w-8 h-8 rounded-lg bg-[#1f75fe]/10 flex items-center justify-center shrink-0">
               <Banknote className="w-[18px] h-[18px] text-[#1f75fe]" />
@@ -144,35 +189,20 @@ export default function AccountSettings() {
           )}
         </div>}
 
-        {/* Language switch */}
-        <div className="bg-white rounded-2xl overflow-hidden p-4 space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center shrink-0">
-              <Globe className="w-[18px] h-[18px] text-white" />
-            </div>
-            <div>
-              <p className="text-[15px] font-semibold text-gray-900">{t("settingsPage.language")}</p>
-            </div>
-          </div>
-          <div className="flex gap-2 pt-1">
-            {languages.map((lang) => (
-              <button
-                key={lang.code}
-                onClick={() => i18n.changeLanguage(lang.code)}
-                className={cn(
-                  "flex-1 h-10 rounded-xl border text-sm font-semibold transition-all",
-                  i18n.language === lang.code
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-gray-200 bg-white text-gray-500 hover:border-primary/40",
-                )}
-              >
-                {lang.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
       </div>
+
+      {selectedImage && (
+        <PhotoCropModal
+          isOpen={isCropOpen}
+          onClose={() => {
+            setIsCropOpen(false);
+            setSelectedImage(null);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+          }}
+          imageSrc={selectedImage}
+          onCrop={handleCropComplete}
+        />
+      )}
     </div>
   );
 }

@@ -302,7 +302,7 @@ export default function StaffPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <button
-                onClick={() => window.history.back()}
+                onClick={() => navigate("/menu")}
                 className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-500 shrink-0"
               >
                 <ChevronLeft className="w-5 h-5" />

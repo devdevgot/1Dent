@@ -1,6 +1,7 @@
 import { useState, useRef, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuthStore } from "@/hooks/use-auth";
 import {
   useListContractTemplates,
   useUploadContractTemplate,
@@ -147,6 +148,8 @@ function MappingEditor({ template, onClose }: { template: ContractTemplate; onCl
 }
 
 export default function ContractTemplatesPage() {
+  const { user } = useAuthStore();
+  const canEdit = user?.role === "owner" || user?.role === "admin";
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
@@ -164,9 +167,7 @@ export default function ContractTemplatesPage() {
   const systemTemplates = allTemplates.filter((t: ContractTemplate) => t.isSystem);
   const templates = allTemplates.filter((t: ContractTemplate) => !t.isSystem);
 
-  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
-    "Имплантация": true, // Expand Implantation by default as requested
-  });
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   const [expandedSubcategories, setExpandedSubcategories] = useState<Record<string, boolean>>({});
 
   const toggleCategory = (cat: string) => {
@@ -280,76 +281,80 @@ export default function ContractTemplatesPage() {
         </div>
 
         {/* Upload section */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-6">
-          <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <Plus className="w-4 h-4 text-primary" />
-            Загрузить новый шаблон
-          </h2>
+        {canEdit && (
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-6">
+            <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <Plus className="w-4 h-4 text-primary" />
+              Загрузить новый шаблон
+            </h2>
 
-          <div className="mb-3">
-            <label className="block text-xs font-medium text-gray-600 mb-1.5">
-              Название шаблона{" "}
-              <span className="text-gray-400 font-normal">(необязательно — по умолчанию имя файла)</span>
-            </label>
-            <input
-              type="text"
-              placeholder="Например: Договор на лечение зубов"
-              value={customName}
-              onChange={(e) => setCustomName(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
+            <div className="mb-3">
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                Название шаблона{" "}
+                <span className="text-gray-400 font-normal">(необязательно — по умолчанию имя файла)</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Например: Договор на лечение зубов"
+                value={customName}
+                onChange={(e) => setCustomName(e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
 
-          <div
-            className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${
-              dragOver ? "border-primary bg-primary/5" : "border-gray-200 hover:border-primary/40 hover:bg-gray-50"
-            }`}
-            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".docx,.pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf"
-              className="hidden"
-              onChange={handleInputChange}
-            />
-            {uploadMutation.isPending ? (
-              <div className="flex flex-col items-center gap-3">
-                <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Загрузка и анализ файла…</p>
-                  <p className="text-xs text-gray-400 mt-1">AI определяет поля для автозаполнения</p>
+            <div
+              className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${
+                dragOver ? "border-primary bg-primary/5" : "border-gray-200 hover:border-primary/40 hover:bg-gray-50"
+              }`}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".docx,.pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf"
+                className="hidden"
+                onChange={handleInputChange}
+              />
+              {uploadMutation.isPending ? (
+                <div className="flex flex-col items-center gap-3">
+                  <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">Загрузка и анализ файла…</p>
+                    <p className="text-xs text-gray-400 mt-1">AI определяет поля для автозаполнения</p>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-primary/5 flex items-center justify-center">
-                  <Upload className="w-6 h-6 text-primary" />
+              ) : (
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-primary/5 flex items-center justify-center">
+                    <Upload className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700">Перетащите файл или нажмите</p>
+                    <p className="text-xs text-gray-400 mt-1">DOCX или PDF, до 10 МБ</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-700">Перетащите файл или нажмите</p>
-                  <p className="text-xs text-gray-400 mt-1">DOCX или PDF, до 10 МБ</p>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* AI info */}
-        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-6 flex gap-3">
-          <AlertCircle className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-          <div className="text-xs text-blue-700 space-y-1">
-            <p className="font-semibold">Как работает AI-анализ</p>
-            <p>
-              После загрузки AI сканирует договор и находит места с пустыми строками, метками
-              (ФИО, ИИН, дата) и плейсхолдерами. Вы можете отредактировать обнаруженные поля,
-              нажав на значок карандаша рядом с шаблоном.
-            </p>
+        {canEdit && (
+          <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-6 flex gap-3">
+            <AlertCircle className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+            <div className="text-xs text-blue-700 space-y-1">
+              <p className="font-semibold">Как работает AI-анализ</p>
+              <p>
+                После загрузки AI сканирует договор и находит места с пустыми строками, метками
+                (ФИО, ИИН, дата) и плейсхолдерами. Вы можете отредактировать обнаруженные поля,
+                нажав на значок карандаша рядом с шаблоном.
+              </p>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* System (built-in) templates — read-only */}
         {!isLoading && systemTemplates.length > 0 && (
@@ -518,21 +523,23 @@ export default function ContractTemplatesPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          onClick={() => {
-                            if (isEditing) {
-                              setEditingId(null);
-                              setExpandedId(null);
-                            } else {
-                              setExpandedId(tmpl.id);
-                              setEditingId(tmpl.id);
-                            }
-                          }}
-                          className="p-2 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-colors"
-                          title="Редактировать маппинг полей"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
+                        {canEdit && (
+                          <button
+                            onClick={() => {
+                              if (isEditing) {
+                                setEditingId(null);
+                                setExpandedId(null);
+                              } else {
+                                setExpandedId(tmpl.id);
+                                setEditingId(tmpl.id);
+                              }
+                            }}
+                            className="p-2 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-colors"
+                            title="Редактировать маппинг полей"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                        )}
                         <button
                           onClick={() => setExpandedId(isExpanded && !isEditing ? null : tmpl.id)}
                           className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors"
@@ -540,14 +547,16 @@ export default function ContractTemplatesPage() {
                         >
                           {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                         </button>
-                        <button
-                          onClick={() => handleDelete(tmpl.id, tmpl.name)}
-                          disabled={deleteMutation.isPending}
-                          className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                          title="Удалить шаблон"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {canEdit && (
+                          <button
+                            onClick={() => handleDelete(tmpl.id, tmpl.name)}
+                            disabled={deleteMutation.isPending}
+                            className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                            title="Удалить шаблон"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </div>
 

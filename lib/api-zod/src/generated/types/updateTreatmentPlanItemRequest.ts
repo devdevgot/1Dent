@@ -13,4 +13,12 @@ export interface UpdateTreatmentPlanItemRequest {
   /** @minimum 0 */
   sortOrder?: number;
   status?: UpdateTreatmentPlanItemRequestStatus;
+  stage?: string | null;
+  bundleToken?: string | null;
+  /** @minimum 0 */
+  discount?: number;
+  notes?: string | null;
+  attachments?: string[];
+  assignedDoctorId?: string | null;
+  procedureId?: string | null;
 }

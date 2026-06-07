@@ -646,7 +646,58 @@
     "clearFilters": "Clear",
     "total": "Total records",
     "empty": "No records found",
-    "unknownUser": "Unknown"
+    "unknownUser": "Unknown user",
+    "unknownPatient": "patient",
+    "unknownItem": "item",
+    "filterUserLabel": "Employee",
+    "filterActionLabel": "Action",
+    "filterEntityLabel": "Entity",
+    "actions": {
+      "CREATE": "Created",
+      "UPDATE": "Updated",
+      "DELETE": "Deleted"
+    },
+    "entities": {
+      "patients": "Patients",
+      "procedures": "Procedures",
+      "inventory": "Inventory/Stock",
+      "users": "Employees",
+      "followups": "Follow-ups"
+    },
+    "descriptions": {
+      "patients": {
+        "create": "{{actor}} created patient card for {{name}}",
+        "update": "{{actor}} updated patient details for {{name}}",
+        "delete": "{{actor}} deleted patient card for {{name}}",
+        "proceduresAdd": "{{actor}} added procedure to {{name}}'s treatment plan",
+        "proceduresUpdate": "{{actor}} updated procedure for patient {{name}}",
+        "proceduresDelete": "{{actor}} deleted procedure for patient {{name}}",
+        "teethUpdate": "{{actor}} updated tooth condition for patient {{name}}",
+        "planUpdate": "{{actor}} updated treatment plan for patient {{name}}",
+        "contractCreate": "{{actor}} generated document package for patient {{name}}"
+      },
+      "procedures": {
+        "create": "{{actor}} added new procedure (ID: {{id}})",
+        "update": "{{actor}} updated procedure status (ID: {{id}})",
+        "delete": "{{actor}} deleted procedure (ID: {{id}})"
+      },
+      "inventory": {
+        "create": "{{actor}} added item {{name}} to inventory",
+        "update": "{{actor}} updated item {{name}} in inventory",
+        "delete": "{{actor}} removed item {{name}} from inventory"
+      },
+      "users": {
+        "create": "{{actor}} invited employee {{name}} to the system",
+        "update": "{{actor}} updated profile/permissions of employee {{name}}",
+        "delete": "{{actor}} removed employee {{name}} from the system"
+      },
+      "followups": {
+        "create": "{{actor}} scheduled follow-up appointment (ID: {{id}})",
+        "update": "{{actor}} updated follow-up status (ID: {{id}})",
+        "delete": "{{actor}} removed follow-up (ID: {{id}})"
+      },
+      "unknown": "{{actor}} performed action {{action}} on entity {{entity}}"
+    }
   },
   "financials": {
     "title": "Financials",
@@ -722,10 +773,48 @@
     "sessionsEmpty": "No active bot sessions",
     "operatorMode": "Operator",
     "resetSession": "Reset session",
+    "messagesCount": "{{count}} messages",
+    "loading": "Loading...",
+    "noMessages": "No messages yet",
+    "botLabel": "🤖 Bot",
+    "clientLabel": "👤 Client",
     "tab": {
       "sessions": "Conversations",
       "settings": "Settings",
       "managerStyle": "Manager Style"
+    },
+    "states": {
+      "greeting": "Greeting",
+      "collect_iin": "IIN Collection",
+      "collect_name": "Name Collection",
+      "collect_phone": "Phone Collection",
+      "collect_problem": "Problem Description",
+      "suggest_doctor": "Doctor Suggestion",
+      "manage_appointment": "Manage Appointment",
+      "show_slots": "Time Selection",
+      "collect_datetime": "DateTime Input",
+      "collect_branch": "Branch Selection",
+      "confirm_appointment": "Confirmation",
+      "dental_qa": "Consultation",
+      "done": "Completed",
+      "human_takeover": "Operator",
+      "reactivation": "Reactivation"
+    },
+    "dataFields": {
+      "patientName": "Name",
+      "collectedIin": "IIN",
+      "collectedPhone": "Phone",
+      "problemDescription": "Problem",
+      "suggestedDoctorName": "Doctor",
+      "selectedBranch": "Branch",
+      "preferredDatetime": "Time",
+      "urgency": "Urgency",
+      "serviceType": "Service Type",
+      "inactivityReminderSent": "Inactivity reminder sent",
+      "isReschedule": "Rescheduling",
+      "clickId": "Ad Click ID",
+      "patientType": "Patient Type",
+      "aiConfidence": "AI Confidence"
     },
     "settings": {
       "enableBot": "Enable chatbot",

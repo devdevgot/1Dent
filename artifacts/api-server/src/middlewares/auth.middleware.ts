@@ -33,7 +33,8 @@ export function authMiddleware(req: Request, _res: Response, next: NextFunction)
     const cookieToken = req.cookies?.["auth_token"];
     const authHeader = req.headers.authorization;
     const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-    const token = cookieToken || bearerToken;
+    const queryToken = typeof req.query["token"] === "string" ? req.query["token"] : null;
+    const token = cookieToken || bearerToken || queryToken;
 
     if (!token) {
       throw new UnauthorizedError("Authentication required");

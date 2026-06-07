@@ -747,6 +747,8 @@ export const ListTreatmentPlansParams = zod.object({
   id: zod.coerce.string(),
 });
 
+export const listTreatmentPlansResponseDataPlansItemItemsItemDiscountDefault = 0;
+
 export const ListTreatmentPlansResponse = zod.object({
   success: zod.literal(true),
   data: zod.object({
@@ -780,6 +782,13 @@ export const ListTreatmentPlansResponse = zod.object({
             status: zod.enum(["pending", "completed", "cancelled"]),
             sortOrder: zod.number(),
             procedureId: zod.string().nullish(),
+            stage: zod.string().nullish(),
+            bundleToken: zod.string().nullish(),
+            discount: zod
+              .number()
+              .default(
+                listTreatmentPlansResponseDataPlansItemItemsItemDiscountDefault,
+              ),
             createdAt: zod.date(),
           }),
         ),
@@ -796,6 +805,8 @@ export const ListTreatmentPlansResponse = zod.object({
 export const GetActiveTreatmentPlanParams = zod.object({
   id: zod.coerce.string(),
 });
+
+export const getActiveTreatmentPlanResponseDataPlanOneItemsItemDiscountDefault = 0;
 
 export const GetActiveTreatmentPlanResponse = zod.object({
   success: zod.literal(true),
@@ -830,6 +841,13 @@ export const GetActiveTreatmentPlanResponse = zod.object({
             status: zod.enum(["pending", "completed", "cancelled"]),
             sortOrder: zod.number(),
             procedureId: zod.string().nullish(),
+            stage: zod.string().nullish(),
+            bundleToken: zod.string().nullish(),
+            discount: zod
+              .number()
+              .default(
+                getActiveTreatmentPlanResponseDataPlanOneItemsItemDiscountDefault,
+              ),
             createdAt: zod.date(),
           }),
         ),
@@ -874,6 +892,8 @@ export const UpdateTreatmentPlanBody = zod.object({
   notes: zod.string().nullish(),
 });
 
+export const updateTreatmentPlanResponseDataPlanItemsItemDiscountDefault = 0;
+
 export const UpdateTreatmentPlanResponse = zod.object({
   success: zod.literal(true),
   data: zod.object({
@@ -906,6 +926,13 @@ export const UpdateTreatmentPlanResponse = zod.object({
           status: zod.enum(["pending", "completed", "cancelled"]),
           sortOrder: zod.number(),
           procedureId: zod.string().nullish(),
+          stage: zod.string().nullish(),
+          bundleToken: zod.string().nullish(),
+          discount: zod
+            .number()
+            .default(
+              updateTreatmentPlanResponseDataPlanItemsItemDiscountDefault,
+            ),
           createdAt: zod.date(),
         }),
       ),
@@ -922,6 +949,8 @@ export const ApproveTreatmentPlanParams = zod.object({
   id: zod.coerce.string(),
   planId: zod.coerce.string(),
 });
+
+export const approveTreatmentPlanResponseDataPlanItemsItemDiscountDefault = 0;
 
 export const ApproveTreatmentPlanResponse = zod.object({
   success: zod.literal(true),
@@ -955,6 +984,13 @@ export const ApproveTreatmentPlanResponse = zod.object({
           status: zod.enum(["pending", "completed", "cancelled"]),
           sortOrder: zod.number(),
           procedureId: zod.string().nullish(),
+          stage: zod.string().nullish(),
+          bundleToken: zod.string().nullish(),
+          discount: zod
+            .number()
+            .default(
+              approveTreatmentPlanResponseDataPlanItemsItemDiscountDefault,
+            ),
           createdAt: zod.date(),
         }),
       ),
@@ -991,6 +1027,8 @@ export const UpdateTreatmentPlanItemParams = zod.object({
 
 export const updateTreatmentPlanItemBodySortOrderMin = 0;
 
+export const updateTreatmentPlanItemBodyDiscountMin = 0;
+
 export const UpdateTreatmentPlanItemBody = zod.object({
   title: zod.string().optional(),
   price: zod.number().optional(),
@@ -999,7 +1037,16 @@ export const UpdateTreatmentPlanItemBody = zod.object({
     .min(updateTreatmentPlanItemBodySortOrderMin)
     .optional(),
   status: zod.enum(["cancelled"]).optional(),
+  stage: zod.string().nullish(),
+  bundleToken: zod.string().nullish(),
+  discount: zod.number().min(updateTreatmentPlanItemBodyDiscountMin).optional(),
+  notes: zod.string().nullish(),
+  attachments: zod.array(zod.string()).optional(),
+  assignedDoctorId: zod.string().nullish(),
+  procedureId: zod.string().nullish(),
 });
+
+export const updateTreatmentPlanItemResponseDataItemDiscountDefault = 0;
 
 export const UpdateTreatmentPlanItemResponse = zod.object({
   success: zod.literal(true),
@@ -1017,6 +1064,11 @@ export const UpdateTreatmentPlanItemResponse = zod.object({
       status: zod.enum(["pending", "completed", "cancelled"]),
       sortOrder: zod.number(),
       procedureId: zod.string().nullish(),
+      stage: zod.string().nullish(),
+      bundleToken: zod.string().nullish(),
+      discount: zod
+        .number()
+        .default(updateTreatmentPlanItemResponseDataItemDiscountDefault),
       createdAt: zod.date(),
     }),
   }),
@@ -1030,6 +1082,8 @@ export const CompleteTreatmentPlanItemParams = zod.object({
   planId: zod.coerce.string(),
   itemId: zod.coerce.string(),
 });
+
+export const completeTreatmentPlanItemResponseDataItemDiscountDefault = 0;
 
 export const CompleteTreatmentPlanItemResponse = zod.object({
   success: zod.literal(true),
@@ -1047,6 +1101,11 @@ export const CompleteTreatmentPlanItemResponse = zod.object({
       status: zod.enum(["pending", "completed", "cancelled"]),
       sortOrder: zod.number(),
       procedureId: zod.string().nullish(),
+      stage: zod.string().nullish(),
+      bundleToken: zod.string().nullish(),
+      discount: zod
+        .number()
+        .default(completeTreatmentPlanItemResponseDataItemDiscountDefault),
       createdAt: zod.date(),
     }),
     procedureId: zod.string(),

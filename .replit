@@ -41,6 +41,10 @@ TMA_DEV_BYPASS_TG_ID = "1337923744"
   channel = "stable-25_05"
 
 [[ports]]
+localPort = 5173
+externalPort = 6800
+
+[[ports]]
 localPort = 8080
 externalPort = 8080
 

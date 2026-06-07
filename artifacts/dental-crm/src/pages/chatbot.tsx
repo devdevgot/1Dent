@@ -65,23 +65,121 @@ const STATE_COLORS: Record<string, string> = {
   human_takeover: "bg-red-50 text-red-700 border-red-100",
 };
 
-function formatRelative(dateStr: string) {
+function formatRelative(dateStr: string, lang: string = "ru") {
   const date = new Date(dateStr);
   const diff = Date.now() - date.getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "только что";
-  if (mins < 60) return `${mins} мин. назад`;
+  const isEn = lang.startsWith("en");
+  const isKz = lang.startsWith("kk") || lang.startsWith("kz");
+
+  if (mins < 1) {
+    if (isEn) return "just now";
+    if (isKz) return "жаңа ғана";
+    return "только что";
+  }
+  if (mins < 60) {
+    if (isEn) return `${mins}m ago`;
+    if (isKz) return `${mins} мин бұрын`;
+    return `${mins} мин. назад`;
+  }
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs} ч. назад`;
-  return `${Math.floor(hrs / 24)} д. назад`;
+  if (hrs < 24) {
+    if (isEn) return `${hrs}h ago`;
+    if (isKz) return `${hrs} сағ бұрын`;
+    return `${hrs} ч. назад`;
+  }
+  const days = Math.floor(hrs / 24);
+  if (isEn) return `${days}d ago`;
+  if (isKz) return `${days} күн бұрын`;
+  return `${days} д. назад`;
 }
 
-function formatTime(dateStr: string) {
-  return new Date(dateStr).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+function formatTime(dateStr: string, lang: string = "ru") {
+  const locale = lang.startsWith("en") ? "en-US" : lang.startsWith("kk") || lang.startsWith("kz") ? "kk-KZ" : "ru-RU";
+  return new Date(dateStr).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
 }
 
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
+function formatDate(dateStr: string, lang: string = "ru") {
+  const locale = lang.startsWith("en") ? "en-US" : lang.startsWith("kk") || lang.startsWith("kz") ? "kk-KZ" : "ru-RU";
+  return new Date(dateStr).toLocaleDateString(locale, { day: "numeric", month: "short" });
+}
+
+function getSessionSummary(data: any, t: any): string {
+  if (!data || typeof data !== "object") return "";
+
+  const parts: string[] = [];
+
+  // 1. Patient Name
+  if (data.patientName) {
+    parts.push(`${t("chatbot.dataFields.patientName", "Имя")}: ${data.patientName}`);
+  }
+
+  // 2. IIN
+  if (data.collectedIin) {
+    parts.push(`${t("chatbot.dataFields.collectedIin", "ИИН")}: ${data.collectedIin}`);
+  }
+
+  // 3. Phone
+  if (data.collectedPhone) {
+    parts.push(`${t("chatbot.dataFields.collectedPhone", "Телефон")}: ${data.collectedPhone}`);
+  }
+
+  // 4. Problem
+  if (data.problemDescription) {
+    parts.push(`${t("chatbot.dataFields.problemDescription", "Проблема")}: ${data.problemDescription}`);
+  }
+
+  // 5. Doctor
+  if (data.suggestedDoctorName) {
+    parts.push(`${t("chatbot.dataFields.suggestedDoctorName", "Врач")}: ${data.suggestedDoctorName}`);
+  }
+
+  // 6. Branch
+  if (data.selectedBranch) {
+    parts.push(`${t("chatbot.dataFields.selectedBranch", "Филиал")}: ${data.selectedBranch}`);
+  }
+
+  // 7. Preferred Datetime
+  if (data.preferredDatetime) {
+    parts.push(`${t("chatbot.dataFields.preferredDatetime", "Время")}: ${data.preferredDatetime}`);
+  }
+
+  // 8. Urgency
+  if (data.urgency) {
+    parts.push(`${t("chatbot.dataFields.urgency", "Срочность")}: ${data.urgency}`);
+  }
+
+  // 9. Service Type
+  if (data.serviceType) {
+    parts.push(`${t("chatbot.dataFields.serviceType", "Тип услуги")}: ${data.serviceType}`);
+  }
+
+  // 10. Inactivity reminder
+  if (data.inactivityReminderSent) {
+    parts.push(t("chatbot.dataFields.inactivityReminderSent", "Напоминание о неактивности отправлено"));
+  }
+
+  // 11. Reschedule
+  if (data.isReschedule) {
+    parts.push(t("chatbot.dataFields.isReschedule", "Перенос записи"));
+  }
+
+  // 12. Ad click ID
+  if (data.clickId) {
+    parts.push(`${t("chatbot.dataFields.clickId", "Переход с рекламы")}: ${data.clickId}`);
+  }
+
+  // 13. Patient Type
+  if (data.patientType) {
+    parts.push(`${t("chatbot.dataFields.patientType", "Тип пациента")}: ${data.patientType}`);
+  }
+
+  // 14. AI Confidence
+  if (data.aiConfidence) {
+    parts.push(`${t("chatbot.dataFields.aiConfidence", "Уверенность ИИ")}: ${data.aiConfidence}`);
+  }
+
+  return parts.join(" · ");
 }
 
 // ─── Session conversation view ────────────────────────────────────────────────
@@ -89,6 +187,8 @@ function formatDate(dateStr: string) {
 function SessionChat({ phone, onBack }: { phone: string; onBack: () => void }) {
   const { data, isLoading, refetch } = useGetChatbotSessionMessages(phone);
   const messages = data?.data?.messages ?? [];
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language || "ru";
   let lastDate = "";
 
   return (
@@ -105,7 +205,9 @@ function SessionChat({ phone, onBack }: { phone: string; onBack: () => void }) {
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-foreground truncate">{phone}</p>
-          <p className="text-xs text-muted-foreground">Чат-бот · {messages.length} сообщений</p>
+          <p className="text-xs text-muted-foreground">
+            {t("chatbot.title", "AI-чатбот")} · {t("chatbot.messagesCount", "{{count}} сообщений").replace("{{count}}", String(messages.length))}
+          </p>
         </div>
         <button
           onClick={() => refetch()}
@@ -117,15 +219,15 @@ function SessionChat({ phone, onBack }: { phone: string; onBack: () => void }) {
 
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1 bg-muted/20">
         {isLoading ? (
-          <div className="flex items-center justify-center h-full text-sm text-muted-foreground">Загрузка...</div>
+          <div className="flex items-center justify-center h-full text-sm text-muted-foreground">{t("chatbot.loading", "Загрузка...")}</div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-2">
             <MessageSquare className="h-8 w-8 text-muted-foreground/30" />
-            <p className="text-sm text-muted-foreground">Сообщений пока нет</p>
+            <p className="text-sm text-muted-foreground">{t("chatbot.noMessages", "Сообщений пока нет")}</p>
           </div>
         ) : (
           messages.map((msg) => {
-            const msgDate = formatDate(msg.createdAt);
+            const msgDate = formatDate(msg.createdAt, lang);
             const showDateSep = msgDate !== lastDate;
             lastDate = msgDate;
             const isBot = msg.direction === "outbound";
@@ -150,7 +252,7 @@ function SessionChat({ phone, onBack }: { phone: string; onBack: () => void }) {
                       {msg.content}
                     </div>
                     <p className={`text-[10px] text-muted-foreground mt-0.5 ${isBot ? "text-left pl-1" : "text-right pr-1"}`}>
-                      {isBot ? "🤖 Бот" : "👤 Клиент"} · {formatTime(msg.createdAt)}
+                      {isBot ? t("chatbot.botLabel", "🤖 Бот") : t("chatbot.clientLabel", "👤 Клиент")} · {formatTime(msg.createdAt, lang)}
                     </p>
                   </div>
                 </div>
@@ -438,7 +540,7 @@ function AiBroadcastTab() {
             <tbody className="divide-y divide-border/30">
               {(runs as DentalBroadcastRun[]).map((run) => (
                 <tr key={run.id} className="hover:bg-muted/20">
-                  <td className="px-4 py-2.5 text-foreground">{formatDate(run.startedAt)}</td>
+                  <td className="px-4 py-2.5 text-foreground">{formatDate(run.startedAt, lang)}</td>
                   <td className="px-4 py-2.5">
                     <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full border ${STATUS_COLOR[run.status]}`}>
                       {run.status === "running" && <Loader2 className="h-2.5 w-2.5 animate-spin" />}
@@ -496,7 +598,8 @@ function AiBroadcastTab() {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function ChatbotPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language || "ru";
   const [tab, setTab] = useState<"sessions" | "settings" | "manager-style" | "ai-broadcast">("sessions");
   const [combinedOpen, setCombinedOpen] = useState(false);
   const [mindMapSaveStatus, setMindMapSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
@@ -652,9 +755,9 @@ export default function ChatbotPage() {
                       <p className="text-sm font-medium text-foreground truncate">{session.phone}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <span className={cn("inline-flex text-[10px] font-medium px-1.5 py-0.5 rounded-full border", STATE_COLORS[session.state] ?? "bg-muted text-muted-foreground border-border")}>
-                          {STATE_LABELS[session.state] ?? session.state}
+                          {t(`chatbot.states.${session.state}`, STATE_LABELS[session.state] ?? session.state)}
                         </span>
-                        <span className="text-[10px] text-muted-foreground">{formatRelative(session.updatedAt)}</span>
+                        <span className="text-[10px] text-muted-foreground">{formatRelative(session.updatedAt, lang)}</span>
                         {session.humanTakeover && (
                           <span className="inline-flex text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-100">
                             {t("chatbot.operatorMode")}
@@ -663,14 +766,7 @@ export default function ChatbotPage() {
                       </div>
                       {session.data && (
                         <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
-                          {typeof session.data === "object" &&
-                            Object.entries(session.data as Record<string, string>)
-                              .filter(([k, v]) => v && k !== "refCode" && k !== "channelId" && k !== "confusedCount")
-                              .map(([k, v]) => {
-                                const labels: Record<string, string> = { patientName: "Имя", problemDescription: "Проблема", suggestedDoctorName: "Врач" };
-                                return `${labels[k] ?? k}: ${v}`;
-                              })
-                              .join(" · ")}
+                          {getSessionSummary(session.data, t)}
                         </p>
                       )}
                     </div>

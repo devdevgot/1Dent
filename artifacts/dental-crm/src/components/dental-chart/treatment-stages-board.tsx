@@ -274,6 +274,7 @@ interface ItemActions {
   onEditCancel: () => void;
   onEditDraftChange: (field: "title" | "price", value: string) => void;
   savingEditId: string | null;
+  onOpenModal: (itemId: string) => void;
 }
 
 // ── PlanItemCard ──────────────────────────────────────────────────────────────
@@ -357,8 +358,10 @@ function PlanItemCard({
 
   return (
     <div
+      onClick={() => { if (!actions.isEditMode) actions.onOpenModal(item.id); }}
       className={cn(
         "rounded-lg border transition-all duration-200",
+        !actions.isEditMode && "cursor-pointer hover:bg-slate-50/50",
         isDone
           ? "border-emerald-100 bg-emerald-50/40"
           : isRunning
@@ -466,7 +469,7 @@ function PlanItemCard({
               <>
                 {/* Start */}
                 <button
-                  onClick={() => actions.onStart(item.id)}
+                  onClick={(e) => { e.stopPropagation(); actions.onOpenModal(item.id); }}
                   disabled={isBusy}
                   className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-md bg-blue-500 text-white hover:bg-blue-600 active:bg-blue-700 transition-colors disabled:opacity-50"
                 >
@@ -1978,6 +1981,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
     onEditCancel: handleEditCancel,
     onEditDraftChange: handleEditDraftChange,
     savingEditId,
+    onOpenModal: setModalItemId,
   };
 
   // ── Stage filtering + DnD ─────────────────────────────────────────────────

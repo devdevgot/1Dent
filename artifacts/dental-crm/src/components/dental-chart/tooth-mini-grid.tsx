@@ -38,7 +38,7 @@ function ToothButton({
       onClick={() => onToggle(fdi)}
       className={cn(
         "relative flex items-center justify-center rounded text-[9px] font-bold transition-all select-none",
-        "w-[26px] h-[26px] border-2",
+        "flex-1 aspect-square max-w-[26px] min-w-0 border-2",
         selected
           ? "border-primary ring-2 ring-primary/40 scale-110 z-10"
           : "border-transparent hover:border-slate-300",
@@ -62,10 +62,10 @@ export function ToothMiniGrid({ teeth, selectedFdis, onToggle }: ToothMiniGridPr
   const toothMap = new Map(teeth.map((t) => [t.toothFdi, t]));
 
   return (
-    <div className="select-none">
-      <div className="flex items-center gap-1 mb-1">
+    <div className="select-none w-full">
+      <div className="flex items-center gap-1 mb-1 w-full justify-between">
         <span className="text-[9px] font-semibold text-muted-foreground w-6 text-right shrink-0">Q1</span>
-        <div className="flex gap-0.5">
+        <div className="flex flex-1 min-w-0 gap-0.5 justify-end">
           {UPPER_LEFT.map((fdi) => (
             <ToothButton
               key={fdi}
@@ -76,8 +76,8 @@ export function ToothMiniGrid({ teeth, selectedFdis, onToggle }: ToothMiniGridPr
             />
           ))}
         </div>
-        <div className="w-px h-5 bg-slate-200 mx-0.5" />
-        <div className="flex gap-0.5">
+        <div className="w-px h-5 bg-slate-200 shrink-0 mx-0.5" />
+        <div className="flex flex-1 min-w-0 gap-0.5 justify-start">
           {UPPER_RIGHT.map((fdi) => (
             <ToothButton
               key={fdi}
@@ -91,9 +91,9 @@ export function ToothMiniGrid({ teeth, selectedFdis, onToggle }: ToothMiniGridPr
         <span className="text-[9px] font-semibold text-muted-foreground w-6 shrink-0">Q2</span>
       </div>
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 w-full justify-between">
         <span className="text-[9px] font-semibold text-muted-foreground w-6 text-right shrink-0">Q4</span>
-        <div className="flex gap-0.5">
+        <div className="flex flex-1 min-w-0 gap-0.5 justify-end">
           {LOWER_LEFT.map((fdi) => (
             <ToothButton
               key={fdi}
@@ -104,8 +104,8 @@ export function ToothMiniGrid({ teeth, selectedFdis, onToggle }: ToothMiniGridPr
             />
           ))}
         </div>
-        <div className="w-px h-5 bg-slate-200 mx-0.5" />
-        <div className="flex gap-0.5">
+        <div className="w-px h-5 bg-slate-200 shrink-0 mx-0.5" />
+        <div className="flex flex-1 min-w-0 gap-0.5 justify-start">
           {LOWER_ROW.slice(8).map((fdi) => (
             <ToothButton
               key={fdi}

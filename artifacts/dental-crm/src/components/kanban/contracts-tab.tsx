@@ -251,7 +251,7 @@ export function ContractsTab({ patientId, bundle }: ContractsTabProps) {
   const sendMutation = useSendContract();
 
   const allContracts = contractsData?.data?.contracts ?? [];
-  const contracts = allContracts.filter((c: PatientContract) => c.status !== "created");
+  const contracts = allContracts.filter((c: PatientContract) => c.status !== "created" && !c.bundleToken);
   const templates = templatesData?.data?.templates ?? [];
 
   const historyItems = groupContracts(contracts);

@@ -306,7 +306,7 @@ function Router() {
 
       {/* Contract templates management */}
       <Route path="/contract-templates">
-        <ProtectedRoute component={ContractTemplatesPage} allowedRoles={['owner', 'admin']} />
+        <ProtectedRoute component={ContractTemplatesPage} allowedRoles={['owner', 'admin', 'doctor']} />
       </Route>
 
       {/* Branches & geo-zones — owner only */}

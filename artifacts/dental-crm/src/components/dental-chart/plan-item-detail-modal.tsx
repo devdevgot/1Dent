@@ -3,7 +3,7 @@ import {
   X, Brain, FileText, Paperclip, Play, Square, CheckCircle2,
   Ban, Loader2, Clock, Upload, Trash2, Image, File,
   UserRound, ChevronDown, Stethoscope, RefreshCw, StickyNote,
-  Camera, FlipHorizontal, CircleDot,
+  Camera, FlipHorizontal, CircleDot, Send, Lock, FileSignature, Check
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -11,6 +11,11 @@ import {
   useUpdateTreatmentPlanItem,
   getGetActiveTreatmentPlanQueryKey,
   getListTeethQueryKey,
+  useListPatientContracts,
+  useSendExtractionBundle,
+  useGetPatient,
+  useUpdatePatient,
+  getGetPatientQueryKey,
 } from "@workspace/api-client-react";
 import type { TreatmentPlanItem } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -217,12 +222,40 @@ export function PlanItemDetailModal({
   const { toast } = useToast();
   const [tab, setTab] = useState<"info" | "ai" | "files">("info");
   const [notes, setNotes] = useState(item.notes ?? "");
+  const [previewPath, setPreviewPath] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
+  const handleFullscreenToggle = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen().catch(() => {});
+      setIsFullscreen(false);
+    }
+  }, []);
+
   const [notesDirty, setNotesDirty] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [attachments, setAttachments] = useState<string[]>(item.attachments ?? []);
+  
+  // Fetch patient details to get their assigned doctor
+  const { data: patientRes } = useGetPatient(patientId);
+  const patient = patientRes?.data?.patient;
+  const patientDoctorId = patient?.doctorId ?? "";
+
   const [selectedDoctor, setSelectedDoctor] = useState<string>(item.assignedDoctorId ?? "");
   const [showDoctorPicker, setShowDoctorPicker] = useState(false);
+  const [doctorToTransfer, setDoctorToTransfer] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
   const [cameraFacing, setCameraFacing] = useState<"environment" | "user">("environment");
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -230,6 +263,13 @@ export function PlanItemDetailModal({
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  // Default to patient's assigned doctor if not set on the plan item
+  useEffect(() => {
+    if (!selectedDoctor && patientDoctorId) {
+      setSelectedDoctor(patientDoctorId);
+    }
+  }, [patientDoctorId, selectedDoctor]);
 
   const isPending = item.status === "pending";
   const isCompleted = item.status === "completed";
@@ -254,6 +294,69 @@ export function PlanItemDetailModal({
     },
   });
 
+  const updatePatientMutation = useUpdatePatient({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getGetPatientQueryKey(patientId) });
+        qc.invalidateQueries({ queryKey: ["listPatients"] });
+        qc.invalidateQueries({ queryKey: getGetActiveTreatmentPlanQueryKey(patientId) });
+      },
+    },
+  });
+
+  const sendBundleMutation = useSendExtractionBundle();
+  const { data: contractsData, refetch: refetchContracts, isFetching: isFetchingContracts } = useListPatientContracts(
+    patientId,
+    {
+      query: {
+        refetchInterval: (query: any) => {
+          const data = query?.state?.data;
+          const list = data?.data?.contracts ?? [];
+          const sub = item.bundleToken ? list.filter((c: any) => c.bundleToken === item.bundleToken) : [];
+          const isAllSigned = !!item.bundleToken && sub.length > 0 && sub.every((c: any) => c.status === "signed");
+          return item.bundleToken && !isAllSigned ? 5000 : false;
+        }
+      } as any
+    }
+  );
+
+  const bundleToken = item.bundleToken;
+  const bundleContracts = contractsData?.data?.contracts.filter(c => c.bundleToken === bundleToken) ?? [];
+  const hasBundle = !!bundleToken;
+  const allSigned = hasBundle && bundleContracts.length > 0 && bundleContracts.every(c => c.status === "signed");
+
+  const [sendingBundle, setSendingBundle] = useState(false);
+  const handleSendBundle = async () => {
+    setSendingBundle(true);
+    try {
+      const res = await sendBundleMutation.mutateAsync({
+        patientId,
+        serviceNames: [item.title],
+      });
+      if (res.success && res.data?.bundleToken) {
+        // Save the bundle token to the treatment plan item
+        await updateMutation.mutateAsync({
+          id: patientId,
+          planId,
+          itemId: item.id,
+          data: { bundleToken: res.data.bundleToken },
+        });
+        toast({ title: "Пакет документов отправлен пациенту на WhatsApp" });
+        void refetchContracts();
+      } else {
+        throw new Error("Не удалось получить токен пакета");
+      }
+    } catch (err) {
+      toast({
+        title: "Ошибка отправки",
+        description: err instanceof Error ? err.message : "Неизвестная ошибка",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingBundle(false);
+    }
+  };
+
   const handleSaveNotes = useCallback(async () => {
     if (!notesDirty) return;
     setSavingNotes(true);
@@ -263,15 +366,54 @@ export function PlanItemDetailModal({
     toast({ title: "Заметка сохранена" });
   }, [notes, notesDirty, patientId, planId, item.id, updateMutation, toast]);
 
-  const handleAssignDoctor = useCallback(async (doctorId: string) => {
+  const performDoctorAssignment = useCallback(async (doctorId: string) => {
     setSelectedDoctor(doctorId);
-    setShowDoctorPicker(false);
-    await updateMutation.mutateAsync({
-      id: patientId, planId, itemId: item.id,
-      data: { assignedDoctorId: doctorId || null },
-    });
-    toast({ title: doctorId ? "Врач назначен" : "Врач снят" });
+    try {
+      await updateMutation.mutateAsync({
+        id: patientId, planId, itemId: item.id,
+        data: { assignedDoctorId: doctorId || null },
+      });
+      toast({ title: doctorId ? "Врач назначен" : "Врач снят" });
+    } catch {
+      // handled by mutation
+    }
   }, [patientId, planId, item.id, updateMutation, toast]);
+
+  const handleAssignDoctor = useCallback((doctorId: string) => {
+    setShowDoctorPicker(false);
+    if (doctorId && doctorId !== selectedDoctor) {
+      setDoctorToTransfer(doctorId);
+    } else {
+      void performDoctorAssignment(doctorId);
+    }
+  }, [selectedDoctor, performDoctorAssignment]);
+
+  const handleConfirmTransfer = async () => {
+    if (!doctorToTransfer) return;
+    const targetDoctorId = doctorToTransfer;
+    setDoctorToTransfer(null);
+    setSelectedDoctor(targetDoctorId);
+
+    try {
+      // 1. Update treatment plan item doctor
+      await updateMutation.mutateAsync({
+        id: patientId,
+        planId,
+        itemId: item.id,
+        data: { assignedDoctorId: targetDoctorId || null },
+      });
+
+      // 2. Update patient doctor record
+      await updatePatientMutation.mutateAsync({
+        id: patientId,
+        data: { doctorId: targetDoctorId || undefined },
+      });
+
+      toast({ title: "Врач успешно изменен и лечение передано" });
+    } catch (err) {
+      console.error("Failed to transfer doctor", err);
+    }
+  };
 
   const handleFileSelect = useCallback(async (file: File) => {
     setUploadingFile(true);
@@ -415,6 +557,8 @@ export function PlanItemDetailModal({
   };
 
   const isImage = (path: string) => /\.(jpe?g|png|gif|webp|heic)$/i.test(path);
+  const isVideo = (path: string) => /\.(mp4|webm|mov|ogg|mkv)$/i.test(path);
+  const isPdf = (path: string) => /\.pdf$/i.test(path);
   const fileName = (path: string) => path.split("/").pop() ?? path;
 
   return (
@@ -499,56 +643,177 @@ export function PlanItemDetailModal({
           {/* ── Tab: Процедура ── */}
           {tab === "info" && (
             <div className="px-4 py-4 space-y-4">
-
-              {/* Timer section */}
+              {/* Timer & Documents section */}
               {isPending && !isAdmin && (
-                <div className="bg-gradient-to-br from-primary/5 to-blue-50 rounded-2xl p-4 border border-primary/10">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Clock className="w-4 h-4 text-primary" />
-                    <span className="text-[13px] font-semibold text-gray-800">Таймер</span>
-                  </div>
-
-                  {isTimerRunning ? (
-                    <div className="space-y-3">
-                      <div className="text-center">
-                        <div className="text-[32px] font-bold text-primary tabular-nums">
-                          {remaining != null ? formatTimer(remaining) : formatTimer(elapsed)}
+                <div className="space-y-3">
+                  {/* Documents step */}
+                  {!isTimerRunning && (
+                    <>
+                      {!hasBundle ? (
+                        <div className="bg-amber-50/70 border border-amber-200/60 rounded-2xl p-4 space-y-3">
+                          <div className="flex items-start gap-3">
+                            <div className="w-8 h-8 rounded-xl bg-amber-100/80 flex items-center justify-center shrink-0">
+                              <FileSignature className="w-4 h-4 text-amber-600" />
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="text-[13px] font-bold text-amber-950">Необходима подпись документов</h4>
+                              <p className="text-[11.5px] text-amber-850 leading-relaxed mt-0.5">
+                                Перед началом лечения пациенту необходимо подписать пакет документов в электронном виде. Отправьте ссылку на подпись в WhatsApp.
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={handleSendBundle}
+                            disabled={sendingBundle}
+                            className="w-full h-11 rounded-xl bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white text-[12px] font-bold flex items-center justify-center gap-2 transition-all shadow-sm"
+                          >
+                            {sendingBundle ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Send className="w-3.5 h-3.5" />
+                            )}
+                            Отправить пакет документов на WhatsApp
+                          </button>
                         </div>
-                        <p className="text-[11px] text-gray-400 mt-0.5">
-                          {remaining != null ? "осталось" : "прошло"}
-                        </p>
-                      </div>
-                      {duration && (
-                        <div className="h-1.5 bg-white/80 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-primary rounded-full transition-all"
-                            style={{ width: `${Math.min(100, ((elapsed) / duration) * 100)}%` }}
-                          />
+                      ) : !allSigned ? (
+                        <div className="bg-blue-50/70 border border-blue-200/60 rounded-2xl p-4 space-y-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-start gap-3">
+                              <div className="w-8 h-8 rounded-xl bg-blue-100/80 flex items-center justify-center shrink-0">
+                                <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                              </div>
+                              <div className="flex-1">
+                                <h4 className="text-[13px] font-bold text-blue-950">Ожидание подписи пациента</h4>
+                                <p className="text-[11.5px] text-blue-800/80 leading-relaxed mt-0.5">
+                                  Ссылка отправлена в WhatsApp. Вы сможете начать лечение после того, как пациент подпишет все документы.
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => void refetchContracts()}
+                              disabled={isFetchingContracts}
+                              className="p-1.5 rounded-lg hover:bg-blue-100/80 text-blue-600 transition-colors shrink-0"
+                              title="Обновить статус"
+                            >
+                              <RefreshCw className={cn("w-3.5 h-3.5", isFetchingContracts && "animate-spin")} />
+                            </button>
+                          </div>
+
+                          {/* Documents list */}
+                          <div className="bg-white/80 border border-blue-100/50 rounded-xl p-3 space-y-2">
+                            {bundleContracts.length === 0 ? (
+                              <div className="flex items-center gap-2 text-[11px] text-gray-400">
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                Загрузка списка документов...
+                              </div>
+                            ) : (
+                              bundleContracts.map((c) => (
+                                <div key={c.id} className="flex items-center justify-between text-[11px] gap-2">
+                                  <span className="text-gray-700 font-medium truncate flex-1">{c.templateName}</span>
+                                  <span className={cn(
+                                    "px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0",
+                                    c.status === "signed" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-orange-50 text-orange-600 border border-orange-100"
+                                  )}>
+                                    {c.status === "signed" ? "Подписан" : "Ожидает"}
+                                  </span>
+                                </div>
+                              ))
+                            )}
+                          </div>
+
+                          <div className="flex gap-2">
+                            <button
+                              onClick={handleSendBundle}
+                              disabled={sendingBundle}
+                              className="flex-1 h-9 rounded-xl border border-blue-200 bg-white hover:bg-blue-50 text-blue-700 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+                            >
+                              {sendingBundle ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Send className="w-3 h-3" />
+                              )}
+                              Переотправить в WhatsApp
+                            </button>
+                            <a
+                              href={`${window.location.origin}/p/bundle/${bundleToken}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="h-9 px-3 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 text-[11px] font-medium flex items-center justify-center gap-1 transition-colors"
+                            >
+                              Открыть пакет
+                            </a>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="bg-emerald-50/70 border border-emerald-200/60 rounded-2xl p-4 space-y-2">
+                          <div className="flex items-start gap-3">
+                            <div className="w-8 h-8 rounded-xl bg-emerald-100/80 flex items-center justify-center shrink-0">
+                              <Check className="w-4 h-4 text-emerald-600" />
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="text-[13px] font-bold text-emerald-950">Документы подписаны</h4>
+                              <p className="text-[11.5px] text-emerald-800/80 leading-relaxed mt-0.5">
+                                Пациент подписал все необходимые согласия. Доступ к запуску лечения разблокирован.
+                              </p>
+                            </div>
+                          </div>
                         </div>
                       )}
-                      <button
-                        onClick={() => { onStopTimer(item.id); handleComplete(); }}
-                        disabled={isCompletingThis}
-                        className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-[13px] font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
-                      >
-                        {isCompletingThis ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                        Отметить выполнение
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => onStart(item.id, null)}
-                      className="w-full h-11 rounded-xl bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 active:bg-primary/80 flex items-center justify-center gap-2 transition-colors shadow-sm"
-                    >
-                      <Play className="w-4 h-4" />
-                      {/удал/i.test(item.title) ? "Начать удаление" : "Начать лечение"}
-                    </button>
+                    </>
                   )}
+
+                  {/* Timer UI Card */}
+                  <div className="bg-gradient-to-br from-primary/5 to-blue-50 rounded-2xl p-4 border border-primary/10">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Clock className="w-4 h-4 text-primary" />
+                      <span className="text-[13px] font-semibold text-gray-800">Таймер лечения</span>
+                    </div>
+
+                    {isTimerRunning ? (
+                      <div className="space-y-3">
+                        <div className="text-center">
+                          <div className="text-[32px] font-bold text-primary tabular-nums">
+                            {remaining != null ? formatTimer(remaining) : formatTimer(elapsed)}
+                          </div>
+                          <p className="text-[11px] text-gray-400 mt-0.5">
+                            {remaining != null ? "осталось" : "прошло"}
+                          </p>
+                        </div>
+                        {duration && (
+                          <div className="h-1.5 bg-white/80 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-primary rounded-full transition-all"
+                              style={{ width: `${Math.min(100, ((elapsed) / duration) * 100)}%` }}
+                            />
+                          </div>
+                        )}
+                        <button
+                          onClick={() => { onStopTimer(item.id); handleComplete(); }}
+                          disabled={isCompletingThis}
+                          className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-[13px] font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                        >
+                          {isCompletingThis ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                          Отметить выполнение
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => onStart(item.id, null)}
+                        disabled={!allSigned}
+                        className={cn(
+                          "w-full h-11 rounded-xl text-[13px] font-semibold flex items-center justify-center gap-2 transition-all shadow-sm",
+                          allSigned
+                            ? "bg-primary text-white hover:bg-primary/90 active:bg-primary/80"
+                            : "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
+                        )}
+                      >
+                        {allSigned ? <Play className="w-4 h-4" /> : <Lock className="w-3.5 h-3.5" />}
+                        {/удал/i.test(item.title) ? "Начать удаление" : "Начать лечение"}
+                      </button>
+                    )}
+                  </div>
                 </div>
-              )}
-
-
-              {/* Doctor assignment */}
+              )}              {/* Doctor assignment */}
               <div>
                 <p className="text-[12px] font-semibold text-gray-500 uppercase tracking-wide mb-2">Врач</p>
                 <div className="relative">
@@ -747,7 +1012,7 @@ export function PlanItemDetailModal({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*,.pdf,.docx,.doc"
+                accept="image/*,video/*,.pdf,.docx,.doc"
                 className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
@@ -766,31 +1031,44 @@ export function PlanItemDetailModal({
                 <div className="space-y-2">
                   {attachments.map((path) => (
                     <div key={path} className="flex items-center gap-3 p-3 bg-white border border-gray-100 rounded-xl shadow-sm">
-                      {isImage(path) ? (
-                        <a href={fileUrl(path)} target="_blank" rel="noreferrer" className="shrink-0">
-                          <img
-                            src={fileUrl(path)}
-                            alt={fileName(path)}
-                            className="w-10 h-10 rounded-lg object-cover border border-gray-100"
-                          />
-                        </a>
+                      {isImage(path) || isVideo(path) ? (
+                        <button
+                          type="button"
+                          onClick={() => setPreviewPath(path)}
+                          className="shrink-0 group/img focus:outline-none"
+                        >
+                          {isImage(path) ? (
+                            <img
+                              src={fileUrl(path)}
+                              alt={fileName(path)}
+                              className="w-10 h-10 rounded-lg object-cover border border-gray-100 group-hover/img:opacity-85 transition-opacity"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-lg bg-slate-900 flex items-center justify-center shrink-0 border border-gray-100 relative group-hover/img:opacity-85 transition-opacity">
+                              <Play className="w-4 h-4 text-white fill-white absolute" />
+                            </div>
+                          )}
+                        </button>
                       ) : (
-                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setPreviewPath(path)}
+                          className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 hover:bg-primary/20 transition-colors focus:outline-none"
+                        >
                           <File className="w-5 h-5 text-primary" />
-                        </div>
+                        </button>
                       )}
                       <div className="flex-1 min-w-0">
-                        <a
-                          href={fileUrl(path)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-[12px] font-medium text-gray-700 truncate block hover:text-primary transition-colors"
+                        <button
+                          type="button"
+                          onClick={() => setPreviewPath(path)}
+                          className="text-[12px] font-medium text-gray-700 truncate block hover:text-primary transition-colors text-left w-full focus:outline-none"
                         >
                           {fileName(path)}
-                        </a>
-                        {isImage(path) && (
-                          <span className="text-[10px] text-gray-400">Изображение</span>
-                        )}
+                        </button>
+                        <span className="text-[10px] text-gray-400 block">
+                          {isImage(path) ? "Изображение" : isVideo(path) ? "Видео" : isPdf(path) ? "Документ PDF" : "Файл"}
+                        </span>
                       </div>
                       {!isAdmin && (
                         <button
@@ -808,6 +1086,147 @@ export function PlanItemDetailModal({
           )}
         </div>
       </div>
+
+      {/* ── File Preview Modal ── */}
+      {previewPath && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md animate-in fade-in duration-200">
+          {/* Close button */}
+          <button
+            onClick={() => {
+              setPreviewPath(null);
+              if (document.fullscreenElement) {
+                document.exitFullscreen().catch(() => {});
+              }
+              setIsFullscreen(false);
+            }}
+            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white z-50 transition-colors"
+            title="Закрыть"
+          >
+            <X className="w-6 h-6" />
+          </button>
+
+          {/* Fullscreen toggle button */}
+          {(isImage(previewPath) || isVideo(previewPath)) && (
+            <button
+              onClick={handleFullscreenToggle}
+              className="absolute top-4 right-16 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white z-50 transition-colors"
+              title={isFullscreen ? "Свернуть" : "На весь экран"}
+            >
+              {isFullscreen ? (
+                <X className="w-5 h-5" />
+              ) : (
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+                </svg>
+              )}
+            </button>
+          )}
+
+          {/* Content container */}
+          <div
+            className={cn(
+              "flex flex-col items-center justify-center p-4 transition-all duration-300",
+              isFullscreen ? "w-screen h-screen" : "max-w-4xl max-h-[85vh] w-full"
+            )}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {isImage(previewPath) ? (
+              <img
+                src={fileUrl(previewPath)}
+                alt={fileName(previewPath)}
+                className={cn(
+                  "object-contain select-none rounded-lg shadow-2xl transition-all",
+                  isFullscreen ? "w-full h-full max-h-screen rounded-none" : "max-w-full max-h-[75vh]"
+                )}
+              />
+            ) : isVideo(previewPath) ? (
+              <video
+                src={fileUrl(previewPath)}
+                controls
+                autoPlay
+                className={cn(
+                  "object-contain rounded-lg shadow-2xl transition-all",
+                  isFullscreen ? "w-full h-full max-h-screen rounded-none" : "max-w-full max-h-[75vh]"
+                )}
+              />
+            ) : isPdf(previewPath) ? (
+              <div className="w-full h-[75vh] flex flex-col bg-white rounded-2xl overflow-hidden shadow-2xl">
+                <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-gray-700 truncate">{fileName(previewPath)}</span>
+                  <a
+                    href={fileUrl(previewPath)}
+                    download
+                    className="text-xs font-semibold text-primary hover:underline"
+                  >
+                    Скачать
+                  </a>
+                </div>
+                <iframe
+                  src={`${fileUrl(previewPath)}#toolbar=0`}
+                  className="w-full flex-1 border-0"
+                />
+              </div>
+            ) : (
+              <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center space-y-4 shadow-2xl animate-in zoom-in-95 duration-200">
+                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+                  <File className="w-8 h-8 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900 truncate px-2">{fileName(previewPath)}</h3>
+                  <p className="text-xs text-gray-400 mt-1">Данный формат не поддерживается для предпросмотра</p>
+                </div>
+                <a
+                  href={fileUrl(previewPath)}
+                  download
+                  className="inline-flex items-center justify-center px-6 py-2.5 rounded-xl bg-primary text-white text-xs font-semibold hover:bg-primary/95 shadow-sm transition-colors w-full"
+                >
+                  Скачать файл
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {doctorToTransfer && (() => {
+        const targetDoctor = allUsers.find((u) => u.id === doctorToTransfer);
+        return (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+            <div className="bg-white w-full max-w-[340px] rounded-2xl p-5 shadow-2xl border border-slate-100 flex flex-col text-center space-y-4 animate-in zoom-in-95 duration-150">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto text-primary">
+                <UserRound className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-semibold text-gray-900 text-[16px]">Передача лечения</h3>
+                <p className="text-[13px] text-gray-500 leading-relaxed">
+                  Вы точно хотите передать это лечение врачу{" "}
+                  <span className="font-semibold text-gray-800">{targetDoctor?.name}</span>? 
+                  Имя нового врача обновится на канбан-доске и во всех списках.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setDoctorToTransfer(null)}
+                  className="flex-1 py-2 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-gray-600 hover:bg-slate-50 transition-colors"
+                >
+                  Нет
+                </button>
+                <button
+                  onClick={handleConfirmTransfer}
+                  disabled={updatePatientMutation.isPending || updateMutation.isPending}
+                  className="flex-1 py-2 rounded-xl bg-primary text-sm font-semibold text-white hover:bg-primary/95 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  {(updatePatientMutation.isPending || updateMutation.isPending) ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    "Да"
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

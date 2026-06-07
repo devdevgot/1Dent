@@ -4237,6 +4237,9 @@ components:
         stage:
           type: string
           nullable: true
+        bundleToken:
+          type: string
+          nullable: true
         discount:
           type: integer
           default: 0
@@ -4451,6 +4454,22 @@ components:
         stage:
           type: string
           nullable: true
+        bundleToken:
+          type: string
+          nullable: true
         discount:
           type: integer
           minimum: 0
+        notes:
+          type: string
+          nullable: true
+        attachments:
+          type: array
+          items:
+            type: string
+        assignedDoctorId:
+          type: string
+          nullable: true
+        procedureId:
+          type: string
+          nullable: true

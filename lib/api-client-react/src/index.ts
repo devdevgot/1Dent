@@ -12,8 +12,16 @@ export type { AuthTokenGetter, UnauthorizedHandler } from "./custom-fetch";
 // ─── Custom hooks (manually maintained) ───────────────────────────────────────
 import { customFetch } from "./custom-fetch";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import type { UseMutationOptions, UseQueryOptions } from "@tanstack/react-query";
-import type { MySalaryResponse, UpdateUserStatusRequest, UsersListResponse, Patient } from "./generated/api.schemas";
+import type {
+  UseMutationOptions,
+  UseQueryOptions,
+} from "@tanstack/react-query";
+import type {
+  MySalaryResponse,
+  UpdateUserStatusRequest,
+  UsersListResponse,
+  Patient,
+} from "./generated/api.schemas";
 
 export interface UpdateProfileRequest {
   name?: string;
@@ -116,12 +124,17 @@ export interface ManagerExampleResponse {
   data: { example: ChatbotManagerExample };
 }
 
-export const listManagerExamples = (options?: RequestInit): Promise<ListManagerExamplesResponse> =>
-  customFetch<ListManagerExamplesResponse>("/api/chatbot/manager-examples", { method: "GET", ...options });
+export const listManagerExamples = (
+  options?: RequestInit,
+): Promise<ListManagerExamplesResponse> =>
+  customFetch<ListManagerExamplesResponse>("/api/chatbot/manager-examples", {
+    method: "GET",
+    ...options,
+  });
 
-export const useListManagerExamples = <TError = unknown>(
-  options?: { query?: UseQueryOptions<ListManagerExamplesResponse, TError> },
-) =>
+export const useListManagerExamples = <TError = unknown>(options?: {
+  query?: UseQueryOptions<ListManagerExamplesResponse, TError>;
+}) =>
   useQuery<ListManagerExamplesResponse, TError>({
     queryKey: ["/api/chatbot/manager-examples"],
     queryFn: ({ signal }) => listManagerExamples({ signal }),
@@ -139,9 +152,17 @@ export const createManagerExample = (data: {
   });
 
 export const useCreateManagerExample = <TError = unknown>(options?: {
-  mutation?: UseMutationOptions<ManagerExampleResponse, TError, { userMessage: string; managerResponse: string }>;
+  mutation?: UseMutationOptions<
+    ManagerExampleResponse,
+    TError,
+    { userMessage: string; managerResponse: string }
+  >;
 }) =>
-  useMutation<ManagerExampleResponse, TError, { userMessage: string; managerResponse: string }>({
+  useMutation<
+    ManagerExampleResponse,
+    TError,
+    { userMessage: string; managerResponse: string }
+  >({
     mutationFn: (data) => createManagerExample(data),
     ...options?.mutation,
   });
@@ -150,16 +171,24 @@ export const updateManagerExample = (
   id: string,
   data: { userMessage?: string; managerResponse?: string },
 ): Promise<ManagerExampleResponse> =>
-  customFetch<ManagerExampleResponse>(`/api/chatbot/manager-examples/${encodeURIComponent(id)}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
+  customFetch<ManagerExampleResponse>(
+    `/api/chatbot/manager-examples/${encodeURIComponent(id)}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    },
+  );
 
-export const deleteManagerExample = (id: string): Promise<{ success: boolean }> =>
-  customFetch<{ success: boolean }>(`/api/chatbot/manager-examples/${encodeURIComponent(id)}`, {
-    method: "DELETE",
-  });
+export const deleteManagerExample = (
+  id: string,
+): Promise<{ success: boolean }> =>
+  customFetch<{ success: boolean }>(
+    `/api/chatbot/manager-examples/${encodeURIComponent(id)}`,
+    {
+      method: "DELETE",
+    },
+  );
 
 export const useDeleteManagerExample = <TError = unknown>(options?: {
   mutation?: UseMutationOptions<{ success: boolean }, TError, string>;
@@ -169,12 +198,18 @@ export const useDeleteManagerExample = <TError = unknown>(options?: {
     ...options?.mutation,
   });
 
-export const reorderManagerExample = (id: string, sortOrder: number): Promise<ManagerExampleResponse> =>
-  customFetch<ManagerExampleResponse>(`/api/chatbot/manager-examples/${encodeURIComponent(id)}/reorder`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ sortOrder }),
-  });
+export const reorderManagerExample = (
+  id: string,
+  sortOrder: number,
+): Promise<ManagerExampleResponse> =>
+  customFetch<ManagerExampleResponse>(
+    `/api/chatbot/manager-examples/${encodeURIComponent(id)}/reorder`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sortOrder }),
+    },
+  );
 
 export interface TestMessageResponse {
   success: boolean;
@@ -192,9 +227,23 @@ export const testChatbotMessage = (data: {
   });
 
 export const useTestChatbotMessage = <TError = unknown>(options?: {
-  mutation?: UseMutationOptions<TestMessageResponse, TError, { userMessage: string; history?: Array<{ role: "user" | "assistant"; content: string }> }>;
+  mutation?: UseMutationOptions<
+    TestMessageResponse,
+    TError,
+    {
+      userMessage: string;
+      history?: Array<{ role: "user" | "assistant"; content: string }>;
+    }
+  >;
 }) =>
-  useMutation<TestMessageResponse, TError, { userMessage: string; history?: Array<{ role: "user" | "assistant"; content: string }> }>({
+  useMutation<
+    TestMessageResponse,
+    TError,
+    {
+      userMessage: string;
+      history?: Array<{ role: "user" | "assistant"; content: string }>;
+    }
+  >({
     mutationFn: (data) => testChatbotMessage(data),
     ...options?.mutation,
   });
@@ -438,7 +487,11 @@ export const useApprovePayrollPeriod = <TError = unknown>(options?: {
     ApprovePeriodPayrollRequest
   >;
 }) =>
-  useMutation<ApprovePeriodPayrollResponse, TError, ApprovePeriodPayrollRequest>({
+  useMutation<
+    ApprovePeriodPayrollResponse,
+    TError,
+    ApprovePeriodPayrollRequest
+  >({
     mutationFn: (data) => approvePeriodPayroll(data),
     ...options?.mutation,
   });
@@ -519,7 +572,11 @@ export const useUpdateUserStatus = <TError = unknown>(options?: {
     { id: string; isActive: boolean }
   >;
 }) =>
-  useMutation<UpdateUserStatusResponse, TError, { id: string; isActive: boolean }>({
+  useMutation<
+    UpdateUserStatusResponse,
+    TError,
+    { id: string; isActive: boolean }
+  >({
     mutationFn: ({ id, isActive }) => updateUserStatus(id, { isActive }),
     ...options?.mutation,
   });
@@ -542,7 +599,14 @@ export const useGetMySalary = <TError = unknown>(options?: {
 
 // ─── Custom: expenses ─────────────────────────────────────────────────────────
 
-export type ExpenseCategory = "salary" | "materials" | "rent" | "utilities" | "equipment" | "marketing" | "other";
+export type ExpenseCategory =
+  | "salary"
+  | "materials"
+  | "rent"
+  | "utilities"
+  | "equipment"
+  | "marketing"
+  | "other";
 
 export interface ClinicExpense {
   id: string;
@@ -582,7 +646,13 @@ export interface CreateExpenseRequest {
 export interface UpdateExpenseRequest extends Partial<CreateExpenseRequest> {}
 
 export const listExpenses = (
-  params?: { dateFrom?: string; dateTo?: string; category?: string; periodMonth?: number; periodYear?: number },
+  params?: {
+    dateFrom?: string;
+    dateTo?: string;
+    category?: string;
+    periodMonth?: number;
+    periodYear?: number;
+  },
   options?: RequestInit,
 ): Promise<GetExpensesResponse> => {
   const qs = new URLSearchParams();
@@ -629,7 +699,13 @@ export const deleteExpense = (
   });
 
 export const useListExpenses = <TError = unknown>(
-  params?: { dateFrom?: string; dateTo?: string; category?: string; periodMonth?: number; periodYear?: number },
+  params?: {
+    dateFrom?: string;
+    dateTo?: string;
+    category?: string;
+    periodMonth?: number;
+    periodYear?: number;
+  },
   options?: { query?: UseQueryOptions<GetExpensesResponse, TError> },
 ) =>
   useQuery<GetExpensesResponse, TError>({
@@ -639,7 +715,11 @@ export const useListExpenses = <TError = unknown>(
   });
 
 export const useCreateExpense = <TError = unknown>(options?: {
-  mutation?: UseMutationOptions<GetExpenseResponse, TError, CreateExpenseRequest>;
+  mutation?: UseMutationOptions<
+    GetExpenseResponse,
+    TError,
+    CreateExpenseRequest
+  >;
 }) =>
   useMutation<GetExpenseResponse, TError, CreateExpenseRequest>({
     mutationFn: (data) => createExpense(data),
@@ -647,9 +727,17 @@ export const useCreateExpense = <TError = unknown>(options?: {
   });
 
 export const useUpdateExpense = <TError = unknown>(options?: {
-  mutation?: UseMutationOptions<GetExpenseResponse, TError, { id: string; data: UpdateExpenseRequest }>;
+  mutation?: UseMutationOptions<
+    GetExpenseResponse,
+    TError,
+    { id: string; data: UpdateExpenseRequest }
+  >;
 }) =>
-  useMutation<GetExpenseResponse, TError, { id: string; data: UpdateExpenseRequest }>({
+  useMutation<
+    GetExpenseResponse,
+    TError,
+    { id: string; data: UpdateExpenseRequest }
+  >({
     mutationFn: ({ id, data }) => updateExpense(id, data),
     ...options?.mutation,
   });
@@ -778,10 +866,13 @@ export const getDentalAiAnalysis = (
   patientId: string,
   options?: RequestInit,
 ): Promise<GetDentalAiAnalysisResponse> =>
-  customFetch<GetDentalAiAnalysisResponse>(`/api/patients/${patientId}/teeth/ai-analysis`, {
-    method: "GET",
-    ...options,
-  });
+  customFetch<GetDentalAiAnalysisResponse>(
+    `/api/patients/${patientId}/teeth/ai-analysis`,
+    {
+      method: "GET",
+      ...options,
+    },
+  );
 
 export const getDentalAiAnalysisQueryKey = (patientId: string) =>
   [`/api/patients/${patientId}/teeth/ai-analysis`] as const;
@@ -797,10 +888,15 @@ export const useGetDentalAiAnalysis = <TError = unknown>(
     ...options?.query,
   });
 
-export const triggerDentalAiAnalysis = (patientId: string): Promise<{ success: boolean }> =>
-  customFetch<{ success: boolean }>(`/api/patients/${patientId}/teeth/trigger-ai-analysis`, {
-    method: "POST",
-  });
+export const triggerDentalAiAnalysis = (
+  patientId: string,
+): Promise<{ success: boolean }> =>
+  customFetch<{ success: boolean }>(
+    `/api/patients/${patientId}/teeth/trigger-ai-analysis`,
+    {
+      method: "POST",
+    },
+  );
 
 export const useTriggerDentalAiAnalysis = <TError = unknown>(options?: {
   mutation?: UseMutationOptions<{ success: boolean }, TError, string>;
@@ -849,13 +945,17 @@ export const listDentalBroadcastRuns = (
 
 export const useListDentalBroadcastRuns = <TError = unknown>(
   limit = 20,
-  options?: { query?: UseQueryOptions<ListDentalBroadcastRunsResponse, TError> },
+  options?: {
+    query?: UseQueryOptions<ListDentalBroadcastRunsResponse, TError>;
+  },
 ) =>
   useQuery<ListDentalBroadcastRunsResponse, TError>({
     queryKey: listDentalBroadcastRunsQueryKey(limit),
     queryFn: ({ signal }) => listDentalBroadcastRuns(limit, { signal }),
     refetchInterval: (query) =>
-      query.state.data?.data?.runs?.some((r) => r.status === "running") ? 2000 : false,
+      query.state.data?.data?.runs?.some((r) => r.status === "running")
+        ? 2000
+        : false,
     ...options?.query,
   });
 
@@ -867,9 +967,9 @@ export const triggerDentalBroadcast = (
     ...options,
   });
 
-export const useTriggerDentalBroadcast = <TError = unknown>(
-  options?: { mutation?: UseMutationOptions<TriggerDentalBroadcastResponse, TError, void> },
-) =>
+export const useTriggerDentalBroadcast = <TError = unknown>(options?: {
+  mutation?: UseMutationOptions<TriggerDentalBroadcastResponse, TError, void>;
+}) =>
   useMutation<TriggerDentalBroadcastResponse, TError, void>({
     mutationFn: () => triggerDentalBroadcast(),
     ...options?.mutation,
@@ -905,9 +1005,9 @@ export const getStandardScriptBlocks = (
     ...options,
   });
 
-export const useGetStandardScriptBlocks = <TError = unknown>(
-  options?: { query?: UseQueryOptions<GetStandardScriptBlocksResponse, TError> },
-) =>
+export const useGetStandardScriptBlocks = <TError = unknown>(options?: {
+  query?: UseQueryOptions<GetStandardScriptBlocksResponse, TError>;
+}) =>
   useQuery<GetStandardScriptBlocksResponse, TError>({
     queryKey: ["/api/chatbot/script/standard"],
     queryFn: ({ signal }) => getStandardScriptBlocks({ signal }),
@@ -932,7 +1032,12 @@ export const useParseScript = <TError = unknown>(options?: {
 
 // ─── AI Migration ─────────────────────────────────────────────────────────────
 
-import type { AiAnalyzeRequest, AiAnalyzeResponse, AiConfirmRequest, MigrationJobResponse } from "./generated/api.schemas";
+import type {
+  AiAnalyzeRequest,
+  AiAnalyzeResponse,
+  AiConfirmRequest,
+  MigrationJobResponse,
+} from "./generated/api.schemas";
 
 export const analyzeFileWithAi = (
   data: AiAnalyzeRequest,
@@ -1014,7 +1119,10 @@ export interface PatientContract {
 
 export interface UploadTemplateResponse {
   success: boolean;
-  data: { template: ContractTemplate; patientFields: { field: string; label: string }[] };
+  data: {
+    template: ContractTemplate;
+    patientFields: { field: string; label: string }[];
+  };
 }
 
 export interface SendContractResponse {
@@ -1022,20 +1130,33 @@ export interface SendContractResponse {
   data: { contract: PatientContract; contractUrl: string };
 }
 
-export const listContractTemplates = (): Promise<{ success: boolean; data: { templates: ContractTemplate[] } }> =>
-  customFetch("/api/contracts/templates");
+export const listContractTemplates = (): Promise<{
+  success: boolean;
+  data: { templates: ContractTemplate[] };
+}> => customFetch("/api/contracts/templates");
 
 export const useListContractTemplates = <TError = unknown>(options?: {
-  query?: UseQueryOptions<{ success: boolean; data: { templates: ContractTemplate[] } }, TError>;
+  query?: UseQueryOptions<
+    { success: boolean; data: { templates: ContractTemplate[] } },
+    TError
+  >;
 }) =>
-  useQuery<{ success: boolean; data: { templates: ContractTemplate[] } }, TError>({
+  useQuery<
+    { success: boolean; data: { templates: ContractTemplate[] } },
+    TError
+  >({
     queryKey: ["contract-templates"],
     queryFn: listContractTemplates,
     ...options?.query,
   });
 
-export const uploadContractTemplate = (formData: FormData): Promise<UploadTemplateResponse> =>
-  customFetch("/api/contracts/templates/upload", { method: "POST", body: formData });
+export const uploadContractTemplate = (
+  formData: FormData,
+): Promise<UploadTemplateResponse> =>
+  customFetch("/api/contracts/templates/upload", {
+    method: "POST",
+    body: formData,
+  });
 
 export const useUploadContractTemplate = <TError = unknown>(options?: {
   mutation?: UseMutationOptions<UploadTemplateResponse, TError, FormData>;
@@ -1045,7 +1166,9 @@ export const useUploadContractTemplate = <TError = unknown>(options?: {
     ...options?.mutation,
   });
 
-export const deleteContractTemplate = (id: string): Promise<{ success: boolean }> =>
+export const deleteContractTemplate = (
+  id: string,
+): Promise<{ success: boolean }> =>
   customFetch(`/api/contracts/templates/${id}`, { method: "DELETE" });
 
 export const useDeleteContractTemplate = <TError = unknown>(options?: {
@@ -1056,31 +1179,53 @@ export const useDeleteContractTemplate = <TError = unknown>(options?: {
     ...options?.mutation,
   });
 
-export const listPatientContracts = (patientId: string): Promise<{ success: boolean; data: { contracts: PatientContract[] } }> =>
+export const listPatientContracts = (
+  patientId: string,
+): Promise<{ success: boolean; data: { contracts: PatientContract[] } }> =>
   customFetch(`/api/contracts/patient/${patientId}`);
 
 export const useListPatientContracts = <TError = unknown>(
   patientId: string,
-  options?: { query?: UseQueryOptions<{ success: boolean; data: { contracts: PatientContract[] } }, TError> },
+  options?: {
+    query?: UseQueryOptions<
+      { success: boolean; data: { contracts: PatientContract[] } },
+      TError
+    >;
+  },
 ) =>
-  useQuery<{ success: boolean; data: { contracts: PatientContract[] } }, TError>({
+  useQuery<
+    { success: boolean; data: { contracts: PatientContract[] } },
+    TError
+  >({
     queryKey: ["patient-contracts", patientId],
     queryFn: () => listPatientContracts(patientId),
     enabled: !!patientId,
     ...options?.query,
   });
 
-export const sendContract = (patientId: string, templateId: string): Promise<SendContractResponse> =>
+export const sendContract = (
+  patientId: string,
+  templateId: string,
+): Promise<SendContractResponse> =>
   customFetch(`/api/contracts/patient/${patientId}/send`, {
     method: "POST",
     body: JSON.stringify({ templateId }),
   });
 
 export const useSendContract = <TError = unknown>(options?: {
-  mutation?: UseMutationOptions<SendContractResponse, TError, { patientId: string; templateId: string }>;
+  mutation?: UseMutationOptions<
+    SendContractResponse,
+    TError,
+    { patientId: string; templateId: string }
+  >;
 }) =>
-  useMutation<SendContractResponse, TError, { patientId: string; templateId: string }>({
-    mutationFn: ({ patientId, templateId }) => sendContract(patientId, templateId),
+  useMutation<
+    SendContractResponse,
+    TError,
+    { patientId: string; templateId: string }
+  >({
+    mutationFn: ({ patientId, templateId }) =>
+      sendContract(patientId, templateId),
     ...options?.mutation,
   });
 
@@ -1111,6 +1256,42 @@ export const useUpdateTemplateMappings = <TError = unknown>(options?: {
     TError,
     { id: string; fieldMappings: FieldMappingItem[] }
   >({
-    mutationFn: ({ id, fieldMappings }) => updateTemplateMappings(id, fieldMappings),
+    mutationFn: ({ id, fieldMappings }) =>
+      updateTemplateMappings(id, fieldMappings),
+    ...options?.mutation,
+  });
+
+export interface SendExtractionBundleResponse {
+  success: boolean;
+  data: {
+    bundleToken: string;
+    bundleUrl: string;
+    contracts: PatientContract[];
+  };
+}
+
+export const sendExtractionBundle = (
+  patientId: string,
+  serviceNames: string[],
+): Promise<SendExtractionBundleResponse> =>
+  customFetch(`/api/contracts/patient/${patientId}/send-extraction-bundle`, {
+    method: "POST",
+    body: JSON.stringify({ serviceNames }),
+  });
+
+export const useSendExtractionBundle = <TError = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    SendExtractionBundleResponse,
+    TError,
+    { patientId: string; serviceNames: string[] }
+  >;
+}) =>
+  useMutation<
+    SendExtractionBundleResponse,
+    TError,
+    { patientId: string; serviceNames: string[] }
+  >({
+    mutationFn: ({ patientId, serviceNames }) =>
+      sendExtractionBundle(patientId, serviceNames),
     ...options?.mutation,
   });
