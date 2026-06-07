@@ -48,6 +48,7 @@ import MigrationPage from "@/pages/migration";
 import ChannelsPage from "@/pages/channels";
 import ContractTemplatesPage from "@/pages/contract-templates";
 import BranchesPage from "@/pages/branches";
+import ClinicBranchesPage from "@/pages/clinic-branches";
 import NotFound from "@/pages/not-found";
 
 // Admin-specific pages
@@ -312,6 +313,11 @@ function Router() {
       {/* Branches & geo-zones — owner only */}
       <Route path="/branches">
         <ProtectedRoute component={BranchesPage} allowedRoles={['owner']} />
+      </Route>
+
+      {/* Clinic branch management — owner only */}
+      <Route path="/clinic-branches">
+        <ProtectedRoute component={ClinicBranchesPage} allowedRoles={['owner']} />
       </Route>
 
       {/* Account settings pages */}

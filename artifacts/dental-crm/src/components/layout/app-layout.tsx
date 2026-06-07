@@ -101,8 +101,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
   // A page is geo-blocked if outside zone and route is restricted
   const pageBlocked = isRestricted && hasBranches && isGeoRestrictedPath(location);
 
+  const { clinic } = useAuthStore();
   const showBranchSelector = isOwner && branches.length > 0 && isHomePage;
   const selectedBranch = branches.find((b) => b.id === selectedBranchId);
+  const mainClinicName = clinic?.name ?? "Основная клиника";
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background overflow-hidden">
@@ -122,7 +124,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 >
                   <Building2 className="w-4 h-4 text-primary shrink-0" />
                   <span className="flex-1 text-left text-[13px] font-medium text-gray-700 truncate">
-                    {selectedBranch ? selectedBranch.name : "Все филиалы"}
+                    {selectedBranch ? selectedBranch.name : mainClinicName}
                   </span>
                   <ChevronDown className={cn("w-4 h-4 text-gray-400 transition-transform", branchPickerOpen && "rotate-180")} />
                 </button>
@@ -139,7 +141,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                         )}
                       >
                         <Building2 className="w-4 h-4 shrink-0" />
-                        <span className="flex-1 text-left">Все филиалы</span>
+                        <span className="flex-1 text-left">{mainClinicName}</span>
                         {!selectedBranchId && <Check className="w-4 h-4 text-primary shrink-0" />}
                       </button>
                       {branches.map((branch) => (

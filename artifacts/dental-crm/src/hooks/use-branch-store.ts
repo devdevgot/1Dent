@@ -1,16 +1,15 @@
 import { create } from "zustand";
 import { getBaseUrl } from "@/lib/base-url";
 
-export interface Branch {
+export interface ClinicBranch {
   id: string;
   name: string;
-  latitude: number;
-  longitude: number;
-  radiusMeters: number;
+  parentClinicId: string | null;
+  createdAt: string;
 }
 
 interface BranchState {
-  branches: Branch[];
+  branches: ClinicBranch[];
   selectedBranchId: string | null;
   isLoading: boolean;
   hasFetched: boolean;
@@ -40,7 +39,7 @@ export const useBranchStore = create<BranchState>((set, get) => ({
     set({ isLoading: true });
     try {
       const token = localStorage.getItem("auth_token");
-      const res = await fetch(`${getBaseUrl()}/api/branches`, {
+      const res = await fetch(`${getBaseUrl()}/api/clinic-branches`, {
         headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         credentials: "include",
       });
@@ -48,7 +47,7 @@ export const useBranchStore = create<BranchState>((set, get) => ({
         set({ branches: [], isLoading: false, hasFetched: true });
         return;
       }
-      const json = (await res.json()) as { success: boolean; data: { branches: Branch[] } };
+      const json = (await res.json()) as { success: boolean; data: { branches: ClinicBranch[] } };
       const branches = json.data?.branches ?? [];
       set({ branches, isLoading: false, hasFetched: true });
 

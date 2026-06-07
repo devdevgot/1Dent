@@ -57,7 +57,8 @@
     "channels": "Channels",
     "migration": "Migration",
     "contractTemplates": "Contract Templates",
-    "branches": "Branches",
+    "clinicBranches": "Branches",
+    "branches": "Tracking",
     "logs": "Audit Log",
     "more": "More",
     "settings": "Settings"

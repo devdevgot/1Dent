@@ -25,6 +25,7 @@ import storageRouter from "./storage";
 import geoRouter from "./geo";
 import contractsRouter from "../modules/contracts/contracts.controller";
 import branchesRouter from "../modules/branches/branches.controller";
+import clinicBranchesRouter from "../modules/clinic-branches/clinic-branches.controller";
 import knowledgeRouter from "../modules/knowledge/knowledge.controller";
 import { actionLogMiddleware } from "../middlewares/action-log.middleware";
 import { authRateLimit } from "../middlewares/rate-limit.middleware";
@@ -81,6 +82,7 @@ router.use("/", analyticsRouter);
 router.use(messagesRouter);
 router.use("/contracts", contractsRouter);
 router.use("/", branchesRouter);
+router.use("/", clinicBranchesRouter);
 router.use("/", knowledgeRouter);
 router.use(storageRouter);
 
