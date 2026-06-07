@@ -214,6 +214,7 @@ export const treatmentPlanItemsTable = pgTable("treatment_plan_items", {
   attachments: json("attachments").$type<string[]>().default([]),
   assignedDoctorId: text("assigned_doctor_id").references(() => usersTable.id, { onDelete: "set null" }),
   bundleToken: text("bundle_token"),
+  scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

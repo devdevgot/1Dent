@@ -668,7 +668,25 @@ function SortableSection({
         <div className="flex items-center justify-between py-2.5 border-t border-gray-100 px-4">
           <div className="flex items-center gap-1.5 text-[12px] text-gray-400">
             <Calendar className="w-3.5 h-3.5 shrink-0" />
-            <span>Дата не назначена</span>
+            {(() => {
+              const scheduledItems = planItems
+                .filter((p) => p.status === "pending" && p.scheduledAt)
+                .sort((a, b) => new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime());
+              const nearest = scheduledItems[0];
+              if (nearest?.scheduledAt) {
+                const d = new Date(nearest.scheduledAt);
+                return (
+                  <span className="text-primary font-medium">
+                    {d.toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}{" "}
+                    {d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
+                    {scheduledItems.length > 1 && (
+                      <span className="text-gray-400 font-normal ml-1">+{scheduledItems.length - 1}</span>
+                    )}
+                  </span>
+                );
+              }
+              return <span>Дата не назначена</span>;
+            })()}
             {runningCount > 0 && (
               <span className="flex items-center gap-1 text-[10px] font-semibold text-blue-500 ml-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
@@ -1011,10 +1029,36 @@ function StageDetailSheet({
           <div>
             <h3 className="text-[15px] font-bold text-gray-900 mb-3">Назначено</h3>
             <div className="bg-white rounded-2xl border border-gray-100 divide-y divide-gray-100">
-              <div className="flex items-center gap-3 px-4 py-3">
-                <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
-                <span className="text-[13px] text-gray-500">Дата не назначена</span>
-              </div>
+              {(() => {
+                const scheduledItems = planItems
+                  .filter((p) => p.status === "pending" && p.scheduledAt)
+                  .sort((a, b) => new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime());
+
+                if (scheduledItems.length === 0) {
+                  return (
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
+                      <span className="text-[13px] text-gray-500">Дата не назначена</span>
+                    </div>
+                  );
+                }
+
+                return scheduledItems.map((si) => {
+                  const d = new Date(si.scheduledAt!);
+                  return (
+                    <div key={si.id} className="flex items-center gap-3 px-4 py-3">
+                      <Calendar className="w-4 h-4 text-primary shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[13px] text-gray-700 font-medium">
+                          {d.toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })}{" "}
+                          в {d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                        <p className="text-[11px] text-gray-400 truncate">{si.title}</p>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
               {doctorName && (
                 <div className="flex items-center gap-3 px-4 py-3">
                   <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">

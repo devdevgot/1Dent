@@ -789,6 +789,7 @@ export const ListTreatmentPlansResponse = zod.object({
               .default(
                 listTreatmentPlansResponseDataPlansItemItemsItemDiscountDefault,
               ),
+            scheduledAt: zod.date().nullish(),
             createdAt: zod.date(),
           }),
         ),
@@ -848,6 +849,7 @@ export const GetActiveTreatmentPlanResponse = zod.object({
               .default(
                 getActiveTreatmentPlanResponseDataPlanOneItemsItemDiscountDefault,
               ),
+            scheduledAt: zod.date().nullish(),
             createdAt: zod.date(),
           }),
         ),
@@ -933,6 +935,7 @@ export const UpdateTreatmentPlanResponse = zod.object({
             .default(
               updateTreatmentPlanResponseDataPlanItemsItemDiscountDefault,
             ),
+          scheduledAt: zod.date().nullish(),
           createdAt: zod.date(),
         }),
       ),
@@ -991,6 +994,7 @@ export const ApproveTreatmentPlanResponse = zod.object({
             .default(
               approveTreatmentPlanResponseDataPlanItemsItemDiscountDefault,
             ),
+          scheduledAt: zod.date().nullish(),
           createdAt: zod.date(),
         }),
       ),
@@ -1044,6 +1048,7 @@ export const UpdateTreatmentPlanItemBody = zod.object({
   attachments: zod.array(zod.string()).optional(),
   assignedDoctorId: zod.string().nullish(),
   procedureId: zod.string().nullish(),
+  scheduledAt: zod.date().nullish(),
 });
 
 export const updateTreatmentPlanItemResponseDataItemDiscountDefault = 0;
@@ -1069,6 +1074,7 @@ export const UpdateTreatmentPlanItemResponse = zod.object({
       discount: zod
         .number()
         .default(updateTreatmentPlanItemResponseDataItemDiscountDefault),
+      scheduledAt: zod.date().nullish(),
       createdAt: zod.date(),
     }),
   }),
@@ -1106,6 +1112,7 @@ export const CompleteTreatmentPlanItemResponse = zod.object({
       discount: zod
         .number()
         .default(completeTreatmentPlanItemResponseDataItemDiscountDefault),
+      scheduledAt: zod.date().nullish(),
       createdAt: zod.date(),
     }),
     procedureId: zod.string(),

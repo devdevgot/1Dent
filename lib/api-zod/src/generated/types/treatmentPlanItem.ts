@@ -23,5 +23,6 @@ export interface TreatmentPlanItem {
   stage?: string | null;
   bundleToken?: string | null;
   discount?: number;
+  scheduledAt?: Date | null;
   createdAt: Date;
 }
