@@ -367,27 +367,35 @@ export class TreatmentPlansRepository {
           console.warn("[AiTreatmentPlan] Failed to generate AI plan, falling back to local:", e);
         }
 
+        const VALID_CONDITIONS = new Set([
+          "healthy", "cavity", "treated", "crown", "root_canal",
+          "implant", "missing", "extraction_needed",
+        ]);
+
         if (aiItems.length > 0) {
-          itemsData = aiItems.map((item, idx) => {
-            const cond = item.condition;
-            const priceEntry = cond ? pricesMap[cond] : null;
-            return {
-              id: randomUUID(),
-              planId,
-              clinicId,
-              patientId,
-              toothFdi: item.toothFdi ?? null,
-              condition: (item.condition ?? null) as ToothCondition | null,
-              mkb10Code: (cond && (priceEntry?.mkb10 ?? CONDITION_MKB10[cond])) ?? null,
-              title: item.title,
-              price: typeof item.price === "number" ? item.price : (priceEntry?.price ?? 0),
-              status: "pending" as TreatmentPlanItemStatus,
-              sortOrder: idx,
-              procedureId: null,
-              stage: item.stage ?? null,
-              createdAt: new Date(),
-            };
-          });
+          itemsData = aiItems
+            .filter((item) => item.title && typeof item.title === "string")
+            .map((item, idx) => {
+              const rawCond = item.condition;
+              const cond = rawCond && VALID_CONDITIONS.has(rawCond) ? rawCond : null;
+              const priceEntry = cond ? pricesMap[cond] : null;
+              return {
+                id: randomUUID(),
+                planId,
+                clinicId,
+                patientId,
+                toothFdi: typeof item.toothFdi === "number" ? item.toothFdi : null,
+                condition: (cond ?? null) as ToothCondition | null,
+                mkb10Code: (cond && (priceEntry?.mkb10 ?? CONDITION_MKB10[cond])) ?? null,
+                title: item.title,
+                price: typeof item.price === "number" ? item.price : (priceEntry?.price ?? 0),
+                status: "pending" as TreatmentPlanItemStatus,
+                sortOrder: idx,
+                procedureId: null,
+                stage: item.stage ?? null,
+                createdAt: new Date(),
+              };
+            });
         } else {
           // Fallback to local logic
           const problemTeeth = teeth

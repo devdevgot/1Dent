@@ -44,6 +44,7 @@ export default function AccountEditProfile() {
       setIsCropOpen(true);
     };
     reader.readAsDataURL(file);
+    e.target.value = "";
   };
 
   const handleCropComplete = (croppedBase64: string) => {

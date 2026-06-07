@@ -972,7 +972,7 @@ export function PatientDetailPanel() {
   });
   const teethRecords: ToothRecord[] = teethData?.data?.teeth ?? [];
   const hasDiagnosis = teethRecords.length > 0;
-  const teethMap = new Map(teethRecords.map((t) => [t.toothFdi, t]));
+  const teethMap = useMemo(() => new Map(teethRecords.map((t) => [t.toothFdi, t])), [teethRecords]);
 
   const { data: conditionPricesData } = useGetConditionPrices({
     query: {
@@ -1110,6 +1110,7 @@ export function PatientDetailPanel() {
     },
   });
   const dentalLoading = teethLoading || planLoading || plansLoading;
+  const chartReady = !teethLoading;
 
   // Auto-open active plan detail when navigating to step 2
   useEffect(() => {
@@ -1138,7 +1139,19 @@ export function PatientDetailPanel() {
         queryClient.invalidateQueries({ queryKey: getListTreatmentPlansQueryKey(selectedPatientId ?? "") });
         toast({ title: "План лечения создан" });
       },
-      onError: () => toast({ title: t("account.errorTitle"), variant: "destructive" }),
+      onError: (err: any) => {
+        const apiMsg = err?.data?.error ?? err?.data?.message ?? err?.message;
+        const description = typeof apiMsg === "string" && !apiMsg.startsWith("HTTP ")
+          ? apiMsg
+          : typeof apiMsg === "string"
+          ? apiMsg.replace(/^HTTP \d{3} [^:]+:\s*/, "")
+          : undefined;
+        toast({
+          title: "Не удалось создать план лечения",
+          description,
+          variant: "destructive",
+        });
+      },
     },
   });
 
@@ -1148,7 +1161,14 @@ export function PatientDetailPanel() {
         queryClient.invalidateQueries({ queryKey: getGetActiveTreatmentPlanQueryKey(selectedPatientId ?? "") });
         toast({ title: "План согласован с пациентом" });
       },
-      onError: () => toast({ title: t("account.errorTitle"), variant: "destructive" }),
+      onError: (err: any) => {
+        const apiMsg = err?.data?.error ?? err?.data?.message ?? err?.message;
+        toast({
+          title: "Ошибка согласования плана",
+          description: typeof apiMsg === "string" ? apiMsg.replace(/^HTTP \d{3} [^:]+:\s*/, "") : undefined,
+          variant: "destructive",
+        });
+      },
     },
   });
 
@@ -1519,24 +1539,43 @@ export function PatientDetailPanel() {
     cancelled: "bg-gray-50 text-gray-500 border-gray-200",
   };
 
-  const diagnosisDisplayMap: Map<number, ToothRecord> = new Map(teethMap);
-  for (const [fdi, condition] of diagnosisMap.entries()) {
-    const existing = teethMap.get(fdi);
-    if (existing) {
-      diagnosisDisplayMap.set(fdi, { ...existing, condition });
-    } else {
-      diagnosisDisplayMap.set(fdi, {
-        id: `temp-${fdi}`,
-        clinicId: "",
-        patientId: selectedPatientId,
-        toothFdi: fdi,
-        condition,
-        notes: null,
-        updatedAt: new Date().toISOString(),
-        updatedBy: null,
-      });
+  const diagnosisDisplayMap: Map<number, ToothRecord> = useMemo(() => {
+    const map: Map<number, ToothRecord> = new Map(teethMap);
+    for (const [fdi, condition] of diagnosisMap.entries()) {
+      const existing = teethMap.get(fdi);
+      if (existing) {
+        map.set(fdi, { ...existing, condition });
+      } else {
+        map.set(fdi, {
+          id: `temp-${fdi}`,
+          clinicId: "",
+          patientId: selectedPatientId,
+          toothFdi: fdi,
+          condition,
+          notes: null,
+          updatedAt: new Date().toISOString(),
+          updatedBy: null,
+        });
+      }
     }
-  }
+    return map;
+  }, [teethMap, diagnosisMap, selectedPatientId]);
+
+  const handleDiagnosisToothClick = useCallback((fdi: number) => {
+    setPickerSearch("");
+    setDiagnosisToothFdi((prev) => {
+      if (fdi === prev) {
+        setPickerCategory(null);
+        return null;
+      }
+      const existingCond = diagnosisMap.get(fdi);
+      const autoCategory = existingCond
+        ? (CONDITION_TO_PICKER_CATEGORY[existingCond] ?? null)
+        : null;
+      setPickerCategory(autoCategory);
+      return fdi;
+    });
+  }, [diagnosisMap]);
 
   return (
     <>
@@ -1865,8 +1904,8 @@ export function PatientDetailPanel() {
               <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                 <div ref={dentalScrollRef} className="flex-1 overflow-y-auto custom-scrollbar">
                   <div className="p-3 pb-6">
-                    {/* Loading skeleton — wait for teeth + plans before rendering any state */}
-                    {dentalLoading && !isDiagnosisMode && (
+                    {/* Loading skeleton — show until teeth are loaded */}
+                    {!chartReady && !isDiagnosisMode && (
                       <div className="space-y-3 animate-pulse">
                         <div className="h-4 w-32 bg-slate-100 rounded" />
                         <div className="h-36 bg-slate-100 rounded-2xl" />
@@ -1874,7 +1913,7 @@ export function PatientDetailPanel() {
                       </div>
                     )}
                     {/* Diagnosis mode (primary — no teeth yet, or manual re-diagnosis) */}
-                    {!isAdmin && (isDiagnosisMode || (!dentalLoading && !hasDiagnosis)) && (
+                    {!isAdmin && (isDiagnosisMode || (chartReady && !hasDiagnosis)) && (
                       <div className="space-y-3">
                         <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
                           <p className="text-xs text-amber-800 font-medium">
@@ -1886,22 +1925,7 @@ export function PatientDetailPanel() {
                           teethData={diagnosisDisplayMap}
                           selectedFdi={diagnosisToothFdi}
                           inProgressFdi={activeTreatmentFdi}
-                          onToothClick={(fdi) => {
-                            setPickerSearch("");
-                            if (fdi === diagnosisToothFdi) {
-                              // Deselect tooth
-                              setDiagnosisToothFdi(null);
-                              setPickerCategory(null);
-                            } else {
-                              setDiagnosisToothFdi(fdi);
-                              // If this tooth already has a condition, auto-open its service category
-                              const existingCond = diagnosisMap.get(fdi);
-                              const autoCategory = existingCond
-                                ? (CONDITION_TO_PICKER_CATEGORY[existingCond] ?? null)
-                                : null;
-                              setPickerCategory(autoCategory);
-                            }
-                          }}
+                          onToothClick={handleDiagnosisToothClick}
                         />
 
                         {voiceDraftExists && (
@@ -2125,7 +2149,7 @@ export function PatientDetailPanel() {
                     )}
 
                     {/* Normal mode — has diagnosis */}
-                    {!dentalLoading && (hasDiagnosis || isAdmin) && !isDiagnosisMode && (
+                    {chartReady && (hasDiagnosis || isAdmin) && !isDiagnosisMode && (
                       <div className="space-y-3">
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-[11px] text-muted-foreground">
@@ -2199,7 +2223,7 @@ export function PatientDetailPanel() {
                 </div>
 
               {/* ── Pinned bottom bar: diagnosis action buttons ── */}
-              {(isDiagnosisMode || (!dentalLoading && !hasDiagnosis)) && (
+              {(isDiagnosisMode || (chartReady && !hasDiagnosis)) && (
                 <div className="shrink-0 border-t border-border/30 bg-white/95 backdrop-blur-sm safe-area-bottom">
                   <div className="flex items-center justify-center gap-8 py-3 px-6">
 
