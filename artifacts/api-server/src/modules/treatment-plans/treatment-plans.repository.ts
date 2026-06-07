@@ -286,8 +286,126 @@ export class TreatmentPlansRepository {
     pricesMap: ConditionPricesMap,
     manualItems?: Array<{ toothFdi?: number; condition?: string; mkb10Code?: string; title: string; price: number }>,
   ): Promise<TreatmentPlanWithItems> {
+    const planId = randomUUID();
+
+    const VALID_CONDITIONS = new Set([
+      "healthy", "cavity", "treated", "crown", "root_canal",
+      "implant", "missing", "extraction_needed",
+    ]);
+
+    let itemsData: Array<{
+      id: string; planId: string; clinicId: string; patientId: string;
+      toothFdi: number | null; condition: ToothCondition | null; mkb10Code: string | null;
+      title: string; price: number; status: TreatmentPlanItemStatus; sortOrder: number;
+      procedureId: string | null; stage: string | null; createdAt: Date;
+    }> = [];
+
+    if (manualItems && manualItems.length > 0) {
+      itemsData = manualItems.map((item, idx) => ({
+        id: randomUUID(),
+        planId,
+        clinicId,
+        patientId,
+        toothFdi: item.toothFdi ?? null,
+        condition: (item.condition ?? null) as ToothCondition | null,
+        mkb10Code: item.mkb10Code ?? null,
+        title: item.title,
+        price: item.price,
+        status: "pending" as TreatmentPlanItemStatus,
+        sortOrder: idx,
+        procedureId: null,
+        stage: null,
+        createdAt: new Date(),
+      }));
+    } else {
+      const teeth = await db
+        .select()
+        .from(toothRecordsTable)
+        .where(
+          and(
+            eq(toothRecordsTable.patientId, patientId),
+            eq(toothRecordsTable.clinicId, clinicId),
+          ),
+        );
+
+      let aiItems: any[] = [];
+      try {
+        const formattedTeeth = teeth
+          .filter((t) => t.condition !== "healthy")
+          .map((t) => ({
+            toothFdi: t.toothFdi,
+            condition: t.condition,
+            notes: t.notes,
+          }));
+
+        if (formattedTeeth.length > 0) {
+          aiItems = await generateAiPlanItems(formattedTeeth, pricesMap);
+        }
+      } catch (e) {
+        console.warn("[AiTreatmentPlan] Failed to generate AI plan, falling back to local:", e);
+      }
+
+      if (aiItems.length > 0) {
+        itemsData = aiItems
+          .filter((item) => item.title && typeof item.title === "string")
+          .map((item, idx) => {
+            const rawCond = item.condition;
+            const cond = rawCond && VALID_CONDITIONS.has(rawCond) ? rawCond : null;
+            const priceEntry = cond ? pricesMap[cond] : null;
+            return {
+              id: randomUUID(),
+              planId,
+              clinicId,
+              patientId,
+              toothFdi: typeof item.toothFdi === "number" ? item.toothFdi : null,
+              condition: (cond ?? null) as ToothCondition | null,
+              mkb10Code: (cond && (priceEntry?.mkb10 ?? CONDITION_MKB10[cond])) ?? null,
+              title: item.title,
+              price: typeof item.price === "number" ? item.price : (priceEntry?.price ?? 0),
+              status: "pending" as TreatmentPlanItemStatus,
+              sortOrder: idx,
+              procedureId: null,
+              stage: item.stage ?? null,
+              createdAt: new Date(),
+            };
+          });
+      } else {
+        const problemTeeth = teeth
+          .filter((t) => t.condition !== "healthy" && t.condition !== "treated" && t.condition !== "missing")
+          .sort((a, b) => {
+            const pa = CONDITION_PRIORITY[a.condition as string] ?? 9;
+            const pb = CONDITION_PRIORITY[b.condition as string] ?? 9;
+            if (pa !== pb) return pa - pb;
+            return a.toothFdi - b.toothFdi;
+          });
+
+        itemsData = problemTeeth.map((tooth, idx) => {
+          const cond = tooth.condition as string;
+          const priceEntry = pricesMap[cond];
+          const stage = conditionToStageId(cond);
+          return {
+            id: randomUUID(),
+            planId,
+            clinicId,
+            patientId,
+            toothFdi: tooth.toothFdi,
+            condition: tooth.condition as ToothCondition | null,
+            mkb10Code: priceEntry?.mkb10 ?? CONDITION_MKB10[cond] ?? null,
+            title: `${CONDITION_LABEL[cond] ?? cond} — зуб #${tooth.toothFdi}`,
+            price: priceEntry?.price ?? 0,
+            status: "pending" as TreatmentPlanItemStatus,
+            sortOrder: idx,
+            procedureId: null,
+            stage,
+            createdAt: new Date(),
+          };
+        });
+      }
+    }
+
+    const totalCost = itemsData.reduce((sum, i) => sum + i.price, 0);
+
     return db.transaction(async (tx) => {
-      // Calculate next plan number for this patient
       const [{ total }] = await tx
         .select({ total: count() })
         .from(treatmentPlansTable)
@@ -299,7 +417,6 @@ export class TreatmentPlansRepository {
         );
       const planNumber = (Number(total) || 0) + 1;
 
-      // Archive any existing active plans for this patient before creating a new one
       await tx
         .update(treatmentPlansTable)
         .set({ status: "cancelled", updatedAt: new Date() })
@@ -311,127 +428,6 @@ export class TreatmentPlansRepository {
             ne(treatmentPlansTable.status, "cancelled"),
           ),
         );
-
-      const planId = randomUUID();
-
-      let itemsData: Array<{
-        id: string; planId: string; clinicId: string; patientId: string;
-        toothFdi: number | null; condition: ToothCondition | null; mkb10Code: string | null;
-        title: string; price: number; status: TreatmentPlanItemStatus; sortOrder: number;
-        procedureId: string | null; stage: string | null; createdAt: Date;
-      }> = [];
-
-      if (manualItems && manualItems.length > 0) {
-        itemsData = manualItems.map((item, idx) => ({
-          id: randomUUID(),
-          planId,
-          clinicId,
-          patientId,
-          toothFdi: item.toothFdi ?? null,
-          condition: (item.condition ?? null) as ToothCondition | null,
-          mkb10Code: item.mkb10Code ?? null,
-          title: item.title,
-          price: item.price,
-          status: "pending" as TreatmentPlanItemStatus,
-          sortOrder: idx,
-          procedureId: null,
-          stage: null,
-          createdAt: new Date(),
-        }));
-      } else {
-        const teeth = await tx
-          .select()
-          .from(toothRecordsTable)
-          .where(
-            and(
-              eq(toothRecordsTable.patientId, patientId),
-              eq(toothRecordsTable.clinicId, clinicId),
-            ),
-          );
-
-        // Try AI planning first
-        let aiItems: any[] = [];
-        try {
-          const formattedTeeth = teeth
-            .filter((t) => t.condition !== "healthy")
-            .map((t) => ({
-              toothFdi: t.toothFdi,
-              condition: t.condition,
-              notes: t.notes,
-            }));
-          
-          if (formattedTeeth.length > 0) {
-            aiItems = await generateAiPlanItems(formattedTeeth, pricesMap);
-          }
-        } catch (e) {
-          console.warn("[AiTreatmentPlan] Failed to generate AI plan, falling back to local:", e);
-        }
-
-        const VALID_CONDITIONS = new Set([
-          "healthy", "cavity", "treated", "crown", "root_canal",
-          "implant", "missing", "extraction_needed",
-        ]);
-
-        if (aiItems.length > 0) {
-          itemsData = aiItems
-            .filter((item) => item.title && typeof item.title === "string")
-            .map((item, idx) => {
-              const rawCond = item.condition;
-              const cond = rawCond && VALID_CONDITIONS.has(rawCond) ? rawCond : null;
-              const priceEntry = cond ? pricesMap[cond] : null;
-              return {
-                id: randomUUID(),
-                planId,
-                clinicId,
-                patientId,
-                toothFdi: typeof item.toothFdi === "number" ? item.toothFdi : null,
-                condition: (cond ?? null) as ToothCondition | null,
-                mkb10Code: (cond && (priceEntry?.mkb10 ?? CONDITION_MKB10[cond])) ?? null,
-                title: item.title,
-                price: typeof item.price === "number" ? item.price : (priceEntry?.price ?? 0),
-                status: "pending" as TreatmentPlanItemStatus,
-                sortOrder: idx,
-                procedureId: null,
-                stage: item.stage ?? null,
-                createdAt: new Date(),
-              };
-            });
-        } else {
-          // Fallback to local logic
-          const problemTeeth = teeth
-            .filter((t) => t.condition !== "healthy" && t.condition !== "treated" && t.condition !== "missing")
-            .sort((a, b) => {
-              const pa = CONDITION_PRIORITY[a.condition as string] ?? 9;
-              const pb = CONDITION_PRIORITY[b.condition as string] ?? 9;
-              if (pa !== pb) return pa - pb;
-              return a.toothFdi - b.toothFdi;
-            });
-
-          itemsData = problemTeeth.map((tooth, idx) => {
-            const cond = tooth.condition as string;
-            const priceEntry = pricesMap[cond];
-            const stage = conditionToStageId(cond);
-            return {
-              id: randomUUID(),
-              planId,
-              clinicId,
-              patientId,
-              toothFdi: tooth.toothFdi,
-              condition: tooth.condition as ToothCondition | null,
-              mkb10Code: priceEntry?.mkb10 ?? CONDITION_MKB10[cond] ?? null,
-              title: `${CONDITION_LABEL[cond] ?? cond} — зуб #${tooth.toothFdi}`,
-              price: priceEntry?.price ?? 0,
-              status: "pending" as TreatmentPlanItemStatus,
-              sortOrder: idx,
-              procedureId: null,
-              stage,
-              createdAt: new Date(),
-            };
-          });
-        }
-      }
-
-      const totalCost = itemsData.reduce((sum, i) => sum + i.price, 0);
 
       const [plan] = await tx
         .insert(treatmentPlansTable)
