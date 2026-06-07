@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { X, ZoomIn, ZoomOut, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -17,28 +17,51 @@ export default function PhotoCropModal({
 }: PhotoCropModalProps) {
   const { t } = useTranslation();
   const [zoom, setZoom] = useState(1);
+  const [minZoom, setMinZoom] = useState(0.1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isSaving, setIsSaving] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
+  const pinchStartDist = useRef<number | null>(null);
+  const pinchStartZoom = useRef(1);
 
-  const CROP_SIZE = 192; // 192px crop circle diameter on screen
+  const CROP_SIZE = 192;
+  const MAX_ZOOM = 5;
 
-  // Reset states when a new image is loaded
   useEffect(() => {
     if (isOpen) {
       setZoom(1);
+      setMinZoom(0.1);
       setPosition({ x: 0, y: 0 });
       setIsSaving(false);
+      setImageLoaded(false);
     }
   }, [isOpen, imageSrc]);
 
+  const handleImageLoad = useCallback(() => {
+    const imgEl = imageRef.current;
+    if (!imgEl) return;
+    setImageLoaded(true);
+
+    const imgDisplayW = imgEl.offsetWidth;
+    const imgDisplayH = imgEl.offsetHeight;
+    const smaller = Math.min(imgDisplayW, imgDisplayH);
+
+    if (smaller > 0) {
+      const fitZoom = Math.max(0.1, CROP_SIZE / smaller);
+      setMinZoom(Math.min(fitZoom * 0.5, 0.8));
+      setZoom(Math.max(fitZoom, 0.5));
+    }
+  }, []);
+
   if (!isOpen) return null;
 
-  // Mouse handlers
+  const clampZoom = (v: number) => Math.min(MAX_ZOOM, Math.max(minZoom, v));
+
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -57,8 +80,16 @@ export default function PhotoCropModal({
     setIsDragging(false);
   };
 
-  // Touch handlers
   const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      pinchStartDist.current = Math.hypot(dx, dy);
+      pinchStartZoom.current = zoom;
+      setIsDragging(false);
+      return;
+    }
+
     const touch = e.touches[0];
     if (!touch) return;
     setIsDragging(true);
@@ -66,6 +97,15 @@ export default function PhotoCropModal({
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && pinchStartDist.current !== null) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.hypot(dx, dy);
+      const scale = dist / pinchStartDist.current;
+      setZoom(clampZoom(pinchStartZoom.current * scale));
+      return;
+    }
+
     if (!isDragging) return;
     const touch = e.touches[0];
     if (!touch) return;
@@ -76,7 +116,14 @@ export default function PhotoCropModal({
   };
 
   const handleTouchEnd = () => {
+    pinchStartDist.current = null;
     setIsDragging(false);
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = -e.deltaY * 0.002;
+    setZoom((prev) => clampZoom(prev + delta));
   };
 
   const handleSave = async () => {
@@ -86,32 +133,25 @@ export default function PhotoCropModal({
     try {
       const imgEl = imageRef.current;
       const canvas = document.createElement("canvas");
-      canvas.width = 200;
-      canvas.height = 200;
+      canvas.width = 400;
+      canvas.height = 400;
       const ctx = canvas.getContext("2d");
 
       if (ctx) {
-        // Draw white background
         ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, 200, 200);
+        ctx.fillRect(0, 0, 400, 400);
 
         const img = new Image();
+        img.crossOrigin = "anonymous";
         img.src = imageSrc;
-        
+
         await new Promise<void>((resolve, reject) => {
           img.onload = () => {
-            // Scale factor between screen crop circle (CROP_SIZE) and output canvas (200px)
-            const k = 200 / CROP_SIZE;
-
-            // Scaled image dimensions on canvas
+            const k = 400 / CROP_SIZE;
             const canvasImageWidth = imgEl.offsetWidth * zoom * k;
             const canvasImageHeight = imgEl.offsetHeight * zoom * k;
-
-            // Center position relative to output canvas center (100, 100)
-            const dx_canvas = 100 + position.x * k;
-            const dy_canvas = 100 + position.y * k;
-
-            // Top-left draw offset on canvas
+            const dx_canvas = 200 + position.x * k;
+            const dy_canvas = 200 + position.y * k;
             const x_canvas = dx_canvas - canvasImageWidth / 2;
             const y_canvas = dy_canvas - canvasImageHeight / 2;
 
@@ -121,7 +161,7 @@ export default function PhotoCropModal({
           img.onerror = reject;
         });
 
-        const base64 = canvas.toDataURL("image/jpeg", 0.95);
+        const base64 = canvas.toDataURL("image/jpeg", 0.92);
         await onCrop(base64);
         onClose();
       }
@@ -135,12 +175,12 @@ export default function PhotoCropModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="bg-white w-full max-w-[360px] rounded-2xl overflow-hidden shadow-2xl flex flex-col border border-slate-100 animate-in fade-in zoom-in-95 duration-150">
-        
+
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-100">
           <span className="font-semibold text-gray-900 text-[16px]">{t("settingsPage.cropPhoto", "Обрезка фото")}</span>
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             disabled={isSaving}
             className="p-1 rounded-full text-gray-400 hover:bg-slate-100 transition-colors disabled:opacity-50"
           >
@@ -149,7 +189,7 @@ export default function PhotoCropModal({
         </div>
 
         {/* Crop Viewport */}
-        <div 
+        <div
           ref={containerRef}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
@@ -158,22 +198,25 @@ export default function PhotoCropModal({
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
+          onWheel={handleWheel}
           className="relative w-full aspect-square bg-[#0c0f1d] overflow-hidden flex items-center justify-center cursor-move select-none touch-none"
         >
           <img
             ref={imageRef}
             src={imageSrc}
             alt="Source"
-            className="max-w-none max-h-none pointer-events-none transition-transform duration-75 ease-out"
+            onLoad={handleImageLoad}
+            className="max-w-none max-h-none pointer-events-none"
             style={{
               width: "80%",
               height: "auto",
               transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
+              opacity: imageLoaded ? 1 : 0,
             }}
           />
 
           {/* Circle Mask Overlay */}
-          <div 
+          <div
             className="rounded-full border-2 border-white/80 absolute pointer-events-none shadow-[0_0_0_9999px_rgba(15,23,42,0.65)]"
             style={{
               width: `${CROP_SIZE}px`,
@@ -185,19 +228,37 @@ export default function PhotoCropModal({
         {/* Zoom Controls */}
         <div className="p-4 space-y-4 bg-slate-50/50 border-t border-slate-100">
           <div className="flex items-center gap-3">
-            <ZoomOut className="w-4 h-4 text-gray-400 shrink-0" />
+            <button
+              type="button"
+              onClick={() => setZoom((z) => clampZoom(z - 0.2))}
+              disabled={isSaving}
+              className="p-1 rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-50"
+            >
+              <ZoomOut className="w-4 h-4 text-gray-500" />
+            </button>
             <input
               type="range"
-              min="1"
-              max="4"
+              min={minZoom}
+              max={MAX_ZOOM}
               step="0.01"
               value={zoom}
               onChange={(e) => setZoom(parseFloat(e.target.value))}
               disabled={isSaving}
               className="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary disabled:opacity-50"
             />
-            <ZoomIn className="w-4 h-4 text-gray-400 shrink-0" />
+            <button
+              type="button"
+              onClick={() => setZoom((z) => clampZoom(z + 0.2))}
+              disabled={isSaving}
+              className="p-1 rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-50"
+            >
+              <ZoomIn className="w-4 h-4 text-gray-500" />
+            </button>
           </div>
+
+          <p className="text-center text-[11px] text-gray-400">
+            {Math.round(zoom * 100)}%
+          </p>
 
           {/* Action Buttons */}
           <div className="flex gap-2">

@@ -21,11 +21,14 @@ export default function AccountSettings() {
   const { data: myPayrollData } = useGetMyPayrollRecords();
   const myRecords: PayrollRecord[] = myPayrollData?.data?.records ?? [];
 
+  const [photoVersion, setPhotoVersion] = useState(0);
+
   const updateMutation = useUpdateProfile({
     mutation: {
       onSuccess: (res) => {
         if (res.success && user && clinic) {
           setAuth({ ...user, ...(res.data.user as any) }, clinic);
+          setPhotoVersion((v) => v + 1);
         }
         toast({ title: t("settingsPage.photoUpdated", "Фото профиля обновлено") });
       },
@@ -45,6 +48,7 @@ export default function AccountSettings() {
       setIsCropOpen(true);
     };
     reader.readAsDataURL(file);
+    e.target.value = "";
   };
 
   const handleCropComplete = async (croppedBase64: string) => {
@@ -96,7 +100,7 @@ export default function AccountSettings() {
           >
             <div className="w-20 h-20 rounded-full overflow-hidden bg-primary/15 flex items-center justify-center text-primary font-bold text-2xl border border-slate-100 transition-transform active:scale-95 duration-100">
               {photoUrl ? (
-                <img src={photoUrl} alt="avatar" className="w-full h-full object-cover" />
+                <img key={photoVersion} src={photoUrl} alt="avatar" className="w-full h-full object-cover" />
               ) : (
                 initials
               )}
