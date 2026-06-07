@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuthStore } from "@/hooks/use-auth";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
@@ -6,6 +6,7 @@ import { NotificationBell } from "./notification-bell";
 import { GlobalSearch } from "./global-search";
 import { AppointmentReminderModal } from "./appointment-reminder-modal";
 import { AttendanceCheckModal } from "./attendance-check-modal";
+import { useBranchStore } from "@/hooks/use-branch-store";
 import {
   LayoutDashboard,
   Users,
@@ -19,6 +20,9 @@ import {
   MoreHorizontal,
   MapPin,
   AlertTriangle,
+  Building2,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { cn } from "@/lib/utils";
@@ -67,6 +71,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { user } = useAuthStore();
   const [location] = useLocation();
   const { status, activeBranch, isRestricted, hasBranches } = useGeoRestriction();
+  const { branches, selectedBranchId, setSelectedBranchId, fetchBranches, hasFetched } = useBranchStore();
+  const [branchPickerOpen, setBranchPickerOpen] = useState(false);
+
+  const isOwner = user?.role === "owner";
+
+  useEffect(() => {
+    if (isOwner && !hasFetched) {
+      void fetchBranches();
+    }
+  }, [isOwner, hasFetched, fetchBranches]);
 
   const roleDashboardHref = user
     ? (ROLE_DASHBOARD_HREF[user.role] ?? getRoleDashboardPath(user.role))
@@ -87,6 +101,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
   // A page is geo-blocked if outside zone and route is restricted
   const pageBlocked = isRestricted && hasBranches && isGeoRestrictedPath(location);
 
+  const showBranchSelector = isOwner && branches.length > 0 && isHomePage;
+  const selectedBranch = branches.find((b) => b.id === selectedBranchId);
+
   return (
     <div className="flex flex-col h-[100dvh] bg-background overflow-hidden">
       <AppointmentReminderModal />
@@ -94,10 +111,63 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       {/* Home page header */}
       {isHomePage && (
-        <header className="flex-none relative flex items-center gap-3 px-4 py-2.5 bg-white border-b border-gray-100 z-20 safe-area-top border-t-[1px]">
-          <GlobalSearch />
-          <div className="shrink-0">
-            <NotificationBell />
+        <header className="flex-none bg-white border-b border-gray-100 z-20 safe-area-top border-t-[1px]">
+          {/* Branch selector — owner only, only when branches exist */}
+          {showBranchSelector && (
+            <div className="px-4 pt-2.5 pb-1.5">
+              <div className="relative">
+                <button
+                  onClick={() => setBranchPickerOpen(!branchPickerOpen)}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl border border-gray-200 bg-gray-50/80 hover:bg-gray-100 transition-colors"
+                >
+                  <Building2 className="w-4 h-4 text-primary shrink-0" />
+                  <span className="flex-1 text-left text-[13px] font-medium text-gray-700 truncate">
+                    {selectedBranch ? selectedBranch.name : "Все филиалы"}
+                  </span>
+                  <ChevronDown className={cn("w-4 h-4 text-gray-400 transition-transform", branchPickerOpen && "rotate-180")} />
+                </button>
+
+                {branchPickerOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setBranchPickerOpen(false)} />
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-100 rounded-xl shadow-lg z-20 overflow-hidden max-h-[240px] overflow-y-auto">
+                      <button
+                        onClick={() => { setSelectedBranchId(null); setBranchPickerOpen(false); }}
+                        className={cn(
+                          "w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] transition-colors",
+                          !selectedBranchId ? "bg-primary/5 text-primary font-semibold" : "text-gray-700 hover:bg-gray-50",
+                        )}
+                      >
+                        <Building2 className="w-4 h-4 shrink-0" />
+                        <span className="flex-1 text-left">Все филиалы</span>
+                        {!selectedBranchId && <Check className="w-4 h-4 text-primary shrink-0" />}
+                      </button>
+                      {branches.map((branch) => (
+                        <button
+                          key={branch.id}
+                          onClick={() => { setSelectedBranchId(branch.id); setBranchPickerOpen(false); }}
+                          className={cn(
+                            "w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] transition-colors",
+                            selectedBranchId === branch.id ? "bg-primary/5 text-primary font-semibold" : "text-gray-700 hover:bg-gray-50",
+                          )}
+                        >
+                          <MapPin className="w-4 h-4 shrink-0" />
+                          <span className="flex-1 text-left truncate">{branch.name}</span>
+                          {selectedBranchId === branch.id && <Check className="w-4 h-4 text-primary shrink-0" />}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center gap-3 px-4 py-2.5">
+            <GlobalSearch />
+            <div className="shrink-0">
+              <NotificationBell />
+            </div>
           </div>
         </header>
       )}
