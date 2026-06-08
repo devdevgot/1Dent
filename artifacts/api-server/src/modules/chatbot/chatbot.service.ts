@@ -31,10 +31,12 @@ import { classifyPatientRequest, generateChatbotResponse, extractDatetimeFromTex
 import {
   ALMATY_TZ,
   computeAlmatyAvailableSlots,
-  formatAlmatyIso,
+  formatAlmatyDayMonth,
+  formatAlmatyNowContext,
   formatAlmatySlot,
   formatAlmatySlotCompact,
   getAlmatyDayBounds,
+  getAlmatyYmd,
   toAlmatyHourKey,
 } from "./almaty-time";
 import type { ChatbotState, ChatbotSessionData } from "./chatbot.types";
@@ -797,13 +799,13 @@ function buildPlaygroundPrompt(
     settings.greetingTemplate?.match(/"(.+?)"/)?.[1] ??
     "нашу клинику";
   const now = new Date();
-  const todayDate = now.toLocaleDateString("ru-KZ", { day: "numeric", month: "long", timeZone: "Asia/Almaty" });
+  const todayDate = formatAlmatyDayMonth(now);
   const firstDoctor = doctorsWithSlots?.[0];
   const exampleDoctorName = firstDoctor?.name ?? "Иван Петров";
   const exampleTime =
-    firstDoctor?.slots?.[0]?.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty" }) ?? "14:00";
+    firstDoctor?.slots?.[0]?.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit", timeZone: ALMATY_TZ }) ?? "14:00";
   const exampleDate =
-    firstDoctor?.slots?.[0]?.toLocaleDateString("ru-KZ", { day: "numeric", month: "long", timeZone: "Asia/Almaty" }) ?? todayDate;
+    firstDoctor?.slots?.[0] ? formatAlmatyDayMonth(firstDoctor.slots[0]) : todayDate;
 
   const resolvePlaceholders = (text: string) =>
     text
@@ -823,9 +825,9 @@ function buildPlaygroundPrompt(
   }
 
   const nowPlayground = new Date();
-  const nowDateStr = nowPlayground.toLocaleDateString("ru-KZ", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: ALMATY_TZ });
+  const nowContext = formatAlmatyNowContext(nowPlayground);
   const nowTimeStr = nowPlayground.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit", timeZone: ALMATY_TZ });
-  const nowAlmatyIso = formatAlmatyIso(nowPlayground);
+  const todayYmdPlayground = getAlmatyYmd(nowPlayground);
 
   const priceListPlaygroundSection = priceListContext
     ? `\n\nПРАЙС-ЛИСТ КЛИНИКИ (официальные цены — используй для ответов о стоимости услуг):\n${priceListContext}\n\n⚠️ ПРАВИЛО РЕЛЕВАНТНОСТИ: Когда пациент спрашивает о конкретной услуге — называй цену ТОЛЬКО запрошенной услуги. Не перечисляй другие услуги.`
@@ -847,7 +849,7 @@ function buildPlaygroundPrompt(
   const effectiveScriptContext = mindMapSection ? "" : scriptContext;
 
     const systemPrompt = `Ты — AI-ассистент стоматологической клиники. Сейчас ТЕСТОВЫЙ РЕЖИМ (симуляция для проверки скрипта).
-Текущее время: ${nowDateStr}, ${nowTimeStr} (часовой пояс Алматы/Астана, UTC+5). ISO: ${nowAlmatyIso}.
+${nowContext}
 
 ⚠️ ЖЁСТКИЕ ПРАВИЛА ТЕСТОВОГО РЕЖИМА (приоритет выше скрипта):
 1. НИ ПРИ КАКИХ УСЛОВИЯХ не проси ИИН, удостоверение или любой идентификатор — пациент уже идентифицирован
@@ -855,7 +857,7 @@ function buildPlaygroundPrompt(
 3. Если пациент согласился на запись и выбрал время — предложи ему выбрать филиал/адрес клиники из материалов, и только после выбора филиала подтверди запись с коротким саммари деталей
 4. Отвечай коротко: 1–3 предложения максимум
 5. Используй только информацию из материалов клиники и списка врачей — не придумывай
-6. Все даты и время — только в часовом поясе Алматы (UTC+5). НИКОГДА не предлагай и не подтверждай время которое уже прошло (сейчас ${nowTimeStr}, ${nowDateStr}). Если пациент называет время из списка свободных слотов — подтверждай его вместе с датой из списка. Если пациент называет прошедшее время сегодня — объясни что оно уже прошло и предложи ближайший доступный слот. Все слоты в списке врачей уже являются будущими.
+6. Все даты и время — только в часовом поясе Алматы (UTC+5). Сегодняшняя дата: ${todayYmdPlayground}. НИКОГДА не предлагай и не подтверждай время которое уже прошло (сейчас ${nowTimeStr}). Если пациент называет время из списка свободных слотов — подтверждай его вместе с полной датой из списка. Если пациент называет прошедшее время сегодня — объясни что оно уже прошло и предложи ближайший доступный слот. Все слоты в списке врачей уже являются будущими.
 ${kazakhNote}${doctorsSection}${priceListPlaygroundSection}${mindMapSection}${activeMindMapSection}${effectiveScriptContext}${knowledgeSection}`;
     return systemPrompt;
 }
@@ -871,7 +873,7 @@ function renderScriptBlocks(
     settings.greetingTemplate?.match(/"(.+?)"/)?.[1] ??
     "нашу клинику";
   const now = new Date();
-  const todayDate = now.toLocaleDateString("ru-KZ", { day: "numeric", month: "long", timeZone: "Asia/Almaty" });
+  const todayDate = formatAlmatyDayMonth(now);
 
   const resolvePlaceholders = (text: string) =>
     text
@@ -916,11 +918,10 @@ function buildSystemPrompt(
 Не придумывай информацию о клинике — цены, адрес и расписание бери из скрипта ниже или уточняй у администратора.${kazakhNote}${generalExtra}`;
 
   const now = new Date();
-  const todayStr = now.toLocaleDateString("ru-KZ", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: ALMATY_TZ });
+  const nowContext = formatAlmatyNowContext(now);
+  const todayYmd = getAlmatyYmd(now);
   const currentTimeStr = now.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit", timeZone: ALMATY_TZ });
-  const nowAlmatyIso = formatAlmatyIso(now);
-  const nowContext = `Сейчас: ${todayStr}, ${currentTimeStr} (часовой пояс Алматы/Астана, UTC+5). ISO: ${nowAlmatyIso}.`;
-  const timeRule = `ВАЖНО: все даты и время — только в часовом поясе Алматы (UTC+5). Никогда не предлагай и не подтверждай время которое уже прошло сегодня (сейчас ${currentTimeStr}, ${todayStr}). Если пациент выбирает время из предложенных слотов — подтверждай его вместе с датой из списка. Если пациент называет прошедшее время — вежливо объясни что оно уже прошло и предложи ближайший доступный слот.`;
+  const timeRule = `ВАЖНО: все даты и время — только в часовом поясе Алматы (UTC+5). Сегодняшняя дата: ${todayYmd}. Никогда не предлагай и не подтверждай время которое уже прошло сегодня (сейчас ${currentTimeStr}). Если пациент выбирает время из предложенных слотов — подтверждай его вместе с полной датой из списка. Если пациент называет прошедшее время — вежливо объясни что оно уже прошло и предложи ближайший доступный слот.`;
 
   const stateGuidance: Record<ChatbotState, string> = {
     greeting: `Сейчас этап: ПРИВЕТСТВИЕ. Поприветствуй пациента согласно блоку «Приветствие» в скрипте и сразу узнай, что его беспокоит или какая услуга интересует. НЕ проси ИИН, имя или телефон в начале — это создаёт барьер. Эти данные узнаешь позже, когда будешь оформлять запись.`,

@@ -8,9 +8,10 @@ import {
 import { logger } from "../../lib/logger";
 import {
   ALMATY_OFFSET,
-  formatAlmatyDateShort,
+  formatAlmatyDateLong,
   formatAlmatyIso,
-  isPastInAlmaty,
+  getAlmatyYmd,
+  isInvalidAppointmentTime,
   parseAlmatyDatetime,
 } from "./almaty-time";
 
@@ -262,15 +263,17 @@ export async function generateChatbotResponse(
 
 export async function extractDatetimeFromText(text: string): Promise<Date | null> {
   const now = new Date();
-  const todayStr = formatAlmatyDateShort(now);
+  const todayYmd = getAlmatyYmd(now);
+  const todayLong = formatAlmatyDateLong(now);
   const nowAlmaty = formatAlmatyIso(now);
 
-  const systemPrompt = `Сегодня ${todayStr}. Текущее время в Алматы: ${nowAlmaty}.
+  const systemPrompt = `Сегодня в Алматы: ${todayLong} (${todayYmd}). Текущее время: ${nowAlmaty}.
 Извлеки из текста пациента дату и время визита. Все даты и время интерпретируй строго в часовом поясе Алматы (UTC+5).
+Слова «сегодня»/«бүгін» = ${todayYmd}, «завтра»/«ертең» = следующий день после ${todayYmd}.
 Верни JSON: {"iso": "YYYY-MM-DDTHH:mm:00${ALMATY_OFFSET}"} или {"iso": null} если дата/время не указаны или неясны.
 Казахские слова дней: ертең=завтра, бүгін=сегодня, дүйсенбі=понедельник, сейсенбі=вторник, сәрсенбі=среда, бейсенбі=четверг, жұма/жума=пятница, сенбі=суббота, жексенбі=воскресенье.
 Казахские слова времени: таңертең/тангертен=утро(09:00), күндізгі/кундизги=день(13:00), кешкі/кешки=вечер(17:00).
-Если время не указано — ставь 10:00. Дата должна быть >= сегодня (${todayStr}).
+Если время не указано — ставь 10:00. Дата визита должна быть не раньше сегодня (${todayYmd}).
 Отвечай ТОЛЬКО валидным JSON без markdown-обёрток.`;
 
   try {
@@ -297,7 +300,7 @@ export async function extractDatetimeFromText(text: string): Promise<Date | null
     if (!date) return null;
 
     const sixMonthsLater = new Date(now.getTime() + 6 * 30 * 24 * 60 * 60 * 1000);
-    if (isPastInAlmaty(date, now) || date > sixMonthsLater) return null;
+    if (isInvalidAppointmentTime(date, now) || date > sixMonthsLater) return null;
 
     return date;
   } catch (err) {

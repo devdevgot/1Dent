@@ -26,11 +26,13 @@ export function getAlmatyParts(date: Date): AlmatyParts {
   const parts = Object.fromEntries(
     fmt.formatToParts(date).filter((p) => p.type !== "literal").map((p) => [p.type, p.value]),
   );
+  // Some runtimes return hour "24" at midnight — normalize to 0.
+  const hour = Number(parts.hour) % 24;
   return {
     year: Number(parts.year),
     month: Number(parts.month),
     day: Number(parts.day),
-    hour: Number(parts.hour),
+    hour,
     minute: Number(parts.minute),
   };
 }
@@ -83,6 +85,44 @@ export function formatAlmatyDateShort(date: Date = new Date()): string {
   return `${pad2(p.day)}.${pad2(p.month)}.${p.year}`;
 }
 
+/** YYYY-MM-DD in Almaty — unambiguous for LLM prompts. */
+export function getAlmatyYmd(date: Date = new Date()): string {
+  const p = getAlmatyParts(date);
+  return `${p.year}-${pad2(p.month)}-${pad2(p.day)}`;
+}
+
+/** Long Russian date with weekday and year in Almaty. */
+export function formatAlmatyDateLong(date: Date = new Date()): string {
+  return date.toLocaleDateString("ru-KZ", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: ALMATY_TZ,
+  });
+}
+
+/** Compact Russian date (day + month) in Almaty. */
+export function formatAlmatyDayMonth(date: Date = new Date()): string {
+  return date.toLocaleDateString("ru-KZ", { day: "numeric", month: "long", timeZone: ALMATY_TZ });
+}
+
+/** True when `date` falls on an earlier calendar day than `now` in Almaty. */
+export function isBeforeAlmatyCalendarDay(date: Date, now: Date = new Date()): boolean {
+  const d = getAlmatyParts(date);
+  const n = getAlmatyParts(now);
+  if (d.year !== n.year) return d.year < n.year;
+  if (d.month !== n.month) return d.month < n.month;
+  return d.day < n.day;
+}
+
+/** Full context string for LLM system prompts. */
+export function formatAlmatyNowContext(date: Date = new Date()): string {
+  const p = getAlmatyParts(date);
+  const timeStr = date.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit", timeZone: ALMATY_TZ });
+  return `Сейчас: ${formatAlmatyDateLong(date)}, ${timeStr} (Алматы/Астана, UTC+5). Сегодня: ${getAlmatyYmd(date)}. ISO: ${formatAlmatyIso(date)}.`;
+}
+
 /**
  * Parse LLM/user datetime as Almaty local time.
  * Strings without timezone are treated as Asia/Almaty, not server local.
@@ -102,6 +142,12 @@ export function parseAlmatyDatetime(iso: string | null | undefined): Date | null
 
 export function isPastInAlmaty(date: Date, now: Date = new Date()): boolean {
   return date.getTime() < now.getTime();
+}
+
+/** Reject datetimes on past calendar days or earlier times today (Almaty). */
+export function isInvalidAppointmentTime(date: Date, now: Date = new Date()): boolean {
+  if (isBeforeAlmatyCalendarDay(date, now)) return true;
+  return isPastInAlmaty(date, now);
 }
 
 const ALMATY_WEEKDAY_SHORT = ["вс", "пн", "вт", "ср", "чт", "пт", "сб"];
