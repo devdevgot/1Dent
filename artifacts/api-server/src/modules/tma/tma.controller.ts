@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import {
   db,
+  pool,
   platformAdminsTable,
   clinicsTable,
   usersTable,
@@ -229,6 +230,22 @@ router.patch("/clinics/:clinicId", async (req: Request, res: Response, next: Nex
       .returning();
     if (!clinic) return next(new NotFoundError("Clinic not found"));
     res.json({ success: true, data: { clinic } });
+  } catch (err) { next(err); }
+});
+
+// Grant trial period to a clinic
+router.post("/clinics/:clinicId/grant-trial", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const clinicId = req.params["clinicId"] as string;
+    const days = typeof req.body?.days === "number" ? req.body.days : 3;
+    const trialEndsAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+
+    await pool.query(
+      `UPDATE clinics SET trial_ends_at = $1 WHERE id = $2`,
+      [trialEndsAt.toISOString(), clinicId],
+    );
+
+    res.json({ success: true, data: { trialEndsAt: trialEndsAt.toISOString(), days } });
   } catch (err) { next(err); }
 });
 

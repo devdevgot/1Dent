@@ -156,6 +156,43 @@ function ProceduresRedirect() {
   return null;
 }
 
+function PlanPaywall() {
+  const { clinic } = useAuthStore();
+  const clinicAny = clinic as any;
+  const plan = clinicAny?.plan ?? "free";
+  const trialEndsAt = clinicAny?.trialEndsAt;
+  const hasPaidPlan = plan !== "free";
+  const trialActive = trialEndsAt && new Date(trialEndsAt) > new Date();
+
+  if (hasPaidPlan || trialActive) return null;
+
+  const trialExpired = trialEndsAt && new Date(trialEndsAt) <= new Date();
+
+  return (
+    <div className="fixed inset-0 z-[200] bg-white flex flex-col items-center justify-center px-6 text-center">
+      <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-5">
+        <svg className="w-8 h-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+      </div>
+      <h1 className="text-xl font-bold text-gray-900 mb-2">
+        {trialExpired ? "Пробный период закончился" : "Тариф не подключён"}
+      </h1>
+      <p className="text-sm text-gray-500 leading-relaxed max-w-xs mb-6">
+        {trialExpired
+          ? "Ваш пробный период истёк. Для продолжения работы необходимо подключить тарифный план."
+          : "Для доступа к системе необходимо подключить тарифный план. Свяжитесь с администратором платформы."}
+      </p>
+      <a
+        href="https://wa.me/77001234567"
+        target="_blank"
+        rel="noreferrer"
+        className="px-6 py-3 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors"
+      >
+        Связаться с нами
+      </a>
+    </div>
+  );
+}
+
 function Router() {
   const { isAuthenticated, user } = useAuthStore();
   const [location, setLocation] = useLocation();
@@ -175,6 +212,8 @@ function Router() {
   }, [location, isAuthenticated, setLocation, roleDashboard]);
 
   return (
+    <>
+    {isAuthenticated && <PlanPaywall />}
     <Switch>
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
@@ -343,6 +382,7 @@ function Router() {
       {/* 404 */}
       <Route path="/:rest*" component={NotFound} />
     </Switch>
+    </>
   );
 }
 

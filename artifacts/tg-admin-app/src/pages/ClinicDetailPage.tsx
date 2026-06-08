@@ -157,6 +157,55 @@ function InfoTab({ clinicId }: { clinicId: string }) {
           )}
         </div>
 
+        {/* Trial grant */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-xs text-muted-foreground">Пробный период</p>
+          </div>
+          {c["trialEndsAt"] && new Date(String(c["trialEndsAt"])) > new Date() ? (
+            <p className="text-xs text-green-400">
+              Активен до {new Date(String(c["trialEndsAt"])).toLocaleDateString("ru", { day: "numeric", month: "long", year: "numeric" })}
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground mb-2">{c["trialEndsAt"] ? "Истёк" : "Не выдан"}</p>
+          )}
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                haptic("medium");
+                api.post(`/clinics/${clinicId}/grant-trial`, { days: 3 }).then(() => {
+                  hapticNotify("success");
+                  qc.invalidateQueries({ queryKey: ["tma-clinic-detail", clinicId] });
+                  tgAlert("Пробный период 3 дня активирован");
+                });
+              }}
+              className="flex-1 py-2 border border-blue-500/30 text-blue-400 rounded-lg text-xs hover:bg-blue-500/10"
+            >3 дня</button>
+            <button
+              onClick={() => {
+                haptic("medium");
+                api.post(`/clinics/${clinicId}/grant-trial`, { days: 7 }).then(() => {
+                  hapticNotify("success");
+                  qc.invalidateQueries({ queryKey: ["tma-clinic-detail", clinicId] });
+                  tgAlert("Пробный период 7 дней активирован");
+                });
+              }}
+              className="flex-1 py-2 border border-blue-500/30 text-blue-400 rounded-lg text-xs hover:bg-blue-500/10"
+            >7 дней</button>
+            <button
+              onClick={() => {
+                haptic("medium");
+                api.post(`/clinics/${clinicId}/grant-trial`, { days: 30 }).then(() => {
+                  hapticNotify("success");
+                  qc.invalidateQueries({ queryKey: ["tma-clinic-detail", clinicId] });
+                  tgAlert("Пробный период 30 дней активирован");
+                });
+              }}
+              className="flex-1 py-2 border border-blue-500/30 text-blue-400 rounded-lg text-xs hover:bg-blue-500/10"
+            >30 дней</button>
+          </div>
+        </div>
+
         <div className="pt-2 border-t border-border">
           {isActive ? (
             <button
