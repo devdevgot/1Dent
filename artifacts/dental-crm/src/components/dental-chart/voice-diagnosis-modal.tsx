@@ -673,10 +673,10 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                         <thead>
                           <tr className="bg-slate-50 border-b border-border/50 text-[10px] uppercase tracking-wide text-muted-foreground">
                             <th className="text-left font-semibold px-3 py-2 w-[11%]">Зуб</th>
-                            <th className="text-left font-semibold px-3 py-2 w-[26%]">Диагноз</th>
-                            <th className="text-left font-semibold px-3 py-2 w-[36%]">Услуга</th>
-                            <th className="text-center font-semibold px-2 py-2 w-[12%]">Удалить</th>
+                            <th className="text-left font-semibold px-3 py-2 w-[27%]">Диагноз</th>
+                            <th className="text-left font-semibold px-3 py-2 w-[37%]">Услуга</th>
                             <th className="text-right font-semibold px-3 py-2 w-[15%]">Цена</th>
+                            <th className="text-center font-semibold px-2 py-2 w-[10%]">Удалить</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border/40">
@@ -742,6 +742,9 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                                     </p>
                                   )}
                                 </td>
+                                <td className="px-3 py-2.5 align-top text-right font-semibold text-primary tabular-nums whitespace-nowrap max-w-0 min-w-0">
+                                  {rowPrice > 0 ? `${rowPrice.toLocaleString("ru-KZ")} ₸` : "—"}
+                                </td>
                                 <td className="px-2 py-2.5 align-top text-center">
                                   <button
                                     type="button"
@@ -752,9 +755,6 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
                                   </button>
-                                </td>
-                                <td className="px-3 py-2.5 align-top text-right font-semibold text-primary tabular-nums whitespace-nowrap max-w-0 min-w-0">
-                                  {rowPrice > 0 ? `${rowPrice.toLocaleString("ru-KZ")} ₸` : "—"}
                                 </td>
                               </tr>
                             );
