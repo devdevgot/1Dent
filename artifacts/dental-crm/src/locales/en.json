@@ -1195,6 +1195,8 @@
     "historyTitle": "Usage history",
     "loading": "Loading...",
     "noUsage": "No AI credit usage yet",
+    "emptyState": "Credit data is unavailable. Try refreshing the page.",
+    "historyError": "Failed to load usage history",
     "loadError": "Failed to load credit data",
     "refresh": "Refresh",
     "exhaustedTitle": "AI credits exhausted",

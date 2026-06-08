@@ -8,6 +8,7 @@ const EXEMPT_PREFIXES = [
   "/api/webhook/",
   "/api/storage/",
   "/api/plan-requests",
+  "/api/ai-credits",
 ];
 
 function isExempt(url: string): boolean {

@@ -31,8 +31,11 @@ export default function AiCreditsPage() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const isOwner = user?.role === "owner";
-  const { data: summary, isLoading, isError, refetch, isFetching } = useAiCreditsSummary();
-  const { data: usage = [], isLoading: usageLoading } = useAiCreditsUsage(100);
+  const { data: summary, isLoading, isError, error, refetch, isFetching } = useAiCreditsSummary();
+  const { data: usage = [], isLoading: usageLoading, isError: usageError } = useAiCreditsUsage(100);
+  const errorMessage =
+    (error as { data?: { error?: string }; message?: string } | null)?.data?.error ??
+    (error as Error | null)?.message;
 
   const usedPercent =
     summary && summary.totalAvailable > 0
@@ -72,8 +75,24 @@ export default function AiCreditsPage() {
         )}
 
         {isError && (
-          <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-sm text-red-700">
-            {t("aiCredits.loadError")}
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-sm text-red-700 space-y-2">
+            <p>{t("aiCredits.loadError")}</p>
+            {errorMessage && (
+              <p className="text-xs text-red-600/80 break-words">{errorMessage}</p>
+            )}
+            <button
+              type="button"
+              onClick={() => void refetch()}
+              className="text-xs font-semibold text-red-800 underline"
+            >
+              {t("aiCredits.refresh")}
+            </button>
+          </div>
+        )}
+
+        {!isLoading && !isError && !summary && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-800">
+            {t("aiCredits.emptyState")}
           </div>
         )}
 
@@ -167,14 +186,18 @@ export default function AiCreditsPage() {
             <div className="p-6 text-sm text-gray-400 text-center">{t("aiCredits.loading")}</div>
           )}
 
-          {!usageLoading && usage.length === 0 && (
+          {usageError && (
+            <div className="p-6 text-sm text-red-600 text-center">{t("aiCredits.historyError")}</div>
+          )}
+
+          {!usageLoading && !usageError && usage.length === 0 && (
             <div className="p-8 text-center">
               <Sparkles className="w-8 h-8 text-gray-200 mx-auto mb-2" />
               <p className="text-sm text-gray-400">{t("aiCredits.noUsage")}</p>
             </div>
           )}
 
-          {!usageLoading && usage.length > 0 && (
+          {!usageLoading && !usageError && usage.length > 0 && (
             <div className="divide-y divide-gray-100">
               {usage.map((row) => (
                 <div key={row.id} className="px-4 py-3 flex items-start gap-3">

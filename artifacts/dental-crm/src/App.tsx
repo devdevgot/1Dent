@@ -407,7 +407,7 @@ function Router() {
       </Route>
 
       <Route path="/ai-credits">
-        <ProtectedRoute component={AiCreditsPage} allowedRoles={['owner', 'admin', 'doctor', 'accountant']} />
+        <ProtectedRoute component={AiCreditsPage} allowedRoles={['owner', 'admin', 'doctor', 'accountant', 'warehouse']} />
       </Route>
 
       {/* Account settings pages */}

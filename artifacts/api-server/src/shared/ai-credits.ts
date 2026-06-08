@@ -1,8 +1,9 @@
 import { randomUUID } from "crypto";
-import { db, clinicsTable, aiCreditUsageTable, notificationsTable, usersTable } from "@workspace/db";
+import { db, pool, clinicsTable, aiCreditUsageTable, notificationsTable, usersTable } from "@workspace/db";
 import { eq, and, gte, lte, desc, sql, like } from "drizzle-orm";
 import type { ClinicPlan } from "@workspace/db";
 import { InsufficientAiCreditsError } from "./errors/index";
+import { logger } from "../lib/logger";
 
 export const PLAN_AI_CREDIT_LIMITS: Record<ClinicPlan, number> = {
   free: 0,
@@ -43,10 +44,51 @@ export const AI_CREDIT_COSTS: Record<AiCreditFeature, number> = {
   voice_transcribe: 2,
 };
 
+let schemaReady: Promise<void> | null = null;
+
+async function ensureAiCreditsSchema(): Promise<void> {
+  if (!schemaReady) {
+    schemaReady = (async () => {
+      try {
+        await pool.query(
+          `ALTER TABLE "clinics" ADD COLUMN IF NOT EXISTS "ai_bonus_credits" integer NOT NULL DEFAULT 0`,
+        );
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS "ai_credit_usage" (
+            "id" text PRIMARY KEY NOT NULL,
+            "clinic_id" text NOT NULL,
+            "user_id" text,
+            "feature" text NOT NULL,
+            "credits" integer NOT NULL,
+            "description" text,
+            "created_at" timestamp with time zone DEFAULT now() NOT NULL
+          )
+        `);
+        await pool.query(`
+          CREATE INDEX IF NOT EXISTS "ai_credit_usage_clinic_created_idx"
+          ON "ai_credit_usage" ("clinic_id", "created_at")
+        `);
+      } catch (err) {
+        schemaReady = null;
+        logger.error({ err }, "[AiCredits] Failed to ensure schema");
+        throw err;
+      }
+    })();
+  }
+  await schemaReady;
+}
+
 function monthBounds(date = new Date()) {
   const start = new Date(date.getFullYear(), date.getMonth(), 1);
   const end = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
   return { start, end };
+}
+
+function normalizePlan(plan: string | null | undefined): ClinicPlan {
+  if (plan && plan in PLAN_AI_CREDIT_LIMITS) {
+    return plan as ClinicPlan;
+  }
+  return "free";
 }
 
 function resolveMonthlyLimit(
@@ -87,42 +129,38 @@ export interface AiCreditUsageRow {
 
 export class AiCreditsService {
   async getSummary(clinicId: string): Promise<AiCreditsSummary> {
-    const [clinic] = await db
-      .select({
-        plan: clinicsTable.plan,
-        trialEndsAt: clinicsTable.trialEndsAt,
-        planExpiresAt: clinicsTable.planExpiresAt,
-        aiBonusCredits: clinicsTable.aiBonusCredits,
-      })
-      .from(clinicsTable)
-      .where(eq(clinicsTable.id, clinicId))
-      .limit(1);
+    await ensureAiCreditsSchema();
 
+    const { rows } = await pool.query<{
+      plan: string;
+      trial_ends_at: string | null;
+      plan_expires_at: string | null;
+      ai_bonus_credits: number | string | null;
+    }>(
+      `SELECT plan, trial_ends_at, plan_expires_at, COALESCE(ai_bonus_credits, 0) AS ai_bonus_credits
+       FROM clinics WHERE id = $1 LIMIT 1`,
+      [clinicId],
+    );
+
+    const clinic = rows[0];
     if (!clinic) {
       throw new Error("Clinic not found");
     }
 
     const { start, end } = monthBounds();
-    const [usageRow] = await db
-      .select({
-        total: sql<number>`coalesce(sum(${aiCreditUsageTable.credits}), 0)`.mapWith(Number),
-      })
-      .from(aiCreditUsageTable)
-      .where(
-        and(
-          eq(aiCreditUsageTable.clinicId, clinicId),
-          gte(aiCreditUsageTable.createdAt, start),
-          lte(aiCreditUsageTable.createdAt, end),
-        ),
-      );
-
-    const monthlyLimit = resolveMonthlyLimit(
-      clinic.plan,
-      clinic.trialEndsAt,
-      clinic.planExpiresAt,
+    const { rows: usageRows } = await pool.query<{ total: string | number | null }>(
+      `SELECT COALESCE(SUM(credits), 0) AS total
+       FROM ai_credit_usage
+       WHERE clinic_id = $1 AND created_at >= $2 AND created_at <= $3`,
+      [clinicId, start.toISOString(), end.toISOString()],
     );
-    const bonusCredits = clinic.aiBonusCredits ?? 0;
-    const usedThisMonth = usageRow?.total ?? 0;
+
+    const plan = normalizePlan(clinic.plan);
+    const trialEndsAt = clinic.trial_ends_at ? new Date(clinic.trial_ends_at) : null;
+    const planExpiresAt = clinic.plan_expires_at ? new Date(clinic.plan_expires_at) : null;
+    const monthlyLimit = resolveMonthlyLimit(plan, trialEndsAt, planExpiresAt);
+    const bonusCredits = Number(clinic.ai_bonus_credits ?? 0);
+    const usedThisMonth = Number(usageRows[0]?.total ?? 0);
     const totalAvailable = monthlyLimit + bonusCredits;
     const remaining = Math.max(0, totalAvailable - usedThisMonth);
 
@@ -135,13 +173,15 @@ export class AiCreditsService {
       totalAvailable,
       usedThisMonth,
       remaining,
-      exhausted: remaining <= 0,
-      plan: clinic.plan,
+      exhausted: totalAvailable > 0 ? remaining <= 0 : usedThisMonth > 0,
+      plan,
       monthLabel,
     };
   }
 
   async listUsage(clinicId: string, limit = 50): Promise<AiCreditUsageRow[]> {
+    await ensureAiCreditsSchema();
+
     const rows = await db
       .select({
         id: aiCreditUsageTable.id,
@@ -175,6 +215,8 @@ export class AiCreditsService {
     description?: string;
     credits?: number;
   }): Promise<void> {
+    await ensureAiCreditsSchema();
+
     const cost = params.credits ?? AI_CREDIT_COSTS[params.feature] ?? 1;
     const summary = await this.getSummary(params.clinicId);
 

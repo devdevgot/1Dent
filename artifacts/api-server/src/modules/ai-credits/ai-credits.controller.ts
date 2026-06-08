@@ -3,7 +3,7 @@ import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { aiCreditsService } from "../../shared/ai-credits";
 
 const router: IRouter = Router();
-const canRead = roleGuard("owner", "admin", "doctor", "accountant");
+const canRead = roleGuard("owner", "admin", "doctor", "accountant", "warehouse");
 
 router.use(authMiddleware);
 
