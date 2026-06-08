@@ -50,3 +50,11 @@ export class WhatsappNotConnectedError extends AppError {
     super(message, 422, "WHATSAPP_NOT_CONNECTED");
   }
 }
+
+export class InsufficientAiCreditsError extends AppError {
+  constructor(
+    message = "AI-кредиты закончились. Докупите дополнительные кредиты или смените тариф.",
+  ) {
+    super(message, 402, "AI_CREDITS_EXHAUSTED");
+  }
+}

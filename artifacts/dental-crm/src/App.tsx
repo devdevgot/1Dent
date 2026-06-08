@@ -51,6 +51,7 @@ import ContractTemplatesPage from "@/pages/contract-templates";
 import BranchesPage from "@/pages/branches";
 import ClinicBranchesPage from "@/pages/clinic-branches";
 import PricingPage from "@/pages/pricing";
+import AiCreditsPage from "@/pages/ai-credits";
 import NotFound from "@/pages/not-found";
 
 // Admin-specific pages
@@ -403,6 +404,10 @@ function Router() {
       {/* Pricing / Tariffs — owner only */}
       <Route path="/pricing">
         <ProtectedRoute component={PricingPage} allowedRoles={['owner']} />
+      </Route>
+
+      <Route path="/ai-credits">
+        <ProtectedRoute component={AiCreditsPage} allowedRoles={['owner', 'admin', 'doctor', 'accountant']} />
       </Route>
 
       {/* Account settings pages */}

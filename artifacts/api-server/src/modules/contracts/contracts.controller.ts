@@ -180,7 +180,7 @@ router.post(
     }
 
     // 3. AI analysis — detect fields
-    const fieldMappings = await analyzeContractFields(extractedText);
+    const fieldMappings = await analyzeContractFields(extractedText, req.user!.clinicId, req.user!.id);
 
     // 4. Save template
     const template = await repo

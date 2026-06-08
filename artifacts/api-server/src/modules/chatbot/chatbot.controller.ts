@@ -231,7 +231,9 @@ router.post(
     if (!parsed.success) {
       return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
     }
-    const blocks = await service.parseScriptWithAI(parsed.data.text).catch(next);
+    const blocks = await service
+      .parseScriptWithAI(req.user!.clinicId, parsed.data.text, req.user!.id)
+      .catch(next);
     if (!blocks) return;
     res.json({ success: true, data: { blocks } });
   },
@@ -248,7 +250,7 @@ router.post(
       return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
     }
     const reply = await service
-      .testMessage(req.user!.clinicId, parsed.data.userMessage, parsed.data.history)
+      .testMessage(req.user!.clinicId, parsed.data.userMessage, parsed.data.history, req.user!.id)
       .catch(next);
     if (!reply) return;
     res.json({ success: true, data: { reply } });

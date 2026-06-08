@@ -32,6 +32,8 @@ import type { ChatbotState, ChatbotSessionData } from "./chatbot.types";
 import type { ChatbotSettings } from "@workspace/db";
 import { STANDARD_SCRIPT_BLOCKS, type ScriptBlock } from "./script-templates";
 import { openrouter, FAST_MODEL, withTimeout, parseLlmJson } from "../../lib/openrouter-client";
+import { aiCreditsService } from "../../shared/ai-credits";
+import { InsufficientAiCreditsError } from "../../shared/errors/index";
 
 type CachedSettings = { settings: ChatbotSettings; expiresAt: number };
 type CachedExamples = { examples: ManagerExample[]; expiresAt: number };
@@ -1159,6 +1161,19 @@ export class ChatbotService {
     saveChatbotMessage(clinicId, phone, "inbound", text).catch(() => {});
 
     if (!settings.enabled) return null;
+
+    try {
+      await aiCreditsService.consumeCredits({ clinicId, feature: "chatbot_reply" });
+    } catch (err) {
+      if (err instanceof InsufficientAiCreditsError) {
+        const exhaustedReply =
+          "К сожалению, AI-кредиты клиники закончились. Администратору нужно докупить кредиты или сменить тариф в разделе «ИИ кредиты».";
+        saveChatbotMessage(clinicId, phone, "outbound", exhaustedReply).catch(() => {});
+        sendToPatient(clinicId, phone, exhaustedReply).catch(() => {});
+        return exhaustedReply;
+      }
+      throw err;
+    }
 
     let session = await loadSession(clinicId, phone);
 
@@ -2303,7 +2318,12 @@ export class ChatbotService {
     return getSettings(clinicId);
   }
 
-  async parseScriptWithAI(rawText: string): Promise<ScriptBlock[]> {
+  async parseScriptWithAI(clinicId: string, rawText: string, userId?: string | null): Promise<ScriptBlock[]> {
+    await aiCreditsService.consumeCredits({
+      clinicId,
+      userId,
+      feature: "chatbot_script_parse",
+    });
     const systemPrompt = `Ты — парсер скриптов чат-бота для стоматологической клиники.
 Твоя задача: разбить текст скрипта на логические блоки и вернуть JSON-массив.
 
@@ -2431,7 +2451,14 @@ export class ChatbotService {
     clinicId: string,
     userMessage: string,
     history: Array<{ role: "user" | "assistant"; content: string }> = [],
+    userId?: string | null,
   ) {
+    await aiCreditsService.consumeCredits({
+      clinicId,
+      userId,
+      feature: "chatbot_test",
+    });
+
     const [settings, managerExamples, doctorsWithSlots, clinicRow, knowledgeContext, priceListContext] = await Promise.all([
       getSettings(clinicId),
       getManagerExamples(clinicId),

@@ -125,7 +125,12 @@ router.post(
       return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
     }
     try {
-      const result = await migrationService.analyzeFileWithAi(parsed.data.fileBase64, parsed.data.fileType);
+      const result = await migrationService.analyzeFileWithAi(
+        req.user!.clinicId,
+        parsed.data.fileBase64,
+        parsed.data.fileType,
+        req.user!.id,
+      );
       res.json({ success: true, data: result });
     } catch (err) {
       next(new ValidationError((err as Error).message));

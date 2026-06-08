@@ -1,5 +1,6 @@
 import { openrouter, FAST_MODEL, parseLlmJson, withTimeout } from "../../lib/openrouter-client";
 import { logger } from "../../lib/logger";
+import { aiCreditsService } from "../../shared/ai-credits";
 import type { FieldMapping } from "@workspace/db";
 
 /** All patient fields we can auto-fill */
@@ -64,7 +65,17 @@ function mergeMappings(a: FieldMapping[], b: FieldMapping[]): FieldMapping[] {
 
 export async function analyzeContractFields(
   text: string,
+  clinicId?: string,
+  userId?: string | null,
 ): Promise<FieldMapping[]> {
+  if (clinicId) {
+    await aiCreditsService.consumeCredits({
+      clinicId,
+      userId,
+      feature: "contract_ai",
+    });
+  }
+
   const truncated = text.slice(0, 8000);
 
   logger.info(

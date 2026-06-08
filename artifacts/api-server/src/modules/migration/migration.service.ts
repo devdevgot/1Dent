@@ -303,7 +303,19 @@ export class MigrationService {
     return { headers, rows, suggestedMapping: detectMapping(headers), totalRows };
   }
 
-  async analyzeFileWithAi(base64data: string, fileType: FileType): Promise<AiAnalyzeResponse> {
+  async analyzeFileWithAi(
+    clinicId: string,
+    base64data: string,
+    fileType: FileType,
+    userId?: string | null,
+  ): Promise<AiAnalyzeResponse> {
+    const { aiCreditsService } = await import("../../shared/ai-credits");
+    await aiCreditsService.consumeCredits({
+      clinicId,
+      userId,
+      feature: "migration_ai",
+    });
+
     if (fileType === "pdf") {
       return this._analyzePdf(base64data);
     }

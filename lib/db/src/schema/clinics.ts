@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -13,6 +13,7 @@ export const clinicsTable = pgTable("clinics", {
   parentClinicId: text("parent_clinic_id"),
   trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
   planExpiresAt: timestamp("plan_expires_at", { withTimezone: true }),
+  aiBonusCredits: integer("ai_bonus_credits").notNull().default(0),
   whatsappPhone: text("whatsapp_phone"),
   greenApiInstanceId: text("green_api_instance_id"),
   greenApiToken: text("green_api_token"),

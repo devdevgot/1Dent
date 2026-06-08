@@ -27,6 +27,7 @@ import contractsRouter from "../modules/contracts/contracts.controller";
 import branchesRouter from "../modules/branches/branches.controller";
 import clinicBranchesRouter from "../modules/clinic-branches/clinic-branches.controller";
 import knowledgeRouter from "../modules/knowledge/knowledge.controller";
+import aiCreditsRouter from "../modules/ai-credits/ai-credits.controller";
 import { actionLogMiddleware } from "../middlewares/action-log.middleware";
 import { authRateLimit } from "../middlewares/rate-limit.middleware";
 import { authMiddleware, roleGuard } from "../middlewares/auth.middleware";
@@ -112,6 +113,7 @@ router.use("/contracts", contractsRouter);
 router.use("/", branchesRouter);
 router.use("/", clinicBranchesRouter);
 router.use("/", knowledgeRouter);
+router.use("/ai-credits", aiCreditsRouter);
 router.use(storageRouter);
 
 // Alias: GET /procedure-templates (maps to GET /procedures/templates)

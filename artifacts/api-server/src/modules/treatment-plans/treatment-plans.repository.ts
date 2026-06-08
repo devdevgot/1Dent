@@ -18,6 +18,7 @@ import type {
 } from "@workspace/db";
 import type { ConditionPricesMap } from "../clinic/clinic-prices.repository";
 import { openrouter, FAST_MODEL, parseLlmJson } from "../../lib/openrouter-client";
+import { aiCreditsService } from "../../shared/ai-credits";
 
 export type TreatmentPlanWithItems = TreatmentPlan & { items: TreatmentPlanItem[] };
 
@@ -35,9 +36,15 @@ function conditionToStageId(condition: string): string {
 }
 
 async function generateAiPlanItems(
+  clinicId: string,
   teeth: { toothFdi: number; condition: string; notes: string | null }[],
   pricesMap: ConditionPricesMap,
 ): Promise<Array<{ toothFdi: number | null; condition: string | null; title: string; price: number; stage: string }>> {
+  await aiCreditsService.consumeCredits({
+    clinicId,
+    feature: "treatment_plan_ai",
+  });
+
   const systemPrompt = `Ты — искусственный интеллект для планирования стоматологического лечения.
 Тебе на вход дается список проблемных зубов пациента с их текущим состоянием (condition) и заметками врача.
 Также тебе дается карта цен клиники для каждого состояния зуба.
@@ -339,7 +346,7 @@ export class TreatmentPlansRepository {
           }));
 
         if (formattedTeeth.length > 0) {
-          aiItems = await generateAiPlanItems(formattedTeeth, pricesMap);
+          aiItems = await generateAiPlanItems(clinicId, formattedTeeth, pricesMap);
         }
       } catch (e) {
         console.warn("[AiTreatmentPlan] Failed to generate AI plan, falling back to local:", e);

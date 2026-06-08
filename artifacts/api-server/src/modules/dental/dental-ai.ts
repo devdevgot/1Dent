@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import { db, dentalAiAnalysesTable, toothRecordsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { openrouter, DEEPSEEK_MODEL } from "../../lib/openrouter-client";
+import { aiCreditsService } from "../../shared/ai-credits";
 import { logger } from "../../lib/logger";
 
 const FALLBACK_MODEL = "openai/gpt-4o-mini";
@@ -131,6 +132,12 @@ export async function triggerDentalAiAnalysis(
 
     // Mark as in-flight immediately to prevent concurrent duplicate calls
     analysisDeupCache.set(cacheKey, { hash: currentHash, triggeredAt: Date.now() });
+
+    await aiCreditsService.consumeCredits({
+      clinicId,
+      feature: "dental_analysis",
+      description: "AI-анализ состояния зубов",
+    });
 
     const prompt = buildDentalPrompt(teeth);
 

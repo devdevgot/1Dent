@@ -8,6 +8,7 @@ import { db } from "@workspace/db";
 import { knowledgeSourcesTable, knowledgeScriptsTable, clinicsTable } from "@workspace/db";
 import { openrouter, FAST_MODEL, parseLlmJson, withTimeout } from "../../lib/openrouter-client";
 import { ObjectStorageService } from "../../lib/objectStorage";
+import { aiCreditsService } from "../../shared/ai-credits";
 
 const router: IRouter = Router();
 const storage = new ObjectStorageService();
@@ -193,6 +194,13 @@ router.patch("/knowledge/scripts", ownerAdmin, async (req: Request, res: Respons
 router.post("/knowledge/generate", ownerAdmin, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const clinicId = req.user!.clinicId;
+
+    await aiCreditsService.consumeCredits({
+      clinicId,
+      userId: req.user!.id,
+      feature: "knowledge_parse",
+      description: "Генерация скрипта из базы знаний",
+    });
 
     const [clinicRow, sources] = await Promise.all([
       db.select({ name: clinicsTable.name }).from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1),

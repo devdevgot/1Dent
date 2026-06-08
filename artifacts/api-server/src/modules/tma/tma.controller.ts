@@ -276,6 +276,23 @@ router.post("/clinics/:clinicId/grant-trial", async (req: Request, res: Response
   } catch (err) { next(err); }
 });
 
+router.post("/clinics/:clinicId/grant-ai-credits", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const clinicId = req.params["clinicId"] as string;
+    const schema = z.object({ amount: z.number().int().min(1).max(1_000_000) });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError(parsed.error.message));
+
+    const { rows } = await pool.query<{ ai_bonus_credits: number }>(
+      `UPDATE clinics SET ai_bonus_credits = COALESCE(ai_bonus_credits, 0) + $1 WHERE id = $2 RETURNING ai_bonus_credits`,
+      [parsed.data.amount, clinicId],
+    );
+    if (!rows[0]) return next(new NotFoundError("Clinic not found"));
+
+    res.json({ success: true, data: { bonusCredits: rows[0].ai_bonus_credits, added: parsed.data.amount } });
+  } catch (err) { next(err); }
+});
+
 // Soft-delete: deactivate clinic instead of hard delete
 router.delete("/clinics/:clinicId", async (req: Request, res: Response, next: NextFunction) => {
   try {

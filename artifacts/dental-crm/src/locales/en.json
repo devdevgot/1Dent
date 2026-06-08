@@ -59,6 +59,7 @@
     "contractTemplates": "Contract Templates",
     "clinicBranches": "Branches",
     "pricing": "Pricing",
+    "aiCredits": "AI Credits",
     "branches": "Tracking",
     "logs": "Audit Log",
     "more": "More",
@@ -1180,5 +1181,31 @@
     "statusInactiveHint": "Access blocked",
     "emailReadonly": "Email cannot be changed after creation",
     "partialSaveWarning": "Employee created, but salary / capacity settings could not be saved. Open the profile and save again."
+  },
+  "aiCredits": {
+    "title": "AI credits & usage",
+    "subtitle": "Balance and AI feature consumption history",
+    "available": "Available now",
+    "ofTotal": "of {{total}} this month",
+    "usedThisMonth": "Used in {{month}}",
+    "used": "used",
+    "monthlyLimit": "Plan limit",
+    "bonusCredits": "Purchased extra",
+    "bonusHint": "Carries over within the month pool",
+    "historyTitle": "Usage history",
+    "loading": "Loading...",
+    "noUsage": "No AI credit usage yet",
+    "loadError": "Failed to load credit data",
+    "refresh": "Refresh",
+    "exhaustedTitle": "AI credits exhausted",
+    "exhaustedDesc": "Your plan limit has been reached. Purchase additional credits or upgrade your plan to continue using the chatbot, AI analysis, and other AI features.",
+    "buyMore": "Buy credits / change plan",
+    "upgradePlan": "View plans",
+    "plan": {
+      "free": "No plan",
+      "starter": "START",
+      "professional": "PRO",
+      "enterprise": "ENTERPRISE"
+    }
   }
 }

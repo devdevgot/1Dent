@@ -239,6 +239,13 @@
       "when": 1781269800000,
       "tag": "0033_treatment_plan_item_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1781356200000,
+      "tag": "0034_ai_credits",
+      "breakpoints": true
     }
   ]
 }
