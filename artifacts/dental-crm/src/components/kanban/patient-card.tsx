@@ -70,11 +70,16 @@ export const PatientCardView = memo(function PatientCardView({
       </span>
 
       <div className="mb-2.5">
-        <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Прогресс</p>
+        <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Прогресс</p>
         {progress && (progress.paid > 0 || progress.debt > 0 || progress.pending > 0) ? (
           <PatientTreatmentProgressBar data={progress} compact />
         ) : (
-          <span className="text-[10px] text-gray-300">—</span>
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-full border-[3px] border-gray-100 flex items-center justify-center shrink-0">
+              <span className="text-[10px] text-gray-300">—</span>
+            </div>
+            <span className="text-[10px] text-gray-300">Нет плана</span>
+          </div>
         )}
       </div>
 
