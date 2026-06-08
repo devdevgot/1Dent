@@ -6,6 +6,8 @@ import { eq, and } from "drizzle-orm";
 import { pool } from "@workspace/db";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
+import { seedContractTemplatesForClinic } from "../../seeds/contract-templates.seed";
+import { logger } from "../../lib/logger";
 
 const router = Router();
 const ownerOnly = roleGuard("owner");
@@ -95,6 +97,9 @@ router.post(
       );
 
       const branch = rows[0]!;
+      seedContractTemplatesForClinic(branch.id).catch((err) => {
+        logger.warn({ err, clinicId: branch.id }, "[clinic-branches] contract template seed failed");
+      });
       res.status(201).json({
         success: true,
         data: {

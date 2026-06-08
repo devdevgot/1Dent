@@ -71,6 +71,7 @@ router.get(
         if (def) {
           return {
             ...tmpl,
+            isSystem: true,
             category: def.category,
             subcategory: def.subcategory,
             extractedText: null,

@@ -14,6 +14,7 @@ import type { UserRole, User } from "@workspace/db";
 import type { SafeClinic } from "./auth.repository";
 import { sendPasswordResetEmail, sendStaffInvitationEmail } from "../../lib/email";
 import { logger } from "../../lib/logger";
+import { seedContractTemplatesForClinic } from "../../seeds/contract-templates.seed";
 
 const resetTokens = new Map<string, { email: string; expiresAt: number }>();
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
@@ -52,6 +53,10 @@ export class AuthService {
     const clinic = await this.repo.createClinic({
       id: randomUUID(),
       name: data.clinicName,
+    });
+
+    seedContractTemplatesForClinic(clinic.id).catch((err) => {
+      logger.warn({ err, clinicId: clinic.id }, "[auth] contract template seed failed on register");
     });
 
     const passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);

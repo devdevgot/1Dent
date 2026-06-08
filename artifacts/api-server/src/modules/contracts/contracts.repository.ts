@@ -13,6 +13,7 @@ import { randomUUID } from "crypto";
 import type { ContractTemplate, PatientContract, FieldMapping } from "@workspace/db";
 import {
   EXTRACTION_TEMPLATES,
+  type ExtractionTemplateDefinition,
   getExtractionTemplateText,
   renderExtractionTemplate,
   textToHtml,
@@ -156,14 +157,48 @@ export class ContractsRepository {
   // ── Templates ──────────────────────────────────────────────────────────────
 
   async listTemplates(clinicId: string): Promise<ContractTemplate[]> {
-    // Ensure system (extraction) templates exist for this clinic on every list call
-    await this.ensureSystemExtractionTemplates(clinicId);
+    try {
+      await this.ensureSystemExtractionTemplates(clinicId);
+    } catch (err) {
+      logger.error(
+        { err, clinicId },
+        "[contracts] ensureSystemExtractionTemplates failed during list — returning partial catalog",
+      );
+    }
 
-    return db
+    const rows = await db
       .select()
       .from(contractTemplatesTable)
-      .where(eq(contractTemplatesTable.clinicId, clinicId))
-      .orderBy(contractTemplatesTable.isSystem, desc(contractTemplatesTable.createdAt));
+      .where(eq(contractTemplatesTable.clinicId, clinicId));
+
+    const userTemplates = rows
+      .filter((t) => !t.isSystem)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+    const systemByType = new Map(
+      rows
+        .filter((t) => t.isSystem && t.systemType)
+        .map((t) => [t.systemType!, t] as const),
+    );
+
+    for (const def of EXTRACTION_TEMPLATES) {
+      if (systemByType.has(def.id)) continue;
+      try {
+        const row = await this.insertSystemTemplate(clinicId, def);
+        systemByType.set(def.id, row);
+      } catch (err) {
+        logger.error(
+          { err, clinicId, systemType: def.id },
+          "[contracts] failed to insert missing built-in template",
+        );
+      }
+    }
+
+    const systemTemplates = EXTRACTION_TEMPLATES.map((def) => systemByType.get(def.id)).filter(
+      Boolean,
+    ) as ContractTemplate[];
+
+    return [...systemTemplates, ...userTemplates];
   }
 
   async findTemplate(id: string, clinicId: string): Promise<ContractTemplate | null> {
@@ -213,38 +248,77 @@ export class ContractsRepository {
 
   // ── System (extraction) templates ──────────────────────────────────────────
 
+  private async insertSystemTemplate(
+    clinicId: string,
+    def: ExtractionTemplateDefinition,
+  ): Promise<ContractTemplate> {
+    const [row] = await db
+      .insert(contractTemplatesTable)
+      .values({
+        id: randomUUID(),
+        clinicId,
+        name: def.name,
+        fileUrl: "__system__",
+        fileType: "html",
+        extractedText: null,
+        fieldMappings: [] as unknown as FieldMapping[],
+        isSystem: true,
+        systemType: def.id,
+      })
+      .returning();
+    return row!;
+  }
+
   /**
-   * Lazily creates the 4 extraction system templates for a clinic if they
-   * don't already exist, then returns all 4 in definition order.
+   * Creates built-in system templates for a clinic if missing.
+   * Returns all templates in catalog definition order.
    */
   async ensureSystemExtractionTemplates(clinicId: string): Promise<ContractTemplate[]> {
+    const activeSystemIds = new Set(EXTRACTION_TEMPLATES.map((def) => def.id));
+
     let existing = await db
       .select()
       .from(contractTemplatesTable)
-      .where(and(eq(contractTemplatesTable.clinicId, clinicId), eq(contractTemplatesTable.isSystem, true)));
+      .where(
+        and(
+          eq(contractTemplatesTable.clinicId, clinicId),
+          inArray(contractTemplatesTable.systemType, [...activeSystemIds]),
+        ),
+      );
 
-    // 1. Delete obsolete system templates
-    const activeSystemIds = new Set(EXTRACTION_TEMPLATES.map((def) => def.id));
+    // Mark legacy rows that have systemType but isSystem=false
+    const legacyIds = existing.filter((t) => !t.isSystem).map((t) => t.id);
+    if (legacyIds.length > 0) {
+      await db
+        .update(contractTemplatesTable)
+        .set({ isSystem: true, updatedAt: new Date() })
+        .where(
+          and(
+            eq(contractTemplatesTable.clinicId, clinicId),
+            inArray(contractTemplatesTable.id, legacyIds),
+          ),
+        );
+      existing = existing.map((t) => (legacyIds.includes(t.id) ? { ...t, isSystem: true } : t));
+    }
+
     const obsolete = existing.filter((t) => t.systemType && !activeSystemIds.has(t.systemType));
-    
     if (obsolete.length > 0) {
       const obsoleteIds = obsolete.map((o) => o.id);
       await db.delete(contractTemplatesTable).where(
         and(
           eq(contractTemplatesTable.clinicId, clinicId),
-          eq(contractTemplatesTable.isSystem, true),
-          inArray(contractTemplatesTable.id, obsoleteIds)
-        )
+          inArray(contractTemplatesTable.id, obsoleteIds),
+        ),
       );
       existing = existing.filter((t) => !obsoleteIds.includes(t.id));
     }
 
-    const existingTypes = new Set(existing.map((t) => t.systemType));
+    const existingTypes = new Set(
+      existing.map((t) => t.systemType).filter((type): type is string => Boolean(type)),
+    );
     const toCreate = EXTRACTION_TEMPLATES.filter((def) => !existingTypes.has(def.id));
 
     if (toCreate.length > 0) {
-      // Store metadata only — full text lives in EXTRACTION_TEMPLATES to keep
-      // seeding fast and avoid huge INSERT payloads in production.
       for (let i = 0; i < toCreate.length; i += SYSTEM_TEMPLATE_BATCH_SIZE) {
         const batch = toCreate.slice(i, i + SYSTEM_TEMPLATE_BATCH_SIZE);
         try {
@@ -266,16 +340,27 @@ export class ContractsRepository {
             .returning();
           existing.push(...inserted);
         } catch (err) {
-          logger.error(
+          logger.warn(
             { err, clinicId, batchStart: i, batchSize: batch.length },
-            "[contracts] Failed to seed system template batch",
+            "[contracts] batch insert failed — retrying one-by-one",
           );
-          throw err;
+          for (const def of batch) {
+            if (existingTypes.has(def.id)) continue;
+            try {
+              const row = await this.insertSystemTemplate(clinicId, def);
+              existing.push(row);
+              existingTypes.add(def.id);
+            } catch (singleErr) {
+              logger.error(
+                { err: singleErr, clinicId, systemType: def.id },
+                "[contracts] failed to insert built-in template",
+              );
+            }
+          }
         }
       }
     }
 
-    // Return in definition order
     return EXTRACTION_TEMPLATES.map(
       (def) => existing.find((t) => t.systemType === def.id)!,
     ).filter(Boolean);

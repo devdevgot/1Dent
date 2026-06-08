@@ -35,6 +35,7 @@ import { eq, desc, count, sum, gte, lte, and, sql, not, ilike, or, isNotNull, ty
 import { requireTmaAdmin, invalidateAdminCache } from "./tma.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 import { seedProcedureTemplates } from "../../seeds/procedure-templates.seed";
+import { seedContractTemplatesForClinic } from "../../seeds/contract-templates.seed";
 
 const router = Router();
 router.use(requireTmaAdmin);
@@ -195,6 +196,9 @@ router.post("/clinics", async (req: Request, res: Response, next: NextFunction) 
     }
     const seedResult = await seedProcedureTemplates(clinicId);
     console.log(`[createClinic] Seeded ${seedResult.inserted} procedure templates for clinic ${clinicId}`);
+    await seedContractTemplatesForClinic(clinicId).catch((err) => {
+      console.error(`[createClinic] Contract template seed failed for clinic ${clinicId}`, err);
+    });
     res.status(201).json({ success: true, data: { clinic, ownerInitialPassword } });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);

@@ -149,7 +149,7 @@ function MappingEditor({ template, onClose }: { template: ContractTemplate; onCl
 }
 
 function isSystemTemplate(t: ContractTemplate): boolean {
-  return Boolean(t.isSystem);
+  return Boolean(t.isSystem ?? (t as ContractTemplate & { is_system?: boolean }).is_system);
 }
 
 function SystemTemplatePreview({ templateId, open }: { templateId: string; open: boolean }) {
@@ -395,6 +395,25 @@ export default function ContractTemplatesPage() {
         )}
 
         {/* System (built-in) templates — read-only */}
+        {!isLoading && systemTemplates.length === 0 && (
+          <div className="mb-8 bg-amber-50 border border-amber-100 rounded-2xl p-4 flex gap-3">
+            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <div className="text-xs text-amber-800 space-y-2">
+              <p className="font-semibold">Встроенные пакеты документов не загрузились</p>
+              <p>Нажмите «Обновить» — шаблоны создаются автоматически для каждой клиники.</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8"
+                onClick={() => void queryClient.invalidateQueries({ queryKey: ["contract-templates"] })}
+              >
+                Обновить
+              </Button>
+            </div>
+          </div>
+        )}
+
         {!isLoading && systemTemplates.length > 0 && (
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-3">
