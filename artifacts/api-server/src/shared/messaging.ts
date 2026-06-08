@@ -1,8 +1,15 @@
 import { db, clinicsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { sendGreenApiMessage, showGreenApiTyping } from "./green-api";
-import { sendWhatsAppMessage } from "./whatsapp";
+import { sendGreenApiFile, sendGreenApiMessage, showGreenApiTyping } from "./green-api";
+import { sendWhatsAppMedia, sendWhatsAppMessage } from "./whatsapp";
 import { logger } from "../lib/logger";
+
+export interface OutboundFileAttachment {
+  buffer: Buffer;
+  fileName: string;
+  contentType: string;
+  caption?: string;
+}
 
 const META_ENABLED = !!(
   process.env["WHATSAPP_TOKEN"] && process.env["WHATSAPP_PHONE_ID"]
@@ -40,6 +47,49 @@ export async function sendToPatient(
   }
 
   logger.info({ clinicId, phone }, "sendToPatient: no WhatsApp provider configured — message not delivered");
+  return "";
+}
+
+export async function sendFileToPatient(
+  clinicId: string,
+  phone: string,
+  attachment: OutboundFileAttachment,
+): Promise<string> {
+  const [clinic] = await db
+    .select({
+      greenApiInstanceId: clinicsTable.greenApiInstanceId,
+      greenApiToken: clinicsTable.greenApiToken,
+      greenApiUrl: clinicsTable.greenApiUrl,
+    })
+    .from(clinicsTable)
+    .where(eq(clinicsTable.id, clinicId))
+    .limit(1);
+
+  if (clinic?.greenApiInstanceId && clinic?.greenApiToken) {
+    const result = await sendGreenApiFile(
+      clinic.greenApiInstanceId,
+      clinic.greenApiToken,
+      phone,
+      attachment.buffer,
+      attachment.fileName,
+      attachment.caption,
+      clinic.greenApiUrl,
+    );
+    return result.idMessage;
+  }
+
+  if (META_ENABLED) {
+    const result = await sendWhatsAppMedia(
+      phone,
+      attachment.buffer,
+      attachment.contentType,
+      attachment.fileName,
+      attachment.caption,
+    );
+    return result.whatsappMessageId ?? "";
+  }
+
+  logger.info({ clinicId, phone, fileName: attachment.fileName }, "sendFileToPatient: no WhatsApp provider configured — file not delivered");
   return "";
 }
 

@@ -87,6 +87,18 @@ export class ObjectStorageService {
     return null;
   }
 
+  async readObjectEntityBuffer(
+    objectPath: string,
+  ): Promise<{ buffer: Buffer; contentType: string }> {
+    const file = await this.getObjectEntityFile(objectPath);
+    const [metadata] = await file.getMetadata();
+    const [buffer] = await file.download();
+    return {
+      buffer,
+      contentType: (metadata.contentType as string) || "application/octet-stream",
+    };
+  }
+
   async downloadObject(file: File, cacheTtlSec: number = 3600): Promise<Response> {
     const [metadata] = await file.getMetadata();
     const aclPolicy = await getObjectAclPolicy(file);

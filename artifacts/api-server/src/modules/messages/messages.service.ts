@@ -4,17 +4,27 @@ import { notificationsTable, usersTable } from "@workspace/db";
 import { eq, and, inArray } from "drizzle-orm";
 import { MessagesRepository } from "./messages.repository";
 import { isRedAlert } from "../../shared/whatsapp";
-import { sendToPatient } from "../../shared/messaging";
+import { sendFileToPatient, sendToPatient } from "../../shared/messaging";
+import { encodeAttachmentContent } from "../../shared/attachment-content";
 import { getAlertQueue } from "../../shared/alert-queue";
-import { NotFoundError } from "../../shared/errors";
+import { NotFoundError, ValidationError } from "../../shared/errors";
+import { ObjectStorageService } from "../../lib/objectStorage";
+import { getObjectAclPolicy } from "../../lib/objectAcl";
 import { logger } from "../../lib/logger";
 import { ChatbotService } from "../chatbot/chatbot.service";
 import { debounceMessage } from "../../shared/message-debounce";
 import type { UserRole, Message, Notification } from "@workspace/db";
 
+export interface SendMessageAttachment {
+  objectPath: string;
+  fileName: string;
+  contentType: string;
+}
+
 export class MessagesService {
   private repo = new MessagesRepository();
   private chatbot = new ChatbotService();
+  private storage = new ObjectStorageService();
 
   async listMessages(
     patientId: string,
@@ -34,21 +44,62 @@ export class MessagesService {
     content: string,
     requestingRole: UserRole,
     requestingUserId: string,
+    attachment?: SendMessageAttachment,
   ): Promise<Message> {
     const patient = await this.repo.findPatient(patientId, clinicId);
     if (!patient) throw new NotFoundError("Patient not found");
 
     let whatsappMessageId: string | undefined;
+    let storedContent = content;
 
-    // Proxy: real phone only exists server-side, never sent to frontend
-    // Routes through Green API (if clinic configured) or falls back to Meta
-    const msgId = await sendToPatient(clinicId, patient.phone, content).catch((err) => {
-      logger.warn({ err }, "sendToPatient failed — message saved without delivery");
-      return "";
-    });
-    if (msgId) whatsappMessageId = msgId;
+    if (attachment) {
+      const normalizedPath = attachment.objectPath.startsWith("/objects/")
+        ? attachment.objectPath
+        : this.storage.normalizeObjectEntityPath(attachment.objectPath);
 
-    const alertFlag = isRedAlert(content);
+      const objectFile = await this.storage.getObjectEntityFile(normalizedPath);
+      const aclPolicy = await getObjectAclPolicy(objectFile);
+      if (aclPolicy && aclPolicy.owner !== clinicId) {
+        throw new ValidationError("Нет доступа к этому файлу");
+      }
+      if (!aclPolicy) {
+        await this.storage.trySetObjectEntityAclPolicy(normalizedPath, {
+          owner: clinicId,
+          visibility: "private",
+        });
+      }
+
+      const { buffer, contentType } = await this.storage.readObjectEntityBuffer(normalizedPath);
+      const caption = content.trim() || undefined;
+
+      const msgId = await sendFileToPatient(clinicId, patient.phone, {
+        buffer,
+        fileName: attachment.fileName,
+        contentType: attachment.contentType || contentType,
+        caption,
+      }).catch((err) => {
+        logger.warn({ err, objectPath: normalizedPath }, "sendFileToPatient failed — message saved without delivery");
+        return "";
+      });
+      if (msgId) whatsappMessageId = msgId;
+
+      storedContent = encodeAttachmentContent(
+        normalizedPath,
+        attachment.fileName,
+        attachment.contentType || contentType,
+        caption,
+      );
+    } else {
+      // Proxy: real phone only exists server-side, never sent to frontend
+      // Routes through Green API (if clinic configured) or falls back to Meta
+      const msgId = await sendToPatient(clinicId, patient.phone, content).catch((err) => {
+        logger.warn({ err }, "sendToPatient failed — message saved without delivery");
+        return "";
+      });
+      if (msgId) whatsappMessageId = msgId;
+    }
+
+    const alertFlag = isRedAlert(storedContent);
 
     const message = await this.repo.create({
       id: randomUUID(),
@@ -56,7 +107,7 @@ export class MessagesService {
       patientId,
       direction: "outbound",
       senderId: requestingUserId,
-      content,
+      content: storedContent,
       whatsappMessageId: whatsappMessageId ?? null,
       isRedAlert: alertFlag,
     });
@@ -69,18 +120,18 @@ export class MessagesService {
             clinicId,
             patientId,
             messageId: message.id,
-            content,
+            content: storedContent,
             patientName: patient.name,
           })
           .catch(() => {
             this.writeRedAlertNotifications(
-              clinicId, patientId, message.id, content, patient.name,
+              clinicId, patientId, message.id, storedContent, patient.name,
             ).catch((err) => logger.error({ err }, "Failed to write red alert notifications (BullMQ fallback)"));
           });
       } else {
         // Direct DB path — no Redis configured
         this.writeRedAlertNotifications(
-          clinicId, patientId, message.id, content, patient.name,
+          clinicId, patientId, message.id, storedContent, patient.name,
         ).catch((err) => logger.error({ err }, "Failed to write red alert notifications"));
       }
     }

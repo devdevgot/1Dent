@@ -130,11 +130,59 @@ function DeliveryIcon({ status }: { status: DeliveryStatus }) {
   return null;
 }
 
+const ATTACHMENT_PREFIX = "__file__:";
+
+interface ParsedAttachment {
+  caption?: string;
+  objectPath: string;
+  fileName: string;
+  contentType: string;
+}
+
+function parseAttachmentContent(content: string): ParsedAttachment | null {
+  const metaLine =
+    content
+      .split("\n")
+      .find((line) => line.startsWith(ATTACHMENT_PREFIX)) ??
+    (content.startsWith(ATTACHMENT_PREFIX) ? content : null);
+  if (!metaLine) return null;
+
+  const parts = metaLine.slice(ATTACHMENT_PREFIX.length).split("|");
+  if (parts.length < 3) return null;
+
+  const [objectPath, fileName, contentType] = parts as [string, string, string];
+  const caption = content
+    .split("\n")
+    .filter((line) => !line.startsWith(ATTACHMENT_PREFIX))
+    .join("\n")
+    .trim();
+
+  return {
+    objectPath,
+    fileName,
+    contentType,
+    caption: caption || undefined,
+  };
+}
+
+function attachmentPreviewUrl(objectPath: string): string {
+  const path = objectPath.replace(/^\/objects\//, "");
+  return `/api/storage/objects/${path}`;
+}
+
+function isImageAttachment(contentType: string, fileName: string): boolean {
+  if (contentType.startsWith("image/")) return true;
+  return /\.(jpe?g|png|gif|webp|heic|bmp)$/i.test(fileName);
+}
+
 function isImageUrl(text: string): boolean {
+  const attachment = parseAttachmentContent(text);
+  if (attachment) return isImageAttachment(attachment.contentType, attachment.fileName);
   return /\.(jpe?g|png|gif|webp|heic)(\?.*)?$/i.test(text.trim());
 }
 
 function isMediaUrl(text: string): boolean {
+  if (parseAttachmentContent(text)) return true;
   const t = text.trim();
   if (!t.startsWith("http://") && !t.startsWith("https://") && !t.startsWith("/api/storage/")) return false;
   return /\.(jpe?g|png|gif|webp|heic|pdf|doc|docx|mp4|mp3|ogg|wav)(\?.*)?$/i.test(t);
@@ -215,21 +263,35 @@ function MessageBubble({ message, isOutbound }: { message: Message; isOutbound: 
           </div>
         )}
         {isMediaUrl(message.content) ? (
-          <a href={message.content} target="_blank" rel="noreferrer" className="block">
-            {isImageUrl(message.content) ? (
-              <img
-                src={message.content}
-                alt="Фото"
-                className="max-w-full rounded-lg max-h-[240px] object-cover"
-                loading="lazy"
-              />
-            ) : (
-              <div className="flex items-center gap-2 py-1">
-                <Paperclip className="w-4 h-4 shrink-0 opacity-70" />
-                <span className="text-sm underline break-all">{message.content.split("/").pop()}</span>
+          (() => {
+            const attachment = parseAttachmentContent(message.content);
+            const mediaUrl = attachment
+              ? attachmentPreviewUrl(attachment.objectPath)
+              : message.content;
+            const fileLabel = attachment?.fileName ?? message.content.split("/").pop() ?? "Файл";
+            return (
+              <div className="space-y-1">
+                {attachment?.caption && (
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{attachment.caption}</p>
+                )}
+                <a href={mediaUrl} target="_blank" rel="noreferrer" className="block">
+                  {isImageUrl(message.content) ? (
+                    <img
+                      src={mediaUrl}
+                      alt={fileLabel}
+                      className="max-w-full rounded-lg max-h-[240px] object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2 py-1">
+                      <Paperclip className="w-4 h-4 shrink-0 opacity-70" />
+                      <span className="text-sm underline break-all">{fileLabel}</span>
+                    </div>
+                  )}
+                </a>
               </div>
-            )}
-          </a>
+            );
+          })()
         ) : (
           <p className="text-sm leading-relaxed whitespace-pre-wrap break-words" style={{ overflowWrap: "anywhere" }}>{message.content}</p>
         )}
@@ -319,13 +381,16 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
   const sendMutation = useSendMessage({
     mutation: {
       onMutate: async (vars) => {
+        const optimisticContent = vars.data.attachment
+          ? `${ATTACHMENT_PREFIX}${vars.data.attachment.objectPath}|${vars.data.attachment.fileName}|${vars.data.attachment.contentType}`
+          : (vars.data.content ?? "");
         const optimistic: Message = {
           id:               `optimistic-${Date.now()}`,
           clinicId:         user!.clinicId,
           patientId:        patient.id,
           direction:        "outbound",
           senderId:         user!.id,
-          content:          vars.data.content,
+          content:          optimisticContent,
           whatsappMessageId: null,
           isRedAlert:       false,
           createdAt:        new Date().toISOString(),
@@ -391,8 +456,17 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
       const putRes = await fetch(uploadURL, { method: "PUT", body: file, headers: { "Content-Type": file.type } });
       if (!putRes.ok) throw new Error("Upload failed");
 
-      const fileUrl = `${window.location.origin}/api/storage/objects/${objectPath.replace(/^\/objects\//, "")}${tok ? `?token=${tok}` : ""}`;
-      sendMutation.mutate({ patientId: patient.id, data: { content: fileUrl } });
+      sendMutation.mutate({
+        patientId: patient.id,
+        data: {
+          content: "",
+          attachment: {
+            objectPath,
+            fileName: file.name,
+            contentType: file.type || "application/octet-stream",
+          },
+        },
+      });
     } catch {
       // ignore upload errors silently
     } finally {

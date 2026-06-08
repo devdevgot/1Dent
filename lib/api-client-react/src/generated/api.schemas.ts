@@ -425,11 +425,13 @@ export interface Message {
 }
 
 export interface SendMessageRequest {
-  /**
-   * @minLength 1
-   * @maxLength 4096
-   */
-  content: string;
+  /** @maxLength 4096 */
+  content?: string;
+  attachment?: {
+    objectPath: string;
+    fileName: string;
+    contentType: string;
+  };
 }
 
 export type MessagesResponseData = {
