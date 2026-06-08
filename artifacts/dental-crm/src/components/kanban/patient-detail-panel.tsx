@@ -1139,6 +1139,13 @@ export function PatientDetailPanel() {
   const dentalLoading = teethLoading || (planLoading && !planError) || (plansLoading && !plansError);
   const chartReady = !teethLoading;
 
+  // Treatment plans and contracts require a saved dental chart first.
+  useEffect(() => {
+    if (chartReady && !hasDiagnosis && treatmentStep > 1) {
+      setTreatmentStep(1);
+    }
+  }, [chartReady, hasDiagnosis, treatmentStep]);
+
   // Auto-open active plan detail when navigating to step 2
   useEffect(() => {
     if (treatmentStep === 2 && activePlan && planDetailId === null && !planLoading && !plansLoading) {
@@ -1176,7 +1183,7 @@ export function PatientDetailPanel() {
         queryClient.invalidateQueries({ queryKey: getListTreatmentPlansQueryKey(selectedPatientId ?? "") });
         if (newPlanId) {
           setPlanDetailId(newPlanId);
-          setTreatmentStep(2);
+          if (hasDiagnosis) setTreatmentStep(2);
         }
         toast({ title: "План лечения создан" });
       },
@@ -1470,7 +1477,8 @@ export function PatientDetailPanel() {
     //    Fire-and-forget — we don't need to wait for the AI result here.
     void triggerAnalysisMutation.mutateAsync(selectedPatientId);
 
-    await refetchTeeth();
+    const refetchResult = await refetchTeeth();
+    const diagnosisComplete = (refetchResult.data?.data?.teeth ?? []).length > 0;
     setDiagnosisMap(new Map());
     setDiagnosisNotesMap(new Map());
     setDiagnosisToothFdi(null);
@@ -1491,7 +1499,7 @@ export function PatientDetailPanel() {
       setBundleSent(false);
       setBundleRequiredModalOpen(true);
       void handlePrepareBundle(selectedPatientId, selectedServices.map(s => s.name));
-    } else {
+    } else if (diagnosisComplete) {
       setActiveTab("treatment");
       setTreatmentStep(2);
     }
@@ -1549,7 +1557,8 @@ export function PatientDetailPanel() {
     }
 
     void triggerAnalysisMutation.mutateAsync(selectedPatientId);
-    await refetchTeeth();
+    const refetchResult = await refetchTeeth();
+    const diagnosisComplete = (refetchResult.data?.data?.teeth ?? []).length > 0;
     await queryClient.invalidateQueries({ queryKey: getGetActiveTreatmentPlanQueryKey(selectedPatientId) });
     await queryClient.invalidateQueries({ queryKey: getListTreatmentPlansQueryKey(selectedPatientId) });
 
@@ -1563,8 +1572,10 @@ export function PatientDetailPanel() {
     setPlanViewToothFdi(null);
     queryClient.removeQueries({ queryKey: getDentalAiAnalysisQueryKey(selectedPatientId) });
     toast({ title: t("patient.diagnosisSaved") });
-    setActiveTab("treatment");
-    setTreatmentStep(2);
+    if (diagnosisComplete) {
+      setActiveTab("treatment");
+      setTreatmentStep(2);
+    }
   }, [
     selectedPatientId,
     activePlan,
@@ -2024,23 +2035,33 @@ export function PatientDetailPanel() {
                     { id: 1 as const, label: "Карта зубов" },
                     { id: 2 as const, label: "Планы лечения" },
                     { id: 3 as const, label: "Договоры" },
-                  ] as const).map((step, idx) => (
+                  ] as const).map((step, idx) => {
+                    const stepLocked = step.id > 1 && !hasDiagnosis;
+                    return (
                     <div key={step.id} className="flex items-center">
                       <button
+                        type="button"
+                        disabled={stepLocked}
                         onClick={() => {
+                          if (stepLocked) return;
                           setTreatmentStep(step.id);
                           if (step.id === 2 && activePlan) {
                             setPlanDetailId(activePlan.id);
                           }
                         }}
-                        className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${treatmentStep === step.id ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-slate-100"}`}
+                        className={cn(
+                          "flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-semibold transition-colors",
+                          treatmentStep === step.id ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-slate-100",
+                          stepLocked && "opacity-40 cursor-not-allowed hover:bg-transparent",
+                        )}
                       >
                         <span className={`w-4.5 h-4.5 w-[18px] h-[18px] rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 ${treatmentStep === step.id ? "bg-primary text-white" : "bg-slate-200 text-slate-500"}`}>{step.id}</span>
                         {step.label}
                       </button>
                       {idx < 2 && <ChevronRight className="w-3 h-3 text-muted-foreground/40 mx-0.5 shrink-0" />}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* ── Step 1: Карта зубов ── */}
@@ -2930,7 +2951,7 @@ export function PatientDetailPanel() {
                 onClick={() => {
                   setBundleRequiredModalOpen(false);
                   setActiveTab("treatment");
-                  setTreatmentStep(2);
+                  if (hasDiagnosis) setTreatmentStep(2);
                 }}
                 className={cn(
                   "w-full h-11 rounded-xl text-[14px] font-semibold transition-all flex items-center justify-center gap-2",
