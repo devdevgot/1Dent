@@ -14,6 +14,7 @@ import {
 import { AppointmentModal } from "@/components/appointment-modal";
 import { useAppointmentSave } from "@/hooks/use-appointment-save";
 import type { ProcedureTemplate } from "@/components/appointment-modal";
+import { isCalendarProcedure } from "@/lib/calendar-procedures";
 
 /* ─── Constants ─────────────────────────────────────────────────────────────── */
 const HOUR_H  = 64;   // px per hour
@@ -122,7 +123,7 @@ export default function DoctorScheduleDayPage() {
     const all = (pData?.data?.procedures ?? []) as Procedure[];
     const mine = user?.id ? all.filter(p => p.doctorId === user.id) : all;
     return mine
-      .filter(p => p.scheduledAt && toStr(new Date(p.scheduledAt)) === dateStr)
+      .filter(p => isCalendarProcedure(p) && toStr(new Date(p.scheduledAt!)) === dateStr)
       .sort((a, b) => new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime());
   }, [pData, user?.id, dateStr]);
 
@@ -273,8 +274,8 @@ export default function DoctorScheduleDayPage() {
             </div>
           )}
 
-          {/* Events — completed procedures are hidden from calendar */}
-          {dayProcs.filter(p => p.status !== "completed").map(proc => {
+          {/* Events — only scheduled / in-progress appointments */}
+          {dayProcs.map(proc => {
             if (!proc.scheduledAt) return null;
             const startMin = timeMins(proc.scheduledAt);
             if (startMin < START_H * 60 || startMin >= END_H * 60) return null;

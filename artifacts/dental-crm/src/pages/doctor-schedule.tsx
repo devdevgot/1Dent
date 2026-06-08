@@ -13,6 +13,7 @@ import { ChevronLeft, ChevronRight, CalendarDays, Plus } from "lucide-react";
 import { AppointmentModal } from "@/components/appointment-modal";
 import { useAppointmentSave } from "@/hooks/use-appointment-save";
 import type { ProcedureTemplate } from "@/components/appointment-modal";
+import { isCalendarProcedure } from "@/lib/calendar-procedures";
 
 /* ─── Status colours ────────────────────────────────────────────────────────── */
 const STATUS_PILL: Record<ProcedureStatus, string> = {
@@ -80,11 +81,11 @@ export default function DoctorSchedulePage() {
 
   const apptSave = useAppointmentSave({ onDone: () => setModalDate(null) });
 
-  /* Group procedures by local date — completed hidden from calendar */
+  /* Group procedures by local date — only scheduled / in-progress appointments */
   const byDate = useMemo(() => {
     const all = (data?.data?.procedures ?? []) as Procedure[];
     const mine = user?.id ? all.filter(p => p.doctorId === user.id) : all;
-    const active = mine.filter(p => p.status !== "completed");
+    const active = mine.filter(isCalendarProcedure);
     const map = new Map<string, Procedure[]>();
     active.forEach(p => {
       if (!p.scheduledAt) return;

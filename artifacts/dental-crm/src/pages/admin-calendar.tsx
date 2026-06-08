@@ -43,6 +43,7 @@ import {
   type PatientEntry,
 } from "@/components/appointment-modal";
 import { useAppointmentSave } from "@/hooks/use-appointment-save";
+import { isCalendarProcedure } from "@/lib/calendar-procedures";
 
 /* ─── Appointment Group ─────────────────────────────────────────────────────
    Multiple procedures belonging to the same patient at the same time slot
@@ -262,7 +263,7 @@ export default function AdminCalendar() {
 
   const filteredProcedures = useMemo(() => {
     return allProcedures.filter((p) => {
-      if (!p.scheduledAt) return false;
+      if (!isCalendarProcedure(p)) return false;
       if (filterDoctorId && p.doctorId !== filterDoctorId) return false;
       return true;
     });

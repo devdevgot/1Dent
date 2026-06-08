@@ -33,6 +33,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isCalendarProcedure } from "@/lib/calendar-procedures";
 import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -316,9 +317,8 @@ export default function AdminAppointmentNewPage() {
   const conflictingAppointments = useMemo(() => {
     if (!doctorId || !apptDate) return [];
     return allProcedures.filter((p) => {
-      if (!p.scheduledAt || p.doctorId !== doctorId) return false;
-      if (p.status === "cancelled") return false;
-      const d = parseISO(p.scheduledAt);
+      if (!isCalendarProcedure(p) || p.doctorId !== doctorId) return false;
+      const d = parseISO(p.scheduledAt!);
       return format(d, "yyyy-MM-dd") === apptDate;
     }).sort((a, b) => {
       const da = a.scheduledAt ? parseISO(a.scheduledAt).getTime() : 0;
