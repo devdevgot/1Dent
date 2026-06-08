@@ -43,6 +43,8 @@ export class AuthRepository {
         name: clinicsTable.name,
         plan: clinicsTable.plan,
         whatsappPhone: clinicsTable.whatsappPhone,
+        trialEndsAt: clinicsTable.trialEndsAt,
+        planExpiresAt: clinicsTable.planExpiresAt,
         createdAt: clinicsTable.createdAt,
       })
       .from(clinicsTable)
