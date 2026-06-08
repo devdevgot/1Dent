@@ -18,6 +18,7 @@ import {
   BarChart3,
   Wallet,
   Bot,
+  UserCog,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { useTranslation } from "react-i18next";
@@ -69,7 +70,8 @@ function normalize(s: string) {
   return s.toLowerCase().replace(/\s+/g, " ").trim();
 }
 
-function matches(text: string, query: string) {
+function matches(text: string | null | undefined, query: string) {
+  if (!text) return false;
   return normalize(text).includes(normalize(query));
 }
 
