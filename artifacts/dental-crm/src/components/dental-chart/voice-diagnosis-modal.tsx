@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import {
   Mic, X, Loader2, Check, Trash2, ChevronDown, ChevronRight,
-  RotateCcw, CheckSquare, Square, Clock, Stethoscope, Plus,
+  RotateCcw, Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,7 +21,7 @@ import { useAuthStore } from "@/hooks/use-auth";
 import { getBaseUrl } from "@/lib/base-url";
 import { CONDITION_CONFIG } from "./fdi-chart";
 import type { ToothCondition } from "@workspace/api-client-react";
-import { cn } from "@/lib/utils";
+import { matchVoiceServices } from "@/lib/voice-service-matching";
 
 const AUTH_TOKEN_KEY = "auth_token";
 
@@ -41,22 +41,6 @@ const CONDITION_TO_CATEGORY: Record<string, string | undefined> = {
   missing: "implantation",
 };
 
-/** For missing teeth, also pin these categories at the top of the tab list */
-const MISSING_PRIORITY_CATEGORIES = ["implantation", "orthopedics", "surgery"];
-
-const CATEGORY_LABELS: Record<string, string> = {
-  therapy: "Терапия",
-  surgery: "Хирургия",
-  orthopedics: "Ортопедия",
-  implantation: "Имплантация",
-  pediatric: "Детский прайс",
-  hygiene: "Гигиена",
-  periodontology: "Пародонтология",
-  radiology: "Рентген",
-  restoration: "Реставрация",
-  other: "Прочее",
-};
-
 export type SuggestedTemplate = { id: string; name: string; defaultPrice: number };
 
 export type VoiceDiagnosisEntry = {
@@ -64,6 +48,7 @@ export type VoiceDiagnosisEntry = {
   condition: string;
   notes: string;
   diagnosisText?: string;
+  spokenProcedure?: string;
   price: number;
   mkb10Code?: string;
   suggestedTemplates?: SuggestedTemplate[];
@@ -74,7 +59,7 @@ type VoiceDraft = {
   timestamp: number;
   transcript: string;
   entries: VoiceDiagnosisEntry[];
-  selectedServiceIds: Record<number, string[]>;
+  selectedServiceIds: Record<number, string>;
 };
 
 type Phase = "idle" | "recording" | "processing" | "review" | "applying";
@@ -100,6 +85,44 @@ function formatTime(ts: number) {
   return new Date(ts).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
 }
 
+function normalizeDraftSelections(
+  raw: Record<number, string | string[]>,
+): Record<number, string> {
+  const out: Record<number, string> = {};
+  for (const [k, v] of Object.entries(raw)) {
+    if (Array.isArray(v)) {
+      if (v[0]) out[Number(k)] = v[0];
+    } else if (v) {
+      out[Number(k)] = v;
+    }
+  }
+  return out;
+}
+
+function rematchEntryServices(
+  entry: VoiceDiagnosisEntry,
+  transcript: string,
+  templates: ProcedureTemplate[],
+): VoiceDiagnosisEntry {
+  const category = CONDITION_TO_CATEGORY[entry.condition];
+  const { suggestions, bestMatchId } = matchVoiceServices({
+    transcript,
+    condition: entry.condition,
+    diagnosisText: entry.diagnosisText,
+    notes: entry.notes,
+    spokenProcedure: entry.spokenProcedure,
+    templates,
+    category,
+  });
+  const best = suggestions.find((s) => s.id === bestMatchId);
+  return {
+    ...entry,
+    suggestedTemplates: suggestions,
+    bestMatchId,
+    price: best?.defaultPrice ?? entry.price,
+  };
+}
+
 export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplied, initialRestoreDraft }: Props) {
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -115,12 +138,8 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
   const [error, setError] = useState<string | null>(null);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
 
-  // Per-tooth: selected service IDs
-  const [selectedServiceIds, setSelectedServiceIds] = useState<Record<number, Set<string>>>({});
-  // Per-tooth: expanded service panel
-  const [expandedFdi, setExpandedFdi] = useState<number | null>(null);
-  // Per-tooth: category browser (keyed by FDI number)
-  const [browseCategoryMap, setBrowseCategoryMap] = useState<Record<number, string | null>>({});
+  // Per-tooth: one selected service from relevant transcript matches
+  const [selectedServiceIds, setSelectedServiceIds] = useState<Record<number, string>>({});
 
   // Draft state
   const DRAFT_KEY = `1dent:voice-draft:${patientId}`;
@@ -150,11 +169,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
         if (initialRestoreDraft) {
           setTranscript(draft.transcript);
           setEntries(draft.entries);
-          const restored: Record<number, Set<string>> = {};
-          for (const [k, v] of Object.entries(draft.selectedServiceIds)) {
-            restored[Number(k)] = new Set(v as string[]);
-          }
-          setSelectedServiceIds(restored);
+          setSelectedServiceIds(normalizeDraftSelections(draft.selectedServiceIds));
           setPhase("review");
         } else {
           setDraftInfo({ ts: draft.timestamp });
@@ -173,9 +188,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
       timestamp: Date.now(),
       transcript,
       entries,
-      selectedServiceIds: Object.fromEntries(
-        Object.entries(selectedServiceIds).map(([k, v]) => [k, [...v]]),
-      ),
+      selectedServiceIds,
     };
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
   }, [DRAFT_KEY, transcript, entries, selectedServiceIds]);
@@ -192,11 +205,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
       const draft: VoiceDraft = JSON.parse(raw);
       setTranscript(draft.transcript);
       setEntries(draft.entries);
-      const restored: Record<number, Set<string>> = {};
-      for (const [k, v] of Object.entries(draft.selectedServiceIds)) {
-        restored[Number(k)] = new Set(v as string[]);
-      }
-      setSelectedServiceIds(restored);
+      setSelectedServiceIds(normalizeDraftSelections(draft.selectedServiceIds as Record<number, string | string[]>));
       setPhase("review");
       setDraftInfo(null);
     } catch {
@@ -285,12 +294,9 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
       const diagEntries = json.data.diagnoses ?? [];
       setTranscript(json.data.transcript ?? "");
       setEntries(diagEntries);
-      // Auto-select the best-matching template for each tooth
-      const autoSelected: Record<number, Set<string>> = {};
+      const autoSelected: Record<number, string> = {};
       for (const d of diagEntries) {
-        if (d.bestMatchId) {
-          autoSelected[d.fdi] = new Set([d.bestMatchId]);
-        }
+        if (d.bestMatchId) autoSelected[d.fdi] = d.bestMatchId;
       }
       setSelectedServiceIds(autoSelected);
       setPhase("review");
@@ -320,32 +326,37 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
     });
   };
 
-  // ── Service selection ────────────────────────────────────────────────────────
-
-  const toggleService = (fdi: number, id: string) => {
+  const setServiceForTooth = (fdi: number, serviceId: string) => {
     setSelectedServiceIds((prev) => {
-      const cur = new Set(prev[fdi] ?? []);
-      if (cur.has(id)) cur.delete(id); else cur.add(id);
-      return { ...prev, [fdi]: cur };
+      const next = { ...prev };
+      if (!serviceId) delete next[fdi];
+      else next[fdi] = serviceId;
+      return next;
     });
   };
 
+  const getServicePrice = useCallback((entry: VoiceDiagnosisEntry, serviceId?: string) => {
+    const id = serviceId || selectedServiceIds[entry.fdi] || entry.bestMatchId;
+    if (!id) return entry.price;
+    const fromSuggestions = entry.suggestedTemplates?.find((s) => s.id === id);
+    if (fromSuggestions) return fromSuggestions.defaultPrice;
+    const tpl = allTemplates.find((t) => t.id === id);
+    return tpl?.defaultPrice ?? entry.price;
+  }, [selectedServiceIds, allTemplates]);
+
   const totalSelectedServices = useMemo(
-    () => Object.values(selectedServiceIds).reduce((sum, s) => sum + s.size, 0),
+    () => Object.values(selectedServiceIds).filter(Boolean).length,
     [selectedServiceIds],
   );
 
   const totalServiceCost = useMemo(() => {
     let sum = 0;
-    for (const [fdiStr, ids] of Object.entries(selectedServiceIds)) {
-      void fdiStr;
-      for (const id of ids) {
-        const tpl = allTemplates.find((t) => t.id === id);
-        if (tpl) sum += tpl.defaultPrice ?? 0;
-      }
+    for (const entry of entries) {
+      const id = selectedServiceIds[entry.fdi];
+      if (id) sum += getServicePrice(entry, id);
     }
     return sum;
-  }, [selectedServiceIds, allTemplates]);
+  }, [entries, selectedServiceIds, getServicePrice]);
 
   // ── Apply ────────────────────────────────────────────────────────────────────
 
@@ -379,44 +390,45 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
       let appliedServices = 0;
       const serviceErrors: string[] = [];
 
-      for (const [fdiStr, ids] of Object.entries(selectedServiceIds)) {
+      for (const [fdiStr, id] of Object.entries(selectedServiceIds)) {
+        if (!id) continue;
         const fdi = Number(fdiStr);
         const entry = entries.find((e) => e.fdi === fdi);
-        for (const id of ids) {
-          const tpl = allTemplates.find((t) => t.id === id);
-          if (!tpl) continue;
+        const tpl = allTemplates.find((t) => t.id === id)
+          ?? entry?.suggestedTemplates?.find((s) => s.id === id);
+        if (!tpl) continue;
+        const price = "defaultPrice" in tpl ? tpl.defaultPrice : 0;
+        const name = tpl.name;
+        try {
+          await createProcedureMutation.mutateAsync({
+            data: {
+              patientId,
+              doctorId: user?.id,
+              templateId: tpl.id,
+              name: `[Зуб ${fdi}] ${name}`,
+              price,
+            },
+          });
+          appliedServices++;
+        } catch {
+          serviceErrors.push(name);
+        }
+
+        if (activePlanId) {
           try {
-            await createProcedureMutation.mutateAsync({
+            await addPlanItemMutation.mutateAsync({
+              id: patientId,
+              planId: activePlanId,
               data: {
-                patientId,
-                doctorId: user?.id,
-                templateId: tpl.id,
-                name: `[Зуб ${fdi}] ${tpl.name}`,
-                price: tpl.defaultPrice,
+                toothFdi: fdi,
+                condition: entry?.condition,
+                mkb10Code: entry?.mkb10Code,
+                title: `[Зуб ${fdi}] ${name}`,
+                price,
               },
             });
-            appliedServices++;
           } catch {
-            serviceErrors.push(tpl.name);
-          }
-
-          // Also add to active treatment plan if one exists
-          if (activePlanId) {
-            try {
-              await addPlanItemMutation.mutateAsync({
-                id: patientId,
-                planId: activePlanId,
-                data: {
-                  toothFdi: fdi,
-                  condition: entry?.condition,
-                  mkb10Code: entry?.mkb10Code,
-                  title: `[Зуб ${fdi}] ${tpl.name}`,
-                  price: tpl.defaultPrice,
-                },
-              });
-            } catch {
-              // Non-critical: plan might be locked or already have this item
-            }
+            // Non-critical: plan might be locked or already have this item
           }
         }
       }
@@ -458,172 +470,18 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
     }
   };
 
-  // ── Per-entry service panel ──────────────────────────────────────────────────
-
-  const ServicePanel = ({ entry }: { entry: VoiceDiagnosisEntry }) => {
-    const fdi = entry.fdi;
-    const isMissing = entry.condition === "missing";
-    const defaultCat = CONDITION_TO_CATEGORY[entry.condition];
-    const browseCategory = browseCategoryMap[fdi] ?? null;
-    const activeCat = browseCategory ?? defaultCat;
-
-    const setBrowseCategory = (cat: string | null) =>
-      setBrowseCategoryMap((prev) => ({ ...prev, [fdi]: cat }));
-
-    const displayedTemplates = useMemo(
-      () =>
-        activeCat
-          ? allTemplates.filter((t) => t.category === activeCat && t.defaultPrice > 0)
-          : entry.suggestedTemplates ?? [],
-      [entry.suggestedTemplates, activeCat],
-    );
-
-    const suggestedIds = useMemo(
-      () => new Set((entry.suggestedTemplates ?? []).map((t) => t.id)),
-      [entry.suggestedTemplates],
-    );
-
-    const bestMatchId = entry.bestMatchId;
-    const selected = selectedServiceIds[fdi] ?? new Set<string>();
-    const selectedCount = selected.size;
-
-    // Build ordered category tab list:
-    // – for missing teeth: pin implantation/orthopedics/surgery first, then rest
-    // – for others: defaultCat first, then remaining
-    const allCategories = useMemo(
-      () => [...new Set(allTemplates.map((t) => t.category))].filter(Boolean).sort(),
-      [],
-    );
-
-    const orderedCategories = useMemo(() => {
-      if (isMissing) {
-        const priority = MISSING_PRIORITY_CATEGORIES.filter((c) =>
-          allCategories.includes(c),
-        );
-        const rest = allCategories.filter((c) => !MISSING_PRIORITY_CATEGORIES.includes(c));
-        return [...priority, ...rest];
-      }
-      if (!defaultCat) return allCategories;
-      return [defaultCat, ...allCategories.filter((c) => c !== defaultCat)];
-    }, [allCategories, isMissing]);
-
-    return (
-      <div className="space-y-2">
-        {/* Missing-tooth hint banner */}
-        {isMissing && !browseCategory && (
-          <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-2">
-            <span className="text-base leading-none shrink-0">🦷</span>
-            <p className="text-[11px] text-amber-800 leading-snug">
-              <span className="font-semibold">Отсутствующий зуб.</span> Рассмотрите варианты
-              протезирования: имплант, коронка на имплант или мостовидный протез.
-            </p>
-          </div>
-        )}
-
-        {/* Category tabs */}
-        {allTemplates.length > 0 && (
-          <div className="flex gap-1 flex-wrap">
-            {/* "Suggested" tab (only when backend returned suggestions) */}
-            {(entry.suggestedTemplates?.length ?? 0) > 0 && defaultCat && (
-              <button
-                onClick={() => setBrowseCategory(null)}
-                className={cn(
-                  "text-[10px] px-2 py-1 rounded-full border transition-colors font-medium",
-                  !browseCategory
-                    ? "bg-primary text-white border-primary"
-                    : "border-border text-muted-foreground hover:border-primary/50",
-                )}
-              >
-                {isMissing ? "Подобранные" : CATEGORY_LABELS[defaultCat] ?? defaultCat}
-              </button>
-            )}
-
-            {/* Priority / ordered category tabs */}
-            {orderedCategories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setBrowseCategory(cat)}
-                className={cn(
-                  "text-[10px] px-2 py-1 rounded-full border transition-colors",
-                  browseCategory === cat
-                    ? "bg-primary text-white border-primary"
-                    : isMissing && MISSING_PRIORITY_CATEGORIES.includes(cat)
-                    ? "border-amber-300 text-amber-700 bg-amber-50 hover:border-primary/50 hover:text-primary hover:bg-primary/5"
-                    : "border-border text-muted-foreground hover:border-primary/50",
-                )}
-              >
-                {CATEGORY_LABELS[cat] ?? cat}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Template list */}
-        <div className="space-y-1 max-h-52 overflow-y-auto custom-scrollbar pr-1">
-          {displayedTemplates.length === 0 ? (
-            <p className="text-[11px] text-muted-foreground py-2 text-center">
-              Нет услуг в этой категории
-            </p>
-          ) : (
-            displayedTemplates.map((tpl) => {
-              const checked = selected.has(tpl.id);
-              const isSuggested = suggestedIds.has(tpl.id);
-              return (
-                <button
-                  key={tpl.id}
-                  onClick={() => toggleService(fdi, tpl.id)}
-                  className={cn(
-                    "w-full flex items-start gap-2 px-2.5 py-2 rounded-lg border text-left text-[11px] transition-all",
-                    checked
-                      ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                      : "border-border hover:border-primary/40 hover:bg-slate-50",
-                  )}
-                >
-                  <span className="mt-0.5 shrink-0">
-                    {checked
-                      ? <CheckSquare className="w-3.5 h-3.5 text-primary" />
-                      : <Square className="w-3.5 h-3.5 text-muted-foreground" />}
-                  </span>
-                  <span className="flex-1 min-w-0">
-                    <span className="flex items-center gap-1.5 flex-wrap">
-                      <span className="font-medium text-foreground leading-snug">{tpl.name}</span>
-                      {tpl.id === bestMatchId && !browseCategory && (
-                        <span className="shrink-0 text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-medium">
-                          Подобрано ИИ
-                        </span>
-                      )}
-                      {isSuggested && tpl.id !== bestMatchId && !browseCategory && (
-                        <span className="shrink-0 text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">
-                          ИИ
-                        </span>
-                      )}
-                    </span>
-                    <span className="block mt-0.5 text-primary font-semibold">
-                      {tpl.defaultPrice > 0
-                        ? `${tpl.defaultPrice.toLocaleString("ru-KZ")} ₸`
-                        : "Бесплатно"}
-                    </span>
-                  </span>
-                </button>
-              );
-            })
-          )}
-        </div>
-
-        {selectedCount > 0 && (
-          <p className="text-[11px] text-primary font-medium text-right">
-            Выбрано: {selectedCount} {plural(selectedCount, "услуга", "услуги", "услуг")}
-          </p>
-        )}
-      </div>
-    );
+  const handleConditionChange = (idx: number, entry: VoiceDiagnosisEntry, condition: string) => {
+    const updated = rematchEntryServices({ ...entry, condition }, transcript, allTemplates);
+    setEntries((prev) => prev.map((item, i) => (i === idx ? updated : item)));
+    if (updated.bestMatchId) setServiceForTooth(entry.fdi, updated.bestMatchId);
+    else setServiceForTooth(entry.fdi, "");
   };
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm sm:p-4">
-      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg flex flex-col"
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-3xl flex flex-col"
         style={{ maxHeight: "min(92dvh, 100dvh - env(safe-area-inset-bottom, 0px))" }}
       >
 
@@ -688,7 +546,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                 <p className="text-sm text-muted-foreground text-center max-w-xs leading-relaxed">
                   Нажмите кнопку и продиктуйте состояние зубов. Например:
                   <span className="block mt-2 italic text-xs bg-slate-50 border border-border/40 rounded-lg px-3 py-2 text-foreground/70 leading-relaxed">
-                    «Шестнадцатый — кариес. Двадцать первый — коронка. Сорок шестой требует удаления»
+                    «Шестнадцатый — кариес, пломба композитная. Двадцать первый — коронка циркониевая»
                   </span>
                 </p>
               )}
@@ -788,148 +646,99 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
               ) : (
                 <>
                   <p className="text-xs text-muted-foreground px-1">
-                    Проверьте диагнозы и выберите услуги из прейскуранта:
+                    Проверьте диагнозы. В списке услуг — только позиции, совпадающие со словами из расшифровки.
                   </p>
 
-                  <div className="space-y-2">
-                    {entries.map((entry, idx) => {
-                      const cfg = CONDITION_CONFIG[entry.condition as ToothCondition];
-                      const isExpanded = expandedFdi === entry.fdi;
-                      const selectedCount = selectedServiceIds[entry.fdi]?.size ?? 0;
-                      const hasSuggestions = (entry.suggestedTemplates?.length ?? 0) > 0;
+                  <div className="border border-border/50 rounded-xl overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-border/50 text-[10px] uppercase tracking-wide text-muted-foreground">
+                            <th className="text-left font-semibold px-3 py-2 w-14">Зуб</th>
+                            <th className="text-left font-semibold px-3 py-2 min-w-[140px]">Диагноз</th>
+                            <th className="text-left font-semibold px-3 py-2 min-w-[200px]">Услуга</th>
+                            <th className="text-right font-semibold px-3 py-2 w-24">Цена</th>
+                            <th className="w-10" />
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/40">
+                          {entries.map((entry, idx) => {
+                            const cfg = CONDITION_CONFIG[entry.condition as ToothCondition];
+                            const selectedId = selectedServiceIds[entry.fdi] ?? entry.bestMatchId ?? "";
+                            const rowPrice = getServicePrice(entry, selectedId || undefined);
+                            const suggestions = entry.suggestedTemplates ?? [];
 
-                      return (
-                        <div
-                          key={idx}
-                          className="border border-border/50 rounded-xl bg-white hover:border-primary/30 transition-colors overflow-hidden"
-                        >
-                          {/* Tooth header */}
-                          <div className="p-3 space-y-2">
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-2 min-w-0">
-                                {cfg && (
-                                  <span
-                                    className="w-3 h-3 rounded border shrink-0"
-                                    style={{ background: cfg.crownFill, borderColor: cfg.stroke }}
-                                  />
-                                )}
-                                <span className="text-xs font-bold text-foreground shrink-0">Зуб {entry.fdi}</span>
-                                {entry.diagnosisText && (
-                                  <span className="text-[10px] text-muted-foreground italic truncate">
-                                    {entry.diagnosisText}
-                                  </span>
-                                )}
-                              </div>
-                              <button
-                                onClick={() => removeEntry(idx)}
-                                className="p-1 text-muted-foreground hover:text-red-500 transition-colors shrink-0"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2">
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Состояние</label>
-                                <select
-                                  value={entry.condition}
-                                  onChange={(e) => {
-                                    updateEntry(idx, { condition: e.target.value });
-                                    setBrowseCategoryMap((prev) => {
-                                      const next = { ...prev };
-                                      delete next[entry.fdi];
-                                      return next;
-                                    });
-                                  }}
-                                  className="w-full text-xs border border-border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
-                                >
-                                  {CONDITION_VALUES.map((c) => (
-                                    <option key={c} value={c}>{CONDITION_CONFIG[c]?.label ?? c}</option>
-                                  ))}
-                                </select>
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-                                  {entry.bestMatchId ? "Цена по прейскуранту" : "Базовая цена"}
-                                </label>
-                                <div className={cn(
-                                  "w-full text-xs border rounded-lg px-2 py-1.5",
-                                  entry.bestMatchId
-                                    ? "border-emerald-300 bg-emerald-50 text-emerald-800 font-semibold"
-                                    : "border-border/50 bg-slate-50 text-foreground/70",
-                                )}>
-                                  {entry.price > 0 ? `${entry.price.toLocaleString("ru-KZ")} ₸` : "—"}
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="space-y-1">
-                              <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Примечания</label>
-                              <input
-                                type="text"
-                                value={entry.notes}
-                                onChange={(e) => updateEntry(idx, { notes: e.target.value })}
-                                placeholder="Дополнительные заметки..."
-                                className="w-full text-xs border border-border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/50"
-                              />
-                            </div>
-
-                            {/* Services expand toggle */}
-                            <button
-                              onClick={() => {
-                                setExpandedFdi(isExpanded ? null : entry.fdi);
-                                // Reset only this tooth's browse category when collapsing
-                                if (isExpanded) {
-                                  setBrowseCategoryMap((prev) => {
-                                    const next = { ...prev };
-                                    delete next[entry.fdi];
-                                    return next;
-                                  });
-                                }
-                              }}
-                              className={cn(
-                                "w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg border text-left transition-all",
-                                isExpanded
-                                  ? "bg-primary/5 border-primary/30"
-                                  : "bg-slate-50 border-border/50 hover:bg-slate-100",
-                              )}
-                            >
-                              <div className="flex items-center gap-2">
-                                <Stethoscope className="w-3.5 h-3.5 text-muted-foreground" />
-                                <span className="text-xs font-medium text-foreground">
-                                  Услуги из прейскуранта
-                                </span>
-                                {!isExpanded && entry.bestMatchId && selectedCount === 0 && (
-                                  <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">
-                                    подобрано ИИ
-                                  </span>
-                                )}
-                                {!isExpanded && hasSuggestions && !entry.bestMatchId && (
-                                  <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
-                                    {entry.suggestedTemplates!.length} от ИИ
-                                  </span>
-                                )}
-                                {selectedCount > 0 && (
-                                  <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-medium">
-                                    ✓ {selectedCount}
-                                  </span>
-                                )}
-                              </div>
-                              {isExpanded
-                                ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
-                                : <Plus className="w-3.5 h-3.5 text-muted-foreground" />}
-                            </button>
-                          </div>
-
-                          {/* Expanded service panel */}
-                          {isExpanded && (
-                            <div className="border-t border-border/40 bg-slate-50/60 px-3 py-3">
-                              <ServicePanel entry={entry} />
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                            return (
+                              <tr key={entry.fdi} className="bg-white hover:bg-slate-50/60">
+                                <td className="px-3 py-2.5 align-top">
+                                  <div className="flex items-center gap-1.5">
+                                    {cfg && (
+                                      <span
+                                        className="w-2.5 h-2.5 rounded border shrink-0"
+                                        style={{ background: cfg.crownFill, borderColor: cfg.stroke }}
+                                      />
+                                    )}
+                                    <span className="font-bold">{entry.fdi}</span>
+                                  </div>
+                                </td>
+                                <td className="px-3 py-2.5 align-top space-y-1.5">
+                                  <select
+                                    value={entry.condition}
+                                    onChange={(e) => handleConditionChange(idx, entry, e.target.value)}
+                                    className="w-full text-xs border border-border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                  >
+                                    {CONDITION_VALUES.map((c) => (
+                                      <option key={c} value={c}>{CONDITION_CONFIG[c]?.label ?? c}</option>
+                                    ))}
+                                  </select>
+                                  {(entry.diagnosisText || entry.spokenProcedure) && (
+                                    <p className="text-[10px] text-muted-foreground leading-snug">
+                                      {entry.diagnosisText}
+                                      {entry.spokenProcedure && entry.spokenProcedure !== entry.diagnosisText && (
+                                        <span className="block italic">«{entry.spokenProcedure}»</span>
+                                      )}
+                                    </p>
+                                  )}
+                                </td>
+                                <td className="px-3 py-2.5 align-top">
+                                  {suggestions.length > 0 ? (
+                                    <select
+                                      value={selectedId}
+                                      onChange={(e) => setServiceForTooth(entry.fdi, e.target.value)}
+                                      className="w-full text-xs border border-border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                    >
+                                      <option value="">— не выбрано —</option>
+                                      {suggestions.map((tpl) => (
+                                        <option key={tpl.id} value={tpl.id}>
+                                          {tpl.name}
+                                          {tpl.id === entry.bestMatchId ? " ★" : ""}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  ) : (
+                                    <p className="text-[11px] text-muted-foreground py-1.5">
+                                      Нет совпадений в расшифровке
+                                    </p>
+                                  )}
+                                </td>
+                                <td className="px-3 py-2.5 align-top text-right font-semibold text-primary whitespace-nowrap">
+                                  {rowPrice > 0 ? `${rowPrice.toLocaleString("ru-KZ")} ₸` : "—"}
+                                </td>
+                                <td className="px-2 py-2.5 align-top text-center">
+                                  <button
+                                    type="button"
+                                    onClick={() => removeEntry(idx)}
+                                    className="p-1 text-muted-foreground hover:text-red-500 transition-colors"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
 
                   <button

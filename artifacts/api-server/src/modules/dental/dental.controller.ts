@@ -19,6 +19,7 @@ import { ProceduresRepository } from "../procedures/procedures.repository";
 import { triggerDentalAiAnalysis, getLatestDentalAnalysis, deleteLatestDentalAnalysis } from "./dental-ai";
 import { logger } from "../../lib/logger";
 import { openrouter, DEEPSEEK_MODEL } from "../../lib/openrouter-client";
+import { matchVoiceServices } from "./voice-service-matching";
 
 const router: IRouter = Router({ mergeParams: true });
 const repo = new DentalRepository();
@@ -360,15 +361,22 @@ router.post(
 2. Если зуб упоминается как "верхний правый шестой" и т.п. — переведи в FDI (верхний правый 6й = 16).
 3. "Четвёрка" = 4-й зуб; уточни квадрант из контекста, если возможно.
 4. Игнорируй зубы с состоянием "healthy" — их не нужно включать в список (это норма).
-5. В поле diagnosisText укажи ТОЧНОЕ медицинское название диагноза как сказал врач (например: "хронический пульпит", "глубокий кариес дистальной поверхности", "периодонтит", "киста"). Это используется для поиска услуги в прейскуранте.
-6. Верни ТОЛЬКО JSON массив, без пояснений.
+5. В поле diagnosisText укажи ТОЧНОЕ медицинское название диагноза как сказал врач (например: "хронический пульпит", "глубокий кариес дистальной поверхности", "периодонтит", "киста").
+6. В поле spokenProcedure укажи ТОЧНЫЕ слова врача о планируемой услуге, материале или методе лечения для этого зуба (например: "пломба композитная световая Filtek", "коронка циркониевая", "удаление"). Если врач услугу не назвал — оставь пустую строку "".
+7. Верни ТОЛЬКО JSON массив, без пояснений.
 
 Формат ответа:
-[{"fdi": 16, "condition": "cavity", "diagnosisText": "глубокий кариес дистальной поверхности", "notes": "глубокий кариес дистальной поверхности"}, ...]
+[{"fdi": 16, "condition": "cavity", "diagnosisText": "глубокий кариес дистальной поверхности", "spokenProcedure": "пломба композитная световая", "notes": "глубокий кариес дистальной поверхности"}, ...]
 
 Если ничего не удалось разобрать — верни пустой массив [].`;
 
-    let diagnoses: Array<{ fdi: number; condition: string; notes: string; diagnosisText: string }> = [];
+    let diagnoses: Array<{
+      fdi: number;
+      condition: string;
+      notes: string;
+      diagnosisText: string;
+      spokenProcedure: string;
+    }> = [];
     try {
       const chatRes = await openrouter.chat.completions.create({
         model: DEEPSEEK_MODEL,
@@ -403,7 +411,10 @@ router.post(
             fdi: d["fdi"] as number,
             condition: d["condition"] as string,
             notes: typeof d["notes"] === "string" ? (d["notes"] as string) : "",
-            diagnosisText: typeof d["diagnosisText"] === "string" ? (d["diagnosisText"] as string) : (typeof d["notes"] === "string" ? (d["notes"] as string) : ""),
+            diagnosisText: typeof d["diagnosisText"] === "string"
+              ? (d["diagnosisText"] as string)
+              : (typeof d["notes"] === "string" ? (d["notes"] as string) : ""),
+            spokenProcedure: typeof d["spokenProcedure"] === "string" ? (d["spokenProcedure"] as string) : "",
           }));
       }
     } catch (err) {
@@ -411,27 +422,7 @@ router.post(
       return next(err);
     }
 
-    // ── Step 3: Enrich with clinic prices + suggested procedure templates ──
-    // Keyword-based matching: score how well a template name matches the doctor's diagnosis text
-    const scoreTemplateMatch = (diagnosisText: string, templateName: string): number => {
-      const normalize = (s: string) =>
-        s.toLowerCase()
-          .replace(/ё/g, "е")
-          .replace(/[^а-яa-z0-9\s]/gi, " ")
-          .split(/\s+/)
-          .filter((w) => w.length > 2);
-      const queryWords = normalize(diagnosisText);
-      const nameWords = normalize(templateName);
-      let score = 0;
-      for (const qw of queryWords) {
-        for (const nw of nameWords) {
-          if (nw === qw) score += 3;
-          else if (nw.startsWith(qw) || qw.startsWith(nw)) score += 1;
-        }
-      }
-      return score;
-    };
-
+    // ── Step 3: Enrich with clinic prices + transcript-relevant procedure templates ──
     const [prices, allTemplates] = await Promise.all([
       pricesRepo.getConditionPrices(req.user!.clinicId),
       procRepo.listTemplates(req.user!.clinicId),
@@ -440,37 +431,39 @@ router.post(
 
     const enriched = diagnoses.map((d) => {
       const cat = CONDITION_TO_CATEGORY[d.condition];
-      // Get all category templates with prices
-      const categoryTemplates = cat
-        ? allTemplates.filter((t) => t.category === cat && t.defaultPrice > 0)
-        : [];
+      const { suggestions, bestMatchId } = matchVoiceServices({
+        transcript,
+        condition: d.condition,
+        diagnosisText: d.diagnosisText,
+        notes: d.notes,
+        spokenProcedure: d.spokenProcedure,
+        category: cat,
+        templates: allTemplates.map((t) => ({
+          id: t.id,
+          name: t.name,
+          defaultPrice: t.defaultPrice,
+          description: t.description,
+          category: t.category,
+        })),
+      });
 
-      // Score each template against the doctor's diagnosis text
-      const diagQuery = d.diagnosisText || d.notes || "";
-      const scored = categoryTemplates
-        .map((t) => ({ t, score: diagQuery ? scoreTemplateMatch(diagQuery, t.name) : 0 }))
-        .sort((a, b) => b.score - a.score);
-
-      // Best match: highest score (must be > 0 to count as a real match)
-      const bestMatch = scored.length > 0 && scored[0]!.score > 0 ? scored[0]!.t : null;
-
-      // Return up to 8 templates, best match first
-      const suggestedTemplates = scored
-        .slice(0, 8)
-        .map((s) => ({ id: s.t.id, name: s.t.name, defaultPrice: s.t.defaultPrice }));
-
-      // Use best-matching template price; fall back to condition price table
-      const matchedPrice = bestMatch ? bestMatch.defaultPrice : (prices[d.condition]?.price ?? 0);
+      const bestMatch = bestMatchId
+        ? suggestions.find((s) => s.id === bestMatchId)
+        : undefined;
+      const matchedPrice = bestMatch
+        ? bestMatch.defaultPrice
+        : (prices[d.condition]?.price ?? 0);
 
       return {
         fdi: d.fdi,
         condition: d.condition,
         notes: d.notes,
         diagnosisText: d.diagnosisText,
+        spokenProcedure: d.spokenProcedure,
         price: matchedPrice,
         mkb10Code: prices[d.condition]?.mkb10 ?? "",
-        suggestedTemplates,
-        bestMatchId: bestMatch ? bestMatch.id : undefined,
+        suggestedTemplates: suggestions,
+        bestMatchId,
       };
     });
 
