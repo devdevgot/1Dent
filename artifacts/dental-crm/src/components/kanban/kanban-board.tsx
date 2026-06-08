@@ -1,6 +1,7 @@
 import { memo, useCallback, useMemo, useRef, useState } from "react";
 import {
   DndContext,
+  type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent,
   DragOverlay,
@@ -9,7 +10,9 @@ import {
   useSensor,
   useSensors,
   closestCorners,
+  pointerWithin,
 } from "@dnd-kit/core";
+import { cn } from "@/lib/utils";
 import {
   useListPatients,
   useUpdatePatientStatus,
@@ -81,6 +84,17 @@ export const KanbanBoard = memo(function KanbanBoard({
       },
     },
   });
+
+  // Prefer the column the pointer is actually inside. This keeps the "over"
+  // target (and the column highlight) stable instead of flickering between
+  // neighbouring columns the way distance-based detection does, which is what
+  // made the columns appear to shake while dragging. Fall back to corner
+  // distance only when the pointer isn't over any column (e.g. fast flicks).
+  const collisionDetection = useCallback<CollisionDetection>((args) => {
+    const pointerHits = pointerWithin(args);
+    if (pointerHits.length > 0) return pointerHits;
+    return closestCorners(args);
+  }, []);
 
   const resolveOverColumn = useCallback((overId: string | number): PatientStatus | null => {
     const overIdStr = String(overId);
@@ -171,12 +185,16 @@ export const KanbanBoard = memo(function KanbanBoard({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={collisionDetection}
+      autoScroll={{ threshold: { x: 0.2, y: 0.2 }, acceleration: 18 }}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className={className}>
+      {/* Scroll-snap is disabled while dragging: otherwise the browser keeps
+          snapping the board back to a column mid-gesture, which fights dnd-kit's
+          auto-scroll and makes the board shake and refuse to move left/right. */}
+      <div className={cn(className, !isDragging && "snap-x snap-mandatory sm:snap-none")}>
         {KANBAN_COLUMNS.map((col) => (
           <KanbanColumn
             key={col.id}
