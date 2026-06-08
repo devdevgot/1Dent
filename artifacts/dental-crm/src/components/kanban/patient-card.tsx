@@ -1,6 +1,5 @@
 import { memo, useRef } from "react";
 import { useDraggable } from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
 import { Calendar, User, AlertTriangle } from "lucide-react";
 import type { Patient } from "@workspace/api-client-react";
 import { SOURCE_LABELS, SOURCE_COLORS, KANBAN_COLUMNS, COLUMN_HEADER_COLOR } from "@/lib/patient-utils";
@@ -127,14 +126,15 @@ export const PatientCard = memo(function PatientCard({
   isBoardDragging = false,
 }: PatientCardProps) {
   const pointerStart = useRef<{ x: number; y: number } | null>(null);
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: patient.id,
     data: { type: "patient", status: patient.status },
   });
 
+  // The moving clone is rendered by <DragOverlay>, so the source card stays in
+  // place and is only dimmed. Avoiding a translate transform here means the
+  // active card doesn't have to recompute its style on every pointer move.
   const style = {
-    transform: CSS.Translate.toString(transform),
-    transition: isDragging ? undefined : "transform 150ms ease",
     opacity: isDragging ? 0.25 : 1,
     touchAction: "none" as const,
   };

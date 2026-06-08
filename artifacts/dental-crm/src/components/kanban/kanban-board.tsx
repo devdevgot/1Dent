@@ -36,6 +36,7 @@ export const KanbanBoard = memo(function KanbanBoard({
 }: KanbanBoardProps) {
   const queryClient = useQueryClient();
   const [activeDragPatient, setActiveDragPatient] = useState<Patient | null>(null);
+  const isDragging = activeDragPatient !== null;
   const isDraggingRef = useRef(false);
   const patientsRef = useRef<Patient[]>([]);
 
@@ -58,8 +59,10 @@ export const KanbanBoard = memo(function KanbanBoard({
   const patients = patientsProp ?? data?.data?.patients ?? [];
   patientsRef.current = patients;
 
-  const { data: notificationsData } = useNotifications();
-  const { data: progressMap } = usePatientTreatmentProgress();
+  // Pause background polling while a card is being dragged so refetches don't
+  // interrupt the gesture.
+  const { data: notificationsData } = useNotifications({ paused: isDragging });
+  const { data: progressMap } = usePatientTreatmentProgress({ paused: isDragging });
 
   const redAlertPatientIds = useMemo(() => {
     const ids = new Set<string>();
@@ -144,8 +147,26 @@ export const KanbanBoard = memo(function KanbanBoard({
     return grouped;
   }, [patients]);
 
-  const isDragging = activeDragPatient !== null;
-  const showProgress = !isDragging;
+  // Freeze the data the columns render from while a drag is in progress. This
+  // keeps the props passed to columns/cards referentially stable for the whole
+  // gesture, so any background update (notifications, treatment progress, list
+  // refetch) that lands mid-drag cannot trigger a re-render of the cards and
+  // cause the dragged card to stutter or freeze.
+  const renderSnapshotRef = useRef({
+    columns: patientsByColumnMap,
+    redAlert: redAlertPatientIds,
+    progress: progressMap,
+  });
+  if (!isDragging) {
+    renderSnapshotRef.current = {
+      columns: patientsByColumnMap,
+      redAlert: redAlertPatientIds,
+      progress: progressMap,
+    };
+  }
+  const renderColumns = isDragging ? renderSnapshotRef.current.columns : patientsByColumnMap;
+  const renderRedAlert = isDragging ? renderSnapshotRef.current.redAlert : redAlertPatientIds;
+  const renderProgress = isDragging ? renderSnapshotRef.current.progress : progressMap;
 
   return (
     <DndContext
@@ -162,9 +183,9 @@ export const KanbanBoard = memo(function KanbanBoard({
             id={col.id}
             label={col.label}
             colorClass={col.color}
-            patients={patientsByColumnMap[col.id] ?? []}
-            redAlertPatientIds={redAlertPatientIds}
-            progressMap={showProgress ? progressMap : undefined}
+            patients={renderColumns[col.id] ?? []}
+            redAlertPatientIds={renderRedAlert}
+            progressMap={renderProgress}
             onSelectPatient={onSelectPatient}
             isBoardDragging={isDragging}
           />
@@ -178,8 +199,8 @@ export const KanbanBoard = memo(function KanbanBoard({
         {activeDragPatient ? (
           <PatientCardOverlay
             patient={activeDragPatient}
-            hasRedAlert={redAlertPatientIds.has(activeDragPatient.id)}
-            progress={progressMap?.[activeDragPatient.id]}
+            hasRedAlert={renderRedAlert.has(activeDragPatient.id)}
+            progress={renderProgress?.[activeDragPatient.id]}
           />
         ) : null}
       </DragOverlay>
