@@ -58,7 +58,29 @@ function edgeMatches(
     }
   }
 
+  if (targetNode?.label) {
+    const targetNorm = normalizeText(targetNode.label);
+    if (targetNorm.length > 2 && haystack.includes(targetNorm)) score += 2;
+  }
+
   return score;
+}
+
+/** Sync active mind-map node id when FSM state changes. */
+export function resolveMindMapNodeIdForState(
+  mindMap: ScriptMindMapData | null | undefined,
+  state: ChatbotState | string,
+  opts: { serviceType?: string; userText?: string; activeNodeId?: string } = {},
+): string | undefined {
+  if (opts.activeNodeId && mindMap?.nodes?.some((n) => n.id === opts.activeNodeId)) {
+    return opts.activeNodeId;
+  }
+  const node = resolveActiveMindMapNode(mindMap, state, {
+    serviceType: opts.serviceType,
+    userText: opts.userText,
+    parentFsmState: state === "collect_problem" ? "collect_problem" : state,
+  });
+  return node?.id;
 }
 
 /** Find node linked to an FSM state (first match). */

@@ -314,35 +314,58 @@ export function ScriptMindMap({ initialData, onSave, saveStatus = "idle" }: Scri
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initEdges);
+  const skipAutoSaveRef = useRef(true);
+
+  const markDirty = useCallback(() => {
+    skipAutoSaveRef.current = false;
+  }, []);
+
+  const placeChildNode = useCallback((parentId: string, newNode: Node, allNodes: Node[]): Node => {
+    const parent = allNodes.find((n) => n.id === parentId);
+    if (!parent) return { ...newNode, position: { x: NODE_W + H_GAP, y: 0 } };
+    return {
+      ...newNode,
+      position: { x: parent.position.x + NODE_W + H_GAP, y: parent.position.y },
+    };
+  }, []);
 
   const addChild = useCallback((parentId: string) => {
+    markDirty();
     const id = genId();
     const newNode = makeFlowNode({ id, label: "Новый шаг", content: "" });
     setEdges((prev) => {
       const newEdge = makeFlowEdge({ id: `e_${id}`, source: parentId, target: id });
       const updated = [...prev, newEdge];
-      setNodes((pn) => autoLayout([...pn, newNode], updated));
+      setNodes((pn) => [...pn, placeChildNode(parentId, newNode, pn)]);
       return updated;
     });
-  }, [setNodes, setEdges]);
+  }, [setNodes, setEdges, markDirty, placeChildNode]);
 
   const fork = useCallback((siblingId: string) => {
+    markDirty();
     const id = genId();
     const newNode = makeFlowNode({ id, label: "Новая ветка", content: "" });
     setEdges((prev) => {
       const parentEdge = prev.find((e) => e.target === siblingId);
       if (!parentEdge) {
-        setNodes((pn) => autoLayout([...pn, newNode], prev));
+        setNodes((pn) => [...pn, { ...newNode, position: { x: 0, y: pn.length * (NODE_H + V_GAP) } }]);
         return prev;
       }
       const newEdge = makeFlowEdge({ id: `e_${id}`, source: parentEdge.source, target: id });
       const updated = [...prev, newEdge];
-      setNodes((pn) => autoLayout([...pn, newNode], updated));
+      setNodes((pn) => {
+        const sibling = pn.find((n) => n.id === siblingId);
+        const placed = sibling
+          ? { ...newNode, position: { x: sibling.position.x, y: sibling.position.y + NODE_H + V_GAP } }
+          : placeChildNode(parentEdge.source, newNode, pn);
+        return [...pn, placed];
+      });
       return updated;
     });
-  }, [setNodes, setEdges]);
+  }, [setNodes, setEdges, markDirty, placeChildNode]);
 
   const remove = useCallback((id: string) => {
+    markDirty();
     setEdges((prevEdges) => {
       const ch: Record<string, string[]> = {};
       prevEdges.forEach((e) => { ch[e.source] = [...(ch[e.source] ?? []), e.target]; });
@@ -354,19 +377,17 @@ export function ScriptMindMap({ initialData, onSave, saveStatus = "idle" }: Scri
         (ch[cur] ?? []).forEach((k) => q.push(k));
       }
       const newEdges = prevEdges.filter((e) => !toRemove.has(e.source) && !toRemove.has(e.target));
-      setNodes((pn) => {
-        const newNodes = pn.filter((n) => !toRemove.has(n.id));
-        return autoLayout(newNodes, newEdges);
-      });
+      setNodes((pn) => pn.filter((n) => !toRemove.has(n.id)));
       return newEdges;
     });
-  }, [setNodes, setEdges]);
+  }, [setNodes, setEdges, markDirty]);
 
   const update = useCallback((id: string, label: string, content: string, fsmState?: string) => {
+    markDirty();
     setNodes((prev) =>
       prev.map((n) => n.id === id ? { ...n, data: { ...n.data, label, content, fsmState } } : n),
     );
-  }, [setNodes]);
+  }, [setNodes, markDirty]);
 
   const cbs = useMemo<MindMapCbs>(() => ({ addChild, fork, remove, update }), [addChild, fork, remove, update]);
 
@@ -387,19 +408,24 @@ export function ScriptMindMap({ initialData, onSave, saveStatus = "idle" }: Scri
     })),
   }), [nodes, edges]);
 
-  const handleSave = useCallback(() => {
-    onSave(serializeData());
-  }, [onSave, serializeData]);
+  const onSaveRef = useRef(onSave);
+  onSaveRef.current = onSave;
 
-  const skipAutoSaveRef = useRef(true);
+  const handleSave = useCallback(() => {
+    markDirty();
+    onSaveRef.current(serializeData());
+  }, [serializeData, markDirty]);
+
   useEffect(() => {
-    if (skipAutoSaveRef.current) {
-      skipAutoSaveRef.current = false;
-      return;
-    }
-    const timer = setTimeout(() => onSave(serializeData()), 1200);
+    if (skipAutoSaveRef.current) return;
+    const timer = setTimeout(() => onSaveRef.current(serializeData()), 1200);
     return () => clearTimeout(timer);
-  }, [nodes, edges, onSave, serializeData]);
+  }, [nodes, edges, serializeData]);
+
+  const handleNodesChange = useCallback((changes: Parameters<typeof onNodesChange>[0]) => {
+    if (changes.some((c) => c.type === "position" || c.type === "remove")) markDirty();
+    onNodesChange(changes);
+  }, [onNodesChange, markDirty]);
 
   return (
     <MindMapCtx.Provider value={cbs}>
@@ -407,7 +433,7 @@ export function ScriptMindMap({ initialData, onSave, saveStatus = "idle" }: Scri
         <ReactFlow
           nodes={nodes}
           edges={edges}
-          onNodesChange={onNodesChange}
+          onNodesChange={handleNodesChange}
           onEdgesChange={onEdgesChange}
           nodeTypes={nodeTypes}
           fitView

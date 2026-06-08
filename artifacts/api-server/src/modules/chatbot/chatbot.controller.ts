@@ -3,6 +3,7 @@ import { z } from "zod";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError } from "../../shared/errors";
 import { ChatbotService } from "./chatbot.service";
+import type { ChatbotState } from "./chatbot.types";
 import { STANDARD_SCRIPT_BLOCKS } from "./script-templates";
 
 const router: IRouter = Router();
@@ -258,7 +259,7 @@ router.post(
         parsed.data.userMessage,
         parsed.data.history,
         req.user!.id,
-        parsed.data.fsmState ? { fsmState: parsed.data.fsmState as import("./chatbot.types").ChatbotState } : undefined,
+        parsed.data.fsmState ? { fsmState: parsed.data.fsmState as ChatbotState } : undefined,
       )
       .catch(next);
     if (!result) return;

@@ -37,8 +37,9 @@ import { InsufficientAiCreditsError } from "../../shared/errors/index";
 import {
   renderMindMapScript,
   buildActiveMindMapContext,
-  resolveActiveMindMapNode,
+  findMindMapNodeByFsmState,
   matchMindMapBranch,
+  resolveMindMapNodeIdForState,
   type ScriptMindMapData,
 } from "./mindmap-utils";
 
@@ -1572,13 +1573,18 @@ export class ChatbotService {
         data.aiConfidence = classification.confidence;
 
         const mindMapData = settings.scriptMindMap as ScriptMindMapData | undefined;
-        const problemNode = resolveActiveMindMapNode(mindMapData, "collect_problem", {});
+        const problemNode = findMindMapNodeByFsmState(mindMapData, "collect_problem");
         if (problemNode) {
           const branch = matchMindMapBranch(mindMapData, problemNode.id, {
             serviceType: classification.serviceType,
             userText: text,
           });
-          if (branch) data.activeMindMapNodeId = branch.node.id;
+          data.activeMindMapNodeId = branch?.node.id ?? problemNode.id;
+        } else {
+          data.activeMindMapNodeId = resolveMindMapNodeIdForState(mindMapData, "collect_problem", {
+            serviceType: classification.serviceType,
+            userText: text,
+          });
         }
 
         logger.info(
@@ -2157,6 +2163,17 @@ export class ChatbotService {
         response = null;
     }
 
+    const mindMapForSync = settings.scriptMindMap as ScriptMindMapData | undefined;
+    data.activeMindMapNodeId = resolveMindMapNodeIdForState(
+      mindMapForSync,
+      session.state as ChatbotState,
+      {
+        serviceType: data.serviceType,
+        userText: text,
+        activeNodeId: data.activeMindMapNodeId,
+      },
+    );
+
     session.data = data;
     await saveSession(session);
 
@@ -2473,7 +2490,10 @@ export class ChatbotService {
     const clinicName = clinicRow[0]?.name ?? undefined;
     const mindMap = settings.scriptMindMap as ScriptMindMapData | undefined;
     const fsmState = opts?.fsmState ?? "greeting";
-    const activeNode = resolveActiveMindMapNode(mindMap, fsmState, { userText: userMessage });
+    const activeNodeId = resolveMindMapNodeIdForState(mindMap, fsmState, { userText: userMessage });
+    const activeNode = activeNodeId
+      ? mindMap?.nodes?.find((n) => n.id === activeNodeId) ?? null
+      : null;
     const playgroundOpts = { fsmState, userText: userMessage };
 
     const mindMapNodePayload = activeNode
@@ -2631,7 +2651,17 @@ export class ChatbotService {
         content: r.content,
       }));
 
-      const systemPrompt = buildSystemPrompt(session.state as ChatbotState, settings, { clinicName, knowledgeContext, doctorsContext, priceListContext });
+      const reminderData = data as ChatbotSessionData;
+      const mindMapForReminder = settings.scriptMindMap as ScriptMindMapData | undefined;
+      const systemPrompt = buildSystemPrompt(session.state as ChatbotState, settings, {
+        clinicName,
+        knowledgeContext,
+        doctorsContext,
+        priceListContext,
+        serviceType: reminderData.serviceType,
+        activeMindMapNodeId: reminderData.activeMindMapNodeId
+          ?? resolveMindMapNodeIdForState(mindMapForReminder, session.state as ChatbotState),
+      });
       const helperPrompt = `${systemPrompt}\n\n⚠️ ДОПОЛНИТЕЛЬНОЕ РУКОВОДСТВО ДЛЯ НАПОМИНАНИЯ:\n${stateGuidance}`;
 
       const reply = await generateChatbotResponse(helperPrompt, recentMessages, "Отправь вежливое напоминание (reminder)", managerExamples);

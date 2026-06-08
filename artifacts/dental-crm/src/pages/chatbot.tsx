@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Bot,
@@ -317,9 +317,11 @@ function PlaygroundTab() {
       role: m.role === "user" ? ("user" as const) : ("assistant" as const),
       content: m.text,
     }));
-    const nextState = nextPlaygroundFsmState(playgroundFsmState, text);
+    const stateForApi: PlaygroundFsmState =
+      messages.length === 0 ? "collect_problem" : playgroundFsmState;
+    const nextState = nextPlaygroundFsmState(stateForApi, text);
     testMessage.mutate(
-      { userMessage: text, history, fsmState: playgroundFsmState },
+      { userMessage: text, history, fsmState: stateForApi },
       {
         onSuccess: (res) => {
           setMessages((prev) => [...prev, { role: "bot", text: res.data?.reply ?? "..." }]);
@@ -682,7 +684,7 @@ export default function ChatbotPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localSettings]);
 
-  const handleSaveMindMap = (data: ScriptMindMapData) => {
+  const handleSaveMindMap = useCallback((data: ScriptMindMapData) => {
     setMindMapSaveStatus("saving");
     updateSettings.mutate(
       { data: { scriptMindMap: data } as ChatbotSettingsUpdate },
@@ -695,7 +697,7 @@ export default function ChatbotPage() {
         onError: () => setMindMapSaveStatus("idle"),
       },
     );
-  };
+  }, [updateSettings, refetchSettings]);
 
   const handleDeleteSession = (phone: string) => {
     deleteSession.mutate({ phone }, { onSuccess: () => refetchSessions() });
