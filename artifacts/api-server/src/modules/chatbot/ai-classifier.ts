@@ -6,6 +6,13 @@ import {
   parseLlmJson,
 } from "../../lib/openrouter-client";
 import { logger } from "../../lib/logger";
+import {
+  ALMATY_OFFSET,
+  formatAlmatyDateShort,
+  formatAlmatyIso,
+  isPastInAlmaty,
+  parseAlmatyDatetime,
+} from "./almaty-time";
 
 export type ServiceType =
   | "therapy"
@@ -255,13 +262,15 @@ export async function generateChatbotResponse(
 
 export async function extractDatetimeFromText(text: string): Promise<Date | null> {
   const now = new Date();
-  const todayStr = now.toLocaleDateString("ru-KZ", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Asia/Almaty" });
+  const todayStr = formatAlmatyDateShort(now);
+  const nowAlmaty = formatAlmatyIso(now);
 
-  const systemPrompt = `Сегодня ${todayStr} (${now.toISOString()}).
-Извлеки из текста пациента дату и время визита. Верни JSON: {"iso": "YYYY-MM-DDTHH:mm:00"} или {"iso": null} если дата/время не указаны или неясны.
+  const systemPrompt = `Сегодня ${todayStr}. Текущее время в Алматы: ${nowAlmaty}.
+Извлеки из текста пациента дату и время визита. Все даты и время интерпретируй строго в часовом поясе Алматы (UTC+5).
+Верни JSON: {"iso": "YYYY-MM-DDTHH:mm:00${ALMATY_OFFSET}"} или {"iso": null} если дата/время не указаны или неясны.
 Казахские слова дней: ертең=завтра, бүгін=сегодня, дүйсенбі=понедельник, сейсенбі=вторник, сәрсенбі=среда, бейсенбі=четверг, жұма/жума=пятница, сенбі=суббота, жексенбі=воскресенье.
 Казахские слова времени: таңертең/тангертен=утро(09:00), күндізгі/кундизги=день(13:00), кешкі/кешки=вечер(17:00).
-Если время не указано — ставь 10:00. Дата должна быть >= сегодня.
+Если время не указано — ставь 10:00. Дата должна быть >= сегодня (${todayStr}).
 Отвечай ТОЛЬКО валидным JSON без markdown-обёрток.`;
 
   try {
@@ -284,11 +293,11 @@ export async function extractDatetimeFromText(text: string): Promise<Date | null
     const parsed = parseLlmJson<{ iso?: string | null }>(raw);
     if (!parsed?.iso) return null;
 
-    const date = new Date(parsed.iso);
-    if (isNaN(date.getTime())) return null;
+    const date = parseAlmatyDatetime(parsed.iso);
+    if (!date) return null;
 
     const sixMonthsLater = new Date(now.getTime() + 6 * 30 * 24 * 60 * 60 * 1000);
-    if (date < now || date > sixMonthsLater) return null;
+    if (isPastInAlmaty(date, now) || date > sixMonthsLater) return null;
 
     return date;
   } catch (err) {

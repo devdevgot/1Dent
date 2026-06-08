@@ -28,6 +28,15 @@ import { logger } from "../../lib/logger";
 import { pickBestDoctorAdvanced, type AdvancedScoringOptions } from "../analytics/analytics.repository";
 import { ChannelsRepository } from "../channels/channels.repository";
 import { classifyPatientRequest, generateChatbotResponse, extractDatetimeFromText, extractBranchFromText, type ChatMessage, type ManagerExample } from "./ai-classifier";
+import {
+  ALMATY_TZ,
+  computeAlmatyAvailableSlots,
+  formatAlmatyIso,
+  formatAlmatySlot,
+  formatAlmatySlotCompact,
+  getAlmatyDayBounds,
+  toAlmatyHourKey,
+} from "./almaty-time";
 import type { ChatbotState, ChatbotSessionData } from "./chatbot.types";
 import type { ChatbotSettings } from "@workspace/db";
 import { STANDARD_SCRIPT_BLOCKS, type ScriptBlock } from "./script-templates";
@@ -244,9 +253,8 @@ async function pickTherapist(clinicId: string): Promise<{ id: string; name: stri
   );
   if (therapist) return { id: therapist.id, name: therapist.name };
 
-  // No specialty match — pick least-loaded doctor today using procedure count
-  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-  const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
+  // No specialty match — pick least-loaded doctor today using procedure count (Almaty calendar day)
+  const { todayStart, todayEnd } = getAlmatyDayBounds();
 
   const loads = await Promise.all(
     doctors.map(async (doc) => {
@@ -296,51 +304,17 @@ async function getAvailableSlots(clinicId: string, doctorId: string): Promise<Da
       ),
     );
 
-  // Build set of occupied hours (YYYY-MM-DDTHH precision)
   const bookedHours = new Set(
     booked
       .filter((b) => b.scheduledAt)
-      .map((b) => b.scheduledAt!.toISOString().slice(0, 13)),
+      .map((b) => toAlmatyHourKey(b.scheduledAt!)),
   );
 
-  const slots: Date[] = [];
-  const cursor = new Date(now);
-  // Start from the next hour boundary (at least 1 hour ahead)
-  cursor.setMinutes(0, 0, 0);
-  cursor.setHours(cursor.getHours() + 1);
-  if (cursor.getHours() < 9) cursor.setHours(9, 0, 0, 0);
-
-  while (slots.length < 5 && cursor <= sevenDaysLater) {
-    const dayOfWeek = cursor.getDay(); // 0=Sun, 6=Sat
-    const hour = cursor.getHours();
-
-    if (dayOfWeek !== 0 && hour >= 9 && hour < 18) {
-      const hourKey = cursor.toISOString().slice(0, 13);
-      if (!bookedHours.has(hourKey)) {
-        slots.push(new Date(cursor));
-      }
-    }
-
-    cursor.setHours(cursor.getHours() + 1);
-    if (cursor.getHours() >= 18) {
-      cursor.setDate(cursor.getDate() + 1);
-      cursor.setHours(9, 0, 0, 0);
-    }
-  }
-
-  return slots;
+  return computeAlmatyAvailableSlots(now, bookedHours);
 }
 
 function formatSlots(slots: Date[]): string {
-  const dayNames = ["вс", "пн", "вт", "ср", "чт", "пт", "сб"];
-  return slots
-    .map((s) => {
-      const day = dayNames[s.getDay()];
-      const date = s.toLocaleDateString("ru-KZ", { day: "numeric", month: "long", timeZone: "Asia/Almaty" });
-      const time = s.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty" });
-      return `• ${day}, ${date} в ${time}`;
-    })
-    .join("\n");
+  return slots.map((s) => formatAlmatySlot(s)).join("\n");
 }
 
 interface DoctorWithSlots {
@@ -808,15 +782,7 @@ function buildPlaygroundPrompt(
       const spec = doc.specialty ? ` — ${doc.specialty}` : "";
       doctorsSection += `• ${doc.name}${spec}\n`;
       if (doc.slots.length > 0) {
-        const slotLine = doc.slots
-          .map((s) => {
-            const dayNames = ["вс", "пн", "вт", "ср", "чт", "пт", "сб"];
-            const day = dayNames[s.getDay()];
-            const date = s.toLocaleDateString("ru-KZ", { day: "numeric", month: "long", timeZone: "Asia/Almaty" });
-            const time = s.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty" });
-            return `${day} ${date} в ${time}`;
-          })
-          .join(", ");
+        const slotLine = doc.slots.map((s) => formatAlmatySlotCompact(s)).join(", ");
         doctorsSection += `  Свободные слоты: ${slotLine}\n`;
       } else {
         doctorsSection += `  Свободные слоты: нет на ближайшие 7 дней\n`;
@@ -857,8 +823,9 @@ function buildPlaygroundPrompt(
   }
 
   const nowPlayground = new Date();
-  const nowDateStr = nowPlayground.toLocaleDateString("ru-KZ", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Almaty" });
-  const nowTimeStr = nowPlayground.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty" });
+  const nowDateStr = nowPlayground.toLocaleDateString("ru-KZ", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: ALMATY_TZ });
+  const nowTimeStr = nowPlayground.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit", timeZone: ALMATY_TZ });
+  const nowAlmatyIso = formatAlmatyIso(nowPlayground);
 
   const priceListPlaygroundSection = priceListContext
     ? `\n\nПРАЙС-ЛИСТ КЛИНИКИ (официальные цены — используй для ответов о стоимости услуг):\n${priceListContext}\n\n⚠️ ПРАВИЛО РЕЛЕВАНТНОСТИ: Когда пациент спрашивает о конкретной услуге — называй цену ТОЛЬКО запрошенной услуги. Не перечисляй другие услуги.`
@@ -880,7 +847,7 @@ function buildPlaygroundPrompt(
   const effectiveScriptContext = mindMapSection ? "" : scriptContext;
 
     const systemPrompt = `Ты — AI-ассистент стоматологической клиники. Сейчас ТЕСТОВЫЙ РЕЖИМ (симуляция для проверки скрипта).
-Текущее время: ${nowDateStr}, ${nowTimeStr} (Алматы/Астана).
+Текущее время: ${nowDateStr}, ${nowTimeStr} (часовой пояс Алматы/Астана, UTC+5). ISO: ${nowAlmatyIso}.
 
 ⚠️ ЖЁСТКИЕ ПРАВИЛА ТЕСТОВОГО РЕЖИМА (приоритет выше скрипта):
 1. НИ ПРИ КАКИХ УСЛОВИЯХ не проси ИИН, удостоверение или любой идентификатор — пациент уже идентифицирован
@@ -888,7 +855,7 @@ function buildPlaygroundPrompt(
 3. Если пациент согласился на запись и выбрал время — предложи ему выбрать филиал/адрес клиники из материалов, и только после выбора филиала подтверди запись с коротким саммари деталей
 4. Отвечай коротко: 1–3 предложения максимум
 5. Используй только информацию из материалов клиники и списка врачей — не придумывай
-6. НИКОГДА не предлагай и не подтверждай время которое уже прошло (сейчас ${nowTimeStr}). Если пациент называет прошедшее время сегодня — объясни что оно уже прошло и предложи ближайший доступный слот. Все слоты в списке врачей уже являются будущими.
+6. Все даты и время — только в часовом поясе Алматы (UTC+5). НИКОГДА не предлагай и не подтверждай время которое уже прошло (сейчас ${nowTimeStr}, ${nowDateStr}). Если пациент называет время из списка свободных слотов — подтверждай его вместе с датой из списка. Если пациент называет прошедшее время сегодня — объясни что оно уже прошло и предложи ближайший доступный слот. Все слоты в списке врачей уже являются будущими.
 ${kazakhNote}${doctorsSection}${priceListPlaygroundSection}${mindMapSection}${activeMindMapSection}${effectiveScriptContext}${knowledgeSection}`;
     return systemPrompt;
 }
@@ -949,10 +916,11 @@ function buildSystemPrompt(
 Не придумывай информацию о клинике — цены, адрес и расписание бери из скрипта ниже или уточняй у администратора.${kazakhNote}${generalExtra}`;
 
   const now = new Date();
-  const todayStr = now.toLocaleDateString("ru-KZ", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Almaty" });
-  const currentTimeStr = now.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty" });
-  const nowContext = `Сейчас: ${todayStr}, ${currentTimeStr} (Алматы/Астана).`;
-  const timeRule = `ВАЖНО: никогда не предлагай и не подтверждай время которое уже прошло сегодня (сейчас ${currentTimeStr}). Если пациент называет прошедшее время — вежливо объясни что оно уже прошло и предложи ближайший доступный слот.`;
+  const todayStr = now.toLocaleDateString("ru-KZ", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: ALMATY_TZ });
+  const currentTimeStr = now.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit", timeZone: ALMATY_TZ });
+  const nowAlmatyIso = formatAlmatyIso(now);
+  const nowContext = `Сейчас: ${todayStr}, ${currentTimeStr} (часовой пояс Алматы/Астана, UTC+5). ISO: ${nowAlmatyIso}.`;
+  const timeRule = `ВАЖНО: все даты и время — только в часовом поясе Алматы (UTC+5). Никогда не предлагай и не подтверждай время которое уже прошло сегодня (сейчас ${currentTimeStr}, ${todayStr}). Если пациент выбирает время из предложенных слотов — подтверждай его вместе с датой из списка. Если пациент называет прошедшее время — вежливо объясни что оно уже прошло и предложи ближайший доступный слот.`;
 
   const stateGuidance: Record<ChatbotState, string> = {
     greeting: `Сейчас этап: ПРИВЕТСТВИЕ. Поприветствуй пациента согласно блоку «Приветствие» в скрипте и сразу узнай, что его беспокоит или какая услуга интересует. НЕ проси ИИН, имя или телефон в начале — это создаёт барьер. Эти данные узнаешь позже, когда будешь оформлять запись.`,
