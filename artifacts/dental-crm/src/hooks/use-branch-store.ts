@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { getBaseUrl } from "@/lib/base-url";
+import { syncBranchContext } from "@/lib/branch-context";
 
 export interface ClinicBranch {
   id: string;
@@ -26,11 +27,7 @@ export const useBranchStore = create<BranchState>((set, get) => ({
   hasFetched: false,
 
   setSelectedBranchId: (id) => {
-    if (id) {
-      localStorage.setItem(STORAGE_KEY, id);
-    } else {
-      localStorage.removeItem(STORAGE_KEY);
-    }
+    syncBranchContext(id);
     set({ selectedBranchId: id });
   },
 
@@ -53,7 +50,7 @@ export const useBranchStore = create<BranchState>((set, get) => ({
 
       const currentId = get().selectedBranchId;
       if (currentId && !branches.find((b) => b.id === currentId)) {
-        localStorage.removeItem(STORAGE_KEY);
+        syncBranchContext(null);
         set({ selectedBranchId: null });
       }
     } catch {

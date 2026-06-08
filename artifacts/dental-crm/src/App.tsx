@@ -8,6 +8,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 
 import { useGetMe, getGetMeQueryKey, setUnauthorizedHandler, setBaseUrl } from "@workspace/api-client-react";
 import { clearAuthToken, restoreAuthToken } from "@/lib/auth-token";
+import { restoreBranchContext } from "@/lib/branch-context";
 import type { User, Clinic } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/components/auth/protected-route";
@@ -84,8 +85,9 @@ const DEV_MOCK_CLINIC: Clinic = {
 // Set API base URL to the hosted Replit backend
 setBaseUrl("https://dental-crm-kz.replit.app");
 
-// Restore auth token from localStorage on page load
+// Restore auth token and branch context from localStorage on page load
 restoreAuthToken();
+restoreBranchContext();
 
 function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setAuth, clearAuth, setLoading } = useAuthStore();

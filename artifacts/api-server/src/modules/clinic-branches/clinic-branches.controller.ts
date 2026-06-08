@@ -48,7 +48,7 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       await ensureParentColumn();
-      const clinicId = req.user!.clinicId;
+      const clinicId = req.homeClinicId ?? req.user!.clinicId;
 
       const { rows } = await pool.query<BranchRow>(
         `SELECT id, name, parent_clinic_id, created_at FROM clinics WHERE parent_clinic_id = $1 ORDER BY created_at`,
@@ -80,7 +80,7 @@ router.post(
 
     try {
       await ensureParentColumn();
-      const clinicId = req.user!.clinicId;
+      const clinicId = req.homeClinicId ?? req.user!.clinicId;
 
       const { rows: parentRows } = await pool.query<{ plan: string }>(
         `SELECT plan FROM clinics WHERE id = $1 LIMIT 1`,
@@ -123,7 +123,7 @@ router.patch(
 
     try {
       await ensureParentColumn();
-      const clinicId = req.user!.clinicId;
+      const clinicId = req.homeClinicId ?? req.user!.clinicId;
       const branchId = req.params["branchId"] as string;
 
       const { rows: check } = await pool.query(
@@ -163,7 +163,7 @@ router.delete(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       await ensureParentColumn();
-      const clinicId = req.user!.clinicId;
+      const clinicId = req.homeClinicId ?? req.user!.clinicId;
       const branchId = req.params["branchId"] as string;
 
       const { rows: check } = await pool.query(

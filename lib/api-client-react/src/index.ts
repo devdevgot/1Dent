@@ -4,10 +4,11 @@ export {
   setBaseUrl,
   getBaseUrl,
   setAuthTokenGetter,
+  setBranchIdGetter,
   setUnauthorizedHandler,
   customFetch,
 } from "./custom-fetch";
-export type { AuthTokenGetter, UnauthorizedHandler } from "./custom-fetch";
+export type { AuthTokenGetter, BranchIdGetter, UnauthorizedHandler } from "./custom-fetch";
 
 // ─── Custom hooks (manually maintained) ───────────────────────────────────────
 import { customFetch } from "./custom-fetch";
