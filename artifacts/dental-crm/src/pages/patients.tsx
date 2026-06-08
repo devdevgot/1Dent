@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useSearch, useLocation } from "wouter";
 import {
   useListPatients,
@@ -19,7 +19,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  closestCorners,
+  pointerWithin,
 } from "@dnd-kit/core";
 import {
   Users, KanbanSquare,
@@ -28,7 +28,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { KanbanColumn } from "@/components/kanban/kanban-column";
-import { PatientCard } from "@/components/kanban/patient-card";
+import { PatientCardOverlay } from "@/components/kanban/patient-card";
+import { useNotifications } from "@/hooks/use-notifications";
 import { PatientDetailPanel } from "@/components/kanban/patient-detail-panel";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { CreatePatientDialog } from "@/components/kanban/create-patient-dialog";
@@ -341,6 +342,7 @@ function PatientsKanbanView({
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const setSelectedPatientId = useKanbanStore((s) => s.setSelectedPatientId);
   const [activeDragPatient, setActiveDragPatient] = useState<Patient | null>(null);
 
   const sensors = useSensors(
@@ -350,8 +352,25 @@ function PatientsKanbanView({
   const { data, isLoading, error } = useListPatients({
     query: { queryKey: getListPatientsQueryKey() },
   });
+  const { data: notificationsData } = useNotifications();
+  const { data: financials } = usePatientFinancials();
 
   const patients: Patient[] = data?.data?.patients ?? [];
+
+  const redAlertPatientIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const n of notificationsData?.data?.notifications ?? []) {
+      if (n.type === "red_alert" && n.patientId && !n.read) {
+        ids.add(n.patientId);
+      }
+    }
+    return ids;
+  }, [notificationsData]);
+
+  const onSelectPatient = useCallback(
+    (patientId: string) => setSelectedPatientId(patientId),
+    [setSelectedPatientId],
+  );
 
   const visiblePatients = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -415,8 +434,15 @@ function PatientsKanbanView({
     }
   };
 
-  const patientsByColumn = (columnId: PatientStatus) =>
-    visiblePatients.filter((p) => p.status === columnId);
+  const patientsByColumnMap = useMemo(() => {
+    const grouped = Object.fromEntries(
+      KANBAN_COLUMNS.map((col) => [col.id, [] as Patient[]]),
+    ) as Record<PatientStatus, Patient[]>;
+    for (const patient of visiblePatients) {
+      grouped[patient.status]?.push(patient);
+    }
+    return grouped;
+  }, [visiblePatients]);
 
   return (
     <div className="flex flex-col h-full bg-[#f2f2f7]">
@@ -432,9 +458,10 @@ function PatientsKanbanView({
         ) : (
           <DndContext
             sensors={sensors}
-            collisionDetection={closestCorners}
+            collisionDetection={pointerWithin}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
+            onDragCancel={() => setActiveDragPatient(null)}
           >
             <div className="flex gap-3 overflow-x-auto pb-4 flex-1 items-stretch snap-x snap-mandatory sm:snap-none custom-scrollbar">
               {KANBAN_COLUMNS.map((col) => (
@@ -443,15 +470,20 @@ function PatientsKanbanView({
                   id={col.id}
                   label={col.label}
                   colorClass={col.color}
-                  patients={patientsByColumn(col.id)}
+                  patients={patientsByColumnMap[col.id] ?? []}
+                  redAlertPatientIds={redAlertPatientIds}
+                  financials={financials}
+                  onSelectPatient={onSelectPatient}
                 />
               ))}
             </div>
-            <DragOverlay>
+            <DragOverlay adjustScale={false}>
               {activeDragPatient ? (
-                <div className="rotate-2 opacity-90 pointer-events-none">
-                  <PatientCard patient={activeDragPatient} />
-                </div>
+                <PatientCardOverlay
+                  patient={activeDragPatient}
+                  hasRedAlert={redAlertPatientIds.has(activeDragPatient.id)}
+                  fin={financials?.[activeDragPatient.id]}
+                />
               ) : null}
             </DragOverlay>
           </DndContext>
