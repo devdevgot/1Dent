@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Link } from "wouter";
+import type { Clinic } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Check, Star, Sparkles, Rocket, Building2, Shield, X, Loader2 } from "lucide-react";
+import { ChevronLeft, Check, Star, Sparkles, Rocket, Shield, X, Loader2, Clock, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type PlanId = "free" | "starter" | "professional" | "enterprise";
@@ -114,6 +115,72 @@ const PLANS: Plan[] = [
   },
 ];
 
+const PLAN_DISPLAY_NAMES: Record<PlanId, string> = {
+  free: "Без тарифа",
+  starter: "START",
+  professional: "PRO",
+  enterprise: "ENTERPRISE",
+};
+
+type SubscriptionStatus =
+  | { kind: "active_plan"; plan: PlanId; expiresAt: Date | null }
+  | { kind: "active_trial"; expiresAt: Date }
+  | { kind: "expired_plan"; plan: PlanId; expiresAt: Date }
+  | { kind: "expired_trial"; expiresAt: Date }
+  | { kind: "none" };
+
+function formatExpiryDate(date: Date): string {
+  return date.toLocaleDateString("ru", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function getClinicPlanFields(clinic: Clinic | null) {
+  const clinicAny = clinic as (Clinic & {
+    plan?: PlanId;
+    trialEndsAt?: string | null;
+    planExpiresAt?: string | null;
+  }) | null;
+
+  return {
+    plan: clinicAny?.plan ?? "free",
+    trialEndsAt: clinicAny?.trialEndsAt ?? null,
+    planExpiresAt: clinicAny?.planExpiresAt ?? null,
+  };
+}
+
+function getSubscriptionStatus(clinic: Clinic | null): SubscriptionStatus {
+  const { plan, trialEndsAt, planExpiresAt } = getClinicPlanFields(clinic);
+  const now = new Date();
+  const hasPaidPlan = plan !== "free";
+  const planNotExpired = !planExpiresAt || new Date(planExpiresAt) > now;
+  const trialActive = !!trialEndsAt && new Date(trialEndsAt) > now;
+
+  if (hasPaidPlan && planNotExpired) {
+    return {
+      kind: "active_plan",
+      plan,
+      expiresAt: planExpiresAt ? new Date(planExpiresAt) : null,
+    };
+  }
+
+  if (trialActive) {
+    return { kind: "active_trial", expiresAt: new Date(trialEndsAt) };
+  }
+
+  if (hasPaidPlan && planExpiresAt && new Date(planExpiresAt) <= now) {
+    return { kind: "expired_plan", plan, expiresAt: new Date(planExpiresAt) };
+  }
+
+  if (trialEndsAt && new Date(trialEndsAt) <= now) {
+    return { kind: "expired_trial", expiresAt: new Date(trialEndsAt) };
+  }
+
+  return { kind: "none" };
+}
+
 const COMMON_FEATURES = [
   "Полноценная система управления стоматологией",
   "База пациентов и история лечения",
@@ -129,10 +196,115 @@ const COMMON_FEATURES = [
   "Защита и резервное копирование данных",
 ];
 
+function CurrentSubscriptionBanner({ clinic }: { clinic: Clinic | null }) {
+  const status = getSubscriptionStatus(clinic);
+
+  if (status.kind === "active_plan") {
+    return (
+      <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
+            <Check className="w-5 h-5 text-emerald-600" strokeWidth={3} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">Ваш тариф</p>
+            <p className="text-[18px] font-black text-emerald-900 mt-0.5">{PLAN_DISPLAY_NAMES[status.plan]}</p>
+            {status.expiresAt ? (
+              <p className="text-[13px] text-emerald-700 mt-1 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 shrink-0" />
+                Действует до {formatExpiryDate(status.expiresAt)}
+              </p>
+            ) : (
+              <p className="text-[13px] text-emerald-700 mt-1">Подписка активна</p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (status.kind === "active_trial") {
+    return (
+      <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
+            <Clock className="w-5 h-5 text-blue-600" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold text-blue-700 uppercase tracking-wider">Пробный период</p>
+            <p className="text-[18px] font-black text-blue-900 mt-0.5">Активен</p>
+            <p className="text-[13px] text-blue-700 mt-1 flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 shrink-0" />
+              Действует до {formatExpiryDate(status.expiresAt)}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (status.kind === "expired_plan") {
+    return (
+      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+            <AlertCircle className="w-5 h-5 text-amber-600" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wider">Тариф истёк</p>
+            <p className="text-[18px] font-black text-amber-900 mt-0.5">{PLAN_DISPLAY_NAMES[status.plan]}</p>
+            <p className="text-[13px] text-amber-700 mt-1 flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 shrink-0" />
+              Истёк {formatExpiryDate(status.expiresAt)}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (status.kind === "expired_trial") {
+    return (
+      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+            <AlertCircle className="w-5 h-5 text-amber-600" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wider">Пробный период</p>
+            <p className="text-[18px] font-black text-amber-900 mt-0.5">Закончился</p>
+            <p className="text-[13px] text-amber-700 mt-1 flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 shrink-0" />
+              Истёк {formatExpiryDate(status.expiresAt)}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4">
+      <div className="flex items-start gap-3">
+        <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
+          <AlertCircle className="w-5 h-5 text-gray-500" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Текущий статус</p>
+          <p className="text-[18px] font-black text-gray-900 mt-0.5">Тариф не подключён</p>
+          <p className="text-[13px] text-gray-500 mt-1">Выберите тариф ниже, чтобы подключить систему</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PricingPage() {
   const { clinic, user } = useAuthStore();
   const { toast } = useToast();
-  const currentPlan = ((clinic as any)?.plan as PlanId) ?? "free";
+  const subscriptionStatus = getSubscriptionStatus(clinic);
+  const activePaidPlan =
+    subscriptionStatus.kind === "active_plan" ? subscriptionStatus.plan : null;
   const [requestPlan, setRequestPlan] = useState<string | null>(null);
   const [formName, setFormName] = useState(user?.name ?? "");
   const [formPhone, setFormPhone] = useState("");
@@ -187,10 +359,12 @@ export default function PricingPage() {
           </p>
         </div>
 
+        <CurrentSubscriptionBanner clinic={clinic} />
+
         {/* Plan cards */}
         <div className="space-y-5">
           {PLANS.map((plan) => {
-            const isCurrentPlan = currentPlan === plan.id;
+            const isCurrentPlan = activePaidPlan === plan.id;
             const Icon = plan.icon;
 
             return (
