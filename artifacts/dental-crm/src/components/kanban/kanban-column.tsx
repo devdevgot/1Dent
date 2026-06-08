@@ -73,6 +73,7 @@ export const KanbanColumn = memo(function KanbanColumn({
 
   return (
     <div
+      ref={setNodeRef}
       className={cn(
         "flex flex-col rounded-2xl border-2 w-[85vw] min-w-[85vw] sm:w-[260px] sm:min-w-[260px] flex-shrink-0 snap-center h-full transition-[border-color,box-shadow] duration-150",
         colorClass,
@@ -88,10 +89,7 @@ export const KanbanColumn = memo(function KanbanColumn({
         </span>
       </div>
 
-      <div
-        ref={setNodeRef}
-        className="flex-1 px-2 pb-3 space-y-2 min-h-[120px] overflow-y-auto overscroll-contain"
-      >
+      <div className="flex-1 px-2 pb-3 space-y-2 min-h-[120px] overflow-y-auto overscroll-contain">
         <ColumnPatientList {...listProps} />
       </div>
     </div>
