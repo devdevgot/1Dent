@@ -23,8 +23,8 @@ import {
   ChevronLeft,
   Pencil,
   Loader2,
-  PlayCircle,
-  StopCircle,
+  Paperclip,
+  Image as ImageIcon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -129,6 +129,16 @@ function DeliveryIcon({ status }: { status: DeliveryStatus }) {
   return null;
 }
 
+function isImageUrl(text: string): boolean {
+  return /\.(jpe?g|png|gif|webp|heic)(\?.*)?$/i.test(text.trim());
+}
+
+function isMediaUrl(text: string): boolean {
+  const t = text.trim();
+  if (!t.startsWith("http://") && !t.startsWith("https://") && !t.startsWith("/api/storage/")) return false;
+  return /\.(jpe?g|png|gif|webp|heic|pdf|doc|docx|mp4|mp3|ogg|wav)(\?.*)?$/i.test(t);
+}
+
 function getDeliveryStatus(message: Message): DeliveryStatus {
   if (message.id.startsWith("optimistic-")) return "pending";
   if (message.direction === "outbound")
@@ -203,7 +213,25 @@ function MessageBubble({ message, isOutbound }: { message: Message; isOutbound: 
             <span>{t("chat.redAlert")}</span>
           </div>
         )}
-        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words" style={{ overflowWrap: "anywhere" }}>{message.content}</p>
+        {isMediaUrl(message.content) ? (
+          <a href={message.content} target="_blank" rel="noreferrer" className="block">
+            {isImageUrl(message.content) ? (
+              <img
+                src={message.content}
+                alt="Фото"
+                className="max-w-full rounded-lg max-h-[240px] object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <div className="flex items-center gap-2 py-1">
+                <Paperclip className="w-4 h-4 shrink-0 opacity-70" />
+                <span className="text-sm underline break-all">{message.content.split("/").pop()}</span>
+              </div>
+            )}
+          </a>
+        ) : (
+          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words" style={{ overflowWrap: "anywhere" }}>{message.content}</p>
+        )}
         <div
           className={cn(
             "flex items-center justify-end gap-0.5 mt-0.5 text-[10px] select-none",
@@ -254,13 +282,12 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
   const [text, setText] = useState("");
   const bottomRef       = useRef<HTMLDivElement>(null);
   const textareaRef     = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef    = useRef<HTMLInputElement>(null);
   const qc              = useQueryClient();
   const formatDate      = useChatDateLabel();
+  const [uploadingFile, setUploadingFile] = useState(false);
 
-  const [session, setSession]               = useState<ChatSessionData | null>(null);
-  const [sessionLoading, setSessionLoading] = useState(true);
   const [sessionHistory, setSessionHistory] = useState<ChatSessionData[]>([]);
-  const [sessionWorking, setSessionWorking] = useState(false);
 
   const fetchSession = useCallback(async () => {
     try {
@@ -268,51 +295,18 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
         success: boolean;
         data: { session: ChatSessionData | null; history: ChatSessionData[] };
       }>(`/api/patients/${patient.id}/chat-session`);
-      setSession(res.data.session);
       setSessionHistory(res.data.history);
     } catch {
       // ignore
-    } finally {
-      setSessionLoading(false);
     }
   }, [patient.id]);
 
   useEffect(() => {
-    setSession(null);
     setSessionHistory([]);
-    setSessionLoading(true);
     fetchSession();
     const iv = setInterval(fetchSession, 10_000);
     return () => clearInterval(iv);
   }, [patient.id, fetchSession]);
-
-  const handleStartSession = async () => {
-    setSessionWorking(true);
-    try {
-      const res = await customFetch<{ success: boolean; data: { session: ChatSessionData } }>(
-        `/api/patients/${patient.id}/chat-session`,
-        { method: "POST" },
-      );
-      setSession(res.data.session);
-      await fetchSession();
-    } catch {
-      // ignore
-    } finally {
-      setSessionWorking(false);
-    }
-  };
-
-  const handleEndSession = async () => {
-    setSessionWorking(true);
-    try {
-      await customFetch(`/api/patients/${patient.id}/chat-session/end`, { method: "POST" });
-      await fetchSession();
-    } catch {
-      // ignore
-    } finally {
-      setSessionWorking(false);
-    }
-  };
 
   const { data, isLoading } = useListMessages(patient.id, {
     query: {
@@ -374,6 +368,37 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
     e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
   };
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setUploadingFile(true);
+    try {
+      const tok = localStorage.getItem("auth_token");
+      const urlRes = await fetch("/api/storage/uploads/request-url", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(tok ? { Authorization: `Bearer ${tok}` } : {}),
+        },
+        credentials: "include",
+        body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
+      });
+      if (!urlRes.ok) throw new Error("Failed to get upload URL");
+      const { uploadURL, objectPath } = (await urlRes.json()) as { uploadURL: string; objectPath: string };
+
+      const putRes = await fetch(uploadURL, { method: "PUT", body: file, headers: { "Content-Type": file.type } });
+      if (!putRes.ok) throw new Error("Upload failed");
+
+      const fileUrl = `${window.location.origin}/api/storage/objects/${objectPath.replace(/^\/objects\//, "")}${tok ? `?token=${tok}` : ""}`;
+      sendMutation.mutate({ patientId: patient.id, data: { content: fileUrl } });
+    } catch {
+      // ignore upload errors silently
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
   // Build unified timeline: messages + session start/end events merged by timestamp
   const timeline = buildTimeline(messages, sessionHistory);
 
@@ -414,14 +439,6 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
           </div>
           <p className="text-xs text-muted-foreground truncate">{patient.phone}</p>
         </div>
-
-        {/* Active session indicator in header */}
-        {!sessionLoading && session && (
-          <div className="flex items-center gap-1.5 shrink-0">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-xs text-green-700 font-medium hidden sm:inline">Чат активен</span>
-          </div>
-        )}
 
         {hasRedAlert && (
           <Badge variant="destructive" className="flex items-center gap-1 shrink-0 text-xs">
@@ -491,69 +508,54 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
         <div ref={bottomRef} className="h-2" />
       </div>
 
-      {/* ── Input area with Start/End buttons ── */}
-      {!sessionLoading && !session ? (
-        // No active session — show "Начать диалог" button
-        <div className="px-3 py-2.5 border-t border-border/30 shrink-0 bg-[#f0f2f5]">
+      {/* ── Input area ── */}
+      <div className="flex flex-col gap-0 border-t border-border/30 shrink-0 bg-[#f0f2f5]">
+        <div className="flex items-end gap-2 px-3 py-2.5">
+          {/* File attachment button */}
           <button
-            onClick={handleStartSession}
-            disabled={sessionWorking}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl font-semibold text-sm transition-all active:scale-[0.98] disabled:opacity-60 shadow-sm"
-            style={{ backgroundColor: BRAND, color: BRAND_DARK }}
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadingFile}
+            className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-gray-500 hover:bg-white/80 active:scale-95 transition-all disabled:opacity-40"
           >
-            {sessionWorking
-              ? <Loader2 className="w-4 h-4 animate-spin" />
-              : <PlayCircle className="w-4 h-4" />
-            }
-            {sessionWorking ? "Начинаем…" : "Начать диалог"}
+            {uploadingFile ? (
+              <Loader2 className="w-5 h-5 animate-spin text-primary" />
+            ) : (
+              <Paperclip className="w-5 h-5" />
+            )}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,video/*,.pdf,.doc,.docx"
+            className="hidden"
+            onChange={(e) => void handleFileSelect(e)}
+          />
+
+          {/* Message textarea */}
+          <div className="flex-1 bg-white rounded-2xl px-3.5 py-2 shadow-sm border border-border/20 flex items-end min-h-[44px]">
+            <textarea
+              ref={textareaRef}
+              value={text}
+              onChange={handleInput}
+              onKeyDown={handleKeyDown}
+              placeholder={t("chat.messagePlaceholder")}
+              rows={1}
+              className="w-full resize-none outline-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground leading-relaxed"
+              style={{ maxHeight: 120, minHeight: 24 }}
+            />
+          </div>
+
+          {/* Send button */}
+          <button
+            onClick={handleSend}
+            disabled={!text.trim() || sendMutation.isPending}
+            className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition-all active:scale-95 disabled:opacity-40 shadow-md"
+            style={{ backgroundColor: BRAND }}
+          >
+            <Send className="w-4 h-4" style={{ color: BRAND_DARK }} />
           </button>
         </div>
-      ) : (
-        // Active session (or still loading) — show full input with "Завершить" on left
-        <div className="flex flex-col gap-0 border-t border-border/30 shrink-0 bg-[#f0f2f5]">
-          <div className="flex items-end gap-2 px-3 py-2.5">
-            {/* Завершить button on the left */}
-            {!sessionLoading && session && (
-              <button
-                onClick={handleEndSession}
-                disabled={sessionWorking}
-                title="Завершить диалог"
-                className="flex items-center gap-1 text-xs font-semibold text-red-500 hover:text-red-700 border border-red-200 rounded-xl px-2.5 py-2 hover:bg-red-50 transition-colors disabled:opacity-50 shrink-0 self-end mb-0.5"
-              >
-                {sessionWorking
-                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  : <StopCircle className="w-3.5 h-3.5" />
-                }
-                <span className="hidden sm:inline">Завершить</span>
-              </button>
-            )}
-
-            {/* Message textarea */}
-            <div className="flex-1 bg-white rounded-2xl px-3.5 py-2 shadow-sm border border-border/20 flex items-end min-h-[44px]">
-              <textarea
-                ref={textareaRef}
-                value={text}
-                onChange={handleInput}
-                onKeyDown={handleKeyDown}
-                placeholder={t("chat.messagePlaceholder")}
-                rows={1}
-                className="w-full resize-none outline-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground leading-relaxed"
-                style={{ maxHeight: 120, minHeight: 24 }}
-              />
-            </div>
-
-            {/* Send button */}
-            <button
-              onClick={handleSend}
-              disabled={!text.trim() || sendMutation.isPending}
-              className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition-all active:scale-95 disabled:opacity-40 shadow-md"
-              style={{ backgroundColor: BRAND }}
-            >
-              <Send className="w-4 h-4" style={{ color: BRAND_DARK }} />
-            </button>
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }
