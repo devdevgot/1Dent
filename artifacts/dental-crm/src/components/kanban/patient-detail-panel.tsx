@@ -36,7 +36,7 @@ const DentalAiAnalysisPanel = lazy(() =>
 const ContractsTab = lazy(() =>
   import("./contracts-tab").then((m) => ({ default: m.ContractsTab })),
 );
-import { VoiceDiagnosisModal } from "@/components/dental-chart/voice-diagnosis-modal";
+import { VoiceDiagnosisModal, type VoiceDiagnosisApplyResult } from "@/components/dental-chart/voice-diagnosis-modal";
 import type { ToothRecord, ToothTreatment, ProcedureTemplate } from "@workspace/api-client-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import {
@@ -1059,6 +1059,28 @@ export function PatientDetailPanel() {
     return () => cancelAnimationFrame(frame);
   }, [pickerCategory]);
 
+  // Reset panel session state when switching patients (prevents stale plan/diagnosis UI).
+  useEffect(() => {
+    if (!selectedPatientId) return;
+
+    setTreatmentStep(1);
+    setPlanDetailId(null);
+    setExpandedPlanId(null);
+    setPlanViewToothFdi(null);
+    setIsDiagnosisMode(false);
+    setShowVoiceModal(false);
+    setRestoreVoiceDraft(false);
+    setShowSummaryModal(false);
+    setDiagnosisMap(new Map());
+    setDiagnosisNotesMap(new Map());
+    setDiagnosisServicesMap(new Map());
+    setDiagnosisToothFdi(null);
+    setPickerCategory(null);
+    setModalToothFdi(null);
+    setActiveToothFdi(null);
+    setActiveTreatmentSnapshot(null);
+  }, [selectedPatientId]);
+
   // When patient changes, restore bundle state from the server so that
   // a page refresh doesn't wipe out a previously prepared bundle.
   useEffect(() => {
@@ -1128,6 +1150,15 @@ export function PatientDetailPanel() {
   const pastPlans = allPlans.filter(
     (p) => p.status === "completed" || p.status === "cancelled",
   );
+
+  // Clear stale plan detail id if it doesn't belong to the current patient.
+  useEffect(() => {
+    if (!planDetailId || planLoading || plansLoading) return;
+    const belongsToPatient =
+      activePlan?.id === planDetailId ||
+      allPlans.some((p) => p.id === planDetailId);
+    if (!belongsToPatient) setPlanDetailId(null);
+  }, [planDetailId, activePlan?.id, allPlans, planLoading, plansLoading]);
 
   // Require re-diagnosis before creating a second/third/etc. plan
   const needsRediagnosis = (() => {
@@ -1465,6 +1496,104 @@ export function PatientDetailPanel() {
       setTreatmentStep(2);
     }
   }, [selectedPatientId, diagnosisMap, diagnosisNotesMap, diagnosisServicesMap, teethMap, activePlan, updateToothMutation, triggerAnalysisMutation, createPlanMutation, addPlanItemMutation, refetchTeeth, toast, t, queryClient, setActiveTab, handlePrepareBundle, setMatchedCatsState]);
+
+  const hydrateVoiceDiagnosisSession = useCallback((result: VoiceDiagnosisApplyResult) => {
+    const dm = new Map<number, ToothCondition>();
+    const dnm = new Map<number, string>();
+    const dsm = new Map<number, ProcedureTemplate[]>();
+
+    for (const entry of result.entries) {
+      dm.set(entry.fdi, entry.condition as ToothCondition);
+      if (entry.notes) dnm.set(entry.fdi, entry.notes);
+    }
+    for (const [fdi, services] of result.servicesByTooth.entries()) {
+      dsm.set(fdi, services);
+    }
+
+    setDiagnosisMap(dm);
+    setDiagnosisNotesMap(dnm);
+    setDiagnosisServicesMap(dsm);
+    setDiagnosisToothFdi(null);
+    setPickerCategory(null);
+  }, []);
+
+  const handleVoiceDiagnosisApplied = useCallback(async (result: VoiceDiagnosisApplyResult) => {
+    if (!selectedPatientId || result.appliedFdis.length === 0) {
+      hydrateVoiceDiagnosisSession(result);
+      return;
+    }
+
+    const selectedServices = Array.from(result.servicesByTooth.values()).flat();
+    const matchedCats = Array.from(new Set(selectedServices.flatMap((s) => getMatchedCategories(s.name))));
+    const hasExtractionSelected = matchedCats.length > 0;
+    setMatchedCatsState(matchedCats);
+
+    if (!activePlan && result.servicesByTooth.size > 0) {
+      const items: Array<{ toothFdi: number; condition: string; title: string; price: number }> = [];
+      for (const [fdi, services] of result.servicesByTooth.entries()) {
+        const condition =
+          result.entries.find((e) => e.fdi === fdi)?.condition
+          ?? teethMap.get(fdi)?.condition
+          ?? "healthy";
+        for (const svc of services) {
+          items.push({
+            toothFdi: fdi,
+            condition,
+            title: svc.name,
+            price: svc.defaultPrice ?? 0,
+          });
+        }
+      }
+      if (items.length > 0) {
+        const res = await createPlanMutation.mutateAsync({ id: selectedPatientId, data: { items } });
+        const newPlanId = res?.data?.plan?.id;
+        if (newPlanId) setPlanDetailId(newPlanId);
+      }
+    } else if (activePlan) {
+      setPlanDetailId(activePlan.id);
+    }
+
+    void triggerAnalysisMutation.mutateAsync(selectedPatientId);
+    await refetchTeeth();
+    await queryClient.invalidateQueries({ queryKey: getGetActiveTreatmentPlanQueryKey(selectedPatientId) });
+    await queryClient.invalidateQueries({ queryKey: getListTreatmentPlansQueryKey(selectedPatientId) });
+
+    setDiagnosisMap(new Map());
+    setDiagnosisNotesMap(new Map());
+    setDiagnosisToothFdi(null);
+    setDiagnosisServicesMap(new Map());
+    setPickerCategory(null);
+    setIsDiagnosisMode(false);
+    setShowSummaryModal(false);
+    setPlanViewToothFdi(null);
+    queryClient.removeQueries({ queryKey: getDentalAiAnalysisQueryKey(selectedPatientId) });
+    toast({ title: t("patient.diagnosisSaved") });
+
+    if (hasExtractionSelected) {
+      setBundleToken(null);
+      setBundleUrl(null);
+      setBundleSent(false);
+      setBundleRequiredModalOpen(true);
+      void handlePrepareBundle(selectedPatientId, selectedServices.map((s) => s.name));
+    } else {
+      setActiveTab("treatment");
+      setTreatmentStep(2);
+    }
+  }, [
+    selectedPatientId,
+    activePlan,
+    teethMap,
+    createPlanMutation,
+    triggerAnalysisMutation,
+    refetchTeeth,
+    queryClient,
+    hydrateVoiceDiagnosisSession,
+    handlePrepareBundle,
+    setActiveTab,
+    setMatchedCatsState,
+    toast,
+    t,
+  ]);
 
   const diagnosisSummaryEntries = useMemo((): DiagnosisSummaryEntry[] => {
     // Only show teeth being actively diagnosed in this session (diagnosisMap).
@@ -2445,7 +2574,16 @@ export function PatientDetailPanel() {
                 {!planLoading && !plansLoading && hasDiagnosis && planDetailId !== null && (() => {
                   const isActive = planDetailId === activePlan?.id;
                   const detailPlan = isActive ? activePlan : allPlans.find((p) => p.id === planDetailId) ?? null;
-                  if (!detailPlan) return null;
+                  if (!detailPlan) {
+                    return (
+                      <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 py-10 text-center">
+                        <p className="text-sm text-muted-foreground">План не найден или ещё загружается</p>
+                        <Button variant="outline" size="sm" onClick={() => setPlanDetailId(null)}>
+                          К списку планов
+                        </Button>
+                      </div>
+                    );
+                  }
                   const nc = detailPlan.items.filter((i) => i.status !== "cancelled");
                   const done = nc.filter((i) => i.status === "completed").length;
                   const pct = nc.length > 0 ? Math.round((done / nc.length) * 100) : 0;
@@ -2702,11 +2840,12 @@ export function PatientDetailPanel() {
             setShowVoiceModal(false);
             setRestoreVoiceDraft(false);
           }}
-          onApplied={() => {
+          onApplied={(result) => {
             setShowVoiceModal(false);
             setRestoreVoiceDraft(false);
             setVoiceDraftExists(false);
             setVoiceDraftTime(null);
+            void handleVoiceDiagnosisApplied(result);
           }}
         />
       )}

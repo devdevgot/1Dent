@@ -64,11 +64,17 @@ type VoiceDraft = {
 
 type Phase = "idle" | "recording" | "processing" | "review" | "applying";
 
+export type VoiceDiagnosisApplyResult = {
+  entries: VoiceDiagnosisEntry[];
+  servicesByTooth: Map<number, ProcedureTemplate[]>;
+  appliedFdis: number[];
+};
+
 interface Props {
   patientId: string;
   activePlanId?: string;
   onClose: () => void;
-  onApplied?: () => void;
+  onApplied?: (result: VoiceDiagnosisApplyResult) => void;
   initialRestoreDraft?: boolean;
 }
 
@@ -327,17 +333,18 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
   };
 
   const setServiceForTooth = (fdi: number, serviceId: string) => {
-    setSelectedServiceIds((prev) => {
-      const next = { ...prev };
-      if (!serviceId) delete next[fdi];
-      else next[fdi] = serviceId;
-      return next;
-    });
+    setSelectedServiceIds((prev) => ({ ...prev, [fdi]: serviceId }));
   };
 
   const getServicePrice = useCallback((entry: VoiceDiagnosisEntry, serviceId?: string) => {
-    const id = serviceId || selectedServiceIds[entry.fdi] || entry.bestMatchId;
-    if (!id) return entry.price;
+    const resolved =
+      serviceId !== undefined
+        ? serviceId
+        : entry.fdi in selectedServiceIds
+          ? selectedServiceIds[entry.fdi]
+          : (entry.bestMatchId ?? "");
+    if (!resolved) return entry.price;
+    const id = resolved;
     const fromSuggestions = entry.suggestedTemplates?.find((s) => s.id === id);
     if (fromSuggestions) return fromSuggestions.defaultPrice;
     const tpl = allTemplates.find((t) => t.id === id);
@@ -352,7 +359,9 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
   const totalServiceCost = useMemo(() => {
     let sum = 0;
     for (const entry of entries) {
-      const id = selectedServiceIds[entry.fdi];
+      const id = entry.fdi in selectedServiceIds
+        ? selectedServiceIds[entry.fdi]
+        : (entry.bestMatchId ?? "");
       if (id) sum += getServicePrice(entry, id);
     }
     return sum;
@@ -366,6 +375,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
 
     try {
       let appliedTeeth = 0;
+      const appliedFdis: number[] = [];
       const toothErrors: string[] = [];
 
       for (const entry of entries) {
@@ -379,6 +389,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
             },
           });
           appliedTeeth++;
+          appliedFdis.push(entry.fdi);
         } catch {
           toothErrors.push(`Зуб ${entry.fdi}`);
         }
@@ -458,7 +469,15 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
         });
       }
 
-      onApplied?.();
+      const servicesByTooth = new Map<number, ProcedureTemplate[]>();
+      for (const [fdiStr, id] of Object.entries(selectedServiceIds)) {
+        if (!id) continue;
+        const fdi = Number(fdiStr);
+        const tpl = allTemplates.find((t) => t.id === id);
+        if (tpl) servicesByTooth.set(fdi, [tpl]);
+      }
+
+      onApplied?.({ entries, servicesByTooth, appliedFdis });
       onClose();
     } catch (err) {
       setPhase("review");
@@ -473,8 +492,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
   const handleConditionChange = (idx: number, entry: VoiceDiagnosisEntry, condition: string) => {
     const updated = rematchEntryServices({ ...entry, condition }, transcript, allTemplates);
     setEntries((prev) => prev.map((item, i) => (i === idx ? updated : item)));
-    if (updated.bestMatchId) setServiceForTooth(entry.fdi, updated.bestMatchId);
-    else setServiceForTooth(entry.fdi, "");
+    setServiceForTooth(entry.fdi, updated.bestMatchId ?? "");
   };
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -664,8 +682,11 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                         <tbody className="divide-y divide-border/40">
                           {entries.map((entry, idx) => {
                             const cfg = CONDITION_CONFIG[entry.condition as ToothCondition];
-                            const selectedId = selectedServiceIds[entry.fdi] ?? entry.bestMatchId ?? "";
-                            const rowPrice = getServicePrice(entry, selectedId || undefined);
+                            const selectedId =
+                              entry.fdi in selectedServiceIds
+                                ? selectedServiceIds[entry.fdi]
+                                : (entry.bestMatchId ?? "");
+                            const rowPrice = getServicePrice(entry, selectedId);
                             const suggestions = entry.suggestedTemplates ?? [];
 
                             return (
