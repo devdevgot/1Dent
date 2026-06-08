@@ -79,11 +79,17 @@ type VoiceDraft = {
 
 type Phase = "idle" | "recording" | "processing" | "review" | "applying";
 
+export type VoiceDiagnosisApplyResult = {
+  entries: VoiceDiagnosisEntry[];
+  servicesByTooth: Map<number, ProcedureTemplate[]>;
+  appliedFdis: number[];
+};
+
 interface Props {
   patientId: string;
   activePlanId?: string;
   onClose: () => void;
-  onApplied?: () => void;
+  onApplied?: (result: VoiceDiagnosisApplyResult) => void;
   initialRestoreDraft?: boolean;
 }
 
@@ -355,6 +361,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
 
     try {
       let appliedTeeth = 0;
+      const appliedFdis: number[] = [];
       const toothErrors: string[] = [];
 
       for (const entry of entries) {
@@ -368,6 +375,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
             },
           });
           appliedTeeth++;
+          appliedFdis.push(entry.fdi);
         } catch {
           toothErrors.push(`Зуб ${entry.fdi}`);
         }
@@ -446,7 +454,18 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
         });
       }
 
-      onApplied?.();
+      const servicesByTooth = new Map<number, ProcedureTemplate[]>();
+      for (const [fdiStr, ids] of Object.entries(selectedServiceIds)) {
+        const fdi = Number(fdiStr);
+        const templates: ProcedureTemplate[] = [];
+        for (const id of ids) {
+          const tpl = allTemplates.find((t) => t.id === id);
+          if (tpl) templates.push(tpl);
+        }
+        if (templates.length > 0) servicesByTooth.set(fdi, templates);
+      }
+
+      onApplied?.({ entries, servicesByTooth, appliedFdis });
       onClose();
     } catch (err) {
       setPhase("review");
