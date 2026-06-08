@@ -304,7 +304,7 @@ function PatientsListView({
       )}
 
       <ErrorBoundary>
-        <PatientDetailPanel />
+        <PatientDetailPanelGate />
       </ErrorBoundary>
       <ConfirmDeleteDialog
         open={!!deleteConfirm}
