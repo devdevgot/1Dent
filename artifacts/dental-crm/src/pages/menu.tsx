@@ -23,6 +23,7 @@ import {
   FileText,
   MapPin,
   Building2,
+  CreditCard,
 } from "lucide-react";
 
 const SUPPORTED_LANGS = ["ru", "kz", "en"] as const;
@@ -41,6 +42,7 @@ const ALL_NAV_ITEMS = [
   { nameKey: "nav.migration",    href: "/migration",          icon: DatabaseZap,     roles: ["owner"] },
   { nameKey: "nav.contractTemplates", href: "/contract-templates", icon: FileText,    roles: ["owner","admin","doctor"] },
   { nameKey: "nav.clinicBranches",    href: "/clinic-branches",    icon: Building2,    roles: ["owner"] },
+  { nameKey: "nav.pricing",           href: "/pricing",            icon: CreditCard,   roles: ["owner"] },
   { nameKey: "nav.branches",          href: "/branches",           icon: MapPin,       roles: ["owner"] },
 ];
 
