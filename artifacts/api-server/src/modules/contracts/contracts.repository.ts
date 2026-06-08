@@ -26,7 +26,7 @@ function systemTemplateText(tmpl: ContractTemplate): string {
   return tmpl.extractedText ?? getExtractionTemplateText(tmpl.systemType ?? "");
 }
 
-function matchServiceToSubcategory(title: string): string[] {
+export function matchServiceToSubcategory(title: string): string[] {
   const lower = title.toLowerCase();
   const matched: string[] = [];
 
@@ -99,7 +99,8 @@ function matchServiceToSubcategory(title: string): string[] {
   if (
     (lower.includes("средн") && lower.includes("кариес")) ||
     (lower.includes("поверхн") && lower.includes("кариес")) ||
-    (lower.includes("кариес") && !lower.includes("глубок"))
+    lower.includes("пломб") ||
+    ((lower.includes("кариес") || lower.includes("реставрац")) && !lower.includes("глубок"))
   ) {
     matched.push("Средний карис");
   }
@@ -115,7 +116,14 @@ function matchServiceToSubcategory(title: string): string[] {
   }
 
   // Лечение десен
-  if (lower.includes("десен") || lower.includes("пародонт") || lower.includes("вектор") || (lower.includes("лечение") && lower.includes("дес"))) {
+  if (
+    lower.includes("десен") ||
+    lower.includes("пародонт") ||
+    lower.includes("вектор") ||
+    lower.includes("гигиен") ||
+    lower.includes("чистк") ||
+    (lower.includes("лечение") && lower.includes("дес"))
+  ) {
     matched.push("Лечение десен");
   }
 
@@ -437,7 +445,7 @@ export class ContractsRepository {
     date: string;
     year: string;
     serviceNames?: string[];
-  }): Promise<{ bundleToken: string; contracts: PatientContract[] }> {
+  }): Promise<{ bundleToken: string; contracts: PatientContract[]; matchedSubcategories: string[] }> {
     const allTemplates = await this.ensureSystemExtractionTemplates(data.clinicId);
 
     // 1. Identify relevant subcategories
@@ -501,7 +509,7 @@ export class ContractsRepository {
     const bundleToken = randomUUID();
 
     if (templates.length === 0) {
-      return { bundleToken, contracts: [] };
+      return { bundleToken: "", contracts: [], matchedSubcategories: [...matchedSubcategories] };
     }
 
     const rows = await db
@@ -525,7 +533,7 @@ export class ContractsRepository {
       )
       .returning();
 
-    return { bundleToken, contracts: rows };
+    return { bundleToken, contracts: rows, matchedSubcategories: [...matchedSubcategories] };
   }
 
   async markBundleSent(bundleToken: string): Promise<void> {
@@ -569,6 +577,7 @@ export class ContractsRepository {
     Array<{
       contract: PatientContract;
       templateName: string;
+      systemType: string | null;
       patientName: string;
       patientPhone: string;
       clinicName: string;
@@ -578,6 +587,7 @@ export class ContractsRepository {
       .select({
         contract: patientContractsTable,
         templateName: contractTemplatesTable.name,
+        systemType: contractTemplatesTable.systemType,
         patientName: patientsTable.name,
         patientPhone: patientsTable.phone,
         clinicName: clinicsTable.name,

@@ -362,6 +362,65 @@ router.post(
   },
 );
 
+function resolvePublicBaseUrl(req: Request): string {
+  const fromEnv = getServerBaseUrl();
+  if (fromEnv) return fromEnv.replace(/\/$/, "");
+
+  const host = req.get("x-forwarded-host") ?? req.get("host");
+  const proto = req.get("x-forwarded-proto") ?? req.protocol;
+  if (host) return `${proto}://${host}`.replace(/\/$/, "");
+
+  return "";
+}
+
+function buildBundleUrl(req: Request, bundleToken: string): string {
+  const baseUrl = resolvePublicBaseUrl(req);
+  return baseUrl ? `${baseUrl}/p/bundle/${bundleToken}` : `/p/bundle/${bundleToken}`;
+}
+
+function buildBundleWhatsappMessage(opts: {
+  patientName: string;
+  clinicName: string;
+  bundleUrl: string;
+  subcategories: string[];
+  documents: Array<{ templateName: string }>;
+}): string {
+  const subcatLabel =
+    opts.subcategories.length > 0 ? opts.subcategories.join(", ") : "Лечение";
+  const docList = opts.documents
+    .map((d, i) => `${i + 1}. ${d.templateName}`)
+    .join("\n");
+
+  return (
+    `📋 *Пакет документов — ${subcatLabel}*\n\n` +
+    `Уважаемый(-ая) ${opts.patientName}!\n\n` +
+    `Вам подготовлены ${opts.documents.length} документ(ов) для ознакомления и подписи:\n` +
+    `${docList}\n\n` +
+    `Откройте все документы и подпишите по ссылке:\n${opts.bundleUrl}\n\n` +
+    `Клиника: ${opts.clinicName}`
+  );
+}
+
+async function isWhatsappConfigured(clinicId: string): Promise<boolean> {
+  const [clinicSettings] = await db
+    .select({
+      greenApiInstanceId: clinicsTable.greenApiInstanceId,
+      greenApiToken: clinicsTable.greenApiToken,
+    })
+    .from(clinicsTable)
+    .where(eq(clinicsTable.id, clinicId))
+    .limit(1);
+
+  const metaEnabled = !!(
+    process.env["WHATSAPP_TOKEN"] && process.env["WHATSAPP_PHONE_ID"]
+  );
+  const greenApiEnabled = !!(
+    clinicSettings?.greenApiInstanceId && clinicSettings?.greenApiToken
+  );
+
+  return greenApiEnabled || metaEnabled;
+}
+
 /** Shared helper — loads patient + clinic + doctor for the extraction bundle endpoints */
 async function loadBundleContext(
   patientId: string,
@@ -433,7 +492,8 @@ router.post(
     const dateStr = today.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" });
 
     const { serviceNames } = req.body;
-    const { bundleToken, contracts } = await repo
+    const names = serviceNames && Array.isArray(serviceNames) ? serviceNames as string[] : undefined;
+    const { bundleToken, contracts, matchedSubcategories } = await repo
       .createExtractionBundle({
         clinicId,
         patientId,
@@ -446,15 +506,28 @@ router.post(
         doctorName: ctx.doctorName,
         date: dateStr,
         year: String(today.getFullYear()),
-        serviceNames: serviceNames && Array.isArray(serviceNames) ? serviceNames : undefined,
+        serviceNames: names,
       })
       .catch(next as (e: unknown) => never);
     if (!contracts) return;
 
-    const baseUrl = getServerBaseUrl() ?? "";
-    const bundleUrl = baseUrl ? `${baseUrl}/p/bundle/${bundleToken}` : `/p/bundle/${bundleToken}`;
+    if (!bundleToken || contracts.length === 0) {
+      const subcats = matchedSubcategories?.length
+        ? matchedSubcategories.join(", ")
+        : "не определены";
+      return next(
+        new ValidationError(
+          `Не удалось сформировать пакет документов для услуг (${subcats}). Проверьте шаблоны договоров в настройках.`,
+        ),
+      );
+    }
 
-    res.status(201).json({ success: true, data: { bundleToken, bundleUrl, contracts } });
+    const bundleUrl = buildBundleUrl(req, bundleToken);
+
+    res.status(201).json({
+      success: true,
+      data: { bundleToken, bundleUrl, contracts, matchedSubcategories },
+    });
   },
 );
 
@@ -476,37 +549,31 @@ router.post(
       return next(new NotFoundError("Пакет не найден"));
     }
 
-    // Check WhatsApp connectivity before attempting to send
-    const [clinicSettings] = await db
-      .select({
-        greenApiInstanceId: clinicsTable.greenApiInstanceId,
-        greenApiToken: clinicsTable.greenApiToken,
-      })
-      .from(clinicsTable)
-      .where(eq(clinicsTable.id, clinicId))
-      .limit(1);
-
-    const metaEnabled = !!(
-      process.env["WHATSAPP_TOKEN"] && process.env["WHATSAPP_PHONE_ID"]
-    );
-    const greenApiEnabled = !!(
-      clinicSettings?.greenApiInstanceId && clinicSettings?.greenApiToken
-    );
-
-    if (!greenApiEnabled && !metaEnabled) {
+    if (!(await isWhatsappConfigured(clinicId))) {
       return next(new WhatsappNotConnectedError());
     }
 
     const { patientName, patientPhone, clinicName } = rows[0]!;
-    const baseUrl = getServerBaseUrl() ?? "";
-    const bundleUrl = baseUrl ? `${baseUrl}/p/bundle/${bundleToken}` : `/p/bundle/${bundleToken}`;
+    const bundleUrl = buildBundleUrl(req, bundleToken);
 
-    const message =
-      `📋 *Пакет документов — Удаление зуба*\n\nУважаемый(-ая) ${patientName}!\n\n` +
-      `Вам подготовлены 4 документа для ознакомления и подписи:\n` +
-      `1. Договор на оказание услуг\n2. Согласие на удаление зуба\n` +
-      `3. Согласие на выполнение рекомендаций\n4. Памятка после удаления\n\n` +
-      `Откройте все документы и подпишите по ссылке:\n${bundleUrl}\n\nКлиника: ${clinicName}`;
+    const subcategories = [
+      ...new Set(
+        rows
+          .map((r) => {
+            if (!r.systemType) return null;
+            return getExtractionTemplateDef(r.systemType)?.subcategory ?? null;
+          })
+          .filter((s): s is string => !!s),
+      ),
+    ];
+
+    const message = buildBundleWhatsappMessage({
+      patientName,
+      clinicName,
+      bundleUrl,
+      subcategories,
+      documents: rows.map((r) => ({ templateName: r.templateName })),
+    });
 
     try {
       const idMessage = await sendToPatient(clinicId, patientPhone, message);
@@ -548,7 +615,8 @@ router.post(
     const dateStr = today.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" });
 
     const { serviceNames } = req.body;
-    const { bundleToken, contracts } = await repo
+    const names = serviceNames && Array.isArray(serviceNames) ? serviceNames as string[] : undefined;
+    const { bundleToken, contracts, matchedSubcategories } = await repo
       .createExtractionBundle({
         clinicId,
         patientId,
@@ -561,29 +629,66 @@ router.post(
         doctorName: ctx.doctorName,
         date: dateStr,
         year: String(today.getFullYear()),
-        serviceNames: serviceNames && Array.isArray(serviceNames) ? serviceNames : undefined,
+        serviceNames: names,
       })
       .catch(next as (e: unknown) => never);
     if (!contracts) return;
 
-    const baseUrl = getServerBaseUrl() ?? "";
-    const bundleUrl = baseUrl ? `${baseUrl}/p/bundle/${bundleToken}` : `/p/bundle/${bundleToken}`;
+    if (!bundleToken || contracts.length === 0) {
+      const subcats = matchedSubcategories?.length
+        ? matchedSubcategories.join(", ")
+        : "не определены";
+      return next(
+        new ValidationError(
+          `Не удалось сформировать пакет документов для услуг (${subcats}). Проверьте шаблоны договоров в настройках.`,
+        ),
+      );
+    }
 
+    if (!(await isWhatsappConfigured(clinicId))) {
+      return next(new WhatsappNotConnectedError());
+    }
+
+    const bundleUrl = buildBundleUrl(req, bundleToken);
     const bundleContracts = await repo.findContractsByBundleToken(bundleToken);
-    const docList = bundleContracts.map((c, i) => `${i + 1}. ${c.templateName}`).join("\n");
+    const subcategories = [
+      ...new Set(
+        bundleContracts
+          .map((r) => {
+            if (!r.systemType) return null;
+            return getExtractionTemplateDef(r.systemType)?.subcategory ?? null;
+          })
+          .filter((s): s is string => !!s),
+      ),
+    ];
 
-    const message =
-      `📋 *Пакет документов для лечения*\n\nУважаемый(-ая) ${ctx.patientName}!\n\n` +
-      `Вам отправлен пакет документов для ознакомления и подписи:\n${docList}\n\n` +
-      `Откройте все документы и подпишите по ссылке:\n${bundleUrl}\n\nКлиника: ${ctx.clinicName}`;
+    const message = buildBundleWhatsappMessage({
+      patientName: ctx.patientName,
+      clinicName: ctx.clinicName,
+      bundleUrl,
+      subcategories,
+      documents: bundleContracts.map((c) => ({ templateName: c.templateName })),
+    });
 
-    await sendToPatient(clinicId, ctx.patientPhone, message)
-      .then(() => repo.markBundleSent(bundleToken))
-      .catch((err: unknown) => {
-        logger.error({ err, patientId, bundleToken }, "[contracts] Failed to send bundle WhatsApp");
+    try {
+      const idMessage = await sendToPatient(clinicId, ctx.patientPhone, message);
+      if (!idMessage) {
+        return res.status(502).json({
+          success: false,
+          code: "WHATSAPP_SEND_FAILED",
+          error: "WhatsApp не подключён или сообщение не доставлено",
+        });
+      }
+      await repo.markBundleSent(bundleToken);
+      res.status(201).json({ success: true, data: { bundleToken, bundleUrl, contracts, idMessage } });
+    } catch (err) {
+      logger.error({ err, patientId, bundleToken }, "[contracts] Failed to send bundle WhatsApp");
+      res.status(502).json({
+        success: false,
+        code: "WHATSAPP_SEND_FAILED",
+        error: err instanceof Error ? err.message : "Ошибка при отправке WhatsApp",
       });
-
-    res.status(201).json({ success: true, data: { bundleToken, bundleUrl, contracts } });
+    }
   },
 );
 
