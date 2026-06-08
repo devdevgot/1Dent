@@ -158,13 +158,16 @@ function ProceduresRedirect() {
 
 function PlanPaywall() {
   const { clinic } = useAuthStore();
+  const [, navigate] = useLocation();
   const clinicAny = clinic as any;
   const plan = clinicAny?.plan ?? "free";
   const trialEndsAt = clinicAny?.trialEndsAt;
   const hasPaidPlan = plan !== "free";
   const trialActive = trialEndsAt && new Date(trialEndsAt) > new Date();
 
+  const [loc] = useLocation();
   if (hasPaidPlan || trialActive) return null;
+  if (loc === "/pricing") return null;
 
   const trialExpired = trialEndsAt && new Date(trialEndsAt) <= new Date();
 
@@ -179,13 +182,19 @@ function PlanPaywall() {
       <p className="text-sm text-gray-500 leading-relaxed max-w-xs mb-6">
         {trialExpired
           ? "Ваш пробный период истёк. Для продолжения работы необходимо подключить тарифный план."
-          : "Для доступа к системе необходимо подключить тарифный план. Свяжитесь с администратором платформы."}
+          : "Для доступа к системе необходимо подключить тарифный план."}
       </p>
+      <button
+        onClick={() => navigate("/pricing")}
+        className="w-full max-w-xs px-6 py-3 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors mb-3"
+      >
+        Посмотреть тарифы
+      </button>
       <a
         href="https://wa.me/77001234567"
         target="_blank"
         rel="noreferrer"
-        className="px-6 py-3 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors"
+        className="text-sm text-gray-400 hover:text-primary transition-colors"
       >
         Связаться с нами
       </a>

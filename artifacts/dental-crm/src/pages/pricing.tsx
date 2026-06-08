@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { Link } from "wouter";
 import { useAuthStore } from "@/hooks/use-auth";
-import { ChevronLeft, Check, Star, Sparkles, Rocket, Building2, Shield } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { ChevronLeft, Check, Star, Sparkles, Rocket, Building2, Shield, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type PlanId = "free" | "starter" | "professional" | "enterprise";
@@ -128,8 +130,43 @@ const COMMON_FEATURES = [
 ];
 
 export default function PricingPage() {
-  const { clinic } = useAuthStore();
+  const { clinic, user } = useAuthStore();
+  const { toast } = useToast();
   const currentPlan = ((clinic as any)?.plan as PlanId) ?? "free";
+  const [requestPlan, setRequestPlan] = useState<string | null>(null);
+  const [formName, setFormName] = useState(user?.name ?? "");
+  const [formPhone, setFormPhone] = useState("");
+  const [formEmail, setFormEmail] = useState(user?.email ?? "");
+  const [formMessage, setFormMessage] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmitRequest = async () => {
+    if (!formName.trim() || !formPhone.trim() || !requestPlan) return;
+    setSubmitting(true);
+    try {
+      const tok = localStorage.getItem("auth_token");
+      const res = await fetch("/api/plan-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(tok ? { Authorization: `Bearer ${tok}` } : {}) },
+        credentials: "include",
+        body: JSON.stringify({
+          plan: requestPlan,
+          contactName: formName.trim(),
+          contactPhone: formPhone.trim(),
+          contactEmail: formEmail.trim() || undefined,
+          message: formMessage.trim() || undefined,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      setSubmitted(true);
+      toast({ title: "Заявка отправлена!" });
+    } catch {
+      toast({ title: "Ошибка отправки", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#f2f2f7] pb-10">
@@ -247,6 +284,7 @@ export default function PricingPage() {
                   {/* Action button */}
                   <button
                     disabled={isCurrentPlan}
+                    onClick={() => !isCurrentPlan && setRequestPlan(plan.name)}
                     className={cn(
                       "w-full py-3.5 rounded-xl text-[14px] font-bold transition-all",
                       isCurrentPlan
@@ -293,6 +331,83 @@ export default function PricingPage() {
           </p>
         </div>
       </div>
+
+      {/* Request form modal */}
+      {requestPlan && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <div>
+                <h3 className="font-bold text-gray-900">Заявка на тариф {requestPlan}</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Мы свяжемся с вами для подключения</p>
+              </div>
+              <button onClick={() => { setRequestPlan(null); setSubmitted(false); }} className="p-1.5 rounded-lg hover:bg-gray-100">
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+
+            {submitted ? (
+              <div className="p-8 text-center">
+                <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+                  <Check className="w-7 h-7 text-emerald-600" strokeWidth={3} />
+                </div>
+                <h4 className="text-lg font-bold text-gray-900 mb-1">Заявка отправлена!</h4>
+                <p className="text-sm text-gray-500 mb-5">Мы свяжемся с вами в ближайшее время для подключения тарифа.</p>
+                <button
+                  onClick={() => { setRequestPlan(null); setSubmitted(false); }}
+                  className="px-6 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold"
+                >
+                  Закрыть
+                </button>
+              </div>
+            ) : (
+              <div className="p-5 space-y-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Имя <span className="text-red-400">*</span></label>
+                  <input
+                    type="text" value={formName} onChange={(e) => setFormName(e.target.value)}
+                    placeholder="Ваше имя"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Телефон <span className="text-red-400">*</span></label>
+                  <input
+                    type="tel" value={formPhone} onChange={(e) => setFormPhone(e.target.value)}
+                    placeholder="+7 (___) ___-__-__"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Email</label>
+                  <input
+                    type="email" value={formEmail} onChange={(e) => setFormEmail(e.target.value)}
+                    placeholder="email@example.com"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Комментарий</label>
+                  <textarea
+                    value={formMessage} onChange={(e) => setFormMessage(e.target.value)}
+                    placeholder="Дополнительная информация..."
+                    rows={2}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                  />
+                </div>
+                <button
+                  onClick={() => void handleSubmitRequest()}
+                  disabled={submitting || !formName.trim() || !formPhone.trim()}
+                  className="w-full py-3 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Отправить заявку
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

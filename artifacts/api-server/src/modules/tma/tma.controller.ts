@@ -266,6 +266,31 @@ router.delete("/clinics/:clinicId", async (req: Request, res: Response, next: Ne
   } catch (err) { next(err); }
 });
 
+// ── PLAN REQUESTS ─────────────────────────────────────────────────────────────
+router.get("/plan-requests", async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT pr.*, c.name as clinic_name
+      FROM plan_requests pr
+      LEFT JOIN clinics c ON c.id = pr.clinic_id
+      ORDER BY pr.created_at DESC
+      LIMIT 200
+    `);
+    res.json({ success: true, data: { requests: rows } });
+  } catch (err) { next(err); }
+});
+
+router.patch("/plan-requests/:id", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const status = req.body?.status;
+    if (!status || !["approved", "rejected", "pending"].includes(status)) {
+      return next(new ValidationError("Invalid status"));
+    }
+    await pool.query(`UPDATE plan_requests SET status = $1 WHERE id = $2`, [status, req.params["id"]]);
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
 // ── PLATFORM SETTINGS ────────────────────────────────────────────────────────
 router.get("/settings", async (_req: Request, res: Response, next: NextFunction) => {
   try {
