@@ -225,6 +225,13 @@
       "when": 1781097000000,
       "tag": "0031_plan_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1781183400000,
+      "tag": "0032_plan_expires_at",
+      "breakpoints": true
     }
   ]
 }

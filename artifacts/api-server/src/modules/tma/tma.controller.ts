@@ -233,6 +233,29 @@ router.patch("/clinics/:clinicId", async (req: Request, res: Response, next: Nex
   } catch (err) { next(err); }
 });
 
+// Set plan with subscription period
+router.post("/clinics/:clinicId/set-subscription", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const clinicId = req.params["clinicId"] as string;
+    const schema = z.object({
+      plan: z.enum(["free", "starter", "professional", "enterprise"]),
+      months: z.number().int().min(1).max(120),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError(parsed.error.message));
+
+    const planExpiresAt = new Date();
+    planExpiresAt.setMonth(planExpiresAt.getMonth() + parsed.data.months);
+
+    await pool.query(
+      `UPDATE clinics SET plan = $1, plan_expires_at = $2 WHERE id = $3`,
+      [parsed.data.plan, planExpiresAt.toISOString(), clinicId],
+    );
+
+    res.json({ success: true, data: { plan: parsed.data.plan, planExpiresAt: planExpiresAt.toISOString(), months: parsed.data.months } });
+  } catch (err) { next(err); }
+});
+
 // Grant trial period to a clinic
 router.post("/clinics/:clinicId/grant-trial", async (req: Request, res: Response, next: NextFunction) => {
   try {

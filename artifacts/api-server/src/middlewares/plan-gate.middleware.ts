@@ -19,8 +19,8 @@ export async function planGateMiddleware(req: Request, res: Response, next: Next
   if (!req.user?.clinicId) return next();
 
   try {
-    const { rows } = await pool.query<{ plan: string; trial_ends_at: string | null; is_active: boolean }>(
-      `SELECT plan, trial_ends_at, is_active FROM clinics WHERE id = $1 LIMIT 1`,
+    const { rows } = await pool.query<{ plan: string; trial_ends_at: string | null; plan_expires_at: string | null; is_active: boolean }>(
+      `SELECT plan, trial_ends_at, plan_expires_at, is_active FROM clinics WHERE id = $1 LIMIT 1`,
       [req.user.clinicId],
     );
 
@@ -36,13 +36,17 @@ export async function planGateMiddleware(req: Request, res: Response, next: Next
       return;
     }
 
+    const now = new Date();
     const hasPaidPlan = clinic.plan !== "free";
-    const trialActive = clinic.trial_ends_at && new Date(clinic.trial_ends_at) > new Date();
+    const planNotExpired = !clinic.plan_expires_at || new Date(clinic.plan_expires_at) > now;
+    const trialActive = clinic.trial_ends_at && new Date(clinic.trial_ends_at) > now;
 
-    if (!hasPaidPlan && !trialActive) {
+    if ((!hasPaidPlan || !planNotExpired) && !trialActive) {
       res.status(402).json({
         success: false,
-        error: "Для доступа к системе необходимо подключить тариф.",
+        error: hasPaidPlan && !planNotExpired
+          ? "Срок действия тарифа истёк. Продлите подписку."
+          : "Для доступа к системе необходимо подключить тариф.",
         code: "NO_ACTIVE_PLAN",
       });
       return;
