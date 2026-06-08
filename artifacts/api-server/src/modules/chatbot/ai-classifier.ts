@@ -12,6 +12,7 @@ import {
   formatAlmatyIso,
   getAlmatyYmd,
   isInvalidAppointmentTime,
+  KZ_UTC_OFFSET_LABEL,
   parseAlmatyDatetime,
 } from "./almaty-time";
 
@@ -268,7 +269,7 @@ export async function extractDatetimeFromText(text: string): Promise<Date | null
   const nowAlmaty = formatAlmatyIso(now);
 
   const systemPrompt = `Сегодня в Алматы: ${todayLong} (${todayYmd}). Текущее время: ${nowAlmaty}.
-Извлеки из текста пациента дату и время визита. Все даты и время интерпретируй строго в часовом поясе Алматы (UTC+5).
+Извлеки из текста пациента дату и время визита. Все даты и время интерпретируй строго в часовом поясе Казахстана (${KZ_UTC_OFFSET_LABEL}, Алматы/Астана).
 Слова «сегодня»/«бүгін» = ${todayYmd}, «завтра»/«ертең» = следующий день после ${todayYmd}.
 Верни JSON: {"iso": "YYYY-MM-DDTHH:mm:00${ALMATY_OFFSET}"} или {"iso": null} если дата/время не указаны или неясны.
 Казахские слова дней: ертең=завтра, бүгін=сегодня, дүйсенбі=понедельник, сейсенбі=вторник, сәрсенбі=среда, бейсенбі=четверг, жұма/жума=пятница, сенбі=суббота, жексенбі=воскресенье.

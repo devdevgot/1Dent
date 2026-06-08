@@ -29,14 +29,18 @@ import { pickBestDoctorAdvanced, type AdvancedScoringOptions } from "../analytic
 import { ChannelsRepository } from "../channels/channels.repository";
 import { classifyPatientRequest, generateChatbotResponse, extractDatetimeFromText, extractBranchFromText, type ChatMessage, type ManagerExample } from "./ai-classifier";
 import {
-  ALMATY_TZ,
   computeAlmatyAvailableSlots,
+  formatAlmatyDateShort,
+  formatAlmatyDateTimeLong,
+  formatAlmatyDateTimeShort,
   formatAlmatyDayMonth,
   formatAlmatyNowContext,
   formatAlmatySlot,
   formatAlmatySlotCompact,
+  formatAlmatyTime,
   getAlmatyDayBounds,
   getAlmatyYmd,
+  KZ_UTC_OFFSET_LABEL,
   toAlmatyHourKey,
 } from "./almaty-time";
 import type { ChatbotState, ChatbotSessionData } from "./chatbot.types";
@@ -692,12 +696,7 @@ async function loadPatientDentalContext(clinicId: string, patientId: string): Pr
   if (treatments.length > 0) {
     context += "\n🔧 ПОСЛЕДНИЕ ПРОЦЕДУРЫ (за 12 мес.):\n";
     for (const t of treatments) {
-      const d = new Date(t.performedAt).toLocaleDateString("ru-KZ", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        timeZone: "Asia/Almaty",
-      });
+      const d = formatAlmatyDateShort(new Date(t.performedAt));
       const typeLabel = t.type === "extraction" ? "удаление" : "лечение";
       const statusLabel = t.status === "done" ? " ✓" : " (в процессе)";
       context += `— ${d}: Зуб ${t.toothFdi} — ${t.description} [${typeLabel}]${statusLabel}\n`;
@@ -802,8 +801,7 @@ function buildPlaygroundPrompt(
   const todayDate = formatAlmatyDayMonth(now);
   const firstDoctor = doctorsWithSlots?.[0];
   const exampleDoctorName = firstDoctor?.name ?? "Иван Петров";
-  const exampleTime =
-    firstDoctor?.slots?.[0]?.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit", timeZone: ALMATY_TZ }) ?? "14:00";
+  const exampleTime = firstDoctor?.slots?.[0] ? formatAlmatyTime(firstDoctor.slots[0]) : "14:00";
   const exampleDate =
     firstDoctor?.slots?.[0] ? formatAlmatyDayMonth(firstDoctor.slots[0]) : todayDate;
 
@@ -826,7 +824,7 @@ function buildPlaygroundPrompt(
 
   const nowPlayground = new Date();
   const nowContext = formatAlmatyNowContext(nowPlayground);
-  const nowTimeStr = nowPlayground.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit", timeZone: ALMATY_TZ });
+  const nowTimeStr = formatAlmatyTime(nowPlayground);
   const todayYmdPlayground = getAlmatyYmd(nowPlayground);
 
   const priceListPlaygroundSection = priceListContext
@@ -857,7 +855,7 @@ ${nowContext}
 3. Если пациент согласился на запись и выбрал время — предложи ему выбрать филиал/адрес клиники из материалов, и только после выбора филиала подтверди запись с коротким саммари деталей
 4. Отвечай коротко: 1–3 предложения максимум
 5. Используй только информацию из материалов клиники и списка врачей — не придумывай
-6. Все даты и время — только в часовом поясе Алматы (UTC+5). Сегодняшняя дата: ${todayYmdPlayground}. НИКОГДА не предлагай и не подтверждай время которое уже прошло (сейчас ${nowTimeStr}). Если пациент называет время из списка свободных слотов — подтверждай его вместе с полной датой из списка. Если пациент называет прошедшее время сегодня — объясни что оно уже прошло и предложи ближайший доступный слот. Все слоты в списке врачей уже являются будущими.
+6. Все даты и время — только в часовом поясе Казахстана (${KZ_UTC_OFFSET_LABEL}, Алматы/Астана). Сегодняшняя дата: ${todayYmdPlayground}. НИКОГДА не предлагай и не подтверждай время которое уже прошло (сейчас ${nowTimeStr}). Если пациент называет время из списка свободных слотов — подтверждай его вместе с полной датой из списка. Если пациент называет прошедшее время сегодня — объясни что оно уже прошло и предложи ближайший доступный слот. Все слоты в списке врачей уже являются будущими.
 ${kazakhNote}${doctorsSection}${priceListPlaygroundSection}${mindMapSection}${activeMindMapSection}${effectiveScriptContext}${knowledgeSection}`;
     return systemPrompt;
 }
@@ -920,8 +918,8 @@ function buildSystemPrompt(
   const now = new Date();
   const nowContext = formatAlmatyNowContext(now);
   const todayYmd = getAlmatyYmd(now);
-  const currentTimeStr = now.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit", timeZone: ALMATY_TZ });
-  const timeRule = `ВАЖНО: все даты и время — только в часовом поясе Алматы (UTC+5). Сегодняшняя дата: ${todayYmd}. Никогда не предлагай и не подтверждай время которое уже прошло сегодня (сейчас ${currentTimeStr}). Если пациент выбирает время из предложенных слотов — подтверждай его вместе с полной датой из списка. Если пациент называет прошедшее время — вежливо объясни что оно уже прошло и предложи ближайший доступный слот.`;
+  const currentTimeStr = formatAlmatyTime(now);
+  const timeRule = `ВАЖНО: все даты и время — только в часовом поясе Казахстана (${KZ_UTC_OFFSET_LABEL}, Алматы/Астана). Сегодняшняя дата: ${todayYmd}. Никогда не предлагай и не подтверждай время которое уже прошло сегодня (сейчас ${currentTimeStr}). Если пациент выбирает время из предложенных слотов — подтверждай его вместе с полной датой из списка. Если пациент называет прошедшее время — вежливо объясни что оно уже прошло и предложи ближайший доступный слот.`;
 
   const stateGuidance: Record<ChatbotState, string> = {
     greeting: `Сейчас этап: ПРИВЕТСТВИЕ. Поприветствуй пациента согласно блоку «Приветствие» в скрипте и сразу узнай, что его беспокоит или какая услуга интересует. НЕ проси ИИН, имя или телефон в начале — это создаёт барьер. Эти данные узнаешь позже, когда будешь оформлять запись.`,
@@ -1313,9 +1311,7 @@ export class ChatbotService {
                 .limit(1);
               if (doc) doctorName = doc.name;
             }
-            const apptDate = upcomingProc.scheduledAt.toLocaleDateString("ru-KZ", {
-              weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty",
-            });
+            const apptDate = formatAlmatyDateTimeLong(upcomingProc.scheduledAt);
             data.existingProcedureId = upcomingProc.id;
             data.existingProcedureDate = apptDate;
             data.existingProcedureDoctorName = doctorName;
@@ -1427,9 +1423,7 @@ export class ChatbotService {
                   .limit(1);
                 if (doc) doctorName = doc.name;
               }
-              const apptDate = upcomingProc.scheduledAt.toLocaleDateString("ru-KZ", {
-                weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty",
-              });
+              const apptDate = formatAlmatyDateTimeLong(upcomingProc.scheduledAt);
               data.existingProcedureId = upcomingProc.id;
               data.existingProcedureDate = apptDate;
               data.existingProcedureDoctorName = doctorName;
@@ -1776,9 +1770,7 @@ export class ChatbotService {
           data.preferredDatetime = extractedDate.toISOString();
           session.data = data;
 
-          const formattedDate = extractedDate.toLocaleDateString("ru-KZ", {
-            weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty",
-          });
+          const formattedDate = formatAlmatyDateTimeLong(extractedDate);
 
           // Propose the branch/address first
           const aiReplyBranch = await generateChatbotResponse(
@@ -1899,9 +1891,7 @@ export class ChatbotService {
                   .from(usersTable)
                   .where(and(eq(usersTable.clinicId, clinicId), inArray(usersTable.role, ["owner", "admin"])));
                 if (staffRecipients.length > 0) {
-                  const apptDateStr = preferredDate.toLocaleDateString("ru-KZ", {
-                    weekday: "short", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty",
-                  });
+                  const apptDateStr = formatAlmatyDateTimeShort(preferredDate);
                   const notifMsg = `📅 Новая запись: ${data.patientName ?? phone} → ${data.suggestedDoctorName ?? "врач"} (${serviceLabel}), ${apptDateStr}. Филиал: ${branchToSave}`;
                   await db.insert(notificationsTable).values(
                     staffRecipients.map((r) => ({
@@ -1923,9 +1913,7 @@ export class ChatbotService {
             logger.error({ err }, "ChatbotService: failed to save procedure in collect_branch");
           }
 
-          const formattedDate = preferredDate.toLocaleDateString("ru-KZ", {
-            weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty",
-          });
+          const formattedDate = formatAlmatyDateTimeLong(preferredDate);
           const doctorName = data.suggestedDoctorName ?? data.existingProcedureDoctorName ?? "врача";
 
           const summaryInstruction = data.isReschedule

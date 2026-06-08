@@ -1,6 +1,12 @@
-/** Kazakhstan clinic timezone — no DST, always UTC+5. */
+/**
+ * Kazakhstan clinic time (Almaty / Astana).
+ * Fixed UTC+5 since 1 March 2024 — computed from UTC directly so results
+ * do not depend on possibly outdated IANA tzdata (which may still report +6).
+ */
 export const ALMATY_TZ = "Asia/Almaty";
+export const KZ_UTC_OFFSET_MINUTES = 5 * 60;
 export const ALMATY_OFFSET = "+05:00";
+export const KZ_UTC_OFFSET_LABEL = "UTC+5";
 
 export interface AlmatyParts {
   year: number;
@@ -12,39 +18,54 @@ export interface AlmatyParts {
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
-/** Extract calendar/time components in Asia/Almaty. */
+const MONTH_NAMES_LONG: Record<number, string> = {
+  1: "января",
+  2: "февраля",
+  3: "марта",
+  4: "апреля",
+  5: "мая",
+  6: "июня",
+  7: "июля",
+  8: "августа",
+  9: "сентября",
+  10: "октября",
+  11: "ноября",
+  12: "декабря",
+};
+
+const WEEKDAY_NAMES_LONG: Record<number, string> = {
+  0: "воскресенье",
+  1: "понедельник",
+  2: "вторник",
+  3: "среда",
+  4: "четверг",
+  5: "пятница",
+  6: "суббота",
+};
+
+const ALMATY_WEEKDAY_SHORT: Record<number, string> = {
+  0: "вс", 1: "пн", 2: "вт", 3: "ср", 4: "чт", 5: "пт", 6: "сб",
+};
+
+/** Extract calendar/time components in Kazakhstan (UTC+5). */
 export function getAlmatyParts(date: Date): AlmatyParts {
-  const fmt = new Intl.DateTimeFormat("en-CA", {
-    timeZone: ALMATY_TZ,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-  const parts = Object.fromEntries(
-    fmt.formatToParts(date).filter((p) => p.type !== "literal").map((p) => [p.type, p.value]),
-  );
-  // Some runtimes return hour "24" at midnight — normalize to 0.
-  const hour = Number(parts.hour) % 24;
+  const shifted = new Date(date.getTime() + KZ_UTC_OFFSET_MINUTES * 60_000);
   return {
-    year: Number(parts.year),
-    month: Number(parts.month),
-    day: Number(parts.day),
-    hour,
-    minute: Number(parts.minute),
+    year: shifted.getUTCFullYear(),
+    month: shifted.getUTCMonth() + 1,
+    day: shifted.getUTCDate(),
+    hour: shifted.getUTCHours(),
+    minute: shifted.getUTCMinutes(),
   };
 }
 
-/** 0=Sun … 6=Sat in Asia/Almaty. */
+/** 0=Sun … 6=Sat in Kazakhstan (UTC+5). */
 export function getAlmatyDayOfWeek(date: Date): number {
-  const wd = new Intl.DateTimeFormat("en-US", { timeZone: ALMATY_TZ, weekday: "short" }).format(date);
-  const map: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
-  return map[wd] ?? 0;
+  const p = getAlmatyParts(date);
+  return new Date(Date.UTC(p.year, p.month - 1, p.day)).getUTCDay();
 }
 
-/** Build a UTC instant from Almaty local date/time. */
+/** Build a UTC instant from Kazakhstan local date/time (UTC+5). */
 export function buildAlmatyDate(
   year: number,
   month: number,
@@ -53,12 +74,11 @@ export function buildAlmatyDate(
   minute = 0,
   second = 0,
 ): Date {
-  return new Date(
-    `${year}-${pad2(month)}-${pad2(day)}T${pad2(hour)}:${pad2(minute)}:${pad2(second)}${ALMATY_OFFSET}`,
-  );
+  const utcMs = Date.UTC(year, month - 1, day, hour, minute, second) - KZ_UTC_OFFSET_MINUTES * 60_000;
+  return new Date(utcMs);
 }
 
-/** Start/end of the current calendar day in Almaty. */
+/** Start/end of the current calendar day in Kazakhstan. */
 export function getAlmatyDayBounds(date: Date = new Date()): { todayStart: Date; todayEnd: Date } {
   const p = getAlmatyParts(date);
   return {
@@ -67,10 +87,16 @@ export function getAlmatyDayBounds(date: Date = new Date()): { todayStart: Date;
   };
 }
 
-/** `YYYY-MM-DDTHH` key for slot occupancy in Almaty. */
+/** `YYYY-MM-DDTHH` key for slot occupancy in Kazakhstan. */
 export function toAlmatyHourKey(date: Date): string {
   const p = getAlmatyParts(date);
   return `${p.year}-${pad2(p.month)}-${pad2(p.day)}T${pad2(p.hour)}`;
+}
+
+/** Local time as H:mm — e.g. «0:57», «14:00». */
+export function formatAlmatyTime(date: Date = new Date()): string {
+  const p = getAlmatyParts(date);
+  return `${p.hour}:${pad2(p.minute)}`;
 }
 
 /** ISO string with explicit +05:00 offset for LLM prompts. */
@@ -79,35 +105,50 @@ export function formatAlmatyIso(date: Date = new Date()): string {
   return `${p.year}-${pad2(p.month)}-${pad2(p.day)}T${pad2(p.hour)}:${pad2(p.minute)}:00${ALMATY_OFFSET}`;
 }
 
-/** DD.MM.YYYY in Almaty. */
+/** DD.MM.YYYY in Kazakhstan. */
 export function formatAlmatyDateShort(date: Date = new Date()): string {
   const p = getAlmatyParts(date);
   return `${pad2(p.day)}.${pad2(p.month)}.${p.year}`;
 }
 
-/** YYYY-MM-DD in Almaty — unambiguous for LLM prompts. */
+/** YYYY-MM-DD in Kazakhstan — unambiguous for LLM prompts. */
 export function getAlmatyYmd(date: Date = new Date()): string {
   const p = getAlmatyParts(date);
   return `${p.year}-${pad2(p.month)}-${pad2(p.day)}`;
 }
 
-/** Long Russian date with weekday and year in Almaty. */
+/** Long Russian date with weekday and year in Kazakhstan. */
 export function formatAlmatyDateLong(date: Date = new Date()): string {
-  return date.toLocaleDateString("ru-KZ", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: ALMATY_TZ,
-  });
+  const p = getAlmatyParts(date);
+  const weekday = WEEKDAY_NAMES_LONG[getAlmatyDayOfWeek(date)];
+  const month = MONTH_NAMES_LONG[p.month] ?? String(p.month);
+  return `${weekday}, ${p.day} ${month} ${p.year} г.`;
 }
 
-/** Compact Russian date (day + month) in Almaty. */
+/** Compact Russian date (day + month) in Kazakhstan. */
 export function formatAlmatyDayMonth(date: Date = new Date()): string {
-  return date.toLocaleDateString("ru-KZ", { day: "numeric", month: "long", timeZone: ALMATY_TZ });
+  const p = getAlmatyParts(date);
+  const month = MONTH_NAMES_LONG[p.month] ?? String(p.month);
+  return `${p.day} ${month}`;
 }
 
-/** True when `date` falls on an earlier calendar day than `now` in Almaty. */
+/** «понедельник, 9 июня, 14:00» */
+export function formatAlmatyDateTimeLong(date: Date): string {
+  const p = getAlmatyParts(date);
+  const weekday = WEEKDAY_NAMES_LONG[getAlmatyDayOfWeek(date)];
+  const month = MONTH_NAMES_LONG[p.month] ?? String(p.month);
+  return `${weekday}, ${p.day} ${month}, ${formatAlmatyTime(date)}`;
+}
+
+/** «пн, 9 июня, 14:00» */
+export function formatAlmatyDateTimeShort(date: Date): string {
+  const p = getAlmatyParts(date);
+  const weekday = ALMATY_WEEKDAY_SHORT[getAlmatyDayOfWeek(date)];
+  const month = MONTH_NAMES_LONG[p.month] ?? String(p.month);
+  return `${weekday}, ${p.day} ${month}, ${formatAlmatyTime(date)}`;
+}
+
+/** True when `date` falls on an earlier calendar day than `now` in Kazakhstan. */
 export function isBeforeAlmatyCalendarDay(date: Date, now: Date = new Date()): boolean {
   const d = getAlmatyParts(date);
   const n = getAlmatyParts(now);
@@ -118,14 +159,12 @@ export function isBeforeAlmatyCalendarDay(date: Date, now: Date = new Date()): b
 
 /** Full context string for LLM system prompts. */
 export function formatAlmatyNowContext(date: Date = new Date()): string {
-  const p = getAlmatyParts(date);
-  const timeStr = date.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit", timeZone: ALMATY_TZ });
-  return `Сейчас: ${formatAlmatyDateLong(date)}, ${timeStr} (Алматы/Астана, UTC+5). Сегодня: ${getAlmatyYmd(date)}. ISO: ${formatAlmatyIso(date)}.`;
+  return `Сейчас: ${formatAlmatyDateLong(date)}, ${formatAlmatyTime(date)} (Казахстан, ${KZ_UTC_OFFSET_LABEL}). Сегодня: ${getAlmatyYmd(date)}. ISO: ${formatAlmatyIso(date)}.`;
 }
 
 /**
- * Parse LLM/user datetime as Almaty local time.
- * Strings without timezone are treated as Asia/Almaty, not server local.
+ * Parse LLM/user datetime as Kazakhstan local time (UTC+5).
+ * Strings without timezone are treated as local clinic time, not server local.
  */
 export function parseAlmatyDatetime(iso: string | null | undefined): Date | null {
   if (!iso?.trim()) return null;
@@ -144,28 +183,26 @@ export function isPastInAlmaty(date: Date, now: Date = new Date()): boolean {
   return date.getTime() < now.getTime();
 }
 
-/** Reject datetimes on past calendar days or earlier times today (Almaty). */
+/** Reject datetimes on past calendar days or earlier times today (Kazakhstan). */
 export function isInvalidAppointmentTime(date: Date, now: Date = new Date()): boolean {
   if (isBeforeAlmatyCalendarDay(date, now)) return true;
   return isPastInAlmaty(date, now);
 }
 
-const ALMATY_WEEKDAY_SHORT = ["вс", "пн", "вт", "ср", "чт", "пт", "сб"];
-
-/** Human-readable slot line: «пн, 8 июня в 14:00». */
+/** Human-readable slot line: «пн, 9 июня в 14:00». */
 export function formatAlmatySlot(date: Date): string {
-  const day = ALMATY_WEEKDAY_SHORT[getAlmatyDayOfWeek(date)];
-  const dateStr = date.toLocaleDateString("ru-KZ", { day: "numeric", month: "long", timeZone: ALMATY_TZ });
-  const timeStr = date.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit", timeZone: ALMATY_TZ });
-  return `• ${day}, ${dateStr} в ${timeStr}`;
+  const p = getAlmatyParts(date);
+  const day = ALMATY_WEEKDAY_SHORT[getAlmatyDayOfWeek(date)] ?? "?";
+  const month = MONTH_NAMES_LONG[p.month] ?? String(p.month);
+  return `• ${day}, ${p.day} ${month} в ${formatAlmatyTime(date)}`;
 }
 
-/** Compact slot for doctor lists: «пн 8 июня в 14:00». */
+/** Compact slot for doctor lists: «пн 9 июня в 14:00». */
 export function formatAlmatySlotCompact(date: Date): string {
-  const day = ALMATY_WEEKDAY_SHORT[getAlmatyDayOfWeek(date)];
-  const dateStr = date.toLocaleDateString("ru-KZ", { day: "numeric", month: "long", timeZone: ALMATY_TZ });
-  const timeStr = date.toLocaleTimeString("ru-KZ", { hour: "2-digit", minute: "2-digit", timeZone: ALMATY_TZ });
-  return `${day} ${dateStr} в ${timeStr}`;
+  const p = getAlmatyParts(date);
+  const day = ALMATY_WEEKDAY_SHORT[getAlmatyDayOfWeek(date)] ?? "?";
+  const month = MONTH_NAMES_LONG[p.month] ?? String(p.month);
+  return `${day} ${p.day} ${month} в ${formatAlmatyTime(date)}`;
 }
 
 function advanceAlmatyCursor(cursor: Date): Date {
@@ -181,8 +218,8 @@ function advanceAlmatyCursor(cursor: Date): Date {
 }
 
 /**
- * Returns up to `limit` nearest free hourly slots in Almaty working hours (09:00–18:00 Mon–Sat).
- * `bookedHours` keys must be Almaty `YYYY-MM-DDTHH`.
+ * Returns up to `limit` nearest free hourly slots in Kazakhstan working hours (09:00–18:00 Mon–Sat).
+ * `bookedHours` keys must be `YYYY-MM-DDTHH` in clinic local time.
  */
 export function computeAlmatyAvailableSlots(
   now: Date,
