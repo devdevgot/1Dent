@@ -24,7 +24,6 @@ import {
   MapPin,
   Building2,
   CreditCard,
-  Sparkles,
 } from "lucide-react";
 
 const SUPPORTED_LANGS = ["ru", "kz", "en"] as const;
@@ -171,10 +170,7 @@ export default function MenuPage() {
               href="/ai-credits"
               className="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 transition-colors"
             >
-              <div className="flex items-center gap-2.5">
-                <Sparkles className="w-4 h-4 text-primary" />
-                <span className="text-[15px] text-gray-800">{t("nav.aiCredits")}</span>
-              </div>
+              <span className="text-[15px] text-gray-800">{t("nav.aiCredits")}</span>
               <ChevronRight className="w-4 h-4 text-gray-300" />
             </Link>
 
