@@ -1,125 +1,135 @@
-import { useState } from "react";
 import { Link } from "wouter";
 import { useAuthStore } from "@/hooks/use-auth";
-import { ChevronLeft, Check, Sparkles, Zap, Crown, Rocket, Star } from "lucide-react";
+import { ChevronLeft, Check, Star, Sparkles, Rocket, Building2, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type PlanId = "free" | "starter" | "professional" | "enterprise";
-type BillingCycle = "monthly" | "yearly";
 
 interface PlanFeature {
+  title: string;
+  description?: string;
+}
+
+interface PlanLimit {
   text: string;
-  included: boolean;
 }
 
 interface Plan {
   id: PlanId;
   name: string;
-  description: string;
-  icon: typeof Zap;
-  monthlyPrice: number;
-  yearlyPrice: number;
-  features: PlanFeature[];
-  highlight?: boolean;
+  price: number;
+  subtitle: string;
+  icon: typeof Star;
   badge?: string;
   gradient: string;
   iconBg: string;
+  accentColor: string;
+  includesFrom?: string;
+  features: PlanFeature[];
+  limits: PlanLimit[];
 }
 
 const PLANS: Plan[] = [
   {
-    id: "free",
-    name: "Free",
-    description: "Для знакомства с системой",
-    icon: Zap,
-    monthlyPrice: 0,
-    yearlyPrice: 0,
-    gradient: "from-slate-50 to-slate-100",
-    iconBg: "bg-slate-200 text-slate-600",
-    features: [
-      { text: "До 20 пациентов", included: true },
-      { text: "1 врач", included: true },
-      { text: "Карта зубов", included: true },
-      { text: "Планы лечения", included: true },
-      { text: "WhatsApp интеграция", included: false },
-      { text: "ИИ чат-бот", included: false },
-      { text: "Аналитика", included: false },
-      { text: "Филиалы", included: false },
-    ],
-  },
-  {
     id: "starter",
-    name: "Starter",
-    description: "Для небольших клиник",
+    name: "START",
+    price: 99000,
+    subtitle: "Для небольших стоматологий до 10 сотрудников.",
     icon: Sparkles,
-    monthlyPrice: 14990,
-    yearlyPrice: 149900,
     gradient: "from-blue-50 to-indigo-50",
     iconBg: "bg-blue-100 text-blue-600",
+    accentColor: "#3b82f6",
     features: [
-      { text: "До 200 пациентов", included: true },
-      { text: "До 3 врачей", included: true },
-      { text: "Карта зубов", included: true },
-      { text: "Планы лечения", included: true },
-      { text: "WhatsApp интеграция", included: true },
-      { text: "Базовая аналитика", included: true },
-      { text: "ИИ чат-бот", included: false },
-      { text: "Филиалы", included: false },
+      { title: "Все пациенты в одной системе", description: "Больше не нужно искать информацию в разных программах, таблицах и чатах." },
+      { title: "Полный контроль расписания", description: "Все записи, переносы и отмены находятся в одном месте." },
+      { title: "Общение с пациентами через WhatsApp", description: "Администраторы могут вести переписку прямо из системы." },
+      { title: "Автоматические напоминания пациентам", description: "Система помогает снижать количество неявок." },
+      { title: "Искусственный интеллект для ежедневной работы", description: "Помогает сотрудникам быстрее выполнять рутинные задачи." },
+      { title: "Умный чат-бот для обработки обращений", description: "Отвечает пациентам и помогает записаться на прием." },
+      { title: "Контроль финансов клиники", description: "Вы всегда видите доходы, расходы и прибыль." },
+      { title: "Контроль эффективности сотрудников", description: "Понимайте, кто приносит результат, а кто требует внимания." },
+      { title: "Электронные договоры", description: "Документы создаются автоматически за несколько секунд." },
+      { title: "Автоматические рассылки пациентам", description: "Система самостоятельно напоминает о профилактике и возвращает пациентов в клинику." },
+    ],
+    limits: [
+      { text: "До 10 сотрудников" },
+      { text: "До 5 шаблонов документов" },
+      { text: "До 1 000 AI-кредитов в месяц" },
+      { text: "До 300 диалогов чат-бота в месяц" },
     ],
   },
   {
     id: "professional",
-    name: "Professional",
-    description: "Для растущих клиник",
-    icon: Crown,
-    monthlyPrice: 29990,
-    yearlyPrice: 299900,
-    highlight: true,
-    badge: "Популярный",
+    name: "PRO",
+    price: 159000,
+    subtitle: "Для клиник, которые хотят расти быстрее.",
+    icon: Star,
+    badge: "Рекомендуемый",
     gradient: "from-primary/5 to-blue-50",
     iconBg: "bg-primary/15 text-primary",
+    accentColor: "#1f75fe",
+    includesFrom: "START",
     features: [
-      { text: "Безлимит пациентов", included: true },
-      { text: "До 10 врачей", included: true },
-      { text: "Карта зубов", included: true },
-      { text: "Планы лечения", included: true },
-      { text: "WhatsApp интеграция", included: true },
-      { text: "Полная аналитика", included: true },
-      { text: "ИИ чат-бот", included: true },
-      { text: "До 3 филиалов", included: true },
+      { title: "До 30 сотрудников" },
+      { title: "Больше возможностей искусственного интеллекта", description: "ИИ помогает автоматизировать больше задач и экономить время команды." },
+      { title: "Более мощный чат-бот", description: "Обрабатывает значительно больше обращений пациентов." },
+      { title: "Подробная аналитика клиники", description: "Показывает, откуда приходят пациенты и какие каналы рекламы приносят деньги." },
+      { title: "Глубокий контроль сотрудников", description: "Помогает видеть эффективность каждого врача и администратора." },
+      { title: "Приоритетная поддержка", description: "Быстрая помощь от нашей команды." },
+    ],
+    limits: [
+      { text: "До 30 сотрудников" },
+      { text: "До 20 шаблонов документов" },
+      { text: "До 5 000 AI-кредитов в месяц" },
+      { text: "До 1 500 диалогов чат-бота в месяц" },
     ],
   },
   {
     id: "enterprise",
-    name: "Enterprise",
-    description: "Для сети клиник",
+    name: "ENTERPRISE",
+    price: 199000,
+    subtitle: "Для крупных клиник и сетей.",
     icon: Rocket,
-    monthlyPrice: 59990,
-    yearlyPrice: 599900,
     gradient: "from-amber-50 to-orange-50",
     iconBg: "bg-amber-100 text-amber-600",
+    accentColor: "#f59e0b",
+    includesFrom: "PRO",
     features: [
-      { text: "Безлимит пациентов", included: true },
-      { text: "Безлимит врачей", included: true },
-      { text: "Карта зубов", included: true },
-      { text: "Планы лечения", included: true },
-      { text: "WhatsApp интеграция", included: true },
-      { text: "Расширенная аналитика", included: true },
-      { text: "ИИ чат-бот + обучение", included: true },
-      { text: "Безлимит филиалов", included: true },
+      { title: "Неограниченное количество сотрудников" },
+      { title: "Работа с несколькими филиалами", description: "Управляйте всей сетью клиник из одного кабинета." },
+      { title: "Единая база пациентов", description: "История лечения доступна во всех филиалах." },
+      { title: "Максимальные возможности искусственного интеллекта" },
+      { title: "Максимальные лимиты чат-бота" },
+      { title: "Персональный менеджер сопровождения" },
+      { title: "Индивидуальная настройка системы под вашу сеть" },
+    ],
+    limits: [
+      { text: "Неограниченное количество сотрудников" },
+      { text: "Неограниченное количество шаблонов документов" },
+      { text: "До 15 000 AI-кредитов в месяц" },
+      { text: "До 5 000 диалогов чат-бота в месяц" },
     ],
   },
 ];
 
-function formatPrice(amount: number): string {
-  if (amount === 0) return "Бесплатно";
-  return amount.toLocaleString("ru-KZ") + " ₸";
-}
+const COMMON_FEATURES = [
+  "Полноценная система управления стоматологией",
+  "База пациентов и история лечения",
+  "Запись пациентов и расписание врачей",
+  "WhatsApp для общения с пациентами",
+  "Финансовый учет и аналитика",
+  "Контроль сотрудников",
+  "Электронные договоры",
+  "Автоматические рассылки пациентам",
+  "Искусственный интеллект",
+  "Облачное хранение данных",
+  "Регулярные обновления системы",
+  "Защита и резервное копирование данных",
+];
 
 export default function PricingPage() {
   const { clinic } = useAuthStore();
   const currentPlan = ((clinic as any)?.plan as PlanId) ?? "free";
-  const [billing, setBilling] = useState<BillingCycle>("monthly");
 
   return (
     <div className="min-h-screen bg-[#f2f2f7] pb-10">
@@ -131,74 +141,37 @@ export default function PricingPage() {
         <h1 className="text-[17px] font-semibold text-gray-900">Тарифы</h1>
       </div>
 
-      <div className="px-4 pt-6 space-y-6">
+      <div className="px-4 pt-6 space-y-5">
         {/* Hero */}
         <div className="text-center space-y-2">
-          <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
-            <Star className="w-7 h-7 text-primary" />
-          </div>
-          <h2 className="text-[22px] font-bold text-gray-900">Выберите тариф</h2>
+          <h2 className="text-[22px] font-bold text-gray-900">Тарифы 1Dent</h2>
           <p className="text-[14px] text-gray-500 leading-relaxed max-w-xs mx-auto">
             Подберите план, который подходит именно вашей клинике
           </p>
         </div>
 
-        {/* Billing toggle */}
-        <div className="flex items-center justify-center gap-1 bg-white rounded-2xl p-1 max-w-[280px] mx-auto border border-gray-100 shadow-sm">
-          <button
-            onClick={() => setBilling("monthly")}
-            className={cn(
-              "flex-1 py-2.5 rounded-xl text-[13px] font-semibold transition-all",
-              billing === "monthly"
-                ? "bg-primary text-white shadow-sm"
-                : "text-gray-500 hover:text-gray-700",
-            )}
-          >
-            Помесячно
-          </button>
-          <button
-            onClick={() => setBilling("yearly")}
-            className={cn(
-              "flex-1 py-2.5 rounded-xl text-[13px] font-semibold transition-all relative",
-              billing === "yearly"
-                ? "bg-primary text-white shadow-sm"
-                : "text-gray-500 hover:text-gray-700",
-            )}
-          >
-            Годовой
-            <span className={cn(
-              "absolute -top-2.5 -right-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full",
-              billing === "yearly" ? "bg-emerald-500 text-white" : "bg-emerald-100 text-emerald-700",
-            )}>
-              -17%
-            </span>
-          </button>
-        </div>
-
         {/* Plan cards */}
-        <div className="space-y-4">
+        <div className="space-y-5">
           {PLANS.map((plan) => {
             const isCurrentPlan = currentPlan === plan.id;
-            const price = billing === "monthly" ? plan.monthlyPrice : plan.yearlyPrice;
             const Icon = plan.icon;
 
             return (
               <div
                 key={plan.id}
                 className={cn(
-                  "relative bg-white rounded-2xl border-2 overflow-hidden transition-all",
-                  plan.highlight
+                  "relative bg-white rounded-2xl border-2 overflow-hidden",
+                  plan.badge
                     ? "border-primary shadow-lg shadow-primary/10"
                     : isCurrentPlan
                     ? "border-emerald-400 shadow-md"
                     : "border-gray-100 shadow-sm",
                 )}
               >
-                {/* Badge */}
                 {plan.badge && (
                   <div className="absolute top-0 right-0">
-                    <div className="bg-primary text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl">
-                      {plan.badge}
+                    <div className="bg-primary text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl flex items-center gap-1">
+                      <Star className="w-3 h-3" /> {plan.badge}
                     </div>
                   </div>
                 )}
@@ -217,67 +190,73 @@ export default function PricingPage() {
                       <Icon className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className="text-[17px] font-bold text-gray-900">{plan.name}</h3>
-                      <p className="text-[12px] text-gray-500 mt-0.5">{plan.description}</p>
+                      <h3 className="text-[20px] font-black text-gray-900 tracking-tight">{plan.name}</h3>
+                      <p className="text-[12px] text-gray-500 mt-0.5 leading-relaxed">{plan.subtitle}</p>
                     </div>
                   </div>
 
                   {/* Price */}
-                  <div className="mb-4">
-                    {price === 0 ? (
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-[28px] font-black text-gray-900">Бесплатно</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="text-[28px] font-black text-gray-900">
-                          {(billing === "monthly" ? price : Math.round(price / 12)).toLocaleString("ru-KZ")}
-                        </span>
-                        <span className="text-[14px] text-gray-500 font-medium">₸ / мес</span>
-                      </div>
-                    )}
-                    {billing === "yearly" && price > 0 && (
-                      <p className="text-[12px] text-gray-400 mt-1">
-                        {formatPrice(price)} в год
-                      </p>
-                    )}
+                  <div className="mb-5">
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-[30px] font-black text-gray-900">
+                        {plan.price.toLocaleString("ru-KZ")}
+                      </span>
+                      <span className="text-[14px] text-gray-500 font-medium">₸ / мес</span>
+                    </div>
                   </div>
 
+                  {/* Includes from */}
+                  {plan.includesFrom && (
+                    <div className="mb-4 px-3 py-2 bg-white/60 border border-gray-200/60 rounded-xl">
+                      <p className="text-[12px] text-gray-600 font-medium">
+                        Всё из тарифа <span className="font-bold text-gray-900">{plan.includesFrom}</span>, а также:
+                      </p>
+                    </div>
+                  )}
+
                   {/* Features */}
-                  <div className="space-y-2.5 mb-5">
+                  <div className="space-y-3 mb-5">
                     {plan.features.map((feature, i) => (
-                      <div key={i} className="flex items-center gap-2.5">
-                        <div className={cn(
-                          "w-5 h-5 rounded-full flex items-center justify-center shrink-0",
-                          feature.included
-                            ? "bg-emerald-100 text-emerald-600"
-                            : "bg-gray-100 text-gray-300",
-                        )}>
-                          <Check className="w-3 h-3" strokeWidth={3} />
+                      <div key={i} className="flex items-start gap-2.5">
+                        <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ backgroundColor: plan.accentColor + "18" }}>
+                          <Check className="w-3 h-3" strokeWidth={3} style={{ color: plan.accentColor }} />
                         </div>
-                        <span className={cn(
-                          "text-[13px]",
-                          feature.included ? "text-gray-700" : "text-gray-400",
-                        )}>
-                          {feature.text}
-                        </span>
+                        <div>
+                          <p className="text-[13px] font-semibold text-gray-800 leading-snug">{feature.title}</p>
+                          {feature.description && (
+                            <p className="text-[12px] text-gray-500 leading-relaxed mt-0.5">{feature.description}</p>
+                          )}
+                        </div>
                       </div>
                     ))}
+                  </div>
+
+                  {/* Limits */}
+                  <div className="bg-white/70 border border-gray-100 rounded-xl p-3.5 mb-5">
+                    <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Лимиты</p>
+                    <div className="space-y-1.5">
+                      {plan.limits.map((limit, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-gray-300 shrink-0" />
+                          <span className="text-[12px] text-gray-600">{limit.text}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Action button */}
                   <button
                     disabled={isCurrentPlan}
                     className={cn(
-                      "w-full py-3 rounded-xl text-[14px] font-semibold transition-all",
+                      "w-full py-3.5 rounded-xl text-[14px] font-bold transition-all",
                       isCurrentPlan
                         ? "bg-emerald-100 text-emerald-700 cursor-default"
-                        : plan.highlight
+                        : plan.badge
                         ? "bg-primary text-white hover:bg-primary/90 active:scale-[0.98] shadow-md"
                         : "bg-gray-900 text-white hover:bg-gray-800 active:scale-[0.98]",
                     )}
                   >
-                    {isCurrentPlan ? "Текущий план" : price === 0 ? "Начать бесплатно" : "Выбрать план"}
+                    {isCurrentPlan ? "Текущий план" : "Выбрать план"}
                   </button>
                 </div>
               </div>
@@ -285,7 +264,27 @@ export default function PricingPage() {
           })}
         </div>
 
-        {/* Footer note */}
+        {/* Common features */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <div className="flex items-center gap-2.5 mb-4">
+            <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
+              <Shield className="w-4.5 h-4.5 text-emerald-600" />
+            </div>
+            <h3 className="text-[15px] font-bold text-gray-900">Во все тарифы входит</h3>
+          </div>
+          <div className="space-y-2.5">
+            {COMMON_FEATURES.map((feature, i) => (
+              <div key={i} className="flex items-center gap-2.5">
+                <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                  <Check className="w-3 h-3 text-emerald-600" strokeWidth={3} />
+                </div>
+                <span className="text-[13px] text-gray-700">{feature}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
         <div className="text-center pt-2 pb-4">
           <p className="text-[12px] text-gray-400 leading-relaxed">
             Все цены указаны в тенге (₸). Оплата через Kaspi.
