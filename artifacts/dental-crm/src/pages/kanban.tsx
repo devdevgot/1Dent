@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { KanbanColumn } from "@/components/kanban/kanban-column";
 import { PatientCardOverlay } from "@/components/kanban/patient-card";
 import { useNotifications } from "@/hooks/use-notifications";
-import { usePatientFinancials } from "@/hooks/use-patient-financials";
+import { usePatientTreatmentProgress } from "@/hooks/use-patient-treatment-progress";
 import { PatientDetailPanel } from "@/components/kanban/patient-detail-panel";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { CreatePatientDialog } from "@/components/kanban/create-patient-dialog";
@@ -52,7 +52,7 @@ export default function KanbanPage() {
     query: { queryKey: getListPatientsQueryKey() },
   });
   const { data: notificationsData } = useNotifications();
-  const { data: financials } = usePatientFinancials();
+  const { data: progressMap } = usePatientTreatmentProgress();
 
   const patients: Patient[] = data?.data?.patients ?? [];
 
@@ -196,7 +196,7 @@ export default function KanbanPage() {
                 colorClass={col.color}
                 patients={patientsByColumnMap[col.id] ?? []}
                 redAlertPatientIds={redAlertPatientIds}
-                financials={financials}
+                progressMap={progressMap}
                 onSelectPatient={onSelectPatient}
               />
             ))}
@@ -207,7 +207,7 @@ export default function KanbanPage() {
               <PatientCardOverlay
                 patient={activeDragPatient}
                 hasRedAlert={redAlertPatientIds.has(activeDragPatient.id)}
-                fin={financials?.[activeDragPatient.id]}
+                progress={progressMap?.[activeDragPatient.id]}
               />
             ) : null}
           </DragOverlay>

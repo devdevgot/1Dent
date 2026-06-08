@@ -4,15 +4,15 @@ import { CSS } from "@dnd-kit/utilities";
 import { Calendar, User, AlertTriangle } from "lucide-react";
 import type { Patient } from "@workspace/api-client-react";
 import { SOURCE_LABELS, SOURCE_COLORS, KANBAN_COLUMNS, COLUMN_HEADER_COLOR } from "@/lib/patient-utils";
-import type { PatientFinancial } from "@/hooks/use-patient-financials";
-import { PatientFinancialBar } from "./patient-financial-bar";
+import type { PatientTreatmentProgress } from "@/hooks/use-patient-treatment-progress";
+import { PatientTreatmentProgressBar } from "./patient-treatment-progress-bar";
 import { calculateAge, formatDateOfBirth, maskIIN } from "@workspace/api-zod";
 import { cn } from "@/lib/utils";
 
 export interface PatientCardViewProps {
   patient: Patient;
   hasRedAlert?: boolean;
-  fin?: PatientFinancial;
+  progress?: PatientTreatmentProgress;
   onSelect?: (patientId: string) => void;
   className?: string;
 }
@@ -20,7 +20,7 @@ export interface PatientCardViewProps {
 export const PatientCardView = memo(function PatientCardView({
   patient,
   hasRedAlert = false,
-  fin,
+  progress,
   onSelect,
   className,
 }: PatientCardViewProps) {
@@ -70,9 +70,10 @@ export const PatientCardView = memo(function PatientCardView({
         {statusLabel}
       </span>
 
-      {fin && (fin.paid > 0 || fin.debt > 0 || fin.remaining > 0) && (
+      {progress && (progress.paid > 0 || progress.debt > 0 || progress.pending > 0) && (
         <div className="mb-2.5">
-          <PatientFinancialBar data={fin} compact />
+          <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Прогресс</p>
+          <PatientTreatmentProgressBar data={progress} compact />
         </div>
       )}
 
@@ -110,7 +111,7 @@ interface PatientCardProps extends PatientCardViewProps {}
 export const PatientCard = memo(function PatientCard({
   patient,
   hasRedAlert,
-  fin,
+  progress,
   onSelect,
 }: PatientCardProps) {
   const {
@@ -150,7 +151,7 @@ export const PatientCard = memo(function PatientCard({
       <PatientCardView
         patient={patient}
         hasRedAlert={hasRedAlert}
-        fin={fin}
+        progress={progress}
         onSelect={onSelect}
       />
     </div>

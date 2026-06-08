@@ -4,7 +4,7 @@ import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import type { Patient, PatientStatus } from "@workspace/api-client-react";
 import { PatientCard } from "./patient-card";
 import { COLUMN_HEADER_COLOR } from "@/lib/patient-utils";
-import type { PatientFinancial } from "@/hooks/use-patient-financials";
+import type { PatientTreatmentProgress } from "@/hooks/use-patient-treatment-progress";
 import { cn } from "@/lib/utils";
 
 interface KanbanColumnProps {
@@ -13,7 +13,7 @@ interface KanbanColumnProps {
   colorClass: string;
   patients: Patient[];
   redAlertPatientIds: ReadonlySet<string>;
-  financials?: Record<string, PatientFinancial>;
+  progressMap?: Record<string, PatientTreatmentProgress>;
   onSelectPatient: (patientId: string) => void;
 }
 
@@ -23,7 +23,7 @@ export const KanbanColumn = memo(function KanbanColumn({
   colorClass,
   patients,
   redAlertPatientIds,
-  financials,
+  progressMap,
   onSelectPatient,
 }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
@@ -57,7 +57,7 @@ export const KanbanColumn = memo(function KanbanColumn({
               key={patient.id}
               patient={patient}
               hasRedAlert={redAlertPatientIds.has(patient.id)}
-              fin={financials?.[patient.id]}
+              progress={progressMap?.[patient.id]}
               onSelect={onSelectPatient}
             />
           ))}
