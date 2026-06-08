@@ -11,6 +11,8 @@ export const clinicsTable = pgTable("clinics", {
   plan: text("plan", { enum: clinicPlans }).notNull().default("free"),
   isActive: boolean("is_active").notNull().default(true),
   parentClinicId: text("parent_clinic_id"),
+  trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
+  planExpiresAt: timestamp("plan_expires_at", { withTimezone: true }),
   whatsappPhone: text("whatsapp_phone"),
   greenApiInstanceId: text("green_api_instance_id"),
   greenApiToken: text("green_api_token"),

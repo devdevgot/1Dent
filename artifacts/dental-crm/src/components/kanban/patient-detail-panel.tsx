@@ -937,6 +937,7 @@ export function PatientDetailPanel() {
     query: {
       queryKey: getGetPatientQueryKey(selectedPatientId ?? ""),
       enabled: !!selectedPatientId,
+      retry: 1,
     },
   });
 
@@ -968,6 +969,7 @@ export function PatientDetailPanel() {
     query: {
       queryKey: getListTeethQueryKey(selectedPatientId ?? ""),
       enabled: !!selectedPatientId && activeTab === "treatment",
+      retry: 1,
     },
   });
   const teethRecords: ToothRecord[] = teethData?.data?.teeth ?? [];
@@ -1091,10 +1093,11 @@ export function PatientDetailPanel() {
       .catch(() => {});
   }, [selectedPatientId]);
 
-  const { data: planData, isLoading: planLoading } = useGetActiveTreatmentPlan(selectedPatientId ?? "", {
+  const { data: planData, isLoading: planLoading, isError: planError } = useGetActiveTreatmentPlan(selectedPatientId ?? "", {
     query: {
       queryKey: getGetActiveTreatmentPlanQueryKey(selectedPatientId ?? ""),
       enabled: !!selectedPatientId && activeTab === "treatment",
+      retry: 1,
     },
   });
   const activePlan = planData?.data?.plan ?? null;
@@ -1103,13 +1106,14 @@ export function PatientDetailPanel() {
     return activePlan.items.filter((item) => planViewToothFdi === null || item.toothFdi === planViewToothFdi);
   }, [activePlan, planViewToothFdi]);
 
-  const { data: plansHistoryData, isLoading: plansLoading } = useListTreatmentPlans(selectedPatientId ?? "", {
+  const { data: plansHistoryData, isLoading: plansLoading, isError: plansError } = useListTreatmentPlans(selectedPatientId ?? "", {
     query: {
       queryKey: getListTreatmentPlansQueryKey(selectedPatientId ?? ""),
       enabled: !!selectedPatientId && activeTab === "treatment",
+      retry: 1,
     },
   });
-  const dentalLoading = teethLoading || planLoading || plansLoading;
+  const dentalLoading = teethLoading || (planLoading && !planError) || (plansLoading && !plansError);
   const chartReady = !teethLoading;
 
   // Auto-open active plan detail when navigating to step 2

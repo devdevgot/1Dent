@@ -78,6 +78,9 @@ function InfoTab({ clinicId }: { clinicId: string }) {
   const qc = useQueryClient();
   const [editPlan, setEditPlan] = useState(false);
   const [plan, setPlan] = useState("");
+  const [subPlan, setSubPlan] = useState("starter");
+  const [subMonths, setSubMonths] = useState(1);
+  const [subSaving, setSubSaving] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["tma-clinic-detail", clinicId],
@@ -155,6 +158,101 @@ function InfoTab({ clinicId }: { clinicId: string }) {
           ) : (
             <span className={`inline-block text-xs px-2 py-1 rounded-lg font-medium ${planColors[cp] ?? ""}`}>{cp}</span>
           )}
+        </div>
+
+        {/* Trial grant */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-xs text-muted-foreground">Пробный период</p>
+          </div>
+          {c["trialEndsAt"] && new Date(String(c["trialEndsAt"])) > new Date() ? (
+            <p className="text-xs text-green-400">
+              Активен до {new Date(String(c["trialEndsAt"])).toLocaleDateString("ru", { day: "numeric", month: "long", year: "numeric" })}
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground mb-2">{c["trialEndsAt"] ? "Истёк" : "Не выдан"}</p>
+          )}
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                haptic("medium");
+                api.post(`/clinics/${clinicId}/grant-trial`, { days: 3 }).then(() => {
+                  hapticNotify("success");
+                  qc.invalidateQueries({ queryKey: ["tma-clinic-detail", clinicId] });
+                  tgAlert("Пробный период 3 дня активирован");
+                });
+              }}
+              className="flex-1 py-2 border border-blue-500/30 text-blue-400 rounded-lg text-xs hover:bg-blue-500/10"
+            >3 дня</button>
+            <button
+              onClick={() => {
+                haptic("medium");
+                api.post(`/clinics/${clinicId}/grant-trial`, { days: 7 }).then(() => {
+                  hapticNotify("success");
+                  qc.invalidateQueries({ queryKey: ["tma-clinic-detail", clinicId] });
+                  tgAlert("Пробный период 7 дней активирован");
+                });
+              }}
+              className="flex-1 py-2 border border-blue-500/30 text-blue-400 rounded-lg text-xs hover:bg-blue-500/10"
+            >7 дней</button>
+            <button
+              onClick={() => {
+                haptic("medium");
+                api.post(`/clinics/${clinicId}/grant-trial`, { days: 30 }).then(() => {
+                  hapticNotify("success");
+                  qc.invalidateQueries({ queryKey: ["tma-clinic-detail", clinicId] });
+                  tgAlert("Пробный период 30 дней активирован");
+                });
+              }}
+              className="flex-1 py-2 border border-blue-500/30 text-blue-400 rounded-lg text-xs hover:bg-blue-500/10"
+            >30 дней</button>
+          </div>
+        </div>
+
+        {/* Subscription period */}
+        <div>
+          <p className="text-xs text-muted-foreground mb-1.5">Подключить подписку</p>
+          {c["planExpiresAt"] && new Date(String(c["planExpiresAt"])) > new Date() && (
+            <p className="text-xs text-green-400 mb-2">
+              Подписка активна до {new Date(String(c["planExpiresAt"])).toLocaleDateString("ru", { day: "numeric", month: "long", year: "numeric" })}
+            </p>
+          )}
+          {c["planExpiresAt"] && new Date(String(c["planExpiresAt"])) <= new Date() && (
+            <p className="text-xs text-red-400 mb-2">Подписка истекла</p>
+          )}
+          <div className="flex gap-2 mb-2">
+            <select value={subPlan} onChange={(e) => setSubPlan(e.target.value)} className="flex-1 bg-background border border-border rounded-lg px-2 py-1.5 text-xs text-foreground">
+              <option value="starter">START</option>
+              <option value="professional">PRO</option>
+              <option value="enterprise">ENTERPRISE</option>
+            </select>
+            <select value={subMonths} onChange={(e) => setSubMonths(Number(e.target.value))} className="flex-1 bg-background border border-border rounded-lg px-2 py-1.5 text-xs text-foreground">
+              <option value={1}>1 мес</option>
+              <option value={3}>3 мес</option>
+              <option value={6}>6 мес</option>
+              <option value={12}>1 год</option>
+              <option value={24}>2 года</option>
+              <option value={36}>3 года</option>
+              <option value={60}>5 лет</option>
+              <option value={120}>10 лет</option>
+            </select>
+          </div>
+          <button
+            onClick={() => {
+              haptic("medium");
+              setSubSaving(true);
+              api.post(`/clinics/${clinicId}/set-subscription`, { plan: subPlan, months: subMonths }).then(() => {
+                hapticNotify("success");
+                qc.invalidateQueries({ queryKey: ["tma-clinic-detail", clinicId] });
+                qc.invalidateQueries({ queryKey: ["tma-clinics"] });
+                tgAlert(`Подписка ${subPlan.toUpperCase()} на ${subMonths} мес. активирована`);
+              }).finally(() => setSubSaving(false));
+            }}
+            disabled={subSaving}
+            className="w-full py-2 bg-primary text-primary-foreground rounded-lg text-xs font-semibold disabled:opacity-50"
+          >
+            {subSaving ? "Сохранение..." : "Активировать подписку"}
+          </button>
         </div>
 
         <div className="pt-2 border-t border-border">

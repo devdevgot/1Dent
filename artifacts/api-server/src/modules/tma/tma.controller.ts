@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import {
   db,
+  pool,
   platformAdminsTable,
   clinicsTable,
   usersTable,
@@ -232,6 +233,45 @@ router.patch("/clinics/:clinicId", async (req: Request, res: Response, next: Nex
   } catch (err) { next(err); }
 });
 
+// Set plan with subscription period
+router.post("/clinics/:clinicId/set-subscription", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const clinicId = req.params["clinicId"] as string;
+    const schema = z.object({
+      plan: z.enum(["free", "starter", "professional", "enterprise"]),
+      months: z.number().int().min(1).max(120),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError(parsed.error.message));
+
+    const planExpiresAt = new Date();
+    planExpiresAt.setMonth(planExpiresAt.getMonth() + parsed.data.months);
+
+    await pool.query(
+      `UPDATE clinics SET plan = $1, plan_expires_at = $2 WHERE id = $3`,
+      [parsed.data.plan, planExpiresAt.toISOString(), clinicId],
+    );
+
+    res.json({ success: true, data: { plan: parsed.data.plan, planExpiresAt: planExpiresAt.toISOString(), months: parsed.data.months } });
+  } catch (err) { next(err); }
+});
+
+// Grant trial period to a clinic
+router.post("/clinics/:clinicId/grant-trial", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const clinicId = req.params["clinicId"] as string;
+    const days = typeof req.body?.days === "number" ? req.body.days : 3;
+    const trialEndsAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+
+    await pool.query(
+      `UPDATE clinics SET trial_ends_at = $1 WHERE id = $2`,
+      [trialEndsAt.toISOString(), clinicId],
+    );
+
+    res.json({ success: true, data: { trialEndsAt: trialEndsAt.toISOString(), days } });
+  } catch (err) { next(err); }
+});
+
 // Soft-delete: deactivate clinic instead of hard delete
 router.delete("/clinics/:clinicId", async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -246,6 +286,31 @@ router.delete("/clinics/:clinicId", async (req: Request, res: Response, next: Ne
       .set({ isActive: false })
       .where(eq(usersTable.clinicId, clinicId));
     res.json({ success: true, data: { deactivated: true } });
+  } catch (err) { next(err); }
+});
+
+// ── PLAN REQUESTS ─────────────────────────────────────────────────────────────
+router.get("/plan-requests", async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT pr.*, c.name as clinic_name
+      FROM plan_requests pr
+      LEFT JOIN clinics c ON c.id = pr.clinic_id
+      ORDER BY pr.created_at DESC
+      LIMIT 200
+    `);
+    res.json({ success: true, data: { requests: rows } });
+  } catch (err) { next(err); }
+});
+
+router.patch("/plan-requests/:id", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const status = req.body?.status;
+    if (!status || !["approved", "rejected", "pending"].includes(status)) {
+      return next(new ValidationError("Invalid status"));
+    }
+    await pool.query(`UPDATE plan_requests SET status = $1 WHERE id = $2`, [status, req.params["id"]]);
+    res.json({ success: true });
   } catch (err) { next(err); }
 });
 

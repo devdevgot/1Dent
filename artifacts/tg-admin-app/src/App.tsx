@@ -9,6 +9,7 @@ import ClinicsPage from "./pages/ClinicsPage";
 import ClinicDetailPage from "./pages/ClinicDetailPage";
 import ClinicPickerPage from "./pages/ClinicPickerPage";
 import ActivityPage from "./pages/ActivityPage";
+import PlanRequestsPage from "./pages/PlanRequestsPage";
 import LogsPage from "./pages/LogsPage";
 import SettingsPage from "./pages/SettingsPage";
 
@@ -111,6 +112,7 @@ function Inner() {
             <Route path="/picker/notifications" element={<ClinicPickerPage title="Уведомления" icon="🔔" tab="notifications" />} />
             <Route path="/picker/files" element={<ClinicPickerPage title="Файлы" icon="📁" tab="files" />} />
 
+            <Route path="/plan-requests" element={<PlanRequestsPage />} />
             <Route path="/activity" element={<ActivityPage />} />
             <Route path="/logs" element={<LogsPage />} />
             <Route path="/settings" element={<SettingsPage />} />

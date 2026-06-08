@@ -74,10 +74,12 @@ function PatientsListView({
   search,
   statusFilter,
   sourceFilter,
+  dateFilterFn,
 }: {
   search: string;
   statusFilter: PatientStatus | "all";
   sourceFilter: PatientSource | "all";
+  dateFilterFn: (p: Patient) => boolean;
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -141,6 +143,7 @@ function PatientsListView({
     const q = search.toLowerCase().trim();
     return allPatients
       .filter((p) => {
+        if (!dateFilterFn(p)) return false;
         if (statusFilter !== "all" && p.status !== statusFilter) return false;
         if (sourceFilter !== "all" && p.source !== sourceFilter) return false;
         if (q && !p.name.toLowerCase().includes(q) && !p.phone.toLowerCase().includes(q)) return false;
@@ -329,10 +332,12 @@ function PatientsKanbanView({
   search,
   statusFilter,
   sourceFilter,
+  dateFilterFn,
 }: {
   search: string;
   statusFilter: PatientStatus | "all";
   sourceFilter: PatientSource | "all";
+  dateFilterFn: (p: Patient) => boolean;
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -351,12 +356,13 @@ function PatientsKanbanView({
   const visiblePatients = useMemo(() => {
     const q = search.toLowerCase().trim();
     return patients.filter((p) => {
+      if (!dateFilterFn(p)) return false;
       if (statusFilter !== "all" && p.status !== statusFilter) return false;
       if (sourceFilter !== "all" && p.source !== sourceFilter) return false;
       if (q && !p.name.toLowerCase().includes(q) && !p.phone.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [patients, search, statusFilter, sourceFilter]);
+  }, [patients, search, statusFilter, sourceFilter, dateFilterFn]);
 
   const statusMutation = useUpdatePatientStatus({
     mutation: {
@@ -471,6 +477,7 @@ export default function PatientsPage() {
   const [filterSearch, setFilterSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<PatientStatus | "all">("all");
   const [sourceFilter, setSourceFilter] = useState<PatientSource | "all">("all");
+  const [dateFilter, setDateFilter] = useState<"today" | "week" | "month" | "all">("today");
   const [showFilters, setShowFilters] = useState(false);
 
   const { data } = useListPatients({ query: { queryKey: getListPatientsQueryKey() } });
@@ -482,7 +489,7 @@ export default function PatientsPage() {
     return counts;
   }, [allPatients]);
 
-  const hasActiveFilter = filterSearch.length > 0 || statusFilter !== "all" || sourceFilter !== "all";
+  const hasActiveFilter = statusFilter !== "all" || sourceFilter !== "all" || dateFilter !== "today";
 
   const canCreate = user?.role === "owner" || user?.role === "admin" || user?.role === "doctor";
 
@@ -496,12 +503,32 @@ export default function PatientsPage() {
     { key: "kanban", icon: KanbanSquare, label: t("patients.tabKanban") },
   ];
 
+  const dateFilterFn = useMemo(() => {
+    if (dateFilter === "all") return () => true;
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    if (dateFilter === "today") return (p: Patient) => p.createdAt.slice(0, 10) === todayStr;
+    if (dateFilter === "week") {
+      const weekAgo = new Date(now.getTime() - 7 * 86400000);
+      return (p: Patient) => new Date(p.createdAt) >= weekAgo;
+    }
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    return (p: Patient) => new Date(p.createdAt) >= monthStart;
+  }, [dateFilter]);
+
+  const DATE_OPTIONS: { key: typeof dateFilter; label: string }[] = [
+    { key: "today", label: "Сегодня" },
+    { key: "week",  label: "Неделя" },
+    { key: "month", label: "Месяц" },
+    { key: "all",   label: "Все" },
+  ];
+
   return (
     <div className="flex flex-col h-full bg-gray-50 overflow-hidden">
       {/* Page header */}
       <div className="bg-white border-b border-gray-100 px-4 pt-3 pb-2.5 shrink-0">
 
-        {/* Row 1: title + icon actions */}
+        {/* Row 1: title + actions */}
         <div className="flex items-center gap-2">
           <button
             onClick={() => window.history.back()}
@@ -513,31 +540,7 @@ export default function PatientsPage() {
           <span className="bg-primary/10 text-primary text-xs font-semibold px-2 py-0.5 rounded-full">
             {allPatients.length}
           </span>
-
-          {/* View switcher — desktop only in this row */}
-          <div className="hidden sm:flex items-center bg-gray-100 rounded-lg p-0.5 ml-1">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.key}
-                  onClick={() => setView(tab.key)}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 whitespace-nowrap",
-                    view === tab.key
-                      ? "bg-white text-gray-900 shadow-sm"
-                      : "text-gray-400 hover:text-gray-700",
-                  )}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </div>
-
           <span className="flex-1" />
-
           <button
             onClick={() => queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() })}
             className="text-gray-400 hover:text-primary transition-colors p-1.5"
@@ -566,8 +569,20 @@ export default function PatientsPage() {
           )}
         </div>
 
-        {/* View switcher — mobile only, second row */}
-        <div className="flex sm:hidden items-center bg-gray-100 rounded-lg p-0.5 mt-2.5">
+        {/* Row 2: search bar — always visible */}
+        <div className="relative mt-2.5">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            value={filterSearch}
+            onChange={(e) => setFilterSearch(e.target.value)}
+            placeholder={t("patients.searchPlaceholder")}
+            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 bg-gray-50"
+          />
+        </div>
+
+        {/* Row 3: view switcher */}
+        <div className="flex items-center bg-gray-100 rounded-lg p-0.5 mt-2.5">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -578,7 +593,7 @@ export default function PatientsPage() {
                   "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-semibold transition-all duration-150",
                   view === tab.key
                     ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-400",
+                    : "text-gray-400 hover:text-gray-700",
                 )}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -588,45 +603,52 @@ export default function PatientsPage() {
           })}
         </div>
 
-        {/* Filter panel */}
+        {/* Filter panel — hidden by default */}
         {showFilters && (
-          <div className="mt-2.5 space-y-2 border-t border-gray-100 pt-2.5">
-            <div className="flex flex-wrap gap-2">
-              <div className="relative w-full sm:flex-1 sm:min-w-[180px] sm:max-w-xs">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  value={filterSearch}
-                  onChange={(e) => setFilterSearch(e.target.value)}
-                  placeholder={t("patients.searchPlaceholder")}
-                  className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 bg-gray-50"
-                />
-              </div>
-              <div className="flex gap-2 w-full sm:w-auto">
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as PatientStatus | "all")}
-                  className="flex-1 sm:flex-none text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-gray-700"
+          <div className="mt-2.5 space-y-2.5 border-t border-gray-100 pt-2.5">
+            {/* Date filter */}
+            <div className="flex items-center gap-1.5 bg-gray-50 rounded-xl p-1">
+              {DATE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.key}
+                  onClick={() => setDateFilter(opt.key)}
+                  className={cn(
+                    "flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all",
+                    dateFilter === opt.key
+                      ? "bg-white text-gray-900 shadow-sm"
+                      : "text-gray-400 hover:text-gray-700",
+                  )}
                 >
-                  <option value="all">{t("patients.allStatuses")}</option>
-                  {KANBAN_COLUMNS.map((col) => (
-                    <option key={col.id} value={col.id}>
-                      {col.label} {statusCounts[col.id] ? `(${statusCounts[col.id]})` : ""}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={sourceFilter}
-                  onChange={(e) => setSourceFilter(e.target.value as PatientSource | "all")}
-                  className="flex-1 sm:flex-none text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-gray-700"
-                >
-                  <option value="all">{t("patients.allSources")}</option>
-                  {ALL_SOURCES.map((s) => (
-                    <option key={s} value={s}>{SOURCE_LABELS[s]}</option>
-                  ))}
-                </select>
-              </div>
+                  {opt.label}
+                </button>
+              ))}
             </div>
+            {/* Status + source */}
+            <div className="flex gap-2">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as PatientStatus | "all")}
+                className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-gray-700"
+              >
+                <option value="all">{t("patients.allStatuses")}</option>
+                {KANBAN_COLUMNS.map((col) => (
+                  <option key={col.id} value={col.id}>
+                    {col.label} {statusCounts[col.id] ? `(${statusCounts[col.id]})` : ""}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={sourceFilter}
+                onChange={(e) => setSourceFilter(e.target.value as PatientSource | "all")}
+                className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-gray-700"
+              >
+                <option value="all">{t("patients.allSources")}</option>
+                {ALL_SOURCES.map((s) => (
+                  <option key={s} value={s}>{SOURCE_LABELS[s]}</option>
+                ))}
+              </select>
+            </div>
+            {/* Quick status pills */}
             <div className="flex flex-wrap gap-1.5">
               {KANBAN_COLUMNS.map((col) => {
                 const count = statusCounts[col.id] ?? 0;
@@ -648,8 +670,8 @@ export default function PatientsPage() {
 
       {/* Content */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        {view === "list"   && <PatientsListView search={filterSearch} statusFilter={statusFilter} sourceFilter={sourceFilter} />}
-        {view === "kanban" && <PatientsKanbanView search={filterSearch} statusFilter={statusFilter} sourceFilter={sourceFilter} />}
+        {view === "list"   && <PatientsListView search={filterSearch} statusFilter={statusFilter} sourceFilter={sourceFilter} dateFilterFn={dateFilterFn} />}
+        {view === "kanban" && <PatientsKanbanView search={filterSearch} statusFilter={statusFilter} sourceFilter={sourceFilter} dateFilterFn={dateFilterFn} />}
       </div>
 
       {isCreateOpen && <CreatePatientDialog onClose={() => setIsCreateOpen(false)} />}
