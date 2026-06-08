@@ -2848,10 +2848,20 @@ components:
       properties:
         content:
           type: string
-          minLength: 1
           maxLength: 4096
-      required:
-        - content
+        attachment:
+          type: object
+          properties:
+            objectPath:
+              type: string
+            fileName:
+              type: string
+            contentType:
+              type: string
+          required:
+            - objectPath
+            - fileName
+            - contentType
 
     MessagesResponse:
       type: object

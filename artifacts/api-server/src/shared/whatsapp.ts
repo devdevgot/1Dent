@@ -20,6 +20,82 @@ function getConfig(): WhatsAppConfig | null {
   return { token, phoneNumberId };
 }
 
+export async function sendWhatsAppMedia(
+  recipientPhone: string,
+  file: Buffer,
+  mimeType: string,
+  fileName: string,
+  caption?: string,
+): Promise<SendMessageResult> {
+  const config = getConfig();
+  if (!config) {
+    return { whatsappMessageId: "" };
+  }
+
+  const to = recipientPhone.replace(/\D/g, "");
+  const uploadForm = new FormData();
+  uploadForm.append("messaging_product", "whatsapp");
+  uploadForm.append("type", mimeType);
+  uploadForm.append("file", new Blob([file], { type: mimeType }), fileName);
+
+  const uploadUrl = `https://graph.facebook.com/v19.0/${config.phoneNumberId}/media`;
+  const uploadRes = await fetch(uploadUrl, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${config.token}` },
+    body: uploadForm,
+  });
+
+  if (!uploadRes.ok) {
+    const err = await uploadRes.text();
+    throw new Error(`WhatsApp media upload error ${uploadRes.status}: ${err}`);
+  }
+
+  const uploadData = (await uploadRes.json()) as { id?: string };
+  const mediaId = uploadData.id;
+  if (!mediaId) throw new Error("WhatsApp media upload returned no id");
+
+  const isImage = mimeType.startsWith("image/");
+  const messageUrl = `https://graph.facebook.com/v19.0/${config.phoneNumberId}/messages`;
+  const trimmedCaption = caption?.trim();
+  const body = isImage
+    ? {
+        messaging_product: "whatsapp",
+        to,
+        type: "image",
+        image: {
+          id: mediaId,
+          ...(trimmedCaption ? { caption: trimmedCaption } : {}),
+        },
+      }
+    : {
+        messaging_product: "whatsapp",
+        to,
+        type: "document",
+        document: {
+          id: mediaId,
+          filename: fileName,
+          ...(trimmedCaption ? { caption: trimmedCaption } : {}),
+        },
+      };
+
+  const res = await fetch(messageUrl, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${config.token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`WhatsApp API error ${res.status}: ${err}`);
+  }
+
+  const data = (await res.json()) as { messages?: Array<{ id: string }> };
+  return { whatsappMessageId: data.messages?.[0]?.id ?? "" };
+}
+
 export async function sendWhatsAppMessage(
   recipientPhone: string,
   text: string,

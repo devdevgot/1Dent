@@ -11,9 +11,20 @@ import { randomUUID } from "crypto";
 const router = Router();
 const service = new MessagesService();
 
-const sendMessageSchema = z.object({
-  content: z.string().min(1).max(4096),
-});
+const sendMessageSchema = z
+  .object({
+    content: z.string().max(4096).optional().default(""),
+    attachment: z
+      .object({
+        objectPath: z.string().min(1).max(512),
+        fileName: z.string().min(1).max(255),
+        contentType: z.string().min(1).max(128),
+      })
+      .optional(),
+  })
+  .refine((data) => data.content.trim().length > 0 || data.attachment, {
+    message: "Укажите текст сообщения или прикрепите файл",
+  });
 
 const inboundWebhookSchema = z.object({
   entry: z.array(
@@ -284,6 +295,7 @@ router.post(
         parsed.data.content,
         req.user!.role,
         req.user!.userId,
+        parsed.data.attachment,
       )
       .catch(next);
     if (!result) return;

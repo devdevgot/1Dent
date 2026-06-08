@@ -134,6 +134,44 @@ export async function showGreenApiTyping(
   }
 }
 
+export async function sendGreenApiFile(
+  instanceId: string,
+  token: string,
+  phone: string,
+  file: Buffer,
+  fileName: string,
+  caption?: string,
+  apiBaseUrl?: string | null,
+): Promise<GreenApiSendResult> {
+  const url = `${resolveInstanceBaseUrl(apiBaseUrl)}/waInstance${instanceId}/sendFileByUpload/${token}`;
+  const digitsOnly = phone.replace(/\D/g, "");
+  const chatId = phone.includes("@") ? phone : `${digitsOnly}@c.us`;
+
+  const form = new FormData();
+  form.append("chatId", chatId);
+  form.append("fileName", fileName);
+  form.append("file", new Blob([file]), fileName);
+  if (caption?.trim()) form.append("caption", caption.trim());
+
+  logger.info({ instanceId, chatId, fileName, bytes: file.length }, "[green-api] sendFileByUpload");
+
+  const res = await fetch(url, {
+    method: "POST",
+    signal: greenApiSignal(60_000),
+    body: form,
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    logger.error({ instanceId, chatId, status: res.status, body }, "[green-api] sendFileByUpload failed");
+    throw new Error(`Green API sendFileByUpload failed: ${res.status} ${body}`);
+  }
+
+  const result = (await res.json()) as GreenApiSendResult;
+  logger.info({ instanceId, chatId, idMessage: result.idMessage }, "[green-api] sendFileByUpload OK");
+  return result;
+}
+
 export async function sendGreenApiMessage(
   instanceId: string,
   token: string,
