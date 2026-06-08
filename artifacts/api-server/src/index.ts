@@ -9,6 +9,7 @@ import { startDentalBroadcastScheduler } from "./modules/dental-broadcast/dental
 import { startChatbotInactivityScheduler } from "./modules/chatbot/chatbot-inactivity.scheduler";
 import { getServerBaseUrl } from "./shared/green-api";
 import { seedAllClinics } from "./seeds/procedure-templates.seed";
+import { seedAllClinicsContractTemplates } from "./seeds/contract-templates.seed";
 
 const isProd = process.env["NODE_ENV"] === "production";
 
@@ -119,6 +120,14 @@ if (process.env["DATABASE_URL"]) {
     logger.info("Procedure template seed completed");
   } catch (err) {
     logger.warn({ err }, "Procedure template seed failed — continuing server startup");
+  }
+
+  // Seed built-in contract document bundles for all clinics
+  try {
+    await seedAllClinicsContractTemplates();
+    logger.info("Contract template seed completed");
+  } catch (err) {
+    logger.warn({ err }, "Contract template seed failed — continuing server startup");
   }
 
   // One-time fix: reset chatbot sessions stuck in human_takeover state due to

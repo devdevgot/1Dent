@@ -6,7 +6,7 @@ import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError, WhatsappNotConnectedError } from "../../shared/errors";
 import { ContractsRepository } from "./contracts.repository";
 import { analyzeContractFields, renderContractHtml, PATIENT_FIELDS } from "./contracts.ai";
-import { EXTRACTION_TEMPLATES } from "./extraction-templates";
+import { getExtractionTemplateDef } from "./extraction-templates";
 import { sendToPatient } from "../../shared/messaging";
 import { getServerBaseUrl } from "../../shared/green-api";
 import { logger } from "../../lib/logger";
@@ -63,16 +63,17 @@ router.get(
     const templates = await repo.listTemplates(req.user!.clinicId).catch(next);
     if (!templates) return;
 
-    // Enrich system templates with category & subcategory, and ensure extractedText fallback
+    // Enrich system templates with category/subcategory. Omit full text from the
+    // list payload — 90+ built-in docs would exceed production proxy limits.
     const enriched = templates.map((tmpl) => {
       if (tmpl.isSystem && tmpl.systemType) {
-        const def = EXTRACTION_TEMPLATES.find((d) => d.id === tmpl.systemType);
+        const def = getExtractionTemplateDef(tmpl.systemType);
         if (def) {
           return {
             ...tmpl,
             category: def.category,
             subcategory: def.subcategory,
-            extractedText: tmpl.extractedText || def.text,
+            extractedText: null,
           };
         }
       }
@@ -96,12 +97,14 @@ router.get(
 
     let enriched = template;
     if (template.isSystem && template.systemType) {
-      const def = EXTRACTION_TEMPLATES.find((d) => d.id === template.systemType);
+      const def = getExtractionTemplateDef(template.systemType);
       if (def) {
         enriched = {
           ...template,
+          category: def.category,
+          subcategory: def.subcategory,
           extractedText: template.extractedText || def.text,
-        } as any;
+        } as typeof template & { category: string; subcategory?: string };
       }
     }
 

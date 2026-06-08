@@ -13,9 +13,17 @@ import { randomUUID } from "crypto";
 import type { ContractTemplate, PatientContract, FieldMapping } from "@workspace/db";
 import {
   EXTRACTION_TEMPLATES,
+  getExtractionTemplateText,
   renderExtractionTemplate,
   textToHtml,
 } from "./extraction-templates";
+import { logger } from "../../lib/logger";
+
+const SYSTEM_TEMPLATE_BATCH_SIZE = 20;
+
+function systemTemplateText(tmpl: ContractTemplate): string {
+  return tmpl.extractedText ?? getExtractionTemplateText(tmpl.systemType ?? "");
+}
 
 function matchServiceToSubcategory(title: string): string[] {
   const lower = title.toLowerCase();
@@ -235,23 +243,36 @@ export class ContractsRepository {
     const toCreate = EXTRACTION_TEMPLATES.filter((def) => !existingTypes.has(def.id));
 
     if (toCreate.length > 0) {
-      const inserted = await db
-        .insert(contractTemplatesTable)
-        .values(
-          toCreate.map((def) => ({
-            id: randomUUID(),
-            clinicId,
-            name: def.name,
-            fileUrl: "__system__",
-            fileType: "html",
-            extractedText: def.text,
-            fieldMappings: [] as unknown as FieldMapping[],
-            isSystem: true,
-            systemType: def.id,
-          })),
-        )
-        .returning();
-      existing.push(...inserted);
+      // Store metadata only — full text lives in EXTRACTION_TEMPLATES to keep
+      // seeding fast and avoid huge INSERT payloads in production.
+      for (let i = 0; i < toCreate.length; i += SYSTEM_TEMPLATE_BATCH_SIZE) {
+        const batch = toCreate.slice(i, i + SYSTEM_TEMPLATE_BATCH_SIZE);
+        try {
+          const inserted = await db
+            .insert(contractTemplatesTable)
+            .values(
+              batch.map((def) => ({
+                id: randomUUID(),
+                clinicId,
+                name: def.name,
+                fileUrl: "__system__",
+                fileType: "html",
+                extractedText: null,
+                fieldMappings: [] as unknown as FieldMapping[],
+                isSystem: true,
+                systemType: def.id,
+              })),
+            )
+            .returning();
+          existing.push(...inserted);
+        } catch (err) {
+          logger.error(
+            { err, clinicId, batchStart: i, batchSize: batch.length },
+            "[contracts] Failed to seed system template batch",
+          );
+          throw err;
+        }
+      }
     }
 
     // Return in definition order
@@ -402,7 +423,7 @@ export class ContractsRepository {
       .insert(patientContractsTable)
       .values(
         templates.map((tmpl) => {
-          const rendered = textToHtml(renderExtractionTemplate(tmpl.extractedText ?? "", vars));
+          const rendered = textToHtml(renderExtractionTemplate(systemTemplateText(tmpl), vars));
           return {
             id: randomUUID(),
             clinicId: data.clinicId,

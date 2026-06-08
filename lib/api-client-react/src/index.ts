@@ -1096,6 +1096,8 @@ export interface ContractTemplate {
   fieldMappings: FieldMapping[];
   isSystem: boolean;
   systemType: string | null;
+  category?: string;
+  subcategory?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -1135,6 +1137,30 @@ export const listContractTemplates = (): Promise<{
   success: boolean;
   data: { templates: ContractTemplate[] };
 }> => customFetch("/api/contracts/templates");
+
+export const getContractTemplate = (
+  id: string,
+): Promise<{ success: boolean; data: { template: ContractTemplate } }> =>
+  customFetch(`/api/contracts/templates/${id}`);
+
+export const useGetContractTemplate = <TError = unknown>(
+  id: string | null,
+  options?: {
+    query?: UseQueryOptions<
+      { success: boolean; data: { template: ContractTemplate } },
+      TError
+    >;
+  },
+) =>
+  useQuery<
+    { success: boolean; data: { template: ContractTemplate } },
+    TError
+  >({
+    queryKey: ["contract-template", id],
+    queryFn: () => getContractTemplate(id!),
+    enabled: !!id,
+    ...options?.query,
+  });
 
 export const useListContractTemplates = <TError = unknown>(options?: {
   query?: UseQueryOptions<
