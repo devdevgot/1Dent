@@ -137,7 +137,9 @@ router.post(
       console.error("[CreateTreatmentPlan] Failed:", err);
       return next(err);
     }
-    if (!plan) return;
+    if (!plan) {
+      return next(new Error("Failed to create treatment plan"));
+    }
 
     res.status(201).json({ success: true, data: { plan } });
   },

@@ -1138,9 +1138,14 @@ export function PatientDetailPanel() {
 
   const createPlanMutation = useCreateTreatmentPlan({
     mutation: {
-      onSuccess: () => {
+      onSuccess: (res) => {
+        const newPlanId = res?.data?.plan?.id;
         queryClient.invalidateQueries({ queryKey: getGetActiveTreatmentPlanQueryKey(selectedPatientId ?? "") });
         queryClient.invalidateQueries({ queryKey: getListTreatmentPlansQueryKey(selectedPatientId ?? "") });
+        if (newPlanId) {
+          setPlanDetailId(newPlanId);
+          setTreatmentStep(2);
+        }
         toast({ title: "План лечения создан" });
       },
       onError: (err: any) => {
@@ -2381,38 +2386,26 @@ export function PatientDetailPanel() {
                             </div>
                           </button>
                         ) : needsRediagnosis ? (
-                          isAdmin ? (
-                            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-center">
-                              <p className="text-xs text-muted-foreground">Планы лечения отсутствуют</p>
+                          <div className="bg-amber-50 border border-amber-100 rounded-2xl px-4 py-4 flex items-start gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+                              <svg className="w-4 h-4 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                             </div>
-                          ) : (
-                            <div className="bg-amber-50 border border-amber-100 rounded-2xl px-4 py-4 flex items-start gap-3">
-                              <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
-                                <svg className="w-4 h-4 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-                              </div>
-                              <div className="flex-1">
-                                <p className="text-sm font-semibold text-amber-800">Нужна повторная диагностика</p>
-                                <p className="text-xs text-amber-600 mt-0.5">Для создания плана {allPlans.length + 1} проведите повторный осмотр</p>
-                                <button onClick={() => { setPlanDetailId(null); setTreatmentStep(1); }} className="mt-2 text-xs font-semibold text-amber-700 underline underline-offset-2">Перейти к зубной карте →</button>
-                              </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold text-amber-800">Нужна повторная диагностика</p>
+                              <p className="text-xs text-amber-600 mt-0.5">Для создания плана {allPlans.length + 1} проведите повторный осмотр</p>
+                              <button onClick={() => { setPlanDetailId(null); setTreatmentStep(1); }} className="mt-2 text-xs font-semibold text-amber-700 underline underline-offset-2">Перейти к зубной карте →</button>
                             </div>
-                          )
+                          </div>
                         ) : (
-                          isAdmin ? (
-                            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-center">
-                              <p className="text-xs text-muted-foreground">Планы лечения отсутствуют</p>
-                            </div>
-                          ) : (
-                            <button className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border border-dashed border-gray-200 text-sm font-medium text-gray-400 hover:bg-gray-50 transition-colors"
-                              onClick={() => createPlanMutation.mutate({ id: selectedPatientId, data: {} })}
-                              disabled={createPlanMutation.isPending}
-                            >
-                              {createPlanMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                              {pastPlans.length > 0 ? `Создать план ${allPlans.length + 1}` : "Составить план из диагностики"}
-                            </button>
-                          )
+                          <button className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border border-dashed border-gray-200 text-sm font-medium text-gray-400 hover:bg-gray-50 transition-colors"
+                            onClick={() => createPlanMutation.mutate({ id: selectedPatientId, data: {} })}
+                            disabled={createPlanMutation.isPending}
+                          >
+                            {createPlanMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                            {pastPlans.length > 0 ? `Создать план ${allPlans.length + 1}` : "Составить план из диагностики"}
+                          </button>
                         )}
-                        {!isAdmin && activePlan && (activePlan.status === "completed" || activePlan.status === "in_progress") && !needsRediagnosis && (
+                        {activePlan && (activePlan.status === "completed" || activePlan.status === "in_progress") && !needsRediagnosis && (
                           <button className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-dashed border-gray-200 text-sm font-medium text-gray-400 hover:bg-gray-50 transition-colors mt-2"
                             onClick={() => createPlanMutation.mutate({ id: selectedPatientId, data: {} })} disabled={createPlanMutation.isPending}
                           >
@@ -2491,7 +2484,7 @@ export function PatientDetailPanel() {
                               </div>
                             </div>
                           </div>
-                          {!isAdmin && isActive && activePlan && (activePlan.status === "completed" || activePlan.status === "in_progress") && (
+                          {isActive && activePlan && (activePlan.status === "completed" || activePlan.status === "in_progress") && (
                             needsRediagnosis ? (
                               <Button variant="outline" className="w-full gap-2 border-amber-200 text-amber-700 hover:bg-amber-50" onClick={() => { setPlanDetailId(null); setTreatmentStep(1); setIsDiagnosisMode(true); }}>
                                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
