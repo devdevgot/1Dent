@@ -7,12 +7,14 @@ export type ErrorType<T = unknown> = ApiError<T>;
 export type BodyType<T> = T;
 
 export type AuthTokenGetter = () => Promise<string | null> | string | null;
+export type BranchIdGetter = () => Promise<string | null> | string | null;
 export type UnauthorizedHandler = () => void;
 
 const NO_BODY_STATUS = new Set([204, 205, 304]);
 const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 
 const SKIP_UNAUTHORIZED_PATHS = ["/api/auth/login", "/api/auth/me", "/api/auth/register"];
+const SKIP_BRANCH_HEADER_PATHS = ["/api/auth/", "/api/clinic-branches"];
 
 // ---------------------------------------------------------------------------
 // Module-level configuration
@@ -20,6 +22,7 @@ const SKIP_UNAUTHORIZED_PATHS = ["/api/auth/login", "/api/auth/me", "/api/auth/r
 
 let _baseUrl: string | null = null;
 let _authTokenGetter: AuthTokenGetter | null = null;
+let _branchIdGetter: BranchIdGetter | null = null;
 let _unauthorizedHandler: UnauthorizedHandler | null = null;
 let _unauthorizedFired = false;
 
@@ -58,6 +61,10 @@ export function getBaseUrl(): string | null {
  */
 export function setAuthTokenGetter(getter: AuthTokenGetter | null): void {
   _authTokenGetter = getter;
+}
+
+export function setBranchIdGetter(getter: BranchIdGetter | null): void {
+  _branchIdGetter = getter;
 }
 
 function isRequest(input: RequestInfo | URL): input is Request {
@@ -374,7 +381,16 @@ export async function customFetch<T = unknown>(
     }
   }
 
-  const requestInfo = { method, url: resolveUrl(input) };
+  const requestUrl = resolveUrl(input);
+  const shouldAttachBranchHeader = !SKIP_BRANCH_HEADER_PATHS.some((p) => requestUrl.includes(p));
+  if (_branchIdGetter && shouldAttachBranchHeader && !headers.has("x-clinic-branch-id")) {
+    const branchId = await _branchIdGetter();
+    if (branchId) {
+      headers.set("x-clinic-branch-id", branchId);
+    }
+  }
+
+  const requestInfo = { method, url: requestUrl };
 
   const response = await fetch(input, { ...init, method, headers, credentials: "include" });
 

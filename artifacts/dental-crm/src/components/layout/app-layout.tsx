@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { useAuthStore } from "@/hooks/use-auth";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
@@ -71,8 +72,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { user } = useAuthStore();
   const [location] = useLocation();
   const { status, activeBranch, isRestricted, hasBranches } = useGeoRestriction();
+  const queryClient = useQueryClient();
   const { branches, selectedBranchId, setSelectedBranchId, fetchBranches, hasFetched } = useBranchStore();
   const [branchPickerOpen, setBranchPickerOpen] = useState(false);
+
+  const handleBranchSelect = (branchId: string | null) => {
+    setSelectedBranchId(branchId);
+    setBranchPickerOpen(false);
+    void queryClient.invalidateQueries();
+  };
 
   const isOwner = user?.role === "owner";
 
@@ -134,7 +142,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     <div className="fixed inset-0 z-10" onClick={() => setBranchPickerOpen(false)} />
                     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-100 rounded-xl shadow-lg z-20 overflow-hidden max-h-[240px] overflow-y-auto">
                       <button
-                        onClick={() => { setSelectedBranchId(null); setBranchPickerOpen(false); }}
+                        onClick={() => handleBranchSelect(null)}
                         className={cn(
                           "w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] transition-colors",
                           !selectedBranchId ? "bg-primary/5 text-primary font-semibold" : "text-gray-700 hover:bg-gray-50",
@@ -147,7 +155,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                       {branches.map((branch) => (
                         <button
                           key={branch.id}
-                          onClick={() => { setSelectedBranchId(branch.id); setBranchPickerOpen(false); }}
+                          onClick={() => handleBranchSelect(branch.id)}
                           className={cn(
                             "w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] transition-colors",
                             selectedBranchId === branch.id ? "bg-primary/5 text-primary font-semibold" : "text-gray-700 hover:bg-gray-50",
