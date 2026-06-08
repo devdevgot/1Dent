@@ -1498,8 +1498,6 @@ export function PatientDetailPanel() {
     return activePlan.items.some((item) => getMatchedCategories(item.title).length > 0);
   }, [activePlan]);
 
-  if (!selectedPatientId) return null;
-
   const patient = data?.data?.patient;
   const interactions = data?.data?.interactions ?? [];
 
@@ -1549,6 +1547,7 @@ export function PatientDetailPanel() {
   };
 
   const diagnosisDisplayMap: Map<number, ToothRecord> = useMemo(() => {
+    if (!selectedPatientId) return new Map();
     const map: Map<number, ToothRecord> = new Map(teethMap);
     for (const [fdi, condition] of diagnosisMap.entries()) {
       const existing = teethMap.get(fdi);
@@ -1585,6 +1584,8 @@ export function PatientDetailPanel() {
       return fdi;
     });
   }, [diagnosisMap]);
+
+  if (!selectedPatientId) return null;
 
   return (
     <>
