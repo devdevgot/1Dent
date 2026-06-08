@@ -1,6 +1,5 @@
 import { memo, useMemo } from "react";
 import { useDroppable } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import type { Patient, PatientStatus } from "@workspace/api-client-react";
 import { PatientCard } from "./patient-card";
 import { COLUMN_HEADER_COLOR } from "@/lib/patient-utils";
@@ -15,7 +14,37 @@ interface KanbanColumnProps {
   redAlertPatientIds: ReadonlySet<string>;
   financials?: Record<string, PatientFinancial>;
   onSelectPatient: (patientId: string) => void;
+  isBoardDragging?: boolean;
 }
+
+const ColumnPatientList = memo(function ColumnPatientList({
+  patients,
+  redAlertPatientIds,
+  financials,
+  onSelectPatient,
+  isBoardDragging,
+}: {
+  patients: Patient[];
+  redAlertPatientIds: ReadonlySet<string>;
+  financials?: Record<string, PatientFinancial>;
+  onSelectPatient: (patientId: string) => void;
+  isBoardDragging?: boolean;
+}) {
+  return (
+    <>
+      {patients.map((patient) => (
+        <PatientCard
+          key={patient.id}
+          patient={patient}
+          hasRedAlert={redAlertPatientIds.has(patient.id)}
+          fin={financials?.[patient.id]}
+          onSelect={onSelectPatient}
+          isBoardDragging={isBoardDragging}
+        />
+      ))}
+    </>
+  );
+});
 
 export const KanbanColumn = memo(function KanbanColumn({
   id,
@@ -25,15 +54,27 @@ export const KanbanColumn = memo(function KanbanColumn({
   redAlertPatientIds,
   financials,
   onSelectPatient,
+  isBoardDragging = false,
 }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
-  const itemIds = useMemo(() => patients.map((p) => p.id), [patients]);
   const headerColor = COLUMN_HEADER_COLOR[id];
+  const count = patients.length;
+
+  const listProps = useMemo(
+    () => ({
+      patients,
+      redAlertPatientIds,
+      financials,
+      onSelectPatient,
+      isBoardDragging,
+    }),
+    [patients, redAlertPatientIds, financials, onSelectPatient, isBoardDragging],
+  );
 
   return (
     <div
       className={cn(
-        "flex flex-col rounded-2xl border-2 w-[85vw] min-w-[85vw] sm:w-[260px] sm:min-w-[260px] flex-shrink-0 snap-center h-full",
+        "flex flex-col rounded-2xl border-2 w-[85vw] min-w-[85vw] sm:w-[260px] sm:min-w-[260px] flex-shrink-0 snap-center h-full transition-[border-color,box-shadow] duration-150",
         colorClass,
         isOver && "border-primary/50 ring-1 ring-primary/20",
       )}
@@ -43,25 +84,15 @@ export const KanbanColumn = memo(function KanbanColumn({
           {label}
         </h3>
         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${headerColor}`}>
-          {patients.length}
+          {count}
         </span>
       </div>
 
       <div
         ref={setNodeRef}
-        className="flex-1 px-2 pb-3 space-y-2 min-h-[120px] overflow-y-auto"
+        className="flex-1 px-2 pb-3 space-y-2 min-h-[120px] overflow-y-auto overscroll-contain"
       >
-        <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
-          {patients.map((patient) => (
-            <PatientCard
-              key={patient.id}
-              patient={patient}
-              hasRedAlert={redAlertPatientIds.has(patient.id)}
-              fin={financials?.[patient.id]}
-              onSelect={onSelectPatient}
-            />
-          ))}
-        </SortableContext>
+        <ColumnPatientList {...listProps} />
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
-import { memo } from "react";
-import { useSortable } from "@dnd-kit/sortable";
+import { memo, useRef } from "react";
+import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { Calendar, User, AlertTriangle } from "lucide-react";
 import type { Patient } from "@workspace/api-client-react";
@@ -42,7 +42,6 @@ export const PatientCardView = memo(function PatientCardView({
 
   return (
     <div
-      onClick={onSelect ? () => onSelect(patient.id) : undefined}
       className={cn(
         "bg-white rounded-xl border p-3.5 select-none group shadow-sm",
         hasRedAlert ? "border-red-400 bg-red-50/40" : "border-border/60",
@@ -100,44 +99,37 @@ export const PatientCardOverlay = memo(function PatientCardOverlay(props: Patien
   return (
     <PatientCardView
       {...props}
-      className={cn("shadow-2xl rotate-2 scale-[1.03] cursor-grabbing border-primary/30", props.className)}
+      className={cn(
+        "shadow-2xl rotate-1 scale-[1.02] cursor-grabbing border-primary/30 will-change-transform",
+        props.className,
+      )}
     />
   );
 });
 
-interface PatientCardProps extends PatientCardViewProps {}
+interface PatientCardProps extends PatientCardViewProps {
+  isBoardDragging?: boolean;
+}
 
 export const PatientCard = memo(function PatientCard({
   patient,
   hasRedAlert,
   fin,
   onSelect,
+  isBoardDragging = false,
 }: PatientCardProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: patient.id });
+  const pointerStart = useRef<{ x: number; y: number } | null>(null);
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: patient.id,
+    data: { type: "patient", status: patient.status },
+  });
 
   const style = {
     transform: CSS.Translate.toString(transform),
-    transition: isDragging ? undefined : transition,
+    transition: isDragging ? undefined : "transform 150ms ease",
+    opacity: isDragging ? 0.25 : 1,
     touchAction: "none" as const,
   };
-
-  if (isDragging) {
-    return (
-      <div
-        ref={setNodeRef}
-        style={style}
-        className="h-[100px] rounded-xl border-2 border-dashed border-primary/25 bg-primary/5"
-        {...attributes}
-      />
-    );
-  }
 
   return (
     <div
@@ -145,13 +137,25 @@ export const PatientCard = memo(function PatientCard({
       style={style}
       {...attributes}
       {...listeners}
+      onPointerDown={(event) => {
+        pointerStart.current = { x: event.clientX, y: event.clientY };
+      }}
+      onClick={(event) => {
+        if (isBoardDragging || isDragging || !onSelect) return;
+        const start = pointerStart.current;
+        if (!start) return;
+        const moved =
+          Math.abs(event.clientX - start.x) > 8 || Math.abs(event.clientY - start.y) > 8;
+        if (moved) return;
+        onSelect(patient.id);
+      }}
       className="cursor-grab active:cursor-grabbing touch-none"
     >
       <PatientCardView
         patient={patient}
         hasRedAlert={hasRedAlert}
         fin={fin}
-        onSelect={onSelect}
+        className={isDragging ? "pointer-events-none" : undefined}
       />
     </div>
   );
