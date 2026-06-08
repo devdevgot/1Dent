@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/hooks/use-auth";
 import {
   useListContractTemplates,
+  useGetContractTemplate,
   useUploadContractTemplate,
   useDeleteContractTemplate,
   useUpdateTemplateMappings,
@@ -147,6 +148,36 @@ function MappingEditor({ template, onClose }: { template: ContractTemplate; onCl
   );
 }
 
+function isSystemTemplate(t: ContractTemplate): boolean {
+  return Boolean(t.isSystem);
+}
+
+function SystemTemplatePreview({ templateId, open }: { templateId: string; open: boolean }) {
+  const { data, isLoading } = useGetContractTemplate(open ? templateId : null);
+
+  if (!open) return null;
+  if (isLoading) {
+    return (
+      <div className="px-3 pb-3 border-t border-slate-100 pt-2 bg-slate-50/50 flex justify-center py-4">
+        <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
+      </div>
+    );
+  }
+
+  const text = data?.data?.template?.extractedText;
+  if (!text) return null;
+
+  return (
+    <div className="px-3 pb-3 border-t border-slate-100 pt-2 bg-slate-50/50">
+      <div className="bg-white rounded-lg border border-slate-100 p-2.5 max-h-48 overflow-y-auto">
+        <pre className="text-[11px] text-gray-600 whitespace-pre-wrap font-sans leading-relaxed">
+          {text}
+        </pre>
+      </div>
+    </div>
+  );
+}
+
 export default function ContractTemplatesPage() {
   const { user } = useAuthStore();
   const canEdit = user?.role === "owner" || user?.role === "admin";
@@ -164,8 +195,8 @@ export default function ContractTemplatesPage() {
   const deleteMutation = useDeleteContractTemplate();
 
   const allTemplates = data?.data?.templates ?? [];
-  const systemTemplates = allTemplates.filter((t: ContractTemplate) => t.isSystem);
-  const templates = allTemplates.filter((t: ContractTemplate) => !t.isSystem);
+  const systemTemplates = allTemplates.filter(isSystemTemplate);
+  const templates = allTemplates.filter((t: ContractTemplate) => !isSystemTemplate(t));
 
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   const [expandedSubcategories, setExpandedSubcategories] = useState<Record<string, boolean>>({});
@@ -183,8 +214,8 @@ export default function ContractTemplatesPage() {
   const groupedSystemTemplates = useMemo(() => {
     const groups: Record<string, Record<string, ContractTemplate[]>> = {};
     for (const tmpl of systemTemplates) {
-      const category = (tmpl as any).category || "Другое";
-      const subcategory = (tmpl as any).subcategory || "Общие";
+      const category = tmpl.category || "Другое";
+      const subcategory = tmpl.subcategory || "Общие";
       if (!groups[category]) {
         groups[category] = {};
       }
@@ -195,6 +226,13 @@ export default function ContractTemplatesPage() {
     }
     return groups;
   }, [systemTemplates]);
+
+  const visibleSystemCategories = useMemo(() => {
+    const fromData = Object.keys(groupedSystemTemplates);
+    const ordered = SYSTEM_CATEGORIES.filter((c) => groupedSystemTemplates[c]);
+    const extra = fromData.filter((c) => !SYSTEM_CATEGORIES.includes(c)).sort();
+    return [...ordered, ...extra];
+  }, [groupedSystemTemplates]);
 
   const handleFile = (file: File) => {
     const allowed = [
@@ -371,7 +409,7 @@ export default function ContractTemplatesPage() {
             </p>
 
             <div className="space-y-3">
-              {SYSTEM_CATEGORIES.map((category) => {
+              {visibleSystemCategories.map((category) => {
                 const subcategories = groupedSystemTemplates[category];
                 if (!subcategories) return null;
 
@@ -441,15 +479,7 @@ export default function ContractTemplatesPage() {
                                             {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                                           </button>
                                         </div>
-                                        {isExpanded && tmpl.extractedText && (
-                                          <div className="px-3 pb-3 border-t border-slate-100 pt-2 bg-slate-50/50">
-                                            <div className="bg-white rounded-lg border border-slate-100 p-2.5 max-h-48 overflow-y-auto">
-                                              <pre className="text-[11px] text-gray-600 whitespace-pre-wrap font-sans leading-relaxed">
-                                                {tmpl.extractedText}
-                                              </pre>
-                                            </div>
-                                          </div>
-                                        )}
+                                        <SystemTemplatePreview templateId={tmpl.id} open={isExpanded} />
                                       </div>
                                     );
                                   })}

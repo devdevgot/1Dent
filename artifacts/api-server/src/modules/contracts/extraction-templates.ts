@@ -9971,6 +9971,16 @@ ___________________________________________________/
 
 ];
 
+export function getExtractionTemplateDef(
+  systemType: string,
+): ExtractionTemplateDefinition | undefined {
+  return EXTRACTION_TEMPLATES.find((d) => d.id === systemType);
+}
+
+export function getExtractionTemplateText(systemType: string): string {
+  return getExtractionTemplateDef(systemType)?.text ?? "";
+}
+
 /**
  * Substitutes {{placeholder}} values in template text.
  */
