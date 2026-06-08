@@ -24,7 +24,8 @@ import {
   Pencil,
   Loader2,
   Paperclip,
-  Image as ImageIcon,
+  PlayCircle,
+  StopCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -308,7 +309,7 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
     return () => clearInterval(iv);
   }, [patient.id, fetchSession]);
 
-  const { data, isLoading } = useListMessages(patient.id, {
+  const { data, isLoading, isError } = useListMessages(patient.id, {
     query: {
       queryKey: getListMessagesQueryKey(patient.id),
       refetchInterval: 5000,
@@ -461,7 +462,23 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
           </div>
         )}
 
-        {!isLoading && messages.length === 0 && sessionHistory.length === 0 && (
+        {isError && (
+          <div className="flex flex-col items-center justify-center h-full gap-3 px-8 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center">
+              <AlertTriangle className="w-7 h-7 text-red-500" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-700">
+                {t("chat.loadError", { defaultValue: "Не удалось загрузить переписку" })}
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {t("chat.loadErrorHint", { defaultValue: "Проверьте подключение и попробуйте снова" })}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {!isLoading && !isError && messages.length === 0 && sessionHistory.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-3 px-8 text-center">
             <div
               className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-md"
@@ -476,7 +493,7 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
           </div>
         )}
 
-        {grouped.map((group) => (
+        {!isLoading && !isError && grouped.map((group) => (
           <div key={group.date}>
             <div className="flex justify-center my-3 px-4">
               <span className="text-[11px] font-medium bg-white/80 text-gray-500 px-3 py-1 rounded-full shadow-sm backdrop-blur-sm">
