@@ -1,8 +1,9 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
 import { z } from "zod";
 import { randomUUID } from "crypto";
-import { db, clinicsTable, usersTable } from "@workspace/db";
-import { eq, and, isNull } from "drizzle-orm";
+import { db, clinicsTable } from "@workspace/db";
+import { eq, and } from "drizzle-orm";
+import { pool } from "@workspace/db";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 
@@ -17,34 +18,49 @@ const updateBranchSchema = z.object({
   name: z.string().min(1).max(200).optional(),
 });
 
-// GET /clinic-branches — list branch clinics for the current owner's clinic
+async function ensureParentColumn(): Promise<boolean> {
+  try {
+    const { rows } = await pool.query(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_name = 'clinics' AND column_name = 'parent_clinic_id'
+    `);
+    if (rows.length === 0) {
+      await pool.query(`ALTER TABLE "clinics" ADD COLUMN "parent_clinic_id" text REFERENCES "clinics"("id") ON DELETE SET NULL`);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+interface BranchRow {
+  id: string;
+  name: string;
+  parent_clinic_id: string | null;
+  created_at: string;
+}
+
+// GET /clinic-branches
 router.get(
   "/clinic-branches",
   authMiddleware,
   ownerOnly,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      await ensureParentColumn();
       const clinicId = req.user!.clinicId;
 
-      const [parentClinic] = await db
-        .select()
-        .from(clinicsTable)
-        .where(eq(clinicsTable.id, clinicId))
-        .limit(1);
+      const { rows } = await pool.query<BranchRow>(
+        `SELECT id, name, parent_clinic_id, created_at FROM clinics WHERE parent_clinic_id = $1 ORDER BY created_at`,
+        [clinicId],
+      );
 
-      if (!parentClinic) return next(new NotFoundError("Clinic not found"));
-
-      const rootId = parentClinic.parentClinicId ?? clinicId;
-
-      const branches = await db
-        .select({
-          id: clinicsTable.id,
-          name: clinicsTable.name,
-          parentClinicId: clinicsTable.parentClinicId,
-          createdAt: clinicsTable.createdAt,
-        })
-        .from(clinicsTable)
-        .where(eq(clinicsTable.parentClinicId, rootId));
+      const branches = rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        parentClinicId: r.parent_clinic_id,
+        createdAt: r.created_at,
+      }));
 
       res.json({ success: true, data: { branches } });
     } catch (err) {
@@ -53,7 +69,7 @@ router.get(
   },
 );
 
-// POST /clinic-branches — create a new branch clinic
+// POST /clinic-branches
 router.post(
   "/clinic-branches",
   authMiddleware,
@@ -63,37 +79,40 @@ router.post(
     if (!parsed.success) return next(new ValidationError(parsed.error.message));
 
     try {
+      await ensureParentColumn();
       const clinicId = req.user!.clinicId;
 
-      const [parentClinic] = await db
-        .select()
-        .from(clinicsTable)
-        .where(eq(clinicsTable.id, clinicId))
-        .limit(1);
-
-      if (!parentClinic) return next(new NotFoundError("Clinic not found"));
-
-      const rootId = parentClinic.parentClinicId ?? clinicId;
+      const { rows: parentRows } = await pool.query<{ plan: string }>(
+        `SELECT plan FROM clinics WHERE id = $1 LIMIT 1`,
+        [clinicId],
+      );
+      const plan = parentRows[0]?.plan ?? "free";
 
       const branchId = randomUUID();
-      const [branch] = await db
-        .insert(clinicsTable)
-        .values({
-          id: branchId,
-          name: parsed.data.name,
-          parentClinicId: rootId,
-          plan: parentClinic.plan,
-        })
-        .returning();
+      const { rows } = await pool.query<BranchRow>(
+        `INSERT INTO clinics (id, name, plan, parent_clinic_id) VALUES ($1, $2, $3, $4) RETURNING id, name, parent_clinic_id, created_at`,
+        [branchId, parsed.data.name, plan, clinicId],
+      );
 
-      res.status(201).json({ success: true, data: { branch: { id: branch!.id, name: branch!.name, parentClinicId: branch!.parentClinicId, createdAt: branch!.createdAt } } });
+      const branch = rows[0]!;
+      res.status(201).json({
+        success: true,
+        data: {
+          branch: {
+            id: branch.id,
+            name: branch.name,
+            parentClinicId: branch.parent_clinic_id,
+            createdAt: branch.created_at,
+          },
+        },
+      });
     } catch (err) {
       next(err);
     }
   },
 );
 
-// PATCH /clinic-branches/:branchId — update branch name
+// PATCH /clinic-branches/:branchId
 router.patch(
   "/clinic-branches/:branchId",
   authMiddleware,
@@ -103,51 +122,57 @@ router.patch(
     if (!parsed.success) return next(new ValidationError(parsed.error.message));
 
     try {
+      await ensureParentColumn();
       const clinicId = req.user!.clinicId;
       const branchId = req.params["branchId"] as string;
-      const rootId = clinicId;
 
-      const [branch] = await db
-        .select()
-        .from(clinicsTable)
-        .where(and(eq(clinicsTable.id, branchId), eq(clinicsTable.parentClinicId, rootId)))
-        .limit(1);
+      const { rows: check } = await pool.query(
+        `SELECT id FROM clinics WHERE id = $1 AND parent_clinic_id = $2 LIMIT 1`,
+        [branchId, clinicId],
+      );
+      if (check.length === 0) return next(new NotFoundError("Branch not found"));
 
-      if (!branch) return next(new NotFoundError("Branch not found"));
+      const { rows } = await pool.query<BranchRow>(
+        `UPDATE clinics SET name = $1 WHERE id = $2 RETURNING id, name, parent_clinic_id, created_at`,
+        [parsed.data.name, branchId],
+      );
 
-      const [updated] = await db
-        .update(clinicsTable)
-        .set({ name: parsed.data.name })
-        .where(eq(clinicsTable.id, branchId))
-        .returning();
-
-      res.json({ success: true, data: { branch: { id: updated!.id, name: updated!.name, parentClinicId: updated!.parentClinicId, createdAt: updated!.createdAt } } });
+      const branch = rows[0]!;
+      res.json({
+        success: true,
+        data: {
+          branch: {
+            id: branch.id,
+            name: branch.name,
+            parentClinicId: branch.parent_clinic_id,
+            createdAt: branch.created_at,
+          },
+        },
+      });
     } catch (err) {
       next(err);
     }
   },
 );
 
-// DELETE /clinic-branches/:branchId — delete branch clinic
+// DELETE /clinic-branches/:branchId
 router.delete(
   "/clinic-branches/:branchId",
   authMiddleware,
   ownerOnly,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      await ensureParentColumn();
       const clinicId = req.user!.clinicId;
       const branchId = req.params["branchId"] as string;
-      const rootId = clinicId;
 
-      const [branch] = await db
-        .select()
-        .from(clinicsTable)
-        .where(and(eq(clinicsTable.id, branchId), eq(clinicsTable.parentClinicId, rootId)))
-        .limit(1);
+      const { rows: check } = await pool.query(
+        `SELECT id FROM clinics WHERE id = $1 AND parent_clinic_id = $2 LIMIT 1`,
+        [branchId, clinicId],
+      );
+      if (check.length === 0) return next(new NotFoundError("Branch not found"));
 
-      if (!branch) return next(new NotFoundError("Branch not found"));
-
-      await db.delete(clinicsTable).where(eq(clinicsTable.id, branchId));
+      await pool.query(`DELETE FROM clinics WHERE id = $1`, [branchId]);
 
       res.json({ success: true });
     } catch (err) {
