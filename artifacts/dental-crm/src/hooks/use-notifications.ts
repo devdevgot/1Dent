@@ -8,11 +8,13 @@ import {
   getGetUnreadNotificationsCountQueryKey,
 } from "@workspace/api-client-react";
 
-export function useNotifications() {
+export function useNotifications(options?: { paused?: boolean }) {
   return useListNotifications({
     query: {
       queryKey: getListNotificationsQueryKey(),
-      refetchInterval: 15000, // poll every 15s
+      // Pause polling while the caller is busy (e.g. dragging kanban cards)
+      // so background refetches don't interrupt the interaction.
+      refetchInterval: options?.paused ? false : 15000,
     },
   });
 }

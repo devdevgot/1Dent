@@ -27,11 +27,12 @@ async function fetchTreatmentProgress(): Promise<ProgressSummary> {
   }
 }
 
-export function usePatientTreatmentProgress() {
+export function usePatientTreatmentProgress(options?: { paused?: boolean }) {
   return useQuery({
     queryKey: ["patient-treatment-progress"],
     queryFn: fetchTreatmentProgress,
     staleTime: 30_000,
-    refetchInterval: 60_000,
+    // Pause polling while the caller is busy (e.g. dragging kanban cards).
+    refetchInterval: options?.paused ? false : 60_000,
   });
 }
