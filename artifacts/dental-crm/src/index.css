@@ -132,6 +132,25 @@
     background: hsl(var(--border));
     border-radius: 99px;
   }
+
+  /* Horizontal scroll for tables inside modals — clip overscroll, no white bleed */
+  .table-h-scroll {
+    overflow-x: auto;
+    overscroll-behavior-x: none;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+    background: hsl(var(--background));
+  }
+  .table-h-scroll::-webkit-scrollbar {
+    height: 4px;
+  }
+  .table-h-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .table-h-scroll::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 99px;
+  }
 }
 
 @keyframes fadeIn {

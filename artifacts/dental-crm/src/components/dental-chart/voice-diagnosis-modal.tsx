@@ -498,8 +498,8 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
   // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm sm:p-4">
-      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full min-w-0 sm:max-w-3xl flex flex-col"
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm sm:p-4 overflow-hidden">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full min-w-0 max-w-[100vw] sm:max-w-3xl flex flex-col overflow-hidden"
         style={{ maxHeight: "min(92dvh, 100dvh - env(safe-area-inset-bottom, 0px))" }}
       >
 
@@ -667,9 +667,9 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                     Проверьте диагнозы. В списке услуг — только позиции, совпадающие со словами из расшифровки.
                   </p>
 
-                  <div className="border border-border/50 rounded-xl overflow-hidden w-full max-w-full">
-                    <div className="overflow-x-auto overscroll-x-contain w-full max-w-full">
-                      <table className="text-xs w-full table-fixed min-w-[520px]">
+                  <div className="border border-border/50 rounded-xl overflow-hidden w-full min-w-0 isolate">
+                    <div className="table-h-scroll w-full min-w-0 touch-pan-x">
+                      <table className="text-xs w-full table-fixed min-w-0">
                         <thead>
                           <tr className="bg-slate-50 border-b border-border/50 text-[10px] uppercase tracking-wide text-muted-foreground">
                             <th className="text-left font-semibold px-3 py-2 w-[12%]">Зуб</th>
@@ -702,11 +702,11 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                                     <span className="font-bold">{entry.fdi}</span>
                                   </div>
                                 </td>
-                                <td className="px-3 py-2.5 align-top space-y-1.5">
+                                <td className="px-3 py-2.5 align-top space-y-1.5 max-w-0 min-w-0">
                                   <select
                                     value={entry.condition}
                                     onChange={(e) => handleConditionChange(idx, entry, e.target.value)}
-                                    className="w-full text-xs border border-border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                    className="w-full min-w-0 max-w-full text-xs border border-border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 truncate"
                                   >
                                     {CONDITION_VALUES.map((c) => (
                                       <option key={c} value={c}>{CONDITION_CONFIG[c]?.label ?? c}</option>
@@ -721,12 +721,12 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                                     </p>
                                   )}
                                 </td>
-                                <td className="px-3 py-2.5 align-top">
+                                <td className="px-3 py-2.5 align-top max-w-0 min-w-0">
                                   {suggestions.length > 0 ? (
                                     <select
                                       value={selectedId}
                                       onChange={(e) => setServiceForTooth(entry.fdi, e.target.value)}
-                                      className="w-full text-xs border border-border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                      className="w-full min-w-0 max-w-full text-xs border border-border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 truncate"
                                     >
                                       <option value="">— не выбрано —</option>
                                       {suggestions.map((tpl) => (
@@ -742,7 +742,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                                     </p>
                                   )}
                                 </td>
-                                <td className="px-3 py-2.5 align-top text-right font-semibold text-primary whitespace-nowrap">
+                                <td className="px-3 py-2.5 align-top text-right font-semibold text-primary tabular-nums whitespace-nowrap max-w-0 min-w-0">
                                   {rowPrice > 0 ? `${rowPrice.toLocaleString("ru-KZ")} ₸` : "—"}
                                 </td>
                                 <td className="px-2 py-2.5 align-top text-center">
