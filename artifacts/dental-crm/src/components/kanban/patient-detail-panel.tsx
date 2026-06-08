@@ -1081,9 +1081,10 @@ export function PatientDetailPanel() {
         // Find the most recent bundle (last in list = newest)
         const bundled = [...contracts].reverse().find((c) => c.bundleToken);
         if (bundled?.bundleToken) {
-          // Only restore the token so step 3 knows there's a bundle ready to send.
-          // bundleSent must ONLY be set via the WhatsApp Send button — never from DB state.
           setBundleToken(bundled.bundleToken);
+          const bundleMembers = contracts.filter((c) => c.bundleToken === bundled.bundleToken);
+          const wasSent = bundleMembers.some((c) => c.status !== "created");
+          setBundleSent(wasSent);
         } else {
           setBundleToken(null);
           setBundleUrl(null);
@@ -1303,20 +1304,40 @@ export function PatientDetailPanel() {
         },
         body: JSON.stringify({ serviceNames: services }),
       });
-      const responseData = await res.json() as { success: boolean; data?: { bundleUrl: string; bundleToken: string } };
-      if (responseData.success && responseData.data) {
+      const responseData = await res.json() as {
+        success: boolean;
+        error?: string;
+        data?: { bundleUrl: string; bundleToken: string; contracts?: unknown[] };
+      };
+      if (!res.ok || !responseData.success) {
+        toast({
+          title: "Не удалось сформировать документы",
+          description: responseData.error ?? `HTTP ${res.status}`,
+          variant: "destructive",
+        });
+        return null;
+      }
+      if (responseData.data && (!responseData.data.contracts || responseData.data.contracts.length === 0)) {
+        toast({
+          title: "Нет документов для выбранных услуг",
+          description: "Проверьте шаблоны договоров в настройках клиники",
+          variant: "destructive",
+        });
+        return null;
+      }
+      if (responseData.data) {
         setBundleToken(responseData.data.bundleToken);
         setBundleUrl(responseData.data.bundleUrl);
         queryClient.invalidateQueries({ queryKey: ["patient-contracts", pid] }).catch(() => {});
         return responseData.data.bundleToken;
       }
     } catch {
-      // silent — doctor will see a "prepare" button in step 3 if this fails
+      toast({ title: "Ошибка сети при формировании документов", variant: "destructive" });
     } finally {
       setBundlePreparing(false);
     }
     return null;
-  }, [queryClient]);
+  }, [queryClient, toast]);
 
   // Sends WhatsApp for an already-prepared bundle
   const handleSendBundleWhatsapp = useCallback(async (token: string) => {
@@ -2571,7 +2592,11 @@ export function PatientDetailPanel() {
                           bundleSending,
                           bundleUrl,
                           patientId: selectedPatientId,
-                          onPrepare: () => { if (selectedPatientId) void handlePrepareBundle(selectedPatientId); },
+                          onPrepare: () => {
+                            if (!selectedPatientId) return;
+                            const names = activePlan?.items?.map((i) => i.title) ?? [];
+                            void handlePrepareBundle(selectedPatientId, names.length > 0 ? names : undefined);
+                          },
                           onSend: (token) => void handleSendBundleWhatsapp(token),
                           onOpenPreview: () => setBundlePreviewOpen(true),
                         }}

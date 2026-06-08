@@ -13,7 +13,6 @@ import {
   getGetActiveTreatmentPlanQueryKey,
   getListTeethQueryKey,
   useListPatientContracts,
-  useSendExtractionBundle,
   useGetPatient,
   useUpdatePatient,
   getGetPatientQueryKey,
@@ -506,7 +505,6 @@ export function PlanItemDetailModal({
     },
   });
 
-  const sendBundleMutation = useSendExtractionBundle();
   const { data: contractsData, refetch: refetchContracts, isFetching: isFetchingContracts } = useListPatientContracts(
     patientId,
     {
@@ -531,23 +529,67 @@ export function PlanItemDetailModal({
   const handleSendBundle = async () => {
     setSendingBundle(true);
     try {
-      const res = await sendBundleMutation.mutateAsync({
-        patientId,
-        serviceNames: [item.title],
-      });
-      if (res.success && res.data?.bundleToken) {
-        // Save the bundle token to the treatment plan item
+      const authTok = localStorage.getItem("auth_token");
+      const authHeaders = authTok ? { Authorization: `Bearer ${authTok}` } : {};
+
+      let tokenToSend = bundleToken;
+
+      if (!tokenToSend) {
+        const prepareRes = await fetch(
+          `${getBaseUrl()}/api/contracts/patient/${patientId}/prepare-extraction-bundle`,
+          {
+            method: "POST",
+            credentials: "include",
+            headers: {
+              ...authHeaders,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ serviceNames: [item.title] }),
+          },
+        );
+        const prepareData = await prepareRes.json() as {
+          success: boolean;
+          error?: string;
+          data?: { bundleToken: string; contracts?: unknown[] };
+        };
+        if (!prepareRes.ok || !prepareData.success || !prepareData.data?.bundleToken) {
+          throw new Error(prepareData.error ?? "Не удалось сформировать пакет документов");
+        }
+        if (!prepareData.data.contracts?.length) {
+          throw new Error("Нет документов для данной услуги. Проверьте шаблоны договоров.");
+        }
+        tokenToSend = prepareData.data.bundleToken;
+
         await updateMutation.mutateAsync({
           id: patientId,
           planId,
           itemId: item.id,
-          data: { bundleToken: res.data.bundleToken },
+          data: { bundleToken: tokenToSend },
         });
-        toast({ title: "Пакет документов отправлен пациенту на WhatsApp" });
-        void refetchContracts();
-      } else {
-        throw new Error("Не удалось получить токен пакета");
       }
+
+      const sendRes = await fetch(
+        `${getBaseUrl()}/api/contracts/bundle/${tokenToSend}/send-whatsapp`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: authHeaders,
+        },
+      );
+      const sendData = await sendRes.json() as {
+        success: boolean;
+        code?: string;
+        error?: string;
+      };
+      if (!sendRes.ok || !sendData.success) {
+        if (sendData.code === "WHATSAPP_NOT_CONNECTED" || sendRes.status === 422) {
+          throw new Error("WhatsApp не подключён. Подключите WhatsApp в настройках каналов.");
+        }
+        throw new Error(sendData.error ?? "Ошибка отправки WhatsApp");
+      }
+
+      toast({ title: "Пакет документов отправлен пациенту на WhatsApp" });
+      void refetchContracts();
     } catch (err) {
       toast({
         title: "Ошибка отправки",
