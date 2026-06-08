@@ -197,34 +197,39 @@ function getDeliveryStatus(message: Message): DeliveryStatus {
 
 function BubbleTailOut() {
   return (
-    <span
-      style={{
-        position: "absolute",
-        top: 0,
-        right: -6,
-        width: 0,
-        height: 0,
-        borderTop: `8px solid ${BRAND}`,
-        borderLeft: "6px solid transparent",
-      }}
-    />
+    <svg
+      aria-hidden
+      className="absolute top-0 -right-[6px] pointer-events-none"
+      width="8"
+      height="8"
+      viewBox="0 0 8 8"
+    >
+      <path d="M0 0 H8 L0 8 Z" fill={BRAND} />
+    </svg>
   );
 }
 
 function BubbleTailIn({ alert }: { alert?: boolean }) {
-  const color = alert ? "#fef2f2" : "#ffffff";
+  const fill = alert ? "#fef2f2" : "#ffffff";
   return (
-    <span
-      style={{
-        position: "absolute",
-        top: 0,
-        left: -6,
-        width: 0,
-        height: 0,
-        borderTop: `8px solid ${color}`,
-        borderRight: "6px solid transparent",
-      }}
-    />
+    <svg
+      aria-hidden
+      className="absolute top-0 -left-[6px] pointer-events-none"
+      width="8"
+      height="8"
+      viewBox="0 0 8 8"
+    >
+      <path d="M8 0 H0 L8 8 Z" fill={fill} />
+      {alert && (
+        <path
+          d="M8 0 H0"
+          fill="none"
+          stroke="#fca5a5"
+          strokeWidth="1"
+          vectorEffect="non-scaling-stroke"
+        />
+      )}
+    </svg>
   );
 }
 
@@ -234,15 +239,19 @@ function MessageBubble({ message, isOutbound }: { message: Message; isOutbound: 
   const isAlert          = message.isRedAlert;
 
   return (
-    <div className={cn(
-      "flex mb-1",
-      isOutbound ? "justify-end pl-10 pr-3" : "justify-start pr-10 pl-3",
-    )}>
+    <div
+      className={cn(
+        "flex mb-1 overflow-visible",
+        isOutbound ? "justify-end pl-10 pr-3" : "justify-start pr-10 pl-3",
+      )}
+    >
       <div
         className={cn(
-          "relative min-w-0 max-w-full px-3.5 py-2 shadow-sm",
-          isOutbound ? "rounded-2xl rounded-tr-none mr-1.5" : "rounded-2xl rounded-tl-none ml-1.5",
-          isAlert && !isOutbound && "border border-red-300",
+          "relative min-w-0 w-fit max-w-[min(76%,calc(100%-1rem))] px-3.5 py-2 shadow-sm",
+          isOutbound
+            ? "rounded-2xl rounded-tr-none mr-1.5 self-end"
+            : "rounded-2xl rounded-tl-none ml-1.5 self-start",
+          isAlert && !isOutbound && "ring-1 ring-inset ring-red-300",
         )}
         style={
           isOutbound
@@ -256,9 +265,9 @@ function MessageBubble({ message, isOutbound }: { message: Message; isOutbound: 
         {isOutbound && message.senderId === null && (
           <div className="text-[10px] opacity-60 mb-0.5 font-medium">🤖 Бот</div>
         )}
-        {isAlert && (
+        {isAlert && !isOutbound && (
           <div className="flex items-center gap-1 text-red-600 mb-1 text-xs font-semibold">
-            <AlertTriangle className="w-3 h-3" />
+            <AlertTriangle className="w-3 h-3 shrink-0" />
             <span>{t("chat.redAlert")}</span>
           </div>
         )}
