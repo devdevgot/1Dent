@@ -914,6 +914,7 @@ export default function StaffDetailPage() {
         <PayrollApproveModal
           onClose={() => setShowPayrollModal(false)}
           onSuccess={() => refetchPayroll()}
+          filterUserId={doctorId}
         />
       )}
     </div>
