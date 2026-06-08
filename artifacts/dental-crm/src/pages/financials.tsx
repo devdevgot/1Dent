@@ -57,8 +57,8 @@ export default function FinancialsPage() {
   const canCreate = user?.role === "owner" || user?.role === "admin" || user?.role === "accountant";
   const canWrite  = user?.role === "owner" || user?.role === "admin";
 
-  const [period, setPeriod] = useState<Period>("month");
-  const [customFrom, setCustomFrom] = useState(format(startOfMonth(new Date()), "yyyy-MM-dd"));
+  const [period, setPeriod] = useState<Period>("today");
+  const [customFrom, setCustomFrom] = useState(format(new Date(), "yyyy-MM-dd"));
   const [customTo, setCustomTo] = useState(format(new Date(), "yyyy-MM-dd"));
 
   const [filterDoctor, setFilterDoctor] = useState("");

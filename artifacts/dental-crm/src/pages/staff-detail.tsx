@@ -71,7 +71,7 @@ export default function StaffDetailPage() {
   const [salaryType, setSalaryType] = useState<"fixed" | "commission" | "fixed_plus_commission" | "hourly">("fixed");
   const [fixedAmount, setFixedAmount] = useState(0);
   const [commissionPercent, setCommissionPercent] = useState(0);
-  const [dateFilter, setDateFilter] = useState<"today" | "week" | "month" | "halfYear" | "year">("month");
+  const [dateFilter, setDateFilter] = useState<"today" | "week" | "month" | "halfYear" | "year">("today");
   const [showFilters, setShowFilters] = useState(false);
 
   const dates = useMemo(() => {

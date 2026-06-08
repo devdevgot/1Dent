@@ -187,7 +187,7 @@ export default function AnalyticsPage() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
 
-  const [period, setPeriod] = useState<Period>("month");
+  const [period, setPeriod] = useState<Period>("today");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [showCustom, setShowCustom] = useState(false);

@@ -211,10 +211,10 @@ export default function OwnerDashboard() {
   // ── Date filter state ──
   const [filterOpen, setFilterOpen]     = useState(false);
   const [showCustom, setShowCustom]     = useState(false);
-  const [filterPreset, setFilterPreset] = useState<FilterPreset>("month");
-  const [pendingPreset, setPendingPreset] = useState<FilterPreset>("month");
+  const [filterPreset, setFilterPreset] = useState<FilterPreset>("today");
+  const [pendingPreset, setPendingPreset] = useState<FilterPreset>("today");
   const today = new Date();
-  const [customFrom, setCustomFrom] = useState(toInputValue(new Date(today.getFullYear(), today.getMonth(), 1)));
+  const [customFrom, setCustomFrom] = useState(toInputValue(today));
   const [customTo,   setCustomTo]   = useState(toInputValue(today));
 
   const dateRange = useMemo(() => {
