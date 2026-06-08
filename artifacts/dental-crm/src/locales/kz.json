@@ -57,7 +57,9 @@
     "channels": "Арналар",
     "migration": "Миграция",
     "contractTemplates": "Шарт үлгілері",
-    "branches": "Филиалдар",
+    "clinicBranches": "Филиалдар",
+    "pricing": "Тарифтер",
+    "branches": "Трекинг",
     "logs": "Журнал",
     "more": "Көбірек",
     "settings": "Баптаулар"
@@ -354,7 +356,8 @@
     "payment_processing": "Төлем қабылдау",
     "post_op_monitoring": "Операциядан кейінгі бақылау",
     "completed": "Аяқталды",
-    "repeat_sale": "Қайта сату"
+    "repeat_sale": "Қайта сату",
+    "rejected": "Бас тарту"
   },
   "category": {
     "materials": "Материалдар",

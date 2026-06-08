@@ -57,7 +57,9 @@
     "channels": "Каналы",
     "migration": "Миграция",
     "contractTemplates": "Шаблоны договоров",
-    "branches": "Филиалы",
+    "clinicBranches": "Филиалы",
+    "pricing": "Тарифы",
+    "branches": "Трекинг",
     "logs": "Журнал",
     "more": "Ещё",
     "settings": "Настройки"
@@ -358,7 +360,8 @@
     "payment_processing": "Принятие оплаты",
     "post_op_monitoring": "Постоп контроль",
     "completed": "Завершено",
-    "repeat_sale": "Повторная продажа"
+    "repeat_sale": "Повторная продажа",
+    "rejected": "Отказ"
   },
   "category": {
     "materials": "Материалы",

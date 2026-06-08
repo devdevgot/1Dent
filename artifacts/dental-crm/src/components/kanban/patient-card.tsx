@@ -6,6 +6,8 @@ import type { Patient } from "@workspace/api-client-react";
 import { SOURCE_LABELS, SOURCE_COLORS, KANBAN_COLUMNS, COLUMN_HEADER_COLOR } from "@/lib/patient-utils";
 import { useKanbanStore } from "@/hooks/use-kanban";
 import { useNotifications } from "@/hooks/use-notifications";
+import { usePatientFinancials } from "@/hooks/use-patient-financials";
+import { PatientFinancialBar } from "./patient-financial-bar";
 import { calculateAge, formatDateOfBirth, maskIIN } from "@workspace/api-zod";
 
 interface PatientCardProps {
@@ -15,6 +17,8 @@ interface PatientCardProps {
 export function PatientCard({ patient }: PatientCardProps) {
   const setSelectedPatientId = useKanbanStore((s) => s.setSelectedPatientId);
   const { data: notificationsData } = useNotifications();
+  const { data: financials } = usePatientFinancials();
+  const fin = financials?.[patient.id];
   const hasRedAlert = (notificationsData?.data?.notifications ?? []).some(
     (n) => n.type === "red_alert" && n.patientId === patient.id && !n.read,
   );
@@ -113,6 +117,12 @@ export function PatientCard({ patient }: PatientCardProps) {
       <span className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded-full mb-2.5 ${statusColor}`}>
         {statusLabel}
       </span>
+
+      {fin && (fin.paid > 0 || fin.debt > 0 || fin.remaining > 0) && (
+        <div className="mb-2.5">
+          <PatientFinancialBar data={fin} compact />
+        </div>
+      )}
 
       <div className="flex items-center justify-between text-[11px] text-muted-foreground">
         <div className="flex items-center gap-1">

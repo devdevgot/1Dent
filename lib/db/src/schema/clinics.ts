@@ -10,6 +10,7 @@ export const clinicsTable = pgTable("clinics", {
   name: text("name").notNull(),
   plan: text("plan", { enum: clinicPlans }).notNull().default("free"),
   isActive: boolean("is_active").notNull().default(true),
+  parentClinicId: text("parent_clinic_id"),
   whatsappPhone: text("whatsapp_phone"),
   greenApiInstanceId: text("green_api_instance_id"),
   greenApiToken: text("green_api_token"),

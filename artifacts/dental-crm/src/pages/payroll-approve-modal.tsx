@@ -11,13 +11,14 @@ import {
 interface PayrollApproveModalProps {
   onClose: () => void;
   onSuccess?: () => void;
+  filterUserId?: string;
 }
 
 const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 const currentYear = new Date().getFullYear();
 const YEARS = [currentYear - 1, currentYear, currentYear + 1];
 
-export default function PayrollApproveModal({ onClose, onSuccess }: PayrollApproveModalProps) {
+export default function PayrollApproveModal({ onClose, onSuccess, filterUserId }: PayrollApproveModalProps) {
   const { t } = useTranslation();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
@@ -27,7 +28,8 @@ export default function PayrollApproveModal({ onClose, onSuccess }: PayrollAppro
   const { data: previewData, isFetching } = usePreviewPayroll(year, month);
   const { mutateAsync: approvePeriod, isPending: approving } = useApprovePayrollPeriod();
 
-  const rows: PayrollPreviewRow[] = previewData?.data?.preview ?? [];
+  const allRows: PayrollPreviewRow[] = previewData?.data?.preview ?? [];
+  const rows = filterUserId ? allRows.filter((r) => r.userId === filterUserId) : allRows;
 
   const getApproved = (row: PayrollPreviewRow) =>
     overrides[row.userId] !== undefined ? overrides[row.userId] : row.calculatedAmount;

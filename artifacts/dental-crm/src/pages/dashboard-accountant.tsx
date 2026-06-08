@@ -77,8 +77,8 @@ export default function AccountantDashboard() {
   const { data: proceduresData } = useListProcedures();
   const { data: payrollData, refetch: refetchPayroll } = useGetPayrollRecords();
   const { data: summaryData } = useGetFinancialSummary({
-    dateFrom: format(startOfMonth(today), "yyyy-MM-dd"),
-    dateTo: format(endOfMonth(today), "yyyy-MM-dd"),
+    dateFrom: format(today, "yyyy-MM-dd"),
+    dateTo: format(today, "yyyy-MM-dd"),
   });
 
   const [showApproveModal, setShowApproveModal] = useState(false);

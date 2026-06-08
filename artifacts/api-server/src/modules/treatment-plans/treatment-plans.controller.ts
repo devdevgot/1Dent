@@ -124,15 +124,19 @@ router.post(
     const pricesMap = await pricesRepo.getConditionPrices(req.user!.clinicId).catch(next);
     if (!pricesMap) return;
 
-    const plan = await repo
-      .createPlan(
+    let plan;
+    try {
+      plan = await repo.createPlan(
         req.user!.clinicId,
         req.params["id"] as string,
         req.user!.userId,
         pricesMap,
         parsed.data.items,
-      )
-      .catch(next);
+      );
+    } catch (err) {
+      console.error("[CreateTreatmentPlan] Failed:", err);
+      return next(err);
+    }
     if (!plan) return;
 
     res.status(201).json({ success: true, data: { plan } });

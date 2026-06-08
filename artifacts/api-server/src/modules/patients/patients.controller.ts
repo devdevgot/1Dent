@@ -235,4 +235,119 @@ router.post(
   },
 );
 
+// GET /patients/condition-stats — treatment condition breakdown
+router.get(
+  "/condition-stats",
+  authMiddleware,
+  roleGuard("owner", "admin", "doctor", "accountant"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const clinicId = req.user!.clinicId;
+      const { db, treatmentPlanItemsTable } = await import("@workspace/db");
+      const { eq, and, ne, sql } = await import("drizzle-orm");
+
+      const rows = await db
+        .select({
+          condition: treatmentPlanItemsTable.condition,
+          count: sql<number>`count(distinct ${treatmentPlanItemsTable.patientId})`.as("count"),
+        })
+        .from(treatmentPlanItemsTable)
+        .where(
+          and(
+            eq(treatmentPlanItemsTable.clinicId, clinicId),
+            ne(treatmentPlanItemsTable.status, "cancelled"),
+          ),
+        )
+        .groupBy(treatmentPlanItemsTable.condition);
+
+      const stats: Record<string, number> = {};
+      for (const r of rows) {
+        if (r.condition && r.condition !== "healthy") {
+          stats[r.condition] = Number(r.count) || 0;
+        }
+      }
+
+      res.json({ success: true, data: { stats } });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// GET /patients/financial-summary — per-patient treatment plan financials
+router.get(
+  "/financial-summary",
+  authMiddleware,
+  roleGuard("owner", "admin", "doctor", "accountant"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const clinicId = req.user!.clinicId;
+
+      const { db, treatmentPlanItemsTable, proceduresTable } = await import("@workspace/db");
+      const { eq, and, sql } = await import("drizzle-orm");
+
+      const pendingRows = await db
+        .select({
+          patientId: treatmentPlanItemsTable.patientId,
+          total: sql<number>`coalesce(sum(${treatmentPlanItemsTable.price} * (1 - coalesce(${treatmentPlanItemsTable.discount}, 0) / 100.0)), 0)`.as("total"),
+        })
+        .from(treatmentPlanItemsTable)
+        .where(
+          and(
+            eq(treatmentPlanItemsTable.clinicId, clinicId),
+            eq(treatmentPlanItemsTable.status, "pending"),
+          ),
+        )
+        .groupBy(treatmentPlanItemsTable.patientId);
+
+      const paidRows = await db
+        .select({
+          patientId: proceduresTable.patientId,
+          total: sql<number>`coalesce(sum(${proceduresTable.price}), 0)`.as("total"),
+        })
+        .from(proceduresTable)
+        .where(
+          and(
+            eq(proceduresTable.clinicId, clinicId),
+            eq(proceduresTable.status, "completed"),
+          ),
+        )
+        .groupBy(proceduresTable.patientId);
+
+      const debtRows = await db
+        .select({
+          patientId: proceduresTable.patientId,
+          total: sql<number>`coalesce(sum(${proceduresTable.price}), 0)`.as("total"),
+        })
+        .from(proceduresTable)
+        .where(
+          and(
+            eq(proceduresTable.clinicId, clinicId),
+            eq(proceduresTable.paymentMethod, "debt"),
+          ),
+        )
+        .groupBy(proceduresTable.patientId);
+
+      const summary: Record<string, { paid: number; debt: number; remaining: number }> = {};
+
+      for (const r of paidRows) {
+        if (!summary[r.patientId]) summary[r.patientId] = { paid: 0, debt: 0, remaining: 0 };
+        summary[r.patientId].paid = Number(r.total) || 0;
+      }
+      for (const r of debtRows) {
+        if (!summary[r.patientId]) summary[r.patientId] = { paid: 0, debt: 0, remaining: 0 };
+        summary[r.patientId].debt = Number(r.total) || 0;
+      }
+      for (const r of pendingRows) {
+        if (!summary[r.patientId]) summary[r.patientId] = { paid: 0, debt: 0, remaining: 0 };
+        summary[r.patientId].remaining = Number(r.total) || 0;
+      }
+
+      res.json({ success: true, data: { summary } });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
 export default router;

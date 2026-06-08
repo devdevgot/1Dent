@@ -44,6 +44,8 @@ import {
 } from "@/lib/patient-utils";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
+import { usePatientFinancials } from "@/hooks/use-patient-financials";
+import { PatientFinancialBar } from "@/components/kanban/patient-financial-bar";
 
 type PatientView = "list" | "kanban";
 type SortKey = "name" | "phone" | "dateOfBirth" | "status" | "source" | "createdAt" | "doctor";
@@ -59,6 +61,7 @@ const STATUS_ORDER: Record<PatientStatus, number> = {
   post_op_monitoring: 6,
   completed: 7,
   repeat_sale: 8,
+  rejected: 9,
 };
 
 const ALL_SOURCES: PatientSource[] = [
@@ -91,6 +94,7 @@ function PatientsListView({
   });
   const { data: usersData } = useListUsers();
   const { data: proceduresData } = useListProcedures();
+  const { data: financials } = usePatientFinancials();
 
   const doctorMap = useMemo(() => {
     const m: Record<string, string> = {};
@@ -202,7 +206,7 @@ function PatientsListView({
                 <Th col="status"      label={t("patients.colStatus")} />
                 <Th col="dateOfBirth" label={t("patients.colAge")} className="hidden lg:table-cell" />
                 <Th col="source"      label={t("patients.colSource")} className="hidden xl:table-cell" />
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell whitespace-nowrap">Оплачено</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell whitespace-nowrap">Лечение</th>
                 <Th col="createdAt"   label={t("patients.colCreated")} className="hidden xl:table-cell" />
                 {canDelete && <th className="px-4 py-3 w-12" />}
               </tr>
@@ -271,14 +275,9 @@ function PatientsListView({
                         {SOURCE_LABELS[patient.source] ?? patient.source}
                       </span>
                     </td>
-                    <td className="px-4 py-3 hidden lg:table-cell whitespace-nowrap">
-                      {patientTotals[patient.id] ? (
-                        <div>
-                          <p className="text-xs font-semibold text-gray-800">
-                            {patientTotals[patient.id]!.paid.toLocaleString("ru-RU")} ₸
-                          </p>
-                          <p className="text-[10px] text-gray-400">{patientTotals[patient.id]!.count} проц.</p>
-                        </div>
+                    <td className="px-4 py-3 hidden lg:table-cell min-w-[160px]">
+                      {financials?.[patient.id] && (financials[patient.id].paid > 0 || financials[patient.id].debt > 0 || financials[patient.id].remaining > 0) ? (
+                        <PatientFinancialBar data={financials[patient.id]} />
                       ) : (
                         <span className="text-gray-300 text-xs">—</span>
                       )}
@@ -431,7 +430,7 @@ function PatientsKanbanView({
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-            <div className="flex gap-3 overflow-x-auto pb-4 flex-1 items-start custom-scrollbar">
+            <div className="flex gap-3 overflow-x-auto pb-4 flex-1 items-stretch snap-x snap-mandatory sm:snap-none custom-scrollbar">
               {KANBAN_COLUMNS.map((col) => (
                 <KanbanColumn
                   key={col.id}

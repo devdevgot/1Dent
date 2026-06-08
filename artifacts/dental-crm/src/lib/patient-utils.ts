@@ -30,6 +30,7 @@ export const KANBAN_COLUMNS = [
   mkCol("post_op_monitoring",    "bg-pink-50 border-pink-200",     "text-pink-700 bg-pink-100"),
   mkCol("completed",             "bg-green-50 border-green-200",   "text-green-700 bg-green-100"),
   mkCol("repeat_sale",           "bg-teal-50 border-teal-200",     "text-teal-700 bg-teal-100"),
+  mkCol("rejected",              "bg-red-50 border-red-200",       "text-red-700 bg-red-100"),
 ];
 
 export const COLUMN_HEADER_COLOR: Record<PatientStatus, string> = {
@@ -42,6 +43,7 @@ export const COLUMN_HEADER_COLOR: Record<PatientStatus, string> = {
   post_op_monitoring:    "text-pink-700 bg-pink-100",
   completed:             "text-green-700 bg-green-100",
   repeat_sale:           "text-teal-700 bg-teal-100",
+  rejected:              "text-red-700 bg-red-100",
 };
 
 export const SOURCE_LABELS: Record<PatientSource, string> = new Proxy(

@@ -211,10 +211,10 @@ export default function OwnerDashboard() {
   // ── Date filter state ──
   const [filterOpen, setFilterOpen]     = useState(false);
   const [showCustom, setShowCustom]     = useState(false);
-  const [filterPreset, setFilterPreset] = useState<FilterPreset>("month");
-  const [pendingPreset, setPendingPreset] = useState<FilterPreset>("month");
+  const [filterPreset, setFilterPreset] = useState<FilterPreset>("today");
+  const [pendingPreset, setPendingPreset] = useState<FilterPreset>("today");
   const today = new Date();
-  const [customFrom, setCustomFrom] = useState(toInputValue(new Date(today.getFullYear(), today.getMonth(), 1)));
+  const [customFrom, setCustomFrom] = useState(toInputValue(today));
   const [customTo,   setCustomTo]   = useState(toInputValue(today));
 
   const dateRange = useMemo(() => {
@@ -228,7 +228,7 @@ export default function OwnerDashboard() {
   const dateRangeLabel = fmtDateRange(dateRange.from, dateRange.to);
 
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"channels" | "payments">("channels");
+  const [activeTab, setActiveTab] = useState<"channels" | "conditions">("channels");
 
   const dateFromStr = useMemo(() => format(dateRange.from, "yyyy-MM-dd"), [dateRange.from]);
   const dateToStr = useMemo(() => format(dateRange.to, "yyyy-MM-dd"), [dateRange.to]);
@@ -270,27 +270,32 @@ export default function OwnerDashboard() {
   const totalPatients          = analytics.totalPatients;
   const redAlertCount          = analytics.redAlertCount;
 
-  // Auto-complete onboarding if the clinic already has active records or is older than 24 hours
-  const isExistingOrPopulated = useMemo(() => {
-    if (!clinic?.createdAt || analyticsLoading) return false;
-    const ageInMs = Date.now() - new Date(clinic.createdAt).getTime();
-    const ageInHours = ageInMs / (1000 * 60 * 60);
+  const hasClinicData = useMemo(() => {
+    if (analyticsLoading) return false;
     return (
       totalPatients > 0 ||
       allPatients.length > 0 ||
-      allProcedures.length > 0 ||
-      completedProcedures > 0 ||
-      ageInHours > 24
+      completedProcedures > 0
     );
-  }, [clinic?.createdAt, analyticsLoading, totalPatients, allPatients.length, allProcedures.length, completedProcedures]);
+  }, [analyticsLoading, totalPatients, allPatients.length, completedProcedures]);
 
   useEffect(() => {
-    if (analyticsData && !isOnboardingCompleted && isExistingOrPopulated) {
+    if (analyticsData && !isOnboardingCompleted && hasClinicData) {
       localStorage.setItem("onboarding_completed", "true");
       localStorage.removeItem("show_onboarding_wizard");
       setIsOnboardingCompleted(true);
     }
-  }, [analyticsData, isOnboardingCompleted, isExistingOrPopulated]);
+  }, [analyticsData, isOnboardingCompleted, hasClinicData]);
+
+  // Auto-open wizard for fresh clinics that haven't completed setup
+  useEffect(() => {
+    if (!isOnboardingCompleted && !hasClinicData && !onboardingOpen && clinic?.createdAt) {
+      const ageMs = Date.now() - new Date(clinic.createdAt).getTime();
+      if (ageMs < 7 * 24 * 60 * 60 * 1000) {
+        setOnboardingOpen(true);
+      }
+    }
+  }, [isOnboardingCompleted, hasClinicData, clinic?.createdAt]);
 
   const realIncome = summaryData?.data?.netProfit ?? 0;
 
@@ -322,6 +327,52 @@ export default function OwnerDashboard() {
       };
     }).filter(stat => stat.amount > 0).sort((a, b) => b.amount - a.amount);
   }, [allProcedures, dateRange]);
+
+  const CONDITION_LABELS: Record<string, string> = {
+    cavity: "Кариес",
+    root_canal: "Пульпит / Каналы",
+    crown: "Коронки",
+    implant: "Имплантация",
+    extraction_needed: "Удаление",
+    treated: "Повторное лечение",
+    missing: "Протезирование",
+  };
+  const CONDITION_COLORS: Record<string, string> = {
+    cavity: "#F5A623",
+    root_canal: "#D0021B",
+    crown: "#F8E71C",
+    implant: "#2F9E99",
+    extraction_needed: "#8B0000",
+    treated: "#4A90E2",
+    missing: "#9B59B6",
+  };
+  const CONDITION_ORDER = ["cavity", "root_canal", "extraction_needed", "crown", "implant", "treated", "missing"];
+
+  const [conditionStats, setConditionStats] = useState<Array<{ condition: string; label: string; count: number; percent: number; color: string }>>([]);
+  useEffect(() => {
+    const token = localStorage.getItem("auth_token");
+    fetch(`/api/patients/condition-stats`, {
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      credentials: "include",
+    })
+      .then((r) => r.ok ? r.json() : null)
+      .then((json) => {
+        if (!json?.data?.stats) return;
+        const stats = json.data.stats as Record<string, number>;
+        const total = Object.values(stats).reduce((s: number, v: number) => s + v, 0);
+        const list = CONDITION_ORDER
+          .filter((c) => (stats[c] ?? 0) > 0)
+          .map((c) => ({
+            condition: c,
+            label: CONDITION_LABELS[c] ?? c,
+            count: stats[c] ?? 0,
+            percent: total > 0 ? Math.round(((stats[c] ?? 0) / total) * 100) : 0,
+            color: CONDITION_COLORS[c] ?? "#B2BEC3",
+          }));
+        setConditionStats(list);
+      })
+      .catch(() => {});
+  }, []);
 
   const patientSourceMap = useMemo(() => {
     return new Map(allPatients.map((p) => [p.id, p.source]));
@@ -795,15 +846,15 @@ export default function OwnerDashboard() {
               Каналы привлечения
             </button>
             <button
-              onClick={() => setActiveTab("payments")}
+              onClick={() => setActiveTab("conditions")}
               className={cn(
                 "flex-1 py-2 text-xs font-bold rounded-lg transition-all",
-                activeTab === "payments"
+                activeTab === "conditions"
                   ? "bg-white text-gray-900 shadow-sm"
                   : "text-gray-500 hover:text-gray-900"
               )}
             >
-              Способы оплаты
+              Виды лечения
             </button>
           </div>
 
@@ -851,36 +902,34 @@ export default function OwnerDashboard() {
               </div>
             ) : (
               <div className="space-y-1">
-                {paymentStats.length > 0 ? (
-                  paymentStats.map((stat, idx) => {
-                    const Icon = PAYMENT_ICONS[stat.method] ?? Wallet;
-                    return (
-                      <motion.div
-                        key={stat.method}
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.03 }}
-                        className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0"
+                {conditionStats.length > 0 ? (
+                  conditionStats.map((stat, idx) => (
+                    <motion.div
+                      key={stat.condition}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.03 }}
+                      className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0"
+                    >
+                      <div
+                        className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: stat.color + "22" }}
                       >
-                        <div
-                          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                          style={{ backgroundColor: stat.color + "22" }}
-                        >
-                          <Icon className="w-4 h-4" style={{ color: stat.color }} />
+                        <span className="w-4 h-4 rounded-full" style={{ backgroundColor: stat.color }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-baseline mb-1">
+                          <p className="text-xs font-semibold text-gray-800 truncate pr-2">{stat.label}</p>
+                          <span className="text-xs font-bold text-gray-900 shrink-0">
+                            {stat.count} пац.
+                          </span>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex justify-between items-baseline mb-1">
-                            <p className="text-xs font-semibold text-gray-800 truncate pr-2">{stat.label}</p>
-                            <span className="text-xs font-bold text-gray-900 shrink-0">
-                              {fmtRevenue(stat.amount)}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1 bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                              <div
-                                className="h-1.5 rounded-full"
-                                style={{ width: `${stat.percent}%`, backgroundColor: stat.color }}
-                              />
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className="h-1.5 rounded-full"
+                              style={{ width: `${stat.percent}%`, backgroundColor: stat.color }}
+                            />
                             </div>
                             <span className="text-[9px] font-bold text-gray-400 shrink-0 w-7 text-right">
                               {stat.percent}%
@@ -888,11 +937,10 @@ export default function OwnerDashboard() {
                           </div>
                         </div>
                       </motion.div>
-                    );
-                  })
+                  ))
                 ) : (
                   <p className="py-8 text-center text-xs text-gray-400">
-                    Нет данных по способам оплаты за этот период
+                    Нет данных по видам лечения
                   </p>
                 )}
               </div>

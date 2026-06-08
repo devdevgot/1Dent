@@ -216,6 +216,10 @@ const DEFAULT_NODES: ScriptMindMapData["nodes"] = [
   { id: "doctor_plan", label: "Подбор врача", content: "Предложить подходящего специалиста и свободные слоты" },
   { id: "confirm", label: "Подтверждение записи", content: "Уточнить дату, время и имя — подтвердить детали" },
   { id: "operator", label: "Передача оператору", content: "Соединить с живым менеджером клиники" },
+  { id: "no_response", label: "Нет ответа (15 мин)", content: "Если клиент не отвечает 15 минут — перевести в раздел «Отказ» и начать цепочку повторных касаний" },
+  { id: "followup_3d", label: "Повторное касание (3 дня)", content: "Написать через 3 дня: напомнить о проблеме, предложить помощь, спросить актуальность" },
+  { id: "followup_1w", label: "Повторное касание (1 неделя)", content: "Написать через 1 неделю: мягко напомнить, предложить акцию или бесплатную консультацию" },
+  { id: "followup_3w", label: "Повторное касание (3 недели)", content: "Финальное касание через 3 недели: последнее напоминание с особым предложением" },
 ];
 
 const DEFAULT_EDGES: ScriptMindMapData["edges"] = [
@@ -228,6 +232,10 @@ const DEFAULT_EDGES: ScriptMindMapData["edges"] = [
   { id: "e7", source: "doctor_pain", target: "confirm" },
   { id: "e8", source: "doctor_plan", target: "confirm" },
   { id: "e9", source: "cosmetic", target: "operator" },
+  { id: "e10", source: "greeting", target: "no_response", label: "Нет ответа 15 мин" },
+  { id: "e11", source: "no_response", target: "followup_3d", label: "Нет ответа" },
+  { id: "e12", source: "followup_3d", target: "followup_1w", label: "Нет ответа" },
+  { id: "e13", source: "followup_1w", target: "followup_3w", label: "Нет ответа" },
 ];
 
 // ─── Converters ───────────────────────────────────────────────────────────────
