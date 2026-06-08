@@ -270,27 +270,32 @@ export default function OwnerDashboard() {
   const totalPatients          = analytics.totalPatients;
   const redAlertCount          = analytics.redAlertCount;
 
-  // Auto-complete onboarding if the clinic already has active records or is older than 24 hours
-  const isExistingOrPopulated = useMemo(() => {
-    if (!clinic?.createdAt || analyticsLoading) return false;
-    const ageInMs = Date.now() - new Date(clinic.createdAt).getTime();
-    const ageInHours = ageInMs / (1000 * 60 * 60);
+  const hasClinicData = useMemo(() => {
+    if (analyticsLoading) return false;
     return (
       totalPatients > 0 ||
       allPatients.length > 0 ||
-      allProcedures.length > 0 ||
-      completedProcedures > 0 ||
-      ageInHours > 24
+      completedProcedures > 0
     );
-  }, [clinic?.createdAt, analyticsLoading, totalPatients, allPatients.length, allProcedures.length, completedProcedures]);
+  }, [analyticsLoading, totalPatients, allPatients.length, completedProcedures]);
 
   useEffect(() => {
-    if (analyticsData && !isOnboardingCompleted && isExistingOrPopulated) {
+    if (analyticsData && !isOnboardingCompleted && hasClinicData) {
       localStorage.setItem("onboarding_completed", "true");
       localStorage.removeItem("show_onboarding_wizard");
       setIsOnboardingCompleted(true);
     }
-  }, [analyticsData, isOnboardingCompleted, isExistingOrPopulated]);
+  }, [analyticsData, isOnboardingCompleted, hasClinicData]);
+
+  // Auto-open wizard for fresh clinics that haven't completed setup
+  useEffect(() => {
+    if (!isOnboardingCompleted && !hasClinicData && !onboardingOpen && clinic?.createdAt) {
+      const ageMs = Date.now() - new Date(clinic.createdAt).getTime();
+      if (ageMs < 7 * 24 * 60 * 60 * 1000) {
+        setOnboardingOpen(true);
+      }
+    }
+  }, [isOnboardingCompleted, hasClinicData, clinic?.createdAt]);
 
   const realIncome = summaryData?.data?.netProfit ?? 0;
 
