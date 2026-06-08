@@ -499,7 +499,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm sm:p-4">
-      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-3xl flex flex-col"
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full min-w-0 sm:max-w-3xl flex flex-col"
         style={{ maxHeight: "min(92dvh, 100dvh - env(safe-area-inset-bottom, 0px))" }}
       >
 
@@ -555,7 +555,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
         )}
 
         {/* Body */}
-        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+        <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden custom-scrollbar">
 
           {/* Idle / Recording */}
           {(phase === "idle" || phase === "recording") && (
@@ -632,7 +632,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
 
           {/* Review */}
           {phase === "review" && (
-            <div className="p-4 space-y-3">
+            <div className="p-4 space-y-3 min-w-0">
               {/* Transcript */}
               {transcript && (
                 <>
@@ -667,16 +667,16 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                     Проверьте диагнозы. В списке услуг — только позиции, совпадающие со словами из расшифровки.
                   </p>
 
-                  <div className="border border-border/50 rounded-xl overflow-hidden">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-xs">
+                  <div className="border border-border/50 rounded-xl overflow-hidden w-full max-w-full">
+                    <div className="overflow-x-auto overscroll-x-contain w-full max-w-full">
+                      <table className="text-xs w-full table-fixed min-w-[520px]">
                         <thead>
                           <tr className="bg-slate-50 border-b border-border/50 text-[10px] uppercase tracking-wide text-muted-foreground">
-                            <th className="text-left font-semibold px-3 py-2 w-14">Зуб</th>
-                            <th className="text-left font-semibold px-3 py-2 min-w-[140px]">Диагноз</th>
-                            <th className="text-left font-semibold px-3 py-2 min-w-[200px]">Услуга</th>
-                            <th className="text-right font-semibold px-3 py-2 w-24">Цена</th>
-                            <th className="w-10" />
+                            <th className="text-left font-semibold px-3 py-2 w-[12%]">Зуб</th>
+                            <th className="text-left font-semibold px-3 py-2 w-[28%]">Диагноз</th>
+                            <th className="text-left font-semibold px-3 py-2 w-[38%]">Услуга</th>
+                            <th className="text-right font-semibold px-3 py-2 w-[16%]">Цена</th>
+                            <th className="w-[6%]" />
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border/40">

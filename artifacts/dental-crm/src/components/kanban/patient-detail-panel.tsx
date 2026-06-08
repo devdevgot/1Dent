@@ -1523,11 +1523,6 @@ export function PatientDetailPanel() {
       return;
     }
 
-    const selectedServices = Array.from(result.servicesByTooth.values()).flat();
-    const matchedCats = Array.from(new Set(selectedServices.flatMap((s) => getMatchedCategories(s.name))));
-    const hasExtractionSelected = matchedCats.length > 0;
-    setMatchedCatsState(matchedCats);
-
     if (!activePlan && result.servicesByTooth.size > 0) {
       const items: Array<{ toothFdi: number; condition: string; title: string; price: number }> = [];
       for (const [fdi, services] of result.servicesByTooth.entries()) {
@@ -1568,17 +1563,8 @@ export function PatientDetailPanel() {
     setPlanViewToothFdi(null);
     queryClient.removeQueries({ queryKey: getDentalAiAnalysisQueryKey(selectedPatientId) });
     toast({ title: t("patient.diagnosisSaved") });
-
-    if (hasExtractionSelected) {
-      setBundleToken(null);
-      setBundleUrl(null);
-      setBundleSent(false);
-      setBundleRequiredModalOpen(true);
-      void handlePrepareBundle(selectedPatientId, selectedServices.map((s) => s.name));
-    } else {
-      setActiveTab("treatment");
-      setTreatmentStep(2);
-    }
+    setActiveTab("treatment");
+    setTreatmentStep(2);
   }, [
     selectedPatientId,
     activePlan,
@@ -1588,9 +1574,7 @@ export function PatientDetailPanel() {
     refetchTeeth,
     queryClient,
     hydrateVoiceDiagnosisSession,
-    handlePrepareBundle,
     setActiveTab,
-    setMatchedCatsState,
     toast,
     t,
   ]);
