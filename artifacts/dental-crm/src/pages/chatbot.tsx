@@ -43,6 +43,11 @@ import { KnowledgeAndScriptModal } from "@/components/chatbot/knowledge-tab";
 import type { ScriptMindMapData } from "@/components/chatbot/script-mindmap";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import {
+  FSM_STATE_LABELS,
+  nextPlaygroundFsmState,
+  type PlaygroundFsmState,
+} from "@/lib/chatbot-fsm-states";
 
 
 const STATE_LABELS: Record<string, string> = {
@@ -273,6 +278,12 @@ function PlaygroundTab() {
   const testMessage = useTestChatbotMessage();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
+  const [playgroundFsmState, setPlaygroundFsmState] = useState<PlaygroundFsmState>("greeting");
+  const [activeMindMapNode, setActiveMindMapNode] = useState<{
+    id: string;
+    label: string;
+    fsmState?: string;
+  } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -306,11 +317,18 @@ function PlaygroundTab() {
       role: m.role === "user" ? ("user" as const) : ("assistant" as const),
       content: m.text,
     }));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    testMessage.mutate({ userMessage: text, history } as any, {
-      onSuccess: (res) => setMessages((prev) => [...prev, { role: "bot", text: res.data?.reply ?? "..." }]),
-      onError: () => setMessages((prev) => [...prev, { role: "bot", text: "Ошибка. Попробуйте ещё раз." }]),
-    });
+    const nextState = nextPlaygroundFsmState(playgroundFsmState, text);
+    testMessage.mutate(
+      { userMessage: text, history, fsmState: playgroundFsmState },
+      {
+        onSuccess: (res) => {
+          setMessages((prev) => [...prev, { role: "bot", text: res.data?.reply ?? "..." }]);
+          setPlaygroundFsmState(nextState);
+          setActiveMindMapNode(res.data?.mindMapNode ?? null);
+        },
+        onError: () => setMessages((prev) => [...prev, { role: "bot", text: "Ошибка. Попробуйте ещё раз." }]),
+      },
+    );
   };
 
   return (
@@ -322,7 +340,12 @@ function PlaygroundTab() {
           <span className="font-semibold">Симуляция</span> — бот работает точно как в WhatsApp, но реальные записи не создаются
         </p>
         <button
-          onClick={() => { setMessages([]); setInput(""); }}
+          onClick={() => {
+            setMessages([]);
+            setInput("");
+            setPlaygroundFsmState("greeting");
+            setActiveMindMapNode(null);
+          }}
           disabled={messages.length === 0}
           className="flex items-center gap-1 text-xs text-violet-600 hover:text-violet-800 disabled:opacity-40 transition-colors shrink-0 ml-1"
         >
@@ -330,6 +353,19 @@ function PlaygroundTab() {
           Сбросить
         </button>
       </div>
+
+      {(activeMindMapNode || playgroundFsmState !== "greeting") && (
+        <div className="shrink-0 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900">
+          <span className="font-semibold">Этап FSM:</span>{" "}
+          {FSM_STATE_LABELS[playgroundFsmState] ?? playgroundFsmState}
+          {activeMindMapNode && (
+            <>
+              {" · "}
+              <span className="font-semibold">Узел скрипта:</span> {activeMindMapNode.label}
+            </>
+          )}
+        </div>
+      )}
 
       <div className="flex-1 min-h-0 rounded-xl border border-border/50 bg-muted/20 flex flex-col overflow-hidden">
         <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">

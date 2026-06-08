@@ -42,4 +42,6 @@ export interface ChatbotSessionData {
   urgency?: string;
   patientType?: string;
   aiConfidence?: string;
+  // Active mind-map script node (branch routing)
+  activeMindMapNodeId?: string;
 }

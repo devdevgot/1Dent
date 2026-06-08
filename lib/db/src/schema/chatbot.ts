@@ -25,6 +25,8 @@ export interface ScriptMindMapNode {
   label: string;
   content: string;
   isRoot?: boolean;
+  fsmState?: string;
+  position?: { x: number; y: number };
 }
 
 export interface ScriptMindMapEdge {

@@ -214,12 +214,17 @@ export const reorderManagerExample = (
 
 export interface TestMessageResponse {
   success: boolean;
-  data: { reply: string };
+  data: {
+    reply: string;
+    fsmState?: string;
+    mindMapNode?: { id: string; label: string; fsmState?: string } | null;
+  };
 }
 
 export const testChatbotMessage = (data: {
   userMessage: string;
   history?: Array<{ role: "user" | "assistant"; content: string }>;
+  fsmState?: string;
 }): Promise<TestMessageResponse> =>
   customFetch<TestMessageResponse>("/api/chatbot/test-message", {
     method: "POST",
@@ -234,6 +239,7 @@ export const useTestChatbotMessage = <TError = unknown>(options?: {
     {
       userMessage: string;
       history?: Array<{ role: "user" | "assistant"; content: string }>;
+      fsmState?: string;
     }
   >;
 }) =>
@@ -243,6 +249,7 @@ export const useTestChatbotMessage = <TError = unknown>(options?: {
     {
       userMessage: string;
       history?: Array<{ role: "user" | "assistant"; content: string }>;
+      fsmState?: string;
     }
   >({
     mutationFn: (data) => testChatbotMessage(data),

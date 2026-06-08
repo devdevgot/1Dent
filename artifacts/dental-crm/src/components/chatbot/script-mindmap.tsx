@@ -17,6 +17,7 @@ import {
 } from "@xyflow/react";
 import { CheckCircle2, GitBranch, Loader2, Plus, Save, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CHATBOT_FSM_STATES } from "@/lib/chatbot-fsm-states";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -24,10 +25,18 @@ export interface ScriptMindMapNodeData extends Record<string, unknown> {
   label: string;
   content: string;
   isRoot?: boolean;
+  fsmState?: string;
 }
 
 export interface ScriptMindMapData {
-  nodes: { id: string; label: string; content: string; isRoot?: boolean }[];
+  nodes: {
+    id: string;
+    label: string;
+    content: string;
+    isRoot?: boolean;
+    fsmState?: string;
+    position?: { x: number; y: number };
+  }[];
   edges: { id: string; source: string; target: string; label?: string }[];
 }
 
@@ -91,7 +100,7 @@ type MindMapCbs = {
   addChild: (parentId: string) => void;
   fork: (siblingId: string) => void;
   remove: (id: string) => void;
-  update: (id: string, label: string, content: string) => void;
+  update: (id: string, label: string, content: string, fsmState?: string) => void;
 };
 const MindMapCtx = createContext<MindMapCbs | null>(null);
 const useMindMap = () => useContext(MindMapCtx)!;
@@ -103,12 +112,13 @@ function MindMapNodeComponent({ id, data }: NodeProps) {
   const [editing, setEditing] = useState(false);
   const [label, setLabel] = useState(d.label);
   const [content, setContent] = useState(d.content);
+  const [fsmState, setFsmState] = useState(d.fsmState ?? "");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { addChild, fork, remove, update } = useMindMap();
 
   const commit = () => {
     setEditing(false);
-    update(id, label, content);
+    update(id, label, content, fsmState || undefined);
   };
 
   return (
@@ -150,12 +160,27 @@ function MindMapNodeComponent({ id, data }: NodeProps) {
               onClick={(e) => e.stopPropagation()}
               placeholder="Что делает бот на этом шаге…"
             />
+            <select
+              value={fsmState}
+              onChange={(e) => setFsmState(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              className="mt-1.5 w-full text-[10px] border border-gray-200 rounded-md px-1.5 py-1 bg-white text-gray-600"
+            >
+              {CHATBOT_FSM_STATES.map((opt) => (
+                <option key={opt.value || "none"} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
           </>
         ) : (
           <>
             <p className={cn("text-sm font-semibold leading-tight truncate", d.isRoot ? "text-blue-800" : "text-gray-800")}>
               {label || <span className="font-normal italic text-gray-400">Без названия</span>}
             </p>
+            {d.fsmState && (
+              <p className="text-[9px] font-medium text-violet-600 mt-0.5 truncate">
+                этап: {CHATBOT_FSM_STATES.find((s) => s.value === d.fsmState)?.label ?? d.fsmState}
+              </p>
+            )}
             {content ? (
               <p className="text-xs text-gray-500 mt-1 line-clamp-2 leading-snug">{content}</p>
             ) : (
@@ -207,15 +232,15 @@ const nodeTypes = { mindmap: MindMapNodeComponent };
 // ─── Default initial mind map ─────────────────────────────────────────────────
 
 const DEFAULT_NODES: ScriptMindMapData["nodes"] = [
-  { id: "greeting", label: "Приветствие", content: "Поприветствовать пациента и узнать, что беспокоит", isRoot: true },
-  { id: "problem", label: "Выяснение проблемы", content: "Уточнить симптомы и причину обращения" },
+  { id: "greeting", label: "Приветствие", content: "Поприветствовать пациента и узнать, что беспокоит", isRoot: true, fsmState: "greeting" },
+  { id: "problem", label: "Выяснение проблемы", content: "Уточнить симптомы и причину обращения", fsmState: "collect_problem" },
   { id: "pain", label: "Острая боль", content: "Уточнить симптомы: где болит, как давно, острая/ноющая" },
   { id: "planned", label: "Плановое лечение", content: "Уточнить желаемую процедуру и пожелания по врачу" },
   { id: "cosmetic", label: "Эстетика / Чистка", content: "Рассказать об услуге, предложить консультацию" },
-  { id: "doctor_pain", label: "Подбор врача", content: "Предложить подходящего специалиста и свободные слоты" },
-  { id: "doctor_plan", label: "Подбор врача", content: "Предложить подходящего специалиста и свободные слоты" },
-  { id: "confirm", label: "Подтверждение записи", content: "Уточнить дату, время и имя — подтвердить детали" },
-  { id: "operator", label: "Передача оператору", content: "Соединить с живым менеджером клиники" },
+  { id: "doctor_pain", label: "Подбор врача", content: "Предложить подходящего специалиста и свободные слоты", fsmState: "suggest_doctor" },
+  { id: "doctor_plan", label: "Подбор врача", content: "Предложить подходящего специалиста и свободные слоты", fsmState: "suggest_doctor" },
+  { id: "confirm", label: "Подтверждение записи", content: "Уточнить дату, время и имя — подтвердить детали", fsmState: "collect_branch" },
+  { id: "operator", label: "Передача оператору", content: "Соединить с живым менеджером клиники", fsmState: "human_takeover" },
   { id: "no_response", label: "Нет ответа (15 мин)", content: "Если клиент не отвечает 15 минут — перевести в раздел «Отказ» и начать цепочку повторных касаний" },
   { id: "followup_3d", label: "Повторное касание (3 дня)", content: "Написать через 3 дня: напомнить о проблеме, предложить помощь, спросить актуальность" },
   { id: "followup_1w", label: "Повторное касание (1 неделя)", content: "Написать через 1 неделю: мягко напомнить, предложить акцию или бесплатную консультацию" },
@@ -258,14 +283,16 @@ function makeFlowNode(n: ScriptMindMapData["nodes"][number]): Node {
   return {
     id: n.id,
     type: "mindmap",
-    position: { x: 0, y: 0 },
-    data: { label: n.label, content: n.content, isRoot: n.isRoot },
+    position: n.position ?? { x: 0, y: 0 },
+    data: { label: n.label, content: n.content, isRoot: n.isRoot, fsmState: n.fsmState },
   };
 }
 
 function toFlowGraph(raw: ScriptMindMapData): { nodes: Node[]; edges: Edge[] } {
   const edges = raw.edges.map(makeFlowEdge);
-  const nodes = autoLayout(raw.nodes.map(makeFlowNode), edges);
+  const flowNodes = raw.nodes.map(makeFlowNode);
+  const allHavePositions = raw.nodes.length > 0 && raw.nodes.every((n) => n.position);
+  const nodes = allHavePositions ? flowNodes : autoLayout(flowNodes, edges);
   return { nodes, edges };
 }
 
@@ -335,30 +362,44 @@ export function ScriptMindMap({ initialData, onSave, saveStatus = "idle" }: Scri
     });
   }, [setNodes, setEdges]);
 
-  const update = useCallback((id: string, label: string, content: string) => {
+  const update = useCallback((id: string, label: string, content: string, fsmState?: string) => {
     setNodes((prev) =>
-      prev.map((n) => n.id === id ? { ...n, data: { ...n.data, label, content } } : n),
+      prev.map((n) => n.id === id ? { ...n, data: { ...n.data, label, content, fsmState } } : n),
     );
   }, [setNodes]);
 
   const cbs = useMemo<MindMapCbs>(() => ({ addChild, fork, remove, update }), [addChild, fork, remove, update]);
 
+  const serializeData = useCallback((): ScriptMindMapData => ({
+    nodes: nodes.map((n) => ({
+      id: n.id,
+      label: (n.data as ScriptMindMapNodeData).label,
+      content: (n.data as ScriptMindMapNodeData).content,
+      isRoot: (n.data as ScriptMindMapNodeData).isRoot,
+      fsmState: (n.data as ScriptMindMapNodeData).fsmState,
+      position: { x: n.position.x, y: n.position.y },
+    })),
+    edges: edges.map((e) => ({
+      id: e.id,
+      source: e.source,
+      target: e.target,
+      label: typeof e.label === "string" ? e.label : undefined,
+    })),
+  }), [nodes, edges]);
+
   const handleSave = useCallback(() => {
-    onSave({
-      nodes: nodes.map((n) => ({
-        id: n.id,
-        label: (n.data as ScriptMindMapNodeData).label,
-        content: (n.data as ScriptMindMapNodeData).content,
-        isRoot: (n.data as ScriptMindMapNodeData).isRoot,
-      })),
-      edges: edges.map((e) => ({
-        id: e.id,
-        source: e.source,
-        target: e.target,
-        label: typeof e.label === "string" ? e.label : undefined,
-      })),
-    });
-  }, [nodes, edges, onSave]);
+    onSave(serializeData());
+  }, [onSave, serializeData]);
+
+  const skipAutoSaveRef = useRef(true);
+  useEffect(() => {
+    if (skipAutoSaveRef.current) {
+      skipAutoSaveRef.current = false;
+      return;
+    }
+    const timer = setTimeout(() => onSave(serializeData()), 1200);
+    return () => clearTimeout(timer);
+  }, [nodes, edges, onSave, serializeData]);
 
   return (
     <MindMapCtx.Provider value={cbs}>

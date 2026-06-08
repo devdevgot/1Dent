@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { ScriptMindMap, ScriptMindMapModal, type ScriptMindMapData } from "./script-mindmap";
 import { cn } from "@/lib/utils";
+import { guessFsmStateFromLabel } from "@/lib/chatbot-fsm-states";
 import { useToast } from "@/hooks/use-toast";
 import { getBaseUrl } from "@/lib/base-url";
 
@@ -80,7 +81,12 @@ function convertGeneratedScriptsToMindMap(
 
   function flattenTree(node: ScriptNode, parentId: string, prefix: string) {
     const id = `${prefix}_${node.id}`;
-    nodes.push({ id, label: node.label, content: node.detail ?? "" });
+    nodes.push({
+      id,
+      label: node.label,
+      content: node.detail ?? "",
+      fsmState: guessFsmStateFromLabel(node.label),
+    });
     edges.push({ id: `e_${parentId}_${id}`, source: parentId, target: id });
     for (const child of node.children ?? []) {
       flattenTree(child, id, prefix);
@@ -105,8 +111,10 @@ function convertGeneratedScriptsToMindMap(
 // ── Main KnowledgeTab component ───────────────────────────────────────────────
 export function KnowledgeTab({
   onScriptsGenerated,
+  hasExistingMindMap = false,
 }: {
   onScriptsGenerated?: (data: ScriptMindMapData) => void;
+  hasExistingMindMap?: boolean;
 }) {
   const { toast } = useToast();
   const [sources, setSources] = useState<KnowledgeSource[]>([]);
@@ -246,6 +254,12 @@ export function KnowledgeTab({
   };
 
   const handleGenerate = async () => {
+    if (hasExistingMindMap) {
+      const ok = window.confirm(
+        "Текущий майнд-мэп скрипта будет заменён новой генерацией. Продолжить?",
+      );
+      if (!ok) return;
+    }
     setGenerating(true);
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 95000);
@@ -622,7 +636,10 @@ export function KnowledgeAndScriptModal({
       <div className="flex-1 overflow-y-auto">
         {/* Knowledge base */}
         <div className="px-4 py-5">
-          <KnowledgeTab onScriptsGenerated={handleScriptsGenerated} />
+          <KnowledgeTab
+            onScriptsGenerated={handleScriptsGenerated}
+            hasExistingMindMap={(liveMindMapData?.nodes?.length ?? 0) > 0}
+          />
         </div>
 
         {/* Divider */}

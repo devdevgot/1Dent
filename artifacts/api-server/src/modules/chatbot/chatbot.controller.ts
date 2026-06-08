@@ -34,6 +34,8 @@ const mindMapNodeSchema = z.object({
   label: z.string().max(200),
   content: z.string().max(2000),
   isRoot: z.boolean().optional(),
+  fsmState: z.string().max(50).optional(),
+  position: z.object({ x: z.number(), y: z.number() }).optional(),
 });
 
 const mindMapEdgeSchema = z.object({
@@ -76,6 +78,7 @@ const testMessageSchema = z.object({
     .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() }))
     .max(50)
     .optional(),
+  fsmState: z.string().max(50).optional(),
 });
 
 // ─── Settings ────────────────────────────────────────────────────────────────
@@ -249,11 +252,17 @@ router.post(
     if (!parsed.success) {
       return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
     }
-    const reply = await service
-      .testMessage(req.user!.clinicId, parsed.data.userMessage, parsed.data.history, req.user!.id)
+    const result = await service
+      .testMessage(
+        req.user!.clinicId,
+        parsed.data.userMessage,
+        parsed.data.history,
+        req.user!.id,
+        parsed.data.fsmState ? { fsmState: parsed.data.fsmState as import("./chatbot.types").ChatbotState } : undefined,
+      )
       .catch(next);
-    if (!reply) return;
-    res.json({ success: true, data: { reply } });
+    if (!result) return;
+    res.json({ success: true, data: result });
   },
 );
 

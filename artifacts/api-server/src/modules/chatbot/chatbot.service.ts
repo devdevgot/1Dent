@@ -34,6 +34,13 @@ import { STANDARD_SCRIPT_BLOCKS, type ScriptBlock } from "./script-templates";
 import { openrouter, FAST_MODEL, withTimeout, parseLlmJson } from "../../lib/openrouter-client";
 import { aiCreditsService } from "../../shared/ai-credits";
 import { InsufficientAiCreditsError } from "../../shared/errors/index";
+import {
+  renderMindMapScript,
+  buildActiveMindMapContext,
+  resolveActiveMindMapNode,
+  matchMindMapBranch,
+  type ScriptMindMapData,
+} from "./mindmap-utils";
 
 type CachedSettings = { settings: ChatbotSettings; expiresAt: number };
 type CachedExamples = { examples: ManagerExample[]; expiresAt: number };
@@ -782,57 +789,13 @@ ${dentalContext}
 4. Не придумывай цены, расписание или процедуры, которых нет в карте.`;
 }
 
-/**
- * Converts a ScriptMindMapData tree into a readable text block for the LLM system prompt.
- * Returns an empty string if the mind map is empty.
- */
-function renderMindMapScript(
-  mindMap: { nodes?: { id: string; label: string; content: string; isRoot?: boolean }[]; edges?: { id: string; source: string; target: string; label?: string }[] } | null | undefined,
-): string {
-  if (!mindMap?.nodes?.length) return "";
-
-  const { nodes, edges = [] } = mindMap;
-
-  // Build parent → children adjacency map
-  const childrenMap: Record<string, string[]> = {};
-  const hasParent = new Set<string>();
-  for (const edge of edges) {
-    if (!childrenMap[edge.source]) childrenMap[edge.source] = [];
-    childrenMap[edge.source].push(edge.target);
-    hasParent.add(edge.target);
-  }
-
-  const nodeById = new Map(nodes.map((n) => [n.id, n]));
-  const roots = nodes.filter((n) => !hasParent.has(n.id));
-  if (roots.length === 0) return "";
-
-  function renderNode(id: string, depth: number): string {
-    const node = nodeById.get(id);
-    if (!node) return "";
-    const indent = "  ".repeat(depth);
-    const bullet = depth === 0 ? "▶" : "–";
-    let out = `${indent}${bullet} ${node.label}`;
-    if (node.content?.trim()) out += `\n${indent}  ${node.content.trim()}`;
-    out += "\n";
-    for (const childId of childrenMap[id] ?? []) {
-      out += renderNode(childId, depth + 1);
-    }
-    return out;
-  }
-
-  let text = "\n\nСКРИПТ ДИАЛОГА — МАЙНД-МЭП КЛИНИКИ (это ГЛАВНЫЙ сценарий — строго следуй структуре веток при общении с пациентом):\n";
-  for (const root of roots) {
-    text += renderNode(root.id, 0);
-  }
-  return text;
-}
-
 function buildPlaygroundPrompt(
   settings: Awaited<ReturnType<typeof getSettings>>,
   doctorsWithSlots?: DoctorWithSlots[],
   clinicName?: string,
   knowledgeContext?: string,
   priceListContext?: string,
+  playgroundOpts?: { fsmState?: ChatbotState; serviceType?: string; userText?: string },
 ): string {
   const kazakhNote = `ВАЖНО: Пациент может писать на казахском или русском. Отвечай строго на том языке, на котором пишет пациент.`;
 
@@ -904,7 +867,14 @@ function buildPlaygroundPrompt(
     ? `\n\nМАТЕРИАЛЫ КЛИНИКИ (сайт, документы — дополнительный источник информации; цены берутся из ПРАЙС-ЛИСТА выше):\n${knowledgeContext}`
     : "";
 
-  const mindMapSection = renderMindMapScript(settings.scriptMindMap);
+  const mindMap = settings.scriptMindMap as ScriptMindMapData | undefined;
+  const mindMapSection = renderMindMapScript(mindMap);
+  const activeMindMapSection = playgroundOpts?.fsmState
+    ? buildActiveMindMapContext(mindMap, playgroundOpts.fsmState, {
+        serviceType: playgroundOpts.serviceType,
+        userText: playgroundOpts.userText,
+      })
+    : "";
   // When a mind map exists it IS the script — skip standard/custom blocks to avoid conflict
   const effectiveScriptContext = mindMapSection ? "" : scriptContext;
 
@@ -918,7 +888,7 @@ function buildPlaygroundPrompt(
 4. Отвечай коротко: 1–3 предложения максимум
 5. Используй только информацию из материалов клиники и списка врачей — не придумывай
 6. НИКОГДА не предлагай и не подтверждай время которое уже прошло (сейчас ${nowTimeStr}). Если пациент называет прошедшее время сегодня — объясни что оно уже прошло и предложи ближайший доступный слот. Все слоты в списке врачей уже являются будущими.
-${kazakhNote}${doctorsSection}${priceListPlaygroundSection}${mindMapSection}${effectiveScriptContext}${knowledgeSection}`;
+${kazakhNote}${doctorsSection}${priceListPlaygroundSection}${mindMapSection}${activeMindMapSection}${effectiveScriptContext}${knowledgeSection}`;
     return systemPrompt;
 }
 
@@ -957,7 +927,15 @@ function renderScriptBlocks(
 function buildSystemPrompt(
   state: ChatbotState,
   settings: Awaited<ReturnType<typeof getSettings>>,
-  opts?: { clinicName?: string; knowledgeContext?: string; doctorsContext?: string; priceListContext?: string },
+  opts?: {
+    clinicName?: string;
+    knowledgeContext?: string;
+    doctorsContext?: string;
+    priceListContext?: string;
+    serviceType?: string;
+    userText?: string;
+    activeMindMapNodeId?: string;
+  },
 ): string {
   const si = (settings.stepInstructions ?? {}) as StepInstructions;
   const generalExtra = si.general ? `\n\nДополнительные инструкции клиники:\n${si.general}` : "";
@@ -1019,7 +997,13 @@ function buildSystemPrompt(
     : "";
 
   const scriptContext = renderScriptBlocks(settings, opts?.clinicName);
-  const mindMapSection = renderMindMapScript(settings.scriptMindMap);
+  const mindMap = settings.scriptMindMap as ScriptMindMapData | undefined;
+  const mindMapSection = renderMindMapScript(mindMap);
+  const activeMindMapSection = buildActiveMindMapContext(mindMap, state, {
+    serviceType: opts?.serviceType,
+    userText: opts?.userText,
+    activeNodeId: opts?.activeMindMapNodeId,
+  });
   // When a mind map exists it IS the script — skip standard/custom blocks to avoid conflict
   const effectiveScriptContext = mindMapSection ? "" : scriptContext;
 
@@ -1035,7 +1019,7 @@ function buildSystemPrompt(
     ? `\n\nМАТЕРИАЛЫ КЛИНИКИ (сайт, документы — дополнительный источник информации об услугах и особенностях клиники; цены берутся из ПРАЙС-ЛИСТА выше; информация о врачах — из раздела «ВРАЧИ КЛИНИКИ»):\n${opts.knowledgeContext}`
     : "";
 
-  return `${base}\n\n${stateGuidance[state] ?? ""}${customExtra}${mindMapSection}${effectiveScriptContext}${doctorsSection}${priceListSection}${knowledgeSection}`;
+  return `${base}\n\n${stateGuidance[state] ?? ""}${customExtra}${mindMapSection}${activeMindMapSection}${effectiveScriptContext}${doctorsSection}${priceListSection}${knowledgeSection}`;
 }
 
 async function isComplaintReply(text: string): Promise<boolean> {
@@ -1154,10 +1138,6 @@ export class ChatbotService {
       return null;
     }
 
-    // Local helper to build prompts with knowledge + doctors context pre-bound
-    const sp = (state: ChatbotState, spOpts?: { clinicName?: string }) =>
-      buildSystemPrompt(state, settings, { ...spOpts, knowledgeContext, doctorsContext, priceListContext });
-
     saveChatbotMessage(clinicId, phone, "inbound", text).catch(() => {});
 
     if (!settings.enabled) return null;
@@ -1198,6 +1178,18 @@ export class ChatbotService {
 
     let state = session.state;
     let data = { ...session.data };
+
+    // Local helper to build prompts with knowledge + doctors context pre-bound
+    const sp = (promptState: ChatbotState, spOpts?: { clinicName?: string; userText?: string }) =>
+      buildSystemPrompt(promptState, settings, {
+        ...spOpts,
+        knowledgeContext,
+        doctorsContext,
+        priceListContext,
+        serviceType: data.serviceType,
+        userText: spOpts?.userText ?? text,
+        activeMindMapNodeId: data.activeMindMapNodeId,
+      });
 
     // Operator request always takes priority
     if (isOperatorRequest(text)) {
@@ -1578,6 +1570,16 @@ export class ChatbotService {
         data.urgency = classification.urgency;
         data.patientType = classification.patientType;
         data.aiConfidence = classification.confidence;
+
+        const mindMapData = settings.scriptMindMap as ScriptMindMapData | undefined;
+        const problemNode = resolveActiveMindMapNode(mindMapData, "collect_problem", {});
+        if (problemNode) {
+          const branch = matchMindMapBranch(mindMapData, problemNode.id, {
+            serviceType: classification.serviceType,
+            userText: text,
+          });
+          if (branch) data.activeMindMapNodeId = branch.node.id;
+        }
 
         logger.info(
           { clinicId, phone, classification },
@@ -2376,7 +2378,7 @@ export class ChatbotService {
       followup168hTemplate?: string;
       stepInstructions?: StepInstructions;
       scriptBlocks?: ScriptBlock[];
-      scriptMindMap?: { nodes: { id: string; label: string; content: string; isRoot?: boolean }[]; edges: { id: string; source: string; target: string; label?: string }[] };
+      scriptMindMap?: ScriptMindMapData;
     },
   ) {
     const settings = await getSettings(clinicId);
@@ -2452,6 +2454,7 @@ export class ChatbotService {
     userMessage: string,
     history: Array<{ role: "user" | "assistant"; content: string }> = [],
     userId?: string | null,
+    opts?: { fsmState?: ChatbotState },
   ) {
     await aiCreditsService.consumeCredits({
       clinicId,
@@ -2468,23 +2471,43 @@ export class ChatbotService {
       loadPriceListContext(clinicId),
     ]);
     const clinicName = clinicRow[0]?.name ?? undefined;
+    const mindMap = settings.scriptMindMap as ScriptMindMapData | undefined;
+    const fsmState = opts?.fsmState ?? "greeting";
+    const activeNode = resolveActiveMindMapNode(mindMap, fsmState, { userText: userMessage });
+    const playgroundOpts = { fsmState, userText: userMessage };
+
+    const mindMapNodePayload = activeNode
+      ? { id: activeNode.id, label: activeNode.label, fsmState: activeNode.fsmState ?? fsmState }
+      : null;
 
     // Auto-start: empty message + empty history → generate greeting with AI using knowledge context
     if (!userMessage && history.length === 0) {
-      const systemPrompt = buildPlaygroundPrompt(settings, doctorsWithSlots, clinicName, knowledgeContext, priceListContext);
+      const systemPrompt = buildPlaygroundPrompt(
+        settings, doctorsWithSlots, clinicName, knowledgeContext, priceListContext, playgroundOpts,
+      );
       const reply = await generateChatbotResponse(
         systemPrompt,
         [],
         "Начни диалог — отправь приветственное сообщение как если бы пациент только что написал в первый раз.",
         managerExamples,
       );
-      return reply ?? "Здравствуйте! Чем могу помочь?";
+      return {
+        reply: reply ?? "Здравствуйте! Чем могу помочь?",
+        fsmState,
+        mindMapNode: mindMapNodePayload,
+      };
     }
 
-    const systemPrompt = buildPlaygroundPrompt(settings, doctorsWithSlots, clinicName, knowledgeContext, priceListContext);
+    const systemPrompt = buildPlaygroundPrompt(
+      settings, doctorsWithSlots, clinicName, knowledgeContext, priceListContext, playgroundOpts,
+    );
     const chatHistory = history.map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
     const reply = await generateChatbotResponse(systemPrompt, chatHistory, userMessage, managerExamples);
-    return reply ?? "AI не ответил. Проверьте API-ключ.";
+    return {
+      reply: reply ?? "AI не ответил. Проверьте API-ключ.",
+      fsmState,
+      mindMapNode: mindMapNodePayload,
+    };
   }
 
   async listSessions(clinicId: string) {
