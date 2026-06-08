@@ -19,7 +19,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { KanbanColumn } from "@/components/kanban/kanban-column";
 import { PatientCardOverlay } from "@/components/kanban/patient-card";
 import { useNotifications } from "@/hooks/use-notifications";
-import { usePatientFinancials } from "@/hooks/use-patient-financials";
+import { usePatientTreatmentProgress } from "@/hooks/use-patient-treatment-progress";
 import { KANBAN_COLUMNS } from "@/lib/patient-utils";
 import type { Patient, PatientStatus } from "@workspace/api-client-react";
 
@@ -59,7 +59,7 @@ export const KanbanBoard = memo(function KanbanBoard({
   patientsRef.current = patients;
 
   const { data: notificationsData } = useNotifications();
-  const { data: financials } = usePatientFinancials();
+  const { data: progressMap } = usePatientTreatmentProgress();
 
   const redAlertPatientIds = useMemo(() => {
     const ids = new Set<string>();
@@ -145,7 +145,7 @@ export const KanbanBoard = memo(function KanbanBoard({
   }, [patients]);
 
   const isDragging = activeDragPatient !== null;
-  const showFinancials = !isDragging;
+  const showProgress = !isDragging;
 
   return (
     <DndContext
@@ -164,7 +164,7 @@ export const KanbanBoard = memo(function KanbanBoard({
             colorClass={col.color}
             patients={patientsByColumnMap[col.id] ?? []}
             redAlertPatientIds={redAlertPatientIds}
-            financials={showFinancials ? financials : undefined}
+            progressMap={showProgress ? progressMap : undefined}
             onSelectPatient={onSelectPatient}
             isBoardDragging={isDragging}
           />
@@ -179,7 +179,7 @@ export const KanbanBoard = memo(function KanbanBoard({
           <PatientCardOverlay
             patient={activeDragPatient}
             hasRedAlert={redAlertPatientIds.has(activeDragPatient.id)}
-            fin={financials?.[activeDragPatient.id]}
+            progress={progressMap?.[activeDragPatient.id]}
           />
         ) : null}
       </DragOverlay>

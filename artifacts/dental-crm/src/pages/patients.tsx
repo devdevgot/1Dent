@@ -32,8 +32,8 @@ import {
 } from "@/lib/patient-utils";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
-import { usePatientFinancials } from "@/hooks/use-patient-financials";
-import { PatientFinancialBar } from "@/components/kanban/patient-financial-bar";
+import { usePatientTreatmentProgress } from "@/hooks/use-patient-treatment-progress";
+import { PatientTreatmentProgressBar } from "@/components/kanban/patient-treatment-progress-bar";
 
 type PatientView = "list" | "kanban";
 type SortKey = "name" | "phone" | "dateOfBirth" | "status" | "source" | "createdAt" | "doctor";
@@ -84,7 +84,7 @@ function PatientsListView({
   });
   const { data: usersData } = useListUsers();
   const { data: proceduresData } = useListProcedures();
-  const { data: financials } = usePatientFinancials();
+  const { data: progressMap } = usePatientTreatmentProgress();
 
   const doctorMap = useMemo(() => {
     const m: Record<string, string> = {};
@@ -195,9 +195,9 @@ function PatientsListView({
                 <Th col="phone"       label={t("patients.colPhone")} className="hidden sm:table-cell" />
                 <Th col="doctor"      label="Врач" className="hidden md:table-cell" />
                 <Th col="status"      label={t("patients.colStatus")} />
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell whitespace-nowrap min-w-[160px]">Прогресс</th>
                 <Th col="dateOfBirth" label={t("patients.colAge")} className="hidden lg:table-cell" />
                 <Th col="source"      label={t("patients.colSource")} className="hidden xl:table-cell" />
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell whitespace-nowrap">Лечение</th>
                 <Th col="createdAt"   label={t("patients.colCreated")} className="hidden xl:table-cell" />
                 {canDelete && <th className="px-4 py-3 w-12" />}
               </tr>
@@ -250,6 +250,13 @@ function PatientsListView({
                         {statusCol?.label ?? patient.status}
                       </span>
                     </td>
+                    <td className="px-4 py-3 hidden md:table-cell min-w-[160px]">
+                      {progressMap?.[patient.id] && (progressMap[patient.id].paid > 0 || progressMap[patient.id].debt > 0 || progressMap[patient.id].pending > 0) ? (
+                        <PatientTreatmentProgressBar data={progressMap[patient.id]} compact />
+                      ) : (
+                        <span className="text-gray-300 text-xs">—</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 hidden lg:table-cell text-gray-600 text-xs whitespace-nowrap">
                       {patient.dateOfBirth ? (
                         <span>
@@ -265,13 +272,6 @@ function PatientsListView({
                       <span className={`inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-full ${SOURCE_COLORS[patient.source] ?? "bg-gray-100 text-gray-600"}`}>
                         {SOURCE_LABELS[patient.source] ?? patient.source}
                       </span>
-                    </td>
-                    <td className="px-4 py-3 hidden lg:table-cell min-w-[160px]">
-                      {financials?.[patient.id] && (financials[patient.id].paid > 0 || financials[patient.id].debt > 0 || financials[patient.id].remaining > 0) ? (
-                        <PatientFinancialBar data={financials[patient.id]} />
-                      ) : (
-                        <span className="text-gray-300 text-xs">—</span>
-                      )}
                     </td>
                     <td className="px-4 py-3 hidden xl:table-cell text-gray-400 text-xs whitespace-nowrap">
                       {new Date(patient.createdAt).toLocaleDateString("ru", {

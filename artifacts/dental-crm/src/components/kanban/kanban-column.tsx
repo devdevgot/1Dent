@@ -3,7 +3,7 @@ import { useDroppable } from "@dnd-kit/core";
 import type { Patient, PatientStatus } from "@workspace/api-client-react";
 import { PatientCard } from "./patient-card";
 import { COLUMN_HEADER_COLOR } from "@/lib/patient-utils";
-import type { PatientFinancial } from "@/hooks/use-patient-financials";
+import type { PatientTreatmentProgress } from "@/hooks/use-patient-treatment-progress";
 import { cn } from "@/lib/utils";
 
 interface KanbanColumnProps {
@@ -12,7 +12,7 @@ interface KanbanColumnProps {
   colorClass: string;
   patients: Patient[];
   redAlertPatientIds: ReadonlySet<string>;
-  financials?: Record<string, PatientFinancial>;
+  progressMap?: Record<string, PatientTreatmentProgress>;
   onSelectPatient: (patientId: string) => void;
   isBoardDragging?: boolean;
 }
@@ -20,13 +20,13 @@ interface KanbanColumnProps {
 const ColumnPatientList = memo(function ColumnPatientList({
   patients,
   redAlertPatientIds,
-  financials,
+  progressMap,
   onSelectPatient,
   isBoardDragging,
 }: {
   patients: Patient[];
   redAlertPatientIds: ReadonlySet<string>;
-  financials?: Record<string, PatientFinancial>;
+  progressMap?: Record<string, PatientTreatmentProgress>;
   onSelectPatient: (patientId: string) => void;
   isBoardDragging?: boolean;
 }) {
@@ -37,7 +37,7 @@ const ColumnPatientList = memo(function ColumnPatientList({
           key={patient.id}
           patient={patient}
           hasRedAlert={redAlertPatientIds.has(patient.id)}
-          fin={financials?.[patient.id]}
+          progress={progressMap?.[patient.id]}
           onSelect={onSelectPatient}
           isBoardDragging={isBoardDragging}
         />
@@ -52,7 +52,7 @@ export const KanbanColumn = memo(function KanbanColumn({
   colorClass,
   patients,
   redAlertPatientIds,
-  financials,
+  progressMap,
   onSelectPatient,
   isBoardDragging = false,
 }: KanbanColumnProps) {
@@ -64,11 +64,11 @@ export const KanbanColumn = memo(function KanbanColumn({
     () => ({
       patients,
       redAlertPatientIds,
-      financials,
+      progressMap,
       onSelectPatient,
       isBoardDragging,
     }),
-    [patients, redAlertPatientIds, financials, onSelectPatient, isBoardDragging],
+    [patients, redAlertPatientIds, progressMap, onSelectPatient, isBoardDragging],
   );
 
   return (
