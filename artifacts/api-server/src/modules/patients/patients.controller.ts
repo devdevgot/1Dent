@@ -258,7 +258,7 @@ router.get(
 
       const { db, treatmentPlanItemsTable, treatmentPlansTable, proceduresTable } =
         await import("@workspace/db");
-      const { eq, and, ne, inArray } = await import("drizzle-orm");
+      const { eq, and, ne } = await import("drizzle-orm");
 
       const rows = await db
         .select({
@@ -281,7 +281,8 @@ router.get(
         .where(
           and(
             eq(treatmentPlanItemsTable.clinicId, clinicId),
-            inArray(treatmentPlansTable.status, ["approved", "in_progress"]),
+            ne(treatmentPlansTable.status, "completed"),
+            ne(treatmentPlansTable.status, "cancelled"),
             ne(treatmentPlanItemsTable.status, "cancelled"),
           ),
         );

@@ -195,7 +195,7 @@ function PatientsListView({
                 <Th col="phone"       label={t("patients.colPhone")} className="hidden sm:table-cell" />
                 <Th col="doctor"      label="Врач" className="hidden md:table-cell" />
                 <Th col="status"      label={t("patients.colStatus")} />
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell whitespace-nowrap min-w-[160px]">Прогресс</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap min-w-[140px]">Прогресс</th>
                 <Th col="dateOfBirth" label={t("patients.colAge")} className="hidden lg:table-cell" />
                 <Th col="source"      label={t("patients.colSource")} className="hidden xl:table-cell" />
                 <Th col="createdAt"   label={t("patients.colCreated")} className="hidden xl:table-cell" />
@@ -250,7 +250,7 @@ function PatientsListView({
                         {statusCol?.label ?? patient.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 hidden md:table-cell min-w-[160px]">
+                    <td className="px-4 py-3 min-w-[140px]">
                       {progressMap?.[patient.id] && (progressMap[patient.id].paid > 0 || progressMap[patient.id].debt > 0 || progressMap[patient.id].pending > 0) ? (
                         <PatientTreatmentProgressBar data={progressMap[patient.id]} compact />
                       ) : (

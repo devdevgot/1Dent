@@ -16,11 +16,15 @@ export interface PatientTreatmentProgress {
 type ProgressSummary = Record<string, PatientTreatmentProgress>;
 
 async function fetchTreatmentProgress(): Promise<ProgressSummary> {
-  const res = await customFetch<{
-    success: boolean;
-    data: { summary: ProgressSummary };
-  }>("/api/patients/treatment-progress");
-  return res.data?.summary ?? {};
+  try {
+    const res = await customFetch<{
+      success: boolean;
+      data: { summary: ProgressSummary };
+    }>("/api/patients/treatment-progress");
+    return res.data?.summary ?? {};
+  } catch {
+    return {};
+  }
 }
 
 export function usePatientTreatmentProgress() {
