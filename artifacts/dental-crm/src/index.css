@@ -28,6 +28,16 @@
   
   --color-destructive: hsl(var(--destructive));
   --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  /* App surfaces */
+  --color-canvas: hsl(var(--canvas));
+  --color-surface: hsl(var(--surface));
+
+  /* Typography scale */
+  --text-nav-title: 1.0625rem;   /* 17px — iOS nav bar */
+  --text-body: 0.9375rem;        /* 15px — list rows */
+  --text-caption: 0.8125rem;     /* 13px */
+  --text-micro: 0.6875rem;       /* 11px — section labels */
 }
 
 :root {
@@ -59,6 +69,10 @@
   
   --ring: 217 99% 56%;
   --radius: 1rem;
+
+  /* iOS-style page canvas (#f2f2f7) and elevated surface */
+  --canvas: 240 5% 96%;
+  --surface: 0 0% 100%;
 }
 
 .dark {
@@ -87,6 +101,9 @@
   --destructive-foreground: 0 0% 100%;
   
   --ring: 217 99% 62%;
+
+  --canvas: 220 13% 10%;
+  --surface: 220 13% 15%;
 }
 
 @layer base {
@@ -102,6 +119,32 @@
 }
 
 @layer utilities {
+  .text-nav-title {
+    font-size: var(--text-nav-title);
+    line-height: 1.25;
+  }
+  .text-body {
+    font-size: var(--text-body);
+    line-height: 1.35;
+  }
+  .text-caption {
+    font-size: var(--text-caption);
+    line-height: 1.3;
+  }
+  .text-micro {
+    font-size: var(--text-micro);
+    line-height: 1.2;
+  }
+  .section-label {
+    @apply text-micro font-semibold uppercase tracking-wider text-muted-foreground;
+  }
+  .bg-canvas {
+    background-color: hsl(var(--canvas));
+  }
+  .bg-surface {
+    background-color: hsl(var(--surface));
+  }
+
   .glass-panel {
     @apply bg-white/70 backdrop-blur-xl border border-white/20 shadow-[0_8px_30px_rgb(0,0,0,0.04)];
   }
