@@ -8,7 +8,7 @@ import { ContractsRepository } from "./contracts.repository";
 import { analyzeContractFields, renderContractHtml, PATIENT_FIELDS } from "./contracts.ai";
 import { getExtractionTemplateDef } from "./extraction-templates";
 import { sendToPatient } from "../../shared/messaging";
-import { getServerBaseUrl } from "../../shared/green-api";
+import { getPublicAppBaseUrl } from "../../shared/public-url";
 import { logger } from "../../lib/logger";
 import { db, patientsTable, usersTable, clinicsTable, type FieldMapping } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
@@ -349,8 +349,7 @@ router.post(
       .catch(next);
     if (!contract) return;
 
-    const baseUrl = getServerBaseUrl() ?? "https://your-app.replit.app";
-    const contractUrl = `${baseUrl}/p/contract/${token}`;
+    const contractUrl = `${getPublicAppBaseUrl()}/p/contract/${token}`;
 
     const message = `📋 *${template.name}*\n\nУважаемый(-ая) ${patientRow.name}!\n\nВам отправлен договор для ознакомления и подписи.\n\nОткройте по ссылке: ${contractUrl}\n\nПосле прочтения нажмите кнопку «Подписать».`;
 
@@ -362,20 +361,8 @@ router.post(
   },
 );
 
-function resolvePublicBaseUrl(req: Request): string {
-  const fromEnv = getServerBaseUrl();
-  if (fromEnv) return fromEnv.replace(/\/$/, "");
-
-  const host = req.get("x-forwarded-host") ?? req.get("host");
-  const proto = req.get("x-forwarded-proto") ?? req.protocol;
-  if (host) return `${proto}://${host}`.replace(/\/$/, "");
-
-  return "";
-}
-
-function buildBundleUrl(req: Request, bundleToken: string): string {
-  const baseUrl = resolvePublicBaseUrl(req);
-  return baseUrl ? `${baseUrl}/p/bundle/${bundleToken}` : `/p/bundle/${bundleToken}`;
+function buildBundleUrl(_req: Request, bundleToken: string): string {
+  return `${getPublicAppBaseUrl()}/p/bundle/${bundleToken}`;
 }
 
 function buildBundleWhatsappMessage(opts: {
