@@ -216,6 +216,8 @@ export interface TestMessageResponse {
   success: boolean;
   data: {
     reply: string;
+    parts?: string[];
+    pausesMs?: number[];
     fsmState?: string;
     mindMapNode?: { id: string; label: string; fsmState?: string } | null;
   };

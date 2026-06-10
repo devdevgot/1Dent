@@ -22,12 +22,25 @@ import {
 import type { StepInstructions } from "@workspace/db";
 import { eq, and, inArray, gte, lte, ne, asc, desc, sql } from "drizzle-orm";
 import { isRedAlert } from "../../shared/whatsapp";
-import { sendToPatient, sendTypingToPatient } from "../../shared/messaging";
+import { sendTypingToPatient } from "../../shared/messaging";
 import { getAlertQueue } from "../../shared/alert-queue";
 import { logger } from "../../lib/logger";
 import { pickBestDoctorAdvanced, type AdvancedScoringOptions } from "../analytics/analytics.repository";
 import { ChannelsRepository } from "../channels/channels.repository";
-import { classifyPatientRequest, generateChatbotResponse, extractDatetimeFromText, extractBranchFromText, type ChatMessage, type ManagerExample } from "./ai-classifier";
+import {
+  classifyPatientRequest,
+  generateChatbotResponse,
+  extractDatetimeFromText,
+  extractBranchFromText,
+  joinChatbotReply,
+  mergeReply,
+  appendToReply,
+  replyFromText,
+  type ChatMessage,
+  type ChatbotReply,
+  type ManagerExample,
+} from "./ai-classifier";
+import { deliverChatbotReply } from "./chatbot-reply";
 import type { ChatbotState, ChatbotSessionData } from "./chatbot.types";
 import type { ChatbotSettings } from "@workspace/db";
 import { STANDARD_SCRIPT_BLOCKS, type ScriptBlock } from "./script-templates";
@@ -220,6 +233,23 @@ async function saveChatbotMessage(
         .catch((err) => logger.error({ err }, "[ChatbotService] Failed to mirror outbound message to messages table"));
     }
   }
+}
+
+type OutboundResponse = ChatbotReply | string | null;
+
+function toChatbotReply(value: OutboundResponse): ChatbotReply | null {
+  if (value == null) return null;
+  if (typeof value === "string") return replyFromText(value);
+  return value.parts.length > 0 ? value : null;
+}
+
+async function sendOutboundReply(clinicId: string, phone: string, value: OutboundResponse): Promise<string | null> {
+  const reply = toChatbotReply(value);
+  if (!reply) return null;
+  await deliverChatbotReply(clinicId, phone, reply, {
+    onPartDelivered: (part) => saveChatbotMessage(clinicId, phone, "outbound", part),
+  });
+  return joinChatbotReply(reply);
 }
 
 // ─── Analytics-based doctor routing ─────────────────────────────────────────
@@ -1200,9 +1230,7 @@ export class ChatbotService {
       if (err instanceof InsufficientAiCreditsError) {
         const exhaustedReply =
           "К сожалению, AI-кредиты клиники закончились. Администратору нужно докупить кредиты или сменить тариф в разделе «ИИ кредиты».";
-        saveChatbotMessage(clinicId, phone, "outbound", exhaustedReply).catch(() => {});
-        sendToPatient(clinicId, phone, exhaustedReply).catch(() => {});
-        return exhaustedReply;
+        return await sendOutboundReply(clinicId, phone, exhaustedReply);
       }
       throw err;
     }
@@ -1260,9 +1288,7 @@ export class ChatbotService {
       await saveSession(session);
       await this.notifyHumanTakeover(clinicId, phone, data.patientName);
       const takoverReply = "Соединяю вас с администратором. Пожалуйста, ожидайте — вам ответят в ближайшее время.";
-      saveChatbotMessage(clinicId, phone, "outbound", takoverReply).catch(() => {});
-      sendToPatient(clinicId, phone, takoverReply).catch(() => {});
-      return takoverReply;
+      return await sendOutboundReply(clinicId, phone, takoverReply);
     }
 
     if (patientDb) {
@@ -1277,9 +1303,7 @@ export class ChatbotService {
           await this.notifyHumanTakeover(clinicId, phone, patientDb.name);
 
           const replyText = "Мы видим, что вас беспокоит самочувствие после процедуры. Я уже передал эту информацию нашему дежурному администратору, он свяжется с вами в приоритетном порядке! Пожалуйста, будьте на связи.";
-          saveChatbotMessage(clinicId, phone, "outbound", replyText).catch(() => {});
-          sendToPatient(clinicId, phone, replyText).catch(() => {});
-          return replyText;
+          return await sendOutboundReply(clinicId, phone, replyText);
         } else {
           await db
             .update(patientsTable)
@@ -1291,9 +1315,7 @@ export class ChatbotService {
           await saveSession(session);
 
           const replyText = "Отлично! Рады, что у вас всё хорошо. Желаем вам скорейшего восстановления и крепкого здоровья! Если возникнут вопросы — пишите, мы всегда рядом.";
-          saveChatbotMessage(clinicId, phone, "outbound", replyText).catch(() => {});
-          sendToPatient(clinicId, phone, replyText).catch(() => {});
-          return replyText;
+          return await sendOutboundReply(clinicId, phone, replyText);
         }
       } else if (patientDb.status === "repeat_sale") {
         const agreed = await isPositiveRepeatSaleReply(text);
@@ -1319,9 +1341,7 @@ export class ChatbotService {
           await saveSession(session);
 
           const replyText = "Хорошо! Если решите записаться на осмотр позже, просто напишите нам. Будем рады помочь вам в любое время!";
-          saveChatbotMessage(clinicId, phone, "outbound", replyText).catch(() => {});
-          sendToPatient(clinicId, phone, replyText).catch(() => {});
-          return replyText;
+          return await sendOutboundReply(clinicId, phone, replyText);
         }
       }
     }
@@ -1330,17 +1350,13 @@ export class ChatbotService {
       if (!options?.skipRedAlert && isRedAlert(text)) {
         await triggerRedAlert(clinicId, phone, text, data.createdPatientId);
         const alertReply = "🚨 Мы видим вашу проблему и передаём её администратору. Ожидайте, пожалуйста.";
-        saveChatbotMessage(clinicId, phone, "outbound", alertReply).catch(() => {});
-        sendToPatient(clinicId, phone, alertReply).catch(() => {});
-        return alertReply;
+        return await sendOutboundReply(clinicId, phone, alertReply);
       }
       const doneReply = "Рады вашему обращению! Если возникнут вопросы — пишите. Или напишите «оператор» для связи с администратором.";
-      saveChatbotMessage(clinicId, phone, "outbound", doneReply).catch(() => {});
-      sendToPatient(clinicId, phone, doneReply).catch(() => {});
-      return doneReply;
+      return await sendOutboundReply(clinicId, phone, doneReply);
     }
 
-    let response: string | null = null;
+    let response: OutboundResponse = null;
 
     // Show typing indicator while AI processes — fire-and-forget so it never blocks
     sendTypingToPatient(clinicId, phone, true).catch(() => {});
@@ -1419,8 +1435,7 @@ export class ChatbotService {
               text,
               managerExamples,
             );
-            response = aiReply ??
-              `Здравствуйте, ${existingByPhone.name}! 👋\n\nУ вас запись к врачу *${doctorName}* на *${apptDate}*.\n\nЧто хотите сделать?\n• Перенести\n• Отменить\n• Оставить как есть`;
+            response = mergeReply(aiReply, `Здравствуйте, ${existingByPhone.name}! 👋\n\nУ вас запись к врачу *${doctorName}* на *${apptDate}*.\n\nЧто хотите сделать?\n• Перенести\n• Отменить\n• Оставить как есть`);
             session.state = "manage_appointment";
             session.data = data;
             break;
@@ -1433,7 +1448,7 @@ export class ChatbotService {
             text,
             managerExamples,
           );
-          response = aiReply ?? `Здравствуйте, ${existingByPhone.name}! 😊 Чем могу помочь?`;
+          response = mergeReply(aiReply, `Здравствуйте, ${existingByPhone.name}! 😊 Чем могу помочь?`);
           session.state = "collect_problem";
           session.data = data;
           break;
@@ -1454,9 +1469,10 @@ export class ChatbotService {
             text,
             managerExamples,
           );
-          response =
-            aiAskIin ??
-            "Здравствуйте! 👋 Чтобы найти вашу запись, пожалуйста, введите ваш ИИН (12 цифр).";
+          response = mergeReply(
+            aiAskIin,
+            "Здравствуйте! 👋 Чтобы найти вашу запись, пожалуйста, введите ваш ИИН (12 цифр).",
+          );
           session.state = "collect_iin";
           break;
         }
@@ -1469,7 +1485,7 @@ export class ChatbotService {
           text,
           managerExamples,
         );
-        response = aiGreeting ?? scriptGreeting;
+        response = mergeReply(aiGreeting, scriptGreeting);
         session.state = "collect_problem";
         break;
       }
@@ -1535,8 +1551,7 @@ export class ChatbotService {
                 text,
                 managerExamples,
               );
-              response = aiReply ??
-                `Добро пожаловать, ${iinMatch.name}! 👋\n\nУ вас запись к врачу *${doctorName}* на *${apptDate}*.\n\nЧто хотите сделать?\n• Перенести на другую дату\n• Отменить запись\n• Оставить как есть`;
+              response = mergeReply(aiReply, `Добро пожаловать, ${iinMatch.name}! 👋\n\nУ вас запись к врачу *${doctorName}* на *${apptDate}*.\n\nЧто хотите сделать?\n• Перенести на другую дату\n• Отменить запись\n• Оставить как есть`);
               session.state = "manage_appointment";
             } else {
               // No upcoming appointment — start booking flow
@@ -1546,8 +1561,7 @@ export class ChatbotService {
                 text,
                 managerExamples,
               );
-              response = aiReply ??
-                `Добро пожаловать, ${iinMatch.name}! 😊\nЧем могу помочь? Опишите, что вас беспокоит или какую услугу вы хотели бы получить.`;
+              response = mergeReply(aiReply, `Добро пожаловать, ${iinMatch.name}! 😊\nЧем могу помочь? Опишите, что вас беспокоит или какую услугу вы хотели бы получить.`);
               session.state = "collect_problem";
             }
           } else {
@@ -1590,7 +1604,7 @@ export class ChatbotService {
             text,
             managerExamples,
           );
-          response = (aiAskTime ?? `Приятно познакомиться, ${extractedName}! 😊\nКогда вам удобно прийти к врачу *${data.suggestedDoctorName ?? ""}*?`) + slotsText;
+          response = appendToReply(mergeReply(aiAskTime, `Приятно познакомиться, ${extractedName}! 😊\nКогда вам удобно прийти к врачу *${data.suggestedDoctorName ?? ""}*?`), slotsText);
           session.state = "collect_datetime";
           session.data = data;
           break;
@@ -1603,7 +1617,7 @@ export class ChatbotService {
           text,
           managerExamples,
         );
-        response = aiReply0 ?? `Приятно познакомиться, ${extractedName}! 😊\nПодскажите, что вас беспокоит?`;
+        response = mergeReply(aiReply0, `Приятно познакомиться, ${extractedName}! 😊\nПодскажите, что вас беспокоит?`);
         session.state = "collect_problem";
         session.data = data;
         break;
@@ -1619,7 +1633,7 @@ export class ChatbotService {
             text,
             managerExamples,
           );
-          response = aiReplyPhone ?? `Отлично! Теперь опишите, что вас беспокоит или какую процедуру вы хотели бы пройти.`;
+          response = mergeReply(aiReplyPhone, `Отлично! Теперь опишите, что вас беспокоит или какую процедуру вы хотели бы пройти.`);
           session.state = "collect_problem";
         } else {
           response = `Пожалуйста, введите ваш номер телефона в формате +7XXXXXXXXXX или 8XXXXXXXXXX.`;
@@ -1696,7 +1710,7 @@ export class ChatbotService {
             data.confusedCount = 0;
             if (!data.patientName && !data.existingPatientId) {
               const aiAskName = await generateChatbotResponse(up("collect_name"), recentMessages, text, managerExamples);
-              response = aiAskName ?? `Отлично! Подскажите, как к вам обращаться?`;
+              response = mergeReply(aiAskName, `Отлично! Подскажите, как к вам обращаться?`);
               session.state = "collect_name";
             } else {
               let slotsText = "";
@@ -1710,7 +1724,7 @@ export class ChatbotService {
                 text,
                 managerExamples,
               );
-              response = (aiReplyDt ?? `Отлично! Когда вам удобно прийти к врачу *${data.suggestedDoctorName ?? ""}*?`) + slotsText;
+              response = appendToReply(mergeReply(aiReplyDt, `Отлично! Когда вам удобно прийти к врачу *${data.suggestedDoctorName ?? ""}*?`), slotsText);
               session.state = "collect_datetime";
             }
             session.data = data;
@@ -1728,7 +1742,7 @@ export class ChatbotService {
             text,
             managerExamples,
           );
-          response = aiReply ?? `Расскажите, пожалуйста, что вас беспокоит?`;
+          response = mergeReply(aiReply, `Расскажите, пожалуйста, что вас беспокоит?`);
           session.state = nodeFsm && nodeFsm !== "collect_problem" ? nodeFsm : "collect_problem";
           session.data = data;
           break;
@@ -1743,7 +1757,7 @@ export class ChatbotService {
               text,
               managerExamples,
             );
-            response = aiReply ?? `Понял! Для начала рекомендую записаться на консультацию к врачу *${pickedDoctor.name}* — он определит, какое лечение вам нужно.\n\nЗаписать вас? (Да / Нет)`;
+            response = mergeReply(aiReply, `Понял! Для начала рекомендую записаться на консультацию к врачу *${pickedDoctor.name}* — он определит, какое лечение вам нужно.\n\nЗаписать вас? (Да / Нет)`);
             session.state = "suggest_doctor";
           } else {
             response = `Чтобы подобрать специалиста, уточните: что именно вас беспокоит?`;
@@ -1763,7 +1777,7 @@ export class ChatbotService {
             text,
             managerExamples,
           );
-          response = aiReply ?? `Понял! Рекомендую врача *${pickedDoctor.name}*.${urgencyNote}\n\nЗаписать вас к нему? (Ответьте «Да» или «Нет»)`;
+          response = mergeReply(aiReply, `Понял! Рекомендую врача *${pickedDoctor.name}*.${urgencyNote}\n\nЗаписать вас к нему? (Ответьте «Да» или «Нет»)`);
           session.state = "suggest_doctor";
         } else {
           response = `К сожалению, сейчас нет доступных врачей. Напишите «оператор», чтобы связаться с администратором.`;
@@ -1785,7 +1799,7 @@ export class ChatbotService {
               text,
               managerExamples,
             );
-            response = aiAskName ?? `Отлично! Подскажите, как к вам обращаться?`;
+            response = mergeReply(aiAskName, `Отлично! Подскажите, как к вам обращаться?`);
             session.state = "collect_name";
             session.data = data;
             break;
@@ -1805,7 +1819,7 @@ export class ChatbotService {
             text,
             managerExamples,
           );
-          response = (aiReply1 ?? `Отлично! Когда вам удобно прийти к врачу *${data.suggestedDoctorName ?? ""}*?`) + slotsText;
+          response = appendToReply(mergeReply(aiReply1, `Отлично! Когда вам удобно прийти к врачу *${data.suggestedDoctorName ?? ""}*?`), slotsText);
           session.state = "collect_datetime";
         } else if (isNo(text)) {
           data.confusedCount = 0;
@@ -1827,7 +1841,7 @@ export class ChatbotService {
             await this.notifyHumanTakeover(clinicId, phone, data.patientName);
             response = "Соединяю вас с администратором — ожидайте ответа.";
           } else {
-            response = aiReply2 ?? `Пожалуйста, ответьте «Да» для записи к врачу или «Нет» для отмены.`;
+            response = mergeReply(aiReply2, `Пожалуйста, ответьте «Да» для записи к врачу или «Нет» для отмены.`);
           }
         }
         break;
@@ -1856,7 +1870,7 @@ export class ChatbotService {
             text,
             managerExamples,
           );
-          response = (aiReschedule ?? `Хорошо! На какую дату и время вы хотите перенести запись?`) + slotsText;
+          response = appendToReply(mergeReply(aiReschedule, `Хорошо! На какую дату и время вы хотите перенести запись?`), slotsText);
           session.state = "collect_datetime";
         } else if (wantsCancel) {
           // Cancel the existing procedure
@@ -1882,7 +1896,7 @@ export class ChatbotService {
             text,
             managerExamples,
           );
-          response = aiCancel ?? `✅ Ваша запись к врачу *${data.existingProcedureDoctorName ?? ""}* отменена.\n\nЕсли захотите записаться снова — напишите нам. Будем рады помочь! 😊`;
+          response = mergeReply(aiCancel, `✅ Ваша запись к врачу *${data.existingProcedureDoctorName ?? ""}* отменена.\n\nЕсли захотите записаться снова — напишите нам. Будем рады помочь! 😊`);
           session.state = "done";
         } else if (wantsKeep || isYes(text)) {
           const aiKeep = await generateChatbotResponse(
@@ -1891,7 +1905,7 @@ export class ChatbotService {
             text,
             managerExamples,
           );
-          response = aiKeep ?? `Отлично! Ваша запись остаётся в силе. Ждём вас! 😊\n\nЕсли возникнут вопросы — пишите.`;
+          response = mergeReply(aiKeep, `Отлично! Ваша запись остаётся в силе. Ждём вас! 😊\n\nЕсли возникнут вопросы — пишите.`);
           session.state = "done";
         } else {
           // Ambiguous
@@ -1909,7 +1923,7 @@ export class ChatbotService {
               text,
               managerExamples,
             );
-            response = aiManage ?? `Пожалуйста, уточните: вы хотите *перенести*, *отменить* запись или *оставить* как есть?`;
+            response = mergeReply(aiManage, `Пожалуйста, уточните: вы хотите *перенести*, *отменить* запись или *оставить* как есть?`);
           }
         }
         session.data = data;
@@ -1934,7 +1948,7 @@ export class ChatbotService {
             text,
             managerExamples,
           );
-          response = aiReplyBranch ?? `В какой из наших филиалов вам будет удобнее подойти?`;
+          response = mergeReply(aiReplyBranch, `В какой из наших филиалов вам будет удобнее подойти?`);
           session.state = "collect_branch";
         } else {
           // Date not recognized
@@ -1952,7 +1966,7 @@ export class ChatbotService {
               text,
               managerExamples,
             );
-            response = aiDateRetry ?? `Не смог разобрать дату. Пожалуйста, напишите, например: «завтра в 11:00» или «пятница в 14:30».`;
+            response = mergeReply(aiDateRetry, `Не смог разобрать дату. Пожалуйста, напишите, например: «завтра в 11:00» или «пятница в 14:30».`);
           }
           session.data = data;
         }
@@ -2086,10 +2100,12 @@ export class ChatbotService {
             managerExamples,
           );
 
-          response = aiDone ??
-            (data.isReschedule
+          response = mergeReply(
+            aiDone,
+            data.isReschedule
               ? `✅ Ваша запись успешно перенесена!\n\n📅 Время: *${formattedDate}*\n👨‍⚕️ Врач: *${doctorName}*\n📍 Филиал: *${branchToSave}*\n\nБудем ждать вас! 😊`
-              : `✅ Запись успешно подтверждена!\n\n📅 Дата и время: *${formattedDate}*\n👨‍⚕️ Врач: *${doctorName}*\n📍 Филиал: *${branchToSave}*\n\nДо встречи в клинике! 😊`);
+              : `✅ Запись успешно подтверждена!\n\n📅 Дата и время: *${formattedDate}*\n👨‍⚕️ Врач: *${doctorName}*\n📍 Филиал: *${branchToSave}*\n\nДо встречи в клинике! 😊`,
+          );
 
           session.state = "done";
         } else {
@@ -2108,7 +2124,7 @@ export class ChatbotService {
               text,
               managerExamples,
             );
-            response = aiBranchRetry ?? `Пожалуйста, уточните филиал/адрес из списка предложенных.`;
+            response = mergeReply(aiBranchRetry, `Пожалуйста, уточните филиал/адрес из списка предложенных.`);
           }
           session.data = data;
         }
@@ -2143,7 +2159,7 @@ export class ChatbotService {
             text,
             managerExamples,
           );
-          response = (aiReply3 ?? `Отлично! Когда вам удобно прийти к врачу *${data.suggestedDoctorName ?? ""}*?`) + slotsText;
+          response = appendToReply(mergeReply(aiReply3, `Отлично! Когда вам удобно прийти к врачу *${data.suggestedDoctorName ?? ""}*?`), slotsText);
           session.state = "collect_datetime";
         } else if (isNo(text)) {
           data.confusedCount = 0;
@@ -2167,7 +2183,7 @@ export class ChatbotService {
             await this.notifyHumanTakeover(clinicId, phone, data.patientName);
             response = "Соединяю вас с администратором — ожидайте ответа.";
           } else {
-            response = aiReply4 ?? `Пожалуйста, ответьте «Да» для подтверждения записи или «Нет» для отмены.`;
+            response = mergeReply(aiReply4, `Пожалуйста, ответьте «Да» для подтверждения записи или «Нет» для отмены.`);
           }
         }
         break;
@@ -2182,11 +2198,7 @@ export class ChatbotService {
           session.data = {};
           session.humanTakeover = false;
           await saveSession(session);
-          sendTypingToPatient(clinicId, phone, false).catch(() => {});
-          const resetReply = "Произошла ошибка сессии. Пожалуйста, начните заново — введите ваш ИИН (12 цифр).";
-          saveChatbotMessage(clinicId, phone, "outbound", resetReply).catch(() => {});
-          sendToPatient(clinicId, phone, resetReply).catch(() => {});
-          return resetReply;
+          return await sendOutboundReply(clinicId, phone, "Произошла ошибка сессии. Пожалуйста, начните заново — введите ваш ИИН (12 цифр).");
         }
 
         const [qaPatient] = await db
@@ -2205,19 +2217,17 @@ export class ChatbotService {
           managerExamples,
         );
 
-        if (!qaReply || qaReply.trim().startsWith("OPERATOR_NEEDED")) {
+        const qaText = qaReply ? joinChatbotReply(qaReply) : "";
+        if (!qaReply || qaText.trim().startsWith("OPERATOR_NEEDED")) {
           // AI signals it can't answer this question — notify admin but keep chatbot active
           // so the patient can still ask other questions about their dental card.
           // Do NOT set humanTakeover = true here — that would permanently lock the chatbot.
           session.data = data;
           await saveSession(session);
           await this.notifyHumanTakeover(clinicId, phone, qaName);
-          sendTypingToPatient(clinicId, phone, false).catch(() => {});
           const handoffReply =
             "Этот вопрос я передал администратору — он ответит в ближайшее время. 🙏\n\nЕсли у вас есть другие вопросы о вашей карте зубов или лечении — спрашивайте, я помогу!";
-          saveChatbotMessage(clinicId, phone, "outbound", handoffReply).catch(() => {});
-          sendToPatient(clinicId, phone, handoffReply).catch(() => {});
-          return handoffReply;
+          return await sendOutboundReply(clinicId, phone, handoffReply);
         }
 
         response = qaReply;
@@ -2249,7 +2259,7 @@ export class ChatbotService {
             text,
             managerExamples,
           );
-          response = (aiReply ?? `Отлично! Какое время и дата будут для вас удобны?`) + slotsText;
+          response = appendToReply(mergeReply(aiReply, `Отлично! Какое время и дата будут для вас удобны?`), slotsText);
           session.state = "collect_datetime";
         } else if (isNo(text) || /\b(нет|не надо|жоқ|керек емес)\b/.test(lowerText)) {
           // Patient does not want to book
@@ -2259,7 +2269,7 @@ export class ChatbotService {
             text,
             managerExamples,
           );
-          response = aiReply ?? `Хорошо, я вас понял. Если в будущем решите записаться — пишите нам в любое время. Всего вам доброго! 😊`;
+          response = mergeReply(aiReply, `Хорошо, я вас понял. Если в будущем решите записаться — пишите нам в любое время. Всего вам доброго! 😊`);
           session.state = "done";
         } else {
           // General AI response for explaining the reason of no-show / negotiation
@@ -2269,7 +2279,7 @@ export class ChatbotService {
             text,
             managerExamples,
           );
-          response = aiReply ?? `Я вас понял. Хотите ли вы выбрать другое время для визита? Мы сохраним для вас скидку 10%.`;
+          response = mergeReply(aiReply, `Я вас понял. Хотите ли вы выбрать другое время для визита? Мы сохраним для вас скидку 10%.`);
           // Stay in reactivation state
         }
         break;
@@ -2293,17 +2303,11 @@ export class ChatbotService {
     session.data = data;
     await saveSession(session);
 
-    // Stop typing indicator before sending (or when there is nothing to send)
-    sendTypingToPatient(clinicId, phone, false).catch(() => {});
-
-    if (response) {
-      saveChatbotMessage(clinicId, phone, "outbound", response).catch(() => {});
-      sendToPatient(clinicId, phone, response).catch((err) =>
-        logger.error({ err }, "ChatbotService: failed to send WhatsApp reply"),
-      );
+    if (!response) {
+      sendTypingToPatient(clinicId, phone, false).catch(() => {});
+      return null;
     }
-
-    return response;
+    return await sendOutboundReply(clinicId, phone, response);
   }
 
   async triggerReactivation(
@@ -2403,11 +2407,13 @@ export class ChatbotService {
       managerExamples,
     );
 
-    const reply = aiReply ?? `Здравствуйте, ${patientName}! Мы заметили, что ваш прием на процедуру «${procedureName}» был отменен. Всё ли у вас в порядке? Подскажите, пожалуйста, по какой причине не получилось прийти? Мы будем рады предложить вам перезапись на любое удобное время, а также специальную скидку 10% на эту процедуру. 😊`;
+    const reply = mergeReply(
+      aiReply,
+      `Здравствуйте, ${patientName}! Мы заметили, что ваш прием на процедуру «${procedureName}» был отменен. Всё ли у вас в порядке? Подскажите, пожалуйста, по какой причине не получилось прийти? Мы будем рады предложить вам перезапись на любое удобное время, а также специальную скидку 10% на эту процедуру. 😊`,
+    );
 
     await saveSession(session);
-    await saveChatbotMessage(clinicId, patient.phone, "outbound", reply);
-    await sendToPatient(clinicId, patient.phone, reply).catch((err) =>
+    await sendOutboundReply(clinicId, patient.phone, reply).catch((err) =>
       logger.error({ err }, "ChatbotService: failed to send WhatsApp reactivation reply"),
     );
   }
@@ -2628,14 +2634,17 @@ export class ChatbotService {
       const systemPrompt = buildPlaygroundPrompt(
         settings, doctorsWithSlots, clinicName, knowledgeContext, priceListContext, playgroundOpts,
       );
-      const reply = await generateChatbotResponse(
+      const aiReply = await generateChatbotResponse(
         systemPrompt,
         [],
         "Начни диалог — отправь приветственное сообщение как если бы пациент только что написал в первый раз.",
         managerExamples,
       );
+      const resolved = mergeReply(aiReply, "Здравствуйте! Чем могу помочь?");
       return {
-        reply: reply ?? "Здравствуйте! Чем могу помочь?",
+        reply: joinChatbotReply(resolved),
+        parts: resolved.parts,
+        pausesMs: resolved.pausesMs,
         fsmState,
         mindMapNode: mindMapNodePayload,
       };
@@ -2645,9 +2654,12 @@ export class ChatbotService {
       settings, doctorsWithSlots, clinicName, knowledgeContext, priceListContext, playgroundOpts,
     );
     const chatHistory = history.map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
-    const reply = await generateChatbotResponse(systemPrompt, chatHistory, userMessage, managerExamples);
+    const aiReply = await generateChatbotResponse(systemPrompt, chatHistory, userMessage, managerExamples);
+    const resolved = mergeReply(aiReply, "AI не ответил. Проверьте API-ключ.");
     return {
-      reply: reply ?? "AI не ответил. Проверьте API-ключ.",
+      reply: joinChatbotReply(resolved),
+      parts: resolved.parts,
+      pausesMs: resolved.pausesMs,
       fsmState,
       mindMapNode: mindMapNodePayload,
     };
@@ -2792,15 +2804,17 @@ export class ChatbotService {
         },
       );
 
-      const reply = await generateChatbotResponse(helperPrompt, recentMessages, "Отправь вежливое напоминание (reminder)", managerExamples);
-      
-      if (reply) {
-        // Send message to patient
-        await sendToPatient(session.clinicId, session.phone, reply).catch((err) =>
-          logger.error({ err }, "[ChatbotService] Failed to send inactivity reminder")
+      const aiReminder = await generateChatbotResponse(
+        helperPrompt,
+        recentMessages,
+        "Отправь вежливое напоминание (reminder)",
+        managerExamples,
+      );
+      const reminderReply = mergeReply(aiReminder, "Напоминаем — мы остановились на записи. Нужна помощь? Напишите, и мы продолжим.");
+      if (reminderReply.parts.length > 0) {
+        await sendOutboundReply(session.clinicId, session.phone, reminderReply).catch((err) =>
+          logger.error({ err }, "[ChatbotService] Failed to send inactivity reminder"),
         );
-        // Persist message
-        await saveChatbotMessage(session.clinicId, session.phone, "outbound", reply);
       }
     }
   }

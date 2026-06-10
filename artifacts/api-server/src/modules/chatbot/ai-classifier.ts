@@ -6,6 +6,12 @@ import {
   parseLlmJson,
 } from "../../lib/openrouter-client";
 import { logger } from "../../lib/logger";
+import {
+  HUMAN_MESSAGING_PROMPT,
+  parseChatbotReplyJson,
+  replyFromText,
+  type ChatbotReply,
+} from "./chatbot-reply";
 
 export type ServiceType =
   | "therapy"
@@ -189,18 +195,20 @@ function detectPatientLanguage(messages: ChatMessage[]): "kz" | "en" | null {
   return null;
 }
 
+export type { ChatbotReply } from "./chatbot-reply";
+export { joinChatbotReply, mergeReply, appendToReply, replyFromText } from "./chatbot-reply";
+
 export async function generateChatbotResponse(
   systemPrompt: string,
   history: ChatMessage[],
   userMessage: string,
   fewShotExamples?: ManagerExample[],
-): Promise<string | null> {
+): Promise<ChatbotReply | null> {
   const extraSystemMessages: Array<{ role: "system"; content: string }> = [];
   const fewShot: Array<{ role: "user" | "assistant"; content: string }> = [];
 
-  // Detect patient language and enforce it strongly so the bot never switches
   const detectedLang = detectPatientLanguage(history);
-  let finalSystemPrompt = systemPrompt;
+  let finalSystemPrompt = `${systemPrompt}\n\n${HUMAN_MESSAGING_PROMPT}`;
   if (detectedLang === "kz") {
     finalSystemPrompt +=
       "\n\n⚠️ КРИТИЧЕСКИ ВАЖНО: Пациент пишет на КАЗАХСКОМ языке. " +
@@ -237,14 +245,27 @@ export async function generateChatbotResponse(
     const response = await withTimeout(
       openrouter.chat.completions.create({
         model: CHAT_MODEL,
-        max_tokens: 400,
-        temperature: 0.6,
+        max_tokens: 700,
+        temperature: 0.65,
+        response_format: { type: "json_object" },
         messages,
       }),
       20_000,
       "generateChatbotResponse",
     );
-    return response.choices[0]?.message?.content ?? null;
+    const content = response.choices[0]?.message?.content ?? "";
+    const parsed = parseChatbotReplyJson(content);
+    if (parsed) return parsed;
+
+    const loose = parseLlmJson<{ parts?: string[]; pausesMs?: number[] }>(content);
+    if (loose?.parts?.length) {
+      return parseChatbotReplyJson(JSON.stringify(loose));
+    }
+
+    if (content.trim()) {
+      return replyFromText(content.trim());
+    }
+    return null;
   } catch (err) {
     logger.error({ err }, "[AIClassifier] generateChatbotResponse failed — using fallback text");
     return null;

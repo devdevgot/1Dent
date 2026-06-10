@@ -6,6 +6,7 @@ import {
   Trash2, Upload, AlignLeft, FileText, ChevronDown
 } from "lucide-react";
 import { customFetch, useTestChatbotMessage } from "@workspace/api-client-react";
+import { schedulePlaygroundBotParts } from "@/lib/chatbot-playground-parts";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -269,7 +270,13 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
 
     testMessage.mutate({ userMessage: text, history } as any, {
       onSuccess: (res) => {
-        setPlaygroundMessages(prev => [...prev, { role: "bot", text: res.data?.reply ?? "..." }]);
+        const parts = res.data?.parts?.length ? res.data.parts : [res.data?.reply ?? "..."];
+        schedulePlaygroundBotParts(
+          parts,
+          res.data?.pausesMs,
+          (part) => setPlaygroundMessages((prev) => [...prev, { role: "bot", text: part }]),
+          () => {},
+        );
       },
       onError: () => {
         setPlaygroundMessages(prev => [...prev, { role: "bot", text: "Ошибка связи с ассистентом." }]);
