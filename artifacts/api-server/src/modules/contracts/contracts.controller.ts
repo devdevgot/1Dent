@@ -425,6 +425,7 @@ async function isWhatsappConfigured(clinicId: string): Promise<boolean> {
 async function loadBundleContext(
   patientId: string,
   clinicId: string,
+  opts?: { sentById?: string | null },
 ): Promise<{
   patientName: string;
   patientPhone: string;
@@ -432,6 +433,7 @@ async function loadBundleContext(
   patientDob: string;
   patientDoctorId: string | null;
   clinicName: string;
+  clinicPhone: string;
   doctorName: string;
 } | null> {
   const [patientRow] = await db
@@ -449,19 +451,26 @@ async function loadBundleContext(
   if (!patientRow) return null;
 
   const [clinicRow] = await db
-    .select({ name: clinicsTable.name })
+    .select({
+      name: clinicsTable.name,
+      whatsappPhone: clinicsTable.whatsappPhone,
+    })
     .from(clinicsTable)
     .where(eq(clinicsTable.id, clinicId))
     .limit(1);
 
   let doctorName = "";
-  if (patientRow.doctorId) {
+  const doctorIds = [patientRow.doctorId, opts?.sentById].filter(Boolean) as string[];
+  for (const doctorId of doctorIds) {
     const [doc] = await db
       .select({ name: usersTable.name })
       .from(usersTable)
-      .where(eq(usersTable.id, patientRow.doctorId))
+      .where(eq(usersTable.id, doctorId))
       .limit(1);
-    doctorName = doc?.name ?? "";
+    if (doc?.name?.trim()) {
+      doctorName = doc.name.trim();
+      break;
+    }
   }
 
   return {
@@ -471,6 +480,7 @@ async function loadBundleContext(
     patientDob: patientRow.dateOfBirth ?? "",
     patientDoctorId: patientRow.doctorId ?? null,
     clinicName: clinicRow?.name ?? "",
+    clinicPhone: clinicRow?.whatsappPhone ?? "",
     doctorName,
   };
 }
@@ -485,7 +495,8 @@ router.post(
     const patientId = String(req.params["patientId"]);
     const clinicId = req.user!.clinicId;
 
-    const ctx = await loadBundleContext(patientId, clinicId).catch(() => null);
+    const sentById = req.user!.userId ?? null;
+    const ctx = await loadBundleContext(patientId, clinicId, { sentById }).catch(() => null);
     if (!ctx) return next(new NotFoundError("Пациент не найден"));
 
     const today = new Date();
@@ -497,12 +508,13 @@ router.post(
       .createExtractionBundle({
         clinicId,
         patientId,
-        sentById: req.user!.userId ?? null,
+        sentById,
         patientName: ctx.patientName,
         patientPhone: ctx.patientPhone,
         patientIin: ctx.patientIin,
         patientDob: ctx.patientDob,
         clinicName: ctx.clinicName,
+        clinicPhone: ctx.clinicPhone,
         doctorName: ctx.doctorName,
         date: dateStr,
         year: String(today.getFullYear()),
@@ -608,7 +620,8 @@ router.post(
     const patientId = String(req.params["patientId"]);
     const clinicId = req.user!.clinicId;
 
-    const ctx = await loadBundleContext(patientId, clinicId).catch(() => null);
+    const sentById = req.user!.userId ?? null;
+    const ctx = await loadBundleContext(patientId, clinicId, { sentById }).catch(() => null);
     if (!ctx) return next(new NotFoundError("Пациент не найден"));
 
     const today = new Date();
@@ -620,12 +633,13 @@ router.post(
       .createExtractionBundle({
         clinicId,
         patientId,
-        sentById: req.user!.userId ?? null,
+        sentById,
         patientName: ctx.patientName,
         patientPhone: ctx.patientPhone,
         patientIin: ctx.patientIin,
         patientDob: ctx.patientDob,
         clinicName: ctx.clinicName,
+        clinicPhone: ctx.clinicPhone,
         doctorName: ctx.doctorName,
         date: dateStr,
         year: String(today.getFullYear()),

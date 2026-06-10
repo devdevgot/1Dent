@@ -10214,6 +10214,11 @@ function postProcessRenderedTemplate(
   const phone = vars.phone ?? "";
   const dob = vars.dob ?? "";
   const clinic = vars.clinic_name ?? "";
+  const doctor = vars.doctor_name ?? "";
+  const clinicPhone = vars.clinic_phone ?? "";
+  const clinicCity = vars.clinic_city ?? "";
+  const clinicLicense = vars.clinic_license ?? "";
+  const clinicAddress = vars.clinic_address ?? "";
 
   if (clinic) {
     t = t.replace(/ТОО\s*«\s*[^»|\n]+\s*»/g, clinic);
@@ -10228,6 +10233,13 @@ function postProcessRenderedTemplate(
     t = t.replace(/((?:ребенка|ребёнка)\s*\n)_+/gi, `$1${name}`);
     t = t.replace(/Пациент\s+_+\s+и Клиника/gi, `Пациент ${name} и Клиника`);
     t = t.replace(/Я,\s*_+\(ФИО пациента\)/gi, `Я, ${name}(ФИО пациента)`);
+    t = t.replace(/Ф\.?\s*И\.?\s*О\.?\s*:?\s*_+/gi, `Ф.И.О.: ${name}`);
+    t = t.replace(/ФИО\s+полностью[,\s]*_+/gi, `ФИО полностью, ${name}`);
+  }
+  if (doctor) {
+    t = t.replace(/Беседу\s+провел\s+врач:\s*_+/gi, `Беседу провел врач: ${doctor}`);
+    t = t.replace(/провел\s+врач:\s*_+/gi, `провел врач: ${doctor}`);
+    t = t.replace(/врач:\s*_+\s*\//gi, `врач: ${doctor} /`);
   }
   if (iin) {
     t = t.replace(/Уд\.л№_+/gi, `Уд.л№${iin}`);
@@ -10240,18 +10252,20 @@ function postProcessRenderedTemplate(
   if (dob) {
     t = t.replace(/Дата рождения\s*:?\s*_+/gi, `Дата рождения ${dob}`);
   }
+  if (clinicPhone) {
+    t = t.replace(/Тел\.?\s*;?\s*222-25-75/gi, `Тел. ${clinicPhone}`);
+    t = t.replace(/\|Тел\.\s*222-25-75/gi, `|Тел. ${clinicPhone}`);
+  }
+  if (clinicCity) {
+    t = t.replace(/г\.\s*Алматы/gi, clinicCity);
+  }
+  if (clinicLicense) {
+    t = t.replace(/лицензии\s*№\s*18021758/gi, `лицензии № ${clinicLicense}`);
+  }
+  if (clinicAddress) {
+    t = t.replace(/Адрес:\s*г\.\s*Алматы[^\n]*/gi, `Адрес: ${clinicAddress}`);
+  }
   return t;
 }
 
-/**
- * Converts plain-text template to safe HTML with line breaks preserved.
- */
-export function textToHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\n/g, "<br>\n")
-    .replace(/✓/g, "✓")
-    .replace(/!/g, "!");
-}
+export { textToHtml } from "./contract-render";

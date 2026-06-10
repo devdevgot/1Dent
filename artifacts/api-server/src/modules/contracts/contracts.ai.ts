@@ -2,6 +2,7 @@ import { openrouter, FAST_MODEL, parseLlmJson, withTimeout } from "../../lib/ope
 import { logger } from "../../lib/logger";
 import { aiCreditsService } from "../../shared/ai-credits";
 import type { FieldMapping } from "@workspace/db";
+import { escapeHtml, textToHtml } from "./contract-render";
 
 /** All patient fields we can auto-fill */
 export const PATIENT_FIELDS: { field: string; label: string }[] = [
@@ -165,17 +166,3 @@ export function renderContractHtml(
   return html;
 }
 
-function textToHtml(text: string): string {
-  return text
-    .split(/\n/)
-    .map((line) => `<p>${escapeHtml(line)}</p>`)
-    .join("\n");
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
