@@ -48,6 +48,7 @@ import {
   nextPlaygroundFsmState,
   type PlaygroundFsmState,
 } from "@/lib/chatbot-fsm-states";
+import { schedulePlaygroundBotParts } from "@/lib/chatbot-playground-parts";
 
 
 const STATE_LABELS: Record<string, string> = {
@@ -278,6 +279,7 @@ function PlaygroundTab() {
   const testMessage = useTestChatbotMessage();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
+  const [isReceivingParts, setIsReceivingParts] = useState(false);
   const [playgroundFsmState, setPlaygroundFsmState] = useState<PlaygroundFsmState>("greeting");
   const [activeMindMapNode, setActiveMindMapNode] = useState<{
     id: string;
@@ -290,7 +292,7 @@ function PlaygroundTab() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, testMessage.isPending]);
+  }, [messages, testMessage.isPending, isReceivingParts]);
 
   useEffect(() => {
     const vv = window.visualViewport;
@@ -309,7 +311,7 @@ function PlaygroundTab() {
 
   const handleSend = () => {
     const text = input.trim();
-    if (!text || testMessage.isPending) return;
+    if (!text || testMessage.isPending || isReceivingParts) return;
     const updatedMessages = [...messages, { role: "user" as const, text }];
     setMessages(updatedMessages);
     setInput("");
@@ -324,9 +326,16 @@ function PlaygroundTab() {
       { userMessage: text, history, fsmState: stateForApi },
       {
         onSuccess: (res) => {
-          setMessages((prev) => [...prev, { role: "bot", text: res.data?.reply ?? "..." }]);
+          const parts = res.data?.parts?.length ? res.data.parts : [res.data?.reply ?? "..."];
           setPlaygroundFsmState(nextState);
           setActiveMindMapNode(res.data?.mindMapNode ?? null);
+          setIsReceivingParts(true);
+          schedulePlaygroundBotParts(
+            parts,
+            res.data?.pausesMs,
+            (part) => setMessages((prev) => [...prev, { role: "bot", text: part }]),
+            () => setIsReceivingParts(false),
+          );
         },
         onError: () => setMessages((prev) => [...prev, { role: "bot", text: "Ошибка. Попробуйте ещё раз." }]),
       },
@@ -403,7 +412,7 @@ function PlaygroundTab() {
             </div>
           ))}
 
-          {testMessage.isPending && (
+          {(testMessage.isPending || isReceivingParts) && (
             <div className="flex justify-start">
               <div className="h-6 w-6 rounded-full bg-violet-100 flex items-center justify-center shrink-0 mr-2 mt-1">
                 <Bot className="h-3.5 w-3.5 text-violet-600" />
@@ -430,10 +439,10 @@ function PlaygroundTab() {
           />
           <button
             onClick={handleSend}
-            disabled={!input.trim() || testMessage.isPending}
+            disabled={!input.trim() || testMessage.isPending || isReceivingParts}
             className="flex items-center justify-center w-10 h-10 bg-primary text-primary-foreground rounded-xl disabled:opacity-50 hover:bg-primary/90 transition-colors shrink-0"
           >
-            {testMessage.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            {testMessage.isPending || isReceivingParts ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </button>
         </div>
       </div>

@@ -23,6 +23,13 @@ import { toast } from "sonner";
 import { useLocation } from "wouter";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import EmployeeDialog, { type EmployeeFormData } from "./employee-dialog";
 import InviteStaffDialog from "./invite-staff-dialog";
 import { cn } from "@/lib/utils";
@@ -73,7 +80,7 @@ function fmtHireDate(dateStr: string | null | undefined): string {
   return d.toLocaleDateString("ru", { day: "numeric", month: "short", year: "numeric" });
 }
 
-/* ── Action menu per user row ─────────────────────────────── */
+/* ── Action menu per user row (portal — not clipped by table overflow) ── */
 function UserActionMenu({
   user,
   currentUserId,
@@ -92,74 +99,71 @@ function UserActionMenu({
   onNavigate: () => void;
 }) {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
   const isSelf = user.id === currentUserId;
 
   return (
-    <div className="relative">
-      <button
-        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
-        className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-400 hover:bg-primary/5 hover:text-primary transition-all duration-200"
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          onClick={(e) => e.stopPropagation()}
+          className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-400 hover:bg-primary/5 hover:text-primary transition-all duration-200"
+          aria-label={t("common.actions", "Действия")}
+        >
+          <MoreVertical className="w-4 h-4" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        side="bottom"
+        sideOffset={6}
+        collisionPadding={12}
+        className="min-w-[180px] rounded-2xl border-gray-100/80 p-2 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
       >
-        <MoreVertical className="w-4 h-4" />
-      </button>
-      <AnimatePresence>
-        {open && (
+        <DropdownMenuItem
+          onClick={(e) => { e.stopPropagation(); onEdit(); }}
+          className="gap-3 rounded-xl px-4 py-2.5 cursor-pointer"
+        >
+          <Briefcase className="w-4 h-4" />
+          {t("common.edit")}
+        </DropdownMenuItem>
+        {user.role !== "owner" && (
+          <DropdownMenuItem
+            onClick={(e) => { e.stopPropagation(); onNavigate(); }}
+            className="gap-3 rounded-xl px-4 py-2.5 cursor-pointer"
+          >
+            <BarChart2 className="w-4 h-4" />
+            {t("employees.analytics", "Аналитика")}
+          </DropdownMenuItem>
+        )}
+        {!isSelf && user.role !== "owner" && (currentRole === "owner" || currentRole === "admin") && (
+          <DropdownMenuItem
+            onClick={(e) => { e.stopPropagation(); onToggleActive(); }}
+            className={cn(
+              "gap-3 rounded-xl px-4 py-2.5 cursor-pointer",
+              user.isActive ? "text-amber-600 focus:text-amber-600 focus:bg-amber-50" : "text-emerald-600 focus:text-emerald-600 focus:bg-emerald-50",
+            )}
+          >
+            {user.isActive
+              ? <><UserX className="w-4 h-4" /> {t("employees.deactivate", "Деактивировать")}</>
+              : <><UserCheck className="w-4 h-4" /> {t("employees.activate", "Активировать")}</>}
+          </DropdownMenuItem>
+        )}
+        {!isSelf && currentRole === "owner" && user.role !== "owner" && (
           <>
-            <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: -4 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: -4 }}
-              transition={{ duration: 0.15 }}
-              className="absolute right-0 top-9 z-20 bg-white rounded-2xl shadow-2xl border border-gray-100/80 py-2 min-w-[180px] backdrop-blur-xl"
+            <DropdownMenuSeparator className="my-1" />
+            <DropdownMenuItem
+              onClick={(e) => { e.stopPropagation(); onDelete(); }}
+              className="gap-3 rounded-xl px-4 py-2.5 text-red-500 focus:text-red-500 focus:bg-red-50 cursor-pointer"
             >
-              <button
-                onClick={() => { setOpen(false); onEdit(); }}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-primary/5 hover:text-primary transition-colors"
-              >
-                <Briefcase className="w-4 h-4" />
-                {t("common.edit")}
-              </button>
-              {user.role !== "owner" && (
-                <button
-                  onClick={() => { setOpen(false); onNavigate(); }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-primary/5 hover:text-primary transition-colors"
-                >
-                  <BarChart2 className="w-4 h-4" />
-                  {t("employees.analytics", "Аналитика")}
-                </button>
-              )}
-              {!isSelf && user.role !== "owner" && (currentRole === "owner" || currentRole === "admin") && (
-                <button
-                  onClick={() => { setOpen(false); onToggleActive(); }}
-                  className={cn(
-                    "w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors",
-                    user.isActive ? "text-amber-600 hover:bg-amber-50" : "text-emerald-600 hover:bg-emerald-50",
-                  )}
-                >
-                  {user.isActive
-                    ? <><UserX className="w-4 h-4" /> {t("employees.deactivate", "Деактивировать")}</>
-                    : <><UserCheck className="w-4 h-4" /> {t("employees.activate", "Активировать")}</>}
-                </button>
-              )}
-              {!isSelf && currentRole === "owner" && user.role !== "owner" && (
-                <>
-                  <div className="my-1 border-t border-gray-100" />
-                  <button
-                    onClick={() => { setOpen(false); onDelete(); }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    {t("common.delete")}
-                  </button>
-                </>
-              )}
-            </motion.div>
+              <Trash2 className="w-4 h-4" />
+              {t("common.delete")}
+            </DropdownMenuItem>
           </>
         )}
-      </AnimatePresence>
-    </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -441,8 +445,8 @@ export default function StaffPage() {
               </p>
             </motion.div>
           ) : (
-            <div className="bg-white rounded-2xl border border-gray-100/80 shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
+            <div className="bg-white rounded-2xl border border-gray-100/80 shadow-sm overflow-x-auto">
+              <div className="min-w-[720px]">
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 bg-gray-50/80 backdrop-blur-sm border-b border-gray-100 z-10">
                     <tr>

@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import {
-  Clock, AlertCircle, Circle, CalendarDays, CheckCircle2, History,
+  Clock, AlertCircle, Circle, CalendarDays, CheckCircle2,
 } from "lucide-react";
-import { format, parseISO, startOfDay, endOfDay, isYesterday } from "date-fns";
+import { format, parseISO, startOfDay, endOfDay } from "date-fns";
 import type { Procedure } from "@workspace/api-client-react";
 
 interface Patient {
@@ -17,12 +17,6 @@ interface TasksBlockProps {
 
 function getRefDate(proc: Procedure): Date {
   return proc.scheduledAt ? parseISO(proc.scheduledAt) : parseISO(proc.createdAt);
-}
-
-function fmtDate(proc: Procedure): string {
-  const d = getRefDate(proc);
-  if (isYesterday(d)) return "вчера";
-  return format(d, "d MMM");
 }
 
 export function TasksBlock({ procedures, patients }: TasksBlockProps) {
@@ -57,30 +51,8 @@ export function TasksBlock({ procedures, patients }: TasksBlockProps) {
       .sort((a, b) => getRefDate(a).getTime() - getRefDate(b).getTime()),
   [procedures, todayStart, todayEnd]);
 
-  const overdueScheduled = useMemo(() =>
-    procedures
-      .filter((p) => {
-        if (!p.scheduledAt || p.status !== "scheduled") return false;
-        return parseISO(p.scheduledAt) < todayStart;
-      })
-      .sort((a, b) => parseISO(b.scheduledAt!).getTime() - parseISO(a.scheduledAt!).getTime()),
-  [procedures, todayStart]);
-
-  const overdueInProgress = useMemo(() =>
-    procedures
-      .filter((p) => (p.status as string) === "in_progress" && getRefDate(p) < todayStart)
-      .sort((a, b) => getRefDate(b).getTime() - getRefDate(a).getTime()),
-  [procedures, todayStart]);
-
-  const overduePending = useMemo(() =>
-    procedures
-      .filter((p) => (p.status as string) === "pending_payment" && getRefDate(p) < todayStart)
-      .sort((a, b) => getRefDate(b).getTime() - getRefDate(a).getTime()),
-  [procedures, todayStart]);
-
   const todayCount = todayScheduled.length + todayInProgress.length + todayPending.length;
-  const overdueCount = overdueScheduled.length + overdueInProgress.length + overduePending.length;
-  const allClear = todayCount === 0 && overdueCount === 0;
+  const allClear = todayCount === 0;
 
   return (
     <>
@@ -206,117 +178,6 @@ export function TasksBlock({ procedures, patients }: TasksBlockProps) {
           </div>
         )}
       </div>
-
-      {/* ─── Незакрытые задачи ─── */}
-      {overdueCount > 0 && (
-        <div className="mx-4 mt-3 bg-white rounded-3xl border border-orange-200 shadow-sm overflow-hidden">
-          <div className="px-4 pt-4 pb-3 flex items-center gap-2 border-b border-orange-100">
-            <History className="w-4 h-4 text-orange-500" />
-            <span className="text-sm font-bold text-gray-900">Незакрытые задачи</span>
-            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">
-              {overdueCount}
-            </span>
-          </div>
-
-          <div className="divide-y divide-orange-50">
-            {overduePending.length > 0 && (
-              <div className="px-4 py-3">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
-                  <span className="text-xs font-bold text-rose-600 uppercase tracking-wide">Ожидают оплату</span>
-                  <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-600 ml-auto">{overduePending.length}</span>
-                </div>
-                <div className="space-y-1.5">
-                  {overduePending.slice(0, 4).map((proc) => {
-                    const patient = patients.find((p) => p.id === proc.patientId);
-                    return (
-                      <div key={proc.id} className="flex items-center gap-2.5 p-2 rounded-xl bg-rose-50 border border-rose-100">
-                        <div className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-gray-900 truncate">{proc.name}</p>
-                          <p className="text-[10px] text-gray-500 truncate">
-                            {patient?.name ?? "—"}{proc.doctorName ? ` · ${proc.doctorName}` : ""}
-                          </p>
-                        </div>
-                        <div className="flex flex-col items-end shrink-0 gap-0.5">
-                          {proc.price != null && proc.price > 0 && (
-                            <span className="text-xs font-bold text-rose-700">{proc.price.toLocaleString("ru-RU")} ₸</span>
-                          )}
-                          <span className="text-[10px] text-orange-500 font-semibold">{fmtDate(proc)}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {overduePending.length > 4 && (
-                    <p className="text-[11px] text-gray-400 text-center pt-0.5">+ ещё {overduePending.length - 4}</p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {overdueInProgress.length > 0 && (
-              <div className="px-4 py-3">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <Circle className="w-3.5 h-3.5 text-amber-500" />
-                  <span className="text-xs font-bold text-amber-600 uppercase tracking-wide">В работе</span>
-                  <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 ml-auto">{overdueInProgress.length}</span>
-                </div>
-                <div className="space-y-1.5">
-                  {overdueInProgress.slice(0, 4).map((proc) => {
-                    const patient = patients.find((p) => p.id === proc.patientId);
-                    return (
-                      <div key={proc.id} className="flex items-center gap-2.5 p-2 rounded-xl bg-amber-50 border border-amber-100">
-                        <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-gray-900 truncate">{proc.name}</p>
-                          <p className="text-[10px] text-gray-500 truncate">
-                            {patient?.name ?? "—"}{proc.doctorName ? ` · ${proc.doctorName}` : ""}
-                          </p>
-                        </div>
-                        <span className="text-[10px] text-orange-500 font-semibold shrink-0">{fmtDate(proc)}</span>
-                      </div>
-                    );
-                  })}
-                  {overdueInProgress.length > 4 && (
-                    <p className="text-[11px] text-gray-400 text-center pt-0.5">+ ещё {overdueInProgress.length - 4}</p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {overdueScheduled.length > 0 && (
-              <div className="px-4 py-3">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <CalendarDays className="w-3.5 h-3.5 text-orange-500" />
-                  <span className="text-xs font-bold text-orange-600 uppercase tracking-wide">Пропущенные</span>
-                  <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 ml-auto">{overdueScheduled.length}</span>
-                </div>
-                <div className="space-y-1.5">
-                  {overdueScheduled.slice(0, 4).map((proc) => {
-                    const patient = patients.find((p) => p.id === proc.patientId);
-                    const timeStr = proc.scheduledAt ? format(parseISO(proc.scheduledAt), "HH:mm") : "—";
-                    return (
-                      <div key={proc.id} className="flex items-center gap-2.5 p-2 rounded-xl bg-orange-50 border border-orange-100">
-                        <span className="text-xs font-bold text-orange-600 w-10 shrink-0">{timeStr}</span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-gray-900 truncate">{proc.name}</p>
-                          <p className="text-[10px] text-gray-500 truncate">
-                            {patient?.name ?? "—"}{proc.doctorName ? ` · ${proc.doctorName}` : ""}
-                          </p>
-                        </div>
-                        <span className="text-[10px] text-orange-500 font-semibold shrink-0">{fmtDate(proc)}</span>
-                      </div>
-                    );
-                  })}
-                  {overdueScheduled.length > 4 && (
-                    <p className="text-[11px] text-gray-400 text-center pt-0.5">+ ещё {overdueScheduled.length - 4}</p>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </>
   );
 }

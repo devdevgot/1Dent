@@ -450,38 +450,44 @@ export class ContractsRepository {
 
     // 1. Identify relevant subcategories
     const matchedSubcategories = new Set<string>();
-    
-    // Check passed service names
-    if (data.serviceNames && data.serviceNames.length > 0) {
-      for (const name of data.serviceNames) {
-        matchServiceToSubcategory(name).forEach(sc => matchedSubcategories.add(sc));
-      }
-    }
-    
-    // Check active plan items
-    const activePlan = await db
-      .select({ id: treatmentPlansTable.id })
-      .from(treatmentPlansTable)
-      .where(
-        and(
-          eq(treatmentPlansTable.patientId, data.patientId),
-          eq(treatmentPlansTable.clinicId, data.clinicId),
-          ne(treatmentPlansTable.status, "completed"),
-          ne(treatmentPlansTable.status, "cancelled")
-        )
-      )
-      .orderBy(desc(treatmentPlansTable.createdAt))
-      .limit(1);
+    const explicitServiceNames = (data.serviceNames ?? []).map((n) => n.trim()).filter(Boolean);
 
-    if (activePlan.length > 0) {
-      const items = await db
-        .select({ title: treatmentPlanItemsTable.title })
-        .from(treatmentPlanItemsTable)
-        .where(eq(treatmentPlanItemsTable.planId, activePlan[0]!.id));
-      
-      items.forEach((it) => {
-        matchServiceToSubcategory(it.title).forEach(sc => matchedSubcategories.add(sc));
-      });
+    if (explicitServiceNames.length > 0) {
+      // Per-card / per-selection: use only the services the client passed (do not union the whole plan).
+      for (const name of explicitServiceNames) {
+        matchServiceToSubcategory(name).forEach((sc) => matchedSubcategories.add(sc));
+      }
+    } else {
+      // Plan-wide: no explicit list — derive subcategories from pending items on the active plan.
+      const activePlan = await db
+        .select({ id: treatmentPlansTable.id })
+        .from(treatmentPlansTable)
+        .where(
+          and(
+            eq(treatmentPlansTable.patientId, data.patientId),
+            eq(treatmentPlansTable.clinicId, data.clinicId),
+            ne(treatmentPlansTable.status, "completed"),
+            ne(treatmentPlansTable.status, "cancelled"),
+          ),
+        )
+        .orderBy(desc(treatmentPlansTable.createdAt))
+        .limit(1);
+
+      if (activePlan.length > 0) {
+        const items = await db
+          .select({ title: treatmentPlanItemsTable.title })
+          .from(treatmentPlanItemsTable)
+          .where(
+            and(
+              eq(treatmentPlanItemsTable.planId, activePlan[0]!.id),
+              eq(treatmentPlanItemsTable.status, "pending"),
+            ),
+          );
+
+        items.forEach((it) => {
+          matchServiceToSubcategory(it.title).forEach((sc) => matchedSubcategories.add(sc));
+        });
+      }
     }
 
     // Default fallback: if no subcategories matched, default to "Удаление зуба" templates
