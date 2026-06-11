@@ -17,7 +17,6 @@ import {
   TrendingUp, Globe, Handshake, Megaphone, MapPin, Sparkles, ChevronRight,
 } from "lucide-react";
 import { FaInstagram, FaTelegram, FaWhatsapp } from "react-icons/fa";
-import { TasksBlock } from "@/components/dashboard/tasks-block";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
@@ -614,8 +613,6 @@ export default function OwnerDashboard() {
           <p className="py-6 text-center text-sm text-gray-400">Нет выручки в этом периоде</p>
         )}
       </div>
-
-      <TasksBlock procedures={allProcedures} patients={allPatients} />
 
       {/* ─── Quick Actions ─── */}
       <div className="mx-4 mt-4 bg-white rounded-3xl border border-gray-100 shadow-sm p-4">
