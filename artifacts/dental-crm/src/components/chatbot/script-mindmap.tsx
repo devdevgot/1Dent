@@ -42,36 +42,41 @@ export interface ScriptMindMapData {
 
 // ─── Layout algorithm ─────────────────────────────────────────────────────────
 
-const NODE_W = 220;
-const NODE_H = 116;
-const H_GAP = 72;
-const V_GAP = 18;
+/** Card width used for layout spacing (cards grow vertically with content). */
+const NODE_W = 300;
+const NODE_H = 168;
+/** Horizontal gap between sibling branches. */
+const H_GAP = 40;
+/** Vertical gap between parent and child row. */
+const V_GAP = 56;
 
-function subtreeH(id: string, ch: Record<string, string[]>): number {
+function subtreeW(id: string, ch: Record<string, string[]>): number {
   const kids = ch[id] ?? [];
-  if (!kids.length) return NODE_H;
-  return kids.reduce((s, k) => s + subtreeH(k, ch), 0) + (kids.length - 1) * V_GAP;
+  if (!kids.length) return NODE_W;
+  return kids.reduce((s, k) => s + subtreeW(k, ch), 0) + (kids.length - 1) * H_GAP;
 }
 
 function placeNode(
   id: string,
   depth: number,
-  topY: number,
+  leftX: number,
   ch: Record<string, string[]>,
   pos: Record<string, { x: number; y: number }>,
 ) {
   const kids = ch[id] ?? [];
-  const x = depth * (NODE_W + H_GAP);
+  const y = depth * (NODE_H + V_GAP);
   if (!kids.length) {
-    pos[id] = { x, y: topY };
-  } else {
-    const total = subtreeH(id, ch);
-    pos[id] = { x, y: topY + (total - NODE_H) / 2 };
-    let cur = topY;
-    for (const k of kids) {
-      placeNode(k, depth + 1, cur, ch, pos);
-      cur += subtreeH(k, ch) + V_GAP;
-    }
+    pos[id] = { x: leftX, y };
+    return;
+  }
+
+  const rowWidth = subtreeW(id, ch);
+  pos[id] = { x: leftX + Math.max(0, (rowWidth - NODE_W) / 2), y };
+
+  let curX = leftX;
+  for (const childId of kids) {
+    placeNode(childId, depth + 1, curX, ch, pos);
+    curX += subtreeW(childId, ch) + H_GAP;
   }
 }
 
@@ -86,10 +91,10 @@ function autoLayout(nodes: Node[], edges: Edge[]): Node[] {
   });
   const roots = nodes.filter((n) => !hasParent[n.id]).map((n) => n.id);
   const pos: Record<string, { x: number; y: number }> = {};
-  let rootY = 0;
-  for (const r of roots) {
-    placeNode(r, 0, rootY, ch, pos);
-    rootY += subtreeH(r, ch) + V_GAP * 4;
+  let rootX = 0;
+  for (const rootId of roots) {
+    placeNode(rootId, 0, rootX, ch, pos);
+    rootX += subtreeW(rootId, ch) + H_GAP * 3;
   }
   return nodes.map((n) => ({ ...n, position: pos[n.id] ?? n.position }));
 }
@@ -124,7 +129,7 @@ function MindMapNodeComponent({ id, data }: NodeProps) {
   return (
     <div
       className={cn(
-        "w-[220px] rounded-xl border-2 bg-white shadow-sm transition-all select-none",
+        "w-[300px] min-h-[120px] rounded-xl border-2 bg-white shadow-sm transition-all select-none",
         d.isRoot
           ? "border-blue-400 bg-blue-50/80"
           : editing
@@ -135,11 +140,11 @@ function MindMapNodeComponent({ id, data }: NodeProps) {
     >
       <Handle
         type="target"
-        position={Position.Left}
+        position={Position.Top}
         className="!w-3 !h-3 !bg-blue-400 !border-2 !border-white"
       />
 
-      <div className="p-3 pb-1.5">
+      <div className="p-3.5 pb-2">
         {editing ? (
           <>
             <input
@@ -152,8 +157,8 @@ function MindMapNodeComponent({ id, data }: NodeProps) {
             />
             <textarea
               ref={textareaRef}
-              className="w-full text-xs text-gray-500 bg-transparent outline-none resize-none leading-relaxed"
-              rows={3}
+              className="w-full text-xs text-gray-500 bg-transparent outline-none resize-y leading-relaxed min-h-[72px]"
+              rows={5}
               value={content}
               onChange={(e) => setContent(e.target.value)}
               onBlur={commit}
@@ -173,16 +178,16 @@ function MindMapNodeComponent({ id, data }: NodeProps) {
           </>
         ) : (
           <>
-            <p className={cn("text-sm font-semibold leading-tight truncate", d.isRoot ? "text-blue-800" : "text-gray-800")}>
+            <p className={cn("text-sm font-semibold leading-snug break-words", d.isRoot ? "text-blue-800" : "text-gray-800")}>
               {label || <span className="font-normal italic text-gray-400">Без названия</span>}
             </p>
             {d.fsmState && (
-              <p className="text-[9px] font-medium text-violet-600 mt-0.5 truncate">
+              <p className="text-[10px] font-medium text-violet-600 mt-1 break-words">
                 этап: {CHATBOT_FSM_STATES.find((s) => s.value === d.fsmState)?.label ?? d.fsmState}
               </p>
             )}
             {content ? (
-              <p className="text-xs text-gray-500 mt-1 line-clamp-2 leading-snug">{content}</p>
+              <p className="text-xs text-gray-500 mt-1.5 leading-relaxed whitespace-pre-wrap break-words">{content}</p>
             ) : (
               <p className="text-xs text-gray-400 mt-1 italic">Нажмите для редактирования</p>
             )}
@@ -220,7 +225,7 @@ function MindMapNodeComponent({ id, data }: NodeProps) {
 
       <Handle
         type="source"
-        position={Position.Right}
+        position={Position.Bottom}
         className="!w-3 !h-3 !bg-blue-400 !border-2 !border-white"
       />
     </div>
@@ -291,8 +296,7 @@ function makeFlowNode(n: ScriptMindMapData["nodes"][number]): Node {
 function toFlowGraph(raw: ScriptMindMapData): { nodes: Node[]; edges: Edge[] } {
   const edges = raw.edges.map(makeFlowEdge);
   const flowNodes = raw.nodes.map(makeFlowNode);
-  const allHavePositions = raw.nodes.length > 0 && raw.nodes.every((n) => n.position);
-  const nodes = allHavePositions ? flowNodes : autoLayout(flowNodes, edges);
+  const nodes = autoLayout(flowNodes, edges);
   return { nodes, edges };
 }
 
@@ -320,12 +324,26 @@ export function ScriptMindMap({ initialData, onSave, saveStatus = "idle" }: Scri
     skipAutoSaveRef.current = false;
   }, []);
 
-  const placeChildNode = useCallback((parentId: string, newNode: Node, allNodes: Node[]): Node => {
+  const placeChildNode = useCallback((parentId: string, newNode: Node, allNodes: Node[], allEdges: Edge[]): Node => {
     const parent = allNodes.find((n) => n.id === parentId);
-    if (!parent) return { ...newNode, position: { x: NODE_W + H_GAP, y: 0 } };
+    if (!parent) return { ...newNode, position: { x: 0, y: NODE_H + V_GAP } };
+
+    const siblings = allEdges
+      .filter((e) => e.source === parentId)
+      .map((e) => allNodes.find((n) => n.id === e.target))
+      .filter(Boolean) as Node[];
+
+    const rightmost = siblings.reduce(
+      (max, n) => Math.max(max, n.position.x),
+      parent.position.x,
+    );
+
     return {
       ...newNode,
-      position: { x: parent.position.x + NODE_W + H_GAP, y: parent.position.y },
+      position: {
+        x: siblings.length > 0 ? rightmost + NODE_W + H_GAP : parent.position.x,
+        y: parent.position.y + NODE_H + V_GAP,
+      },
     };
   }, []);
 
@@ -336,7 +354,7 @@ export function ScriptMindMap({ initialData, onSave, saveStatus = "idle" }: Scri
     setEdges((prev) => {
       const newEdge = makeFlowEdge({ id: `e_${id}`, source: parentId, target: id });
       const updated = [...prev, newEdge];
-      setNodes((pn) => [...pn, placeChildNode(parentId, newNode, pn)]);
+      setNodes((pn) => [...pn, placeChildNode(parentId, newNode, pn, prev)]);
       return updated;
     });
   }, [setNodes, setEdges, markDirty, placeChildNode]);
@@ -348,7 +366,7 @@ export function ScriptMindMap({ initialData, onSave, saveStatus = "idle" }: Scri
     setEdges((prev) => {
       const parentEdge = prev.find((e) => e.target === siblingId);
       if (!parentEdge) {
-        setNodes((pn) => [...pn, { ...newNode, position: { x: 0, y: pn.length * (NODE_H + V_GAP) } }]);
+        setNodes((pn) => [...pn, { ...newNode, position: { x: pn.length * (NODE_W + H_GAP), y: 0 } }]);
         return prev;
       }
       const newEdge = makeFlowEdge({ id: `e_${id}`, source: parentEdge.source, target: id });
@@ -356,8 +374,8 @@ export function ScriptMindMap({ initialData, onSave, saveStatus = "idle" }: Scri
       setNodes((pn) => {
         const sibling = pn.find((n) => n.id === siblingId);
         const placed = sibling
-          ? { ...newNode, position: { x: sibling.position.x, y: sibling.position.y + NODE_H + V_GAP } }
-          : placeChildNode(parentEdge.source, newNode, pn);
+          ? { ...newNode, position: { x: sibling.position.x + NODE_W + H_GAP, y: sibling.position.y } }
+          : placeChildNode(parentEdge.source, newNode, pn, prev);
         return [...pn, placed];
       });
       return updated;
