@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response, type NextFunction } 
 import { createRequire } from "module";
 import path from "path";
 import { ContractsRepository } from "../modules/contracts/contracts.repository";
+import { CONTRACT_TABLE_CSS, htmlToPdfmakeContent } from "../modules/contracts/contract-render";
 import { sendToPatient } from "../shared/messaging";
 import { logger } from "../lib/logger";
 
@@ -39,22 +40,6 @@ function getPdfInstance(): PdfmakeInstance {
   return instance;
 }
 
-/** Strip HTML tags and decode basic entities for plain-text PDF body. */
-function htmlToPlainLines(html: string): string[] {
-  const text = html
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/p>/gi, "\n")
-    .replace(/<\/div>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, " ");
-  return text.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
-}
-
 async function generatePdfBuffer(opts: {
   templateName: string;
   patientName: string;
@@ -63,13 +48,7 @@ async function generatePdfBuffer(opts: {
   signedAt: string | null;
 }): Promise<Buffer> {
   const pdfmake = getPdfInstance();
-  const lines = htmlToPlainLines(opts.renderedHtml);
-
-  const bodyContent = lines.map((line) => ({
-    text: line,
-    style: "body",
-    margin: [0, 0, 0, 4] as [number, number, number, number],
-  }));
+  const bodyContent = htmlToPdfmakeContent(opts.renderedHtml);
 
   const docDefinition = {
     defaultStyle: { font: "Roboto" },
@@ -97,6 +76,7 @@ async function generatePdfBuffer(opts: {
       subtitle:       { fontSize: 12, color: "#555555", alignment: "center", margin: [0, 0, 0, 4] },
       meta:           { fontSize: 12, color: "#333333" },
       body:           { fontSize: 12, lineHeight: 1.5, color: "#222222" },
+      bodyTable:      { fontSize: 11, color: "#222222" },
       signatureBlock: { fontSize: 11, color: "#555555", italics: true },
     },
   };
@@ -171,8 +151,9 @@ function buildContractPage(opts: {
     .meta { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
     .meta-chip { background: #f2f2f7; border-radius: 8px; padding: 6px 12px; font-size: 13px; color: #3a3a3c; }
     .meta-chip span { font-weight: 600; }
-    .contract-body { line-height: 1.7; font-size: 14px; color: #3a3a3c; }
+    .contract-body { line-height: 1.7; font-size: 14px; color: #3a3a3c; white-space: pre-wrap; word-break: break-word; }
     .contract-body p { margin-bottom: 8px; }
+    ${CONTRACT_TABLE_CSS}
     .filled-field { background: #fff9c4; border-radius: 3px; padding: 0 2px; font-weight: 700; font-style: normal; }
     .actions { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #e5e5ea; padding: 16px 20px; display: flex; gap: 12px; }
     .btn { flex: 1; height: 50px; border-radius: 14px; border: none; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.15s; text-decoration: none; }
@@ -673,6 +654,7 @@ function buildBundlePage(opts: {
     .meta-chip{background:#f2f2f7;border-radius:8px;padding:5px 10px;font-size:12px;color:#3a3a3c}
     .meta-chip span{font-weight:600}
     .contract-body{line-height:1.7;font-size:13px;color:#3a3a3c;white-space:pre-wrap;word-break:break-word}
+    ${CONTRACT_TABLE_CSS.replace(/\n/g, "")}
     .actions{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e5e5ea;padding:14px 16px;display:flex;gap:10px;z-index:20}
     .btn{flex:1;height:48px;border-radius:14px;border:none;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s;text-decoration:none}
     .btn:active{opacity:.8}

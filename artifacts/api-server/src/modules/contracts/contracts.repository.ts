@@ -441,6 +441,7 @@ export class ContractsRepository {
     patientIin: string;
     patientDob: string;
     clinicName: string;
+    clinicPhone: string;
     doctorName: string;
     date: string;
     year: string;
@@ -504,6 +505,7 @@ export class ContractsRepository {
     const vars: Record<string, string> = {
       patient_name: data.patientName,
       clinic_name: data.clinicName,
+      clinic_phone: data.clinicPhone,
       doctor_name: data.doctorName,
       date: data.date,
       year: data.year,
