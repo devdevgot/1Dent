@@ -236,36 +236,76 @@ const nodeTypes = { mindmap: MindMapNodeComponent };
 
 // ─── Default initial mind map ─────────────────────────────────────────────────
 
+/** Default first-touch script (Muslim Dent style) — used when clinic has no saved mind map yet. */
 const DEFAULT_NODES: ScriptMindMapData["nodes"] = [
-  { id: "greeting", label: "Приветствие", content: "Поприветствовать пациента и узнать, что беспокоит", isRoot: true, fsmState: "greeting" },
-  { id: "problem", label: "Выяснение проблемы", content: "Уточнить симптомы и причину обращения", fsmState: "collect_problem" },
-  { id: "pain", label: "Острая боль", content: "Уточнить симптомы: где болит, как давно, острая/ноющая" },
-  { id: "planned", label: "Плановое лечение", content: "Уточнить желаемую процедуру и пожелания по врачу" },
-  { id: "cosmetic", label: "Эстетика / Чистка", content: "Рассказать об услуге, предложить консультацию" },
-  { id: "doctor_pain", label: "Подбор врача", content: "Предложить подходящего специалиста и свободные слоты", fsmState: "suggest_doctor" },
-  { id: "doctor_plan", label: "Подбор врача", content: "Предложить подходящего специалиста и свободные слоты", fsmState: "suggest_doctor" },
-  { id: "confirm", label: "Подтверждение записи", content: "Уточнить дату, время и имя — подтвердить детали", fsmState: "collect_branch" },
-  { id: "operator", label: "Передача оператору", content: "Соединить с живым менеджером клиники", fsmState: "human_takeover" },
-  { id: "no_response", label: "Нет ответа (15 мин)", content: "Если клиент не отвечает 15 минут — перевести в раздел «Отказ» и начать цепочку повторных касаний" },
-  { id: "followup_3d", label: "Повторное касание (3 дня)", content: "Написать через 3 дня: напомнить о проблеме, предложить помощь, спросить актуальность" },
-  { id: "followup_1w", label: "Повторное касание (1 неделя)", content: "Написать через 1 неделю: мягко напомнить, предложить акцию или бесплатную консультацию" },
-  { id: "followup_3w", label: "Повторное касание (3 недели)", content: "Финальное касание через 3 недели: последнее напоминание с особым предложением" },
+  {
+    id: "greeting",
+    label: "Приветствие",
+    content:
+      "Тепло поприветствуйте клиента от имени клиники Muslim Dent. Скажите, что рады помочь с любым вопросом по здоровью зубов. Спросите, какая услуга или проблема их интересует (лечение кариеса, чистка, отбеливание, брекеты, импланты, протезирование или что-то другое).",
+    isRoot: true,
+    fsmState: "greeting",
+  },
+  {
+    id: "clarify_problem",
+    label: "Уточнение проблемы",
+    content:
+      "На основе ответа клиента уточните детали проблемы. Если клиент назвал конкретную услугу — подтвердите и спросите, беспокоит ли что-то прямо сейчас (боль, дискомфорт) или это плановый визит.",
+    fsmState: "collect_problem",
+  },
+  {
+    id: "branch_selection",
+    label: "Выбор филиала",
+    content:
+      "Спросите, какой филиал удобнее для посещения. Перечислите адреса: 1) Тургут Озала 84 (уг. Толе би), 2) Майлина 218, 3) пос. Водник, Абылай хана 2, 4) Каскелен, Абылай хана 26/2. Все филиалы работают ежедневно с 10:00 до 19:00.",
+    fsmState: "collect_branch",
+  },
+  {
+    id: "booking",
+    label: "Запись на приём",
+    content:
+      "Клиент готов записаться. Спросите, на какую дату и время удобно прийти (клиника работает ежедневно с 10:00 до 19:00). Предложите ближайшие доступные дни.",
+    fsmState: "collect_datetime",
+  },
+  {
+    id: "confirm_booking",
+    label: "Подтверждение записи",
+    content:
+      "Подтвердите запись: повторите дату, время, адрес филиала и услугу. Дайте контактный номер филиала. Напомните взять с собой документ удостоверяющий личность. Пожелайте хорошего дня и скажите, что будете ждать на приёме. Спросите, есть ли ещё какие-то вопросы.",
+    fsmState: "confirm_appointment",
+  },
+  {
+    id: "handle_doubts",
+    label: "Работа с сомнениями",
+    content:
+      "Клиент не уверен или хочет подумать. Мягко уточните, что именно останавливает — цена, страх процедуры или нужно больше информации. Напомните, что консультация бесплатная и ни к чему не обязывает, врач составит индивидуальный план. Упомяните рассрочку 0-0-24 без переплат. Спросите, удобно ли записаться хотя бы на бесплатный осмотр.",
+    fsmState: "dental_qa",
+  },
+  {
+    id: "re_offer_booking",
+    label: "Повторное предложение записи",
+    content:
+      "Клиент проявил интерес после работы с сомнениями. Предложите конкретное время для визита на бесплатную консультацию в ближайшие дни. Спросите, какой день и время подойдут.",
+    fsmState: "collect_datetime",
+  },
+  {
+    id: "refusal_close",
+    label: "Завершение (отказ)",
+    content:
+      "Клиент отказался записываться. Поблагодарите за обращение, скажите что всегда рады помочь. Оставьте номер для связи: +7 771 800 0065. Напомните, что акции ограничены по времени и они могут вернуться в любой момент.",
+    fsmState: "done",
+  },
 ];
 
 const DEFAULT_EDGES: ScriptMindMapData["edges"] = [
-  { id: "e1", source: "greeting", target: "problem" },
-  { id: "e2", source: "problem", target: "pain", label: "Болит зуб" },
-  { id: "e3", source: "problem", target: "planned", label: "Лечение" },
-  { id: "e4", source: "problem", target: "cosmetic", label: "Эстетика" },
-  { id: "e5", source: "pain", target: "doctor_pain" },
-  { id: "e6", source: "planned", target: "doctor_plan" },
-  { id: "e7", source: "doctor_pain", target: "confirm" },
-  { id: "e8", source: "doctor_plan", target: "confirm" },
-  { id: "e9", source: "cosmetic", target: "operator" },
-  { id: "e10", source: "greeting", target: "no_response", label: "Нет ответа 15 мин" },
-  { id: "e11", source: "no_response", target: "followup_3d", label: "Нет ответа" },
-  { id: "e12", source: "followup_3d", target: "followup_1w", label: "Нет ответа" },
-  { id: "e13", source: "followup_1w", target: "followup_3w", label: "Нет ответа" },
+  { id: "e1", source: "greeting", target: "clarify_problem" },
+  { id: "e2", source: "clarify_problem", target: "branch_selection" },
+  { id: "e3", source: "branch_selection", target: "booking", label: "Готов записаться" },
+  { id: "e4", source: "booking", target: "confirm_booking" },
+  { id: "e5", source: "branch_selection", target: "handle_doubts", label: "Нужно подумать" },
+  { id: "e6", source: "handle_doubts", target: "re_offer_booking", label: "Согласен" },
+  { id: "e7", source: "branch_selection", target: "refusal_close", label: "Отказ" },
+  { id: "e8", source: "re_offer_booking", target: "booking" },
 ];
 
 // ─── Converters ───────────────────────────────────────────────────────────────
