@@ -23,12 +23,15 @@ import {
 import { FaWhatsapp } from "react-icons/fa";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
+import { maskIIN } from "@workspace/api-zod";
+import { useKanbanStore } from "@/hooks/use-kanban";
 
 interface SearchResult {
   id: string;
   label: string;
   subtitle?: string;
   href: string;
+  patientId?: string;
   Icon: React.ElementType;
   iconBg: string;
   iconColor: string;
@@ -75,6 +78,16 @@ function matches(text: string | null | undefined, query: string) {
   return normalize(text).includes(normalize(query));
 }
 
+function digitsOnly(s: string) {
+  return s.replace(/\D/g, "");
+}
+
+function matchesIin(iin: string | null | undefined, query: string) {
+  const qDigits = digitsOnly(query);
+  if (!qDigits || !iin) return false;
+  return digitsOnly(iin).includes(qDigits);
+}
+
 export function GlobalSearch() {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -82,6 +95,7 @@ export function GlobalSearch() {
   const { user } = useAuthStore();
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
+  const setSelectedPatientId = useKanbanStore((s) => s.setSelectedPatientId);
 
   const role = user?.role ?? "";
   const dashboardHref = ROLE_DASHBOARD[role] ?? "/dashboard";
@@ -130,15 +144,18 @@ export function GlobalSearch() {
 
     // Patients
     if (canSeePatients) {
-      const list = (patientsData as { data?: { patients?: { id: string; name: string; phone: string }[] } })?.data?.patients ?? [];
+      const list = (patientsData as {
+        data?: { patients?: { id: string; name: string; phone: string; iin?: string | null }[] };
+      })?.data?.patients ?? [];
       const patients = list
-        .filter((p) => matches(p.name, q) || matches(p.phone, q))
+        .filter((p) => matches(p.name, q) || matches(p.phone, q) || matchesIin(p.iin, q))
         .slice(0, 8)
         .map((p) => ({
           id: p.id,
           label: p.name,
-          subtitle: p.phone,
-          href: "/patients",
+          subtitle: [p.phone, p.iin ? `ИИН ${maskIIN(p.iin)}` : null].filter(Boolean).join(" · "),
+          href: "/patients?view=kanban",
+          patientId: p.id,
           Icon: Users,
           iconBg: "bg-sky-100",
           iconColor: "text-sky-600",
@@ -185,8 +202,9 @@ export function GlobalSearch() {
     return result;
   }, [query, role, patientsData, usersData, proceduresData, canSeePatients, canSeeUsers, canSeeProcedures, dashboardHref]);
 
-  function navigate(href: string) {
+  function navigate(href: string, patientId?: string) {
     setIsOpen(false);
+    if (patientId) setSelectedPatientId(patientId);
     setLocation(href);
   }
 
@@ -202,7 +220,7 @@ export function GlobalSearch() {
         className="flex-1 flex items-center gap-2 bg-gray-100 rounded-xl px-3 py-2 text-left cursor-pointer"
       >
         <Search className="w-4 h-4 text-gray-400 shrink-0" />
-        <span className="text-sm text-gray-400 select-none">Поиск...</span>
+        <span className="text-sm text-gray-400 select-none">Поиск по имени, телефону, ИИН...</span>
       </button>
 
       {/* Overlay */}
@@ -217,7 +235,7 @@ export function GlobalSearch() {
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Поиск..."
+                placeholder="Имя, телефон или ИИН..."
                 className="flex-1 text-[15px] bg-transparent outline-none text-gray-900 placeholder-gray-400"
               />
               {query && (
@@ -262,7 +280,7 @@ export function GlobalSearch() {
                       {group.results.map((result) => (
                         <button
                           key={result.id}
-                          onClick={() => navigate(result.href)}
+                          onClick={() => navigate(result.href, result.patientId)}
                           className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-gray-50"
                         >
                           <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0", result.iconBg)}>
