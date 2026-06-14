@@ -64,11 +64,30 @@ app.use(contractPublicRouter);
 // Serve TMA (Telegram Mini App) admin panel static files
 // The built assets live in artifacts/tg-admin-app/dist/public relative to the workspace root
 // __dirname = .../artifacts/api-server/dist — go up 3 levels to workspace root
-const tmaDistDir = path.resolve(__dirname, "../../..", "artifacts/tg-admin-app/dist/public");
+const workspaceRoot = path.resolve(__dirname, "../../..");
+const tmaDistDir = path.resolve(workspaceRoot, "artifacts/tg-admin-app/dist/public");
 app.use("/tg-admin", express.static(tmaDistDir));
 // SPA fallback — any /tg-admin/* path not matched by static files gets index.html
 app.use("/tg-admin", (_req, res) => {
   res.sendFile(path.join(tmaDistDir, "index.html"));
+});
+
+// Serve Dental CRM SPA (production build from Render / Replit deploy)
+const crmDistDir = path.resolve(workspaceRoot, "artifacts/dental-crm/dist/public");
+const crmIndexPath = path.join(crmDistDir, "index.html");
+const crmReservedPrefixes = ["/api", "/p", "/tg-admin", "/r", "/ref", "/wa"];
+
+app.use(express.static(crmDistDir, { index: false }));
+
+app.get("*", (req, res, next) => {
+  if (req.method !== "GET" && req.method !== "HEAD") return next();
+  const urlPath = req.path;
+  if (crmReservedPrefixes.some((prefix) => urlPath === prefix || urlPath.startsWith(`${prefix}/`))) {
+    return next();
+  }
+  res.sendFile(crmIndexPath, (err) => {
+    if (err) next();
+  });
 });
 
 app.use(errorHandler);
