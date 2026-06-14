@@ -81,8 +81,11 @@ const DEV_MOCK_CLINIC: Clinic = {
   createdAt: new Date().toISOString(),
 };
 
-// Set API base URL to the hosted Replit backend
-setBaseUrl("https://dental-crm-kz.replit.app");
+// API base URL: VITE_API_URL for split hosting; omit for same-origin (Render/Replit single service).
+const apiBaseUrl = import.meta.env.VITE_API_URL as string | undefined;
+if (apiBaseUrl) {
+  setBaseUrl(apiBaseUrl.replace(/\/+$/, ""));
+}
 
 // Restore auth token from localStorage on page load
 restoreAuthToken();

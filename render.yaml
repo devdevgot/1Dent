@@ -1,0 +1,44 @@
+# Render Blueprint — 1Dent Dental CRM
+# Sync this file from the Render Dashboard: New > Blueprint > Connect repo.
+databases:
+  - name: 1dent-db
+    databaseName: onedent
+    user: onedent
+    plan: basic_256mb
+    region: frankfurt
+    postgresMajorVersion: "16"
+
+services:
+  - type: web
+    name: 1dent
+    runtime: node
+    region: frankfurt
+    plan: starter
+    branch: master
+    buildCommand: bash ./scripts/render-build.sh
+    startCommand: pnpm --filter @workspace/api-server run start
+    healthCheckPath: /api/healthz
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: CI
+        value: "true"
+      - key: NODE_OPTIONS
+        value: --enable-source-maps
+      - key: FRONTEND_URL
+        value: https://1dent.kz
+      - key: PUBLIC_URL
+        value: https://1dent.kz
+      - key: DATABASE_URL
+        fromDatabase:
+          name: 1dent-db
+          property: connectionString
+      # Add remaining secrets in the Render Dashboard (Environment tab):
+      # JWT_SECRET, OPENROUTER_API_KEY, RESEND_API_KEY, RESEND_FROM_EMAIL,
+      # WHATSAPP_TOKEN, WHATSAPP_PHONE_ID, WHATSAPP_APP_SECRET,
+      # PLATFORM_TG_BOT_TOKEN, PLATFORM_SUPERADMIN_TG_ID, TRACKING_TG_BOT_TOKEN,
+      # GREEN_API_PARTNER_TOKEN, REDIS_URL (optional), TWOGIS_API_KEY,
+      # VITE_YANDEX_MAPS_API_KEY, VITE_YANDEX_GEOCODER_KEY, YANDEX_GEOCODER_KEY
