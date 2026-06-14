@@ -6,6 +6,9 @@
   "scripts": {
     "preinstall": "node -e \"if (!/pnpm/.test(process.env.npm_config_user_agent || '')) { console.error('Use pnpm instead'); process.exit(1); }\"",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
+    "build:deploy": "bash ./scripts/deploy-build.sh",
+    "railway:setup": "bash ./scripts/railway-setup.sh",
+    "railway:deploy": "bash ./scripts/railway-deploy.sh",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"!./artifacts/mockup-sandbox\" --filter \"./scripts\" --if-present run typecheck"
   },

@@ -72,7 +72,7 @@ app.use("/tg-admin", (_req, res) => {
   res.sendFile(path.join(tmaDistDir, "index.html"));
 });
 
-// Serve Dental CRM SPA (production build from Render / Replit deploy)
+// Serve Dental CRM SPA (production build from Railway / Render / Replit deploy)
 const crmDistDir = path.resolve(workspaceRoot, "artifacts/dental-crm/dist/public");
 const crmIndexPath = path.join(crmDistDir, "index.html");
 const crmReservedPrefixes = ["/api", "/p", "/tg-admin", "/r", "/ref", "/wa"];
