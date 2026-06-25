@@ -79,7 +79,8 @@ const crmReservedPrefixes = ["/api", "/p", "/tg-admin", "/r", "/ref", "/wa"];
 
 app.use(express.static(crmDistDir, { index: false }));
 
-app.get("*", (req, res, next) => {
+// Express 5 / path-to-regexp v8: bare "*" is invalid — use middleware fallback instead.
+app.use((req, res, next) => {
   if (req.method !== "GET" && req.method !== "HEAD") return next();
   const urlPath = req.path;
   if (crmReservedPrefixes.some((prefix) => urlPath === prefix || urlPath.startsWith(`${prefix}/`))) {

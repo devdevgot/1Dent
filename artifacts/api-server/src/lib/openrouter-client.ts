@@ -1,16 +1,36 @@
 import OpenAI from "openai";
 import { logger } from "./logger";
 
-const apiKey = process.env["OPENROUTER_API_KEY"];
 const baseURL = "https://openrouter.ai/api/v1";
 
-if (!apiKey) {
-  const msg = "[OpenRouter] OPENROUTER_API_KEY is required but not set. Add it to Replit Secrets.";
-  logger.error(msg);
-  throw new Error(msg);
+let _client: OpenAI | null = null;
+
+function getClient(): OpenAI {
+  if (_client) return _client;
+  const apiKey = process.env["OPENROUTER_API_KEY"];
+  if (!apiKey) {
+    throw new Error(
+      "[OpenRouter] OPENROUTER_API_KEY is not set. AI features are disabled until the key is configured.",
+    );
+  }
+  _client = new OpenAI({ apiKey, baseURL });
+  return _client;
 }
 
-export const openrouter = new OpenAI({ apiKey, baseURL });
+/** Lazy OpenAI client — server can start without OPENROUTER_API_KEY; AI routes fail at call time. */
+export const openrouter: OpenAI = new Proxy({} as OpenAI, {
+  get(_target, prop, receiver) {
+    const client = getClient();
+    const value = Reflect.get(client, prop, receiver);
+    return typeof value === "function" ? value.bind(client) : value;
+  },
+});
+
+if (!process.env["OPENROUTER_API_KEY"]) {
+  logger.warn(
+    "[OpenRouter] OPENROUTER_API_KEY is not set — AI/chatbot features will be unavailable until configured",
+  );
+}
 
 // Legacy alias kept for any external imports.
 export const DEEPSEEK_MODEL = "deepseek/deepseek-chat-v3-0324";

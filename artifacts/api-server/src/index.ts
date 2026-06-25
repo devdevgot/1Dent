@@ -101,12 +101,17 @@ async function runMigrations(migrationsFolder: string): Promise<void> {
   }
 }
 
-// Run DB migrations before starting the server
-if (process.env["DATABASE_URL"]) {
+// Bootstrap DB migrations and seeds after the server is listening (healthcheck-friendly).
+async function bootstrapDatabase(): Promise<void> {
+  if (!process.env["DATABASE_URL"]) {
+    logger.warn("DATABASE_URL not set — skipping migrations");
+    return;
+  }
+
   try {
     const migrationsFolder = path.resolve(
       path.dirname(new URL(import.meta.url).pathname),
-      "../../../lib/db/drizzle"
+      "../../../lib/db/drizzle",
     );
     await runMigrations(migrationsFolder);
     logger.info("Database migrations applied successfully");
@@ -114,7 +119,6 @@ if (process.env["DATABASE_URL"]) {
     logger.warn({ err }, "Database migration error — continuing server startup");
   }
 
-  // Seed initial price catalog for all clinics that have no templates yet
   try {
     await seedAllClinics();
     logger.info("Procedure template seed completed");
@@ -122,7 +126,6 @@ if (process.env["DATABASE_URL"]) {
     logger.warn({ err }, "Procedure template seed failed — continuing server startup");
   }
 
-  // Seed built-in contract document bundles for all clinics
   try {
     await seedAllClinicsContractTemplates();
     logger.info("Contract template seed completed");
@@ -130,14 +133,10 @@ if (process.env["DATABASE_URL"]) {
     logger.warn({ err }, "Contract template seed failed — continuing server startup");
   }
 
-  // One-time fix: reset chatbot sessions stuck in human_takeover state due to
-  // OPERATOR_NEEDED from dental_qa permanently locking patients out of the chatbot.
-  // After this fix the chatbot no longer sets humanTakeover on OPERATOR_NEEDED,
-  // so these sessions can safely be reset to let patients interact again.
   try {
     const resetResult = await pool.query(
       `UPDATE chatbot_sessions SET state = 'greeting', human_takeover = false, data = '{}', updated_at = NOW()
-       WHERE human_takeover = true AND state = 'human_takeover'`
+       WHERE human_takeover = true AND state = 'human_takeover'`,
     );
     if ((resetResult.rowCount ?? 0) > 0) {
       logger.info({ count: resetResult.rowCount }, "[ChatbotFix] Reset stuck human_takeover sessions");
@@ -145,18 +144,9 @@ if (process.env["DATABASE_URL"]) {
   } catch (err) {
     logger.warn({ err }, "[ChatbotFix] Could not reset stuck sessions — continuing");
   }
-} else {
-  logger.warn("DATABASE_URL not set — skipping migrations");
 }
 
-app.listen(port, (err) => {
-  if (err) {
-    logger.error({ err }, "Error listening on port");
-    process.exit(1);
-  }
-
-  logger.info({ port }, "Server listening");
-
+function onServerReady(): void {
   const webhookBase = getServerBaseUrl();
 
   // ── Platform admin bot (TMA superadmin) ─────────────────────────────────────
@@ -280,4 +270,15 @@ app.listen(port, (err) => {
   } else {
     logger.info("REDIS_URL not set — BullMQ worker disabled; using direct DB writes for Red Alerts");
   }
+}
+
+const server = app.listen(port, "0.0.0.0", () => {
+  logger.info({ port }, "Server listening");
+  onServerReady();
+  void bootstrapDatabase();
+});
+
+server.on("error", (err) => {
+  logger.error({ err }, "Error listening on port");
+  process.exit(1);
 });
