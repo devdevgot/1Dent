@@ -52,6 +52,7 @@ import BranchesPage from "@/pages/branches";
 import ClinicBranchesPage from "@/pages/clinic-branches";
 import PricingPage from "@/pages/pricing";
 import AiCreditsPage from "@/pages/ai-credits";
+import LandingPage from "@/pages/landing";
 import NotFound from "@/pages/not-found";
 
 // Admin-specific pages
@@ -250,15 +251,16 @@ function Router() {
   }, [isAuthenticated, location, setLocation, roleDashboard]);
 
   useEffect(() => {
-    if (location === "/") {
-      setLocation(isAuthenticated ? roleDashboard : "/login");
+    if (isAuthenticated && location === "/") {
+      setLocation(roleDashboard);
     }
-  }, [location, isAuthenticated, setLocation, roleDashboard]);
+  }, [isAuthenticated, location, setLocation, roleDashboard]);
 
   return (
     <>
     {isAuthenticated && <PlanPaywall />}
     <Switch>
+      <Route path="/" component={LandingPage} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
       <Route path="/forgot-password" component={ForgotPassword} />
