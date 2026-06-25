@@ -1,6 +1,7 @@
 import { randomBytes, createHmac } from "crypto";
 import path from "path";
 import fs from "fs/promises";
+import { fileURLToPath } from "url";
 import { db, pool } from "@workspace/db";
 import app from "./app";
 import { logger } from "./lib/logger";
@@ -8,6 +9,7 @@ import { startAlertWorker } from "./shared/alert-queue";
 import { startDentalBroadcastScheduler } from "./modules/dental-broadcast/dental-broadcast.scheduler";
 import { startChatbotInactivityScheduler } from "./modules/chatbot/chatbot-inactivity.scheduler";
 import { getServerBaseUrl } from "./shared/green-api";
+import { setDatabaseReady } from "./shared/db-ready";
 import { seedAllClinics } from "./seeds/procedure-templates.seed";
 import { seedAllClinicsContractTemplates } from "./seeds/contract-templates.seed";
 
@@ -101,6 +103,25 @@ async function runMigrations(migrationsFolder: string): Promise<void> {
   }
 }
 
+async function resolveMigrationsFolder(): Promise<string> {
+  const baseDir = path.dirname(fileURLToPath(import.meta.url));
+  const candidates = [
+    path.resolve(baseDir, "drizzle"),
+    path.resolve(baseDir, "../../../lib/db/drizzle"),
+  ];
+
+  for (const folder of candidates) {
+    try {
+      await fs.access(path.join(folder, "meta", "_journal.json"));
+      return folder;
+    } catch {
+      // try next candidate
+    }
+  }
+
+  throw new Error(`Migrations folder not found. Checked: ${candidates.join(", ")}`);
+}
+
 // Bootstrap DB migrations and seeds after the server is listening (healthcheck-friendly).
 async function bootstrapDatabase(): Promise<void> {
   if (!process.env["DATABASE_URL"]) {
@@ -109,14 +130,14 @@ async function bootstrapDatabase(): Promise<void> {
   }
 
   try {
-    const migrationsFolder = path.resolve(
-      path.dirname(new URL(import.meta.url).pathname),
-      "../../../lib/db/drizzle",
-    );
+    const migrationsFolder = await resolveMigrationsFolder();
     await runMigrations(migrationsFolder);
-    logger.info("Database migrations applied successfully");
+    logger.info({ migrationsFolder }, "Database migrations applied successfully");
+    setDatabaseReady(true);
   } catch (err) {
-    logger.warn({ err }, "Database migration error — continuing server startup");
+    logger.error({ err }, "Database migration error — API will return 503 until fixed");
+    setDatabaseReady(false);
+    return;
   }
 
   try {

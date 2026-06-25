@@ -22,6 +22,7 @@ import {
   Wallet,
   Megaphone,
 } from "lucide-react";
+import { getApiErrorMessage } from "@/lib/api-error-message";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
 import { useTranslation } from "react-i18next";
 
@@ -133,7 +134,7 @@ export default function Register() {
       onError: (error) => {
         toast({
           title: t("register.errorTitle"),
-          description: (error.data as { error?: string })?.error || t("register.errorDesc"),
+          description: getApiErrorMessage(error, t("register.errorDesc")),
           variant: "destructive",
         });
       },

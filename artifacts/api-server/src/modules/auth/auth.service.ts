@@ -47,7 +47,7 @@ export class AuthService {
     const normalizedEmail = data.email.toLowerCase();
     const existing = await this.repo.findUserByEmail(normalizedEmail);
     if (existing) {
-      throw new ConflictError("Email already in use");
+      throw new ConflictError("Этот email уже зарегистрирован");
     }
 
     const clinic = await this.repo.createClinic({
@@ -331,7 +331,7 @@ export class AuthService {
     if (data.email) {
       const existing = await this.repo.findUserByEmail(data.email);
       if (existing && existing.id !== userId) {
-        throw new ConflictError("Email already in use");
+        throw new ConflictError("Этот email уже зарегистрирован");
       }
     }
 

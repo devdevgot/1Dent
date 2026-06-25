@@ -10,6 +10,7 @@ import contractPublicRouter from "./routes/contract-public";
 import webhooksRouter from "./routes/webhooks";
 import tmaRouter from "./modules/tma/tma.controller";
 import { logger } from "./lib/logger";
+import { dbReadyMiddleware } from "./middlewares/db-ready.middleware";
 import { errorHandler } from "./middlewares/error.middleware";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -50,6 +51,9 @@ app.use(
 );
 app.use(express.urlencoded({ extended: true, limit: "25mb" }));
 app.use(cookieParser());
+
+// Block API traffic until Postgres migrations finish (healthcheck stays available).
+app.use(dbReadyMiddleware);
 
 // Webhook routes MUST come before the main /api router.
 // The main router wraps channelsRouter/analyticsRouter with router.use(authMiddleware),

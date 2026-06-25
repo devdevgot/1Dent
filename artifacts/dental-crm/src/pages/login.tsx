@@ -9,6 +9,7 @@ import { saveAuthToken } from "@/lib/auth-token";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff } from "lucide-react";
+import { getApiErrorMessage } from "@/lib/api-error-message";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
 import { useTranslation } from "react-i18next";
 
@@ -42,7 +43,7 @@ export default function Login() {
       onError: (error) => {
         toast({
           title: t("auth.loginErrorTitle"),
-          description: (error.data as { error?: string })?.error || t("auth.loginErrorDesc"),
+          description: getApiErrorMessage(error, t("auth.loginErrorDesc")),
           variant: "destructive",
         });
       },
