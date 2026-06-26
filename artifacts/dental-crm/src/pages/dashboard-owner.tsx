@@ -11,11 +11,10 @@ import {
   getGetDoctorKpisQueryKey,
 } from "@workspace/api-client-react";
 import {
-  Contact, Users, Bell, X, ChevronLeft,
+  Contact, Users, X, ChevronLeft,
   Stethoscope, Send, Banknote, QrCode, CreditCard,
-  Clock, Wallet, CalendarDays, SlidersHorizontal, UserPlus, Layers,
-  TrendingUp, Globe, Handshake, Megaphone, MapPin, Sparkles, ChevronRight,
-  BarChart3,
+  Clock, Wallet, CalendarDays, SlidersHorizontal, Layers,
+  Globe, Handshake, Megaphone, MapPin, ChevronRight,
 } from "lucide-react";
 import { FaInstagram, FaTelegram, FaWhatsapp } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
@@ -23,9 +22,8 @@ import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { OnboardingWizard } from "@/components/dashboard/onboarding-wizard";
-import { staggerChildVariants, staggerParentVariants } from "@/lib/landing-animations";
 import "@/styles/design-system.css";
 
 const PAYMENT_ICONS: Record<string, React.ElementType> = {
@@ -41,55 +39,8 @@ const DOCTOR_BG = [
   "#4f46e5", "#059669", "#d97706", "#db2777", "#0284c7", "#16a34a",
 ];
 
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  bg,
-  accent,
-  loading,
-}: {
-  label: string;
-  value: string;
-  icon: React.ElementType;
-  bg: string;
-  accent: string;
-  loading?: boolean;
-}) {
-  return (
-    <div className="bg-white rounded-2xl border border-[#e8e3d9] p-4 flex flex-col gap-2 shadow-sm">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-[#64748b]">{label}</span>
-        <div
-          className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-          style={{ backgroundColor: bg }}
-        >
-          <Icon className="w-4 h-4" style={{ color: accent }} />
-        </div>
-      </div>
-      {loading ? (
-        <div className="h-8 w-24 bg-[#f1ede4] rounded-lg animate-pulse" />
-      ) : (
-        <span className="text-xl font-bold text-[#0f172a] leading-tight">{value}</span>
-      )}
-    </div>
-  );
-}
-
 function fmtRevenue(n: number) {
   return n.toLocaleString("ru-KZ") + " ₸";
-}
-
-function fmtShort(n: number) {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
-  return String(n);
-}
-
-function todayLabel() {
-  return new Date().toLocaleDateString("ru", {
-    day: "numeric", month: "long", weekday: "short",
-  });
 }
 
 // ─── Donut Chart ──────────────────────────────────────────────────────────────
@@ -237,7 +188,7 @@ function toInputValue(d: Date): string {
 
 export default function OwnerDashboard() {
   const { t } = useTranslation();
-  const { user, clinic } = useAuthStore();
+  const { clinic } = useAuthStore();
   const [, navigate] = useLocation();
   const [onboardingOpen, setOnboardingOpen] = useState(() => {
     return localStorage.getItem("show_onboarding_wizard") === "true";
@@ -479,149 +430,93 @@ export default function OwnerDashboard() {
   }, [allProcedures, patientSourceMap, channels, dateRange]);
 
 
-  const ownerFirstName = (user?.name || "").split(" ")[0] || "владелец";
-
   return (
     <div className="min-h-full bg-[#faf8f4] font-manrope pb-8">
 
-      {/* ─── Header ─── */}
-      <div className="px-4 pt-5 pb-2">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <span className="inline-flex items-center gap-1.5 bg-[#1f75fe]/10 text-[#1f75fe] rounded-full px-3 py-1 text-xs font-medium">
-              <Sparkles className="w-3 h-3" />
-              Дашборд владельца
-            </span>
-            <h1 className="text-[22px] font-extrabold text-[#0f172a] mt-2 leading-tight truncate">
-              {clinic?.name || "Моя клиника"}
-            </h1>
-            <p className="text-sm text-[#64748b] mt-1">
-              Привет, <span className="font-semibold text-[#0f172a]">{ownerFirstName}</span>
-            </p>
+      {/* ─── White top strip: doctor leaderboard + date row ─── */}
+      <div className="bg-white border-b border-[#e8e3d9] shadow-sm">
+        {/* Doctor leaderboard */}
+        {kpis.length > 0 && (
+          <div className="px-4 pt-4 pb-2">
+            <p className="text-[11px] font-semibold text-[#94a3b8] uppercase tracking-wider mb-2">Рейтинг врачей</p>
+            <div
+              className="flex items-start gap-4 overflow-x-auto pb-2 pt-1"
+              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+            >
+              {[...kpis].sort((a, b) => b.score - a.score).map((kpi, i) => {
+                const initials = (kpi.doctorName || "")
+                  .split(" ").map((w: string) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
+                const bg = DOCTOR_BG[i % DOCTOR_BG.length];
+                const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}`;
+                return (
+                  <motion.button
+                    key={kpi.doctorId}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: i * 0.04 }}
+                    onClick={() => navigate(`/users/${kpi.doctorId}`)}
+                    className="flex flex-col items-center shrink-0 w-[88px] p-1.5 hover:bg-[#faf8f4] rounded-2xl transition-colors"
+                  >
+                    <div className="relative w-16 h-16 flex items-center justify-center">
+                      <svg className="absolute inset-0 w-full h-full transform -rotate-90" viewBox="0 0 64 64">
+                        <circle
+                          cx="32"
+                          cy="32"
+                          r="28"
+                          className="stroke-[#f1ede4]"
+                          strokeWidth="3.5"
+                          fill="transparent"
+                        />
+                        <circle
+                          cx="32"
+                          cy="32"
+                          r="28"
+                          className="stroke-[#1f75fe] transition-all duration-500 ease-out"
+                          strokeWidth="3.5"
+                          fill="transparent"
+                          strokeDasharray={2 * Math.PI * 28}
+                          strokeDashoffset={2 * Math.PI * 28 * (1 - (kpi.score ?? 0) / 100)}
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      <div
+                        className="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-xs select-none"
+                        style={{ backgroundColor: bg }}
+                      >
+                        {initials}
+                      </div>
+                      <span className="absolute bottom-0.5 right-0.5 text-[11px] bg-white rounded-full w-[18px] h-[18px] flex items-center justify-center shadow-sm border border-[#e8e3d9] select-none">
+                        {medal}
+                      </span>
+                    </div>
+                    <span className="text-[12px] font-semibold text-[#0f172a] mt-2 text-center truncate w-full px-1">
+                      {(kpi.doctorName || "").split(" ")[0]}
+                    </span>
+                    <span className="text-[10px] font-medium text-[#94a3b8]">{kpi.score ?? 0}%</span>
+                  </motion.button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Date row */}
+        <div className="mx-4 py-3 flex items-center justify-between border-t border-[#f1ede4]">
+          <div className="flex items-center gap-1.5 text-sm font-semibold text-[#0f172a]">
+            <CalendarDays className="w-4 h-4 text-[#1f75fe]" />
+            <span className="capitalize">{dateRangeLabel}</span>
           </div>
           <button
             onClick={() => { setPendingPreset(filterPreset); setShowCustom(false); setFilterOpen(true); }}
-            className="flex items-center gap-1.5 shrink-0 border border-[#e8e3d9] bg-white rounded-xl px-3 py-2 text-xs font-semibold text-[#0f172a] hover:bg-[#f1ede4] transition-colors"
+            className="flex items-center gap-1.5 bg-white border border-[#e8e3d9] rounded-xl px-3 py-1.5 text-xs font-semibold text-[#64748b] hover:bg-[#f1ede4] transition-colors"
           >
-            <SlidersHorizontal className="w-3.5 h-3.5 text-[#64748b]" />
+            <SlidersHorizontal className="w-3.5 h-3.5 text-[#94a3b8]" />
             {filterLabel}
           </button>
         </div>
-        <div className="flex items-center gap-1.5 mt-3 text-sm font-medium text-[#64748b]">
-          <CalendarDays className="w-4 h-4 text-[#1f75fe]" />
-          <span className="capitalize">{dateRangeLabel}</span>
-        </div>
       </div>
 
-      {/* ─── KPI metrics ─── */}
-      <motion.div
-        variants={staggerParentVariants(0.05)}
-        initial="hidden"
-        animate="visible"
-        className="px-4 mt-3 grid grid-cols-2 gap-3"
-      >
-        <motion.div variants={staggerChildVariants}>
-          <StatCard
-            label="Выручка"
-            value={fmtRevenue(revenueThisMonth)}
-            icon={TrendingUp}
-            bg="#fef3c7"
-            accent="#d97706"
-            loading={isLoading}
-          />
-        </motion.div>
-        <motion.div variants={staggerChildVariants}>
-          <StatCard
-            label="Чистая прибыль"
-            value={fmtRevenue(realIncome)}
-            icon={Wallet}
-            bg="#f0fdf4"
-            accent="#16a34a"
-            loading={isLoading}
-          />
-        </motion.div>
-        <motion.div variants={staggerChildVariants}>
-          <StatCard
-            label="Новые пациенты"
-            value={String(newPatientsThisMonth)}
-            icon={UserPlus}
-            bg="#e0e7ff"
-            accent="#4f46e5"
-            loading={isLoading}
-          />
-        </motion.div>
-        <motion.div variants={staggerChildVariants}>
-          <StatCard
-            label="Процедуры"
-            value={String(completedProcedures)}
-            icon={Stethoscope}
-            bg="#fce7f3"
-            accent="#db2777"
-            loading={isLoading}
-          />
-        </motion.div>
-      </motion.div>
-
-      {/* ─── Doctor leaderboard ─── */}
-      {kpis.length > 0 && (
-        <div className="mx-4 mt-4 bg-white rounded-2xl border border-[#e8e3d9] p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-bold text-[#0f172a]">Рейтинг врачей</p>
-            <span className="text-xs font-medium text-[#94a3b8]">{kpis.length} врач.</span>
-          </div>
-          <div
-            className="flex items-start gap-3 overflow-x-auto pb-1"
-            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-          >
-            {[...kpis].sort((a, b) => b.score - a.score).map((kpi, i) => {
-              const initials = (kpi.doctorName || "")
-                .split(" ").map((w: string) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
-              const bg = DOCTOR_BG[i % DOCTOR_BG.length];
-              const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}`;
-              return (
-                <motion.button
-                  key={kpi.doctorId}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: i * 0.04 }}
-                  onClick={() => navigate(`/users/${kpi.doctorId}`)}
-                  className="flex flex-col items-center shrink-0 w-[84px] p-1.5 hover:bg-[#faf8f4] rounded-2xl transition-colors"
-                >
-                  <div className="relative w-16 h-16 flex items-center justify-center">
-                    <svg className="absolute inset-0 w-full h-full transform -rotate-90" viewBox="0 0 64 64">
-                      <circle cx="32" cy="32" r="28" className="stroke-[#f1ede4]" strokeWidth="3.5" fill="transparent" />
-                      <circle
-                        cx="32" cy="32" r="28"
-                        className="stroke-[#1f75fe] transition-all duration-500 ease-out"
-                        strokeWidth="3.5"
-                        fill="transparent"
-                        strokeDasharray={2 * Math.PI * 28}
-                        strokeDashoffset={2 * Math.PI * 28 * (1 - (kpi.score ?? 0) / 100)}
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    <div
-                      className="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-xs select-none"
-                      style={{ backgroundColor: bg }}
-                    >
-                      {initials}
-                    </div>
-                    <span className="absolute bottom-0.5 right-0.5 text-[11px] bg-white rounded-full w-[18px] h-[18px] flex items-center justify-center shadow-sm border border-[#e8e3d9] select-none">
-                      {medal}
-                    </span>
-                  </div>
-                  <span className="text-xs font-semibold text-[#0f172a] mt-2 text-center truncate w-full px-1">
-                    {(kpi.doctorName || "").split(" ")[0]}
-                  </span>
-                  <span className="text-[10px] font-medium text-[#94a3b8]">{kpi.score ?? 0}%</span>
-                </motion.button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ─── Setup Wizard ─── */}
+      {/* ─── Setup Wizard Call-to-Action Card ─── */}
       {!isOnboardingCompleted && (
         <div className="mx-4 mt-4 bg-white border border-[#e8e3d9] rounded-2xl p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -636,7 +531,7 @@ export default function OwnerDashboard() {
           </div>
           <button
             onClick={() => setOnboardingOpen(true)}
-            className="w-full sm:w-auto px-6 py-3 bg-[#1f75fe] hover:bg-[#1a65e8] text-white rounded-full text-sm font-semibold shrink-0 transition-all hover:scale-105 flex items-center justify-center gap-1.5"
+            className="w-full sm:w-auto px-6 py-3 bg-[#1f75fe] hover:bg-[#1a65e8] text-white rounded-full text-sm font-semibold shrink-0 transition-colors flex items-center justify-center gap-1.5"
           >
             Продолжить настройку
             <ChevronRight className="w-4 h-4" />
@@ -644,25 +539,14 @@ export default function OwnerDashboard() {
         </div>
       )}
 
-      {/* ─── Revenue donut ─── */}
-      <div className="mx-4 mt-4 bg-white rounded-2xl border border-[#e8e3d9] shadow-sm overflow-hidden">
-        <div className="px-5 pt-5 pb-1 flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-bold text-[#0f172a]">Структура оплат</h2>
-            <p className="text-xs text-[#94a3b8] mt-0.5">За выбранный период</p>
-          </div>
-          <button
-            onClick={() => setDetailsOpen(true)}
-            className="text-xs font-semibold text-[#1f75fe] hover:text-[#1a65e8] transition-colors"
-          >
-            Детали
-          </button>
-        </div>
+      {/* ─── Revenue Donut Card ─── */}
+      <div className="mx-4 mt-3 bg-white rounded-2xl shadow-sm border border-[#e8e3d9] overflow-hidden">
 
-        <div className="pt-2 pb-2 flex justify-center">
+        {/* Ring chart */}
+        <div className="pt-4 pb-2 flex justify-center">
           {isLoading ? (
             <div className="w-[260px] h-[260px] flex items-center justify-center">
-              <div className="w-10 h-10 border-4 border-[#1f75fe]/20 border-t-[#1f75fe] rounded-full animate-spin" />
+              <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
             </div>
           ) : (
             <DonutChart
@@ -674,6 +558,7 @@ export default function OwnerDashboard() {
           )}
         </div>
 
+        {/* ─── Payment method list ─── */}
         {!isLoading && paymentStats.length > 0 && (
           <div className="px-5 pb-5 space-y-0 divide-y divide-[#f1ede4]">
             {paymentStats.map((stat, idx) => {
@@ -683,7 +568,7 @@ export default function OwnerDashboard() {
                   key={stat.method}
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.04 }}
+                  transition={{ delay: idx * 0.05 }}
                   className="flex items-center gap-3 py-3"
                 >
                   <div
@@ -705,14 +590,14 @@ export default function OwnerDashboard() {
           </div>
         )}
 
-        {!isLoading && paymentStats.length === 0 && (
-          <p className="py-8 text-center text-sm text-[#94a3b8]">Нет выручки в этом периоде</p>
+        {!isLoading && paymentStats.length === 0 && revenueThisMonth === 0 && (
+          <p className="py-6 text-center text-sm text-[#94a3b8]">Нет выручки в этом периоде</p>
         )}
       </div>
 
-      {/* ─── Quick actions ─── */}
+      {/* ─── Quick Actions ─── */}
       <div className="mx-4 mt-4 bg-white rounded-2xl border border-[#e8e3d9] shadow-sm p-4">
-        <p className="text-sm font-bold text-[#0f172a] mb-3">
+        <p className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wide mb-3">
           {t("dashboard.quickActions")}
         </p>
         <div className="grid grid-cols-2 gap-2">
@@ -720,7 +605,6 @@ export default function OwnerDashboard() {
             { label: t("ownerDashboard.manageStaff"), icon: Contact, path: "/users", bg: "#f1f5f9", accent: "#64748b" },
             { label: t("nav.patients"), icon: Users, path: "/patients", bg: "#e0e7ff", accent: "#4f46e5" },
             { label: t("nav.procedures"), icon: Stethoscope, path: "/procedures", bg: "#fce7f3", accent: "#db2777" },
-            { label: t("nav.analytics"), icon: BarChart3, path: "/analytics", bg: "#f0fdf4", accent: "#16a34a" },
           ].map((item) => (
             <button
               key={item.path}
@@ -910,7 +794,6 @@ export default function OwnerDashboard() {
       {/* ─── Detailed Analytics Sheet ─── */}
       <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
         <SheetContent side="bottom" className="rounded-t-3xl px-0 pb-8 max-h-[85dvh] overflow-y-auto bg-[#faf8f4] border-t border-[#e8e3d9]">
-          {/* Header */}
           <div className="flex items-center justify-between px-5 pt-4 pb-2">
             <div>
               <h2 className="text-base font-bold text-[#0f172a]">Детальная аналитика</h2>
@@ -926,7 +809,6 @@ export default function OwnerDashboard() {
             </button>
           </div>
 
-          {/* Segmented Control */}
           <div className="flex bg-[#f1ede4] p-1 rounded-xl mx-5 mt-2 mb-4">
             <button
               onClick={() => setActiveTab("channels")}
