@@ -253,10 +253,8 @@ export default function OwnerDashboard() {
   const kpis = rawKpis;
 
   const revenueThisMonth       = analytics.revenueThisMonth;
-  const newPatientsThisMonth   = analytics.newPatientsThisMonth;
   const completedProcedures    = analytics.completedProceduresThisMonth;
   const totalPatients          = analytics.totalPatients;
-  const redAlertCount          = analytics.redAlertCount;
 
   const hasClinicData = useMemo(() => {
     if (analyticsLoading) return false;
