@@ -107,6 +107,13 @@
     "errorTitle": "Error",
     "errorDesc": "Failed to log out. Please try again."
   },
+  "menuPage": {
+    "title": "Menu",
+    "settings": "Settings",
+    "language": "App language",
+    "notifications": "Notifications",
+    "copyright": "© 2025 1Dent"
+  },
   "role": {
     "owner": "Owner",
     "admin": "Admin",
@@ -1006,6 +1013,13 @@
   },
   "settingsPage": {
     "title": "Settings",
+    "accountTitle": "Account settings",
+    "name": "Name",
+    "email": "Email",
+    "password": "Password",
+    "changePhoto": "Change photo",
+    "photoUpdated": "Profile photo updated",
+    "photoUpdateError": "Failed to update photo",
     "profile": "Profile",
     "security": "Security",
     "appearance": "Appearance",
