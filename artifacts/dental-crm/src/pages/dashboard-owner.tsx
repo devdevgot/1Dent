@@ -15,6 +15,7 @@ import {
   Stethoscope, Send, Banknote, QrCode, CreditCard,
   Clock, Wallet, CalendarDays, SlidersHorizontal, UserPlus, Layers,
   TrendingUp, Globe, Handshake, Megaphone, MapPin, Sparkles, ChevronRight,
+  BarChart3,
 } from "lucide-react";
 import { FaInstagram, FaTelegram, FaWhatsapp } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
@@ -24,6 +25,8 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import { OnboardingWizard } from "@/components/dashboard/onboarding-wizard";
+import { staggerChildVariants, staggerParentVariants } from "@/lib/landing-animations";
+import "@/styles/design-system.css";
 
 const PAYMENT_ICONS: Record<string, React.ElementType> = {
   kaspi_transfer: Send,
@@ -35,8 +38,43 @@ const PAYMENT_ICONS: Record<string, React.ElementType> = {
 };
 
 const DOCTOR_BG = [
-  "#4B7BEC", "#26de81", "#fd9644", "#a29bfe", "#fc5c65", "#45aaf2",
+  "#4f46e5", "#059669", "#d97706", "#db2777", "#0284c7", "#16a34a",
 ];
+
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+  bg,
+  accent,
+  loading,
+}: {
+  label: string;
+  value: string;
+  icon: React.ElementType;
+  bg: string;
+  accent: string;
+  loading?: boolean;
+}) {
+  return (
+    <div className="bg-white rounded-2xl border border-[#e8e3d9] p-4 flex flex-col gap-2 shadow-sm">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium text-[#64748b]">{label}</span>
+        <div
+          className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+          style={{ backgroundColor: bg }}
+        >
+          <Icon className="w-4 h-4" style={{ color: accent }} />
+        </div>
+      </div>
+      {loading ? (
+        <div className="h-8 w-24 bg-[#f1ede4] rounded-lg animate-pulse" />
+      ) : (
+        <span className="text-xl font-bold text-[#0f172a] leading-tight">{value}</span>
+      )}
+    </div>
+  );
+}
 
 function fmtRevenue(n: number) {
   return n.toLocaleString("ru-KZ") + " ₸";
@@ -120,7 +158,7 @@ function DonutChart({
   return (
     <div style={{ width: SIZE, height: SIZE, position: "relative" }}>
       <svg width={SIZE} height={SIZE}>
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#EBEBEB" strokeWidth={SW} />
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#e8e3d9" strokeWidth={SW} />
         {!isEmpty && segs.map((s, i) => (
           <circle
             key={i}
@@ -136,15 +174,15 @@ function DonutChart({
       </svg>
       <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
         {isEmpty ? (
-          <span style={{ fontSize: 12, color: "#8e8e93" }}>Нет данных</span>
+          <span style={{ fontSize: 12, color: "#94a3b8" }}>Нет данных</span>
         ) : (
           <>
-            <span style={{ fontWeight: 700, fontSize: 24, lineHeight: "30px", color: "#1c1c1e" }}>
+            <span style={{ fontWeight: 700, fontSize: 24, lineHeight: "30px", color: "#0f172a" }}>
               {realIncome.toLocaleString("ru-KZ")} ₸
             </span>
             <button
               onClick={onDetailsClick}
-              className="mt-1 px-3 py-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-full text-[10px] font-bold text-primary transition-colors cursor-pointer"
+              className="mt-1 px-3 py-1 bg-[#1f75fe]/10 hover:bg-[#1f75fe]/15 border border-[#1f75fe]/20 rounded-full text-[10px] font-bold text-[#1f75fe] transition-colors cursor-pointer"
             >
               Подробнее
             </button>
@@ -441,112 +479,164 @@ export default function OwnerDashboard() {
   }, [allProcedures, patientSourceMap, channels, dateRange]);
 
 
+  const ownerFirstName = (user?.name || "").split(" ")[0] || "владелец";
+
   return (
-    <div className="min-h-full bg-[#f7f8fc] pb-8">
+    <div className="min-h-full bg-[#faf8f4] font-manrope pb-8">
 
-      {/* ─── White top strip: doctor leaderboard + date row ─── */}
-      <div className="bg-white border-b border-gray-100">
-        {/* Doctor leaderboard */}
-        {kpis.length > 0 && (
-          <div className="px-4 pt-3 pb-2">
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Рейтинг врачей</p>
-            <div 
-              className="flex items-start gap-4 overflow-x-auto pb-2 pt-1"
-              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-            >
-              {[...kpis].sort((a, b) => b.score - a.score).map((kpi, i) => {
-                const initials = (kpi.doctorName || "")
-                  .split(" ").map((w: string) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
-                const bg = DOCTOR_BG[i % DOCTOR_BG.length];
-                const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}`;
-                const slotsLeft = (kpi.maxSlotsPerDay ?? 20) - (kpi.slotsUsedToday ?? 0);
-                const slotsFull = slotsLeft <= 0;
-                return (
-                  <motion.button
-                    key={kpi.doctorId}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: i * 0.04 }}
-                    onClick={() => navigate(`/users/${kpi.doctorId}`)}
-                    className="flex flex-col items-center shrink-0 w-[88px] p-1.5 hover:bg-gray-50 rounded-2xl transition-colors"
-                  >
-                    {/* circular progress + avatar container */}
-                    <div className="relative w-16 h-16 flex items-center justify-center">
-                      <svg className="absolute inset-0 w-full h-full transform -rotate-90" viewBox="0 0 64 64">
-                        {/* Background circle */}
-                        <circle
-                          cx="32"
-                          cy="32"
-                          r="28"
-                          className="stroke-gray-100"
-                          strokeWidth="3.5"
-                          fill="transparent"
-                        />
-                        {/* Progress circle */}
-                        <circle
-                          cx="32"
-                          cy="32"
-                          r="28"
-                          className="stroke-[#1f75fe] transition-all duration-500 ease-out"
-                          strokeWidth="3.5"
-                          fill="transparent"
-                          strokeDasharray={2 * Math.PI * 28}
-                          strokeDashoffset={2 * Math.PI * 28 * (1 - (kpi.score ?? 0) / 100)}
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                      {/* Avatar */}
-                      <div
-                        className="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-xs select-none shadow-inner"
-                        style={{ backgroundColor: bg }}
-                      >
-                        {initials}
-                      </div>
-                      {/* Medal badge */}
-                      <span className="absolute bottom-0.5 right-0.5 text-[11px] bg-white rounded-full w-[18px] h-[18px] flex items-center justify-center shadow-md border border-gray-100 select-none">
-                        {medal}
-                      </span>
-                    </div>
-
-                    {/* Doctor name under avatar */}
-                    <span className="text-[12px] font-semibold text-gray-700 mt-2 text-center truncate w-full px-1">
-                      {(kpi.doctorName || "").split(" ")[0]}
-                    </span>
-                  </motion.button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Date row */}
-        <div className="mx-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-1.5 text-sm font-semibold text-gray-700">
-            <CalendarDays className="w-4 h-4 text-primary" />
-            <span className="capitalize">{dateRangeLabel}</span>
+      {/* ─── Header ─── */}
+      <div className="px-4 pt-5 pb-2">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <span className="inline-flex items-center gap-1.5 bg-[#1f75fe]/10 text-[#1f75fe] rounded-full px-3 py-1 text-xs font-medium">
+              <Sparkles className="w-3 h-3" />
+              Дашборд владельца
+            </span>
+            <h1 className="text-[22px] font-extrabold text-[#0f172a] mt-2 leading-tight truncate">
+              {clinic?.name || "Моя клиника"}
+            </h1>
+            <p className="text-sm text-[#64748b] mt-1">
+              Привет, <span className="font-semibold text-[#0f172a]">{ownerFirstName}</span>
+            </p>
           </div>
           <button
             onClick={() => { setPendingPreset(filterPreset); setShowCustom(false); setFilterOpen(true); }}
-            className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-xl px-3 py-1.5 text-xs font-semibold text-gray-600 shadow-sm"
+            className="flex items-center gap-1.5 shrink-0 border border-[#e8e3d9] bg-white rounded-xl px-3 py-2 text-xs font-semibold text-[#0f172a] hover:bg-[#f1ede4] transition-colors"
           >
-            <SlidersHorizontal className="w-3.5 h-3.5 text-gray-400" />
+            <SlidersHorizontal className="w-3.5 h-3.5 text-[#64748b]" />
             {filterLabel}
           </button>
         </div>
-      </div>{/* end white top strip */}
+        <div className="flex items-center gap-1.5 mt-3 text-sm font-medium text-[#64748b]">
+          <CalendarDays className="w-4 h-4 text-[#1f75fe]" />
+          <span className="capitalize">{dateRangeLabel}</span>
+        </div>
+      </div>
 
-      {/* ─── Setup Wizard Call-to-Action Card ─── */}
+      {/* ─── KPI metrics ─── */}
+      <motion.div
+        variants={staggerParentVariants(0.05)}
+        initial="hidden"
+        animate="visible"
+        className="px-4 mt-3 grid grid-cols-2 gap-3"
+      >
+        <motion.div variants={staggerChildVariants}>
+          <StatCard
+            label="Выручка"
+            value={fmtRevenue(revenueThisMonth)}
+            icon={TrendingUp}
+            bg="#fef3c7"
+            accent="#d97706"
+            loading={isLoading}
+          />
+        </motion.div>
+        <motion.div variants={staggerChildVariants}>
+          <StatCard
+            label="Чистая прибыль"
+            value={fmtRevenue(realIncome)}
+            icon={Wallet}
+            bg="#f0fdf4"
+            accent="#16a34a"
+            loading={isLoading}
+          />
+        </motion.div>
+        <motion.div variants={staggerChildVariants}>
+          <StatCard
+            label="Новые пациенты"
+            value={String(newPatientsThisMonth)}
+            icon={UserPlus}
+            bg="#e0e7ff"
+            accent="#4f46e5"
+            loading={isLoading}
+          />
+        </motion.div>
+        <motion.div variants={staggerChildVariants}>
+          <StatCard
+            label="Процедуры"
+            value={String(completedProcedures)}
+            icon={Stethoscope}
+            bg="#fce7f3"
+            accent="#db2777"
+            loading={isLoading}
+          />
+        </motion.div>
+      </motion.div>
+
+      {/* ─── Doctor leaderboard ─── */}
+      {kpis.length > 0 && (
+        <div className="mx-4 mt-4 bg-white rounded-2xl border border-[#e8e3d9] p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-bold text-[#0f172a]">Рейтинг врачей</p>
+            <span className="text-xs font-medium text-[#94a3b8]">{kpis.length} врач.</span>
+          </div>
+          <div
+            className="flex items-start gap-3 overflow-x-auto pb-1"
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+          >
+            {[...kpis].sort((a, b) => b.score - a.score).map((kpi, i) => {
+              const initials = (kpi.doctorName || "")
+                .split(" ").map((w: string) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
+              const bg = DOCTOR_BG[i % DOCTOR_BG.length];
+              const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}`;
+              return (
+                <motion.button
+                  key={kpi.doctorId}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: i * 0.04 }}
+                  onClick={() => navigate(`/users/${kpi.doctorId}`)}
+                  className="flex flex-col items-center shrink-0 w-[84px] p-1.5 hover:bg-[#faf8f4] rounded-2xl transition-colors"
+                >
+                  <div className="relative w-16 h-16 flex items-center justify-center">
+                    <svg className="absolute inset-0 w-full h-full transform -rotate-90" viewBox="0 0 64 64">
+                      <circle cx="32" cy="32" r="28" className="stroke-[#f1ede4]" strokeWidth="3.5" fill="transparent" />
+                      <circle
+                        cx="32" cy="32" r="28"
+                        className="stroke-[#1f75fe] transition-all duration-500 ease-out"
+                        strokeWidth="3.5"
+                        fill="transparent"
+                        strokeDasharray={2 * Math.PI * 28}
+                        strokeDashoffset={2 * Math.PI * 28 * (1 - (kpi.score ?? 0) / 100)}
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <div
+                      className="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-xs select-none"
+                      style={{ backgroundColor: bg }}
+                    >
+                      {initials}
+                    </div>
+                    <span className="absolute bottom-0.5 right-0.5 text-[11px] bg-white rounded-full w-[18px] h-[18px] flex items-center justify-center shadow-sm border border-[#e8e3d9] select-none">
+                      {medal}
+                    </span>
+                  </div>
+                  <span className="text-xs font-semibold text-[#0f172a] mt-2 text-center truncate w-full px-1">
+                    {(kpi.doctorName || "").split(" ")[0]}
+                  </span>
+                  <span className="text-[10px] font-medium text-[#94a3b8]">{kpi.score ?? 0}%</span>
+                </motion.button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ─── Setup Wizard ─── */}
       {!isOnboardingCompleted && (
-        <div className="mx-4 mt-4 bg-white border border-amber-200/80 rounded-3xl p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="mx-4 mt-4 bg-white border border-[#e8e3d9] rounded-2xl p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h4 className="text-sm sm:text-base font-extrabold text-slate-800">Мастер настроек 1Dent</h4>
-            <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
-              Настройте сотрудников, ИИ чат-бота, геолокацию и Telegram-бота для полноценного старта клиники.
+            <span className="inline-flex items-center gap-1.5 bg-[#fef3c7] text-[#d97706] rounded-full px-3 py-1 text-xs font-medium mb-2">
+              <Layers className="w-3 h-3" />
+              Быстрый старт
+            </span>
+            <h4 className="text-base font-bold text-[#0f172a]">Мастер настроек 1Dent</h4>
+            <p className="text-sm text-[#64748b] mt-1 leading-relaxed">
+              Настройте сотрудников, ИИ-чатбота, геолокацию и Telegram для полноценного старта.
             </p>
           </div>
           <button
             onClick={() => setOnboardingOpen(true)}
-            className="w-full sm:w-auto px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs sm:text-sm font-bold shrink-0 transition-colors shadow-sm flex items-center justify-center gap-1.5"
+            className="w-full sm:w-auto px-6 py-3 bg-[#1f75fe] hover:bg-[#1a65e8] text-white rounded-full text-sm font-semibold shrink-0 transition-all hover:scale-105 flex items-center justify-center gap-1.5"
           >
             Продолжить настройку
             <ChevronRight className="w-4 h-4" />
@@ -554,14 +644,25 @@ export default function OwnerDashboard() {
         </div>
       )}
 
-      {/* ─── Revenue Donut Card ─── */}
-      <div className="mx-4 mt-3 bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+      {/* ─── Revenue donut ─── */}
+      <div className="mx-4 mt-4 bg-white rounded-2xl border border-[#e8e3d9] shadow-sm overflow-hidden">
+        <div className="px-5 pt-5 pb-1 flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-bold text-[#0f172a]">Структура оплат</h2>
+            <p className="text-xs text-[#94a3b8] mt-0.5">За выбранный период</p>
+          </div>
+          <button
+            onClick={() => setDetailsOpen(true)}
+            className="text-xs font-semibold text-[#1f75fe] hover:text-[#1a65e8] transition-colors"
+          >
+            Детали
+          </button>
+        </div>
 
-        {/* Ring chart */}
-        <div className="pt-4 pb-2 flex justify-center">
+        <div className="pt-2 pb-2 flex justify-center">
           {isLoading ? (
             <div className="w-[260px] h-[260px] flex items-center justify-center">
-              <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+              <div className="w-10 h-10 border-4 border-[#1f75fe]/20 border-t-[#1f75fe] rounded-full animate-spin" />
             </div>
           ) : (
             <DonutChart
@@ -573,9 +674,8 @@ export default function OwnerDashboard() {
           )}
         </div>
 
-        {/* ─── Payment method list ─── */}
         {!isLoading && paymentStats.length > 0 && (
-          <div className="px-5 pb-5 space-y-0 divide-y divide-gray-50">
+          <div className="px-5 pb-5 space-y-0 divide-y divide-[#f1ede4]">
             {paymentStats.map((stat, idx) => {
               const Icon = PAYMENT_ICONS[stat.method] ?? Wallet;
               return (
@@ -583,7 +683,7 @@ export default function OwnerDashboard() {
                   key={stat.method}
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.05 }}
+                  transition={{ delay: idx * 0.04 }}
                   className="flex items-center gap-3 py-3"
                 >
                   <div
@@ -593,47 +693,47 @@ export default function OwnerDashboard() {
                     <Icon className="w-5 h-5" style={{ color: stat.color }} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-800">{stat.label}</p>
-                    <p className="text-xs text-gray-400">{stat.percent}%</p>
+                    <p className="text-sm font-semibold text-[#0f172a]">{stat.label}</p>
+                    <p className="text-xs text-[#94a3b8]">{stat.percent}%</p>
                   </div>
-                  <span className="text-sm font-bold text-gray-900 shrink-0">
+                  <span className="text-sm font-bold text-[#0f172a] shrink-0">
                     {fmtRevenue(stat.amount)}
                   </span>
                 </motion.div>
               );
             })}
-
-            {paymentStats.length === 0 && (
-              <p className="py-4 text-center text-sm text-gray-400">Нет данных за этот период</p>
-            )}
           </div>
         )}
 
-        {!isLoading && paymentStats.length === 0 && revenueThisMonth === 0 && (
-          <p className="py-6 text-center text-sm text-gray-400">Нет выручки в этом периоде</p>
+        {!isLoading && paymentStats.length === 0 && (
+          <p className="py-8 text-center text-sm text-[#94a3b8]">Нет выручки в этом периоде</p>
         )}
       </div>
 
-      {/* ─── Quick Actions ─── */}
-      <div className="mx-4 mt-4 bg-white rounded-3xl border border-gray-100 shadow-sm p-4">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+      {/* ─── Quick actions ─── */}
+      <div className="mx-4 mt-4 bg-white rounded-2xl border border-[#e8e3d9] shadow-sm p-4">
+        <p className="text-sm font-bold text-[#0f172a] mb-3">
           {t("dashboard.quickActions")}
         </p>
         <div className="grid grid-cols-2 gap-2">
           {[
-            { label: t("ownerDashboard.manageStaff"), icon: Contact,    path: "/users",      color: "bg-slate-50 text-slate-600" },
-            { label: t("nav.patients"),               icon: Users,       path: "/patients",   color: "bg-blue-50 text-blue-600" },
-            { label: t("nav.procedures"),             icon: Stethoscope, path: "/procedures", color: "bg-violet-50 text-violet-600" },
+            { label: t("ownerDashboard.manageStaff"), icon: Contact, path: "/users", bg: "#f1f5f9", accent: "#64748b" },
+            { label: t("nav.patients"), icon: Users, path: "/patients", bg: "#e0e7ff", accent: "#4f46e5" },
+            { label: t("nav.procedures"), icon: Stethoscope, path: "/procedures", bg: "#fce7f3", accent: "#db2777" },
+            { label: t("nav.analytics"), icon: BarChart3, path: "/analytics", bg: "#f0fdf4", accent: "#16a34a" },
           ].map((item) => (
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className="flex items-center gap-2.5 p-3 rounded-2xl border border-gray-100 hover:border-primary/20 hover:bg-primary/5 transition-all text-left group"
+              className="flex items-center gap-2.5 p-3 rounded-2xl border border-[#e8e3d9] hover:border-[#1f75fe]/30 hover:bg-[#1f75fe]/5 transition-all text-left group"
             >
-              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${item.color} group-hover:bg-primary group-hover:text-white transition-colors`}>
-                <item.icon className="w-4 h-4" />
+              <div
+                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors"
+                style={{ backgroundColor: item.bg }}
+              >
+                <item.icon className="w-4 h-4" style={{ color: item.accent }} />
               </div>
-              <span className="text-xs font-semibold text-gray-700">{item.label}</span>
+              <span className="text-xs font-semibold text-[#0f172a]">{item.label}</span>
             </button>
           ))}
         </div>
@@ -641,7 +741,7 @@ export default function OwnerDashboard() {
 
       {/* ─── Date Filter Sheet ─── */}
       <Sheet open={filterOpen} onOpenChange={(v) => { setFilterOpen(v); if (!v) setShowCustom(false); }}>
-        <SheetContent side="bottom" className="rounded-t-3xl px-0 pb-8 max-h-[85dvh] overflow-y-auto">
+        <SheetContent side="bottom" className="rounded-t-3xl px-0 pb-8 max-h-[85dvh] overflow-y-auto bg-[#faf8f4] border-t border-[#e8e3d9]">
           <AnimatePresence mode="wait" initial={false}>
             {!showCustom ? (
               <motion.div
@@ -653,10 +753,10 @@ export default function OwnerDashboard() {
               >
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 pt-4 pb-2">
-                  <h2 className="text-base font-bold text-gray-900">Фильтр по дате</h2>
+                  <h2 className="text-base font-bold text-[#0f172a]">Фильтр по дате</h2>
                   <button
                     onClick={() => setFilterOpen(false)}
-                    className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500"
+                    className="w-8 h-8 rounded-full bg-[#f1ede4] flex items-center justify-center text-[#64748b] hover:text-[#0f172a] transition-colors"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -675,19 +775,19 @@ export default function OwnerDashboard() {
                           setPendingPreset(p.key);
                         }
                       }}
-                      className="w-full flex items-center justify-between px-5 py-4 border-b border-gray-50 last:border-0"
+                      className="w-full flex items-center justify-between px-5 py-4 border-b border-[#f1ede4] last:border-0 bg-white first:rounded-t-2xl"
                     >
                       <span className={cn(
                         "text-sm font-medium",
-                        pendingPreset === p.key ? "text-gray-900 font-semibold" : "text-gray-600",
+                        pendingPreset === p.key ? "text-[#0f172a] font-semibold" : "text-[#64748b]",
                       )}>
                         {p.label}
                       </span>
                       <span className={cn(
                         "w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
                         pendingPreset === p.key
-                          ? "border-primary bg-primary"
-                          : "border-gray-300",
+                          ? "border-[#1f75fe] bg-[#1f75fe]"
+                          : "border-[#e8e3d9]",
                       )}>
                         {pendingPreset === p.key && (
                           <span className="w-2 h-2 rounded-full bg-white" />
@@ -705,8 +805,7 @@ export default function OwnerDashboard() {
                       setFilterOpen(false);
                       setShowCustom(false);
                     }}
-                    className="w-full py-3.5 rounded-2xl text-sm font-bold text-white"
-                    style={{ backgroundColor: "#1f75fe" }}
+                    className="w-full py-3.5 rounded-full text-sm font-semibold text-white bg-[#1f75fe] hover:bg-[#1a65e8] transition-colors"
                   >
                     Применить
                   </button>
@@ -717,7 +816,7 @@ export default function OwnerDashboard() {
                       setFilterOpen(false);
                       setShowCustom(false);
                     }}
-                    className="w-full py-3.5 rounded-2xl text-sm font-bold text-gray-500 bg-gray-100"
+                    className="w-full py-3.5 rounded-full text-sm font-semibold text-[#64748b] bg-[#f1ede4] hover:bg-[#e8e3d9] transition-colors"
                   >
                     Сбросить
                   </button>
@@ -735,14 +834,14 @@ export default function OwnerDashboard() {
                 <div className="flex items-center gap-3 px-5 pt-4 pb-4">
                   <button
                     onClick={() => setShowCustom(false)}
-                    className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500"
+                    className="w-8 h-8 rounded-full bg-[#f1ede4] flex items-center justify-center text-[#64748b]"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
-                  <h2 className="text-base font-bold text-gray-900 flex-1">Выбрать период</h2>
+                  <h2 className="text-base font-bold text-[#0f172a] flex-1">Выбрать период</h2>
                   <button
                     onClick={() => { setFilterOpen(false); setShowCustom(false); }}
-                    className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500"
+                    className="w-8 h-8 rounded-full bg-[#f1ede4] flex items-center justify-center text-[#64748b]"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -751,37 +850,36 @@ export default function OwnerDashboard() {
                 {/* Date inputs */}
                 <div className="px-5 space-y-3">
                   <div>
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Начало</p>
+                    <p className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider mb-1.5">Начало</p>
                     <div className="relative">
-                      <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8] pointer-events-none" />
                       <input
                         type="date"
                         value={customFrom}
                         max={customTo}
                         onChange={e => setCustomFrom(e.target.value)}
-                        className="w-full pl-9 pr-4 py-3 rounded-2xl border-2 border-gray-100 text-sm font-semibold text-gray-800 focus:border-primary focus:outline-none bg-gray-50"
+                        className="w-full pl-9 pr-4 py-3 rounded-xl border border-[#e8e3d9] text-sm font-semibold text-[#0f172a] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 focus:outline-none bg-white"
                       />
                     </div>
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Конец</p>
+                    <p className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider mb-1.5">Конец</p>
                     <div className="relative">
-                      <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8] pointer-events-none" />
                       <input
                         type="date"
                         value={customTo}
                         min={customFrom}
                         max={toInputValue(new Date())}
                         onChange={e => setCustomTo(e.target.value)}
-                        className="w-full pl-9 pr-4 py-3 rounded-2xl border-2 border-gray-100 text-sm font-semibold text-gray-800 focus:border-primary focus:outline-none bg-gray-50"
+                        className="w-full pl-9 pr-4 py-3 rounded-xl border border-[#e8e3d9] text-sm font-semibold text-[#0f172a] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 focus:outline-none bg-white"
                       />
                     </div>
                   </div>
 
-                  {/* Range preview */}
-                  <div className="bg-primary/8 rounded-2xl px-4 py-3 flex items-center gap-2">
-                    <CalendarDays className="w-4 h-4 text-primary shrink-0" />
-                    <span className="text-sm font-semibold text-primary">
+                  <div className="bg-[#1f75fe]/10 rounded-2xl px-4 py-3 flex items-center gap-2">
+                    <CalendarDays className="w-4 h-4 text-[#1f75fe] shrink-0" />
+                    <span className="text-sm font-semibold text-[#1f75fe]">
                       {customFrom && customTo
                         ? fmtDateRange(new Date(customFrom), new Date(customTo))
                         : "Выберите даты"}
@@ -798,8 +896,7 @@ export default function OwnerDashboard() {
                       setFilterOpen(false);
                       setShowCustom(false);
                     }}
-                    className="w-full py-3.5 rounded-2xl text-sm font-bold text-white disabled:opacity-50"
-                    style={{ backgroundColor: "#1f75fe" }}
+                    className="w-full py-3.5 rounded-full text-sm font-semibold text-white disabled:opacity-50 bg-[#1f75fe] hover:bg-[#1a65e8] transition-colors"
                   >
                     Применить
                   </button>
@@ -812,32 +909,32 @@ export default function OwnerDashboard() {
 
       {/* ─── Detailed Analytics Sheet ─── */}
       <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <SheetContent side="bottom" className="rounded-t-3xl px-0 pb-8 max-h-[85dvh] overflow-y-auto">
+        <SheetContent side="bottom" className="rounded-t-3xl px-0 pb-8 max-h-[85dvh] overflow-y-auto bg-[#faf8f4] border-t border-[#e8e3d9]">
           {/* Header */}
           <div className="flex items-center justify-between px-5 pt-4 pb-2">
             <div>
-              <h2 className="text-base font-bold text-gray-900">Детальная аналитика</h2>
-              <p className="text-[11px] font-medium text-gray-400 mt-0.5">
+              <h2 className="text-base font-bold text-[#0f172a]">Детальная аналитика</h2>
+              <p className="text-[11px] font-medium text-[#94a3b8] mt-0.5">
                 Период: {dateRangeLabel}
               </p>
             </div>
             <button
               onClick={() => setDetailsOpen(false)}
-              className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500"
+              className="w-8 h-8 rounded-full bg-[#f1ede4] flex items-center justify-center text-[#64748b]"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* Segmented Control */}
-          <div className="flex bg-gray-100 p-1 rounded-xl mx-5 mt-2 mb-4">
+          <div className="flex bg-[#f1ede4] p-1 rounded-xl mx-5 mt-2 mb-4">
             <button
               onClick={() => setActiveTab("channels")}
               className={cn(
                 "flex-1 py-2 text-xs font-bold rounded-lg transition-all",
                 activeTab === "channels"
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-500 hover:text-gray-900"
+                  ? "bg-white text-[#0f172a] shadow-sm"
+                  : "text-[#64748b] hover:text-[#0f172a]"
               )}
             >
               Каналы привлечения
@@ -847,8 +944,8 @@ export default function OwnerDashboard() {
               className={cn(
                 "flex-1 py-2 text-xs font-bold rounded-lg transition-all",
                 activeTab === "conditions"
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-500 hover:text-gray-900"
+                  ? "bg-white text-[#0f172a] shadow-sm"
+                  : "text-[#64748b] hover:text-[#0f172a]"
               )}
             >
               Виды лечения
@@ -865,26 +962,26 @@ export default function OwnerDashboard() {
                       key={stat.name}
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0"
+                      className="flex items-center gap-3 py-2.5 border-b border-[#f1ede4] last:border-0"
                     >
-                      <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                      <div className="w-9 h-9 rounded-xl bg-[#e0f2fe] flex items-center justify-center shrink-0">
                         <ChannelIcon type={stat.type} size={18} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-baseline mb-1">
-                          <p className="text-xs font-semibold text-gray-800 truncate pr-2">{stat.name}</p>
-                          <span className="text-xs font-bold text-gray-900 shrink-0">
+                          <p className="text-xs font-semibold text-[#0f172a] truncate pr-2">{stat.name}</p>
+                          <span className="text-xs font-bold text-[#0f172a] shrink-0">
                             {fmtRevenue(stat.amount)}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <div className="flex-1 bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                          <div className="flex-1 bg-[#f1ede4] rounded-full h-1.5 overflow-hidden">
                             <div
-                              className="h-1.5 rounded-full bg-primary"
+                              className="h-1.5 rounded-full bg-[#1f75fe]"
                               style={{ width: `${stat.percent}%` }}
                             />
                           </div>
-                          <span className="text-[9px] font-bold text-gray-400 shrink-0 w-7 text-right">
+                          <span className="text-[9px] font-bold text-[#94a3b8] shrink-0 w-7 text-right">
                             {stat.percent}%
                           </span>
                         </div>
@@ -892,7 +989,7 @@ export default function OwnerDashboard() {
                     </motion.div>
                   ))
                 ) : (
-                  <p className="py-8 text-center text-xs text-gray-400">
+                  <p className="py-8 text-center text-xs text-[#94a3b8]">
                     Нет данных по источникам пациентов за этот период
                   </p>
                 )}
@@ -906,7 +1003,7 @@ export default function OwnerDashboard() {
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: idx * 0.03 }}
-                      className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0"
+                      className="flex items-center gap-3 py-2.5 border-b border-[#f1ede4] last:border-0"
                     >
                       <div
                         className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
@@ -916,19 +1013,19 @@ export default function OwnerDashboard() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-baseline mb-1">
-                          <p className="text-xs font-semibold text-gray-800 truncate pr-2">{stat.label}</p>
-                          <span className="text-xs font-bold text-gray-900 shrink-0">
+                          <p className="text-xs font-semibold text-[#0f172a] truncate pr-2">{stat.label}</p>
+                          <span className="text-xs font-bold text-[#0f172a] shrink-0">
                             {stat.count} пац.
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <div className="flex-1 bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                          <div className="flex-1 bg-[#f1ede4] rounded-full h-1.5 overflow-hidden">
                             <div
                               className="h-1.5 rounded-full"
                               style={{ width: `${stat.percent}%`, backgroundColor: stat.color }}
                             />
                             </div>
-                            <span className="text-[9px] font-bold text-gray-400 shrink-0 w-7 text-right">
+                            <span className="text-[9px] font-bold text-[#94a3b8] shrink-0 w-7 text-right">
                               {stat.percent}%
                             </span>
                           </div>
@@ -936,7 +1033,7 @@ export default function OwnerDashboard() {
                       </motion.div>
                   ))
                 ) : (
-                  <p className="py-8 text-center text-xs text-gray-400">
+                  <p className="py-8 text-center text-xs text-[#94a3b8]">
                     Нет данных по видам лечения
                   </p>
                 )}
