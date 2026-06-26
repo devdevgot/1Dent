@@ -16,6 +16,12 @@ function mapDatabaseError(err: unknown): AppError | null {
         503,
         "DB_NOT_READY",
       );
+    case "42703":
+      return new AppError(
+        "База данных обновляется. Подождите минуту и попробуйте снова.",
+        503,
+        "DB_SCHEMA_OUTDATED",
+      );
     case "ECONNREFUSED":
     case "ENOTFOUND":
     case "ETIMEDOUT":
