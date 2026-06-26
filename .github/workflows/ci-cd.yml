@@ -1,0 +1,68 @@
+# CI/CD: checks on every PR/push to master, deploy to Railway only after checks pass.
+#
+# Setup (one-time in GitHub):
+#   1. Repo → Settings → Secrets and variables → Actions → New repository secret
+#      RAILWAY_DEPLOY_HOOK = Deploy Hook URL from Railway
+#        (Service → Settings → Deploy Hook → Generate)
+#   2. In Railway: disable automatic deploys on git push if you use the hook,
+#      otherwise each push may deploy twice (Railway auto + this workflow).
+#   3. Optional: Branch protection on master → require this workflow to pass.
+#
+# Flow:
+#   local → git push → GitHub → Actions (checks) → Railway (production)
+
+name: CI/CD
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install and build (same as Railway)
+        run: bash ./scripts/deploy-build.sh
+
+  deploy:
+    name: Deploy to Railway
+    needs: checks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: production
+      url: https://1dent.kz
+    steps:
+      - name: Trigger Railway deploy
+        env:
+          RAILWAY_DEPLOY_HOOK: ${{ secrets.RAILWAY_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$RAILWAY_DEPLOY_HOOK" ]; then
+            echo "::error::Missing secret RAILWAY_DEPLOY_HOOK. Add it in GitHub → Settings → Secrets → Actions."
+            exit 1
+          fi
+          curl --fail --silent --show-error --request POST "$RAILWAY_DEPLOY_HOOK"
+          echo "Railway deploy triggered."
