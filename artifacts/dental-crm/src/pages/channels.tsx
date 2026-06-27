@@ -36,13 +36,13 @@ export default function ChannelsPage() {
   const isBlocked = !waLoading && !isConnected;
 
   return (
-    <div className="min-h-full bg-[#f2f2f7] pb-8">
-      <div className="bg-white px-4 py-4 mb-4 flex items-center gap-3 border-b border-gray-100">
-        <button onClick={() => window.history.back()} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-500 shrink-0">
+    <div className="min-h-full bg-[#faf8f4] font-manrope pb-8">
+      <div className="bg-white px-4 py-4 mb-4 flex items-center gap-3 border-b border-[#e8e3d9]">
+        <button onClick={() => window.history.back()} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#f1ede4] active:bg-[#e8e3d9] transition-colors text-[#64748b] shrink-0">
           <ChevronLeft className="w-5 h-5" />
         </button>
         <div>
-          <h1 className="text-[17px] font-semibold text-gray-900">
+          <h1 className="text-[17px] font-semibold text-[#0f172a]">
             {t("channels.sectionTitle", { defaultValue: "Каналы привлечения" })}
           </h1>
         </div>
@@ -51,7 +51,7 @@ export default function ChannelsPage() {
       <div className="px-4 relative">
         {waLoading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            <Loader2 className="w-6 h-6 animate-spin text-[#1f75fe]" />
           </div>
         ) : isBlocked ? (
           <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
@@ -63,11 +63,11 @@ export default function ChannelsPage() {
             </div>
 
             <div className="flex items-center gap-2 mb-2">
-              <Lock className="w-4 h-4 text-gray-400" />
-              <h2 className="text-lg font-bold text-gray-800">Страница заблокирована</h2>
+              <Lock className="w-4 h-4 text-[#94a3b8]" />
+              <h2 className="text-lg font-bold text-[#0f172a]">Страница заблокирована</h2>
             </div>
 
-            <p className="text-sm text-gray-500 leading-relaxed mb-7 max-w-xs">
+            <p className="text-sm text-[#64748b] leading-relaxed mb-7 max-w-xs">
               Подключите WhatsApp клиники, чтобы разблокировать эту страницу и настроить
               каналы привлечения пациентов.
             </p>
@@ -82,7 +82,7 @@ export default function ChannelsPage() {
                 Подключить WhatsApp
               </button>
             ) : (
-              <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-700">
+              <div className="flex items-center gap-2 bg-[#fef3c7] border border-[#d97706]/30 rounded-xl px-4 py-3 text-sm text-[#d97706]">
                 <Lock className="w-4 h-4 shrink-0" />
                 <span>Обратитесь к владельцу клиники для подключения WhatsApp</span>
               </div>

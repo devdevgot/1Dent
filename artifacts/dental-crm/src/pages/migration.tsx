@@ -61,9 +61,9 @@ const CATEGORY_LABELS: Record<AiDetectedCategory, string> = {
 };
 
 const CATEGORY_COLORS: Record<AiDetectedCategory, string> = {
-  patients: "bg-blue-50 text-blue-700 border-blue-200",
-  procedures: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  templates: "bg-amber-50 text-amber-700 border-amber-200",
+  patients: "bg-[#e0f2fe] text-[#0284c7] border-[#0284c7]/30",
+  procedures: "bg-[#f0fdf4] text-[#16a34a] border-[#16a34a]/30",
+  templates: "bg-[#fef3c7] text-[#d97706] border-[#d97706]/30",
 };
 
 function fileToBase64(file: File): Promise<string> {
@@ -89,12 +89,12 @@ function fileTypeFromFile(file: File): "xlsx" | "csv" | "pdf" | null {
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { cls: string; label: string; dot: string }> = {
-    pending:    { cls: "bg-amber-50 text-amber-700",   dot: "bg-amber-400",   label: "Ожидание"  },
-    processing: { cls: "bg-blue-50 text-blue-700",     dot: "bg-blue-400",    label: "Обработка" },
-    done:       { cls: "bg-emerald-50 text-emerald-700", dot: "bg-emerald-400", label: "Завершено" },
-    failed:     { cls: "bg-red-50 text-red-700",       dot: "bg-red-400",     label: "Ошибка"    },
+    pending:    { cls: "bg-[#fef3c7] text-[#d97706]",   dot: "bg-[#d97706]",   label: "Ожидание"  },
+    processing: { cls: "bg-[#e0f2fe] text-[#0284c7]",     dot: "bg-[#0284c7]",    label: "Обработка" },
+    done:       { cls: "bg-[#f0fdf4] text-[#16a34a]", dot: "bg-[#16a34a]", label: "Завершено" },
+    failed:     { cls: "bg-[#fef2f2] text-[#dc2626]",       dot: "bg-[#dc2626]",     label: "Ошибка"    },
   };
-  const s = map[status] ?? { cls: "bg-gray-50 text-gray-600", dot: "bg-gray-400", label: status };
+  const s = map[status] ?? { cls: "bg-[#f1ede4] text-[#64748b]", dot: "bg-[#94a3b8]", label: status };
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${s.cls}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${s.dot} ${status === "processing" ? "animate-pulse" : ""}`} />
@@ -106,9 +106,9 @@ function StatusBadge({ status }: { status: string }) {
 function ProgressBar({ value, max }: { value: number; max: number }) {
   const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
   return (
-    <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+    <div className="w-full bg-[#f1ede4] rounded-full h-1.5 overflow-hidden">
       <div
-        className="h-1.5 rounded-full bg-primary transition-all duration-700"
+        className="h-1.5 rounded-full bg-[#1f75fe] transition-all duration-700"
         style={{ width: `${pct}%` }}
       />
     </div>
@@ -145,27 +145,27 @@ function JobCard({ job: initialJob }: { job: MigrationJob }) {
   const summary = report?.["summary"] as { patients?: number; procedures?: number; templates?: number } | undefined;
 
   return (
-    <div className={`relative bg-white rounded-2xl border overflow-hidden transition-shadow hover:shadow-md ${
-      job.status === "done" ? "border-emerald-100" :
-      job.status === "failed" ? "border-red-100" :
-      job.status === "processing" ? "border-primary/20" :
-      "border-gray-100"
+    <div className={`relative bg-white rounded-2xl border border-[#e8e3d9] overflow-hidden transition-shadow hover:shadow-md shadow-md ${
+      job.status === "done" ? "border-[#16a34a]/30" :
+      job.status === "failed" ? "border-[#dc2626]/30" :
+      job.status === "processing" ? "border-[#1f75fe]/30" :
+      "border-[#e8e3d9]"
     }`}>
       <div className={`absolute left-0 top-0 bottom-0 w-1 ${
-        job.status === "done" ? "bg-emerald-400" :
-        job.status === "failed" ? "bg-red-400" :
-        job.status === "processing" ? "bg-primary" :
-        "bg-amber-400"
+        job.status === "done" ? "bg-[#16a34a]" :
+        job.status === "failed" ? "bg-[#dc2626]" :
+        job.status === "processing" ? "bg-[#1f75fe]" :
+        "bg-[#d97706]"
       }`} />
       <div className="pl-4 pr-4 pt-4 pb-3">
         <div className="flex items-start justify-between gap-2 mb-3">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-              <Sparkles className="w-4 h-4 text-primary" />
+            <div className="w-8 h-8 rounded-lg bg-[#1f75fe]/10 flex items-center justify-center shrink-0">
+              <Sparkles className="w-4 h-4 text-[#1f75fe]" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-gray-800">ИИ-импорт</p>
-              <p className="text-xs text-gray-400 flex items-center gap-1">
+              <p className="text-sm font-semibold text-[#0f172a]">ИИ-импорт</p>
+              <p className="text-xs text-[#94a3b8] flex items-center gap-1">
                 <Clock className="w-3 h-3" />
                 {new Date(job.createdAt).toLocaleString("ru")}
               </p>
@@ -177,23 +177,23 @@ function JobCard({ job: initialJob }: { job: MigrationJob }) {
         {(job.totalRows ?? 0) > 0 && (
           <div className="mb-3">
             <ProgressBar value={job.processedRows ?? 0} max={job.totalRows ?? 1} />
-            <p className="text-xs text-gray-400 mt-1">{job.processedRows ?? 0} / {job.totalRows ?? 0} строк · {pct}%</p>
+            <p className="text-xs text-[#94a3b8] mt-1">{job.processedRows ?? 0} / {job.totalRows ?? 0} строк · {pct}%</p>
           </div>
         )}
 
         <div className="flex gap-3 text-xs">
           {(job.successCount ?? 0) > 0 && (
-            <span className="flex items-center gap-1 text-emerald-600 font-medium">
+            <span className="flex items-center gap-1 text-[#16a34a] font-medium">
               <CheckCircle2 className="w-3.5 h-3.5" /> {job.successCount} успешно
             </span>
           )}
           {(job.duplicateCount ?? 0) > 0 && (
-            <span className="flex items-center gap-1 text-amber-600">
+            <span className="flex items-center gap-1 text-[#d97706]">
               <Info className="w-3.5 h-3.5" /> {job.duplicateCount} дублей
             </span>
           )}
           {(job.errorCount ?? 0) > 0 && (
-            <span className="flex items-center gap-1 text-red-500">
+            <span className="flex items-center gap-1 text-[#dc2626]">
               <XCircle className="w-3.5 h-3.5" /> {job.errorCount} ошибок
             </span>
           )}
@@ -202,24 +202,24 @@ function JobCard({ job: initialJob }: { job: MigrationJob }) {
         {summary && job.status === "done" && (
           <div className="mt-2 flex gap-2 flex-wrap">
             {(summary.patients ?? 0) > 0 && (
-              <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">{summary.patients} пациентов</span>
+              <span className="text-xs bg-[#e0f2fe] text-[#0284c7] px-2 py-0.5 rounded-full">{summary.patients} пациентов</span>
             )}
             {(summary.procedures ?? 0) > 0 && (
-              <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">{summary.procedures} процедур</span>
+              <span className="text-xs bg-[#f0fdf4] text-[#16a34a] px-2 py-0.5 rounded-full">{summary.procedures} процедур</span>
             )}
             {(summary.templates ?? 0) > 0 && (
-              <span className="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full">{summary.templates} шаблонов</span>
+              <span className="text-xs bg-[#fef3c7] text-[#d97706] px-2 py-0.5 rounded-full">{summary.templates} шаблонов</span>
             )}
           </div>
         )}
 
         {errors.length > 0 && (
           <details className="mt-2">
-            <summary className="text-xs text-red-500 cursor-pointer hover:text-red-600">Показать ошибки ({errors.length})</summary>
-            <ul className="mt-1.5 space-y-1 text-xs text-gray-500 max-h-28 overflow-y-auto">
+            <summary className="text-xs text-[#dc2626] cursor-pointer hover:text-[#b91c1c]">Показать ошибки ({errors.length})</summary>
+            <ul className="mt-1.5 space-y-1 text-xs text-[#64748b] max-h-28 overflow-y-auto">
               {errors.slice(0, 10).map((e, i) => (
                 <li key={i} className="flex gap-1.5">
-                  <span className="text-gray-300 shrink-0">#{e.row}</span>
+                  <span className="text-[#94a3b8] shrink-0">#{e.row}</span>
                   <span className="truncate">{e.message}</span>
                 </li>
               ))}
@@ -295,9 +295,9 @@ function AiImportTab() {
   };
 
   const FORMATS = [
-    { icon: <FileSpreadsheet className="w-4 h-4 text-emerald-500" />, label: "Excel", ext: ".xlsx" },
-    { icon: <FileCog className="w-4 h-4 text-blue-500" />,           label: "CSV",   ext: ".csv"  },
-    { icon: <FileText className="w-4 h-4 text-rose-500" />,          label: "PDF",   ext: ".pdf"  },
+    { icon: <FileSpreadsheet className="w-4 h-4 text-[#16a34a]" />, label: "Excel", ext: ".xlsx" },
+    { icon: <FileCog className="w-4 h-4 text-[#0284c7]" />,           label: "CSV",   ext: ".csv"  },
+    { icon: <FileText className="w-4 h-4 text-[#dc2626]" />,          label: "PDF",   ext: ".pdf"  },
   ];
 
   const STEPS: { key: Step; label: string }[] = [
@@ -319,18 +319,18 @@ function AiImportTab() {
             <div key={s.key} className="flex items-center flex-1 last:flex-none">
               <div className="flex items-center gap-2">
                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all ${
-                  done ? "bg-primary text-white" :
-                  active ? "bg-primary/10 text-primary ring-2 ring-primary/30" :
-                  "bg-gray-100 text-gray-400"
+                  done ? "bg-[#1f75fe] text-white" :
+                  active ? "bg-[#1f75fe]/10 text-[#1f75fe] ring-2 ring-[#1f75fe]/30" :
+                  "bg-[#f1ede4] text-[#94a3b8]"
                 }`}>
                   {done ? <Check className="w-3.5 h-3.5" /> : i + 1}
                 </div>
-                <span className={`text-xs font-medium hidden sm:block ${active ? "text-primary" : done ? "text-primary/70" : "text-gray-400"}`}>
+                <span className={`text-xs font-medium hidden sm:block ${active ? "text-[#1f75fe]" : done ? "text-[#1f75fe]/70" : "text-[#94a3b8]"}`}>
                   {s.label}
                 </span>
               </div>
               {i < STEPS.length - 1 && (
-                <div className={`flex-1 h-px mx-3 transition-colors ${i < stepIdx ? "bg-primary/40" : "bg-gray-200"}`} />
+                <div className={`flex-1 h-px mx-3 transition-colors ${i < stepIdx ? "bg-[#1f75fe]/40" : "bg-[#e8e3d9]"}`} />
               )}
             </div>
           );
@@ -346,8 +346,8 @@ function AiImportTab() {
             onDrop={handleDrop}
             className={`relative rounded-2xl border-2 border-dashed transition-all cursor-pointer group ${
               dragging
-                ? "border-primary bg-primary/5 scale-[1.01]"
-                : "border-gray-200 bg-gradient-to-br from-gray-50 to-blue-50/30 hover:border-primary/40 hover:from-blue-50/40 hover:to-blue-50"
+                ? "border-[#1f75fe] bg-[#1f75fe]/5 scale-[1.01]"
+                : "border-[#e8e3d9] bg-gradient-to-br from-[#faf8f4] to-[#e0f2fe]/30 hover:border-[#1f75fe]/40 hover:from-[#e0f2fe]/40 hover:to-[#e0f2fe]/50"
             }`}
           >
             <input
@@ -357,16 +357,16 @@ function AiImportTab() {
               onChange={(e) => { const f = e.target.files?.[0]; if (f) processFile(f); }}
             />
             <div className="flex flex-col items-center gap-4 py-14 px-6 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-white shadow-sm border border-gray-100 flex items-center justify-center group-hover:shadow-md transition-shadow">
-                <Upload className="w-7 h-7 text-primary" />
+              <div className="w-16 h-16 rounded-2xl bg-white shadow-md border border-[#e8e3d9] flex items-center justify-center group-hover:shadow-lg transition-shadow">
+                <Upload className="w-7 h-7 text-[#1f75fe]" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-700">Перетащите файл сюда</p>
-                <p className="text-xs text-gray-400 mt-1">или нажмите, чтобы выбрать · до 5 000 строк</p>
+                <p className="text-sm font-semibold text-[#0f172a]">Перетащите файл сюда</p>
+                <p className="text-xs text-[#94a3b8] mt-1">или нажмите, чтобы выбрать · до 5 000 строк</p>
               </div>
               <div className="flex items-center gap-2 flex-wrap justify-center">
                 {FORMATS.map((f) => (
-                  <span key={f.ext} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-100 rounded-full text-xs text-gray-600 font-medium shadow-sm">
+                  <span key={f.ext} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#e8e3d9] rounded-full text-xs text-[#64748b] font-medium shadow-sm">
                     {f.icon} {f.label}
                   </span>
                 ))}
@@ -380,20 +380,20 @@ function AiImportTab() {
       {step === "analyze" && analyzeMutation.isPending && (
         <div className="flex flex-col items-center gap-5 py-16">
           <div className="relative">
-            <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center">
-              <Sparkles className="w-9 h-9 text-primary animate-pulse" />
+            <div className="w-20 h-20 rounded-2xl bg-[#1f75fe]/10 flex items-center justify-center">
+              <Sparkles className="w-9 h-9 text-[#1f75fe] animate-pulse" />
             </div>
-            <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-white border border-gray-100 flex items-center justify-center shadow-sm">
-              <Loader2 className="w-4 h-4 text-primary animate-spin" />
+            <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-white border border-[#e8e3d9] flex items-center justify-center shadow-sm">
+              <Loader2 className="w-4 h-4 text-[#1f75fe] animate-spin" />
             </div>
           </div>
           <div className="text-center">
-            <p className="text-base font-semibold text-gray-800">ИИ анализирует файл…</p>
-            <p className="text-sm text-gray-400 mt-1">Определяем структуру данных и сопоставляем колонки</p>
+            <p className="text-base font-semibold text-[#0f172a]">ИИ анализирует файл…</p>
+            <p className="text-sm text-[#94a3b8] mt-1">Определяем структуру данных и сопоставляем колонки</p>
           </div>
           {file && (
-            <div className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-100 rounded-full text-xs text-gray-600 shadow-sm">
-              <FileSpreadsheet className="w-3.5 h-3.5 text-primary" />
+            <div className="flex items-center gap-2 px-4 py-2 bg-white border border-[#e8e3d9] rounded-full text-xs text-[#64748b] shadow-sm">
+              <FileSpreadsheet className="w-3.5 h-3.5 text-[#1f75fe]" />
               {file.name}
             </div>
           )}
@@ -407,10 +407,10 @@ function AiImportTab() {
           {/* File pill + detected categories */}
           <div className="flex items-center gap-3 flex-wrap">
             {file && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full text-xs text-primary font-medium">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-[#1f75fe]/10 border border-[#1f75fe]/20 rounded-full text-xs text-[#1f75fe] font-medium">
                 <FileSpreadsheet className="w-3.5 h-3.5" />
                 {file.name}
-                <span className="text-primary/50">·</span>
+                <span className="text-[#1f75fe]/50">·</span>
                 {analysis.totalRows} строк
               </div>
             )}
@@ -424,27 +424,27 @@ function AiImportTab() {
 
           {/* PDF warning */}
           {analysis.isPdf && (
-            <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
-              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
+            <div className="flex items-start gap-3 p-4 bg-[#fef3c7] border border-[#d97706]/30 rounded-xl text-sm text-[#0f172a]">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-[#d97706]" />
               <div>
                 <p className="font-semibold">PDF: структура восстановлена ИИ</p>
-                <p className="text-xs text-amber-700 mt-0.5">Проверьте сопоставление колонок перед импортом.</p>
+                <p className="text-xs text-[#d97706] mt-0.5">Проверьте сопоставление колонок перед импортом.</p>
               </div>
             </div>
           )}
 
           {/* Column mapping */}
-          <div className="bg-gray-50 rounded-2xl p-4 space-y-2">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Сопоставление колонок</p>
+          <div className="bg-[#f1ede4] rounded-2xl p-4 space-y-2">
+            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide mb-3">Сопоставление колонок</p>
             {analysis.headers.map((header) => (
-              <div key={header} className="flex items-center gap-3 bg-white rounded-xl px-3 py-2.5 border border-gray-100 shadow-sm">
-                <span className="flex-1 text-sm text-gray-700 font-medium truncate min-w-0" title={header}>{header}</span>
-                <ChevronRight className="w-3.5 h-3.5 text-gray-300 shrink-0" />
+              <div key={header} className="flex items-center gap-3 bg-white rounded-xl px-3 py-2.5 border border-[#e8e3d9] shadow-sm">
+                <span className="flex-1 text-sm text-[#0f172a] font-medium truncate min-w-0" title={header}>{header}</span>
+                <ChevronRight className="w-3.5 h-3.5 text-[#94a3b8] shrink-0" />
                 <div className="relative flex-1 min-w-0">
                   <select
                     value={mapping[header] ?? ""}
                     onChange={(e) => setMapping((m) => ({ ...m, [header]: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-lg pl-2.5 pr-7 py-1.5 text-sm bg-white text-gray-700 focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none appearance-none"
+                    className="w-full border border-[#e8e3d9] rounded-xl pl-2.5 pr-7 py-1.5 text-sm bg-white text-[#0f172a] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 appearance-none transition-colors"
                   >
                     {AI_FIELD_OPTIONS.map((opt) => (
                       <option key={opt} value={opt}>{AI_FIELD_LABELS[opt]}</option>
@@ -452,7 +452,7 @@ function AiImportTab() {
                   </select>
                 </div>
                 {mapping[header] ? (
-                  <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <Check className="w-4 h-4 text-[#16a34a] shrink-0" />
                 ) : (
                   <div className="w-4 h-4 shrink-0" />
                 )}
@@ -462,25 +462,25 @@ function AiImportTab() {
 
           {/* Preview table */}
           {analysis.previewRows.length > 0 && (
-            <div className="rounded-2xl border border-gray-100 overflow-hidden bg-white shadow-sm">
-              <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Предпросмотр</p>
-                <p className="text-xs text-gray-400">первые {Math.min(analysis.previewRows.length, 10)} строк</p>
+            <div className="rounded-2xl border border-[#e8e3d9] overflow-hidden bg-white shadow-md">
+              <div className="px-4 py-3 border-b border-[#e8e3d9] flex items-center justify-between">
+                <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide">Предпросмотр</p>
+                <p className="text-xs text-[#94a3b8]">первые {Math.min(analysis.previewRows.length, 10)} строк</p>
               </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-xs">
                   <thead>
-                    <tr className="bg-gray-50 border-b border-gray-100">
+                    <tr className="bg-[#faf8f4] border-b border-[#e8e3d9]">
                       {analysis.headers.map((h) => (
-                        <th key={h} className="text-left px-4 py-2.5 text-gray-500 font-semibold whitespace-nowrap">{h}</th>
+                        <th key={h} className="text-left px-4 py-2.5 text-[#64748b] font-semibold whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-[#e8e3d9]/50">
                     {analysis.previewRows.slice(0, 10).map((row, i) => (
-                      <tr key={i} className="hover:bg-gray-50/70 transition-colors">
+                      <tr key={i} className="hover:bg-[#faf8f4] transition-colors">
                         {analysis.headers.map((h) => (
-                          <td key={h} className="px-4 py-2.5 text-gray-600 whitespace-nowrap max-w-[160px] truncate">{row[h] ?? ""}</td>
+                          <td key={h} className="px-4 py-2.5 text-[#64748b] whitespace-nowrap max-w-[160px] truncate">{row[h] ?? ""}</td>
                         ))}
                       </tr>
                     ))}
@@ -494,7 +494,7 @@ function AiImportTab() {
           <div className="flex gap-3 pt-1">
             <button
               onClick={reset}
-              className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-500 rounded-xl text-sm hover:bg-gray-50 hover:text-gray-700 transition-colors"
+              className="flex items-center gap-2 px-4 py-2.5 border border-[#e8e3d9] text-[#64748b] rounded-xl text-sm hover:bg-[#f1ede4] hover:text-[#0f172a] transition-colors"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               Другой файл
@@ -502,7 +502,7 @@ function AiImportTab() {
             <button
               onClick={handleImport}
               disabled={confirmMutation.isPending}
-              className="flex-1 flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-sm text-white bg-primary hover:opacity-90 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 flex items-center justify-center gap-2 px-6 py-2.5 rounded-full font-semibold text-sm text-white bg-[#1f75fe] hover:bg-[#1a65e8] hover:scale-105 active:scale-95 transition-all shadow-md disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed"
             >
               {confirmMutation.isPending ? (
                 <><Loader2 className="w-4 h-4 animate-spin" /> Запуск…</>
@@ -518,18 +518,18 @@ function AiImportTab() {
       {step === "import" && (
         <div className="space-y-4">
           <div className="flex flex-col items-center gap-4 py-10 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center">
-              <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+            <div className="w-16 h-16 rounded-2xl bg-[#f0fdf4] flex items-center justify-center">
+              <CheckCircle2 className="w-8 h-8 text-[#16a34a]" />
             </div>
             <div>
-              <p className="text-base font-semibold text-gray-800">Импорт запущен!</p>
-              <p className="text-sm text-gray-400 mt-1">Следите за прогрессом в истории ниже.</p>
+              <p className="text-base font-semibold text-[#0f172a]">Импорт запущен!</p>
+              <p className="text-sm text-[#94a3b8] mt-1">Следите за прогрессом в истории ниже.</p>
             </div>
-            {jobId && <p className="text-xs text-gray-300">ID: {jobId}</p>}
+            {jobId && <p className="text-xs text-[#94a3b8]">ID: {jobId}</p>}
           </div>
           <button
             onClick={reset}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-sm hover:bg-gray-50 transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-[#e8e3d9] text-[#64748b] rounded-xl text-sm hover:bg-[#f1ede4] transition-colors"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             Импортировать ещё один файл
@@ -539,7 +539,7 @@ function AiImportTab() {
 
       {/* Error */}
       {error && (
-        <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+        <div className="flex items-start gap-3 p-4 bg-[#fef2f2] border border-[#dc2626]/30 rounded-xl text-sm text-[#dc2626]">
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
           {error}
         </div>
@@ -629,28 +629,28 @@ function ExportSection() {
   };
 
   return (
-    <div className="mt-6 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
+    <div className="mt-6 bg-white rounded-2xl shadow-md border border-[#e8e3d9] p-6 space-y-4">
       <div>
-        <p className="text-sm font-semibold text-gray-800">Экспорт данных</p>
-        <p className="text-xs text-gray-400 mt-0.5">
+        <p className="text-sm font-semibold text-[#0f172a]">Экспорт данных</p>
+        <p className="text-xs text-[#94a3b8] mt-0.5">
           Скачайте все данные клиники в XLSX — пациенты, карты зубов, планы лечения, процедуры и шаблоны услуг
         </p>
       </div>
 
       {done === "export" && (
-        <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-sm text-emerald-700">
+        <div className="flex items-center gap-2 p-3 bg-[#f0fdf4] border border-[#16a34a]/30 rounded-xl text-sm text-[#16a34a]">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
           Файл скачан. Импортируйте его снова в любой момент.
         </div>
       )}
       {done === "wipe" && (
-        <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-sm text-emerald-700">
+        <div className="flex items-center gap-2 p-3 bg-[#f0fdf4] border border-[#16a34a]/30 rounded-xl text-sm text-[#16a34a]">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
           Данные экспортированы и удалены. Вы можете восстановить их через импорт.
         </div>
       )}
       {error && (
-        <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+        <div className="flex items-start gap-2 p-3 bg-[#fef2f2] border border-[#dc2626]/30 rounded-xl text-sm text-[#dc2626]">
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
           {error}
         </div>
@@ -660,7 +660,7 @@ function ExportSection() {
         <button
           onClick={() => void handleExport()}
           disabled={exporting || wiping}
-          className="flex-1 flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm font-medium text-gray-700 disabled:opacity-50 transition-colors"
+          className="flex-1 flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-[#e8e3d9] bg-white hover:bg-[#f1ede4] text-sm font-medium text-[#0f172a] disabled:opacity-50 transition-colors"
         >
           {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
           Экспортировать XLSX
@@ -668,7 +668,7 @@ function ExportSection() {
         <button
           onClick={() => { setConfirmWipe(true); setError(null); }}
           disabled={exporting || wiping}
-          className="flex-1 flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 text-sm font-medium text-red-600 disabled:opacity-50 transition-colors"
+          className="flex-1 flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-[#dc2626]/30 bg-[#fef2f2] hover:bg-[#fee2e2] text-sm font-medium text-[#dc2626] disabled:opacity-50 transition-colors"
         >
           <Trash2 className="w-4 h-4" />
           Экспорт и очистить все данные
@@ -679,17 +679,17 @@ function ExportSection() {
       {confirmWipe && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => !wiping && setConfirmWipe(false)} />
-          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
+          <div className="relative bg-white rounded-2xl border border-[#e8e3d9] shadow-xl w-full max-w-sm p-6 space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center shrink-0">
-                <ShieldAlert className="w-5 h-5 text-red-500" />
+              <div className="w-10 h-10 rounded-xl bg-[#fef2f2] flex items-center justify-center shrink-0">
+                <ShieldAlert className="w-5 h-5 text-[#dc2626]" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-800">Удалить все данные клиники?</p>
-                <p className="text-xs text-gray-400 mt-0.5">Это действие необратимо</p>
+                <p className="text-sm font-semibold text-[#0f172a]">Удалить все данные клиники?</p>
+                <p className="text-xs text-[#94a3b8] mt-0.5">Это действие необратимо</p>
               </div>
             </div>
-            <p className="text-sm text-gray-600 leading-relaxed">
+            <p className="text-sm text-[#64748b] leading-relaxed">
               Сначала будет скачан XLSX-файл со всеми данными. Затем из системы удалятся все пациенты, карты зубов, планы лечения и процедуры.
               <br /><br />
               Для восстановления используйте этот файл через импорт.
@@ -698,14 +698,14 @@ function ExportSection() {
               <button
                 onClick={() => setConfirmWipe(false)}
                 disabled={wiping}
-                className="flex-1 h-10 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-40"
+                className="flex-1 h-10 rounded-xl border border-[#e8e3d9] text-sm text-[#64748b] hover:bg-[#f1ede4] transition-colors disabled:opacity-40"
               >
                 Отмена
               </button>
               <button
                 onClick={() => void handleWipe()}
                 disabled={wiping}
-                className="flex-1 h-10 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 h-10 rounded-full bg-[#dc2626] text-white text-sm font-semibold hover:bg-[#b91c1c] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {wiping ? <><Loader2 className="w-4 h-4 animate-spin" /> Удаление…</> : <>Скачать и удалить</>}
               </button>
@@ -728,7 +728,7 @@ function JobHistory() {
 
   if (isLoading) return (
     <div className="flex justify-center py-10">
-      <Loader2 className="w-6 h-6 text-primary animate-spin" />
+      <Loader2 className="w-6 h-6 text-[#1f75fe] animate-spin" />
     </div>
   );
 
@@ -736,12 +736,12 @@ function JobHistory() {
     <div className="mt-8">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-sm font-semibold text-gray-800">История импортов</h2>
-          <p className="text-xs text-gray-400 mt-0.5">{jobs.length > 0 ? `${jobs.length} задач` : "Нет задач"}</p>
+          <h2 className="text-sm font-semibold text-[#0f172a]">История импортов</h2>
+          <p className="text-xs text-[#94a3b8] mt-0.5">{jobs.length > 0 ? `${jobs.length} задач` : "Нет задач"}</p>
         </div>
         <button
           onClick={() => refetch()}
-          className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-primary/5"
+          className="flex items-center gap-1.5 text-xs text-[#94a3b8] hover:text-[#1f75fe] transition-colors px-2 py-1.5 rounded-xl hover:bg-[#1f75fe]/10"
         >
           <RefreshCw className="w-3.5 h-3.5" />
           Обновить
@@ -749,8 +749,8 @@ function JobHistory() {
       </div>
 
       {jobs.length === 0 ? (
-        <div className="text-center py-12 text-sm text-gray-300">
-          <Sparkles className="w-8 h-8 mx-auto mb-2 text-gray-200" />
+        <div className="text-center py-12 text-sm text-[#94a3b8]">
+          <Sparkles className="w-8 h-8 mx-auto mb-2 text-[#e8e3d9]" />
           История импортов пуста
         </div>
       ) : (
@@ -766,24 +766,24 @@ export default function MigrationPage() {
   const [, setLocation] = useLocation();
 
   return (
-    <div className="min-h-screen bg-[#f5f5f7]">
+    <div className="min-h-screen bg-[#faf8f4] font-manrope">
       {/* Header */}
-      <div className="bg-white border-b border-gray-100 px-4 py-4 flex items-center gap-3 shrink-0">
+      <div className="bg-white border-b border-[#e8e3d9] px-4 py-4 flex items-center gap-3 shrink-0">
         <button
           onClick={() => setLocation("/menu")}
-          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-500 shrink-0"
+          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#f1ede4] active:bg-[#f1ede4] transition-colors text-[#64748b] shrink-0"
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
         <div>
-          <h1 className="text-[17px] font-semibold text-gray-900">Миграция данных</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Excel, CSV или PDF — до 5 000 строк</p>
+          <h1 className="text-[17px] font-semibold text-[#0f172a]">Миграция данных</h1>
+          <p className="text-xs text-[#64748b] mt-0.5">Excel, CSV или PDF — до 5 000 строк</p>
         </div>
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-6">
         {/* Main card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="bg-white rounded-2xl shadow-md border border-[#e8e3d9] p-6">
           <AiImportTab />
         </div>
 

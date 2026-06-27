@@ -79,21 +79,21 @@ export default function AccountSettings() {
   const items = [
     {
       icon: User,
-      iconClass: "bg-primary text-primary-foreground",
+      iconClass: "bg-[#1f75fe] text-white",
       label: t("settingsPage.name"),
       value: user?.name,
       href: "/account/edit-profile",
     },
     {
       icon: Mail,
-      iconClass: "bg-emerald-500 text-white",
+      iconClass: "bg-[#16a34a] text-white",
       label: t("settingsPage.email"),
       value: user?.email,
       href: "/account/change-email",
     },
     {
       icon: Lock,
-      iconClass: "bg-muted-foreground text-white",
+      iconClass: "bg-[#64748b] text-white",
       label: t("settingsPage.password"),
       value: "••••••••",
       href: "/account/change-password",
@@ -119,17 +119,17 @@ export default function AccountSettings() {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="relative group focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-full"
+            className="relative group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1f75fe]/20 rounded-full"
           >
-            <div className="w-20 h-20 rounded-full overflow-hidden bg-primary/12 flex items-center justify-center text-primary font-bold text-2xl border-2 border-border/60 transition-transform active:scale-95 duration-150">
+            <div className="w-20 h-20 rounded-full overflow-hidden bg-[#1f75fe]/10 flex items-center justify-center text-[#1f75fe] font-bold text-2xl border-2 border-[#e8e3d9] transition-transform active:scale-95 duration-150">
               {photoUrl ? (
                 <img key={photoVersion} src={photoUrl} alt="avatar" className="w-full h-full object-cover" />
               ) : (
                 initials
               )}
             </div>
-            <div className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-primary flex items-center justify-center shadow-md border-2 border-surface">
-              <Camera className="w-3.5 h-3.5 text-primary-foreground" />
+            <div className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-[#1f75fe] flex items-center justify-center shadow-md border-2 border-white">
+              <Camera className="w-3.5 h-3.5 text-white" />
             </div>
           </button>
           <input
@@ -142,7 +142,7 @@ export default function AccountSettings() {
           <Button
             variant="link"
             size="sm"
-            className="text-caption h-auto p-0"
+            className="text-caption h-auto p-0 text-[#1f75fe]"
             onClick={() => fileInputRef.current?.click()}
           >
             {t("settingsPage.changePhoto")}
@@ -169,11 +169,11 @@ export default function AccountSettings() {
                       <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", item.iconClass)}>
                         <item.icon className="w-[18px] h-[18px]" />
                       </div>
-                      <p className="text-body text-foreground">{item.label}</p>
+                      <p className="text-body text-[#0f172a]">{item.label}</p>
                     </div>
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-caption text-muted-foreground truncate max-w-[140px]">{item.value}</span>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground/50 shrink-0" />
+                      <span className="text-caption text-[#64748b] truncate max-w-[140px]">{item.value}</span>
+                      <ChevronRight className="w-4 h-4 text-[#94a3b8] shrink-0" />
                     </div>
                   </IosGroupRow>
                 </button>
@@ -185,44 +185,44 @@ export default function AccountSettings() {
         {(user?.role === "admin" || user?.role === "accountant" || user?.role === "warehouse") && (
           <IosSection title={t("payroll.mySalary")}>
             <IosGroup>
-              <div className="flex items-center gap-3 px-4 py-4 border-b border-border/50">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                  <Banknote className="w-[18px] h-[18px] text-primary" />
+              <div className="flex items-center gap-3 px-4 py-4 border-b border-[#e8e3d9]">
+                <div className="w-8 h-8 rounded-lg bg-[#1f75fe]/10 flex items-center justify-center shrink-0">
+                  <Banknote className="w-[18px] h-[18px] text-[#1f75fe]" />
                 </div>
                 <div>
-                  <p className="text-body font-semibold text-foreground">{t("payroll.mySalary")}</p>
-                  <p className="text-caption text-muted-foreground">{t("payroll.mySalaryDesc")}</p>
+                  <p className="text-body font-semibold text-[#0f172a]">{t("payroll.mySalary")}</p>
+                  <p className="text-caption text-[#64748b]">{t("payroll.mySalaryDesc")}</p>
                 </div>
               </div>
               {myRecords.length === 0 ? (
-                <div className="px-4 py-6 text-center text-caption text-muted-foreground">
+                <div className="px-4 py-6 text-center text-caption text-[#64748b]">
                   {t("payroll.noMySalary")}
                 </div>
               ) : (
                 <div>
                   {myRecords.slice(0, 6).map((r) => (
-                    <div key={r.id} className="flex items-center justify-between px-4 py-3 border-b border-border/40 last:border-b-0">
+                    <div key={r.id} className="flex items-center justify-between px-4 py-3 border-b border-[#e8e3d9] last:border-b-0">
                       <div>
-                        <p className="text-body font-semibold text-foreground">
+                        <p className="text-body font-semibold text-[#0f172a]">
                           {r.periodMonth.toString().padStart(2, "0")}/{r.periodYear}
                         </p>
-                        <p className="text-caption text-muted-foreground">
+                        <p className="text-caption text-[#64748b]">
                           {t("payroll.myCalculated")}: ₸{Number(r.calculatedAmount).toLocaleString("ru-KZ")}
                         </p>
                       </div>
                       <div className="text-right">
                         {r.approvedAmount && (
-                          <p className="text-body font-bold text-emerald-600">
+                          <p className="text-body font-bold text-[#16a34a]">
                             ₸{Number(r.approvedAmount).toLocaleString("ru-KZ")}
                           </p>
                         )}
                         {r.status === "approved" || r.status === "paid" ? (
-                          <span className="inline-flex items-center gap-1 text-micro font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                          <span className="inline-flex items-center gap-1 text-micro font-semibold text-[#16a34a] bg-[#f0fdf4] px-2 py-0.5 rounded-full">
                             <CheckCircle className="w-3 h-3" />
                             {r.status === "paid" ? t("payroll.paid") : t("payroll.approved")}
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-micro font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                          <span className="inline-flex items-center gap-1 text-micro font-semibold text-[#d97706] bg-[#fef3c7] px-2 py-0.5 rounded-full">
                             <Clock className="w-3 h-3" />
                             {t("payroll.pending")}
                           </span>

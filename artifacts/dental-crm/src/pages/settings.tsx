@@ -9,14 +9,14 @@ import { cn } from "@/lib/utils";
 function RoleBadge({ role }: { role: string }) {
   const { t } = useTranslation();
   const colors: Record<string, string> = {
-    owner:      "bg-purple-100 text-purple-700",
-    admin:      "bg-blue-100 text-blue-700",
-    doctor:     "bg-emerald-100 text-emerald-700",
-    accountant: "bg-amber-100 text-amber-700",
-    warehouse:  "bg-slate-100 text-slate-700",
+    owner:      "bg-[#f5f3ff] text-[#7c3aed]",
+    admin:      "bg-[#e0f2fe] text-[#0284c7]",
+    doctor:     "bg-[#f0fdf4] text-[#16a34a]",
+    accountant: "bg-[#fef3c7] text-[#d97706]",
+    warehouse:  "bg-[#f1ede4] text-[#64748b]",
   };
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide ${colors[role] ?? "bg-slate-100 text-slate-700"}`}>
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide ${colors[role] ?? "bg-[#f1ede4] text-[#64748b]"}`}>
       {t(`role.${role}`)}
     </span>
   );
@@ -24,10 +24,10 @@ function RoleBadge({ role }: { role: string }) {
 
 function Section({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-card rounded-2xl border border-border/60 overflow-hidden">
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-border/40">
-        <span className="text-primary">{icon}</span>
-        <h2 className="font-semibold text-base text-foreground">{title}</h2>
+    <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-md overflow-hidden">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-[#e8e3d9]">
+        <span className="text-[#1f75fe]">{icon}</span>
+        <h2 className="font-semibold text-base text-[#0f172a]">{title}</h2>
       </div>
       <div className="p-5">{children}</div>
     </div>
@@ -89,17 +89,17 @@ export default function SettingsPage() {
   ] as const;
 
   return (
-    <div className="min-h-full bg-[#f2f2f7]">
-      <div className="bg-white px-4 pt-5 pb-4 flex items-center gap-3 border-b border-gray-100">
+    <div className="min-h-full bg-[#faf8f4] font-manrope">
+      <div className="bg-white px-4 pt-5 pb-4 flex items-center gap-3 border-b border-[#e8e3d9]">
         <button
           onClick={() => window.history.back()}
-          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-500 shrink-0"
+          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#f1ede4] active:bg-[#e8e3d9] transition-colors text-[#64748b] shrink-0"
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
         <div className="flex items-center gap-2">
-          <Settings2 className="w-5 h-5 text-primary shrink-0" strokeWidth={1.8} />
-          <h1 className="text-[17px] font-semibold text-gray-900">{t("settingsPage.title")}</h1>
+          <Settings2 className="w-5 h-5 text-[#1f75fe] shrink-0" strokeWidth={1.8} />
+          <h1 className="text-[17px] font-semibold text-[#0f172a]">{t("settingsPage.title")}</h1>
         </div>
       </div>
       <div className="px-4 py-6 pb-safe space-y-4 max-w-xl mx-auto">
@@ -108,12 +108,12 @@ export default function SettingsPage() {
       <Section icon={<User className="w-5 h-5" />} title={t("settingsPage.profile")}>
         <div className="space-y-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-              <User className="w-5 h-5 text-primary" />
+            <div className="w-10 h-10 rounded-full bg-[#1f75fe]/10 flex items-center justify-center shrink-0">
+              <User className="w-5 h-5 text-[#1f75fe]" />
             </div>
             <div>
-              <p className="font-semibold text-foreground">{user?.name}</p>
-              <p className="text-xs text-muted-foreground">{user?.email}</p>
+              <p className="font-semibold text-[#0f172a]">{user?.name}</p>
+              <p className="text-xs text-[#64748b]">{user?.email}</p>
             </div>
           </div>
           {user?.role && (
@@ -128,22 +128,22 @@ export default function SettingsPage() {
       <Section icon={<Shield className="w-5 h-5" />} title={t("settingsPage.security")}>
         <form onSubmit={handleChangePassword} className="space-y-3">
           <div className="relative">
-            <label className="block text-xs font-medium text-muted-foreground mb-1">{t("settingsPage.currentPassword")}</label>
+            <label className="block text-xs font-medium text-[#64748b] mb-1">{t("settingsPage.currentPassword")}</label>
             <div className="relative">
               <input
                 type={showCurrent ? "text" : "password"}
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 required
-                className="w-full h-10 rounded-xl border border-border bg-background px-3 pr-10 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="w-full h-10 rounded-xl border border-[#e8e3d9] bg-white px-3 pr-10 text-sm text-[#0f172a] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20"
               />
-              <button type="button" onClick={() => setShowCurrent(!showCurrent)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+              <button type="button" onClick={() => setShowCurrent(!showCurrent)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8]">
                 {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">{t("settingsPage.newPassword")}</label>
+            <label className="block text-xs font-medium text-[#64748b] mb-1">{t("settingsPage.newPassword")}</label>
             <div className="relative">
               <input
                 type={showNew ? "text" : "password"}
@@ -151,15 +151,15 @@ export default function SettingsPage() {
                 onChange={(e) => setNewPassword(e.target.value)}
                 required
                 minLength={6}
-                className="w-full h-10 rounded-xl border border-border bg-background px-3 pr-10 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="w-full h-10 rounded-xl border border-[#e8e3d9] bg-white px-3 pr-10 text-sm text-[#0f172a] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20"
               />
-              <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+              <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8]">
                 {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">{t("settingsPage.confirmPassword")}</label>
+            <label className="block text-xs font-medium text-[#64748b] mb-1">{t("settingsPage.confirmPassword")}</label>
             <div className="relative">
               <input
                 type={showConfirm ? "text" : "password"}
@@ -167,9 +167,9 @@ export default function SettingsPage() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 minLength={6}
-                className="w-full h-10 rounded-xl border border-border bg-background px-3 pr-10 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="w-full h-10 rounded-xl border border-[#e8e3d9] bg-white px-3 pr-10 text-sm text-[#0f172a] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20"
               />
-              <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+              <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8]">
                 {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
@@ -177,7 +177,7 @@ export default function SettingsPage() {
           <button
             type="submit"
             disabled={changePasswordMutation.isPending}
-            className="w-full h-10 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-60"
+            className="w-full h-10 rounded-full bg-[#1f75fe] text-white text-sm font-semibold hover:bg-[#1a65e8] hover:scale-105 transition-all disabled:opacity-60 disabled:hover:scale-100"
           >
             {changePasswordMutation.isPending ? t("common.saving") : t("settingsPage.changePassword")}
           </button>
@@ -194,8 +194,8 @@ export default function SettingsPage() {
               className={cn(
                 "flex-1 h-10 rounded-xl border text-sm font-semibold transition-all",
                 i18n.language === lang.code
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border bg-background text-muted-foreground hover:border-primary/40",
+                  ? "border-[#1f75fe] bg-[#1f75fe]/10 text-[#1f75fe]"
+                  : "border-[#e8e3d9] bg-white text-[#64748b] hover:border-[#1f75fe]/40",
               )}
             >
               {lang.label}

@@ -62,13 +62,13 @@ const STATE_LABELS: Record<string, string> = {
 };
 
 const STATE_COLORS: Record<string, string> = {
-  greeting: "bg-blue-50 text-blue-700 border-blue-100",
-  collect_name: "bg-violet-50 text-violet-700 border-violet-100",
-  collect_problem: "bg-amber-50 text-amber-700 border-amber-100",
-  suggest_doctor: "bg-indigo-50 text-indigo-700 border-indigo-100",
-  confirm_appointment: "bg-orange-50 text-orange-700 border-orange-100",
-  done: "bg-emerald-50 text-emerald-700 border-emerald-100",
-  human_takeover: "bg-red-50 text-red-700 border-red-100",
+  greeting: "bg-[#e0f2fe] text-[#0284c7] border-[#e0f2fe]",
+  collect_name: "bg-[#1f75fe]/10 text-[#1f75fe] border-[#1f75fe]/20",
+  collect_problem: "bg-[#fef3c7] text-[#d97706] border-[#fef3c7]",
+  suggest_doctor: "bg-[#e0f2fe] text-[#0284c7] border-[#e0f2fe]",
+  confirm_appointment: "bg-[#fef3c7] text-[#d97706] border-[#fef3c7]",
+  done: "bg-[#f0fdf4] text-[#16a34a] border-[#f0fdf4]",
+  human_takeover: "bg-[#fef2f2] text-[#dc2626] border-[#fef2f2]",
 };
 
 function formatRelative(dateStr: string, lang: string = "ru") {
@@ -199,37 +199,37 @@ function SessionChat({ phone, onBack }: { phone: string; onBack: () => void }) {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <div className="shrink-0 flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 bg-background">
+      <div className="shrink-0 flex items-center gap-2.5 px-4 py-3 border-b border-[#e8e3d9] bg-white">
         <button
           onClick={onBack}
-          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-gray-500 shrink-0"
+          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#f1ede4] transition-colors text-[#64748b] shrink-0"
         >
           <ArrowLeft className="w-4 h-4" />
         </button>
-        <div className="h-8 w-8 rounded-full bg-violet-100 flex items-center justify-center">
-          <Phone className="h-3.5 w-3.5 text-violet-600" />
+        <div className="h-8 w-8 rounded-full bg-[#1f75fe]/10 flex items-center justify-center">
+          <Phone className="h-3.5 w-3.5 text-[#1f75fe]" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-foreground truncate">{phone}</p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-sm font-semibold text-[#0f172a] truncate">{phone}</p>
+          <p className="text-xs text-[#64748b]">
             {t("chatbot.title", "AI-чатбот")} · {t("chatbot.messagesCount", "{{count}} сообщений").replace("{{count}}", String(messages.length))}
           </p>
         </div>
         <button
           onClick={() => refetch()}
-          className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          className="p-1.5 rounded-xl text-[#64748b] hover:text-[#0f172a] hover:bg-[#f1ede4] transition-colors"
         >
           <RefreshCw className="h-3.5 w-3.5" />
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1 bg-muted/20">
+      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1 bg-[#faf8f4]">
         {isLoading ? (
-          <div className="flex items-center justify-center h-full text-sm text-muted-foreground">{t("chatbot.loading", "Загрузка...")}</div>
+          <div className="flex items-center justify-center h-full text-sm text-[#64748b]">{t("chatbot.loading", "Загрузка...")}</div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-2">
-            <MessageSquare className="h-8 w-8 text-muted-foreground/30" />
-            <p className="text-sm text-muted-foreground">{t("chatbot.noMessages", "Сообщений пока нет")}</p>
+            <MessageSquare className="h-8 w-8 text-[#94a3b8]/40" />
+            <p className="text-sm text-[#64748b]">{t("chatbot.noMessages", "Сообщений пока нет")}</p>
           </div>
         ) : (
           messages.map((msg) => {
@@ -241,9 +241,9 @@ function SessionChat({ phone, onBack }: { phone: string; onBack: () => void }) {
               <div key={msg.id}>
                 {showDateSep && (
                   <div className="flex items-center gap-2 my-2">
-                    <div className="flex-1 h-px bg-border/50" />
-                    <span className="text-[10px] text-muted-foreground font-medium">{msgDate}</span>
-                    <div className="flex-1 h-px bg-border/50" />
+                    <div className="flex-1 h-px bg-[#e8e3d9]" />
+                    <span className="text-[10px] text-[#94a3b8] font-medium">{msgDate}</span>
+                    <div className="flex-1 h-px bg-[#e8e3d9]" />
                   </div>
                 )}
                 <div className={`flex ${isBot ? "justify-start" : "justify-end"} mb-1`}>
@@ -251,13 +251,13 @@ function SessionChat({ phone, onBack }: { phone: string; onBack: () => void }) {
                     <div
                       className={`px-3 py-2 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
                         isBot
-                          ? "bg-white border border-border/50 text-foreground rounded-tl-sm"
-                          : "bg-primary text-primary-foreground rounded-tr-sm"
+                          ? "bg-white border border-[#e8e3d9] text-[#0f172a] rounded-tl-sm"
+                          : "bg-[#1f75fe] text-white rounded-tr-sm"
                       }`}
                     >
                       {msg.content}
                     </div>
-                    <p className={`text-[10px] text-muted-foreground mt-0.5 ${isBot ? "text-left pl-1" : "text-right pr-1"}`}>
+                    <p className={`text-[10px] text-[#94a3b8] mt-0.5 ${isBot ? "text-left pl-1" : "text-right pr-1"}`}>
                       {isBot ? t("chatbot.botLabel", "🤖 Бот") : t("chatbot.clientLabel", "👤 Клиент")} · {formatTime(msg.createdAt, lang)}
                     </p>
                   </div>
@@ -345,9 +345,9 @@ function PlaygroundTab() {
   return (
     <div ref={containerRef} className="h-full flex flex-col gap-3">
       {/* Simulation banner */}
-      <div className="shrink-0 flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2">
-        <FlaskConical className="h-3.5 w-3.5 text-violet-600 shrink-0" />
-        <p className="text-xs text-violet-800 flex-1">
+      <div className="shrink-0 flex items-center gap-2 rounded-xl border border-[#1f75fe]/20 bg-[#1f75fe]/10 px-3 py-2">
+        <FlaskConical className="h-3.5 w-3.5 text-[#1f75fe] shrink-0" />
+        <p className="text-xs text-[#0f172a] flex-1">
           <span className="font-semibold">Симуляция</span> — бот работает точно как в WhatsApp, но реальные записи не создаются
         </p>
         <button
@@ -358,7 +358,7 @@ function PlaygroundTab() {
             setActiveMindMapNode(null);
           }}
           disabled={messages.length === 0}
-          className="flex items-center gap-1 text-xs text-violet-600 hover:text-violet-800 disabled:opacity-40 transition-colors shrink-0 ml-1"
+          className="flex items-center gap-1 text-xs text-[#1f75fe] hover:text-[#1a65e8] disabled:opacity-40 transition-colors shrink-0 ml-1"
         >
           <RefreshCw className="h-3 w-3" />
           Сбросить
@@ -366,7 +366,7 @@ function PlaygroundTab() {
       </div>
 
       {(activeMindMapNode || playgroundFsmState !== "greeting") && (
-        <div className="shrink-0 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900">
+        <div className="shrink-0 rounded-xl border border-[#e0f2fe] bg-[#e0f2fe] px-3 py-2 text-xs text-[#0284c7]">
           <span className="font-semibold">Этап FSM:</span>{" "}
           {FSM_STATE_LABELS[playgroundFsmState] ?? playgroundFsmState}
           {activeMindMapNode && (
@@ -378,16 +378,16 @@ function PlaygroundTab() {
         </div>
       )}
 
-      <div className="flex-1 min-h-0 rounded-xl border border-border/50 bg-muted/20 flex flex-col overflow-hidden">
+      <div className="flex-1 min-h-0 rounded-2xl border border-[#e8e3d9] bg-[#faf8f4] shadow-md flex flex-col overflow-hidden">
         <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
 
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full text-center py-10">
-              <div className="h-12 w-12 rounded-full bg-violet-100 flex items-center justify-center mb-3">
-                <Bot className="h-6 w-6 text-violet-500" />
+              <div className="h-12 w-12 rounded-full bg-[#1f75fe]/10 flex items-center justify-center mb-3">
+                <Bot className="h-6 w-6 text-[#1f75fe]" />
               </div>
-              <p className="text-sm font-medium text-foreground">Playground готов</p>
-              <p className="text-xs text-muted-foreground mt-1 max-w-[220px]">
+              <p className="text-sm font-medium text-[#0f172a]">Playground готов</p>
+              <p className="text-xs text-[#64748b] mt-1 max-w-[220px]">
                 Напишите как пациент — бот ответит точно по вашему скрипту
               </p>
             </div>
@@ -396,15 +396,15 @@ function PlaygroundTab() {
           {messages.map((msg, idx) => (
             <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
               {msg.role === "bot" && (
-                <div className="h-6 w-6 rounded-full bg-violet-100 flex items-center justify-center shrink-0 mr-2 mt-1">
-                  <Bot className="h-3.5 w-3.5 text-violet-600" />
+                <div className="h-6 w-6 rounded-full bg-[#1f75fe]/10 flex items-center justify-center shrink-0 mr-2 mt-1">
+                  <Bot className="h-3.5 w-3.5 text-[#1f75fe]" />
                 </div>
               )}
               <div
                 className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap leading-relaxed ${
                   msg.role === "user"
-                    ? "bg-primary text-primary-foreground rounded-tr-sm"
-                    : "bg-white border border-border/50 text-foreground rounded-tl-sm"
+                    ? "bg-[#1f75fe] text-white rounded-tr-sm"
+                    : "bg-white border border-[#e8e3d9] text-[#0f172a] rounded-tl-sm"
                 }`}
               >
                 {msg.text}
@@ -414,20 +414,20 @@ function PlaygroundTab() {
 
           {(testMessage.isPending || isReceivingParts) && (
             <div className="flex justify-start">
-              <div className="h-6 w-6 rounded-full bg-violet-100 flex items-center justify-center shrink-0 mr-2 mt-1">
-                <Bot className="h-3.5 w-3.5 text-violet-600" />
+              <div className="h-6 w-6 rounded-full bg-[#1f75fe]/10 flex items-center justify-center shrink-0 mr-2 mt-1">
+                <Bot className="h-3.5 w-3.5 text-[#1f75fe]" />
               </div>
-              <div className="bg-white border border-border/50 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:0ms]" />
-                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:150ms]" />
-                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:300ms]" />
+              <div className="bg-white border border-[#e8e3d9] rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#94a3b8]/50 animate-bounce [animation-delay:0ms]" />
+                <span className="h-1.5 w-1.5 rounded-full bg-[#94a3b8]/50 animate-bounce [animation-delay:150ms]" />
+                <span className="h-1.5 w-1.5 rounded-full bg-[#94a3b8]/50 animate-bounce [animation-delay:300ms]" />
               </div>
             </div>
           )}
           <div ref={bottomRef} />
         </div>
 
-        <div className="shrink-0 border-t border-border/50 bg-background px-3 py-2.5 flex gap-2">
+        <div className="shrink-0 border-t border-[#e8e3d9] bg-white px-3 py-2.5 flex gap-2">
           <input
             ref={inputRef}
             type="text"
@@ -435,12 +435,12 @@ function PlaygroundTab() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-            className="flex-1 text-sm border border-border/50 rounded-xl px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="flex-1 text-sm border border-[#e8e3d9] rounded-xl px-3 py-2 bg-white text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 transition-colors"
           />
           <button
             onClick={handleSend}
             disabled={!input.trim() || testMessage.isPending || isReceivingParts}
-            className="flex items-center justify-center w-10 h-10 bg-primary text-primary-foreground rounded-xl disabled:opacity-50 hover:bg-primary/90 transition-colors shrink-0"
+            className="flex items-center justify-center w-10 h-10 bg-[#1f75fe] text-white rounded-full disabled:opacity-50 hover:bg-[#1a65e8] hover:scale-105 transition-all shrink-0 font-semibold"
           >
             {testMessage.isPending || isReceivingParts ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </button>
@@ -460,10 +460,10 @@ const STATUS_LABEL: Record<DentalBroadcastRun["status"], string> = {
 };
 
 const STATUS_COLOR: Record<DentalBroadcastRun["status"], string> = {
-  pending: "bg-amber-50 text-amber-700 border-amber-100",
-  running: "bg-blue-50 text-blue-700 border-blue-100",
-  completed: "bg-emerald-50 text-emerald-700 border-emerald-100",
-  failed: "bg-red-50 text-red-700 border-red-100",
+  pending: "bg-[#fef3c7] text-[#d97706] border-[#fef3c7]",
+  running: "bg-[#e0f2fe] text-[#0284c7] border-[#e0f2fe]",
+  completed: "bg-[#f0fdf4] text-[#16a34a] border-[#f0fdf4]",
+  failed: "bg-[#fef2f2] text-[#dc2626] border-[#fef2f2]",
 };
 
 function AiBroadcastTab() {
@@ -497,14 +497,14 @@ function AiBroadcastTab() {
 
   return (
     <div className="space-y-4 max-w-2xl">
-      <div className="rounded-xl border border-border/50 bg-card p-4 space-y-2">
+      <div className="rounded-2xl border border-[#e8e3d9] bg-white shadow-md p-4 space-y-2">
         <div className="flex items-start gap-3">
-          <div className="h-8 w-8 rounded-lg bg-violet-100 flex items-center justify-center shrink-0">
-            <Megaphone className="h-4 w-4 text-violet-600" />
+          <div className="h-8 w-8 rounded-xl bg-[#1f75fe]/10 flex items-center justify-center shrink-0">
+            <Megaphone className="h-4 w-4 text-[#1f75fe]" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-foreground">ИИ-рассылка по WhatsApp</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-sm font-medium text-[#0f172a]">ИИ-рассылка по WhatsApp</p>
+            <p className="text-xs text-[#64748b] mt-0.5">
               Анализирует зубную карту каждого пациента с помощью ИИ и отправляет персональное сообщение тем, у кого есть тревожные находки. Автоматически запускается 15-го числа и в последний день месяца.
             </p>
           </div>
@@ -512,30 +512,30 @@ function AiBroadcastTab() {
       </div>
 
       {isRunning && latestRun && (
-        <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-4 space-y-3">
+        <div className="rounded-2xl border border-[#e0f2fe] bg-[#e0f2fe] p-4 space-y-3">
           <div className="flex items-center gap-2">
-            <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
-            <p className="text-sm font-medium text-blue-800">Рассылка выполняется…</p>
+            <Loader2 className="h-4 w-4 text-[#0284c7] animate-spin" />
+            <p className="text-sm font-medium text-[#0284c7]">Рассылка выполняется…</p>
           </div>
           <div className="space-y-1.5">
-            <div className="flex justify-between text-xs text-blue-700">
+            <div className="flex justify-between text-xs text-[#0284c7]">
               <span>Обработано {latestRun.processedPatients} из {latestRun.totalPatients} пациентов</span>
               <span>{progressPercent}%</span>
             </div>
-            <div className="h-2 rounded-full bg-blue-100 overflow-hidden">
-              <div className="h-full rounded-full bg-blue-500 transition-all duration-700" style={{ width: `${progressPercent}%` }} />
+            <div className="h-2 rounded-full bg-[#1f75fe]/20 overflow-hidden">
+              <div className="h-full rounded-full bg-[#1f75fe] transition-all duration-700" style={{ width: `${progressPercent}%` }} />
             </div>
           </div>
-          <p className="text-xs text-blue-600">Отправлено сообщений: {latestRun.messagesSent}</p>
+          <p className="text-xs text-[#0284c7]">Отправлено сообщений: {latestRun.messagesSent}</p>
         </div>
       )}
 
       {latestRun?.status === "completed" && (
-        <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-4 flex items-start gap-3">
-          <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+        <div className="rounded-2xl border border-[#f0fdf4] bg-[#f0fdf4] p-4 flex items-start gap-3">
+          <CheckCircle2 className="h-5 w-5 text-[#16a34a] shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-medium text-emerald-800">Рассылка завершена</p>
-            <p className="text-xs text-emerald-700 mt-0.5">
+            <p className="text-sm font-medium text-[#16a34a]">Рассылка завершена</p>
+            <p className="text-xs text-[#16a34a] mt-0.5">
               Отправлено: <strong>{latestRun.messagesSent}</strong>
               {latestRun.errorsCount > 0 && <> · Ошибок: <strong>{latestRun.errorsCount}</strong></>}
             </p>
@@ -544,21 +544,21 @@ function AiBroadcastTab() {
       )}
 
       {latestRun?.status === "failed" && (
-        <div className="rounded-xl border border-red-100 bg-red-50/50 p-4 flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+        <div className="rounded-2xl border border-[#fef2f2] bg-[#fef2f2] p-4 flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-[#dc2626] shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-medium text-red-800">Рассылка завершилась с ошибкой</p>
-            <p className="text-xs text-red-700 mt-0.5">Попробуйте запустить снова.</p>
+            <p className="text-sm font-medium text-[#dc2626]">Рассылка завершилась с ошибкой</p>
+            <p className="text-xs text-[#dc2626] mt-0.5">Попробуйте запустить снова.</p>
           </div>
         </div>
       )}
 
       <div className="flex items-center justify-between">
-        <p className="text-xs text-muted-foreground">История запусков</p>
+        <p className="text-xs text-[#64748b]">История запусков</p>
         <button
           onClick={() => setShowConfirm(true)}
           disabled={isRunning || trigger.isPending}
-          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1.5 text-xs px-4 py-2 rounded-full font-semibold bg-[#1f75fe] text-white hover:bg-[#1a65e8] hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
         >
           {trigger.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Megaphone className="h-3.5 w-3.5" />}
           Запустить рассылку
@@ -566,39 +566,39 @@ function AiBroadcastTab() {
       </div>
 
       {isLoading ? (
-        <div className="p-8 text-center text-muted-foreground text-sm">Загрузка…</div>
+        <div className="p-8 text-center text-[#64748b] text-sm">Загрузка…</div>
       ) : runs.length === 0 ? (
-        <div className="rounded-xl border border-border/50 bg-muted/30 p-10 text-center">
-          <Megaphone className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-          <p className="text-sm text-muted-foreground">Рассылки ещё не проводились</p>
+        <div className="rounded-2xl border border-[#e8e3d9] bg-[#faf8f4] p-10 text-center">
+          <Megaphone className="h-8 w-8 text-[#94a3b8]/40 mx-auto mb-2" />
+          <p className="text-sm text-[#64748b]">Рассылки ещё не проводились</p>
         </div>
       ) : (
-        <div className="rounded-xl border border-border/50 bg-card overflow-hidden">
+        <div className="rounded-2xl border border-[#e8e3d9] bg-white shadow-md overflow-hidden">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-border/50 bg-muted/30">
-                <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Дата</th>
-                <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Статус</th>
-                <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">Охвачено</th>
-                <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">Отправлено</th>
-                <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">Ошибок</th>
+              <tr className="border-b border-[#e8e3d9] bg-[#faf8f4]">
+                <th className="text-left px-4 py-2.5 font-semibold text-[#64748b] uppercase tracking-wide">Дата</th>
+                <th className="text-left px-4 py-2.5 font-semibold text-[#64748b] uppercase tracking-wide">Статус</th>
+                <th className="text-right px-4 py-2.5 font-semibold text-[#64748b] uppercase tracking-wide">Охвачено</th>
+                <th className="text-right px-4 py-2.5 font-semibold text-[#64748b] uppercase tracking-wide">Отправлено</th>
+                <th className="text-right px-4 py-2.5 font-semibold text-[#64748b] uppercase tracking-wide">Ошибок</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border/30">
+            <tbody className="divide-y divide-[#e8e3d9]">
               {(runs as DentalBroadcastRun[]).map((run) => (
-                <tr key={run.id} className="hover:bg-muted/20">
-                  <td className="px-4 py-2.5 text-foreground">{formatDate(run.startedAt, lang)}</td>
+                <tr key={run.id} className="hover:bg-[#faf8f4] transition-colors">
+                  <td className="px-4 py-2.5 text-[#0f172a]">{formatDate(run.startedAt, lang)}</td>
                   <td className="px-4 py-2.5">
                     <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full border ${STATUS_COLOR[run.status]}`}>
                       {run.status === "running" && <Loader2 className="h-2.5 w-2.5 animate-spin" />}
                       {STATUS_LABEL[run.status]}
                     </span>
                   </td>
-                  <td className="px-4 py-2.5 text-right text-muted-foreground">
+                  <td className="px-4 py-2.5 text-right text-[#64748b]">
                     {run.status === "running" ? `${run.processedPatients}/${run.totalPatients}` : run.totalPatients}
                   </td>
-                  <td className="px-4 py-2.5 text-right text-foreground font-medium">{run.messagesSent}</td>
-                  <td className={`px-4 py-2.5 text-right font-medium ${run.errorsCount > 0 ? "text-red-600" : "text-muted-foreground"}`}>
+                  <td className="px-4 py-2.5 text-right text-[#0f172a] font-medium">{run.messagesSent}</td>
+                  <td className={`px-4 py-2.5 text-right font-medium ${run.errorsCount > 0 ? "text-[#dc2626]" : "text-[#64748b]"}`}>
                     {run.errorsCount}
                   </td>
                 </tr>
@@ -610,26 +610,26 @@ function AiBroadcastTab() {
 
       {showConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-background rounded-2xl shadow-xl border border-border/50 p-6 max-w-sm w-full space-y-4">
+          <div className="bg-white rounded-2xl shadow-xl border border-[#e8e3d9] p-6 max-w-sm w-full space-y-4">
             <div className="flex items-start gap-3">
-              <div className="h-9 w-9 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
-                <Megaphone className="h-4 w-4 text-amber-600" />
+              <div className="h-9 w-9 rounded-xl bg-[#fef3c7] flex items-center justify-center shrink-0">
+                <Megaphone className="h-4 w-4 text-[#d97706]" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-foreground">Запустить рассылку?</p>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-sm font-semibold text-[#0f172a]">Запустить рассылку?</p>
+                <p className="text-xs text-[#64748b] mt-1">
                   Пациенты с тревожными находками по зубной карте получат персональное WhatsApp-сообщение.
                 </p>
               </div>
             </div>
             <div className="flex gap-2 justify-end">
-              <button onClick={() => setShowConfirm(false)} className="text-xs px-3 py-1.5 rounded-md font-medium text-muted-foreground hover:bg-muted transition-colors">
+              <button onClick={() => setShowConfirm(false)} className="text-xs px-3 py-2 rounded-xl font-medium text-[#64748b] hover:bg-[#f1ede4] transition-colors">
                 Отмена
               </button>
               <button
                 onClick={() => trigger.mutate()}
                 disabled={trigger.isPending}
-                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                className="flex items-center gap-1.5 text-xs px-4 py-2 rounded-full font-semibold bg-[#1f75fe] text-white hover:bg-[#1a65e8] hover:scale-105 transition-all disabled:opacity-50 disabled:hover:scale-100"
               >
                 {trigger.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                 Запустить
@@ -717,24 +717,24 @@ export default function ChatbotPage() {
   }
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="h-full flex flex-col overflow-hidden bg-[#faf8f4] font-manrope">
       {/* Header */}
-      <div className="shrink-0 px-4 py-4 border-b border-gray-100 bg-white">
+      <div className="shrink-0 px-4 py-4 border-b border-[#e8e3d9] bg-white">
         <div className="flex items-center gap-3">
           <button
             onClick={() => window.history.back()}
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-500 shrink-0"
+            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#f1ede4] active:bg-[#e8e3d9] transition-colors text-[#64748b] shrink-0"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-[17px] font-semibold text-gray-900">{t("chatbot.title")}</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">{t("chatbot.subtitle")}</p>
+            <h1 className="text-[17px] font-semibold text-[#0f172a]">{t("chatbot.title")}</h1>
+            <p className="text-xs text-[#64748b] mt-0.5">{t("chatbot.subtitle")}</p>
           </div>
           <div className="ml-auto flex items-center gap-2">
             <div className={cn(
               "flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border font-medium",
-              effectiveEnabled ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-red-50 text-red-700 border-red-100",
+              effectiveEnabled ? "bg-[#f0fdf4] text-[#16a34a] border-[#f0fdf4]" : "bg-[#fef2f2] text-[#dc2626] border-[#fef2f2]",
             )}>
               <Power className="h-3 w-3" />
               {effectiveEnabled ? t("chatbot.enabled") : t("chatbot.disabled")}
@@ -753,8 +753,8 @@ export default function ChatbotPage() {
               key={key}
               onClick={() => setTab(key)}
               className={cn(
-                "flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md font-medium transition-colors shrink-0",
-                tab === key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted",
+                "flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl font-medium transition-colors shrink-0",
+                tab === key ? "bg-[#1f75fe]/10 text-[#1f75fe]" : "text-[#64748b] hover:bg-[#f1ede4]",
               )}
             >
               <Icon className="h-3.5 w-3.5" />
@@ -771,56 +771,56 @@ export default function ChatbotPage() {
         {tab === "sessions" && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">
-                {t("chatbot.activeSessions")}: <span className="font-semibold text-foreground">{sessions.length}</span>
+              <p className="text-xs text-[#64748b]">
+                {t("chatbot.activeSessions")}: <span className="font-semibold text-[#0f172a]">{sessions.length}</span>
               </p>
-              <button onClick={() => refetchSessions()} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+              <button onClick={() => refetchSessions()} className="flex items-center gap-1 text-xs text-[#64748b] hover:text-[#0f172a]">
                 <RefreshCw className="h-3 w-3" />
                 {t("common.refresh")}
               </button>
             </div>
 
             {sessionsLoading ? (
-              <div className="p-8 text-center text-muted-foreground text-sm">{t("common.loading")}</div>
+              <div className="p-8 text-center text-[#64748b] text-sm">{t("common.loading")}</div>
             ) : sessions.length === 0 ? (
-              <div className="rounded-xl border border-border/50 bg-muted/30 p-10 text-center">
-                <Bot className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">{t("chatbot.sessionsEmpty")}</p>
+              <div className="rounded-2xl border border-[#e8e3d9] bg-[#faf8f4] p-10 text-center">
+                <Bot className="h-8 w-8 text-[#94a3b8]/40 mx-auto mb-2" />
+                <p className="text-sm text-[#64748b]">{t("chatbot.sessionsEmpty")}</p>
               </div>
             ) : (
-              <div className="divide-y divide-border/50 rounded-xl border border-border/50 bg-card overflow-hidden">
+              <div className="divide-y divide-[#e8e3d9] rounded-2xl border border-[#e8e3d9] bg-white shadow-md overflow-hidden">
                 {sessions.map((session) => (
                   <button
                     key={session.id}
                     onClick={() => setSelectedPhone(session.phone)}
-                    className="w-full flex items-start gap-3 px-4 py-3 hover:bg-muted/40 active:bg-muted/60 transition-colors text-left"
+                    className="w-full flex items-start gap-3 px-4 py-3 hover:bg-[#faf8f4] active:bg-[#f1ede4] transition-colors text-left"
                   >
-                    <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
-                      <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
+                    <div className="h-8 w-8 rounded-full bg-[#f1ede4] flex items-center justify-center shrink-0 mt-0.5">
+                      <MessageSquare className="h-3.5 w-3.5 text-[#64748b]" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{session.phone}</p>
+                      <p className="text-sm font-medium text-[#0f172a] truncate">{session.phone}</p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className={cn("inline-flex text-[10px] font-medium px-1.5 py-0.5 rounded-full border", STATE_COLORS[session.state] ?? "bg-muted text-muted-foreground border-border")}>
+                        <span className={cn("inline-flex text-[10px] font-medium px-1.5 py-0.5 rounded-full border", STATE_COLORS[session.state] ?? "bg-[#f1ede4] text-[#64748b] border-[#e8e3d9]")}>
                           {t(`chatbot.states.${session.state}`, STATE_LABELS[session.state] ?? session.state)}
                         </span>
-                        <span className="text-[10px] text-muted-foreground">{formatRelative(session.updatedAt, lang)}</span>
+                        <span className="text-[10px] text-[#94a3b8]">{formatRelative(session.updatedAt, lang)}</span>
                         {session.humanTakeover && (
-                          <span className="inline-flex text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-100">
+                          <span className="inline-flex text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-[#fef2f2] text-[#dc2626] border border-[#fef2f2]">
                             {t("chatbot.operatorMode")}
                           </span>
                         )}
                       </div>
                       {session.data && (
-                        <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                        <p className="text-[11px] text-[#64748b] mt-0.5 truncate">
                           {getSessionSummary(session.data, t)}
                         </p>
                       )}
                     </div>
-                    <ChevronLeft className="h-4 w-4 text-muted-foreground shrink-0 mt-1 rotate-180" />
+                    <ChevronLeft className="h-4 w-4 text-[#64748b] shrink-0 mt-1 rotate-180" />
                     <button
                       onClick={(e) => { e.stopPropagation(); setConfirmResetPhone(session.phone); }}
-                      className="shrink-0 p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                      className="shrink-0 p-1.5 rounded-xl text-[#64748b] hover:text-[#dc2626] hover:bg-[#fef2f2] transition-colors"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -836,24 +836,24 @@ export default function ChatbotPage() {
           <div className="space-y-4 max-w-2xl">
 
             {/* Bot on/off */}
-            <div className="rounded-xl border border-border/50 bg-card p-4">
+            <div className="rounded-2xl border border-[#e8e3d9] bg-white shadow-md p-4">
               <div className="flex items-center gap-3 justify-between">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground">{t("chatbot.settings.enableBot")}</p>
-                  <p className="text-xs text-muted-foreground">{t("chatbot.settings.enableBotDesc")}</p>
+                  <p className="text-sm font-medium text-[#0f172a]">{t("chatbot.settings.enableBot")}</p>
+                  <p className="text-xs text-[#64748b]">{t("chatbot.settings.enableBotDesc")}</p>
                 </div>
                 <button
                   onClick={() => setLocalSettings((p) => ({ ...p, enabled: !effectiveEnabled }))}
                   className={cn(
                     "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors focus:outline-none",
-                    effectiveEnabled ? "bg-emerald-500" : "bg-muted-foreground/30",
+                    effectiveEnabled ? "bg-[#16a34a]" : "bg-[#94a3b8]/40",
                   )}
                 >
                   <span className={cn("inline-block h-4 w-4 rounded-full bg-white shadow transition-transform", effectiveEnabled ? "translate-x-6" : "translate-x-1")} />
                 </button>
               </div>
               {autosaveStatus !== "idle" && (
-                <p className={cn("text-xs mt-2", autosaveStatus === "saved" ? "text-emerald-600" : "text-muted-foreground")}>
+                <p className={cn("text-xs mt-2", autosaveStatus === "saved" ? "text-[#16a34a]" : "text-[#64748b]")}>
                   {autosaveStatus === "saving" ? "Сохранение…" : "Сохранено"}
                 </p>
               )}
@@ -862,16 +862,16 @@ export default function ChatbotPage() {
             {/* Combined knowledge + script button */}
             <button
               onClick={() => setCombinedOpen(true)}
-              className="w-full flex items-center gap-3 rounded-xl border border-border/50 bg-card p-4 hover:bg-muted/30 transition-colors text-left"
+              className="w-full flex items-center gap-3 rounded-2xl border border-[#e8e3d9] bg-white shadow-md p-4 hover:bg-[#faf8f4] transition-colors text-left"
             >
-              <BookOpen className="h-4 w-4 text-primary shrink-0" />
+              <BookOpen className="h-4 w-4 text-[#1f75fe] shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground">База знаний и скрипт</p>
-                <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                <p className="text-sm font-medium text-[#0f172a]">База знаний и скрипт</p>
+                <p className="text-xs text-[#64748b] mt-0.5 truncate">
                   Ссылки, файлы и визуальный сценарий разговора
                 </p>
               </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+              <ChevronRight className="h-4 w-4 text-[#64748b] shrink-0" />
             </button>
 
           </div>

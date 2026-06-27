@@ -102,13 +102,13 @@ export default function MenuPage() {
   };
 
   return (
-    <PageShell className="pb-6">
+    <PageShell className="pb-6 bg-[#faf8f4] font-manrope text-[#0f172a]">
       <Link
         href="/account-settings"
-        className="block bg-surface px-4 pt-5 pb-4 mb-4 border-b border-border/50 active:bg-muted/40 transition-colors"
+        className="block bg-white px-4 pt-5 pb-4 mb-4 border-b border-[#e8e3d9]/50 active:bg-[#f1ede4] transition-colors"
       >
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-full overflow-hidden bg-primary/12 text-primary flex items-center justify-center font-bold text-base shrink-0 ring-2 ring-primary/10">
+          <div className="w-11 h-11 rounded-full overflow-hidden bg-[#1f75fe]/12 text-[#1f75fe] flex items-center justify-center font-bold text-base shrink-0 ring-2 ring-[#1f75fe]/10">
             {(user as typeof user & { photoUrl?: string | null })?.photoUrl ? (
               <img
                 src={(user as typeof user & { photoUrl?: string | null })?.photoUrl!}
@@ -120,14 +120,14 @@ export default function MenuPage() {
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-foreground text-body leading-tight truncate">{user?.name}</p>
-            <p className="text-caption text-muted-foreground truncate">{user?.email}</p>
+            <p className="font-semibold text-[#0f172a] text-body leading-tight truncate">{user?.name}</p>
+            <p className="text-caption text-[#64748b] truncate">{user?.email}</p>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
-            <span className="text-micro font-bold text-primary uppercase tracking-wider bg-primary/10 px-2 py-0.5 rounded-full">
+            <span className="text-micro font-bold text-[#1f75fe] uppercase tracking-wider bg-[#1f75fe]/10 px-2 py-0.5 rounded-full">
               {user?.role ? t(`role.${user.role}`) : user?.role}
             </span>
-            <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
+            <ChevronRight className="w-4 h-4 text-[#94a3b8]" />
           </div>
         </div>
       </Link>
@@ -144,10 +144,10 @@ export default function MenuPage() {
               <motion.div key={item.href} variants={gridItemVariants}>
                 <Link
                   href={item.href}
-                  className="flex flex-col items-center gap-1.5 py-3 px-1 rounded-xl hover:bg-muted/50 active:bg-muted transition-colors"
+                  className="flex flex-col items-center gap-1.5 py-3 px-1 rounded-xl hover:bg-[#f1ede4] active:bg-[#f1ede4] transition-colors"
                 >
-                  <item.icon className="w-6 h-6 text-primary" strokeWidth={1.8} />
-                  <span className="text-micro text-muted-foreground text-center leading-tight font-medium line-clamp-2">
+                  <item.icon className="w-6 h-6 text-[#1f75fe]" strokeWidth={1.8} />
+                  <span className="text-micro text-[#64748b] text-center leading-tight font-medium line-clamp-2">
                     {item.name}
                   </span>
                 </Link>
@@ -163,8 +163,8 @@ export default function MenuPage() {
             <IosGroupRow>
               <span className="text-body">{t("menuPage.language")}</span>
               <div className="flex items-center gap-1.5">
-                <span className="text-caption text-muted-foreground mr-0.5">{LANG_LABEL[currentLang]}</span>
-                <div className="flex bg-muted rounded-lg p-0.5">
+                <span className="text-caption text-[#64748b] mr-0.5">{LANG_LABEL[currentLang]}</span>
+                <div className="flex bg-[#f1ede4] rounded-lg p-0.5">
                   {SUPPORTED_LANGS.map((lang) => (
                     <button
                       key={lang}
@@ -173,8 +173,8 @@ export default function MenuPage() {
                       className={cn(
                         "text-micro font-semibold px-2.5 py-1.5 rounded-md transition-all",
                         currentLang === lang
-                          ? "bg-surface text-primary shadow-sm"
-                          : "text-muted-foreground hover:text-foreground",
+                          ? "bg-white text-[#1f75fe] shadow-sm"
+                          : "text-[#64748b] hover:text-[#0f172a]",
                       )}
                     >
                       {LANG_LABEL[lang]}
@@ -187,7 +187,7 @@ export default function MenuPage() {
             <Link href="/ai-credits" className="block">
               <IosGroupRow className="border-b-0">
                 <span className="text-body">{t("nav.aiCredits")}</span>
-                <ChevronRight className="w-4 h-4 text-muted-foreground/50 shrink-0" />
+                <ChevronRight className="w-4 h-4 text-[#94a3b8] shrink-0" />
               </IosGroupRow>
             </Link>
 
@@ -195,14 +195,14 @@ export default function MenuPage() {
               <Link href="/logs" className="block">
                 <IosGroupRow>
                   <span className="text-body">{t("nav.logs")}</span>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground/50 shrink-0" />
+                  <ChevronRight className="w-4 h-4 text-[#94a3b8] shrink-0" />
                 </IosGroupRow>
               </Link>
             )}
 
             <IosGroupRow>
               <span className="text-body">{t("menuPage.notifications")}</span>
-              <div className="flex items-center gap-1 text-muted-foreground/60">
+              <div className="flex items-center gap-1 text-[#94a3b8]">
                 <Bell className="w-4 h-4" />
                 <ChevronRight className="w-4 h-4" />
               </div>
@@ -214,7 +214,7 @@ export default function MenuPage() {
       <IosSection className="mt-2">
         <Button
           variant="outline"
-          className="w-full justify-start gap-3 h-auto py-3.5 text-destructive border-border/60 hover:text-destructive hover:bg-destructive/5"
+          className="w-full justify-start gap-3 h-auto py-3.5 text-[#dc2626] border-[#e8e3d9] hover:text-[#dc2626] hover:bg-[#fef2f2]"
           onClick={() => logoutMutation.mutate()}
           disabled={logoutMutation.isPending}
         >
@@ -225,7 +225,7 @@ export default function MenuPage() {
         </Button>
       </IosSection>
 
-      <p className="mt-8 text-center text-caption text-muted-foreground/60">
+      <p className="mt-8 text-center text-caption text-[#94a3b8]">
         {t("menuPage.copyright")}
       </p>
     </PageShell>

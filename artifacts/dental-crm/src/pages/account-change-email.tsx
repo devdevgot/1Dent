@@ -58,47 +58,46 @@ export default function AccountChangeEmail() {
   }
 
   return (
-    <div className="min-h-full bg-[#f2f2f7]">
-      <div className="bg-white px-4 pt-12 pb-3 flex items-center gap-3 border-b border-gray-100">
+    <div className="min-h-full bg-[#faf8f4] font-manrope">
+      <div className="bg-white px-4 pt-12 pb-3 flex items-center gap-3 border-b border-[#e8e3d9]">
         <button
           onClick={() => step === "enter-code" ? setStep("enter-email") : setLocation("/account-settings")}
-          className="p-1 -ml-1 text-gray-500"
+          className="p-1 -ml-1 text-[#64748b] hover:bg-[#f1ede4] rounded-xl transition-colors"
         >
           <ChevronLeft className="w-6 h-6" />
         </button>
-        <h1 className="text-lg font-semibold text-gray-900">Изменить email</h1>
+        <h1 className="text-lg font-semibold text-[#0f172a]">Изменить email</h1>
       </div>
 
       <div className="px-4 py-6 space-y-5">
         {step === "done" ? (
           <div className="flex flex-col items-center gap-4 py-10">
-            <CheckCircle2 className="w-16 h-16 text-primary" />
-            <p className="text-[17px] font-semibold text-gray-900">Email обновлён</p>
-            <p className="text-[14px] text-gray-400 text-center">
-              Ваш новый email: <span className="text-gray-700 font-medium">{newEmail}</span>
+            <CheckCircle2 className="w-16 h-16 text-[#1f75fe]" />
+            <p className="text-[17px] font-semibold text-[#0f172a]">Email обновлён</p>
+            <p className="text-[14px] text-[#94a3b8] text-center">
+              Ваш новый email: <span className="text-[#64748b] font-medium">{newEmail}</span>
             </p>
             <button
               onClick={() => setLocation("/account-settings")}
-              className="mt-4 w-full py-3.5 rounded-2xl font-semibold text-[15px]"
-              style={{ backgroundColor: "#1f75fe", color: "#ffffff" }}
+              className="mt-4 w-full py-3.5 rounded-full font-semibold text-[15px] bg-[#1f75fe] text-white hover:bg-[#1a65e8] hover:scale-105 transition-all"
             >
               Готово
             </button>
           </div>
         ) : step === "enter-email" ? (
           <>
-            <div className="bg-white rounded-2xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-50">
-                <p className="text-[12px] text-gray-400">Текущий email</p>
-                <p className="text-[15px] text-gray-500 mt-0.5">{user?.email}</p>
+            <div className="bg-white rounded-2xl overflow-hidden border border-[#e8e3d9] shadow-md">
+              <div className="px-4 py-3 border-b border-[#e8e3d9]">
+                <p className="text-[12px] text-[#94a3b8]">Текущий email</p>
+                <p className="text-[15px] text-[#64748b] mt-0.5">{user?.email}</p>
               </div>
               <label className="flex flex-col px-4 py-3.5 gap-0.5">
-                <span className="text-[11px] text-gray-400 uppercase tracking-wider font-medium">Новый email</span>
+                <span className="text-[11px] text-[#94a3b8] uppercase tracking-wider font-medium">Новый email</span>
                 <input
                   type="email"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
-                  className="text-[15px] text-gray-900 bg-transparent outline-none placeholder-gray-300 mt-0.5"
+                  className="text-[15px] text-[#0f172a] bg-transparent outline-none placeholder-[#94a3b8] mt-0.5"
                   placeholder="новый@email.com"
                   autoCapitalize="none"
                   autoCorrect="off"
@@ -110,8 +109,7 @@ export default function AccountChangeEmail() {
             <button
               onClick={handleSendCode}
               disabled={sending}
-              className="w-full py-3.5 rounded-2xl font-semibold text-[15px] flex items-center justify-center gap-2"
-              style={{ backgroundColor: "#1f75fe", color: "#ffffff" }}
+              className="w-full py-3.5 rounded-full font-semibold text-[15px] flex items-center justify-center gap-2 bg-[#1f75fe] text-white hover:bg-[#1a65e8] hover:scale-105 transition-all disabled:hover:scale-100"
             >
               {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
               Отправить код подтверждения
@@ -119,24 +117,24 @@ export default function AccountChangeEmail() {
           </>
         ) : (
           <>
-            <div className="bg-primary/5 border border-primary/20 rounded-2xl px-4 py-3.5 flex items-start gap-3">
-              <Mail className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+            <div className="bg-[#1f75fe]/10 border border-[#1f75fe]/20 rounded-2xl px-4 py-3.5 flex items-start gap-3">
+              <Mail className="w-5 h-5 text-[#1f75fe] mt-0.5 shrink-0" />
               <div>
-                <p className="text-[14px] text-gray-700 font-medium">Код отправлен</p>
-                <p className="text-[13px] text-gray-400 mt-0.5">
-                  Проверьте почту <span className="text-gray-600">{newEmail}</span>
+                <p className="text-[14px] text-[#0f172a] font-medium">Код отправлен</p>
+                <p className="text-[13px] text-[#94a3b8] mt-0.5">
+                  Проверьте почту <span className="text-[#64748b]">{newEmail}</span>
                 </p>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl overflow-hidden">
+            <div className="bg-white rounded-2xl overflow-hidden border border-[#e8e3d9] shadow-md">
               <label className="flex flex-col px-4 py-3.5 gap-0.5">
-                <span className="text-[11px] text-gray-400 uppercase tracking-wider font-medium">Код подтверждения</span>
+                <span className="text-[11px] text-[#94a3b8] uppercase tracking-wider font-medium">Код подтверждения</span>
                 <input
                   type="text"
                   value={code}
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                  className="text-[22px] font-bold tracking-[0.3em] text-gray-900 bg-transparent outline-none placeholder-gray-200 mt-1"
+                  className="text-[22px] font-bold tracking-[0.3em] text-[#0f172a] bg-transparent outline-none placeholder-[#e8e3d9] mt-1"
                   placeholder="------"
                   inputMode="numeric"
                   autoFocus
@@ -147,8 +145,7 @@ export default function AccountChangeEmail() {
             <button
               onClick={handleVerify}
               disabled={mutation.isPending}
-              className="w-full py-3.5 rounded-2xl font-semibold text-[15px] flex items-center justify-center gap-2"
-              style={{ backgroundColor: "#1f75fe", color: "#ffffff" }}
+              className="w-full py-3.5 rounded-full font-semibold text-[15px] flex items-center justify-center gap-2 bg-[#1f75fe] text-white hover:bg-[#1a65e8] hover:scale-105 transition-all disabled:hover:scale-100"
             >
               {mutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
               Подтвердить
@@ -156,7 +153,7 @@ export default function AccountChangeEmail() {
 
             <button
               onClick={() => { setCode(""); setStep("enter-email"); }}
-              className="w-full py-3 text-[14px] text-gray-400"
+              className="w-full py-3 text-[14px] text-[#94a3b8] hover:text-[#64748b] transition-colors"
             >
               Изменить email
             </button>
