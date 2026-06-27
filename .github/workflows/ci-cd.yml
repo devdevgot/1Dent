@@ -1,15 +1,15 @@
-# CI/CD: checks on every PR/push to master, deploy to Railway only after checks pass.
+# CI/CD: checks on every PR/push to master.
 #
-# Setup (one-time in GitHub):
-#   1. Repo → Settings → Secrets and variables → Actions → New repository secret
-#      RAILWAY_DEPLOY_HOOK = Deploy Hook URL from Railway
-#        (Service → Settings → Deploy Hook → Generate)
-#   2. In Railway: disable automatic deploys on git push if you use the hook,
-#      otherwise each push may deploy twice (Railway auto + this workflow).
-#   3. Optional: Branch protection on master → require this workflow to pass.
+# Railway deploy — два режима (см. docs/RAILWAY_DEPLOY.md):
 #
-# Flow:
-#   local → git push → GitHub → Actions (checks) → Railway (production)
+#   A) Auto-deploy (проще): Railway Settings → Source → branch master, auto-deploy ON.
+#      GitHub Actions только проверяет сборку. Секрет RAILWAY_DEPLOY_HOOK не нужен.
+#
+#   B) Deploy hook: Railway auto-deploy OFF, в GitHub Secrets добавить RAILWAY_DEPLOY_HOOK.
+#      Деплой запускается после успешного job Checks.
+#
+# Flow (вариант B):
+#   push master → GitHub Actions (checks) → POST deploy hook → Railway
 
 name: CI/CD
 
@@ -19,9 +19,10 @@ on:
   pull_request:
     branches: [master]
 
+# Не отменять прогоны на master — иначе deploy hook не успевает сработать
 concurrency:
-  group: ci-cd-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-cd-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   checks:
@@ -56,13 +57,15 @@ jobs:
       name: production
       url: https://1dent.kz
     steps:
-      - name: Trigger Railway deploy
+      - name: Trigger Railway deploy (optional — via deploy hook)
         env:
           RAILWAY_DEPLOY_HOOK: ${{ secrets.RAILWAY_DEPLOY_HOOK }}
         run: |
           if [ -z "$RAILWAY_DEPLOY_HOOK" ]; then
-            echo "::error::Missing secret RAILWAY_DEPLOY_HOOK. Add it in GitHub → Settings → Secrets → Actions."
-            exit 1
+            echo "::notice::RAILWAY_DEPLOY_HOOK не задан — деплой через hook пропущен."
+            echo "Включите auto-deploy в Railway (ветка master) или добавьте секрет RAILWAY_DEPLOY_HOOK."
+            echo "Инструкция: docs/RAILWAY_DEPLOY.md"
+            exit 0
           fi
           curl --fail --silent --show-error --request POST "$RAILWAY_DEPLOY_HOOK"
-          echo "Railway deploy triggered."
+          echo "Railway deploy triggered via hook."
