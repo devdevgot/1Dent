@@ -70,13 +70,13 @@ function SpecialtyTagInput({
           {values.map((tag) => (
             <span
               key={tag}
-              className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full text-xs font-semibold"
+              className="inline-flex items-center gap-1 bg-[#f0fdf4] text-[#16a34a] border border-[#16a34a]/20 px-2.5 py-1 rounded-full text-xs font-semibold"
             >
               {tag}
               <button
                 type="button"
                 onClick={() => removeTag(tag)}
-                className="text-emerald-500 hover:text-emerald-700 ml-0.5"
+                className="text-[#16a34a] hover:text-[#15803d] ml-0.5"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -112,7 +112,7 @@ function SpecialtyTagInput({
             }
             if (e.key === "Escape") setIsOpen(false);
           }}
-          className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/30"
+          className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 pr-10 text-sm font-medium text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
         />
         <button
           type="button"
@@ -121,19 +121,19 @@ function SpecialtyTagInput({
             setIsOpen((o) => !o);
             inputRef.current?.focus();
           }}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8]"
         >
           <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
         </button>
 
         {isOpen && (filtered.length > 0 || customNotInList) && (
-          <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 max-h-52 overflow-y-auto">
+          <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-[#e8e3d9] rounded-xl shadow-lg z-20 max-h-52 overflow-y-auto">
             {filtered.map((s) => (
               <button
                 key={s}
                 type="button"
                 onMouseDown={() => addTag(s)}
-                className="w-full text-left px-4 py-2.5 text-sm text-gray-800 hover:bg-gray-50 transition-colors"
+                className="w-full text-left px-4 py-2.5 text-sm text-[#0f172a] hover:bg-[#faf8f4] transition-colors"
               >
                 {s}
               </button>
@@ -142,7 +142,7 @@ function SpecialtyTagInput({
               <button
                 type="button"
                 onMouseDown={() => addTag(inputValue.trim())}
-                className="w-full text-left px-4 py-2.5 text-sm font-semibold border-t border-gray-100 hover:bg-gray-50 transition-colors text-primary"
+                className="w-full text-left px-4 py-2.5 text-sm font-semibold border-t border-[#e8e3d9] hover:bg-[#faf8f4] transition-colors text-[#1f75fe]"
               >
                 + Добавить «{inputValue.trim()}»
               </button>
@@ -196,54 +196,54 @@ const ROLE_DEFS: {
     icon: ShieldCheck,
     label: "Администратор",
     desc: "Управляет клиникой и расписанием",
-    color: "text-blue-600",
-    bg: "bg-blue-50",
-    border: "border-blue-200",
+    color: "text-[#0284c7]",
+    bg: "bg-[#e0f2fe]",
+    border: "border-[#e0f2fe]",
   },
   {
     value: "doctor",
     icon: Activity,
     label: "Врач",
     desc: "Ведёт приём пациентов",
-    color: "text-emerald-600",
-    bg: "bg-emerald-50",
-    border: "border-emerald-200",
+    color: "text-[#16a34a]",
+    bg: "bg-[#f0fdf4]",
+    border: "border-[#f0fdf4]",
   },
   {
     value: "accountant",
     icon: BarChart3,
     label: "Бухгалтер",
     desc: "Видит финансы",
-    color: "text-amber-600",
-    bg: "bg-amber-50",
-    border: "border-amber-200",
+    color: "text-[#d97706]",
+    bg: "bg-[#fef3c7]",
+    border: "border-[#fef3c7]",
   },
   {
     value: "warehouse",
     icon: Package,
     label: "Склад",
     desc: "Управляет материалами",
-    color: "text-slate-600",
-    bg: "bg-slate-50",
-    border: "border-slate-200",
+    color: "text-[#7c3aed]",
+    bg: "bg-[#f5f3ff]",
+    border: "border-[#f5f3ff]",
   },
   {
     value: "assistant",
     icon: User2,
     label: "Ассистент",
     desc: "Помогает врачу на приёме",
-    color: "text-purple-600",
-    bg: "bg-purple-50",
-    border: "border-purple-200",
+    color: "text-[#4f46e5]",
+    bg: "bg-[#e0e7ff]",
+    border: "border-[#e0e7ff]",
   },
   {
     value: "nurse",
     icon: User2,
     label: "Медсестра",
     desc: "Обеспечивает уход и порядок",
-    color: "text-pink-600",
-    bg: "bg-pink-50",
-    border: "border-pink-200",
+    color: "text-[#db2777]",
+    bg: "bg-[#fce7f3]",
+    border: "border-[#fce7f3]",
   },
 ];
 
@@ -269,12 +269,12 @@ const ROLE_LABEL: Record<Role, string> = {
 };
 
 const ROLE_COLOR: Record<Role, { bg: string; text: string; border: string }> = {
-  admin:      { bg: "bg-blue-100",    text: "text-blue-700",    border: "border-blue-200" },
-  doctor:     { bg: "bg-emerald-100", text: "text-emerald-700", border: "border-emerald-200" },
-  accountant: { bg: "bg-amber-100",   text: "text-amber-700",   border: "border-amber-200" },
-  warehouse:  { bg: "bg-slate-100",   text: "text-slate-700",   border: "border-slate-200" },
-  assistant:  { bg: "bg-purple-100",  text: "text-purple-700",  border: "border-purple-200" },
-  nurse:      { bg: "bg-pink-100",    text: "text-pink-700",    border: "border-pink-200" },
+  admin:      { bg: "bg-[#e0f2fe]",    text: "text-[#0284c7]",    border: "border-[#e0f2fe]" },
+  doctor:     { bg: "bg-[#f0fdf4]", text: "text-[#16a34a]", border: "border-[#f0fdf4]" },
+  accountant: { bg: "bg-[#fef3c7]",   text: "text-[#d97706]",   border: "border-[#fef3c7]" },
+  warehouse:  { bg: "bg-[#f5f3ff]",   text: "text-[#7c3aed]",   border: "border-[#f5f3ff]" },
+  assistant:  { bg: "bg-[#e0e7ff]",  text: "text-[#4f46e5]",  border: "border-[#e0e7ff]" },
+  nurse:      { bg: "bg-[#fce7f3]",    text: "text-[#db2777]",    border: "border-[#fce7f3]" },
 };
 
 function isValidEmail(e: string) {
@@ -306,10 +306,10 @@ function NumericInput({
           const n = raw === "" ? 0 : Number(raw);
           onChange(max !== undefined ? Math.min(max, n) : n);
         }}
-        className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/30"
+        className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 pr-10 text-sm font-medium text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
       />
       {suffix && (
-        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">{suffix}</span>
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] text-sm font-bold">{suffix}</span>
       )}
     </div>
   );
@@ -439,7 +439,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 28, stiffness: 300 }}
-            className="w-full max-w-lg bg-white rounded-t-3xl overflow-hidden flex flex-col"
+            className="w-full max-w-lg bg-white rounded-t-3xl overflow-hidden flex flex-col font-manrope"
             style={{ maxHeight: "92dvh" }}
           >
             {/* Close confirm overlay */}
@@ -451,21 +451,21 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                   exit={{ opacity: 0 }}
                   className="absolute inset-0 z-10 bg-white/95 backdrop-blur-sm flex flex-col items-center justify-center p-8 rounded-t-3xl"
                 >
-                  <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center mb-4">
-                    <AlertCircle className="w-6 h-6 text-amber-500" />
+                  <div className="w-12 h-12 rounded-2xl bg-[#fef3c7] flex items-center justify-center mb-4">
+                    <AlertCircle className="w-6 h-6 text-[#d97706]" />
                   </div>
-                  <p className="text-base font-bold text-gray-900 text-center mb-1">Закрыть без сохранения?</p>
-                  <p className="text-sm text-gray-400 text-center mb-6">Введённые данные будут потеряны</p>
+                  <p className="text-base font-bold text-[#0f172a] text-center mb-1">Закрыть без сохранения?</p>
+                  <p className="text-sm text-[#94a3b8] text-center mb-6">Введённые данные будут потеряны</p>
                   <div className="flex gap-3 w-full max-w-xs">
                     <button
                       onClick={() => setConfirmClose(false)}
-                      className="flex-1 py-3 rounded-2xl text-sm font-semibold bg-gray-100 text-gray-700"
+                      className="flex-1 py-3 rounded-xl text-sm font-semibold bg-[#f1ede4] text-[#64748b]"
                     >
                       Продолжить
                     </button>
                     <button
                       onClick={forceClose}
-                      className="flex-1 py-3 rounded-2xl text-sm font-bold text-white bg-red-500"
+                      className="flex-1 py-3 rounded-full text-sm font-bold text-white bg-[#dc2626] hover:scale-105"
                     >
                       Закрыть
                     </button>
@@ -477,12 +477,12 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
             {/* Header */}
             <div className="flex items-center justify-between px-5 pt-5 pb-4 shrink-0">
               <div>
-                <h2 className="text-base font-bold text-gray-900">Добавить сотрудника</h2>
-                <p className="text-xs text-gray-400 mt-0.5">Шаг {step} из 4 — {STEP_LABELS[step - 1]}</p>
+                <h2 className="text-base font-bold text-[#0f172a]">Добавить сотрудника</h2>
+                <p className="text-xs text-[#94a3b8] mt-0.5">Шаг {step} из 4 — {STEP_LABELS[step - 1]}</p>
               </div>
               <button
                 onClick={tryClose}
-                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500"
+                className="w-8 h-8 rounded-full bg-[#f1ede4] flex items-center justify-center text-[#64748b]"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -496,7 +496,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                     key={s}
                     className={cn(
                       "flex-1 h-1 rounded-full transition-all duration-300",
-                      s <= step ? "bg-primary" : "bg-gray-100",
+                      s <= step ? "bg-[#1f75fe]" : "bg-[#f1ede4]",
                     )}
                   />
                 ))}
@@ -516,11 +516,11 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                     transition={{ duration: 0.18 }}
                     className="flex flex-col items-center pt-4 pb-2"
                   >
-                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5" style={{ backgroundColor: "#1f75fe22" }}>
-                      <Mail className="w-7 h-7" style={{ color: "#1f75fe" }} />
+                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5 bg-[#1f75fe]/10">
+                      <Mail className="w-7 h-7 text-[#1f75fe]" />
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900 mb-1 text-center">Email сотрудника</h3>
-                    <p className="text-sm text-gray-400 text-center mb-6 leading-relaxed">
+                    <h3 className="text-lg font-bold text-[#0f172a] mb-1 text-center">Email сотрудника</h3>
+                    <p className="text-sm text-[#94a3b8] text-center mb-6 leading-relaxed">
                       На этот адрес придёт приглашение<br />войти в систему
                     </p>
                     <div className="w-full max-w-sm">
@@ -534,14 +534,14 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                         onKeyDown={(e) => { if (e.key === "Enter") goNext(); }}
                         placeholder="doctor@clinic.kz"
                         className={cn(
-                          "w-full border rounded-2xl px-5 py-4 text-base font-medium text-gray-800 text-center focus:outline-none focus:ring-2 transition-all",
+                          "w-full border rounded-2xl px-5 py-4 text-base font-medium text-[#0f172a] text-center focus:outline-none focus:ring-2 transition-all",
                           emailError
-                            ? "border-red-300 focus:ring-red-200"
-                            : "border-gray-200 focus:ring-primary/30",
+                            ? "border-[#dc2626] focus:ring-[#dc2626]/20"
+                            : "border-[#e8e3d9] focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]",
                         )}
                       />
                       {emailError && (
-                        <p className="text-xs text-red-500 mt-2 text-center">{emailError}</p>
+                        <p className="text-xs text-[#dc2626] mt-2 text-center">{emailError}</p>
                       )}
                     </div>
                   </motion.div>
@@ -559,7 +559,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                   >
                     {/* Name */}
                     <div>
-                      <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+                      <label className="block text-xs font-semibold text-[#64748b] mb-1.5">
                         <User2 className="inline w-3.5 h-3.5 mr-1 mb-0.5" />
                         ФИО *
                       </label>
@@ -568,16 +568,16 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                         onChange={(e) => { set("name", e.target.value); if (nameError) setNameError(""); }}
                         placeholder="Др. Иванова Мария"
                         className={cn(
-                          "w-full border rounded-xl px-4 py-3 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 transition-all",
-                          nameError ? "border-red-300 focus:ring-red-200" : "border-gray-200 focus:ring-primary/30",
+                          "w-full border rounded-xl px-4 py-3 text-sm font-medium text-[#0f172a] focus:outline-none focus:ring-2 transition-all",
+                          nameError ? "border-[#dc2626] focus:ring-[#dc2626]/20" : "border-[#e8e3d9] focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]",
                         )}
                       />
-                      {nameError && <p className="text-xs text-red-500 mt-1">{nameError}</p>}
+                      {nameError && <p className="text-xs text-[#dc2626] mt-1">{nameError}</p>}
                     </div>
 
                     {/* Phone */}
                     <div>
-                      <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+                      <label className="block text-xs font-semibold text-[#64748b] mb-1.5">
                         <Phone className="inline w-3.5 h-3.5 mr-1 mb-0.5" />
                         Телефон
                       </label>
@@ -586,13 +586,13 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                         value={form.phone}
                         onChange={(e) => set("phone", e.target.value)}
                         placeholder="+7 700 000 00 00"
-                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 text-sm font-medium text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
                       />
                     </div>
 
                     {/* Role cards */}
                     <div>
-                      <label className="block text-xs font-semibold text-gray-500 mb-2">Роль *</label>
+                      <label className="block text-xs font-semibold text-[#64748b] mb-2">Роль *</label>
                       <div className="grid grid-cols-2 gap-2">
                         {ROLE_DEFS.map((r) => {
                           const Icon = r.icon;
@@ -606,15 +606,15 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                                 "flex flex-col items-start gap-2 p-3.5 rounded-2xl border text-left transition-all",
                                 selected
                                   ? `${r.bg} ${r.border} border-2`
-                                  : "border-gray-200 bg-white hover:bg-gray-50",
+                                  : "border-[#e8e3d9] bg-white hover:bg-[#faf8f4]",
                               )}
                             >
-                              <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center", selected ? r.bg : "bg-gray-100")}>
-                                <Icon className={cn("w-4 h-4", selected ? r.color : "text-gray-400")} />
+                              <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center", selected ? r.bg : "bg-[#f1ede4]")}>
+                                <Icon className={cn("w-4 h-4", selected ? r.color : "text-[#94a3b8]")} />
                               </div>
                               <div>
-                                <p className={cn("text-xs font-bold", selected ? r.color : "text-gray-700")}>{r.label}</p>
-                                <p className="text-[10px] text-gray-400 leading-snug mt-0.5">{r.desc}</p>
+                                <p className={cn("text-xs font-bold", selected ? r.color : "text-[#0f172a]")}>{r.label}</p>
+                                <p className="text-[10px] text-[#94a3b8] leading-snug mt-0.5">{r.desc}</p>
                               </div>
                             </button>
                           );
@@ -630,7 +630,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                         className="space-y-4"
                       >
                         <div>
-                          <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+                          <label className="block text-xs font-semibold text-[#64748b] mb-1.5">
                             Специализация
                           </label>
                           <SpecialtyTagInput
@@ -641,7 +641,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                         </div>
                         {form.role === "doctor" && (
                           <div>
-                            <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+                            <label className="block text-xs font-semibold text-[#64748b] mb-1.5">
                               Макс. пациентов в день
                             </label>
                             <NumericInput
@@ -657,7 +657,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
 
                     {/* Hire date */}
                     <div>
-                      <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+                      <label className="block text-xs font-semibold text-[#64748b] mb-1.5">
                         <Calendar className="inline w-3.5 h-3.5 mr-1 mb-0.5" />
                         Дата приёма на работу
                       </label>
@@ -665,7 +665,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                         type="date"
                         value={form.hireDate}
                         onChange={(e) => set("hireDate", e.target.value)}
-                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 text-sm font-medium text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
                       />
                     </div>
                   </motion.div>
@@ -682,7 +682,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                     className="space-y-4"
                   >
                     <div>
-                      <label className="block text-xs font-semibold text-gray-500 mb-2">Тип оплаты</label>
+                      <label className="block text-xs font-semibold text-[#64748b] mb-2">Тип оплаты</label>
                       <div className="grid grid-cols-2 gap-2">
                         {SALARY_DEFS.map((s) => {
                           const Icon = s.icon;
@@ -695,16 +695,16 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                               className={cn(
                                 "flex flex-col items-start gap-2 p-3.5 rounded-2xl border text-left transition-all",
                                 selected
-                                  ? "border-primary bg-primary/5 border-2"
-                                  : "border-gray-200 bg-white hover:bg-gray-50",
+                                  ? "border-[#1f75fe] bg-[#1f75fe]/10 border-2"
+                                  : "border-[#e8e3d9] bg-white hover:bg-[#faf8f4]",
                               )}
                             >
-                              <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center", selected ? "bg-primary/10" : "bg-gray-100")}>
-                                <Icon className={cn("w-4 h-4", selected ? "text-primary" : "text-gray-400")} />
+                              <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center", selected ? "bg-[#1f75fe]/10" : "bg-[#f1ede4]")}>
+                                <Icon className={cn("w-4 h-4", selected ? "text-[#1f75fe]" : "text-[#94a3b8]")} />
                               </div>
                               <div>
-                                <p className={cn("text-xs font-bold", selected ? "text-primary" : "text-gray-700")}>{s.label}</p>
-                                <p className="text-[10px] text-gray-400 leading-snug mt-0.5">{s.desc}</p>
+                                <p className={cn("text-xs font-bold", selected ? "text-[#1f75fe]" : "text-[#0f172a]")}>{s.label}</p>
+                                <p className="text-[10px] text-[#94a3b8] leading-snug mt-0.5">{s.desc}</p>
                               </div>
                             </button>
                           );
@@ -724,7 +724,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                       >
                         {(form.salaryType === "fixed" || form.salaryType === "fixed_plus_commission") && (
                           <div>
-                            <label className="block text-xs font-semibold text-gray-500 mb-1.5">Оклад (₸/мес)</label>
+                            <label className="block text-xs font-semibold text-[#64748b] mb-1.5">Оклад (₸/мес)</label>
                             <NumericInput
                               value={form.fixedAmount}
                               onChange={(v) => set("fixedAmount", v)}
@@ -735,7 +735,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                         )}
                         {(form.salaryType === "commission" || form.salaryType === "fixed_plus_commission") && (
                           <div>
-                            <label className="block text-xs font-semibold text-gray-500 mb-1.5">Процент от выручки</label>
+                            <label className="block text-xs font-semibold text-[#64748b] mb-1.5">Процент от выручки</label>
                             <div className="relative">
                               <input
                                 type="text"
@@ -747,15 +747,15 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                                   const n = parseFloat(v);
                                   set("commissionPercent", v === "" || isNaN(n) ? 0 : Math.min(100, n));
                                 }}
-                                className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-9 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 pr-9 text-sm font-medium text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
                               />
-                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">%</span>
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] text-sm font-bold">%</span>
                             </div>
                           </div>
                         )}
                         {form.salaryType === "hourly" && (
                           <div>
-                            <label className="block text-xs font-semibold text-gray-500 mb-1.5">Ставка (₸/час)</label>
+                            <label className="block text-xs font-semibold text-[#64748b] mb-1.5">Ставка (₸/час)</label>
                             <NumericInput
                               value={form.hourlyRate}
                               onChange={(v) => set("hourlyRate", v)}
@@ -780,11 +780,10 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                     className="space-y-4"
                   >
                     <div className="flex flex-col items-center pt-2 pb-2">
-                      <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 text-white text-xl font-bold"
-                        style={{ backgroundColor: "#1f75fe" }}>
+                      <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 text-white text-xl font-bold bg-[#1f75fe]">
                         {form.name.split(" ").map((w) => w[0]?.toUpperCase() ?? "").slice(0, 2).join("")}
                       </div>
-                      <h3 className="text-lg font-bold text-gray-900">{form.name}</h3>
+                      <h3 className="text-lg font-bold text-[#0f172a]">{form.name}</h3>
                       <span className={cn(
                         "inline-block mt-1 text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full border",
                         roleColor.bg, roleColor.text, roleColor.border,
@@ -793,37 +792,37 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                       </span>
                     </div>
 
-                    <div className="rounded-2xl border border-gray-100 bg-gray-50 divide-y divide-gray-100">
+                    <div className="rounded-2xl border border-[#e8e3d9] bg-[#faf8f4] divide-y divide-[#e8e3d9]">
                       <div className="flex items-center gap-3 px-4 py-3">
-                        <Mail className="w-4 h-4 text-gray-400 shrink-0" />
+                        <Mail className="w-4 h-4 text-[#94a3b8] shrink-0" />
                         <div>
-                          <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">Email</p>
-                          <p className="text-sm font-medium text-gray-800">{form.email}</p>
+                          <p className="text-[10px] text-[#94a3b8] font-semibold uppercase tracking-wide">Email</p>
+                          <p className="text-sm font-medium text-[#0f172a]">{form.email}</p>
                         </div>
                       </div>
                       {form.phone && (
                         <div className="flex items-center gap-3 px-4 py-3">
-                          <Phone className="w-4 h-4 text-gray-400 shrink-0" />
+                          <Phone className="w-4 h-4 text-[#94a3b8] shrink-0" />
                           <div>
-                            <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">Телефон</p>
-                            <p className="text-sm font-medium text-gray-800">{form.phone}</p>
+                            <p className="text-[10px] text-[#94a3b8] font-semibold uppercase tracking-wide">Телефон</p>
+                            <p className="text-sm font-medium text-[#0f172a]">{form.phone}</p>
                           </div>
                         </div>
                       )}
                       {(form.role === "doctor" || form.role === "assistant" || form.role === "nurse") && form.specialty && (
                         <div className="flex items-center gap-3 px-4 py-3">
-                          <Activity className="w-4 h-4 text-gray-400 shrink-0" />
+                          <Activity className="w-4 h-4 text-[#94a3b8] shrink-0" />
                           <div>
-                            <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">Специализация</p>
-                            <p className="text-sm font-medium text-gray-800">{form.specialty}</p>
+                            <p className="text-[10px] text-[#94a3b8] font-semibold uppercase tracking-wide">Специализация</p>
+                            <p className="text-sm font-medium text-[#0f172a]">{form.specialty}</p>
                           </div>
                         </div>
                       )}
                       <div className="flex items-center gap-3 px-4 py-3">
-                        <Wallet className="w-4 h-4 text-gray-400 shrink-0" />
+                        <Wallet className="w-4 h-4 text-[#94a3b8] shrink-0" />
                         <div>
-                          <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">Оплата</p>
-                          <p className="text-sm font-medium text-gray-800">
+                          <p className="text-[10px] text-[#94a3b8] font-semibold uppercase tracking-wide">Оплата</p>
+                          <p className="text-sm font-medium text-[#0f172a]">
                             {form.salaryType === "fixed" && `${form.fixedAmount.toLocaleString("ru-KZ")} ₸/мес`}
                             {form.salaryType === "commission" && `${form.commissionPercent}%`}
                             {form.salaryType === "fixed_plus_commission" && `${form.fixedAmount.toLocaleString("ru-KZ")} ₸ + ${form.commissionPercent}%`}
@@ -833,9 +832,9 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                       </div>
                     </div>
 
-                    <div className="rounded-2xl bg-primary/5 border border-primary/20 px-4 py-3 flex items-start gap-3">
-                      <Send className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#1f75fe" }} />
-                      <p className="text-xs text-gray-600 leading-relaxed">
+                    <div className="rounded-2xl bg-[#1f75fe]/10 border border-[#1f75fe]/20 px-4 py-3 flex items-start gap-3">
+                      <Send className="w-4 h-4 shrink-0 mt-0.5 text-[#1f75fe]" />
+                      <p className="text-xs text-[#64748b] leading-relaxed">
                         Сотрудник получит письмо с временным паролем и ссылкой для входа. После первого входа он сможет сменить пароль.
                       </p>
                     </div>
@@ -845,13 +844,13 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
             </div>
 
             {/* Footer */}
-            <div className="px-5 pb-6 pt-3 flex flex-col gap-2.5 shrink-0 border-t border-gray-50">
+            <div className="px-5 pb-6 pt-3 flex flex-col gap-2.5 shrink-0 border-t border-[#e8e3d9]">
               <div className="flex gap-3">
                 {step > 1 && (
                   <button
                     type="button"
                     onClick={() => setStep((s) => s - 1)}
-                    className="flex items-center gap-1.5 px-4 py-3.5 rounded-2xl text-sm font-semibold text-gray-600 bg-gray-100"
+                    className="flex items-center gap-1.5 px-4 py-3.5 rounded-xl text-sm font-semibold text-[#64748b] bg-[#f1ede4]"
                   >
                     <ChevronLeft className="w-4 h-4" />
                     Назад
@@ -862,8 +861,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                   <button
                     type="button"
                     onClick={goNext}
-                    className="flex-1 py-3.5 rounded-2xl text-sm font-bold text-white flex items-center justify-center gap-2"
-                    style={{ backgroundColor: "#1f75fe" }}
+                    className="flex-1 py-3.5 rounded-full text-sm font-bold text-white flex items-center justify-center gap-2 bg-[#1f75fe] hover:bg-[#1a65e8] hover:scale-105 font-semibold"
                   >
                     Далее
                     <ChevronDown className="w-4 h-4 -rotate-90" />
@@ -873,8 +871,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                     type="button"
                     disabled={inviteMutation.isPending}
                     onClick={() => inviteMutation.mutate(form)}
-                    className="flex-1 py-3.5 rounded-2xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-60"
-                    style={{ backgroundColor: "#1f75fe" }}
+                    className="flex-1 py-3.5 rounded-full text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-60 bg-[#1f75fe] hover:bg-[#1a65e8] hover:scale-105 font-semibold"
                   >
                     <Send className="w-4 h-4" />
                     {inviteMutation.isPending ? "Добавление..." : "Добавить и отправить приглашение"}
