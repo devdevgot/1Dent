@@ -117,27 +117,27 @@ function DayAppointmentsModal({
   const totalPatients = groups.length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[85vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 font-manrope">
+      <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-lg w-full max-w-md overflow-hidden flex flex-col max-h-[85vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-none">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#e8e3d9] flex-none">
           <div>
-            <h2 className="text-lg font-bold text-gray-900 capitalize">{dayLabel}</h2>
-            <p className="text-sm text-gray-500 mt-0.5">
+            <h2 className="text-lg font-bold text-[#0f172a] capitalize">{dayLabel}</h2>
+            <p className="text-sm text-[#64748b] mt-0.5">
               {totalPatients === 0
                 ? "Нет записей"
                 : `${totalPatients} пациент${totalPatients === 1 ? "" : totalPatients < 5 ? "а" : "ов"}`}
             </p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
-            <X className="w-5 h-5 text-gray-500" />
+          <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-[#f1ede4] transition-colors">
+            <X className="w-5 h-5 text-[#64748b]" />
           </button>
         </div>
 
         {/* List */}
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
           {groups.length === 0 ? (
-            <div className="text-center py-10 text-gray-400 text-sm">
+            <div className="text-center py-10 text-[#94a3b8] text-sm">
               Записей на этот день нет
             </div>
           ) : (
@@ -146,7 +146,7 @@ function DayAppointmentsModal({
                 key={group.key}
                 type="button"
                 onClick={() => onEditAppointment(group.procedures[0])}
-                className="w-full text-left px-4 py-3 rounded-xl border border-gray-100 hover:border-primary/30 hover:bg-primary/5 transition-all flex items-start gap-3"
+                className="w-full text-left px-4 py-3 rounded-xl border border-[#e8e3d9] hover:border-[#1f75fe]/30 hover:bg-[#1f75fe]/5 transition-all flex items-start gap-3"
               >
                 <span
                   className={cn(
@@ -157,11 +157,11 @@ function DayAppointmentsModal({
                 <div className="flex-1 min-w-0">
                   {/* Patient name + time */}
                   <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <span className="text-sm font-semibold text-gray-900 truncate">
+                    <span className="text-sm font-semibold text-[#0f172a] truncate">
                       {group.patientName}
                     </span>
                     {group.timeLabel && (
-                      <span className="flex items-center gap-1 text-xs text-gray-500 shrink-0">
+                      <span className="flex items-center gap-1 text-xs text-[#64748b] shrink-0">
                         <Clock className="w-3 h-3" />
                         {group.timeLabel}
                       </span>
@@ -169,14 +169,14 @@ function DayAppointmentsModal({
                   </div>
                   {/* Doctor */}
                   {group.doctorName && (
-                    <p className="text-xs text-gray-500 truncate mt-0.5 flex items-center gap-1">
+                    <p className="text-xs text-[#64748b] truncate mt-0.5 flex items-center gap-1">
                       <User className="w-3 h-3" />
                       {group.doctorName}
                     </p>
                   )}
                   {/* Procedures list */}
                   {group.procedures.length > 0 && (
-                    <p className="text-xs text-gray-400 truncate mt-0.5">
+                    <p className="text-xs text-[#94a3b8] truncate mt-0.5">
                       {group.procedures.map((p) => p.name).join(", ")}
                     </p>
                   )}
@@ -190,10 +190,10 @@ function DayAppointmentsModal({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 flex-none flex justify-end">
+        <div className="px-6 py-4 border-t border-[#e8e3d9] flex-none flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+            className="px-4 py-2 rounded-xl border border-[#e8e3d9] text-sm text-[#64748b] hover:bg-[#f1ede4] transition-colors"
           >
             Закрыть
           </button>
@@ -320,31 +320,31 @@ export default function AdminCalendar() {
   const DOW_LABELS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-gray-50">
+    <div className="flex flex-col h-full overflow-hidden bg-[#faf8f4] font-manrope">
       {/* Top bar */}
-      <div className="flex-none bg-white border-b border-gray-100 px-4 py-3">
+      <div className="flex-none bg-white border-b border-[#e8e3d9] shadow-sm px-4 py-3">
         <div className="flex items-center gap-2">
 
           {/* Left: title + month navigation */}
-          <h1 className="text-base font-bold text-gray-900 mr-1">Календарь</h1>
+          <h1 className="text-base font-bold text-[#0f172a] mr-1">Календарь</h1>
           <div className="flex items-center gap-1">
             <button
               onClick={() => setCurrentDate((d) => subMonths(d, 1))}
-              className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors"
+              className="p-2 rounded-xl border border-[#e8e3d9] hover:bg-[#f1ede4] transition-colors"
             >
-              <ChevronLeft className="w-4 h-4 text-gray-600" />
+              <ChevronLeft className="w-4 h-4 text-[#64748b]" />
             </button>
             <button
               onClick={() => setCurrentDate(new Date())}
-              className="px-3 py-2 text-sm font-medium text-gray-700 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors min-w-[90px] capitalize"
+              className="px-3 py-2 text-sm font-medium text-[#0f172a] rounded-xl border border-[#e8e3d9] hover:bg-[#f1ede4] transition-colors min-w-[90px] capitalize"
             >
               {format(currentDate, "LLLL", { locale: ru })}
             </button>
             <button
               onClick={() => setCurrentDate((d) => addMonths(d, 1))}
-              className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors"
+              className="p-2 rounded-xl border border-[#e8e3d9] hover:bg-[#f1ede4] transition-colors"
             >
-              <ChevronRight className="w-4 h-4 text-gray-600" />
+              <ChevronRight className="w-4 h-4 text-[#64748b]" />
             </button>
           </div>
 
@@ -355,29 +355,34 @@ export default function AdminCalendar() {
             <button
               onClick={() => setFilterOpen((v) => !v)}
               className={cn(
-                "relative p-1.5 transition-colors",
-                filterDoctorId ? "text-primary" : "text-gray-400 hover:text-primary",
+                "relative p-1.5 rounded-xl transition-colors",
+                filterDoctorId ? "text-[#1f75fe] bg-[#1f75fe]/10" : "text-[#94a3b8] hover:text-[#1f75fe] hover:bg-[#f1ede4]",
               )}
               title="Фильтр по врачу"
             >
               <SlidersHorizontal className="w-4 h-4" />
               {filterDoctorId && (
-                <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-primary rounded-full" />
+                <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-[#1f75fe] rounded-full" />
               )}
             </button>
 
             {filterOpen && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setFilterOpen(false)} />
-                <div className="absolute right-0 top-full mt-1.5 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 min-w-[180px]">
+                <div className="absolute right-0 top-full mt-1.5 z-20 bg-white border border-[#e8e3d9] rounded-2xl shadow-lg py-1.5 min-w-[180px]">
                   {[{ id: "", name: "Все врачи" }, ...doctors].map((d) => (
                     <button
                       key={d.id}
                       onClick={() => { setFilterDoctorId(d.id); setFilterOpen(false); }}
-                      className="w-full flex items-center justify-between gap-3 px-4 py-2 text-sm hover:bg-gray-50 transition-colors text-left"
+                      className={cn(
+                        "w-full flex items-center justify-between gap-3 px-4 py-2 text-sm transition-colors text-left",
+                        d.id === filterDoctorId
+                          ? "bg-[#1f75fe]/10 text-[#1f75fe] font-semibold"
+                          : "text-[#0f172a] hover:bg-[#faf8f4]",
+                      )}
                     >
-                      <span className={d.id === filterDoctorId ? "font-medium text-primary" : "text-gray-700"}>{d.name}</span>
-                      {d.id === filterDoctorId && <Check className="w-4 h-4 text-primary shrink-0" />}
+                      <span>{d.name}</span>
+                      {d.id === filterDoctorId && <Check className="w-4 h-4 text-[#1f75fe] shrink-0" />}
                     </button>
                   ))}
                 </div>
@@ -388,7 +393,7 @@ export default function AdminCalendar() {
           <Button
             onClick={() => openCreateModal(new Date())}
             size="sm"
-            className="w-9 h-9 p-0 shrink-0"
+            className="w-9 h-9 p-0 shrink-0 rounded-full bg-[#1f75fe] hover:bg-[#1a65e8] hover:scale-105 font-semibold shadow-sm"
           >
             <Plus className="w-5 h-5" />
           </Button>
@@ -398,15 +403,15 @@ export default function AdminCalendar() {
 
       {/* Calendar */}
       <div className="flex-1 overflow-hidden p-3 sm:p-4 flex flex-col gap-2">
-        <div className="flex-1 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+        <div className="flex-1 bg-white rounded-2xl shadow-md border border-[#e8e3d9] overflow-hidden flex flex-col">
           {/* Day-of-week header */}
-          <div className="flex-none grid grid-cols-7 border-b border-gray-100">
+          <div className="flex-none grid grid-cols-7 border-b border-[#e8e3d9]">
             {DOW_LABELS.map((label, i) => (
               <div
                 key={label}
                 className={cn(
                   "py-2.5 text-center text-xs font-semibold uppercase tracking-wide",
-                  i >= 5 ? "text-red-400" : "text-gray-500",
+                  i >= 5 ? "text-[#dc2626]" : "text-[#64748b]",
                 )}
               >
                 {label}
@@ -439,11 +444,11 @@ export default function AdminCalendar() {
                     }
                   }}
                   className={cn(
-                    "min-h-[80px] p-2 border-b border-r border-gray-100 cursor-pointer transition-colors",
-                    "hover:bg-primary/5",
-                    !inMonth && "bg-gray-50/60",
-                    isWeekend && inMonth && "bg-red-50/30",
-                    today && "ring-2 ring-inset ring-primary/30",
+                    "min-h-[80px] p-2 border-b border-r border-[#e8e3d9] cursor-pointer transition-colors",
+                    "hover:bg-[#faf8f4]",
+                    !inMonth && "bg-[#f1ede4]/30",
+                    isWeekend && inMonth && "bg-[#fef2f2]/30",
+                    today && "ring-2 ring-inset ring-[#1f75fe]/30",
                   )}
                 >
                   {/* Date number */}
@@ -452,16 +457,16 @@ export default function AdminCalendar() {
                       className={cn(
                         "text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full",
                         today
-                          ? "bg-primary text-white font-bold"
+                          ? "bg-[#1f75fe] text-white font-bold"
                           : inMonth
-                          ? isWeekend ? "text-red-500" : "text-gray-800"
-                          : "text-gray-300",
+                          ? isWeekend ? "text-[#dc2626]" : "text-[#0f172a]"
+                          : "text-[#94a3b8]",
                       )}
                     >
                       {format(day, "d")}
                     </span>
                     {groups.length > 0 && (
-                      <span className="text-[10px] text-gray-400 font-medium">{groups.length}</span>
+                      <span className="text-[10px] text-[#94a3b8] font-medium">{groups.length}</span>
                     )}
                   </div>
 
@@ -497,7 +502,7 @@ export default function AdminCalendar() {
                       </div>
                     ))}
                     {groups.length > 3 && (
-                      <div className="text-[10px] text-gray-400 pl-1">
+                      <div className="text-[10px] text-[#94a3b8] pl-1">
                         +{groups.length - 3} ещё
                       </div>
                     )}
@@ -514,7 +519,7 @@ export default function AdminCalendar() {
           {STATUS_OPTIONS.map((s) => (
             <div key={s.value} className="flex items-center gap-1.5">
               <span className={cn("w-2 h-2 rounded-full", STATUS_DOT[s.value])} />
-              <span className="text-xs text-gray-500">{s.label}</span>
+              <span className="text-xs text-[#64748b]">{s.label}</span>
             </div>
           ))}
         </div>
