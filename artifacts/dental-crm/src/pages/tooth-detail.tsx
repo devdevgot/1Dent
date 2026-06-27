@@ -19,7 +19,7 @@ export default function ToothDetailPage() {
 
   if (!patientId || !fdi) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen text-foreground">
+      <div className="flex flex-col items-center justify-center h-screen text-[#0f172a] font-manrope bg-[#faf8f4]">
         <p>Invalid patient or tooth</p>
       </div>
     );
@@ -32,12 +32,12 @@ export default function ToothDetailPage() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="h-full flex flex-col bg-[#faf8f4] font-manrope">
       {/* Header with back button */}
-      <div className="shrink-0 border-b border-border/50 bg-white px-4 py-3">
+      <div className="shrink-0 border-b border-[#e8e3d9] bg-white shadow-sm px-4 py-3">
         <button
           onClick={handleClose}
-          className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors"
+          className="flex items-center gap-2 text-sm font-medium text-[#0f172a] hover:text-[#1f75fe] hover:bg-[#f1ede4] rounded-xl px-2 py-1.5 -ml-2 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Назад к пациентам
