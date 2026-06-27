@@ -29,36 +29,36 @@ function StatCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
-      className="bg-card p-6 rounded-2xl border border-border/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-shadow group relative overflow-hidden"
+      className="bg-white p-6 rounded-2xl border border-[#e8e3d9] shadow-md hover:shadow-lg transition-shadow group relative overflow-hidden"
     >
-      <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors" />
+      <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-[#1f75fe]/5 rounded-full blur-2xl group-hover:bg-[#1f75fe]/10 transition-colors" />
       <div className="flex justify-between items-start mb-4">
-        <div className="p-3 bg-slate-50 text-primary rounded-xl ring-1 ring-border/50">
+        <div className="p-3 bg-[#f1ede4] text-[#1f75fe] rounded-xl ring-1 ring-[#e8e3d9]/50">
           <Icon className="w-6 h-6" />
         </div>
         {trend && trendUp !== null && trendUp !== undefined && (
           <span
-            className={`text-sm font-bold px-2.5 py-1 rounded-full ${trendUp ? "bg-emerald-50 text-emerald-600" : "bg-destructive/10 text-destructive"}`}
+            className={`text-sm font-bold px-2.5 py-1 rounded-full ${trendUp ? "bg-[#f0fdf4] text-[#16a34a]" : "bg-[#fef2f2] text-[#dc2626]"}`}
           >
             {trend}
           </span>
         )}
       </div>
-      <h3 className="text-muted-foreground font-medium text-sm mb-1">{t(titleKey)}</h3>
-      <div className="text-3xl font-display font-bold text-foreground">{value}</div>
+      <h3 className="text-[#64748b] font-medium text-sm mb-1">{t(titleKey)}</h3>
+      <div className="text-3xl font-display font-bold text-[#0f172a]">{value}</div>
     </motion.div>
   );
 }
 
 function SkeletonCard() {
   return (
-    <div className="bg-card p-6 rounded-2xl border border-border/50 animate-pulse">
+    <div className="bg-white p-6 rounded-2xl border border-[#e8e3d9] shadow-md animate-pulse">
       <div className="flex justify-between items-start mb-4">
-        <div className="w-12 h-12 bg-slate-200 rounded-xl" />
-        <div className="w-16 h-6 bg-slate-200 rounded-full" />
+        <div className="w-12 h-12 bg-[#f1ede4] rounded-xl" />
+        <div className="w-16 h-6 bg-[#f1ede4] rounded-full" />
       </div>
-      <div className="w-24 h-4 bg-slate-200 rounded mb-2" />
-      <div className="w-20 h-8 bg-slate-200 rounded" />
+      <div className="w-24 h-4 bg-[#f1ede4] rounded mb-2" />
+      <div className="w-20 h-8 bg-[#f1ede4] rounded" />
     </div>
   );
 }
@@ -127,27 +127,27 @@ export default function Dashboard() {
   const cards = getCards();
 
   return (
-    <div className="space-y-4 p-4 pb-8">
+    <div className="space-y-4 p-4 pb-8 bg-[#faf8f4] font-manrope">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-white p-6 rounded-2xl border border-border shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-white p-6 rounded-2xl border border-[#e8e3d9] shadow-md">
         <div>
-          <h2 className="text-3xl font-display font-bold text-foreground">
+          <h2 className="text-3xl font-display font-bold text-[#0f172a]">
             {t("dashboard.welcomeBack", { name: (user?.name || "").split(" ")[0] })}
           </h2>
-          <p className="text-muted-foreground mt-1 text-lg">
+          <p className="text-[#64748b] mt-1 text-lg">
             {t("dashboard.subtitle", { clinic: clinic?.name })}
           </p>
         </div>
         <div className="flex gap-3">
           <button
             onClick={() => refetch()}
-            className="p-2.5 border border-border rounded-xl text-muted-foreground hover:bg-slate-50 transition-colors"
+            className="p-2.5 border border-[#e8e3d9] rounded-xl text-[#64748b] hover:bg-[#f1ede4] transition-colors"
           >
             <RefreshCw className="w-5 h-5" />
           </button>
           <button
             onClick={() => navigate("/kanban")}
-            className="px-5 py-2.5 bg-primary text-white font-semibold rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all"
+            className="px-5 py-2.5 bg-[#1f75fe] text-white font-semibold rounded-full hover:scale-105 hover:bg-[#1a65e8] transition-all"
           >
             {t("dashboard.newPatient")}
           </button>
@@ -173,20 +173,20 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Doctor KPI Table — owner/admin only */}
         {isOwnerOrAdmin && kpiLoading ? (
-          <div className="lg:col-span-2 bg-card rounded-2xl border border-border/50 p-6 shadow-sm space-y-3">
-            <div className="w-40 h-5 bg-slate-200 rounded animate-pulse" />
-            {[0,1,2,3].map(i => <div key={i} className="h-10 bg-slate-100 rounded-xl animate-pulse" />)}
+          <div className="lg:col-span-2 bg-white rounded-2xl border border-[#e8e3d9] p-6 shadow-md space-y-3">
+            <div className="w-40 h-5 bg-[#f1ede4] rounded animate-pulse" />
+            {[0,1,2,3].map(i => <div key={i} className="h-10 bg-[#f1ede4] rounded-xl animate-pulse" />)}
           </div>
         ) : isOwnerOrAdmin && kpis.length > 0 ? (
-          <div className="lg:col-span-2 bg-card rounded-2xl border border-border/50 p-6 shadow-sm">
+          <div className="lg:col-span-2 bg-white rounded-2xl border border-[#e8e3d9] p-6 shadow-md">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-bold font-display flex items-center gap-2">
-                <Stethoscope className="w-5 h-5 text-primary" />
+                <Stethoscope className="w-5 h-5 text-[#1f75fe]" />
                 {t("dashboard.doctorKpi")}
               </h3>
               <button
                 onClick={() => navigate("/procedures")}
-                className="text-sm text-primary font-semibold flex items-center gap-1 hover:underline"
+                className="text-sm text-[#1f75fe] font-semibold flex items-center gap-1 hover:underline"
               >
                 {t("dashboard.viewAll")} <ChevronRight className="w-4 h-4" />
               </button>
@@ -194,37 +194,37 @@ export default function Dashboard() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border/50">
-                    <th className="text-left pb-3 font-semibold text-muted-foreground">{t("dashboard.doctor")}</th>
-                    <th className="text-right pb-3 font-semibold text-muted-foreground">{t("dashboard.patients")}</th>
-                    <th className="text-right pb-3 font-semibold text-muted-foreground">{t("dashboard.procedures")}</th>
-                    <th className="text-right pb-3 font-semibold text-muted-foreground">{t("dashboard.revenue")}</th>
-                    <th className="text-right pb-3 font-semibold text-muted-foreground">{t("dashboard.avgCheck")}</th>
+                  <tr className="border-b border-[#e8e3d9]">
+                    <th className="text-left pb-3 uppercase text-xs font-semibold text-[#64748b]">{t("dashboard.doctor")}</th>
+                    <th className="text-right pb-3 uppercase text-xs font-semibold text-[#64748b]">{t("dashboard.patients")}</th>
+                    <th className="text-right pb-3 uppercase text-xs font-semibold text-[#64748b]">{t("dashboard.procedures")}</th>
+                    <th className="text-right pb-3 uppercase text-xs font-semibold text-[#64748b]">{t("dashboard.revenue")}</th>
+                    <th className="text-right pb-3 uppercase text-xs font-semibold text-[#64748b]">{t("dashboard.avgCheck")}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border/30">
+                <tbody className="divide-y divide-[#e8e3d9]/30">
                   {kpis.map((kpi, i) => (
                     <motion.tr
                       key={kpi.doctorId}
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: i * 0.05 }}
-                      className="hover:bg-slate-50 transition-colors"
+                      className="hover:bg-[#faf8f4] transition-colors"
                     >
                       <td className="py-3 pr-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                          <div className="w-8 h-8 rounded-full bg-[#1f75fe]/10 flex items-center justify-center text-[#1f75fe] font-bold text-xs">
                             {kpi.doctorName.charAt(0)}
                           </div>
-                          <span className="font-medium text-foreground">{kpi.doctorName}</span>
+                          <span className="font-medium text-[#0f172a]">{kpi.doctorName}</span>
                         </div>
                       </td>
-                      <td className="py-3 text-right text-foreground">{kpi.patientsCount}</td>
-                      <td className="py-3 text-right text-foreground">{kpi.proceduresCount}</td>
-                      <td className="py-3 text-right font-semibold text-foreground">
+                      <td className="py-3 text-right text-[#0f172a]">{kpi.patientsCount}</td>
+                      <td className="py-3 text-right text-[#0f172a]">{kpi.proceduresCount}</td>
+                      <td className="py-3 text-right font-semibold text-[#0f172a]">
                         ₸ {Number(kpi.revenueTotal).toLocaleString("ru-KZ")}
                       </td>
-                      <td className="py-3 text-right text-muted-foreground">
+                      <td className="py-3 text-right text-[#64748b]">
                         ₸ {Number(kpi.averageCheck ?? 0).toLocaleString("ru-KZ")}
                       </td>
                     </motion.tr>
@@ -234,15 +234,15 @@ export default function Dashboard() {
             </div>
           </div>
         ) : (
-          <div className="lg:col-span-2 bg-card rounded-2xl border border-border/50 p-6 shadow-sm min-h-[300px] flex flex-col items-center justify-center text-center">
-            <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-muted-foreground mb-4">
+          <div className="lg:col-span-2 bg-white rounded-2xl border border-[#e8e3d9] p-6 shadow-md min-h-[300px] flex flex-col items-center justify-center text-center">
+            <div className="w-16 h-16 bg-[#f1ede4] rounded-2xl flex items-center justify-center text-[#64748b] mb-4">
               <Activity className="w-8 h-8 opacity-50" />
             </div>
-            <h3 className="text-xl font-bold font-display">{t("dashboard.activityFeedTitle")}</h3>
-            <p className="text-muted-foreground max-w-sm mt-2">{t("dashboard.activityFeedDesc")}</p>
+            <h3 className="text-xl font-bold font-display text-[#0f172a]">{t("dashboard.activityFeedTitle")}</h3>
+            <p className="text-[#64748b] max-w-sm mt-2">{t("dashboard.activityFeedDesc")}</p>
             <button
               onClick={() => navigate("/procedures")}
-              className="mt-4 px-4 py-2 bg-primary text-white text-sm font-semibold rounded-xl hover:-translate-y-0.5 transition-all shadow-lg shadow-primary/20"
+              className="mt-4 px-4 py-2 bg-[#1f75fe] text-white text-sm font-semibold rounded-full hover:scale-105 hover:bg-[#1a65e8] transition-all"
             >
               {t("dashboard.goToProcedures")}
             </button>
@@ -250,8 +250,8 @@ export default function Dashboard() {
         )}
 
         {/* Quick Actions */}
-        <div className="bg-card rounded-2xl border border-border/50 p-6 shadow-sm">
-          <h3 className="text-lg font-bold font-display mb-5">{t("dashboard.quickActions")}</h3>
+        <div className="bg-white rounded-2xl border border-[#e8e3d9] p-6 shadow-md">
+          <h3 className="text-lg font-bold font-display mb-5 text-[#0f172a]">{t("dashboard.quickActions")}</h3>
           <div className="space-y-3">
             {[
               { label: t("dashboard.openKanban"),     icon: Calendar, path: "/kanban" },
@@ -261,13 +261,13 @@ export default function Dashboard() {
               <button
                 key={item.path}
                 onClick={() => navigate(item.path)}
-                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-border transition-all text-left group"
+                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-[#f1ede4] border border-transparent hover:border-[#e8e3d9] transition-all text-left group"
               >
-                <div className="w-9 h-9 bg-primary/10 text-primary rounded-lg flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                <div className="w-9 h-9 bg-[#1f75fe]/10 text-[#1f75fe] rounded-lg flex items-center justify-center group-hover:bg-[#1f75fe] group-hover:text-white transition-colors">
                   <item.icon className="w-4 h-4" />
                 </div>
-                <span className="font-medium text-sm text-foreground">{item.label}</span>
-                <ChevronRight className="w-4 h-4 text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+                <span className="font-medium text-sm text-[#0f172a]">{item.label}</span>
+                <ChevronRight className="w-4 h-4 text-[#64748b] ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
               </button>
             ))}
           </div>
