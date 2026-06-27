@@ -17,17 +17,17 @@ import { isCalendarProcedure } from "@/lib/calendar-procedures";
 
 /* ─── Status colours ────────────────────────────────────────────────────────── */
 const STATUS_PILL: Record<ProcedureStatus, string> = {
-  scheduled:   "bg-blue-50   text-blue-600",
-  in_progress: "bg-amber-50  text-amber-600",
-  completed:   "bg-emerald-50 text-emerald-600",
-  cancelled:   "bg-slate-100 text-slate-400",
+  scheduled:   "bg-[#e0f2fe] text-[#0284c7]",
+  in_progress: "bg-[#fef3c7] text-[#d97706]",
+  completed:   "bg-[#f0fdf4] text-[#16a34a]",
+  cancelled:   "bg-[#f1f5f9] text-[#94a3b8]",
 };
 
 const STATUS_DOT: Record<ProcedureStatus, string> = {
-  scheduled:   "bg-blue-400",
-  in_progress: "bg-amber-400",
-  completed:   "bg-emerald-400",
-  cancelled:   "bg-slate-300",
+  scheduled:   "bg-[#0284c7]",
+  in_progress: "bg-[#d97706]",
+  completed:   "bg-[#16a34a]",
+  cancelled:   "bg-[#94a3b8]",
 };
 
 /* ─── Locale ────────────────────────────────────────────────────────────────── */
@@ -117,35 +117,35 @@ export default function DoctorSchedulePage() {
   const next = () => { if (month === 11) { setMonth(0);  setYear(y => y+1); } else setMonth(m => m+1); };
 
   return (
-    <div className="min-h-full bg-background pb-8">
+    <div className="min-h-full bg-[#faf8f4] font-manrope pb-8">
 
       {/* ── Header ── */}
-      <div className="bg-white border-b border-border px-4 pt-5 pb-4">
+      <div className="bg-white border-b border-[#e8e3d9] shadow-sm px-4 pt-5 pb-4">
         <div className="flex items-end justify-between mb-1">
           <div>
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest mb-0.5">
+            <p className="text-xs text-[#64748b] font-medium uppercase tracking-widest mb-0.5">
               {year}
             </p>
-            <h1 className="text-3xl font-black font-display text-foreground leading-none">
+            <h1 className="text-3xl font-black text-[#0f172a] leading-none">
               {MONTHS[month]}
             </h1>
           </div>
           <div className="flex items-center gap-1 mb-1">
             <button
               onClick={prev}
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-muted-foreground hover:bg-secondary transition-colors"
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-[#64748b] hover:bg-[#f1ede4] transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
               onClick={next}
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-muted-foreground hover:bg-secondary transition-colors"
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-[#64748b] hover:bg-[#f1ede4] transition-colors"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
             <button
               onClick={() => setModalDate(now)}
-              className="w-8 h-8 rounded-xl flex items-center justify-center bg-primary text-white hover:bg-primary/90 transition-colors ml-1"
+              className="w-8 h-8 rounded-full flex items-center justify-center bg-[#1f75fe] text-white hover:bg-[#1a65e8] hover:scale-105 transition-all ml-1 shadow-sm"
             >
               <Plus className="w-4 h-4" />
             </button>
@@ -155,7 +155,7 @@ export default function DoctorSchedulePage() {
         {/* Weekday row */}
         <div className="grid grid-cols-7 mt-3">
           {DOW.map(d => (
-            <div key={d} className="text-center text-[11px] font-semibold text-muted-foreground uppercase tracking-wide py-1">
+            <div key={d} className="text-center text-[11px] font-semibold text-[#64748b] uppercase tracking-wide py-1">
               {d}
             </div>
           ))}
@@ -165,15 +165,15 @@ export default function DoctorSchedulePage() {
       {/* ── Calendar body ── */}
       {isLoading ? (
         <div className="h-64 flex items-center justify-center">
-          <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-[#1f75fe]/20 border-t-[#1f75fe] rounded-full animate-spin" />
         </div>
       ) : (
-        <div className="bg-white">
+        <div className="bg-white border-b border-[#e8e3d9]">
           {weeks.map((week, wi) => (
-            <div key={wi} className="border-b border-border/60 grid grid-cols-7">
+            <div key={wi} className="border-b border-[#e8e3d9] grid grid-cols-7">
               {week.map((day, di) => {
                 if (!day) return (
-                  <div key={di} className="min-h-[80px] bg-secondary/30" />
+                  <div key={di} className="min-h-[80px] bg-[#f1ede4]/30" />
                 );
 
                 const ds     = toStr(day);
@@ -186,9 +186,9 @@ export default function DoctorSchedulePage() {
                     key={di}
                     onClick={() => navigate(`/schedule/${ds}`)}
                     className={`
-                      min-h-[80px] border-r border-border/60 last:border-r-0 p-1.5 cursor-pointer
+                      min-h-[80px] border-r border-[#e8e3d9] last:border-r-0 p-1.5 cursor-pointer
                       transition-colors select-none
-                      ${isOther ? "bg-secondary/20" : "hover:bg-primary/5"}
+                      ${isOther ? "bg-[#f1ede4]/20" : "hover:bg-[#faf8f4]"}
                     `}
                   >
                     {/* Day number */}
@@ -196,10 +196,10 @@ export default function DoctorSchedulePage() {
                       <span className={`
                         w-7 h-7 flex items-center justify-center rounded-full text-sm font-bold leading-none
                         ${isToday
-                          ? "bg-primary text-primary-foreground shadow-md shadow-primary/30"
+                          ? "bg-[#1f75fe] text-white shadow-md"
                           : isOther
-                            ? "text-muted-foreground/40 font-normal"
-                            : "text-foreground"}
+                            ? "text-[#94a3b8]/40 font-normal"
+                            : "text-[#0f172a]"}
                       `}>
                         {day.getDate()}
                       </span>
@@ -220,7 +220,7 @@ export default function DoctorSchedulePage() {
                         </div>
                       ))}
                       {procs.length > 2 && (
-                        <p className="text-[9px] text-primary font-semibold pl-1">
+                        <p className="text-[9px] text-[#1f75fe] font-semibold pl-1">
                           +{procs.length - 2} ещё
                         </p>
                       )}
@@ -234,13 +234,13 @@ export default function DoctorSchedulePage() {
       )}
 
       {/* ── Legend ── */}
-      <div className="mx-4 mt-4 p-3 bg-white rounded-2xl border border-border shadow-sm">
-        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Статусы</p>
+      <div className="mx-4 mt-4 p-3 bg-white rounded-2xl border border-[#e8e3d9] shadow-md">
+        <p className="text-[10px] font-semibold text-[#64748b] uppercase tracking-wider mb-2">Статусы</p>
         <div className="grid grid-cols-2 gap-1.5">
           {(["scheduled","in_progress","completed","cancelled"] as ProcedureStatus[]).map(s => (
             <div key={s} className="flex items-center gap-1.5">
               <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOT[s]}`} />
-              <span className="text-[11px] text-muted-foreground">{t(`procedure.status.${s}`)}</span>
+              <span className="text-[11px] text-[#64748b]">{t(`procedure.status.${s}`)}</span>
             </div>
           ))}
         </div>
