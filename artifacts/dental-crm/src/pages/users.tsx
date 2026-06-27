@@ -107,7 +107,7 @@ function UserActionMenu({
         <button
           type="button"
           onClick={(e) => e.stopPropagation()}
-          className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-400 hover:bg-primary/5 hover:text-primary transition-all duration-200"
+          className="w-8 h-8 rounded-xl flex items-center justify-center text-[#94a3b8] hover:bg-[#1f75fe]/10 hover:text-[#1f75fe] transition-all duration-200"
           aria-label={t("common.actions", "Действия")}
         >
           <MoreVertical className="w-4 h-4" />
@@ -118,7 +118,7 @@ function UserActionMenu({
         side="bottom"
         sideOffset={6}
         collisionPadding={12}
-        className="min-w-[180px] rounded-2xl border-gray-100/80 p-2 shadow-2xl"
+        className="min-w-[180px] rounded-2xl border border-[#e8e3d9] p-2 shadow-lg font-manrope"
         onClick={(e) => e.stopPropagation()}
       >
         <DropdownMenuItem
@@ -142,7 +142,7 @@ function UserActionMenu({
             onClick={(e) => { e.stopPropagation(); onToggleActive(); }}
             className={cn(
               "gap-3 rounded-xl px-4 py-2.5 cursor-pointer",
-              user.isActive ? "text-amber-600 focus:text-amber-600 focus:bg-amber-50" : "text-emerald-600 focus:text-emerald-600 focus:bg-emerald-50",
+              user.isActive ? "text-[#d97706] focus:text-[#d97706] focus:bg-[#fef3c7]" : "text-[#16a34a] focus:text-[#16a34a] focus:bg-[#f0fdf4]",
             )}
           >
             {user.isActive
@@ -155,7 +155,7 @@ function UserActionMenu({
             <DropdownMenuSeparator className="my-1" />
             <DropdownMenuItem
               onClick={(e) => { e.stopPropagation(); onDelete(); }}
-              className="gap-3 rounded-xl px-4 py-2.5 text-red-500 focus:text-red-500 focus:bg-red-50 cursor-pointer"
+              className="gap-3 rounded-xl px-4 py-2.5 text-[#dc2626] focus:text-[#dc2626] focus:bg-[#fef2f2] cursor-pointer"
             >
               <Trash2 className="w-4 h-4" />
               {t("common.delete")}
@@ -298,24 +298,24 @@ export default function StaffPage() {
   const isSaving = updateMutation.isPending;
 
   return (
-    <div className="min-h-full bg-[#f7f8fc]">
+    <div className="min-h-full bg-[#faf8f4] font-manrope">
       {/* ── Premium Header ───────────────────────────────────── */}
-      <div className="bg-white border-b border-gray-100">
+      <div className="bg-white border-b border-[#e8e3d9] shadow-sm">
         <div className="px-5 pt-5 pb-5">
           {/* Title + Actions row */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <button
                 onClick={() => navigate("/menu")}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-500 shrink-0"
+                className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#f1ede4] transition-colors text-[#64748b] shrink-0"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
               <div>
-                <h1 className="text-xl font-bold text-gray-900 font-display tracking-tight">
+                <h1 className="text-xl font-bold text-[#0f172a] tracking-tight">
                   Сотрудники
                 </h1>
-                <p className="text-xs text-gray-400 mt-0.5">
+                <p className="text-xs text-[#94a3b8] mt-0.5">
                   {!isLoading && `${rawUsers.length} сотрудников в системе`}
                 </p>
               </div>
@@ -323,7 +323,7 @@ export default function StaffPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => queryClient.invalidateQueries({ queryKey: getListUsersAllQueryKey(showInactive) })}
-                className="text-gray-400 hover:text-primary transition-colors p-1.5"
+                className="text-[#94a3b8] hover:text-[#1f75fe] hover:bg-[#f1ede4] rounded-xl transition-colors p-1.5"
                 title="Обновить"
               >
                 <RefreshCw className="w-4 h-4" />
@@ -331,20 +331,20 @@ export default function StaffPage() {
               <button
                 onClick={() => setShowFilters((v) => !v)}
                 className={cn(
-                  "relative transition-colors p-1.5",
-                  showFilters || hasActiveFilter ? "text-primary" : "text-gray-400 hover:text-primary",
+                  "relative transition-colors p-1.5 rounded-xl",
+                  showFilters || hasActiveFilter ? "text-[#1f75fe] bg-[#1f75fe]/10" : "text-[#94a3b8] hover:text-[#1f75fe] hover:bg-[#f1ede4]",
                 )}
                 title="Фильтры"
               >
                 <SlidersHorizontal className="w-4 h-4" />
                 {hasActiveFilter && (
-                  <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-primary rounded-full" />
+                  <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-[#1f75fe] rounded-full" />
                 )}
               </button>
               {isOwnerOrAdmin && (
                 <Button
                   onClick={() => setInviteOpen(true)}
-                  className="gap-1.5 h-8 text-xs px-2.5 sm:px-3"
+                  className="gap-1.5 h-8 text-xs px-2.5 sm:px-3 rounded-full bg-[#1f75fe] hover:bg-[#1a65e8] hover:scale-105 font-semibold"
                 >
                   <Plus className="w-3.5 h-3.5 shrink-0" />
                   <span className="hidden sm:inline">Пригласить</span>
@@ -370,12 +370,12 @@ export default function StaffPage() {
                 <div className="space-y-3 mb-4">
                   {/* Search */}
                   <div className="relative">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8]" />
                     <input
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                       placeholder="Поиск по имени или email..."
-                      className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200/80 rounded-xl text-sm text-gray-700 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-sm"
+                      className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#e8e3d9] rounded-xl text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe] transition-all shadow-sm"
                     />
                   </div>
 
@@ -391,15 +391,15 @@ export default function StaffPage() {
                           className={cn(
                             "shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition-all duration-200",
                             isActive
-                              ? "bg-primary text-white border-primary shadow-md shadow-primary/20"
-                              : "bg-white text-gray-500 border-gray-200/80 hover:border-primary/30 hover:text-primary hover:bg-primary/5",
+                              ? "bg-[#1f75fe] text-white border-[#1f75fe] shadow-md"
+                              : "bg-white text-[#64748b] border-[#e8e3d9] hover:border-[#1f75fe]/30 hover:text-[#1f75fe] hover:bg-[#1f75fe]/5",
                           )}
                         >
                           {r === "all" ? "Все" : t(`role.${r}`, ROLE_LABELS[r] ?? r)}
                           {count > 0 && (
                             <span className={cn(
                               "text-[10px] font-bold px-1.5 py-0.5 rounded-md min-w-[18px] text-center",
-                              isActive ? "bg-white/25" : "bg-gray-100 text-gray-400",
+                              isActive ? "bg-white/25" : "bg-[#f1ede4] text-[#94a3b8]",
                             )}>
                               {count}
                             </span>
@@ -409,14 +409,14 @@ export default function StaffPage() {
                     })}
 
                     {currentUser?.role === "owner" && (
-                      <label className="shrink-0 flex items-center gap-2 cursor-pointer select-none ml-auto pl-3 border-l border-gray-200">
+                      <label className="shrink-0 flex items-center gap-2 cursor-pointer select-none ml-auto pl-3 border-l border-[#e8e3d9]">
                         <input
                           type="checkbox"
                           checked={showInactive}
                           onChange={(e) => setShowInactive(e.target.checked)}
-                          className="w-3.5 h-3.5 rounded accent-primary"
+                          className="w-3.5 h-3.5 rounded accent-[#1f75fe]"
                         />
-                        <span className="text-xs text-gray-400 whitespace-nowrap">Неактивные</span>
+                        <span className="text-xs text-[#94a3b8] whitespace-nowrap">Неактивные</span>
                       </label>
                     )}
                   </div>
@@ -428,7 +428,7 @@ export default function StaffPage() {
           {/* Staff table */}
           {isLoading ? (
             <div className="flex items-center justify-center py-20">
-              <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+              <div className="w-10 h-10 border-4 border-[#1f75fe]/20 border-t-[#1f75fe] rounded-full animate-spin" />
             </div>
           ) : filtered.length === 0 ? (
             <motion.div
@@ -436,31 +436,31 @@ export default function StaffPage() {
               animate={{ opacity: 1, y: 0 }}
               className="text-center py-20"
             >
-              <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center mx-auto mb-5">
-                <Users className="w-10 h-10 text-primary/40" />
+              <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-[#1f75fe]/10 to-[#1f75fe]/5 flex items-center justify-center mx-auto mb-5">
+                <Users className="w-10 h-10 text-[#1f75fe]/40" />
               </div>
-              <p className="text-base font-bold text-gray-500">Сотрудников не найдено</p>
-              <p className="text-sm text-gray-300 mt-1.5 max-w-xs mx-auto">
+              <p className="text-base font-bold text-[#64748b]">Сотрудников не найдено</p>
+              <p className="text-sm text-[#94a3b8] mt-1.5 max-w-xs mx-auto">
                 {search ? "Попробуйте изменить запрос поиска" : "Нажмите «+» чтобы добавить сотрудника"}
               </p>
             </motion.div>
           ) : (
-            <div className="bg-white rounded-2xl border border-gray-100/80 shadow-sm overflow-x-auto">
+            <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-md overflow-x-auto">
               <div className="min-w-[720px]">
                 <table className="w-full text-sm">
-                  <thead className="sticky top-0 bg-gray-50/80 backdrop-blur-sm border-b border-gray-100 z-10">
+                  <thead className="sticky top-0 bg-[#faf8f4] backdrop-blur-sm border-b border-[#e8e3d9] z-10">
                     <tr>
-                      <th className="px-4 py-3 text-left text-[11px] font-semibold text-gray-400 uppercase tracking-wider w-10">#</th>
-                      <th className="px-4 py-3 text-left text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Сотрудник</th>
-                      <th className="px-4 py-3 text-left text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Роль</th>
-                      <th className="px-4 py-3 text-left text-[11px] font-semibold text-gray-400 uppercase tracking-wider hidden sm:table-cell">Телефон</th>
-                      <th className="px-4 py-3 text-left text-[11px] font-semibold text-gray-400 uppercase tracking-wider hidden md:table-cell">Email</th>
-                      <th className="px-4 py-3 text-left text-[11px] font-semibold text-gray-400 uppercase tracking-wider hidden lg:table-cell">Дата найма</th>
-                      <th className="px-4 py-3 text-left text-[11px] font-semibold text-gray-400 uppercase tracking-wider hidden lg:table-cell">Зарплата</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider w-10">#</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider">Сотрудник</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider">Роль</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider hidden sm:table-cell">Телефон</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider hidden md:table-cell">Email</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider hidden lg:table-cell">Дата найма</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider hidden lg:table-cell">Зарплата</th>
                       <th className="px-4 py-3 w-12" />
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-[#e8e3d9]">
                     {filtered.map((u, idx) => {
                       const isSelf = u.id === currentUser?.id;
                       const isInactive = u.isActive === false;
@@ -475,13 +475,13 @@ export default function StaffPage() {
                             }
                           }}
                           className={cn(
-                            "bg-white hover:bg-primary/[0.03] transition-colors group",
+                            "bg-white hover:bg-[#faf8f4] transition-colors group",
                             u.role !== "owner" && "cursor-pointer",
                             isInactive && "opacity-50",
                           )}
                         >
                           {/* # */}
-                          <td className="px-4 py-3.5 text-gray-300 text-xs font-mono">{idx + 1}</td>
+                          <td className="px-4 py-3.5 text-[#94a3b8] text-xs font-mono">{idx + 1}</td>
 
                           {/* Name + avatar */}
                           <td className="px-4 py-3.5">
@@ -496,27 +496,27 @@ export default function StaffPage() {
                                   {initials(u.name)}
                                 </div>
                                 {!isInactive && (
-                                  <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-[1.5px] border-white" />
+                                  <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#16a34a] border-[1.5px] border-white" />
                                 )}
                               </div>
                               <div className="min-w-0">
                                 <div className="flex items-center gap-1.5">
-                                  <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-primary transition-colors">
+                                  <p className="text-sm font-semibold text-[#0f172a] truncate group-hover:text-[#1f75fe] transition-colors">
                                     {u.name}
                                   </p>
                                   {isSelf && (
-                                    <span className="text-[10px] bg-primary/10 text-primary font-bold px-1.5 py-0.5 rounded-md shrink-0">
+                                    <span className="text-[10px] bg-[#1f75fe]/10 text-[#1f75fe] font-bold px-1.5 py-0.5 rounded-md shrink-0">
                                       Вы
                                     </span>
                                   )}
                                   {isInactive && (
-                                    <span className="text-[10px] bg-gray-100 text-gray-400 font-semibold px-1.5 py-0.5 rounded-md shrink-0">
+                                    <span className="text-[10px] bg-[#f1ede4] text-[#94a3b8] font-semibold px-1.5 py-0.5 rounded-md shrink-0">
                                       Неактивен
                                     </span>
                                   )}
                                 </div>
                                 {(u.position || u.specialty) && (
-                                  <p className="text-[11px] text-gray-400 truncate max-w-[180px]">
+                                  <p className="text-[11px] text-[#94a3b8] truncate max-w-[180px]">
                                     {u.specialty || u.position}
                                   </p>
                                 )}
@@ -526,7 +526,7 @@ export default function StaffPage() {
 
                           {/* Role */}
                           <td className="px-4 py-3.5">
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-primary/8 text-primary border border-primary/10 whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-[#1f75fe]/10 text-[#1f75fe] border border-[#1f75fe]/20 whitespace-nowrap">
                               <RoleIcon className="w-3 h-3" />
                               {t(`role.${u.role}`, ROLE_LABELS[u.role] ?? u.role)}
                             </span>
@@ -535,38 +535,38 @@ export default function StaffPage() {
                           {/* Phone */}
                           <td className="px-4 py-3.5 hidden sm:table-cell">
                             {u.phone ? (
-                              <span className="font-mono text-xs text-gray-600">{u.phone}</span>
+                              <span className="font-mono text-xs text-[#64748b]">{u.phone}</span>
                             ) : (
-                              <span className="text-gray-300 text-xs">—</span>
+                              <span className="text-[#94a3b8] text-xs">—</span>
                             )}
                           </td>
 
                           {/* Email */}
                           <td className="px-4 py-3.5 hidden md:table-cell">
                             {u.email ? (
-                              <span className="text-xs text-gray-500 truncate max-w-[160px] block">{u.email}</span>
+                              <span className="text-xs text-[#64748b] truncate max-w-[160px] block">{u.email}</span>
                             ) : (
-                              <span className="text-gray-300 text-xs">—</span>
+                              <span className="text-[#94a3b8] text-xs">—</span>
                             )}
                           </td>
 
                           {/* Hire date */}
-                          <td className="px-4 py-3.5 hidden lg:table-cell text-xs text-gray-500 whitespace-nowrap">
+                          <td className="px-4 py-3.5 hidden lg:table-cell text-xs text-[#64748b] whitespace-nowrap">
                             {u.hireDate ? (
                               <span>с {fmtHireDate(u.hireDate)}</span>
                             ) : (
-                              <span className="text-gray-300">—</span>
+                              <span className="text-[#94a3b8]">—</span>
                             )}
                           </td>
 
                           {/* Salary */}
                           <td className="px-4 py-3.5 hidden lg:table-cell">
                             {u.salarySettings ? (
-                              <span className="text-xs font-semibold text-primary bg-primary/8 px-2.5 py-1 rounded-lg inline-block">
+                              <span className="text-xs font-semibold text-[#1f75fe] bg-[#1f75fe]/10 px-2.5 py-1 rounded-lg inline-block">
                                 {fmtSalaryShort(u)}
                               </span>
                             ) : (
-                              <span className="text-gray-300 text-xs">—</span>
+                              <span className="text-[#94a3b8] text-xs">—</span>
                             )}
                           </td>
 
@@ -590,7 +590,7 @@ export default function StaffPage() {
               </div>
 
               {/* Footer with count */}
-              <div className="bg-gray-50/50 border-t border-gray-100 px-5 py-2.5 text-xs text-gray-400">
+              <div className="bg-[#faf8f4] border-t border-[#e8e3d9] px-5 py-2.5 text-xs text-[#94a3b8]">
                 Показано {filtered.length} из {rawUsers.length} сотрудников
               </div>
             </div>
