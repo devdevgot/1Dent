@@ -1,4 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { SITE } from "@/config/site";
+import "@/styles/dashboard.css";
 import { useAuthStore } from "@/hooks/use-auth";
 import {
   useListProcedures,
@@ -147,22 +149,26 @@ export default function AdminDashboard() {
 
   const maxRevenue = topDoctors[0]?.revenueTotal ?? 1;
 
+  useEffect(() => {
+    document.title = SITE.dashboardTitles.admin;
+  }, []);
 
   return (
-    <div className="space-y-6 p-6 pb-12 max-w-7xl mx-auto bg-[#faf8f4] font-manrope min-h-full">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-white p-6 rounded-2xl border border-[#e8e3d9] shadow-sm">
+    <div className="dashboard-page min-h-full">
+      <div className="dash-page-inner-lg dash-stack">
+      <div className="dash-page-header">
         <div>
-          <h2 className="text-2xl font-bold text-[#0f172a]">
+          <h2 className="dash-page-title">
             {t("dashboard.welcomeBack", { name: (user?.name || "").split(" ")[0] })}
           </h2>
-          <p className="text-[#64748b] mt-1">
+          <p className="dash-page-subtitle">
             {t("adminDashboard.subtitle", { clinic: clinic?.name })}
           </p>
         </div>
         <button
+          type="button"
           onClick={() => setShowApptModal(true)}
-          className="px-5 py-2.5 bg-[#1f75fe] hover:bg-[#1a65e8] text-white font-semibold rounded-full transition-all hover:scale-105 active:scale-95"
+          className="dash-btn dash-btn-primary"
         >
           {t("adminNav.newAppointment")}
         </button>
@@ -171,18 +177,19 @@ export default function AdminDashboard() {
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Today's Schedule */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-[#e8e3d9] p-6 shadow-md">
+        <div className="lg:col-span-2 dash-card dash-card-padded dash-card-elevated">
           <div className="flex items-center justify-between mb-5">
-            <h3 className="text-base font-bold text-[#0f172a] flex items-center gap-2">
-              <Clock className="w-4 h-4 text-[#1f75fe]" />
+            <h3 className="dash-section-title">
+              <Clock className="w-4 h-4 text-[var(--primary)]" />
               {t("adminDashboard.todaySchedule")}
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[#1f75fe]/10 text-[#1f75fe] ml-1">
+              <span className="dash-badge dash-badge-primary ml-1">
                 {todayProcedures.length}
               </span>
             </h3>
             <button
+              type="button"
               onClick={() => navigate("/admin/calendar")}
-              className="text-sm text-[#1f75fe] font-semibold flex items-center gap-1 hover:underline"
+              className="dash-link"
             >
               {t("dashboard.viewAll")} <ChevronRight className="w-4 h-4" />
             </button>
@@ -231,12 +238,12 @@ export default function AdminDashboard() {
         {/* Right column: Active Tasks + Top Doctors */}
         <div className="space-y-4">
           {/* Ожидают оплаты */}
-          <div className="bg-white rounded-2xl border border-[#e8e3d9] p-5 shadow-md">
-            <h3 className="text-base font-bold text-[#0f172a] flex items-center gap-2 mb-4">
-              <Wallet className="w-4 h-4 text-[#16a34a]" />
+          <div className="dash-card dash-card-padded-sm dash-card-elevated">
+            <h3 className="dash-section-title mb-4">
+              <Wallet className="w-4 h-4 text-[var(--success)]" />
               Оплата
               {pendingPaymentQueue.length > 0 && (
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[#f0fdf4] text-[#16a34a] ml-1">
+                <span className="dash-badge dash-badge-success ml-1">
                   {pendingPaymentQueue.length}
                 </span>
               )}
@@ -362,10 +369,10 @@ export default function AdminDashboard() {
           </div>
 
           {/* Top Doctors */}
-          <div className="bg-white rounded-2xl border border-[#e8e3d9] p-5 shadow-md">
+          <div className="dash-card dash-card-padded-sm dash-card-elevated">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-[#0f172a] flex items-center gap-2">
-                <Stethoscope className="w-4 h-4 text-[#1f75fe]" />
+              <h3 className="dash-section-title">
+                <Stethoscope className="w-4 h-4 text-[var(--primary)]" />
                 {t("adminDashboard.topDoctors")}
               </h3>
             </div>
@@ -410,8 +417,8 @@ export default function AdminDashboard() {
 
 
       {/* Quick Links row */}
-      <div className="bg-white rounded-2xl border border-[#e8e3d9] p-6 shadow-md">
-        <h3 className="text-base font-bold text-[#0f172a] mb-4">{t("dashboard.quickActions")}</h3>
+      <div className="dash-card dash-card-padded dash-card-elevated">
+        <h3 className="dash-section-title mb-4">{t("dashboard.quickActions")}</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {[
             { label: t("adminNav.newAppointment"), icon: PlusCircle, path: "/admin/appointments/new" },
@@ -423,13 +430,14 @@ export default function AdminDashboard() {
           ].map((item) => (
             <button
               key={item.path}
+              type="button"
               onClick={() => navigate(item.path)}
-              className="flex flex-col items-center gap-2 p-4 rounded-xl hover:bg-[#f1ede4] border border-[#e8e3d9] hover:border-[#1f75fe]/20 transition-all group text-center"
+              className="flex flex-col items-center gap-2 p-4 rounded-xl hover:bg-[var(--surface-2)] border border-[var(--border)] hover:border-[var(--primary)]/25 transition-all group text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
             >
-              <div className="w-10 h-10 bg-[#1f75fe]/10 text-[#1f75fe] rounded-xl flex items-center justify-center group-hover:bg-[#1f75fe] group-hover:text-white transition-colors">
+              <div className="dash-quick-action-icon w-10 h-10">
                 <item.icon className="w-5 h-5" />
               </div>
-              <span className="text-xs font-medium text-[#64748b] group-hover:text-[#1f75fe] transition-colors leading-tight">{item.label}</span>
+              <span className="text-xs font-medium text-[var(--text-secondary)] group-hover:text-[var(--primary)] transition-colors leading-tight">{item.label}</span>
             </button>
           ))}
         </div>
@@ -447,6 +455,7 @@ export default function AdminDashboard() {
           isSaving={apptSave.isSaving}
         />
       )}
+      </div>
     </div>
   );
 }

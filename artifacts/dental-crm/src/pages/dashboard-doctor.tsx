@@ -1,4 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { SITE } from "@/config/site";
+import "@/styles/dashboard.css";
 import { useAuthStore } from "@/hooks/use-auth";
 import {
   useGetDoctorAnalytics,
@@ -176,19 +178,23 @@ export default function DoctorDashboard() {
         : t("payroll.fixedPlusCommission", "Оклад + %")
     : null;
 
-  return (
-    <div className="min-h-full bg-[#faf8f4] font-manrope pb-8">
+  useEffect(() => {
+    document.title = SITE.dashboardTitles.doctor;
+  }, []);
 
-      {/* ─── White top strip: date row ─── */}
-      <div className="bg-white border-b border-[#e8e3d9] shadow-sm">
+  return (
+    <div className="dashboard-page min-h-full pb-8">
+
+      <div className="dash-top-strip">
         <div className="mx-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-1.5 text-sm font-semibold text-[#0f172a]">
-            <CalendarDays className="w-4 h-4 text-[#1f75fe]" />
+          <div className="flex items-center gap-1.5 text-sm font-semibold text-[var(--text)]">
+            <CalendarDays className="w-4 h-4 text-[var(--primary)]" />
             <span className="capitalize">{dateRangeLabel}</span>
           </div>
           <button
+            type="button"
             onClick={() => { setPendingPreset(filterPreset); setShowCustom(false); setFilterOpen(true); }}
-            className="flex items-center gap-1.5 bg-white border border-[#e8e3d9] rounded-xl px-3 py-1.5 text-xs font-semibold text-[#64748b] hover:bg-[#f1ede4] transition-colors shadow-sm"
+            className="dash-btn-ghost text-xs py-1.5 px-3 flex items-center gap-1.5"
           >
             <SlidersHorizontal className="w-3.5 h-3.5 text-[#94a3b8]" />
             {filterLabel}
@@ -197,7 +203,7 @@ export default function DoctorDashboard() {
       </div>
 
       {/* ─── My Revenue + Salary Card ─── */}
-      <div className="mx-4 mt-3 bg-white rounded-2xl shadow-sm border border-[#e8e3d9] overflow-hidden">
+      <div className="mx-4 mt-3 dash-card overflow-hidden">
         <div className="px-5 pt-4 pb-4">
           {/* PRIMARY: Salary */}
           <div className="flex items-start justify-between mb-1">
@@ -274,7 +280,7 @@ export default function DoctorDashboard() {
       </div>
 
       {/* ─── Schedule Widget ─── */}
-      <div className="mx-4 mt-4 bg-white rounded-2xl shadow-sm border border-[#e8e3d9] overflow-hidden">
+      <div className="mx-4 mt-4 dash-card overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-4 pb-3">
           <div className="flex items-center gap-2">
@@ -375,8 +381,8 @@ export default function DoctorDashboard() {
       </div>
 
       {/* ─── Quick Actions ─── */}
-      <div className="mx-4 mt-4 bg-white rounded-2xl border border-[#e8e3d9] shadow-sm p-4">
-        <p className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wide mb-3">
+      <div className="mx-4 mt-4 dash-card dash-card-padded-sm">
+        <p className="dash-section-label mb-3">
           {t("dashboard.quickActions")}
         </p>
         <div className="grid grid-cols-2 gap-2">
@@ -402,7 +408,7 @@ export default function DoctorDashboard() {
 
       {/* ─── Date Filter Sheet ─── */}
       <Sheet open={filterOpen} onOpenChange={(v) => { setFilterOpen(v); if (!v) setShowCustom(false); }}>
-        <SheetContent side="bottom" className="rounded-t-3xl px-0 pb-8 max-h-[85dvh] overflow-y-auto bg-[#faf8f4] border-t border-[#e8e3d9]">
+        <SheetContent side="bottom" className="dash-sheet rounded-t-3xl px-0 pb-8 max-h-[85dvh] overflow-y-auto">
           <AnimatePresence mode="wait" initial={false}>
             {!showCustom ? (
               <motion.div

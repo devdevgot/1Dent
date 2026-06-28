@@ -1,4 +1,7 @@
 import { useAuthStore } from "@/hooks/use-auth";
+import { useEffect } from "react";
+import { SITE } from "@/config/site";
+import "@/styles/dashboard.css";
 import {
   useGetOwnerAnalytics,
   getGetOwnerAnalyticsQueryKey,
@@ -39,26 +42,25 @@ function StatCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
-      className="bg-white p-6 rounded-2xl border border-[#e8e3d9] shadow-md hover:shadow-lg transition-shadow group relative overflow-hidden"
+      className="dash-stat-card group"
     >
-      <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-[#1f75fe]/5 rounded-full blur-2xl group-hover:bg-[#1f75fe]/10 transition-colors" />
-      <div className="flex justify-between items-start mb-4">
-        <div className="p-3 bg-[#f1ede4] text-[#1f75fe] rounded-xl ring-1 ring-[#e8e3d9]/50">
-          <Icon className="w-6 h-6" />
+      <div className="flex justify-between items-start mb-4 relative z-10">
+        <div className="dash-stat-icon">
+          <Icon className="w-5 h-5" />
         </div>
       </div>
-      <h3 className="text-[#64748b] font-medium text-sm mb-1">{t(titleKey)}</h3>
-      <div className="text-3xl font-display font-bold text-[#0f172a]">{value}</div>
+      <h3 className="dash-stat-label relative z-10">{t(titleKey)}</h3>
+      <div className="dash-stat-value relative z-10">{value}</div>
     </motion.div>
   );
 }
 
 function SkeletonCard() {
   return (
-    <div className="bg-white p-6 rounded-2xl border border-[#e8e3d9] shadow-md animate-pulse">
-      <div className="w-12 h-12 bg-[#f1ede4] rounded-xl mb-4" />
-      <div className="w-24 h-4 bg-[#f1ede4] rounded mb-2" />
-      <div className="w-20 h-8 bg-[#f1ede4] rounded" />
+    <div className="dash-stat-card">
+      <div className="dash-skeleton w-11 h-11 rounded-xl mb-4" />
+      <div className="dash-skeleton w-24 h-4 rounded mb-2" />
+      <div className="dash-skeleton w-20 h-8 rounded" />
     </div>
   );
 }
@@ -140,35 +142,43 @@ export default function AccountantDashboard() {
     { titleKey: "accountantDashboard.netProfit", value: netProfit !== undefined ? fmtMoney(netProfit) : "—", icon: netProfit !== undefined && netProfit >= 0 ? TrendingUp : TrendingDown, delay: 0.15 },
   ];
 
+  useEffect(() => {
+    document.title = SITE.dashboardTitles.accountant;
+  }, []);
+
   return (
-    <div className="space-y-4 p-4 pb-8 bg-[#faf8f4] font-manrope min-h-full">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-white p-6 rounded-2xl border border-[#e8e3d9] shadow-sm">
+    <div className="dashboard-page min-h-full">
+      <div className="dash-page-inner dash-stack">
+      <div className="dash-page-header">
         <div>
-          <h2 className="text-3xl font-display font-bold text-[#0f172a]">
+          <h2 className="dash-page-title">
             {t("dashboard.welcomeBack", { name: (user?.name || "").split(" ")[0] })}
           </h2>
-          <p className="text-[#64748b] mt-1 text-lg">
+          <p className="dash-page-subtitle">
             {t("accountantDashboard.subtitle", { clinic: clinic?.name })}
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <button
+            type="button"
+            aria-label={t("common.refresh", "Обновить")}
             onClick={() => refetch()}
-            className="p-2.5 border border-[#e8e3d9] rounded-xl text-[#64748b] hover:bg-[#f1ede4] transition-colors"
+            className="dash-btn-icon"
           >
             <RefreshCw className="w-5 h-5" />
           </button>
           <button
+            type="button"
             onClick={() => setShowExpenseDialog(true)}
-            className="px-4 py-2.5 border border-[#1f75fe] text-[#1f75fe] font-semibold rounded-full hover:bg-[#1f75fe]/5 transition-all flex items-center gap-2"
+            className="dash-btn dash-btn-secondary"
           >
             <PlusCircle className="w-4 h-4" />
             {t("expenses.add")}
           </button>
           <button
+            type="button"
             onClick={() => navigate("/financials")}
-            className="px-5 py-2.5 bg-[#1f75fe] hover:bg-[#1a65e8] text-white font-semibold rounded-full transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
+            className="dash-btn dash-btn-primary"
           >
             <Wallet className="w-4 h-4" />
             {t("accountantDashboard.financials")}
@@ -187,27 +197,27 @@ export default function AccountantDashboard() {
 
       {/* ─── ФОТ (Payroll Fund) Card ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="bg-white rounded-2xl border border-[#e8e3d9] p-6 shadow-md">
+        <div className="dash-card dash-card-padded dash-card-elevated">
           <div className="flex items-center gap-2 mb-4">
             <div className="p-2 bg-[#1f75fe]/10 rounded-xl">
               <Banknote className="w-5 h-5 text-[#1f75fe]" />
             </div>
             <div className="flex-1">
-              <h3 className="text-sm font-bold font-display text-[#0f172a]">{t("payroll.fot")}</h3>
+              <h3 className="dash-section-title text-sm">{t("payroll.fot")}</h3>
               <p className="text-xs text-[#64748b]">
                 {`${currentMonth.toString().padStart(2, "0")}/${currentYear}`}
               </p>
             </div>
             <button
               onClick={() => setShowApproveModal(true)}
-              className="flex items-center gap-1 px-3 py-1.5 bg-[#1f75fe] hover:bg-[#1a65e8] text-white text-xs font-semibold rounded-full transition-all hover:scale-105 active:scale-95"
+              className="dash-btn dash-btn-primary text-xs py-1.5 px-3"
             >
               <PlusCircle className="w-3.5 h-3.5" />
               {t("payroll.approveFot", "Утвердить ФОТ")}
             </button>
           </div>
 
-          <div className="text-3xl font-display font-bold text-[#0f172a] mb-3">
+          <div className="dash-stat-value text-3xl mb-3">
             ₸ {fotTotal.toLocaleString("ru-KZ")}
           </div>
 
@@ -243,9 +253,9 @@ export default function AccountantDashboard() {
         </div>
 
         {/* Revenue by Doctor — computed from procedures (accessible to accountants) */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-[#e8e3d9] p-6 shadow-md">
+        <div className="lg:col-span-2 dash-card dash-card-padded dash-card-elevated">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold font-display flex items-center gap-2 text-[#0f172a]">
+            <h3 className="dash-section-title text-lg">
               <Stethoscope className="w-5 h-5 text-[#1f75fe]" />
               {t("accountantDashboard.revenueByDoctor")}
             </h3>
@@ -307,12 +317,12 @@ export default function AccountantDashboard() {
       </div>
 
       {/* Billing Queue */}
-      <div className="bg-white rounded-2xl border border-[#e8e3d9] p-6 shadow-md">
-        <h3 className="text-lg font-bold font-display mb-4 flex items-center gap-2 text-[#0f172a]">
+      <div className="dash-card dash-card-padded dash-card-elevated">
+        <h3 className="dash-section-title text-lg mb-4">
           <Wallet className="w-5 h-5 text-[#1f75fe]" />
           {t("accountantDashboard.billingQueue")}
           {completedNoBilling.length > 0 && (
-            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[#fef3c7] text-[#d97706] ml-auto">
+            <span className="dash-badge dash-badge-warning ml-auto">
               {completedNoBilling.length}
             </span>
           )}
@@ -365,6 +375,7 @@ export default function AccountantDashboard() {
           }}
         />
       )}
+      </div>
     </div>
   );
 }
