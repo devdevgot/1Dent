@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, useInView } from "framer-motion";
 import { Flag, HeartHandshake, Shield, RefreshCw, Target } from "lucide-react";
 import { EASE, fadeUp, staggerParentVariants, staggerChildVariants } from "@/lib/landing-animations";
+import { SITE } from "@/config/site";
 
 function useCountUp(end: number, duration = 1500, start = false) {
   const [count, setCount] = useState(0);
@@ -38,10 +39,10 @@ function StatCard({ value, suffix, label, delay }: { value: number; suffix: stri
       style={{ willChange: "transform, opacity" }}
       className="text-center"
     >
-      <div className="font-manrope font-extrabold text-[#0f172a] mb-2" style={{ fontSize: "clamp(48px, 6vw, 80px)" }}>
+      <div className="landing-stat-value font-manrope mb-2">
         {count}{suffix}
       </div>
-      <div className="font-manrope text-[#64748b] text-base">{label}</div>
+      <div className="font-manrope text-[var(--text-secondary)] text-base">{label}</div>
     </motion.div>
   );
 }
@@ -79,21 +80,17 @@ const reasons = [
 
 export function SocialProof() {
   return (
-    <section className="bg-white py-24 px-6">
+    <section className="bg-[var(--surface)] landing-section-sm px-6">
       <div className="max-w-7xl mx-auto">
-
-        {/* Badge */}
-        <motion.div
-          {...fadeUp(0)}
-          className="text-center mb-6"
-        >
-          <div className="inline-flex items-center gap-2 bg-[#1f75fe]/10 text-[#1f75fe] rounded-full px-4 py-2 text-sm font-manrope font-medium mb-10">
+        <motion.div {...fadeUp(0)} className="text-center mb-6">
+          <div className="landing-badge landing-badge-primary font-manrope mb-10">
             <Target size={14} />
-            <span>Почему 1Dent</span>
+            <span>Почему {SITE.name}</span>
           </div>
         </motion.div>
 
-        {/* Stats */}
+        <div className="landing-divider mb-16" />
+
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 mb-24">
           <StatCard value={10} suffix="+" label="модулей системы" delay={0} />
           <StatCard value={3} suffix="" label="тарифных плана" delay={0.1} />
@@ -101,39 +98,36 @@ export function SocialProof() {
           <StatCard value={24} suffix="/7" label="ИИ-чатбот работает" delay={0.3} />
         </div>
 
-        {/* Reasons heading */}
         <motion.h2
           {...fadeUp(0)}
-          className="font-manrope font-extrabold text-[#0f172a] text-center mb-12 leading-tight"
-          style={{ fontSize: "clamp(32px, 4vw, 52px)" }}
+          className="landing-h2 font-manrope text-[var(--text)] text-center mb-12"
         >
           Почему выбирают нас
         </motion.h2>
 
-        {/* Reasons cards — stagger */}
         <motion.div
           variants={staggerParentVariants(0.09)}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-30px" }}
-          className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6"
+          className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5"
         >
           {reasons.map((r, i) => (
             <motion.div
               key={i}
               variants={staggerChildVariants}
               style={{ willChange: "transform, opacity" }}
-              whileHover={{ scale: 1.02 }}
-              className="bg-white rounded-3xl p-6 border border-[#e8e3d9] shadow-sm hover:shadow-md transition-all"
+              whileHover={{ y: -4 }}
+              className="landing-card p-6 hover:border-[var(--border-strong)]"
             >
               <div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
+                className="w-11 h-11 rounded-2xl flex items-center justify-center mb-4"
                 style={{ backgroundColor: r.color }}
               >
-                <r.icon size={22} style={{ color: r.accent }} />
+                <r.icon size={20} style={{ color: r.accent }} />
               </div>
-              <h3 className="font-manrope font-bold text-[#0f172a] text-lg mb-2">{r.title}</h3>
-              <p className="font-manrope text-[#64748b] text-sm leading-relaxed">{r.desc}</p>
+              <h3 className="font-manrope font-bold text-[var(--text)] text-lg mb-2 tracking-tight">{r.title}</h3>
+              <p className="landing-body font-manrope">{r.desc}</p>
             </motion.div>
           ))}
         </motion.div>

@@ -93,29 +93,21 @@ function formatPrice(price: number) {
 
 export function PricingSection() {
   return (
-    <section id="pricing" className="bg-[#f1ede4] py-24 px-6">
+    <section id="pricing" className="bg-[var(--surface-2)] landing-section-sm px-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <motion.div
-          {...fadeUp(0)}
-          className="text-center mb-16"
-        >
-          <div className="inline-flex items-center gap-2 bg-white text-[#64748b] rounded-full px-4 py-2 text-sm font-manrope font-medium mb-6 border border-[#e8e3d9]">
+        <motion.div {...fadeUp(0)} className="text-center mb-16">
+          <div className="landing-badge landing-badge-light font-manrope mb-6">
             <CreditCard size={14} />
             <span>Простые тарифы</span>
           </div>
-          <h2
-            className="font-manrope font-extrabold text-[#0f172a] leading-tight mb-4"
-            style={{ fontSize: "clamp(36px, 5vw, 64px)" }}
-          >
+          <h2 className="landing-h2 font-manrope text-[var(--text)] mb-4">
             Выберите план
           </h2>
-          <p className="font-manrope text-[#64748b] text-lg max-w-xl mx-auto">
+          <p className="landing-lead font-manrope max-w-xl mx-auto">
             14 дней бесплатного пробного периода. Без карты.
           </p>
         </motion.div>
 
-        {/* Plans */}
         <motion.div
           variants={staggerParentVariants(0.1)}
           initial="hidden"
@@ -128,47 +120,44 @@ export function PricingSection() {
               key={plan.id}
               variants={staggerChildVariants}
               style={{ willChange: "transform, opacity" }}
-              whileHover={{ scale: 1.02 }}
-              className={`relative bg-white rounded-3xl p-8 border shadow-sm hover:shadow-lg transition-all ${
-                plan.badge ? "border-[#1f75fe] shadow-[#1f75fe]/10" : "border-[#e8e3d9]"
+              whileHover={{ y: -4 }}
+              className={`relative landing-card p-8 ${
+                plan.badge ? "landing-pricing-featured" : ""
               }`}
             >
               {plan.badge && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="bg-[#1f75fe] text-white text-xs font-manrope font-semibold px-4 py-1.5 rounded-full whitespace-nowrap">
+                  <span className="bg-[var(--primary)] text-white text-xs font-manrope font-semibold px-4 py-1.5 rounded-full whitespace-nowrap shadow-[var(--shadow-sm)]">
                     {plan.badge}
                   </span>
                 </div>
               )}
 
-              {/* Plan header */}
               <div className="flex items-center gap-3 mb-6">
                 <div
-                  className="w-12 h-12 rounded-2xl flex items-center justify-center"
+                  className="w-11 h-11 rounded-2xl flex items-center justify-center"
                   style={{ backgroundColor: plan.accent + "20" }}
                 >
-                  <plan.icon size={22} style={{ color: plan.accent }} />
+                  <plan.icon size={20} style={{ color: plan.accent }} />
                 </div>
                 <div>
-                  <h3 className="font-manrope font-bold text-[#0f172a] text-xl">{plan.name}</h3>
-                  <p className="font-manrope text-[#94a3b8] text-xs">{plan.subtitle}</p>
+                  <h3 className="font-manrope font-bold text-[var(--text)] text-xl tracking-tight">{plan.name}</h3>
+                  <p className="font-manrope text-[var(--text-subtle)] text-xs">{plan.subtitle}</p>
                 </div>
               </div>
 
-              {/* Price */}
-              <div className="mb-6 pb-6 border-b border-[#f1ede4]">
+              <div className="mb-6 pb-6 border-b border-[var(--surface-2)]">
                 <div className="flex items-baseline gap-1">
                   <span
-                    className="font-manrope font-extrabold text-4xl"
+                    className="font-manrope font-extrabold text-4xl tracking-tight"
                     style={{ color: plan.accent }}
                   >
                     {formatPrice(plan.price)}
                   </span>
                 </div>
-                <span className="font-manrope text-[#94a3b8] text-sm">/месяц</span>
+                <span className="font-manrope text-[var(--text-subtle)] text-sm">/месяц</span>
               </div>
 
-              {/* Features */}
               <ul className="space-y-3 mb-6">
                 {plan.features.map((f, j) => (
                   <li key={j} className="flex items-start gap-3">
@@ -178,17 +167,16 @@ export function PricingSection() {
                     >
                       <Check size={11} style={{ color: plan.accent }} strokeWidth={3} />
                     </div>
-                    <span className="font-manrope text-[#0f172a] text-sm">{f}</span>
+                    <span className="font-manrope text-[var(--text)] text-sm leading-snug">{f}</span>
                   </li>
                 ))}
               </ul>
 
-              {/* Limits */}
-              <div className="bg-[#faf8f4] rounded-2xl p-4 mb-6">
-                <div className="font-manrope font-semibold text-[#0f172a] text-xs mb-2">Лимиты:</div>
-                <ul className="space-y-1">
+              <div className="bg-[var(--bg)] rounded-2xl p-4 mb-6 border border-[var(--border)]">
+                <div className="font-manrope font-semibold text-[var(--text)] text-xs mb-2">Лимиты:</div>
+                <ul className="space-y-1.5">
                   {plan.limits.map((l, j) => (
-                    <li key={j} className="font-manrope text-[#64748b] text-xs flex items-center gap-1.5">
+                    <li key={j} className="font-manrope text-[var(--text-secondary)] text-xs flex items-center gap-1.5">
                       <span
                         className="w-1.5 h-1.5 rounded-full flex-shrink-0"
                         style={{ backgroundColor: plan.accent }}
@@ -199,10 +187,9 @@ export function PricingSection() {
                 </ul>
               </div>
 
-              {/* CTA */}
               <Link
                 href="/register"
-                className="block w-full text-center font-manrope font-semibold py-4 rounded-2xl transition-all hover:scale-105"
+                className="landing-btn block w-full text-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
                 style={
                   plan.badge
                     ? { backgroundColor: plan.accent, color: "#fff" }
@@ -215,13 +202,12 @@ export function PricingSection() {
           ))}
         </motion.div>
 
-        {/* Bottom note */}
         <motion.p
           {...fadeUp(0.2)}
-          className="text-center font-manrope text-[#94a3b8] text-sm mt-10"
+          className="text-center font-manrope text-[var(--text-subtle)] text-sm mt-10"
         >
           Нужен индивидуальный тариф для сети клиник?{" "}
-          <a href="#contact" className="text-[#1f75fe] hover:underline font-medium">
+          <a href="#contact" className="text-[var(--primary)] hover:underline font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] rounded">
             Свяжитесь с нами
           </a>
         </motion.p>
