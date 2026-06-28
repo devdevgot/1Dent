@@ -50,11 +50,9 @@ export class AuthService {
       throw new ConflictError("Этот email уже зарегистрирован");
     }
 
-    const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
     const clinic = await this.repo.createClinic({
       id: randomUUID(),
       name: data.clinicName,
-      trialEndsAt,
     });
 
     seedContractTemplatesForClinic(clinic.id).catch((err) => {
