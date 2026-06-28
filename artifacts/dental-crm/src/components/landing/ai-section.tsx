@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Sparkles, MessageSquare, Send, Bell } from "lucide-react";
 import { fadeUp, staggerParentVariants, EASE } from "@/lib/landing-animations";
+import { SITE } from "@/config/site";
 
 function ChatBubble({ text, from, delay }: { text: string; from: "user" | "ai"; delay: number }) {
   return (
@@ -14,8 +15,8 @@ function ChatBubble({ text, from, delay }: { text: string; from: "user" | "ai"; 
     >
       <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm font-manrope ${
         from === "ai"
-          ? "bg-[#1f75fe] text-white rounded-br-sm"
-          : "bg-white/10 text-white/80 rounded-bl-sm border border-white/20"
+          ? "bg-[var(--primary)] text-white rounded-br-sm"
+          : "bg-white/10 text-white/80 rounded-bl-sm border border-white/10"
       }`}>
         {text}
       </div>
@@ -61,33 +62,31 @@ const statsVariants = {
 
 export function AiSection() {
   return (
-    <section className="bg-[#0f172a] py-24 px-6 overflow-hidden relative">
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#1f75fe] rounded-full filter blur-[120px] opacity-10" />
-      <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-purple-500 rounded-full filter blur-[100px] opacity-[0.08]" />
+    <section className="bg-[var(--dark-bg)] landing-section-sm px-6 overflow-hidden relative">
+      <div className="absolute inset-0 pointer-events-none landing-dark-grid" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 rounded-full filter blur-[120px] opacity-100 pointer-events-none landing-dark-glow-blue" />
+      <div className="absolute bottom-0 right-1/4 w-80 h-80 rounded-full filter blur-[100px] opacity-100 pointer-events-none landing-dark-glow-purple" />
 
       <div className="max-w-7xl mx-auto relative z-10">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
-
-          {/* Left: text */}
           <div>
             <motion.div {...fadeUp(0)}>
-              <div className="inline-flex items-center gap-2 bg-[#1f75fe]/20 text-[#60a5fa] rounded-full px-4 py-2 text-sm font-manrope font-medium mb-8">
-                <Sparkles size={14} />
+              <div className="landing-badge landing-badge-dark font-manrope mb-8">
+                <Sparkles size={14} className="text-[var(--accent-blue-light)]" />
                 <span>Powered by DeepSeek V3</span>
               </div>
-              <h2 className="font-manrope font-extrabold text-white leading-[0.95] mb-6" style={{ fontSize: "clamp(36px, 5vw, 64px)" }}>
+              <h2 className="landing-h2 font-manrope text-white leading-[0.95] mb-6">
                 Искусственный
                 <br />
-                <span className="text-[#60a5fa]">интеллект</span>
+                <span className="landing-gradient-text-dark">интеллект</span>
                 <br />
                 внутри.
               </h2>
-              <p className="font-manrope text-white/60 text-lg leading-relaxed mb-10">
-                1Dent работает на ИИ. Чатбот отвечает пациентам, система напоминает, аналитика советует — пока вы занимаетесь лечением.
+              <p className="font-manrope text-[var(--dark-secondary)] text-lg leading-relaxed mb-10">
+                {SITE.name} работает на ИИ. Чатбот отвечает пациентам, система напоминает, аналитика советует — пока вы занимаетесь лечением.
               </p>
             </motion.div>
 
-            {/* AI features — correct stagger */}
             <motion.div
               variants={staggerParentVariants(0.12)}
               initial="hidden"
@@ -100,10 +99,10 @@ export function AiSection() {
                   key={i}
                   variants={featureItemVariants}
                   style={{ willChange: "transform, opacity" }}
-                  className="flex gap-4 items-start"
+                  className="flex gap-4 items-start group"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-[#1f75fe]/20 flex items-center justify-center flex-shrink-0">
-                    <f.icon size={18} className="text-[#60a5fa]" />
+                  <div className="w-10 h-10 rounded-xl bg-[var(--primary)]/20 flex items-center justify-center flex-shrink-0 group-hover:bg-[var(--primary)]/30 transition-colors">
+                    <f.icon size={18} className="text-[var(--accent-blue-light)]" />
                   </div>
                   <div>
                     <div className="font-manrope font-bold text-white text-base mb-1">{f.title}</div>
@@ -114,24 +113,21 @@ export function AiSection() {
             </motion.div>
           </div>
 
-          {/* Right: chat mockup */}
           <motion.div {...fadeUp(0.08, 20)}>
-            <div className="bg-white/5 border border-white/10 rounded-3xl p-6 backdrop-blur-sm">
-              {/* Header */}
-              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-white/10">
-                <div className="w-10 h-10 rounded-full bg-[#1f75fe] flex items-center justify-center">
+            <div className="landing-card-dark p-6">
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-[var(--dark-border)]">
+                <div className="w-10 h-10 rounded-full bg-[var(--primary)] flex items-center justify-center">
                   <Sparkles size={18} className="text-white" />
                 </div>
                 <div>
-                  <div className="font-manrope font-bold text-white text-sm">1Dent ИИ-Ассистент</div>
-                  <div className="font-manrope text-white/50 text-xs flex items-center gap-1">
+                  <div className="font-manrope font-bold text-white text-sm">{SITE.name} ИИ-Ассистент</div>
+                  <div className="font-manrope text-white/50 text-xs flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 bg-green-400 rounded-full inline-block" />
                     Онлайн 24/7
                   </div>
                 </div>
               </div>
 
-              {/* Chat bubbles */}
               <div className="space-y-3">
                 <ChatBubble from="user" text="Здравствуйте! Хочу записаться к ортодонту" delay={0.1} />
                 <ChatBubble from="ai" text="Добрый день! Конечно, помогу с записью. К какому врачу предпочитаете?" delay={0.2} />
@@ -141,17 +137,19 @@ export function AiSection() {
                 <ChatBubble from="ai" text="Записал! Завтра в 10:00. Накануне вечером придёт напоминание в WhatsApp." delay={0.6} />
               </div>
 
-              {/* Input */}
-              <div className="mt-6 flex gap-2 bg-white/5 rounded-2xl p-3 border border-white/10">
-                <input readOnly placeholder="Напишите сообщение..."
-                  className="flex-1 bg-transparent font-manrope text-white/40 text-sm outline-none placeholder:text-white/30" />
-                <button className="w-8 h-8 rounded-xl bg-[#1f75fe] flex items-center justify-center">
+              <div className="mt-6 flex gap-2 bg-white/5 rounded-2xl p-3 border border-[var(--dark-border)]">
+                <input
+                  readOnly
+                  placeholder="Напишите сообщение..."
+                  aria-label="Сообщение"
+                  className="flex-1 bg-transparent font-manrope text-white/40 text-sm outline-none placeholder:text-white/30"
+                />
+                <button type="button" aria-label="Отправить" className="w-8 h-8 rounded-xl bg-[var(--primary)] flex items-center justify-center hover:bg-[var(--primary-hover)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50">
                   <Send size={14} className="text-white" />
                 </button>
               </div>
             </div>
 
-            {/* Stats — stagger */}
             <motion.div
               variants={staggerParentVariants(0.1)}
               initial="hidden"
@@ -164,7 +162,7 @@ export function AiSection() {
                   key={s.label}
                   variants={statsVariants}
                   style={{ willChange: "transform, opacity" }}
-                  className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center"
+                  className="landing-card-dark p-4 text-center"
                 >
                   <div className="font-manrope font-bold text-white text-xl">{s.value}</div>
                   <div className="font-manrope text-white/40 text-xs mt-1">{s.label}</div>
