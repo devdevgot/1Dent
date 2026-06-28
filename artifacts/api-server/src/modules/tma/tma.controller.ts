@@ -36,6 +36,8 @@ import { requireTmaAdmin, invalidateAdminCache } from "./tma.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 import { seedProcedureTemplates } from "../../seeds/procedure-templates.seed";
 import { seedContractTemplatesForClinic } from "../../seeds/contract-templates.seed";
+import { errorEventsService } from "../error-events/error-events.service";
+import type { ErrorEventSeverity, ErrorEventSource } from "@workspace/db";
 
 const router = Router();
 router.use(requireTmaAdmin);
@@ -1838,6 +1840,49 @@ router.get("/messages", async (req: Request, res: Response, next: NextFunction) 
     const [total] = await db.select({ count: count() }).from(chatbotMessagesTable).where(where);
     const nextCursor = messages.length === 50 ? messages[messages.length - 1]?.createdAt?.toISOString() : null;
     res.json({ success: true, data: { messages, total: total?.count ?? 0, page, nextCursor } });
+  } catch (err) { next(err); }
+});
+
+// ── SYSTEM ERROR EVENTS ───────────────────────────────────────────────────────
+router.get("/errors", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const page = parseInt(String(req.query["page"] ?? "1"), 10);
+    const clinicId = req.query["clinicId"] as string | undefined;
+    const source = req.query["source"] as ErrorEventSource | undefined;
+    const severity = req.query["severity"] as ErrorEventSeverity | undefined;
+    const search = req.query["search"] as string | undefined;
+    const unresolvedOnly = req.query["unresolvedOnly"] === "true";
+    const dateFrom = req.query["dateFrom"] as string | undefined;
+    const dateTo = req.query["dateTo"] as string | undefined;
+
+    const result = await errorEventsService.list({
+      page,
+      clinicId,
+      source,
+      severity,
+      search,
+      unresolvedOnly,
+      dateFrom: dateFrom ? new Date(dateFrom) : undefined,
+      dateTo: dateTo ? new Date(dateTo) : undefined,
+    });
+
+    res.json({ success: true, data: result });
+  } catch (err) { next(err); }
+});
+
+router.get("/errors/:id", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const event = await errorEventsService.getById(req.params["id"] as string);
+    if (!event) return next(new NotFoundError("Error event not found"));
+    res.json({ success: true, data: { event } });
+  } catch (err) { next(err); }
+});
+
+router.patch("/errors/:id/resolve", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const event = await errorEventsService.resolve(req.params["id"] as string);
+    if (!event) return next(new NotFoundError("Error event not found"));
+    res.json({ success: true, data: { event } });
   } catch (err) { next(err); }
 });
 

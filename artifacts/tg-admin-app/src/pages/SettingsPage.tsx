@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { haptic, hapticNotify } from "../hooks/useTgBackButton";
 
@@ -54,11 +55,20 @@ function AdminRow({ admin, onRemove }: { admin: PlatformAdmin; onRemove: (id: st
 }
 
 export default function SettingsPage() {
+  const navigate = useNavigate();
   const [showAddForm, setShowAddForm] = useState(false);
   const [tgUserId, setTgUserId] = useState("");
   const [tgUsername, setTgUsername] = useState("");
   const [tgName, setTgName] = useState("");
   const qc = useQueryClient();
+
+  const { data: errorsSummary } = useQuery({
+    queryKey: ["tma-errors-summary"],
+    queryFn: () => api.get<{ success: boolean; data: { unresolvedTotal: number } }>("/errors?unresolvedOnly=true&page=1"),
+    staleTime: 15_000,
+    refetchInterval: 30_000,
+  });
+  const unresolvedErrors = errorsSummary?.data?.unresolvedTotal ?? 0;
 
   const { data, isLoading } = useQuery({
     queryKey: ["tma-settings"],
@@ -108,6 +118,24 @@ export default function SettingsPage() {
           <StatCard label="Пациентов" value={settings.stats.patients} />
         </div>
       )}
+
+      <button
+        type="button"
+        onClick={() => { haptic("light"); navigate("/errors"); }}
+        className={`w-full flex items-center justify-between gap-3 rounded-xl border p-4 text-left transition-colors ${
+          unresolvedErrors > 0 ? "border-red-500/30 bg-red-500/5" : "border-border bg-card"
+        }`}
+      >
+        <div>
+          <p className="text-sm font-semibold text-foreground">🚨 Ошибки системы</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {unresolvedErrors > 0 ? `${unresolvedErrors} нерешённых инцидентов` : "Активных ошибок нет"}
+          </p>
+        </div>
+        {unresolvedErrors > 0 && (
+          <span className="text-xs font-bold px-2 py-1 rounded-full bg-red-500/20 text-red-400">{unresolvedErrors}</span>
+        )}
+      </button>
 
       {/* Bot info */}
       <div className="space-y-2">

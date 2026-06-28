@@ -11,6 +11,7 @@ import ClinicPickerPage from "./pages/ClinicPickerPage";
 import ActivityPage from "./pages/ActivityPage";
 import PlanRequestsPage from "./pages/PlanRequestsPage";
 import LogsPage from "./pages/LogsPage";
+import ErrorsPage from "./pages/ErrorsPage";
 import SettingsPage from "./pages/SettingsPage";
 
 const queryClient = new QueryClient({
@@ -115,6 +116,7 @@ function Inner() {
             <Route path="/plan-requests" element={<PlanRequestsPage />} />
             <Route path="/activity" element={<ActivityPage />} />
             <Route path="/logs" element={<LogsPage />} />
+            <Route path="/errors" element={<ErrorsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </main>

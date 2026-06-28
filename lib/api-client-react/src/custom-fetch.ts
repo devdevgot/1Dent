@@ -410,6 +410,28 @@ export async function customFetch<T = unknown>(
       }, 0);
     }
 
+    if (
+      response.status >= 500 &&
+      !requestInfo.url.includes("/api/errors/report")
+    ) {
+      void fetch("/api/errors/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          source: "dental-crm",
+          message: apiError.message,
+          code: `HTTP_${response.status}`,
+          url: requestInfo.url,
+          metadata: {
+            method: requestInfo.method,
+            statusText: response.statusText,
+            data: errorData,
+          },
+        }),
+      }).catch(() => {});
+    }
+
     throw apiError;
   }
 
