@@ -4,6 +4,7 @@ import { db, errorEventsTable } from "@workspace/db";
 import type { ErrorEvent, ErrorEventSeverity, ErrorEventSource } from "@workspace/db";
 import { and, count, desc, eq, gte, ilike, isNull, lte, or, type SQL } from "drizzle-orm";
 import { logger } from "../../lib/logger";
+import { notifyAdminsIfCritical } from "./error-events.notify";
 
 const MAX_MESSAGE = 2_000;
 const MAX_STACK = 8_000;
@@ -79,7 +80,7 @@ export class ErrorEventsService {
     const fingerprint = buildFingerprint({ ...input, message, stack: stack ?? undefined });
 
     try {
-      await db.insert(errorEventsTable).values({
+      const [event] = await db.insert(errorEventsTable).values({
         id: randomUUID(),
         source: input.source,
         severity: input.severity ?? "error",
@@ -94,7 +95,13 @@ export class ErrorEventsService {
         userAgent: truncate(input.userAgent, 500),
         metadata: input.metadata ?? null,
         fingerprint,
-      });
+      }).returning();
+
+      if (event) {
+        void notifyAdminsIfCritical(event, input).catch((err) => {
+          logger.warn({ err, eventId: event.id }, "[error-events] Telegram alert failed");
+        });
+      }
     } catch (err) {
       logger.warn({ err, fingerprint }, "[error-events] failed to persist error event");
     }
