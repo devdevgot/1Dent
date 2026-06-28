@@ -29,6 +29,7 @@ import clinicBranchesRouter from "../modules/clinic-branches/clinic-branches.con
 import knowledgeRouter from "../modules/knowledge/knowledge.controller";
 import aiCreditsRouter from "../modules/ai-credits/ai-credits.controller";
 import errorEventsRouter from "../modules/error-events/error-events.controller";
+import { actionLogMiddleware } from "../middlewares/action-log.middleware";
 import { authRateLimit } from "../middlewares/rate-limit.middleware";
 import { authMiddleware, roleGuard } from "../middlewares/auth.middleware";
 import { planGateMiddleware } from "../middlewares/plan-gate.middleware";
