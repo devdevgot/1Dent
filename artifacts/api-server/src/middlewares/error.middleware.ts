@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { AppError, ConflictError } from "../shared/errors";
+import { errorEventsService } from "../modules/error-events/error-events.service";
 
 const GENERIC_ERROR_MESSAGE = "Произошла ошибка на сервере. Попробуйте позже.";
 
@@ -44,6 +45,9 @@ export function errorHandler(
   const mapped = mapDatabaseError(err);
   if (mapped) {
     req.log?.warn({ err, code: mapped.code }, mapped.message);
+    if (mapped.statusCode >= 500) {
+      errorEventsService.captureFromRequest(mapped, req, { code: mapped.code });
+    }
     res.status(mapped.statusCode).json({
       success: false,
       error: mapped.message,
@@ -54,6 +58,12 @@ export function errorHandler(
 
   if (err instanceof AppError) {
     req.log?.warn({ err, code: err.code }, err.message);
+    if (err.statusCode >= 500) {
+      errorEventsService.captureFromRequest(err, req, {
+        code: err.code,
+        severity: "error",
+      });
+    }
     res.status(err.statusCode).json({
       success: false,
       error: err.message,
@@ -63,6 +73,10 @@ export function errorHandler(
   }
 
   req.log?.error({ err }, "Unhandled error");
+  errorEventsService.captureFromRequest(err, req, {
+    code: "INTERNAL_ERROR",
+    severity: "error",
+  });
   res.status(500).json({
     success: false,
     error: GENERIC_ERROR_MESSAGE,

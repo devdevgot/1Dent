@@ -14,6 +14,7 @@ import { useAuthStore } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { installGlobalErrorHandlers } from "@/lib/report-error";
 
 // Pages
 import Login from "@/pages/login";
@@ -437,6 +438,8 @@ function Router() {
 }
 
 function App() {
+  useEffect(() => installGlobalErrorHandlers("dental-crm"), []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>

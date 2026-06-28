@@ -8,6 +8,7 @@ import { logger } from "./lib/logger";
 import { startAlertWorker } from "./shared/alert-queue";
 import { startDentalBroadcastScheduler } from "./modules/dental-broadcast/dental-broadcast.scheduler";
 import { startChatbotInactivityScheduler } from "./modules/chatbot/chatbot-inactivity.scheduler";
+import { errorEventsService } from "./modules/error-events/error-events.service";
 import { getServerBaseUrl } from "./shared/green-api";
 import { setDatabaseReady } from "./shared/db-ready";
 import { seedAllClinics } from "./seeds/procedure-templates.seed";
@@ -297,6 +298,28 @@ const server = app.listen(port, "0.0.0.0", () => {
   logger.info({ port }, "Server listening");
   onServerReady();
   void bootstrapDatabase();
+});
+
+process.on("unhandledRejection", (reason) => {
+  logger.error({ err: reason }, "Unhandled promise rejection");
+  errorEventsService.captureSafe({
+    source: "worker",
+    severity: "fatal",
+    message: reason instanceof Error ? reason.message : String(reason),
+    stack: reason instanceof Error ? reason.stack ?? null : null,
+    code: "UNHANDLED_REJECTION",
+  });
+});
+
+process.on("uncaughtException", (err) => {
+  logger.error({ err }, "Uncaught exception");
+  errorEventsService.captureSafe({
+    source: "worker",
+    severity: "fatal",
+    message: err.message,
+    stack: err.stack ?? null,
+    code: "UNCAUGHT_EXCEPTION",
+  });
 });
 
 server.on("error", (err) => {

@@ -253,6 +253,13 @@
       "when": 1781442600000,
       "tag": "0035_users_clinic_schema_sync",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1781529000000,
+      "tag": "0036_error_events",
+      "breakpoints": true
     }
   ]
 }
