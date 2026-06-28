@@ -12,4 +12,12 @@ export const SITE = {
     description:
       "1Dent — CRM для стоматологических клиник Казахстана. Пациенты, финансы, WhatsApp, ИИ-чатбот и аналитика в одной системе.",
   },
+  dashboardTitles: {
+    owner: "Дашборд — 1Dent",
+    admin: "Админ-панель — 1Dent",
+    doctor: "Кабинет врача — 1Dent",
+    accountant: "Бухгалтерия — 1Dent",
+    warehouse: "Склад — 1Dent",
+    default: "Дашборд — 1Dent",
+  },
 } as const;

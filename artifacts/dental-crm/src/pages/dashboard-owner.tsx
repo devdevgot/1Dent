@@ -24,7 +24,8 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { OnboardingWizard } from "@/components/dashboard/onboarding-wizard";
-import "@/styles/design-system.css";
+import { SITE } from "@/config/site";
+import "@/styles/dashboard.css";
 
 const PAYMENT_ICONS: Record<string, React.ElementType> = {
   kaspi_transfer: Send,
@@ -427,16 +428,18 @@ export default function OwnerDashboard() {
     return list.sort((a, b) => b.amount - a.amount);
   }, [allProcedures, patientSourceMap, channels, dateRange]);
 
+  useEffect(() => {
+    document.title = SITE.dashboardTitles.owner;
+  }, []);
 
   return (
-    <div className="min-h-full bg-[#faf8f4] font-manrope pb-8">
+    <div className="dashboard-page min-h-full pb-8">
 
-      {/* ─── White top strip: doctor leaderboard + date row ─── */}
-      <div className="bg-white border-b border-[#e8e3d9] shadow-sm">
+      <div className="dash-top-strip">
         {/* Doctor leaderboard */}
         {kpis.length > 0 && (
           <div className="px-4 pt-4 pb-2">
-            <p className="text-[11px] font-semibold text-[#94a3b8] uppercase tracking-wider mb-2">Рейтинг врачей</p>
+            <p className="dash-section-label mb-2">Рейтинг врачей</p>
             <div
               className="flex items-start gap-4 overflow-x-auto pb-2 pt-1"
               style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
@@ -516,7 +519,7 @@ export default function OwnerDashboard() {
 
       {/* ─── Setup Wizard Call-to-Action Card ─── */}
       {!isOnboardingCompleted && (
-        <div className="mx-4 mt-4 bg-white border border-[#e8e3d9] rounded-2xl p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="mx-4 mt-4 dash-card dash-card-padded-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <span className="inline-flex items-center gap-1.5 bg-[#fef3c7] text-[#d97706] rounded-full px-3 py-1 text-xs font-medium mb-2">
               <Layers className="w-3 h-3" />
@@ -529,7 +532,7 @@ export default function OwnerDashboard() {
           </div>
           <button
             onClick={() => setOnboardingOpen(true)}
-            className="w-full sm:w-auto px-6 py-3 bg-[#1f75fe] hover:bg-[#1a65e8] text-white rounded-full text-sm font-semibold shrink-0 transition-colors flex items-center justify-center gap-1.5"
+            className="dash-btn dash-btn-primary w-full sm:w-auto shrink-0"
           >
             Продолжить настройку
             <ChevronRight className="w-4 h-4" />
@@ -538,7 +541,7 @@ export default function OwnerDashboard() {
       )}
 
       {/* ─── Revenue Donut Card ─── */}
-      <div className="mx-4 mt-3 bg-white rounded-2xl shadow-sm border border-[#e8e3d9] overflow-hidden">
+      <div className="mx-4 mt-3 dash-card overflow-hidden">
 
         {/* Ring chart */}
         <div className="pt-4 pb-2 flex justify-center">
@@ -594,8 +597,8 @@ export default function OwnerDashboard() {
       </div>
 
       {/* ─── Quick Actions ─── */}
-      <div className="mx-4 mt-4 bg-white rounded-2xl border border-[#e8e3d9] shadow-sm p-4">
-        <p className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wide mb-3">
+      <div className="mx-4 mt-4 dash-card dash-card-padded-sm">
+        <p className="dash-section-label mb-3">
           {t("dashboard.quickActions")}
         </p>
         <div className="grid grid-cols-2 gap-2">
@@ -623,7 +626,7 @@ export default function OwnerDashboard() {
 
       {/* ─── Date Filter Sheet ─── */}
       <Sheet open={filterOpen} onOpenChange={(v) => { setFilterOpen(v); if (!v) setShowCustom(false); }}>
-        <SheetContent side="bottom" className="rounded-t-3xl px-0 pb-8 max-h-[85dvh] overflow-y-auto bg-[#faf8f4] border-t border-[#e8e3d9]">
+        <SheetContent side="bottom" className="dash-sheet rounded-t-3xl px-0 pb-8 max-h-[85dvh] overflow-y-auto">
           <AnimatePresence mode="wait" initial={false}>
             {!showCustom ? (
               <motion.div
@@ -791,7 +794,7 @@ export default function OwnerDashboard() {
 
       {/* ─── Detailed Analytics Sheet ─── */}
       <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <SheetContent side="bottom" className="rounded-t-3xl px-0 pb-8 max-h-[85dvh] overflow-y-auto bg-[#faf8f4] border-t border-[#e8e3d9]">
+        <SheetContent side="bottom" className="dash-sheet rounded-t-3xl px-0 pb-8 max-h-[85dvh] overflow-y-auto">
           <div className="flex items-center justify-between px-5 pt-4 pb-2">
             <div>
               <h2 className="text-base font-bold text-[#0f172a]">Детальная аналитика</h2>
