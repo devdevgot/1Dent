@@ -12,7 +12,6 @@ import {
   ArrowLeft,
   Phone,
   Megaphone,
-  BarChart3,
   CheckCircle2,
   AlertCircle,
   Loader2,
@@ -34,7 +33,6 @@ import type { ChatbotSettingsUpdate, DentalBroadcastRun } from "@workspace/api-c
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { KnowledgeAndScriptModal } from "@/components/chatbot/knowledge-tab";
 import { PlaygroundTab } from "@/components/chatbot/playground-tab";
-import { ChatbotAnalyticsTab } from "@/components/chatbot/analytics-tab";
 import { ChatbotCalendarAbSettings } from "@/components/chatbot/calendar-ab-settings";
 import type { ScriptMindMapData } from "@/components/chatbot/script-mindmap";
 import { useQueryClient } from "@tanstack/react-query";
@@ -477,7 +475,7 @@ function AiBroadcastTab() {
 export default function ChatbotPage() {
   const { t, i18n } = useTranslation();
   const lang = i18n.language || "ru";
-  const [tab, setTab] = useState<"sessions" | "settings" | "analytics" | "playground" | "ai-broadcast">("sessions");
+  const [tab, setTab] = useState<"sessions" | "settings" | "playground" | "ai-broadcast">("sessions");
   const [combinedOpen, setCombinedOpen] = useState(false);
   const [mindMapSaveStatus, setMindMapSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [confirmResetPhone, setConfirmResetPhone] = useState<string | null>(null);
@@ -575,7 +573,6 @@ export default function ChatbotPage() {
         <div className="flex gap-1 mt-3 overflow-x-auto pb-0.5">
           {([
             { key: "sessions", label: t("chatbot.tab.sessions"), icon: MessageSquare },
-            { key: "analytics", label: "Аналитика", icon: BarChart3 },
             { key: "settings", label: t("chatbot.tab.settings"), icon: Settings },
             { key: "playground", label: "Playground", icon: FlaskConical },
             { key: "ai-broadcast", label: "ИИ Рассылка", icon: Megaphone },
@@ -712,8 +709,6 @@ export default function ChatbotPage() {
 
           </div>
         )}
-
-        {tab === "analytics" && <ChatbotAnalyticsTab />}
 
         {tab === "playground" && <PlaygroundTab />}
         {tab === "ai-broadcast" && <AiBroadcastTab />}
