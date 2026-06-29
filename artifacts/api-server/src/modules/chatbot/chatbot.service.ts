@@ -1591,8 +1591,9 @@ export class ChatbotService {
           toState: "human_takeover",
         });
         await this.notifyHumanTakeover(clinicId, phone, data.patientName, session.data.handoffSummary);
-      } else noteAction("Оператор: уведомление администратору");
-      else noteAction("Оператор: уведомление администратору");
+      } else {
+        noteAction("Оператор: уведомление администратору");
+      }
       const takoverReply = "Соединяю вас с администратором. Пожалуйста, ожидайте — вам ответят в ближайшее время.";
       return finishTurn(session, takoverReply);
     }
