@@ -1927,10 +1927,9 @@ export class ChatbotService {
         // If we already have a suggested doctor, the patient is mid-booking — go to datetime selection.
         if (data.suggestedDoctorId) {
           let slotsText = "";
-          const slots = await getAvailableSlots(clinicId, data.suggestedDoctorId).catch(() => [] as Date[]);
-          if (slots.length > 0) {
-            slotsText = `\n\nБлижайшие свободные слоты:\n${formatSlots(slots)}\n\nИли укажите своё удобное время.`;
-          }
+          slotsText = data.suggestedDoctorId
+            ? await buildSlotsAppendix(clinicId, data.suggestedDoctorId, settings.calendarConfig)
+            : "";
           const aiAskTime = await generateChatbotResponse(
             up("collect_datetime", {
               backendContext: `Имя пациента: ${extractedName}. Врач: ${data.suggestedDoctorName ?? ""}.`,
@@ -2088,10 +2087,9 @@ export class ChatbotService {
               session.state = "collect_name";
             } else {
               let slotsText = "";
-              const slots = await getAvailableSlots(clinicId, data.suggestedDoctorId).catch(() => [] as Date[]);
-              if (slots.length > 0) {
-                slotsText = `\n\nБлижайшие свободные слоты:\n${formatSlots(slots)}\n\nИли укажите своё удобное время.`;
-              }
+              slotsText = data.suggestedDoctorId
+                ? await buildSlotsAppendix(clinicId, data.suggestedDoctorId, settings.calendarConfig)
+                : "";
               const aiReplyDt = await generateChatbotResponse(
                 up("collect_datetime", { backendContext: `Врач: ${data.suggestedDoctorName ?? ""}.` }),
                 recentMessages,
@@ -2296,10 +2294,9 @@ export class ChatbotService {
 
           let slotsText = "";
           if (data.suggestedDoctorId) {
-            const slots = await getAvailableSlots(clinicId, data.suggestedDoctorId).catch(() => [] as Date[]);
-            if (slots.length > 0) {
-              slotsText = `\n\nБлижайшие свободные слоты:\n${formatSlots(slots)}\n\nИли укажите своё удобное время.`;
-            }
+            slotsText = data.suggestedDoctorId
+              ? await buildSlotsAppendix(clinicId, data.suggestedDoctorId, settings.calendarConfig)
+              : "";
           }
           const dtBackend = `Филиал: ${data.selectedBranch ?? ""}. Врач: ${data.suggestedDoctorName ?? ""}.`;
           const aiDt = await generateChatbotResponse(
@@ -2410,10 +2407,9 @@ export class ChatbotService {
 
           let slotsText = "";
           if (data.suggestedDoctorId) {
-            const slots = await getAvailableSlots(clinicId, data.suggestedDoctorId).catch(() => [] as Date[]);
-            if (slots.length > 0) {
-              slotsText = `\n\nБлижайшие свободные слоты:\n${formatSlots(slots)}\n\nИли укажите своё удобное время.`;
-            }
+            slotsText = data.suggestedDoctorId
+              ? await buildSlotsAppendix(clinicId, data.suggestedDoctorId, settings.calendarConfig)
+              : "";
           }
           const aiDt = await generateChatbotResponse(
             up("collect_datetime", { backendContext: "Повторное предложение записи после возражений." }),
@@ -2628,10 +2624,7 @@ export class ChatbotService {
           // Show current doctor's available slots if we know the doctor
           let slotsText = "";
           if (data.suggestedDoctorId) {
-            const slots = await getAvailableSlots(clinicId, data.suggestedDoctorId).catch(() => [] as Date[]);
-            if (slots.length > 0) {
-              slotsText = `\n\nСвободные слоты:\n${formatSlots(slots)}\n\nИли укажите своё удобное время.`;
-            }
+            slotsText = await buildSlotsAppendix(clinicId, data.suggestedDoctorId, settings.calendarConfig);
           }
           const aiReschedule = await generateChatbotResponse(
             up("collect_datetime", { backendContext: "Пациент хочет перенести запись." }),
@@ -2873,10 +2866,9 @@ export class ChatbotService {
           // Ask for preferred time — collect_datetime will create the procedure
           let slotsText = "";
           if (data.suggestedDoctorId) {
-            const slots = await getAvailableSlots(clinicId, data.suggestedDoctorId).catch(() => [] as Date[]);
-            if (slots.length > 0) {
-              slotsText = `\n\nБлижайшие свободные слоты:\n${formatSlots(slots)}\n\nИли укажите своё удобное время.`;
-            }
+            slotsText = data.suggestedDoctorId
+              ? await buildSlotsAppendix(clinicId, data.suggestedDoctorId, settings.calendarConfig)
+              : "";
           }
           const aiReply3 = await generateChatbotResponse(
             up("collect_datetime", { backendContext: `Врач: ${data.suggestedDoctorName ?? ""}.` }),
@@ -2980,10 +2972,9 @@ export class ChatbotService {
           // If we have a doctor, show their slots
           let slotsText = "";
           if (data.suggestedDoctorId) {
-            const slots = await getAvailableSlots(clinicId, data.suggestedDoctorId).catch(() => [] as Date[]);
-            if (slots.length > 0) {
-              slotsText = `\n\nСвободные слоты к врачу *${data.suggestedDoctorName ?? ""}*:\n${formatSlots(slots)}\n\nИли укажите другое удобное время.`;
-            }
+            slotsText = data.suggestedDoctorId
+              ? await buildSlotsAppendix(clinicId, data.suggestedDoctorId, settings.calendarConfig)
+              : "";
           }
           const aiReply = await generateChatbotResponse(
             up("collect_datetime"),
@@ -3052,11 +3043,29 @@ export class ChatbotService {
       initGreeting?: boolean;
     },
   ): Promise<SimulateMessageResult> {
-    await aiCreditsService.consumeCredits({
-      clinicId,
-      userId: opts?.userId,
-      feature: "chatbot_test",
-    });
+    try {
+      await aiCreditsService.consumeCredits({
+        clinicId,
+        userId: opts?.userId,
+        feature: "chatbot_test",
+      });
+    } catch (err) {
+      if (err instanceof InsufficientAiCreditsError) {
+        const exhaustedReply =
+          "AI-кредиты закончились. Докупите кредиты в разделе «ИИ кредиты», чтобы тестировать чат-бот в Playground.";
+        return {
+          reply: exhaustedReply,
+          parts: [exhaustedReply],
+          pausesMs: [0],
+          fsmState: opts?.session?.state ?? "greeting",
+          humanTakeover: false,
+          sessionData: opts?.session?.data ?? {},
+          mindMapNode: null,
+          simulatedActions: [],
+        };
+      }
+      throw err;
+    }
 
     const settings = getEffectiveSettings(await getSettings(clinicId));
     const turn = await this.executeTurn(clinicId, PLAYGROUND_SIM_PHONE, userMessage, {

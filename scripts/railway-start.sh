@@ -34,4 +34,7 @@ EOF
   exit 1
 fi
 
+echo "[railway-start] Applying database migrations..."
+pnpm --filter @workspace/db run migrate
+
 exec pnpm --filter @workspace/api-server run start
