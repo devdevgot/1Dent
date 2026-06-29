@@ -58,3 +58,19 @@ export class InsufficientAiCreditsError extends AppError {
     super(message, 402, "AI_CREDITS_EXHAUSTED");
   }
 }
+
+export class OpenRouterNotConfiguredError extends AppError {
+  constructor(
+    message = "AI-чатбот недоступен: не настроен OPENROUTER_API_KEY. Добавьте ключ OpenRouter в переменные окружения сервера.",
+  ) {
+    super(message, 503, "OPENROUTER_NOT_CONFIGURED");
+  }
+}
+
+export class OpenRouterAiFailedError extends AppError {
+  constructor(
+    message = "AI не смог сгенерировать ответ. Проверьте баланс OpenRouter и настройки модели.",
+  ) {
+    super(message, 502, "OPENROUTER_AI_FAILED");
+  }
+}

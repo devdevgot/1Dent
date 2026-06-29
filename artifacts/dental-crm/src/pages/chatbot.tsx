@@ -49,6 +49,7 @@ import {
   type PlaygroundFsmState,
 } from "@/lib/chatbot-fsm-states";
 import { schedulePlaygroundBotParts } from "@/lib/chatbot-playground-parts";
+import { getApiErrorMessage } from "@/lib/api-error-message";
 
 
 const STATE_LABELS: Record<string, string> = {
@@ -337,7 +338,14 @@ function PlaygroundTab() {
             () => setIsReceivingParts(false),
           );
         },
-        onError: () => setMessages((prev) => [...prev, { role: "bot", text: "Ошибка. Попробуйте ещё раз." }]),
+        onError: (err) =>
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "bot",
+              text: getApiErrorMessage(err as { data?: unknown; message?: string }, "Ошибка. Попробуйте ещё раз."),
+            },
+          ]),
       },
     );
   };

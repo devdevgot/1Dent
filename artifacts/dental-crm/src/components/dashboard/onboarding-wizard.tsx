@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { customFetch, useTestChatbotMessage } from "@workspace/api-client-react";
 import { schedulePlaygroundBotParts } from "@/lib/chatbot-playground-parts";
+import { getApiErrorMessage } from "@/lib/api-error-message";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -278,9 +279,18 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
           () => {},
         );
       },
-      onError: () => {
-        setPlaygroundMessages(prev => [...prev, { role: "bot", text: "Ошибка связи с ассистентом." }]);
-      }
+      onError: (err) => {
+        setPlaygroundMessages((prev) => [
+          ...prev,
+          {
+            role: "bot",
+            text: getApiErrorMessage(
+              err as { data?: unknown; message?: string },
+              "Ошибка связи с ассистентом.",
+            ),
+          },
+        ]);
+      },
     });
   };
 

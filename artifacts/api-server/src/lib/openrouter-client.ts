@@ -1,20 +1,75 @@
 import OpenAI from "openai";
+import type { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat/completions";
+import { OpenRouterNotConfiguredError } from "../shared/errors/index";
 import { logger } from "./logger";
 
 const baseURL = "https://openrouter.ai/api/v1";
 
 let _client: OpenAI | null = null;
 
+function getReferer(): string {
+  return (
+    process.env["PUBLIC_URL"] ??
+    process.env["FRONTEND_URL"] ??
+    process.env["WEBHOOK_BASE_URL"] ??
+    "https://1dent.kz"
+  );
+}
+
+export function isOpenRouterConfigured(): boolean {
+  return Boolean(process.env["OPENROUTER_API_KEY"]?.trim());
+}
+
+export function assertOpenRouterConfigured(): void {
+  if (!isOpenRouterConfigured()) {
+    throw new OpenRouterNotConfiguredError();
+  }
+}
+
 function getClient(): OpenAI {
   if (_client) return _client;
-  const apiKey = process.env["OPENROUTER_API_KEY"];
+  const apiKey = process.env["OPENROUTER_API_KEY"]?.trim();
   if (!apiKey) {
-    throw new Error(
-      "[OpenRouter] OPENROUTER_API_KEY is not set. AI features are disabled until the key is configured.",
-    );
+    throw new OpenRouterNotConfiguredError();
   }
-  _client = new OpenAI({ apiKey, baseURL });
+  _client = new OpenAI({
+    apiKey,
+    baseURL,
+    defaultHeaders: {
+      "HTTP-Referer": getReferer(),
+      "X-Title": "1Dent",
+    },
+  });
   return _client;
+}
+
+/** Gemini / thinking models can spend the whole max_tokens budget on reasoning and return empty content. */
+function shouldDisableReasoning(model: string): boolean {
+  const id = model.toLowerCase();
+  return id.includes("gemini") || id.includes("/o1") || id.includes("/o3") || id.includes("thinking");
+}
+
+type OpenRouterChatParams = ChatCompletionCreateParamsNonStreaming & {
+  reasoning?: { effort?: string; max_tokens?: number; exclude?: boolean; enabled?: boolean };
+};
+
+export async function createChatCompletion(
+  params: ChatCompletionCreateParamsNonStreaming,
+  opts?: { timeoutMs?: number; label?: string; disableReasoning?: boolean },
+): Promise<OpenAI.Chat.ChatCompletion> {
+  const client = getClient();
+  const disableReasoning = opts?.disableReasoning ?? shouldDisableReasoning(params.model);
+  const body: OpenRouterChatParams = {
+    ...params,
+    ...(disableReasoning ? { reasoning: { effort: "none" } } : {}),
+  };
+
+  const promise = client.chat.completions.create(body as ChatCompletionCreateParamsNonStreaming);
+  return withTimeout(
+    promise,
+    opts?.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+    opts?.label ?? "openrouter",
+  );
 }
 
 /** Lazy OpenAI client — server can start without OPENROUTER_API_KEY; AI routes fail at call time. */

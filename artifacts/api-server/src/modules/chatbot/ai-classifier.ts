@@ -1,5 +1,5 @@
 import {
-  openrouter,
+  createChatCompletion,
   FAST_MODEL,
   CHAT_MODEL,
   withTimeout,
@@ -111,16 +111,15 @@ async function classifyWithRetry(
   ];
 
   try {
-    const response = await withTimeout(
-      openrouter.chat.completions.create({
+    const response = await createChatCompletion(
+      {
         model: FAST_MODEL,
         max_tokens: 512,
         temperature: 0.1,
         messages,
         response_format: { type: "json_object" },
-      }),
-      15_000,
-      "classifyPatientRequest",
+      },
+      { timeoutMs: 15_000, label: "classifyPatientRequest" },
     );
 
     const raw = response.choices[0]?.message?.content ?? "{}";
@@ -251,16 +250,15 @@ export async function generateChatbotResponse(
   ];
 
   try {
-    const response = await withTimeout(
-      openrouter.chat.completions.create({
+    const response = await createChatCompletion(
+      {
         model: CHAT_MODEL,
-        max_tokens: 700,
+        max_tokens: 1200,
         temperature: 0.65,
         response_format: { type: "json_object" },
         messages,
-      }),
-      20_000,
-      "generateChatbotResponse",
+      },
+      { timeoutMs: 25_000, label: "generateChatbotResponse" },
     );
     const content = response.choices[0]?.message?.content ?? "";
     const parsed = parseChatbotReplyJson(content);
@@ -299,8 +297,8 @@ export async function extractDatetimeFromText(text: string): Promise<Date | null
 Отвечай ТОЛЬКО валидным JSON без markdown-обёрток.`;
 
   try {
-    const response = await withTimeout(
-      openrouter.chat.completions.create({
+    const response = await createChatCompletion(
+      {
         model: FAST_MODEL,
         max_tokens: 80,
         temperature: 0.1,
@@ -309,9 +307,8 @@ export async function extractDatetimeFromText(text: string): Promise<Date | null
           { role: "user", content: text },
         ],
         response_format: { type: "json_object" },
-      }),
-      12_000,
-      "extractDatetimeFromText",
+      },
+      { timeoutMs: 12_000, label: "extractDatetimeFromText" },
     );
 
     const raw = response.choices[0]?.message?.content ?? "{}";
@@ -344,8 +341,8 @@ ${knowledgeContext}
 Отвечай ТОЛЬКО валидным JSON без markdown-обёрток.`;
 
   try {
-    const response = await withTimeout(
-      openrouter.chat.completions.create({
+    const response = await createChatCompletion(
+      {
         model: FAST_MODEL,
         max_tokens: 100,
         temperature: 0.1,
@@ -354,9 +351,8 @@ ${knowledgeContext}
           { role: "user", content: text },
         ],
         response_format: { type: "json_object" },
-      }),
-      12_000,
-      "extractBranchFromText",
+      },
+      { timeoutMs: 12_000, label: "extractBranchFromText" },
     );
 
     const raw = response.choices[0]?.message?.content ?? "{}";

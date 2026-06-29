@@ -59,9 +59,9 @@ import { deliverChatbotReply } from "./chatbot-reply";
 import type { ChatbotState, ChatbotSessionData } from "./chatbot.types";
 import type { ChatbotSettings } from "@workspace/db";
 import { STANDARD_SCRIPT_BLOCKS, type ScriptBlock } from "./script-templates";
-import { openrouter, FAST_MODEL, withTimeout, parseLlmJson } from "../../lib/openrouter-client";
+import { createChatCompletion, FAST_MODEL, parseLlmJson, assertOpenRouterConfigured } from "../../lib/openrouter-client";
 import { aiCreditsService } from "../../shared/ai-credits";
-import { InsufficientAiCreditsError } from "../../shared/errors/index";
+import { InsufficientAiCreditsError, OpenRouterAiFailedError } from "../../shared/errors/index";
 import {
   renderMindMapScript,
   buildActiveMindMapContext,
@@ -1082,8 +1082,8 @@ async function isComplaintReply(text: string): Promise<boolean> {
 }`;
 
   try {
-    const response = await withTimeout(
-      openrouter.chat.completions.create({
+    const response = await createChatCompletion(
+      {
         model: FAST_MODEL,
         max_tokens: 100,
         temperature: 0.1,
@@ -1092,9 +1092,8 @@ async function isComplaintReply(text: string): Promise<boolean> {
           { role: "system", content: systemPrompt },
           { role: "user", content: text },
         ],
-      }),
-      10000,
-      "isComplaintReply",
+      },
+      { timeoutMs: 10_000, label: "isComplaintReply" },
     );
     const content = response.choices[0]?.message?.content ?? "{}";
     const parsed = parseLlmJson<{ hasComplaint?: boolean }>(content);
@@ -1126,8 +1125,8 @@ async function isPositiveRepeatSaleReply(text: string): Promise<boolean> {
 }`;
 
   try {
-    const response = await withTimeout(
-      openrouter.chat.completions.create({
+    const response = await createChatCompletion(
+      {
         model: FAST_MODEL,
         max_tokens: 100,
         temperature: 0.1,
@@ -1136,9 +1135,8 @@ async function isPositiveRepeatSaleReply(text: string): Promise<boolean> {
           { role: "system", content: systemPrompt },
           { role: "user", content: text },
         ],
-      }),
-      10000,
-      "isPositiveRepeatSaleReply",
+      },
+      { timeoutMs: 10_000, label: "isPositiveRepeatSaleReply" },
     );
     const content = response.choices[0]?.message?.content ?? "{}";
     const parsed = parseLlmJson<{ agreed?: boolean }>(content);
@@ -2444,8 +2442,8 @@ export class ChatbotService {
 Верни ТОЛЬКО валидный JSON-массив без пояснений, кода и markdown.`;
 
     try {
-      const response = await withTimeout(
-        openrouter.chat.completions.create({
+      const response = await createChatCompletion(
+        {
           model: FAST_MODEL,
           max_tokens: 6000,
           temperature: 0.1,
@@ -2453,9 +2451,8 @@ export class ChatbotService {
             { role: "system", content: systemPrompt },
             { role: "user", content: `Разбей этот скрипт на блоки:\n\n${rawText}` },
           ],
-        }),
-        30_000,
-        "parseScriptWithAI",
+        },
+        { timeoutMs: 30_000, label: "parseScriptWithAI" },
       );
 
       const content = response.choices[0]?.message?.content ?? "[]";
@@ -2559,6 +2556,8 @@ export class ChatbotService {
     userId?: string | null,
     opts?: { fsmState?: ChatbotState },
   ) {
+    assertOpenRouterConfigured();
+
     await aiCreditsService.consumeCredits({
       clinicId,
       userId,
@@ -2586,18 +2585,30 @@ export class ChatbotService {
       ? { id: activeNode.id, label: activeNode.label, fsmState: activeNode.fsmState ?? fsmState }
       : null;
 
+    const ensureAiReply = async (
+      systemPrompt: string,
+      chatHistory: ChatMessage[],
+      prompt: string,
+      fallback: string,
+    ) => {
+      const aiReply = await generateChatbotResponse(systemPrompt, chatHistory, prompt, managerExamples);
+      if (!aiReply?.parts?.length) {
+        throw new OpenRouterAiFailedError();
+      }
+      return mergeReply(aiReply, fallback);
+    };
+
     // Auto-start: empty message + empty history → generate greeting with AI using knowledge context
     if (!userMessage && history.length === 0) {
       const systemPrompt = buildPlaygroundPrompt(
         settings, doctorsWithSlots, clinicName, knowledgeContext, priceListContext, playgroundOpts,
       );
-      const aiReply = await generateChatbotResponse(
+      const resolved = await ensureAiReply(
         systemPrompt,
         [],
         "Начни диалог — отправь приветственное сообщение как если бы пациент только что написал в первый раз.",
-        managerExamples,
+        "Здравствуйте! Чем могу помочь?",
       );
-      const resolved = mergeReply(aiReply, "Здравствуйте! Чем могу помочь?");
       return {
         reply: joinChatbotReply(resolved),
         parts: resolved.parts,
@@ -2611,8 +2622,7 @@ export class ChatbotService {
       settings, doctorsWithSlots, clinicName, knowledgeContext, priceListContext, playgroundOpts,
     );
     const chatHistory = history.map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
-    const aiReply = await generateChatbotResponse(systemPrompt, chatHistory, userMessage, managerExamples);
-    const resolved = mergeReply(aiReply, "AI не ответил. Проверьте API-ключ.");
+    const resolved = await ensureAiReply(systemPrompt, chatHistory, userMessage, "AI не ответил. Проверьте API-ключ.");
     return {
       reply: joinChatbotReply(resolved),
       parts: resolved.parts,
