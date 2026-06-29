@@ -17,7 +17,6 @@ import {
   AlertCircle,
   Loader2,
   FlaskConical,
-  MessageCircle,
   BookOpen,
 } from "lucide-react";
 import {
@@ -35,7 +34,6 @@ import type { ChatbotSettingsUpdate, DentalBroadcastRun } from "@workspace/api-c
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { KnowledgeAndScriptModal } from "@/components/chatbot/knowledge-tab";
 import { PlaygroundTab } from "@/components/chatbot/playground-tab";
-import { ManagerExamplesTab } from "@/components/chatbot/manager-examples-tab";
 import { ChatbotAnalyticsTab } from "@/components/chatbot/analytics-tab";
 import { ChatbotCalendarAbSettings } from "@/components/chatbot/calendar-ab-settings";
 import type { ScriptMindMapData } from "@/components/chatbot/script-mindmap";
@@ -479,7 +477,7 @@ function AiBroadcastTab() {
 export default function ChatbotPage() {
   const { t, i18n } = useTranslation();
   const lang = i18n.language || "ru";
-  const [tab, setTab] = useState<"sessions" | "settings" | "analytics" | "playground" | "manager-style" | "ai-broadcast">("sessions");
+  const [tab, setTab] = useState<"sessions" | "settings" | "analytics" | "playground" | "ai-broadcast">("sessions");
   const [combinedOpen, setCombinedOpen] = useState(false);
   const [mindMapSaveStatus, setMindMapSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [confirmResetPhone, setConfirmResetPhone] = useState<string | null>(null);
@@ -580,7 +578,6 @@ export default function ChatbotPage() {
             { key: "analytics", label: "Аналитика", icon: BarChart3 },
             { key: "settings", label: t("chatbot.tab.settings"), icon: Settings },
             { key: "playground", label: "Playground", icon: FlaskConical },
-            { key: "manager-style", label: "Стиль", icon: MessageCircle },
             { key: "ai-broadcast", label: "ИИ Рассылка", icon: Megaphone },
           ] as const).map(({ key, label, icon: Icon }) => (
             <button
@@ -719,7 +716,6 @@ export default function ChatbotPage() {
         {tab === "analytics" && <ChatbotAnalyticsTab />}
 
         {tab === "playground" && <PlaygroundTab />}
-        {tab === "manager-style" && <ManagerExamplesTab />}
         {tab === "ai-broadcast" && <AiBroadcastTab />}
       </div>
 
