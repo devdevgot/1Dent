@@ -112,6 +112,10 @@ export class MessagesService {
       isRedAlert: alertFlag,
     });
 
+    this.chatbot.pauseBotForStaffMessage(clinicId, patient.phone).catch((err) =>
+      logger.warn({ err, phone: patient.phone }, "Failed to pause chatbot after staff message"),
+    );
+
     if (alertFlag) {
       const queue = getAlertQueue();
       if (queue) {

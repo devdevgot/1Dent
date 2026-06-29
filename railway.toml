@@ -6,7 +6,8 @@ builder = "RAILPACK"
 buildCommand = "bash ./scripts/deploy-build.sh"
 
 [deploy]
-startCommand = "pnpm --filter @workspace/api-server run start"
+# Normalizes DATABASE_URL and prints Railway setup hints if Postgres is not linked.
+startCommand = "bash ./scripts/railway-start.sh"
 healthcheckPath = "/api/healthz"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"

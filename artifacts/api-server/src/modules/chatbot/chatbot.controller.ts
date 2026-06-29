@@ -3,7 +3,7 @@ import { z } from "zod";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError } from "../../shared/errors";
 import { ChatbotService } from "./chatbot.service";
-import type { ChatbotState } from "./chatbot.types";
+import type { ChatbotSessionData, ChatbotState } from "./chatbot.types";
 import { STANDARD_SCRIPT_BLOCKS } from "./script-templates";
 
 const router: IRouter = Router();
@@ -46,6 +46,35 @@ const mindMapEdgeSchema = z.object({
   label: z.string().max(200).optional(),
 });
 
+const dayScheduleSchema = z.object({
+  day: z.number().int().min(0).max(6),
+  enabled: z.boolean(),
+  startHour: z.number().int().min(0).max(23),
+  startMinute: z.number().int().min(0).max(59),
+  endHour: z.number().int().min(0).max(23),
+  endMinute: z.number().int().min(0).max(59),
+});
+
+const calendarConfigSchema = z.object({
+  slotDurationMinutes: z.number().int().min(15).max(120).optional(),
+  bufferMinutes: z.number().int().min(0).max(60).optional(),
+  defaultAppointmentMinutes: z.number().int().min(15).max(180).optional(),
+  weeklySchedule: z.array(dayScheduleSchema).optional(),
+});
+
+const scriptVariantSchema = z.object({
+  id: z.string(),
+  name: z.string().max(100),
+  weight: z.number().int().min(0).max(100),
+  scriptBlocks: z.array(scriptBlockSchema).optional(),
+  scriptMindMap: z.object({
+    nodes: z.array(mindMapNodeSchema),
+    edges: z.array(mindMapEdgeSchema),
+  }).optional(),
+  stepInstructions: stepInstructionsSchema.optional(),
+  greetingTemplate: z.string().max(500).optional(),
+});
+
 const settingsUpdateSchema = z.object({
   enabled: z.boolean().optional(),
   greetingTemplate: z.string().min(1).max(500).optional(),
@@ -58,6 +87,9 @@ const settingsUpdateSchema = z.object({
     nodes: z.array(mindMapNodeSchema),
     edges: z.array(mindMapEdgeSchema),
   }).optional(),
+  calendarConfig: calendarConfigSchema.optional(),
+  abTestEnabled: z.boolean().optional(),
+  scriptVariants: z.array(scriptVariantSchema).optional(),
 });
 
 const parseScriptSchema = z.object({
@@ -80,6 +112,21 @@ const testMessageSchema = z.object({
     .max(50)
     .optional(),
   fsmState: z.string().max(50).optional(),
+  initGreeting: z.boolean().optional(),
+  scenario: z.enum([
+    "new_patient",
+    "returning_no_appt",
+    "returning_with_appt",
+    "wants_existing_appt",
+    "post_op_monitoring",
+    "repeat_sale",
+    "reactivation",
+  ]).optional(),
+  session: z.object({
+    state: z.string().max(50),
+    data: z.record(z.unknown()).optional(),
+    humanTakeover: z.boolean().optional(),
+  }).optional(),
 });
 
 // ─── Settings ────────────────────────────────────────────────────────────────
@@ -138,6 +185,38 @@ router.delete(
     const phone = String(req.params["phone"]);
     await service.clearSession(req.user!.clinicId, phone).catch(next);
     res.json({ success: true });
+  },
+);
+
+const takeoverSchema = z.object({
+  takeover: z.boolean(),
+});
+
+router.patch(
+  "/sessions/:phone/takeover",
+  roleGuard("owner", "admin"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const phone = String(req.params["phone"]);
+    const parsed = takeoverSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+    }
+    const session = await service
+      .setSessionTakeover(req.user!.clinicId, phone, parsed.data.takeover)
+      .catch(next);
+    if (!session) return;
+    res.json({ success: true, data: { session } });
+  },
+);
+
+router.get(
+  "/analytics/funnel",
+  roleGuard("owner", "admin"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const days = Math.min(90, Math.max(1, parseInt(String(req.query["days"] ?? "30"), 10) || 30));
+    const analytics = await service.getFunnelAnalytics(req.user!.clinicId, days).catch(next);
+    if (!analytics) return;
+    res.json({ success: true, data: { analytics } });
   },
 );
 
@@ -259,7 +338,18 @@ router.post(
         parsed.data.userMessage,
         parsed.data.history,
         req.user!.id,
-        parsed.data.fsmState ? { fsmState: parsed.data.fsmState as ChatbotState } : undefined,
+        {
+          fsmState: parsed.data.fsmState ? (parsed.data.fsmState as ChatbotState) : undefined,
+          session: parsed.data.session
+            ? {
+                state: parsed.data.session.state as ChatbotState,
+                data: (parsed.data.session.data ?? {}) as ChatbotSessionData,
+                humanTakeover: parsed.data.session.humanTakeover,
+              }
+            : undefined,
+          scenario: parsed.data.scenario,
+          initGreeting: parsed.data.initGreeting,
+        },
       )
       .catch(next);
     if (!result) return;

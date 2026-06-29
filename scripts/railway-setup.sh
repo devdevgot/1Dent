@@ -65,14 +65,30 @@ railway variable set \
   PUBLIC_URL=https://1dent.kz \
   --service "$SERVICE_NAME"
 
-# Reference Postgres plugin URL (service name may differ — check with: railway variable list)
-railway variable set \
-  'DATABASE_URL=${{Postgres.DATABASE_URL}}' \
-  --service "$SERVICE_NAME" 2>/dev/null || \
+link_postgres_url() {
+  local postgres_service="$1"
   railway variable set \
-  'DATABASE_URL=${{postgres.DATABASE_URL}}' \
-  --service "$SERVICE_NAME" 2>/dev/null || \
-  echo "   ⚠ Set DATABASE_URL manually: railway variable set DATABASE_URL='\${{Postgres.DATABASE_URL}}'"
+    "DATABASE_URL=\${{${postgres_service}.DATABASE_URL}}" \
+    --service "$SERVICE_NAME" 2>/dev/null
+}
+
+echo ""
+echo "→ Linking Postgres DATABASE_URL to ${SERVICE_NAME}"
+LINKED=0
+for candidate in Postgres postgres PostgreSQL postgresql; do
+  if link_postgres_url "$candidate"; then
+    echo "   ✓ DATABASE_URL=\${{${candidate}.DATABASE_URL}}"
+    LINKED=1
+    break
+  fi
+done
+
+if [[ "$LINKED" -eq 0 ]]; then
+  echo "   ⚠ Could not auto-link Postgres. In Railway Dashboard:"
+  echo "     ${SERVICE_NAME} → Variables → Reference → <Postgres service> → DATABASE_URL"
+  echo "   Or run (replace <db-service> with the actual name from railway status):"
+  echo "     railway variable set 'DATABASE_URL=\${{<db-service>.DATABASE_URL}}' --service ${SERVICE_NAME}"
+fi
 
 echo ""
 echo "→ Generating Railway public domain (for webhooks until 1dent.kz is attached)"

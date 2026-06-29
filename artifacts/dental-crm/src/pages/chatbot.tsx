@@ -11,19 +11,13 @@ import {
   ChevronRight,
   ArrowLeft,
   Phone,
-  Send,
-  X,
   Megaphone,
+  BarChart3,
   CheckCircle2,
   AlertCircle,
   Loader2,
   FlaskConical,
-  Hand,
-  Search,
   MessageCircle,
-  Calendar,
-  Bell,
-  Heart,
   BookOpen,
 } from "lucide-react";
 import {
@@ -32,7 +26,7 @@ import {
   useListChatbotSessions,
   useDeleteChatbotSession,
   useGetChatbotSessionMessages,
-  useTestChatbotMessage,
+  usePatchChatbotSessionTakeover,
   useListDentalBroadcastRuns,
   useTriggerDentalBroadcast,
   listDentalBroadcastRunsQueryKey,
@@ -40,26 +34,15 @@ import {
 import type { ChatbotSettingsUpdate, DentalBroadcastRun } from "@workspace/api-client-react";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { KnowledgeAndScriptModal } from "@/components/chatbot/knowledge-tab";
+import { PlaygroundTab } from "@/components/chatbot/playground-tab";
+import { ManagerExamplesTab } from "@/components/chatbot/manager-examples-tab";
+import { ChatbotAnalyticsTab } from "@/components/chatbot/analytics-tab";
+import { ChatbotCalendarAbSettings } from "@/components/chatbot/calendar-ab-settings";
 import type { ScriptMindMapData } from "@/components/chatbot/script-mindmap";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import {
-  FSM_STATE_LABELS,
-  nextPlaygroundFsmState,
-  type PlaygroundFsmState,
-} from "@/lib/chatbot-fsm-states";
-import { schedulePlaygroundBotParts } from "@/lib/chatbot-playground-parts";
+import { FSM_STATE_LABELS } from "@/lib/chatbot-fsm-states";
 
-
-const STATE_LABELS: Record<string, string> = {
-  greeting: "Приветствие",
-  collect_name: "Сбор имени",
-  collect_problem: "Сбор проблемы",
-  suggest_doctor: "Предложение врача",
-  confirm_appointment: "Подтверждение",
-  done: "Завершено",
-  human_takeover: "Оператор",
-};
 
 const STATE_COLORS: Record<string, string> = {
   greeting: "bg-blue-50 text-blue-700 border-blue-100",
@@ -192,10 +175,21 @@ function getSessionSummary(data: any, t: any): string {
 
 function SessionChat({ phone, onBack }: { phone: string; onBack: () => void }) {
   const { data, isLoading, refetch } = useGetChatbotSessionMessages(phone);
+  const { data: sessionsData, refetch: refetchSessions } = useListChatbotSessions();
+  const takeoverMutation = usePatchChatbotSessionTakeover();
   const messages = data?.data?.messages ?? [];
+  const session = sessionsData?.data?.sessions?.find((s) => s.phone === phone);
+  const humanTakeover = session?.humanTakeover ?? false;
   const { t, i18n } = useTranslation();
   const lang = i18n.language || "ru";
   let lastDate = "";
+
+  const toggleTakeover = () => {
+    takeoverMutation.mutate(
+      { phone, takeover: !humanTakeover },
+      { onSuccess: () => refetchSessions() },
+    );
+  };
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -213,8 +207,21 @@ function SessionChat({ phone, onBack }: { phone: string; onBack: () => void }) {
           <p className="text-sm font-semibold text-foreground truncate">{phone}</p>
           <p className="text-xs text-muted-foreground">
             {t("chatbot.title", "AI-чатбот")} · {t("chatbot.messagesCount", "{{count}} сообщений").replace("{{count}}", String(messages.length))}
+            {humanTakeover && ` · ${t("chatbot.operatorMode", "Оператор")}`}
           </p>
         </div>
+        <button
+          onClick={toggleTakeover}
+          disabled={takeoverMutation.isPending}
+          className={cn(
+            "text-[11px] font-medium px-2.5 py-1 rounded-full border transition-colors shrink-0",
+            humanTakeover
+              ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+              : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100",
+          )}
+        >
+          {humanTakeover ? t("chatbot.resumeBot", "Включить бота") : t("chatbot.takeoverBot", "Взять диалог")}
+        </button>
         <button
           onClick={() => refetch()}
           className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
@@ -271,184 +278,7 @@ function SessionChat({ phone, onBack }: { phone: string; onBack: () => void }) {
   );
 }
 
-// ─── Playground tab ───────────────────────────────────────────────────────────
-
-type ChatMessage = { role: "user" | "bot"; text: string };
-
-function PlaygroundTab() {
-  const testMessage = useTestChatbotMessage();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState("");
-  const [isReceivingParts, setIsReceivingParts] = useState(false);
-  const [playgroundFsmState, setPlaygroundFsmState] = useState<PlaygroundFsmState>("greeting");
-  const [activeMindMapNode, setActiveMindMapNode] = useState<{
-    id: string;
-    label: string;
-    fsmState?: string;
-  } | null>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, testMessage.isPending, isReceivingParts]);
-
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const update = () => {
-      const keyboardOffset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-      if (containerRef.current) {
-        containerRef.current.style.paddingBottom = keyboardOffset > 0 ? `${keyboardOffset}px` : "";
-      }
-      if (keyboardOffset > 0) setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
-    };
-    vv.addEventListener("resize", update);
-    vv.addEventListener("scroll", update);
-    return () => { vv.removeEventListener("resize", update); vv.removeEventListener("scroll", update); };
-  }, []);
-
-  const handleSend = () => {
-    const text = input.trim();
-    if (!text || testMessage.isPending || isReceivingParts) return;
-    const updatedMessages = [...messages, { role: "user" as const, text }];
-    setMessages(updatedMessages);
-    setInput("");
-    const history = updatedMessages.slice(0, -1).map((m) => ({
-      role: m.role === "user" ? ("user" as const) : ("assistant" as const),
-      content: m.text,
-    }));
-    const stateForApi: PlaygroundFsmState =
-      messages.length === 0 ? "collect_problem" : playgroundFsmState;
-    const nextState = nextPlaygroundFsmState(stateForApi, text);
-    testMessage.mutate(
-      { userMessage: text, history, fsmState: stateForApi },
-      {
-        onSuccess: (res) => {
-          const parts = res.data?.parts?.length ? res.data.parts : [res.data?.reply ?? "..."];
-          setPlaygroundFsmState(nextState);
-          setActiveMindMapNode(res.data?.mindMapNode ?? null);
-          setIsReceivingParts(true);
-          schedulePlaygroundBotParts(
-            parts,
-            res.data?.pausesMs,
-            (part) => setMessages((prev) => [...prev, { role: "bot", text: part }]),
-            () => setIsReceivingParts(false),
-          );
-        },
-        onError: () => setMessages((prev) => [...prev, { role: "bot", text: "Ошибка. Попробуйте ещё раз." }]),
-      },
-    );
-  };
-
-  return (
-    <div ref={containerRef} className="h-full flex flex-col gap-3">
-      {/* Simulation banner */}
-      <div className="shrink-0 flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2">
-        <FlaskConical className="h-3.5 w-3.5 text-violet-600 shrink-0" />
-        <p className="text-xs text-violet-800 flex-1">
-          <span className="font-semibold">Симуляция</span> — бот работает точно как в WhatsApp, но реальные записи не создаются
-        </p>
-        <button
-          onClick={() => {
-            setMessages([]);
-            setInput("");
-            setPlaygroundFsmState("greeting");
-            setActiveMindMapNode(null);
-          }}
-          disabled={messages.length === 0}
-          className="flex items-center gap-1 text-xs text-violet-600 hover:text-violet-800 disabled:opacity-40 transition-colors shrink-0 ml-1"
-        >
-          <RefreshCw className="h-3 w-3" />
-          Сбросить
-        </button>
-      </div>
-
-      {(activeMindMapNode || playgroundFsmState !== "greeting") && (
-        <div className="shrink-0 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900">
-          <span className="font-semibold">Этап FSM:</span>{" "}
-          {FSM_STATE_LABELS[playgroundFsmState] ?? playgroundFsmState}
-          {activeMindMapNode && (
-            <>
-              {" · "}
-              <span className="font-semibold">Узел скрипта:</span> {activeMindMapNode.label}
-            </>
-          )}
-        </div>
-      )}
-
-      <div className="flex-1 min-h-0 rounded-xl border border-border/50 bg-muted/20 flex flex-col overflow-hidden">
-        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
-
-          {messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-full text-center py-10">
-              <div className="h-12 w-12 rounded-full bg-violet-100 flex items-center justify-center mb-3">
-                <Bot className="h-6 w-6 text-violet-500" />
-              </div>
-              <p className="text-sm font-medium text-foreground">Playground готов</p>
-              <p className="text-xs text-muted-foreground mt-1 max-w-[220px]">
-                Напишите как пациент — бот ответит точно по вашему скрипту
-              </p>
-            </div>
-          )}
-
-          {messages.map((msg, idx) => (
-            <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-              {msg.role === "bot" && (
-                <div className="h-6 w-6 rounded-full bg-violet-100 flex items-center justify-center shrink-0 mr-2 mt-1">
-                  <Bot className="h-3.5 w-3.5 text-violet-600" />
-                </div>
-              )}
-              <div
-                className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap leading-relaxed ${
-                  msg.role === "user"
-                    ? "bg-primary text-primary-foreground rounded-tr-sm"
-                    : "bg-white border border-border/50 text-foreground rounded-tl-sm"
-                }`}
-              >
-                {msg.text}
-              </div>
-            </div>
-          ))}
-
-          {(testMessage.isPending || isReceivingParts) && (
-            <div className="flex justify-start">
-              <div className="h-6 w-6 rounded-full bg-violet-100 flex items-center justify-center shrink-0 mr-2 mt-1">
-                <Bot className="h-3.5 w-3.5 text-violet-600" />
-              </div>
-              <div className="bg-white border border-border/50 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:0ms]" />
-                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:150ms]" />
-                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:300ms]" />
-              </div>
-            </div>
-          )}
-          <div ref={bottomRef} />
-        </div>
-
-        <div className="shrink-0 border-t border-border/50 bg-background px-3 py-2.5 flex gap-2">
-          <input
-            ref={inputRef}
-            type="text"
-            placeholder="Напишите как пациент..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-            className="flex-1 text-sm border border-border/50 rounded-xl px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
-          />
-          <button
-            onClick={handleSend}
-            disabled={!input.trim() || testMessage.isPending || isReceivingParts}
-            className="flex items-center justify-center w-10 h-10 bg-primary text-primary-foreground rounded-xl disabled:opacity-50 hover:bg-primary/90 transition-colors shrink-0"
-          >
-            {testMessage.isPending || isReceivingParts ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+// ─── Playground imported from @/components/chatbot/playground-tab ─────────────
 
 // ─── AI Broadcast Tab ─────────────────────────────────────────────────────────
 
@@ -647,7 +477,7 @@ function AiBroadcastTab() {
 export default function ChatbotPage() {
   const { t, i18n } = useTranslation();
   const lang = i18n.language || "ru";
-  const [tab, setTab] = useState<"sessions" | "settings" | "manager-style" | "ai-broadcast">("sessions");
+  const [tab, setTab] = useState<"sessions" | "settings" | "analytics" | "playground" | "manager-style" | "ai-broadcast">("sessions");
   const [combinedOpen, setCombinedOpen] = useState(false);
   const [mindMapSaveStatus, setMindMapSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [confirmResetPhone, setConfirmResetPhone] = useState<string | null>(null);
@@ -745,8 +575,10 @@ export default function ChatbotPage() {
         <div className="flex gap-1 mt-3 overflow-x-auto pb-0.5">
           {([
             { key: "sessions", label: t("chatbot.tab.sessions"), icon: MessageSquare },
+            { key: "analytics", label: "Аналитика", icon: BarChart3 },
             { key: "settings", label: t("chatbot.tab.settings"), icon: Settings },
-            { key: "manager-style", label: "Playground", icon: FlaskConical },
+            { key: "playground", label: "Playground", icon: FlaskConical },
+            { key: "manager-style", label: "Стиль", icon: MessageCircle },
             { key: "ai-broadcast", label: "ИИ Рассылка", icon: Megaphone },
           ] as const).map(({ key, label, icon: Icon }) => (
             <button
@@ -765,7 +597,7 @@ export default function ChatbotPage() {
       </div>
 
       {/* Tab content */}
-      <div className={cn("flex-1 p-4 min-h-0", tab === "manager-style" ? "overflow-hidden flex flex-col" : "overflow-y-auto")}>
+      <div className={cn("flex-1 p-4 min-h-0", tab === "playground" ? "overflow-hidden flex flex-col" : "overflow-y-auto")}>
 
         {/* Sessions tab */}
         {tab === "sessions" && (
@@ -802,7 +634,7 @@ export default function ChatbotPage() {
                       <p className="text-sm font-medium text-foreground truncate">{session.phone}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <span className={cn("inline-flex text-[10px] font-medium px-1.5 py-0.5 rounded-full border", STATE_COLORS[session.state] ?? "bg-muted text-muted-foreground border-border")}>
-                          {t(`chatbot.states.${session.state}`, STATE_LABELS[session.state] ?? session.state)}
+                          {t(`chatbot.states.${session.state}`, FSM_STATE_LABELS[session.state] ?? session.state)}
                         </span>
                         <span className="text-[10px] text-muted-foreground">{formatRelative(session.updatedAt, lang)}</span>
                         {session.humanTakeover && (
@@ -874,10 +706,78 @@ export default function ChatbotPage() {
               <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
             </button>
 
+            <ChatbotCalendarAbSettings
+              localSettings={localSettings}
+              onChange={(patch) => setLocalSettings((p) => ({ ...p, ...patch }))}
+            />
+
+            <div className="rounded-xl border border-border/50 bg-card p-4 space-y-3">
+              <p className="text-sm font-medium text-foreground">Тексты и инструкции</p>
+              <label className="block text-xs text-muted-foreground">
+                Приветствие (шаблон)
+                <textarea
+                  className="mt-1 w-full text-sm border border-border/50 rounded-lg px-3 py-2 min-h-[72px]"
+                  value={localSettings.greetingTemplate ?? settings?.greetingTemplate ?? ""}
+                  onChange={(e) => setLocalSettings((p) => ({ ...p, greetingTemplate: e.target.value }))}
+                />
+              </label>
+              {(
+                [
+                  ["followup24hTemplate", "Follow-up 24ч"],
+                  ["followup72hTemplate", "Follow-up 72ч"],
+                  ["followup168hTemplate", "Follow-up 168ч"],
+                ] as const
+              ).map(([key, label]) => (
+                <label key={key} className="block text-xs text-muted-foreground">
+                  {label}
+                  <input
+                    type="text"
+                    className="mt-1 w-full text-sm border border-border/50 rounded-lg px-3 py-2"
+                    value={(localSettings[key] as string | undefined) ?? (settings?.[key] as string | undefined) ?? ""}
+                    onChange={(e) => setLocalSettings((p) => ({ ...p, [key]: e.target.value }))}
+                  />
+                </label>
+              ))}
+              {(
+                [
+                  ["general", "Общие инструкции"],
+                  ["greeting", "Этап: приветствие"],
+                  ["collectName", "Этап: имя"],
+                  ["collectProblem", "Этап: проблема"],
+                  ["suggestDoctor", "Этап: врач"],
+                  ["confirm", "Этап: подтверждение"],
+                ] as const
+              ).map(([key, label]) => (
+                <label key={key} className="block text-xs text-muted-foreground">
+                  {label}
+                  <textarea
+                    className="mt-1 w-full text-sm border border-border/50 rounded-lg px-3 py-2 min-h-[56px]"
+                    value={
+                      (localSettings.stepInstructions as Record<string, string> | undefined)?.[key]
+                      ?? (settings?.stepInstructions as Record<string, string> | undefined)?.[key]
+                      ?? ""
+                    }
+                    onChange={(e) =>
+                      setLocalSettings((p) => ({
+                        ...p,
+                        stepInstructions: {
+                          ...(p.stepInstructions ?? settings?.stepInstructions ?? {}),
+                          [key]: e.target.value,
+                        },
+                      }))
+                    }
+                  />
+                </label>
+              ))}
+            </div>
+
           </div>
         )}
 
-        {tab === "manager-style" && <PlaygroundTab />}
+        {tab === "analytics" && <ChatbotAnalyticsTab />}
+
+        {tab === "playground" && <PlaygroundTab />}
+        {tab === "manager-style" && <ManagerExamplesTab />}
         {tab === "ai-broadcast" && <AiBroadcastTab />}
       </div>
 

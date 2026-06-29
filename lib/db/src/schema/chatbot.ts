@@ -41,6 +41,36 @@ export interface ScriptMindMapData {
   edges: ScriptMindMapEdge[];
 }
 
+export interface DaySchedule {
+  /** 0=Sun … 6=Sat */
+  day: number;
+  enabled: boolean;
+  startHour: number;
+  startMinute: number;
+  endHour: number;
+  endMinute: number;
+}
+
+export interface ClinicCalendarConfig {
+  slotDurationMinutes?: number;
+  /** Minutes between appointments */
+  bufferMinutes?: number;
+  /** Default procedure length when blocking calendar */
+  defaultAppointmentMinutes?: number;
+  weeklySchedule?: DaySchedule[];
+}
+
+export interface ScriptVariant {
+  id: string;
+  name: string;
+  /** Traffic weight 0–100; variants should sum to 100 when A/B enabled */
+  weight: number;
+  scriptBlocks?: ScriptBlock[];
+  scriptMindMap?: ScriptMindMapData;
+  stepInstructions?: StepInstructions;
+  greetingTemplate?: string;
+}
+
 export const chatbotSettingsTable = pgTable("chatbot_settings", {
   id: text("id").primaryKey(),
   clinicId: text("clinic_id")
@@ -69,8 +99,25 @@ export const chatbotSettingsTable = pgTable("chatbot_settings", {
   stepInstructions: jsonb("step_instructions").$type<StepInstructions>().default({}),
   scriptBlocks: jsonb("script_blocks").$type<ScriptBlock[]>().default([]),
   scriptMindMap: jsonb("script_mind_map").$type<ScriptMindMapData>().default({ nodes: [], edges: [] }),
+  calendarConfig: jsonb("calendar_config").$type<ClinicCalendarConfig>().default({}),
+  abTestEnabled: boolean("ab_test_enabled").default(false).notNull(),
+  scriptVariants: jsonb("script_variants").$type<ScriptVariant[]>().default([]),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const chatbotFunnelEventsTable = pgTable("chatbot_funnel_events", {
+  id: text("id").primaryKey(),
+  clinicId: text("clinic_id")
+    .notNull()
+    .references(() => clinicsTable.id, { onDelete: "cascade" }),
+  phone: text("phone").notNull(),
+  sessionId: text("session_id"),
+  variantId: text("variant_id"),
+  eventType: text("event_type").notNull(),
+  fromState: text("from_state"),
+  toState: text("to_state"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const chatbotSessionsTable = pgTable(
@@ -123,3 +170,5 @@ export type ChatbotMessage = typeof chatbotMessagesTable.$inferSelect;
 export type InsertChatbotMessage = typeof chatbotMessagesTable.$inferInsert;
 export type ChatbotManagerExample = typeof chatbotManagerExamplesTable.$inferSelect;
 export type InsertChatbotManagerExample = typeof chatbotManagerExamplesTable.$inferInsert;
+export type ChatbotFunnelEvent = typeof chatbotFunnelEventsTable.$inferSelect;
+export type InsertChatbotFunnelEvent = typeof chatbotFunnelEventsTable.$inferInsert;

@@ -11,10 +11,12 @@ import { sendWhatsAppMessage } from "../../shared/whatsapp";
 import { logger } from "../../lib/logger";
 
 const QUEUE_NAME = "postop-followups";
-const FOLLOWUP_DELAYS_HOURS = [3] as const;
+const FOLLOWUP_DELAYS_HOURS = [3, 72, 168] as const;
 
-const DEFAULT_TEMPLATES: [string] = [
-  "Дорогой пациент! Прошло 3 часа после вашей процедуры. Как вы себя чувствуете? Если есть вопросы или дискомфорт — обращайтесь, мы всегда на связи.",
+const DEFAULT_TEMPLATES: [string, string, string] = [
+  "Дорогой пациент! Прошло несколько часов после вашей процедуры. Как вы себя чувствуете? Если есть вопросы или дискомфорт — обращайтесь, мы всегда на связи.",
+  "Здравствуйте! Прошло 3 дня после процедуры. Как ваше самочувствие? Если что-то беспокоит — напишите нам.",
+  "Добрый день! Прошла неделя после процедуры. Надеемся, всё хорошо. Если нужна помощь или контрольный осмотр — мы на связи.",
 ];
 
 interface FollowupJobData {
@@ -25,7 +27,7 @@ interface FollowupJobData {
   messageTemplate: string;
 }
 
-async function getClinicTemplates(clinicId: string): Promise<[string]> {
+async function getClinicTemplates(clinicId: string): Promise<[string, string, string]> {
   const [settings] = await db
     .select()
     .from(chatbotSettingsTable)
@@ -33,7 +35,11 @@ async function getClinicTemplates(clinicId: string): Promise<[string]> {
     .limit(1);
 
   if (settings) {
-    return [settings.followup24hTemplate];
+    return [
+      settings.followup24hTemplate,
+      settings.followup72hTemplate,
+      settings.followup168hTemplate,
+    ];
   }
   return DEFAULT_TEMPLATES;
 }
@@ -162,7 +168,7 @@ export async function scheduleFollowups(input: ScheduleFollowupsInput): Promise<
     }
     logger.info(
       { clinicId, patientId, procedureId, count: followups.length },
-      "[FollowupQueue] Scheduled post-op BullMQ followup job (3h)",
+      "[FollowupQueue] Scheduled post-op BullMQ followup jobs",
     );
   } else {
     logger.info(

@@ -8,6 +8,7 @@ import {
 } from "@workspace/db";
 import { eq, and, gte, lte, count, sum, sql, isNotNull, SQL, ne } from "drizzle-orm";
 import { analyticsCache } from "../../shared/analytics-cache";
+import { findNearestSlotMinutes } from "../chatbot/calendar-slots";
 
 export interface DoctorAnalyticsFilters {
   dateFrom?: Date;
@@ -131,7 +132,20 @@ export type AdvancedScoringOptions = {
   urgency?: "urgent" | "soon" | "planned";
   patientType?: "new" | "returning" | "vip";
   returningPatientDoctorId?: string;
+  /** Skip random exploration noise — for Playground / reproducible ranking */
+  deterministic?: boolean;
 };
+
+export interface DoctorCandidate {
+  id: string;
+  name: string;
+  specialty: string | null;
+  finalScore: number;
+  rankPercent: number;
+  hasCapacity: boolean;
+  nearestSlotMinutes: number | null;
+  reasons: string[];
+}
 
 export interface AdvancedDoctorScore {
   doctorId: string;
@@ -214,13 +228,133 @@ export function computeAdvancedScore(
   }
 
   // 7. exploration_factor — 60% exploit best, 40% random from top-3 (handled at selection level)
-  // We encode a small noise here so the caller can do top-3 selection
-  const explorationNoise = 1.0 + (Math.random() - 0.5) * 0.1;
+  const explorationNoise = opts.deterministic
+    ? 1.0
+    : 1.0 + (Math.random() - 0.5) * 0.1;
 
   const finalScore =
     baseScore * quotaFactor * loadFactor * valueFactor * patientFitFactor * timeFactor * explorationNoise;
 
   return Math.max(0, finalScore);
+}
+
+const SERVICE_SPECIALTY_HINTS: Record<string, string[]> = {
+  therapy: ["therapist", "general", "терапевт", "терапия", "дантист", "dentist"],
+  hygiene: ["hygienist", "therapist", "гигиен", "терапевт"],
+  surgery: ["surgeon", "хирург", "surgery"],
+  orthopedics: ["orthoped", "ортопед", "prosth"],
+  orthodontics: ["orthodont", "ортодонт", "braces", "брекет"],
+  implantation: ["implant", "implantolog", "хирург", "surgeon"],
+  consultation: ["therapist", "general", "терапевт"],
+};
+
+function specialtyMatchesService(serviceType: string | undefined, specialty: string | null): boolean {
+  if (!serviceType || !specialty) return false;
+  const hints = SERVICE_SPECIALTY_HINTS[serviceType];
+  if (!hints) return false;
+  const lower = specialty.toLowerCase();
+  return hints.some((h) => lower.includes(h));
+}
+
+function buildDoctorPickReasons(
+  kpi: RawDoctorKpi,
+  allKpis: RawDoctorKpi[],
+  opts: AdvancedScoringOptions,
+  rankPercent: number,
+  specialty: string | null,
+): string[] {
+  const reasons: string[] = [];
+  if (opts.returningPatientDoctorId === kpi.doctorId) {
+    reasons.push("ваш постоянный врач");
+  }
+  if (opts.urgency === "urgent") {
+    if (kpi.nearestSlotMinutes !== null && kpi.nearestSlotMinutes <= 120) {
+      reasons.push("ближайший свободный слот");
+    }
+    if (kpi.slotsUsedToday < kpi.maxSlotsPerDay) {
+      reasons.push("есть окно сегодня");
+    }
+  }
+  if (rankPercent >= 75) {
+    reasons.push("высокий рейтинг");
+  } else if (rankPercent >= 55) {
+    reasons.push("стабильно высокие показатели");
+  }
+  if (specialtyMatchesService(opts.serviceType, specialty)) {
+    reasons.push("специализация под ваш запрос");
+  }
+  if (kpi.slotsUsedToday < kpi.maxSlotsPerDay * 0.5) {
+    reasons.push("свободные окна на ближайшие дни");
+  }
+  const conversionRaw =
+    kpi.proceduresCount + kpi.cancelledCount > 0
+      ? kpi.proceduresCount / (kpi.proceduresCount + kpi.cancelledCount)
+      : 0;
+  if (conversionRaw >= 0.85 && reasons.length < 3) {
+    reasons.push("высокая конверсия записей");
+  }
+  return reasons.slice(0, 3);
+}
+
+/** Rank doctors for chatbot — returns top N with scores and human-readable reasons. */
+export async function rankDoctorCandidates(
+  clinicId: string,
+  opts: AdvancedScoringOptions = {},
+  options?: { limit?: number; excludeIds?: string[] },
+): Promise<DoctorCandidate[]> {
+  const limit = options?.limit ?? 3;
+  const excludeIds = new Set(options?.excludeIds ?? []);
+
+  const repo = new AnalyticsRepository();
+  const kpis = await repo.getDoctorKpisRaw(clinicId);
+  if (kpis.length === 0) return [];
+
+  const doctors = await db
+    .select({ id: usersTable.id, specialty: usersTable.specialty })
+    .from(usersTable)
+    .where(and(eq(usersTable.clinicId, clinicId), eq(usersTable.role, "doctor")));
+  const specialtyMap = new Map(doctors.map((d) => [d.id, d.specialty ?? null]));
+
+  let pool = kpis.filter((k) => !excludeIds.has(k.doctorId));
+
+  if (opts.urgency === "urgent") {
+    pool = [...pool]
+      .filter((k) => k.slotsUsedToday < k.maxSlotsPerDay)
+      .sort((a, b) => {
+        const aMin = a.nearestSlotMinutes ?? 9999;
+        const bMin = b.nearestSlotMinutes ?? 9999;
+        if (aMin !== bMin) return aMin - bMin;
+        return a.slotsUsedToday / a.maxSlotsPerDay - b.slotsUsedToday / b.maxSlotsPerDay;
+      });
+    if (pool.length === 0) {
+      pool = [...kpis.filter((k) => !excludeIds.has(k.doctorId))].sort(
+        (a, b) => a.slotsUsedToday - b.slotsUsedToday,
+      );
+    }
+  }
+
+  const scored = pool.map((kpi) => {
+    const specialty = specialtyMap.get(kpi.doctorId) ?? null;
+    const finalScore = computeAdvancedScore(kpi, kpis, opts);
+    const rankPercent = computeDoctorScore(kpi, kpis);
+    return {
+      id: kpi.doctorId,
+      name: kpi.doctorName,
+      specialty,
+      finalScore,
+      rankPercent,
+      hasCapacity: kpi.slotsUsedToday < kpi.maxSlotsPerDay,
+      nearestSlotMinutes: kpi.nearestSlotMinutes,
+      reasons: buildDoctorPickReasons(kpi, kpis, opts, rankPercent, specialty),
+    };
+  });
+
+  scored.sort((a, b) => b.finalScore - a.finalScore);
+
+  const withCapacity = scored.filter((s) => s.hasCapacity);
+  const ranked = (withCapacity.length > 0 ? withCapacity : scored).slice(0, limit);
+
+  return ranked;
 }
 
 /** Pick the best doctor for chatbot routing using 7-factor advanced scoring. */
@@ -254,24 +388,20 @@ export async function pickBestDoctorAdvanced(
   }
 
   // Score all doctors using 7-factor algorithm
-  const scored = kpis.map((kpi) => ({
-    doctorId: kpi.doctorId,
-    doctorName: kpi.doctorName,
-    score: computeAdvancedScore(kpi, kpis, opts),
-    slotsUsedToday: kpi.slotsUsedToday,
-    maxSlotsPerDay: kpi.maxSlotsPerDay,
+  const candidates = await rankDoctorCandidates(clinicId, opts, { limit: 3 });
+  if (candidates.length === 0) return null;
+
+  const pool = candidates.map((c) => ({
+    doctorId: c.id,
+    doctorName: c.name,
+    score: c.finalScore,
+    slotsUsedToday: 0,
+    maxSlotsPerDay: 1,
   }));
-
-  // Prefer doctors with remaining capacity
-  const withCapacity = scored.filter((s) => s.slotsUsedToday < s.maxSlotsPerDay);
-  const pool = withCapacity.length > 0 ? withCapacity : scored;
-
-  // Sort by score desc
-  pool.sort((a, b) => b.score - a.score);
 
   // Pick doctor based on the 50%-30%-20% motivation algorithm, generalized for N doctors using weights w_i = 0.6^i
   let pick = pool[0]!;
-  if (pool.length > 1) {
+  if (pool.length > 1 && !opts.deterministic) {
     const weights = pool.map((_, idx) => Math.pow(0.6, idx));
     const totalWeight = weights.reduce((sum, w) => sum + w, 0);
     let r = Math.random() * totalWeight;
@@ -824,7 +954,9 @@ export class AnalyticsRepository {
         const maxSlotsPerDay = capacityMap.get(doc.id) ?? 20;
         const slotsUsedToday = todayProcs.length;
 
-        const nearestSlotMinutes = computeNearestSlotMinutes(slotsUsedToday, maxSlotsPerDay);
+        const nearestSlotMinutes =
+          (await findNearestSlotMinutes(clinicId, doc.id).catch(() => null)) ??
+          computeNearestSlotMinutes(slotsUsedToday, maxSlotsPerDay);
 
         return {
           doctorId: doc.id,

@@ -1763,6 +1763,75 @@ paths:
                   success:
                     type: boolean
 
+  /chatbot/analytics/funnel:
+    get:
+      operationId: getChatbotFunnelAnalytics
+      tags: [chatbot]
+      summary: Chatbot funnel conversion metrics and A/B test results
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: query
+          name: days
+          schema:
+            type: integer
+            default: 30
+      responses:
+        "200":
+          description: Funnel analytics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      analytics:
+                        type: object
+                        additionalProperties: true
+
+  /chatbot/sessions/{phone}/takeover:
+    patch:
+      operationId: patchChatbotSessionTakeover
+      tags: [chatbot]
+      summary: Enable or disable human takeover for a chatbot session
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: phone
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [takeover]
+              properties:
+                takeover:
+                  type: boolean
+      responses:
+        "200":
+          description: Session takeover updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      session:
+                        $ref: "#/components/schemas/ChatbotSession"
+
   /analytics/owner:
     get:
       operationId: getOwnerAnalytics

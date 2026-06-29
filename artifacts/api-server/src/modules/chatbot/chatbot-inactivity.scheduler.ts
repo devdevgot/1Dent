@@ -11,8 +11,9 @@ export function startChatbotInactivityScheduler(): void {
   setInterval(async () => {
     try {
       await chatbotService.checkInactivityReminders();
+      await chatbotService.checkLeadNurtureFollowups();
     } catch (err) {
-      logger.error({ err }, "[ChatbotInactivityScheduler] Error checking inactivity reminders");
+      logger.error({ err }, "[ChatbotInactivityScheduler] Error checking inactivity/lead nurture reminders");
     }
   }, CHECK_INTERVAL_MS);
 }

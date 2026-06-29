@@ -206,22 +206,3 @@ export function buildActiveMindMapContext(
   text += "\nСледуй этому узлу в текущем ответе.";
   return text;
 }
-
-/** Guess FSM state label for playground UI (Russian). */
-export const FSM_STATE_LABELS: Record<string, string> = {
-  greeting: "Приветствие",
-  collect_iin: "ИИН",
-  collect_name: "Имя",
-  collect_phone: "Телефон",
-  collect_problem: "Выяснение проблемы",
-  suggest_doctor: "Подбор врача",
-  manage_appointment: "Управление записью",
-  show_slots: "Выбор слота",
-  collect_datetime: "Дата и время",
-  collect_branch: "Филиал",
-  confirm_appointment: "Подтверждение",
-  dental_qa: "Вопросы по лечению",
-  done: "Завершено",
-  human_takeover: "Оператор",
-  reactivation: "Реактивация",
-};

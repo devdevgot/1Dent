@@ -4,11 +4,14 @@ export type ChatbotState =
   | "collect_name"
   | "collect_phone"
   | "collect_problem"
+  | "collect_qualification"
   | "suggest_doctor"
   | "manage_appointment"
   | "show_slots"
   | "collect_datetime"
   | "collect_branch"
+  | "await_decision"
+  | "handle_objections"
   | "confirm_appointment"
   | "dental_qa"
   | "done"
@@ -32,16 +35,37 @@ export interface ChatbotSessionData {
   preferredDatetime?: string;
   selectedBranch?: string;
   inactivityReminderSent?: boolean;
-  // Existing appointment management
   existingProcedureId?: string;
   existingProcedureDate?: string;
   existingProcedureDoctorName?: string;
   isReschedule?: boolean;
-  // AI classification results
   serviceType?: string;
   urgency?: string;
   patientType?: string;
   aiConfidence?: string;
-  // Active mind-map script node (branch routing)
   activeMindMapNodeId?: string;
+  qualificationAsked?: boolean;
+  qualificationPhase?: "symptoms" | "branch";
+  objectionsHandled?: boolean;
+  decisionOutcome?: "ready" | "hesitating" | "refused";
+  objectionType?: "price" | "fear" | "info";
+  returningDoctorId?: string;
+  doctorCandidates?: Array<{
+    id: string;
+    name: string;
+    score: number;
+    reasons?: string[];
+    specialty?: string | null;
+  }>;
+  doctorPickReason?: string;
+  doctorRankPercent?: number;
+  doctorConfirmed?: boolean;
+  excludedDoctorIds?: string[];
+  leadNurtureAnchorAt?: string;
+  leadFollowup24Sent?: boolean;
+  leadFollowup72Sent?: boolean;
+  leadFollowup168Sent?: boolean;
+  handoffSummary?: string;
+  createdProcedureId?: string;
+  abVariantId?: string;
 }

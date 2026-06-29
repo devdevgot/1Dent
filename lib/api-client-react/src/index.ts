@@ -12,7 +12,7 @@ export type { AuthTokenGetter, BranchIdGetter, UnauthorizedHandler } from "./cus
 
 // ─── Custom hooks (manually maintained) ───────────────────────────────────────
 import { customFetch } from "./custom-fetch";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   UseMutationOptions,
   UseQueryOptions,
@@ -95,7 +95,104 @@ export const useGetChatbotSessionMessages = <TError = unknown>(
     ...options?.query,
   });
 
-// ─── Custom: chatbot manager examples ────────────────────────────────────────
+export interface PatchChatbotSessionTakeoverResponse {
+  success: boolean;
+  data: {
+    session: {
+      id: string;
+      clinicId: string;
+      phone: string;
+      state: string;
+      data?: Record<string, unknown>;
+      humanTakeover: boolean;
+      updatedAt: string;
+    };
+  };
+}
+
+export const patchChatbotSessionTakeover = (
+  phone: string,
+  takeover: boolean,
+  options?: RequestInit,
+): Promise<PatchChatbotSessionTakeoverResponse> =>
+  customFetch<PatchChatbotSessionTakeoverResponse>(
+    `/api/chatbot/sessions/${encodeURIComponent(phone)}/takeover`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ takeover }),
+      ...options,
+    },
+  );
+
+export const usePatchChatbotSessionTakeover = <TError = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    PatchChatbotSessionTakeoverResponse,
+    TError,
+    { phone: string; takeover: boolean }
+  >;
+}) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ phone, takeover }) => patchChatbotSessionTakeover(phone, takeover),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/chatbot/sessions"] });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/chatbot/sessions", variables.phone, "messages"],
+      });
+    },
+    ...options?.mutation,
+  });
+};
+
+export interface FunnelStageMetric {
+  state: string;
+  entered: number;
+  progressed: number;
+  conversionRate: number;
+}
+
+export interface VariantFunnelMetric {
+  variantId: string;
+  variantName: string;
+  sessions: number;
+  bookings: number;
+  bookingRate: number;
+  handoffs: number;
+}
+
+export interface ChatbotFunnelAnalytics {
+  periodDays: number;
+  totalSessions: number;
+  totalBookings: number;
+  overallBookingRate: number;
+  stages: FunnelStageMetric[];
+  variants: VariantFunnelMetric[];
+}
+
+export interface GetChatbotFunnelAnalyticsResponse {
+  success: boolean;
+  data: { analytics: ChatbotFunnelAnalytics };
+}
+
+export const getChatbotFunnelAnalytics = (
+  days = 30,
+  options?: RequestInit,
+): Promise<GetChatbotFunnelAnalyticsResponse> =>
+  customFetch<GetChatbotFunnelAnalyticsResponse>(
+    `/api/chatbot/analytics/funnel?days=${days}`,
+    { method: "GET", ...options },
+  );
+
+export const useGetChatbotFunnelAnalytics = <TError = unknown>(
+  days = 30,
+  options?: { query?: UseQueryOptions<GetChatbotFunnelAnalyticsResponse, TError> },
+) =>
+  useQuery<GetChatbotFunnelAnalyticsResponse, TError>({
+    queryKey: ["/api/chatbot/analytics/funnel", days],
+    queryFn: ({ signal }) => getChatbotFunnelAnalytics(days, { signal }),
+    ...options?.query,
+  });
 
 export interface ChatbotManagerExample {
   id: string;
@@ -212,6 +309,21 @@ export const reorderManagerExample = (
     },
   );
 
+export type PlaygroundScenario =
+  | "new_patient"
+  | "returning_no_appt"
+  | "returning_with_appt"
+  | "wants_existing_appt"
+  | "post_op_monitoring"
+  | "repeat_sale"
+  | "reactivation";
+
+export interface PlaygroundSessionPayload {
+  state: string;
+  data?: Record<string, unknown>;
+  humanTakeover?: boolean;
+}
+
 export interface TestMessageResponse {
   success: boolean;
   data: {
@@ -219,7 +331,10 @@ export interface TestMessageResponse {
     parts?: string[];
     pausesMs?: number[];
     fsmState?: string;
+    humanTakeover?: boolean;
+    sessionData?: Record<string, unknown>;
     mindMapNode?: { id: string; label: string; fsmState?: string } | null;
+    simulatedActions?: string[];
   };
 }
 
@@ -227,6 +342,9 @@ export const testChatbotMessage = (data: {
   userMessage: string;
   history?: Array<{ role: "user" | "assistant"; content: string }>;
   fsmState?: string;
+  initGreeting?: boolean;
+  scenario?: PlaygroundScenario;
+  session?: PlaygroundSessionPayload;
 }): Promise<TestMessageResponse> =>
   customFetch<TestMessageResponse>("/api/chatbot/test-message", {
     method: "POST",
@@ -242,6 +360,9 @@ export const useTestChatbotMessage = <TError = unknown>(options?: {
       userMessage: string;
       history?: Array<{ role: "user" | "assistant"; content: string }>;
       fsmState?: string;
+      initGreeting?: boolean;
+      scenario?: PlaygroundScenario;
+      session?: PlaygroundSessionPayload;
     }
   >;
 }) =>
@@ -252,6 +373,9 @@ export const useTestChatbotMessage = <TError = unknown>(options?: {
       userMessage: string;
       history?: Array<{ role: "user" | "assistant"; content: string }>;
       fsmState?: string;
+      initGreeting?: boolean;
+      scenario?: PlaygroundScenario;
+      session?: PlaygroundSessionPayload;
     }
   >({
     mutationFn: (data) => testChatbotMessage(data),
