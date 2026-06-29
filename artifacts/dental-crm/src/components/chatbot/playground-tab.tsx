@@ -1,81 +1,21 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Bot, RefreshCw, Send, Loader2, FlaskConical } from "lucide-react";
+import { Bot, RefreshCw, Send, Loader2 } from "lucide-react";
 import {
   useTestChatbotMessage,
-  type PlaygroundScenario,
   type PlaygroundSessionPayload,
   type TestMessageResponse,
 } from "@workspace/api-client-react";
-import { FSM_STATE_LABELS, PLAYGROUND_SCENARIO_LABELS } from "@/lib/chatbot-fsm-states";
 import { schedulePlaygroundBotParts } from "@/lib/chatbot-playground-parts";
 import { getApiErrorMessage } from "@/lib/api-error-message";
 
 type ChatMessage = { role: "user" | "bot"; text: string };
-
-const SCENARIOS = Object.keys(PLAYGROUND_SCENARIO_LABELS) as PlaygroundScenario[];
-
-function SessionDebugPanel({
-  fsmState,
-  sessionData,
-  mindMapNode,
-  simulatedActions,
-  humanTakeover,
-}: {
-  fsmState: string;
-  sessionData: Record<string, unknown>;
-  mindMapNode: { id: string; label: string; fsmState?: string } | null;
-  simulatedActions: string[];
-  humanTakeover: boolean;
-}) {
-  const entries = Object.entries(sessionData).filter(([, v]) => v != null && v !== "");
-  return (
-    <div className="shrink-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 space-y-1.5 max-h-40 overflow-y-auto">
-      <p>
-        <span className="font-semibold">Этап FSM:</span> {FSM_STATE_LABELS[fsmState] ?? fsmState}
-        {humanTakeover && " · Оператор"}
-      </p>
-      {mindMapNode && (
-        <p>
-          <span className="font-semibold">Узел скрипта:</span> {mindMapNode.label}
-        </p>
-      )}
-      {entries.length > 0 && (
-        <div>
-          <p className="font-semibold mb-0.5">Собранные данные</p>
-          <ul className="space-y-0.5 text-slate-600">
-            {entries.map(([k, v]) => (
-              <li key={k}>
-                {k}: {String(v)}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {simulatedActions.length > 0 && (
-        <div>
-          <p className="font-semibold mb-0.5">Действия (симуляция)</p>
-          <ul className="space-y-0.5 text-emerald-700">
-            {simulatedActions.map((a, i) => (
-              <li key={i}>• {a}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
-  );
-}
 
 export function PlaygroundTab() {
   const testMessage = useTestChatbotMessage();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isReceivingParts, setIsReceivingParts] = useState(false);
-  const [scenario, setScenario] = useState<PlaygroundScenario>("new_patient");
   const [session, setSession] = useState<PlaygroundSessionPayload | null>(null);
-  const [fsmState, setFsmState] = useState("greeting");
-  const [sessionData, setSessionData] = useState<Record<string, unknown>>({});
-  const [mindMapNode, setMindMapNode] = useState<{ id: string; label: string; fsmState?: string } | null>(null);
-  const [simulatedActions, setSimulatedActions] = useState<string[]>([]);
   const [humanTakeover, setHumanTakeover] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -84,16 +24,12 @@ export function PlaygroundTab() {
     const data = res.data;
     if (!data) return;
     const parts = data.parts?.length ? data.parts : [data.reply ?? "..."];
-    if (data.fsmState) setFsmState(data.fsmState);
     const nextData = (data.sessionData ?? {}) as Record<string, unknown>;
-    setSessionData(nextData);
     setSession({
       state: data.fsmState ?? "greeting",
       data: nextData,
       humanTakeover: data.humanTakeover,
     });
-    setMindMapNode(data.mindMapNode ?? null);
-    setSimulatedActions(data.simulatedActions ?? []);
     setHumanTakeover(!!data.humanTakeover);
     setIsReceivingParts(true);
     schedulePlaygroundBotParts(
@@ -108,17 +44,14 @@ export function PlaygroundTab() {
     (payload: {
       userMessage: string;
       history: Array<{ role: "user" | "assistant"; content: string }>;
-      initGreeting?: boolean;
       session?: PlaygroundSessionPayload | null;
-      scenario?: PlaygroundScenario;
     }) => {
       testMessage.mutate(
         {
           userMessage: payload.userMessage,
           history: payload.history,
-          scenario: payload.scenario ?? scenario,
+          scenario: "new_patient",
           session: payload.session ?? session ?? undefined,
-          initGreeting: payload.initGreeting,
         },
         {
           onSuccess: applyResponse,
@@ -136,7 +69,7 @@ export function PlaygroundTab() {
         },
       );
     },
-    [testMessage, scenario, session, applyResponse],
+    [testMessage, session, applyResponse],
   );
 
   useEffect(() => {
@@ -161,30 +94,11 @@ export function PlaygroundTab() {
     };
   }, []);
 
-  const resetPlayground = useCallback(
-    (nextScenario: PlaygroundScenario = scenario) => {
-      setMessages([]);
-      setInput("");
-      setSession(null);
-      setFsmState(nextScenario === "reactivation" ? "reactivation" : "greeting");
-      setSessionData({});
-      setMindMapNode(null);
-      setSimulatedActions([]);
-      setHumanTakeover(false);
-      runTest({
-        userMessage: "",
-        history: [],
-        initGreeting: true,
-        session: null,
-        scenario: nextScenario,
-      });
-    },
-    [scenario, runTest],
-  );
-
-  useEffect(() => {
-    runTest({ userMessage: "", history: [], initGreeting: true, session: null, scenario: "new_patient" });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  const resetPlayground = useCallback(() => {
+    setMessages([]);
+    setInput("");
+    setSession(null);
+    setHumanTakeover(false);
   }, []);
 
   const handleSend = () => {
@@ -202,51 +116,32 @@ export function PlaygroundTab() {
 
   return (
     <div ref={containerRef} className="h-full flex flex-col gap-3 min-h-0">
-      <div className="shrink-0 flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2">
-        <FlaskConical className="h-3.5 w-3.5 text-violet-600 shrink-0" />
-        <p className="text-xs text-violet-800 flex-1">
-          <span className="font-semibold">Симуляция</span> — тот же FSM и логика, что в WhatsApp; записи в CRM не создаются
-        </p>
-        <button
-          type="button"
-          onClick={() => resetPlayground()}
-          className="flex items-center gap-1 text-xs text-violet-600 hover:text-violet-800 transition-colors shrink-0"
-        >
-          <RefreshCw className="h-3 w-3" />
-          Сбросить
-        </button>
-      </div>
-
-      <div className="shrink-0 flex flex-wrap gap-1.5">
-        {SCENARIOS.map((key) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => {
-              setScenario(key);
-              resetPlayground(key);
-            }}
-            className={`text-[11px] px-2 py-1 rounded-full border transition-colors ${
-              scenario === key
-                ? "bg-primary text-primary-foreground border-primary"
-                : "bg-background text-muted-foreground border-border hover:bg-muted"
-            }`}
-          >
-            {PLAYGROUND_SCENARIO_LABELS[key]}
-          </button>
-        ))}
-      </div>
-
-      <SessionDebugPanel
-        fsmState={fsmState}
-        sessionData={sessionData}
-        mindMapNode={mindMapNode}
-        simulatedActions={simulatedActions}
-        humanTakeover={humanTakeover}
-      />
-
       <div className="flex-1 min-h-0 rounded-xl border border-border/50 bg-muted/20 flex flex-col overflow-hidden">
+        <div className="shrink-0 flex justify-end px-3 pt-2">
+          <button
+            type="button"
+            onClick={resetPlayground}
+            disabled={messages.length === 0 && !session}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-40 transition-colors"
+          >
+            <RefreshCw className="h-3 w-3" />
+            Сбросить
+          </button>
+        </div>
+
         <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
+          {messages.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-full text-center py-10">
+              <div className="h-12 w-12 rounded-full bg-violet-100 flex items-center justify-center mb-3">
+                <Bot className="h-6 w-6 text-violet-600" />
+              </div>
+              <p className="text-sm font-medium text-foreground">Playground готов</p>
+              <p className="text-xs text-muted-foreground mt-1 max-w-[220px]">
+                Напишите как пациент — бот ответит по вашему скрипту
+              </p>
+            </div>
+          )}
+
           {messages.map((msg, idx) => (
             <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
               {msg.role === "bot" && (
