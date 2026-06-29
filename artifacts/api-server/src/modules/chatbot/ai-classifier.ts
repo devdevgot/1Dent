@@ -250,17 +250,26 @@ export async function generateChatbotResponse(
   ];
 
   try {
-    const response = await createChatCompletion(
-      {
-        model: CHAT_MODEL,
-        max_tokens: 1200,
-        temperature: 0.65,
-        response_format: { type: "json_object" },
-        messages,
-      },
-      { timeoutMs: 25_000, label: "generateChatbotResponse" },
-    );
-    const content = response.choices[0]?.message?.content ?? "";
+    const runOnce = async (maxTokens: number) => {
+      const response = await createChatCompletion(
+        {
+          model: CHAT_MODEL,
+          max_tokens: maxTokens,
+          temperature: 0.65,
+          response_format: { type: "json_object" },
+          messages,
+        },
+        { timeoutMs: 25_000, label: "generateChatbotResponse" },
+      );
+      return response.choices[0]?.message?.content ?? "";
+    };
+
+    let content = await runOnce(1200);
+    if (!content.trim()) {
+      logger.warn({ model: CHAT_MODEL }, "[AIClassifier] Empty chatbot response — retrying with higher max_tokens");
+      content = await runOnce(2400);
+    }
+
     const parsed = parseChatbotReplyJson(content);
     if (parsed) return parsed;
 
@@ -272,6 +281,11 @@ export async function generateChatbotResponse(
     if (content.trim()) {
       return replyFromText(content.trim());
     }
+
+    logger.warn(
+      { model: CHAT_MODEL, contentSnippet: content.slice(0, 200) },
+      "[AIClassifier] generateChatbotResponse returned empty content",
+    );
     return null;
   } catch (err) {
     logger.error({ err }, "[AIClassifier] generateChatbotResponse failed — using fallback text");

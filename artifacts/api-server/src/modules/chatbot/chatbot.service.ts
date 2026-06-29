@@ -2558,11 +2558,17 @@ export class ChatbotService {
   ) {
     assertOpenRouterConfigured();
 
-    await aiCreditsService.consumeCredits({
-      clinicId,
-      userId,
-      feature: "chatbot_test",
-    });
+    // Playground is a configuration preview tool — do not block owners on AI credits.
+    try {
+      await aiCreditsService.consumeCredits({
+        clinicId,
+        userId,
+        feature: "chatbot_test",
+      });
+    } catch (err) {
+      if (!(err instanceof InsufficientAiCreditsError)) throw err;
+      logger.info({ clinicId }, "[ChatbotService] Playground test without AI credits — allowed for preview");
+    }
 
     const [settings, managerExamples, doctorsWithSlots, clinicRow, knowledgeContext, priceListContext] = await Promise.all([
       getSettings(clinicId),
