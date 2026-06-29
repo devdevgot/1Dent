@@ -77,9 +77,9 @@ import {
 } from "./playground-scenarios";
 import type { ChatbotSettings } from "@workspace/db";
 import { STANDARD_SCRIPT_BLOCKS, type ScriptBlock } from "./script-templates";
-import { openrouter, FAST_MODEL, withTimeout, parseLlmJson } from "../../lib/openrouter-client";
+import { createChatCompletion, FAST_MODEL, parseLlmJson, assertOpenRouterConfigured } from "../../lib/openrouter-client";
 import { aiCreditsService } from "../../shared/ai-credits";
-import { InsufficientAiCreditsError } from "../../shared/errors/index";
+import { InsufficientAiCreditsError, OpenRouterAiFailedError } from "../../shared/errors/index";
 import {
   renderMindMapScript,
   buildActiveMindMapContext,
@@ -1060,8 +1060,8 @@ async function isComplaintReply(text: string): Promise<boolean> {
 }`;
 
   try {
-    const response = await withTimeout(
-      openrouter.chat.completions.create({
+    const response = await createChatCompletion(
+      {
         model: FAST_MODEL,
         max_tokens: 100,
         temperature: 0.1,
@@ -1070,9 +1070,8 @@ async function isComplaintReply(text: string): Promise<boolean> {
           { role: "system", content: systemPrompt },
           { role: "user", content: text },
         ],
-      }),
-      10000,
-      "isComplaintReply",
+      },
+      { timeoutMs: 10_000, label: "isComplaintReply" },
     );
     const content = response.choices[0]?.message?.content ?? "{}";
     const parsed = parseLlmJson<{ hasComplaint?: boolean }>(content);
@@ -1104,8 +1103,8 @@ async function isPositiveRepeatSaleReply(text: string): Promise<boolean> {
 }`;
 
   try {
-    const response = await withTimeout(
-      openrouter.chat.completions.create({
+    const response = await createChatCompletion(
+      {
         model: FAST_MODEL,
         max_tokens: 100,
         temperature: 0.1,
@@ -1114,9 +1113,8 @@ async function isPositiveRepeatSaleReply(text: string): Promise<boolean> {
           { role: "system", content: systemPrompt },
           { role: "user", content: text },
         ],
-      }),
-      10000,
-      "isPositiveRepeatSaleReply",
+      },
+      { timeoutMs: 10_000, label: "isPositiveRepeatSaleReply" },
     );
     const content = response.choices[0]?.message?.content ?? "{}";
     const parsed = parseLlmJson<{ agreed?: boolean }>(content);
@@ -3043,6 +3041,8 @@ export class ChatbotService {
       initGreeting?: boolean;
     },
   ): Promise<SimulateMessageResult> {
+    assertOpenRouterConfigured();
+
     try {
       await aiCreditsService.consumeCredits({
         clinicId,
@@ -3050,21 +3050,8 @@ export class ChatbotService {
         feature: "chatbot_test",
       });
     } catch (err) {
-      if (err instanceof InsufficientAiCreditsError) {
-        const exhaustedReply =
-          "AI-кредиты закончились. Докупите кредиты в разделе «ИИ кредиты», чтобы тестировать чат-бот в Playground.";
-        return {
-          reply: exhaustedReply,
-          parts: [exhaustedReply],
-          pausesMs: [0],
-          fsmState: opts?.session?.state ?? "greeting",
-          humanTakeover: false,
-          sessionData: opts?.session?.data ?? {},
-          mindMapNode: null,
-          simulatedActions: [],
-        };
-      }
-      throw err;
+      if (!(err instanceof InsufficientAiCreditsError)) throw err;
+      logger.info({ clinicId }, "[ChatbotService] Playground test without AI credits — allowed for preview");
     }
 
     const settings = getEffectiveSettings(await getSettings(clinicId));
@@ -3278,8 +3265,8 @@ export class ChatbotService {
 Верни ТОЛЬКО валидный JSON-массив без пояснений, кода и markdown.`;
 
     try {
-      const response = await withTimeout(
-        openrouter.chat.completions.create({
+      const response = await createChatCompletion(
+        {
           model: FAST_MODEL,
           max_tokens: 6000,
           temperature: 0.1,
@@ -3287,9 +3274,8 @@ export class ChatbotService {
             { role: "system", content: systemPrompt },
             { role: "user", content: `Разбей этот скрипт на блоки:\n\n${rawText}` },
           ],
-        }),
-        30_000,
-        "parseScriptWithAI",
+        },
+        { timeoutMs: 30_000, label: "parseScriptWithAI" },
       );
 
       const content = response.choices[0]?.message?.content ?? "[]";

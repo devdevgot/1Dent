@@ -8,6 +8,7 @@ import {
 } from "@workspace/api-client-react";
 import { FSM_STATE_LABELS, PLAYGROUND_SCENARIO_LABELS } from "@/lib/chatbot-fsm-states";
 import { schedulePlaygroundBotParts } from "@/lib/chatbot-playground-parts";
+import { getApiErrorMessage } from "@/lib/api-error-message";
 
 type ChatMessage = { role: "user" | "bot"; text: string };
 
@@ -121,8 +122,17 @@ export function PlaygroundTab() {
         },
         {
           onSuccess: applyResponse,
-          onError: () =>
-            setMessages((prev) => [...prev, { role: "bot", text: "Ошибка. Попробуйте ещё раз." }]),
+          onError: (err) =>
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: "bot",
+                text: getApiErrorMessage(
+                  err as { data?: unknown; message?: string },
+                  "Ошибка. Попробуйте ещё раз.",
+                ),
+              },
+            ]),
         },
       );
     },

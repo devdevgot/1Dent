@@ -297,6 +297,8 @@ const STATUS_COLOR: Record<DentalBroadcastRun["status"], string> = {
 };
 
 function AiBroadcastTab() {
+  const { i18n } = useTranslation();
+  const lang = i18n.language || "ru";
   const queryClient = useQueryClient();
   const [showConfirm, setShowConfirm] = useState(false);
   const { data, isLoading } = useListDentalBroadcastRuns(20, {
