@@ -713,66 +713,6 @@ export default function ChatbotPage() {
               onChange={(patch) => setLocalSettings((p) => ({ ...p, ...patch }))}
             />
 
-            <div className="rounded-xl border border-border/50 bg-card p-4 space-y-3">
-              <p className="text-sm font-medium text-foreground">Тексты и инструкции</p>
-              <label className="block text-xs text-muted-foreground">
-                Приветствие (шаблон)
-                <textarea
-                  className="mt-1 w-full text-sm border border-border/50 rounded-lg px-3 py-2 min-h-[72px]"
-                  value={localSettings.greetingTemplate ?? settings?.greetingTemplate ?? ""}
-                  onChange={(e) => setLocalSettings((p) => ({ ...p, greetingTemplate: e.target.value }))}
-                />
-              </label>
-              {(
-                [
-                  ["followup24hTemplate", "Follow-up 24ч"],
-                  ["followup72hTemplate", "Follow-up 72ч"],
-                  ["followup168hTemplate", "Follow-up 168ч"],
-                ] as const
-              ).map(([key, label]) => (
-                <label key={key} className="block text-xs text-muted-foreground">
-                  {label}
-                  <input
-                    type="text"
-                    className="mt-1 w-full text-sm border border-border/50 rounded-lg px-3 py-2"
-                    value={(localSettings[key] as string | undefined) ?? (settings?.[key] as string | undefined) ?? ""}
-                    onChange={(e) => setLocalSettings((p) => ({ ...p, [key]: e.target.value }))}
-                  />
-                </label>
-              ))}
-              {(
-                [
-                  ["general", "Общие инструкции"],
-                  ["greeting", "Этап: приветствие"],
-                  ["collectName", "Этап: имя"],
-                  ["collectProblem", "Этап: проблема"],
-                  ["suggestDoctor", "Этап: врач"],
-                  ["confirm", "Этап: подтверждение"],
-                ] as const
-              ).map(([key, label]) => (
-                <label key={key} className="block text-xs text-muted-foreground">
-                  {label}
-                  <textarea
-                    className="mt-1 w-full text-sm border border-border/50 rounded-lg px-3 py-2 min-h-[56px]"
-                    value={
-                      (localSettings.stepInstructions as Record<string, string> | undefined)?.[key]
-                      ?? (settings?.stepInstructions as Record<string, string> | undefined)?.[key]
-                      ?? ""
-                    }
-                    onChange={(e) =>
-                      setLocalSettings((p) => ({
-                        ...p,
-                        stepInstructions: {
-                          ...(p.stepInstructions ?? settings?.stepInstructions ?? {}),
-                          [key]: e.target.value,
-                        },
-                      }))
-                    }
-                  />
-                </label>
-              ))}
-            </div>
-
           </div>
         )}
 
