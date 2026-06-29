@@ -28,6 +28,7 @@ import branchesRouter from "../modules/branches/branches.controller";
 import clinicBranchesRouter from "../modules/clinic-branches/clinic-branches.controller";
 import knowledgeRouter from "../modules/knowledge/knowledge.controller";
 import aiCreditsRouter from "../modules/ai-credits/ai-credits.controller";
+import errorEventsRouter from "../modules/error-events/error-events.controller";
 import { actionLogMiddleware } from "../middlewares/action-log.middleware";
 import { authRateLimit } from "../middlewares/rate-limit.middleware";
 import { authMiddleware, roleGuard } from "../middlewares/auth.middleware";
@@ -45,6 +46,7 @@ const _patientsRepo = new PatientsRepository();
 router.use(healthRouter);
 router.use("/auth", authRateLimit, authRouter);
 router.use(geoRouter);
+router.use("/errors", errorEventsRouter);
 
 // Plan request — must be before planGate so it's accessible even without a plan
 router.post("/plan-requests", authMiddleware, async (req: Request, res: Response, next: NextFunction) => {

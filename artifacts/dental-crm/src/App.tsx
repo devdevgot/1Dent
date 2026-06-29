@@ -14,6 +14,7 @@ import { useAuthStore } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { installGlobalErrorHandlers } from "@/lib/report-error";
 
 // Pages
 import Login from "@/pages/login";
@@ -52,6 +53,7 @@ import BranchesPage from "@/pages/branches";
 import ClinicBranchesPage from "@/pages/clinic-branches";
 import PricingPage from "@/pages/pricing";
 import AiCreditsPage from "@/pages/ai-credits";
+import LandingPage from "@/pages/landing";
 import NotFound from "@/pages/not-found";
 
 // Admin-specific pages
@@ -250,15 +252,16 @@ function Router() {
   }, [isAuthenticated, location, setLocation, roleDashboard]);
 
   useEffect(() => {
-    if (location === "/") {
-      setLocation(isAuthenticated ? roleDashboard : "/login");
+    if (isAuthenticated && location === "/") {
+      setLocation(roleDashboard);
     }
-  }, [location, isAuthenticated, setLocation, roleDashboard]);
+  }, [isAuthenticated, location, setLocation, roleDashboard]);
 
   return (
     <>
     {isAuthenticated && <PlanPaywall />}
     <Switch>
+      <Route path="/" component={LandingPage} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
       <Route path="/forgot-password" component={ForgotPassword} />
@@ -435,6 +438,8 @@ function Router() {
 }
 
 function App() {
+  useEffect(() => installGlobalErrorHandlers("dental-crm"), []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>

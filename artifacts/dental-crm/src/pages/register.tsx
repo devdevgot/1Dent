@@ -22,6 +22,7 @@ import {
   Wallet,
   Megaphone,
 } from "lucide-react";
+import { getApiErrorMessage } from "@/lib/api-error-message";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
 import { useTranslation } from "react-i18next";
 
@@ -49,19 +50,19 @@ function InputField({
   return (
     <div>
       <div
-        className={`w-full px-3.5 py-2.5 rounded-xl border-2 bg-gray-50 transition-all ${
+        className={`w-full px-3.5 py-2.5 rounded-xl border bg-white transition-all ${
           error
-            ? "border-destructive bg-red-50"
-            : "border-gray-200 focus-within:border-primary focus-within:bg-white"
+            ? "border-[#dc2626] bg-[#fef2f2]"
+            : "border-[#e8e3d9] focus-within:border-[#1f75fe] focus-within:ring-2 focus-within:ring-[#1f75fe]/20"
         }`}
       >
-        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">
+        <p className="text-[10px] font-semibold text-[#94a3b8] uppercase tracking-wide mb-0.5">
           {label}
         </p>
         {children}
       </div>
       {error && (
-        <p className="text-xs text-destructive font-medium mt-1 px-1">{error}</p>
+        <p className="text-xs text-[#dc2626] font-medium mt-1 px-1">{error}</p>
       )}
     </div>
   );
@@ -74,7 +75,7 @@ function StepDots({ step }: { step: Step }) {
         <div
           key={s}
           className={`rounded-full transition-all duration-300 ${
-            step >= s ? "w-5 h-1.5 bg-primary" : "w-1.5 h-1.5 bg-gray-200"
+            step >= s ? "w-5 h-1.5 bg-[#1f75fe]" : "w-1.5 h-1.5 bg-[#e8e3d9]"
           }`}
         />
       ))}
@@ -133,7 +134,7 @@ export default function Register() {
       onError: (error) => {
         toast({
           title: t("register.errorTitle"),
-          description: (error.data as { error?: string })?.error || t("register.errorDesc"),
+          description: getApiErrorMessage(error, t("register.errorDesc")),
           variant: "destructive",
         });
       },
@@ -160,14 +161,14 @@ export default function Register() {
   };
 
   return (
-    <div className="h-[100dvh] w-full bg-white flex flex-col items-center justify-center px-6 overflow-hidden">
-      <div className="w-full max-w-sm">
+    <div className="h-[100dvh] w-full bg-[#faf8f4] font-manrope flex flex-col items-center justify-center px-6 overflow-hidden">
+      <div className="w-full max-w-sm bg-white rounded-2xl border border-[#e8e3d9] shadow-md p-6">
         {/* Back button row */}
         <div className="h-8 mb-3 flex items-center">
           {step > 0 && (
             <button
               onClick={() => goBack((step - 1) as Step)}
-              className="flex items-center gap-1.5 text-gray-400 hover:text-gray-700 transition-colors"
+              className="flex items-center gap-1.5 text-[#94a3b8] hover:text-[#0f172a] transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
@@ -188,19 +189,18 @@ export default function Register() {
             >
               <div className="flex flex-col items-center text-center mb-6">
                 <div
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 shadow-sm"
-                  style={{ backgroundColor: "#eff6ff" }}
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 shadow-sm bg-[#1f75fe]/10"
                 >
-                  <ShieldCheck className="w-7 h-7" style={{ color: "#1f75fe" }} />
+                  <ShieldCheck className="w-7 h-7 text-[#1f75fe]" />
                 </div>
-                <h2 className="text-xl font-display font-bold text-gray-900 mb-3">
+                <h2 className="text-xl font-manrope font-bold text-[#0f172a] mb-3">
                   Прежде чем начать
                 </h2>
-                <p className="text-sm text-gray-500 leading-relaxed">
-                  Регистрация в <span className="font-semibold text-gray-700">1Dent</span> предназначена
-                  исключительно для <span className="font-semibold text-gray-700">владельцев клиник</span>.
+                <p className="text-sm text-[#64748b] leading-relaxed">
+                  Регистрация в <span className="font-semibold text-[#0f172a]">1Dent</span> предназначена
+                  исключительно для <span className="font-semibold text-[#0f172a]">владельцев клиник</span>.
                 </p>
-                <p className="text-sm text-gray-500 leading-relaxed mt-2">
+                <p className="text-sm text-[#64748b] leading-relaxed mt-2">
                   Если вы являетесь сотрудником клиники, пожалуйста, не создавайте новый аккаунт —
                   войдите в систему с помощью данных, которые вам предоставил руководитель.
                 </p>
@@ -208,16 +208,15 @@ export default function Register() {
 
               <button
                 onClick={() => goForward(1)}
-                className="w-full py-3 rounded-xl text-sm font-bold transition-all duration-200 active:scale-[0.98]"
-                style={{ backgroundColor: "#1f75fe", color: "#ffffff" }}
+                className="w-full py-3 rounded-full text-sm font-semibold transition-all duration-200 hover:scale-105 active:scale-95 bg-[#1f75fe] hover:bg-[#1a65e8] text-white"
               >
                 Я владелец клиники — продолжить
               </button>
 
               <div className="text-center mt-3">
-                <Link href="/login" className="text-sm text-gray-400">
+                <Link href="/login" className="text-sm text-[#94a3b8]">
                   Уже есть аккаунт?{" "}
-                  <span className="font-semibold text-gray-600">Войти</span>
+                  <span className="font-semibold text-[#1f75fe]">Войти</span>
                 </Link>
               </div>
             </motion.div>
@@ -237,14 +236,14 @@ export default function Register() {
               <StepDots step={1} />
 
               <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                  <UserRound className="w-4 h-4 text-primary" />
+                <div className="w-8 h-8 rounded-xl bg-[#1f75fe]/10 flex items-center justify-center shrink-0">
+                  <UserRound className="w-4 h-4 text-[#1f75fe]" />
                 </div>
                 <div>
-                  <h2 className="text-base font-display font-bold text-gray-900 leading-tight">
+                  <h2 className="text-base font-manrope font-bold text-[#0f172a] leading-tight">
                     Личные данные
                   </h2>
-                  <p className="text-xs text-gray-400">Шаг 1 из 2</p>
+                  <p className="text-xs text-[#94a3b8]">Шаг 1 из 2</p>
                 </div>
               </div>
 
@@ -255,7 +254,7 @@ export default function Register() {
                     type="text"
                     placeholder={t("register.ownerNamePlaceholder")}
                     autoComplete="name"
-                    className="w-full bg-transparent text-sm text-gray-900 placeholder:text-gray-300 outline-none"
+                    className="w-full bg-transparent text-sm text-[#0f172a] placeholder:text-[#94a3b8] outline-none"
                   />
                 </InputField>
 
@@ -265,7 +264,7 @@ export default function Register() {
                     type="email"
                     placeholder={t("register.emailPlaceholder")}
                     autoComplete="email"
-                    className="w-full bg-transparent text-sm text-gray-900 placeholder:text-gray-300 outline-none"
+                    className="w-full bg-transparent text-sm text-[#0f172a] placeholder:text-[#94a3b8] outline-none"
                   />
                 </InputField>
 
@@ -276,12 +275,12 @@ export default function Register() {
                       type={showPassword ? "text" : "password"}
                       placeholder="••••••••"
                       autoComplete="new-password"
-                      className="flex-1 bg-transparent text-sm text-gray-900 placeholder:text-gray-300 outline-none"
+                      className="flex-1 bg-transparent text-sm text-[#0f172a] placeholder:text-[#94a3b8] outline-none"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword((v) => !v)}
-                      className="text-gray-400 hover:text-gray-600 transition-colors ml-2"
+                      className="text-[#94a3b8] hover:text-[#64748b] transition-colors ml-2"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -291,8 +290,7 @@ export default function Register() {
                 <button
                   type="button"
                   onClick={handleStep1Next}
-                  className="w-full py-3 rounded-xl text-sm font-bold transition-all duration-200 active:scale-[0.98] mt-1"
-                  style={{ backgroundColor: "#1f75fe", color: "#ffffff" }}
+                  className="w-full py-3 rounded-full text-sm font-semibold transition-all duration-200 hover:scale-105 active:scale-95 mt-1 bg-[#1f75fe] hover:bg-[#1a65e8] text-white"
                 >
                   Далее
                 </button>
@@ -314,14 +312,14 @@ export default function Register() {
               <StepDots step={2} />
 
               <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                  <Building2 className="w-4 h-4 text-primary" />
+                <div className="w-8 h-8 rounded-xl bg-[#1f75fe]/10 flex items-center justify-center shrink-0">
+                  <Building2 className="w-4 h-4 text-[#1f75fe]" />
                 </div>
                 <div>
-                  <h2 className="text-base font-display font-bold text-gray-900 leading-tight">
+                  <h2 className="text-base font-manrope font-bold text-[#0f172a] leading-tight">
                     Данные клиники
                   </h2>
-                  <p className="text-xs text-gray-400">Шаг 2 из 2</p>
+                  <p className="text-xs text-[#94a3b8]">Шаг 2 из 2</p>
                 </div>
               </div>
 
@@ -332,15 +330,15 @@ export default function Register() {
                     type="text"
                     placeholder={t("register.clinicNamePlaceholder")}
                     autoComplete="organization"
-                    className="w-full bg-transparent text-sm text-gray-900 placeholder:text-gray-300 outline-none"
+                    className="w-full bg-transparent text-sm text-[#0f172a] placeholder:text-[#94a3b8] outline-none"
                   />
                 </InputField>
 
                 {/* Use-case multi-select */}
                 <div>
                   <div className="flex items-center gap-1.5 mb-2.5">
-                    <Sparkles className="w-3.5 h-3.5 text-primary" />
-                    <p className="text-xs font-semibold text-gray-500">
+                    <Sparkles className="w-3.5 h-3.5 text-[#1f75fe]" />
+                    <p className="text-xs font-semibold text-[#64748b]">
                       Для чего планируете использовать?
                     </p>
                   </div>
@@ -353,33 +351,33 @@ export default function Register() {
                           type="button"
                           onClick={() => toggleUseCase(id)}
                           className={`
-                            flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-2 text-left
+                            flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-left
                             transition-all duration-150 active:scale-[0.97]
                             ${selected
-                              ? "border-primary bg-primary/5"
-                              : "border-gray-100 bg-gray-50 hover:border-gray-200"}
+                              ? "border-[#1f75fe] bg-[#1f75fe]/5"
+                              : "border-[#e8e3d9] bg-white hover:border-[#d4cfc6]"}
                           `}
                         >
                           <div
                             className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
-                              selected ? "bg-primary/15" : "bg-white"
+                              selected ? "bg-[#1f75fe]/15" : "bg-[#faf8f4]"
                             }`}
                           >
                             <Icon
                               className={`w-3.5 h-3.5 transition-colors ${
-                                selected ? "text-primary" : "text-gray-400"
+                                selected ? "text-[#1f75fe]" : "text-[#94a3b8]"
                               }`}
                             />
                           </div>
                           <div className="min-w-0">
                             <p
                               className={`text-xs font-semibold leading-tight truncate ${
-                                selected ? "text-gray-900" : "text-gray-600"
+                                selected ? "text-[#0f172a]" : "text-[#64748b]"
                               }`}
                             >
                               {label}
                             </p>
-                            <p className="text-[10px] text-gray-400 leading-tight truncate">{sub}</p>
+                            <p className="text-[10px] text-[#94a3b8] leading-tight truncate">{sub}</p>
                           </div>
                         </button>
                       );
@@ -390,8 +388,7 @@ export default function Register() {
                 <button
                   type="submit"
                   disabled={registerMutation.isPending}
-                  className="w-full py-3 rounded-xl text-sm font-bold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.98]"
-                  style={{ backgroundColor: "#1f75fe", color: "#ffffff" }}
+                  className="w-full py-3 rounded-full text-sm font-semibold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed hover:scale-105 active:scale-95 bg-[#1f75fe] hover:bg-[#1a65e8] text-white"
                 >
                   {registerMutation.isPending ? t("register.submitting") : "Создать клинику"}
                 </button>

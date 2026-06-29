@@ -25,10 +25,10 @@ const END_H   = 21;
 const STATUS_COLORS: Record<ProcedureStatus, {
   bar: string; bg: string; text: string; badge: string; icon: string;
 }> = {
-  scheduled:   { bar: "bg-blue-500",    bg: "bg-blue-50",    text: "text-blue-800",    badge: "bg-blue-100 text-blue-700 border-blue-200",    icon: "text-blue-500"    },
-  in_progress: { bar: "bg-amber-400",   bg: "bg-amber-50",   text: "text-amber-800",   badge: "bg-amber-100 text-amber-700 border-amber-200",   icon: "text-amber-500"   },
-  completed:   { bar: "bg-emerald-500", bg: "bg-emerald-50", text: "text-emerald-800", badge: "bg-emerald-100 text-emerald-700 border-emerald-200", icon: "text-emerald-500" },
-  cancelled:   { bar: "bg-slate-300",   bg: "bg-slate-50",   text: "text-slate-600",   badge: "bg-slate-100 text-slate-500 border-slate-200",   icon: "text-slate-400"   },
+  scheduled:   { bar: "bg-[#0284c7]", bg: "bg-[#e0f2fe]", text: "text-[#0284c7]", badge: "bg-[#e0f2fe] text-[#0284c7] border-[#bae6fd]", icon: "text-[#0284c7]" },
+  in_progress: { bar: "bg-[#d97706]", bg: "bg-[#fef3c7]", text: "text-[#d97706]", badge: "bg-[#fef3c7] text-[#d97706] border-[#fde68a]", icon: "text-[#d97706]" },
+  completed:   { bar: "bg-[#16a34a]", bg: "bg-[#f0fdf4]", text: "text-[#16a34a]", badge: "bg-[#f0fdf4] text-[#16a34a] border-[#bbf7d0]", icon: "text-[#16a34a]" },
+  cancelled:   { bar: "bg-[#94a3b8]", bg: "bg-[#f8fafc]", text: "text-[#64748b]", badge: "bg-[#f1f5f9] text-[#94a3b8] border-[#e2e8f0]", icon: "text-[#94a3b8]" },
 };
 
 
@@ -165,15 +165,15 @@ export default function DoctorScheduleDayPage() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-background overflow-hidden">
+    <div className="flex flex-col h-full bg-[#faf8f4] font-manrope overflow-hidden">
 
       {/* ── Top bar ── */}
-      <div className="flex-none bg-white border-b border-border">
+      <div className="flex-none bg-white border-b border-[#e8e3d9] shadow-sm">
         {/* Back row */}
         <div className="flex items-center gap-2 px-3 pt-3 pb-1">
           <button
             onClick={() => navigate("/schedule")}
-            className="flex items-center gap-1 text-primary font-semibold text-sm"
+            className="flex items-center gap-1 text-[#1f75fe] font-semibold text-sm hover:text-[#1a65e8] transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
             {MONTH_FULL[selDate.getMonth()]}
@@ -182,7 +182,7 @@ export default function DoctorScheduleDayPage() {
 
         {/* Week strip */}
         <div className="flex items-center px-1 pb-2">
-          <button onClick={goWeekPrev} className="w-7 h-7 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors shrink-0">
+          <button onClick={goWeekPrev} className="w-7 h-7 flex items-center justify-center text-[#64748b] hover:text-[#0f172a] hover:bg-[#f1ede4] rounded-xl transition-colors shrink-0">
             <ChevronLeft className="w-4 h-4" />
           </button>
 
@@ -197,15 +197,15 @@ export default function DoctorScheduleDayPage() {
                   onClick={() => navigate(`/schedule/${ds}`)}
                   className="flex flex-col items-center gap-0.5 py-1 rounded-xl transition-colors"
                 >
-                  <span className={`text-[10px] font-semibold uppercase tracking-wide ${isSel ? "text-primary" : "text-muted-foreground"}`}>
+                  <span className={`text-[10px] font-semibold uppercase tracking-wide ${isSel ? "text-[#1f75fe]" : "text-[#64748b]"}`}>
                     {DOW_SHORT[(d.getDay())]}
                   </span>
                   <span className={`
                     w-8 h-8 flex items-center justify-center rounded-full text-sm font-bold transition-all
-                    ${isSel && isNow  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
-                    : isSel           ? "bg-foreground text-background"
-                    : isNow           ? "text-primary"
-                    :                   "text-foreground"}
+                    ${isSel && isNow  ? "bg-[#1f75fe] text-white shadow-lg"
+                    : isSel           ? "bg-[#1f75fe]/10 text-[#1f75fe]"
+                    : isNow           ? "text-[#1f75fe]"
+                    :                   "text-[#0f172a]"}
                   `}>
                     {d.getDate()}
                   </span>
@@ -214,18 +214,18 @@ export default function DoctorScheduleDayPage() {
             })}
           </div>
 
-          <button onClick={goWeekNext} className="w-7 h-7 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors shrink-0">
+          <button onClick={goWeekNext} className="w-7 h-7 flex items-center justify-center text-[#64748b] hover:text-[#0f172a] hover:bg-[#f1ede4] rounded-xl transition-colors shrink-0">
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
 
         {/* Date label */}
-        <div className="px-4 py-2 border-t border-border/50 bg-secondary/40 flex items-center justify-between">
+        <div className="px-4 py-2 border-t border-[#e8e3d9] bg-[#faf8f4] flex items-center justify-between">
           <div>
-            <p className="text-[13px] font-bold text-foreground">
+            <p className="text-[13px] font-bold text-[#0f172a]">
               {DOW_FULL[selDate.getDay()]} — {selDate.getDate()} {MONTH_GEN[selDate.getMonth()]} {selDate.getFullYear()} г.
             </p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
+            <p className="text-[11px] text-[#64748b] mt-0.5">
               {dayProcs.length > 0
                 ? `${dayProcs.length} ${dayProcs.length === 1 ? "приём" : dayProcs.length < 5 ? "приёма" : "приёмов"}`
                 : "Нет приёмов"}
@@ -233,7 +233,7 @@ export default function DoctorScheduleDayPage() {
           </div>
           <button
             onClick={() => setShowModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-white text-xs font-semibold hover:bg-primary/90 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1f75fe] text-white text-xs font-semibold hover:bg-[#1a65e8] hover:scale-105 transition-all shadow-sm"
           >
             <Plus className="w-3.5 h-3.5" />
             Новая запись
@@ -242,7 +242,7 @@ export default function DoctorScheduleDayPage() {
       </div>
 
       {/* ── Timeline ── */}
-      <div ref={tlRef} className="flex-1 overflow-y-auto bg-white">
+      <div ref={tlRef} className="flex-1 overflow-y-auto bg-white border-t border-[#e8e3d9]">
         <div className="relative" style={{ height: totalH + HOUR_H }}>
 
           {/* Hour grid */}
@@ -252,10 +252,10 @@ export default function DoctorScheduleDayPage() {
               className="absolute left-0 right-0 flex items-start pointer-events-none"
               style={{ top: (h - START_H) * HOUR_H }}
             >
-              <span className="w-14 shrink-0 text-right pr-3 text-[11px] text-muted-foreground font-medium leading-none -translate-y-[6px] select-none">
+              <span className="w-14 shrink-0 text-right pr-3 text-[11px] text-[#64748b] font-medium leading-none -translate-y-[6px] select-none">
                 {h < END_H ? `${String(h).padStart(2,"0")}:00` : ""}
               </span>
-              <div className="flex-1 border-t border-border/50" />
+              <div className="flex-1 border-t border-[#e8e3d9]" />
             </div>
           ))}
 
@@ -266,11 +266,11 @@ export default function DoctorScheduleDayPage() {
               style={{ top: nowPx }}
             >
               <div className="w-14 shrink-0 flex justify-end pr-2">
-                <span className="text-[10px] font-bold bg-primary text-primary-foreground rounded-full px-1.5 py-0.5 leading-tight shadow-md shadow-primary/30">
+                <span className="text-[10px] font-bold bg-[#1f75fe] text-white rounded-full px-1.5 py-0.5 leading-tight shadow-md">
                   {nowDate.toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}
                 </span>
               </div>
-              <div className="flex-1 h-px bg-primary shadow-sm" />
+              <div className="flex-1 h-px bg-[#1f75fe] shadow-sm" />
             </div>
           )}
 
@@ -330,10 +330,10 @@ export default function DoctorScheduleDayPage() {
           {/* Empty state */}
           {dayProcs.length === 0 && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 pointer-events-none">
-              <div className="w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center">
-                <Calendar className="w-7 h-7 text-muted-foreground/40" />
+              <div className="w-14 h-14 rounded-2xl bg-[#f1ede4] flex items-center justify-center">
+                <Calendar className="w-7 h-7 text-[#94a3b8]" />
               </div>
-              <p className="text-sm font-semibold text-muted-foreground">Нет приёмов на этот день</p>
+              <p className="text-sm font-semibold text-[#64748b]">Нет приёмов на этот день</p>
             </div>
           )}
         </div>

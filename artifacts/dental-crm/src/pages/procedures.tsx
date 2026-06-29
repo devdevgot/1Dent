@@ -28,11 +28,11 @@ import {
 } from "lucide-react";
 
 const STATUS_COLORS: Record<ProcedureStatus, string> = {
-  scheduled:       "bg-blue-50 text-blue-700 border-blue-200",
-  in_progress:     "bg-amber-50 text-amber-700 border-amber-200",
-  pending_payment: "bg-orange-50 text-orange-700 border-orange-200",
-  completed:       "bg-emerald-50 text-emerald-700 border-emerald-200",
-  cancelled:       "bg-slate-100 text-slate-500 border-slate-200",
+  scheduled:       "bg-[#e0f2fe] text-[#0284c7] border-[#0284c7]/20",
+  in_progress:     "bg-[#fef3c7] text-[#d97706] border-[#d97706]/20",
+  pending_payment: "bg-[#fef3c7] text-[#d97706] border-[#d97706]/20",
+  completed:       "bg-[#f0fdf4] text-[#16a34a] border-[#16a34a]/20",
+  cancelled:       "bg-[#f1ede4] text-[#64748b] border-[#e8e3d9]",
 };
 
 const STATUS_ICONS: Record<ProcedureStatus, React.ElementType> = {
@@ -207,12 +207,12 @@ function NewProcedureModal({
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+        className="bg-white rounded-2xl border border-[#e8e3d9] shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-6 border-b border-border/50 flex items-center justify-between">
-          <h2 className="text-xl font-bold font-display">{t("procedure.newProcedure")}</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
+        <div className="p-6 border-b border-[#e8e3d9] flex items-center justify-between">
+          <h2 className="text-xl font-bold text-[#0f172a]">{t("procedure.newProcedure")}</h2>
+          <button onClick={onClose} className="text-[#64748b] hover:text-[#0f172a] hover:bg-[#f1ede4] rounded-xl p-1 transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -221,12 +221,12 @@ function NewProcedureModal({
           {/* Template picker */}
           {templates.length > 0 && (
             <div>
-              <label className="block text-sm font-semibold text-muted-foreground mb-1.5">
+              <label className="block text-sm font-semibold text-[#64748b] mb-1.5">
                 {t("procedure.fromTemplate")}
               </label>
               <div className="relative">
                 <select
-                  className="w-full border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none appearance-none pr-10 bg-white"
+                  className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 text-sm text-[#0f172a] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none appearance-none pr-10 bg-white"
                   onChange={(e) => handleTemplate(e.target.value)}
                   defaultValue=""
                 >
@@ -237,14 +237,14 @@ function NewProcedureModal({
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8] pointer-events-none" />
               </div>
             </div>
           )}
 
           {/* Patient */}
           <div>
-            <label className="block text-sm font-semibold text-muted-foreground mb-1.5">
+            <label className="block text-sm font-semibold text-[#64748b] mb-1.5">
               {t("procedure.patient")} *
             </label>
             <div className="relative">
@@ -256,40 +256,40 @@ function NewProcedureModal({
                   setSelectedFdis([]);
                   setShowToothPicker(false);
                 }}
-                className="w-full border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none appearance-none pr-10 bg-white"
+                className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 text-sm text-[#0f172a] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none appearance-none pr-10 bg-white"
               >
                 <option value="">{t("procedure.selectPatient")}</option>
                 {patients.map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8] pointer-events-none" />
             </div>
           </div>
 
           {/* Tooth Picker */}
           {form.patientId && (
-            <div className="border border-border rounded-xl overflow-hidden">
+            <div className="border border-[#e8e3d9] rounded-xl overflow-hidden">
               <button
                 type="button"
                 onClick={() => setShowToothPicker((v) => !v)}
-                className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold hover:bg-slate-50 transition-colors"
+                className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-[#0f172a] hover:bg-[#faf8f4] transition-colors"
               >
                 <span className="flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-primary" />
+                  <Activity className="w-4 h-4 text-[#1f75fe]" />
                   {t("procedure.toothSelection")}
                   {selectedFdis.length > 0 && (
-                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold">
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#1f75fe] text-white text-[10px] font-bold">
                       {selectedFdis.length}
                     </span>
                   )}
                 </span>
-                <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${showToothPicker ? "rotate-180" : ""}`} />
+                <ChevronDown className={`w-4 h-4 text-[#94a3b8] transition-transform ${showToothPicker ? "rotate-180" : ""}`} />
               </button>
 
               {showToothPicker && (
-                <div className="px-4 pb-4 border-t border-border/50 bg-slate-50/50">
-                  <p className="text-xs text-muted-foreground mt-3 mb-2">
+                <div className="px-4 pb-4 border-t border-[#e8e3d9] bg-[#faf8f4]">
+                  <p className="text-xs text-[#64748b] mt-3 mb-2">
                     {t("procedure.toothSelectionHint")}
                   </p>
 
@@ -303,14 +303,14 @@ function NewProcedureModal({
 
                   {selectedFdis.length > 0 && (
                     <div className="mt-3 space-y-2">
-                      <label className="block text-xs font-semibold text-muted-foreground">
+                      <label className="block text-xs font-semibold text-[#64748b]">
                         {t("procedure.manipulationType")}
                       </label>
                       <div className="relative">
                         <select
                           value={manipulation}
                           onChange={(e) => setManipulation(e.target.value as ToothCondition)}
-                          className="w-full border border-border rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none appearance-none pr-8 bg-white"
+                          className="w-full border border-[#e8e3d9] rounded-xl px-3 py-2.5 text-sm text-[#0f172a] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none appearance-none pr-8 bg-white"
                         >
                           {MANIPULATION_OPTIONS.map((opt) => (
                             <option key={opt.value} value={opt.value}>
@@ -318,20 +318,20 @@ function NewProcedureModal({
                             </option>
                           ))}
                         </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94a3b8] pointer-events-none" />
                       </div>
 
                       <div className="flex flex-wrap gap-1.5 mt-2">
                         {selectedFdis.sort((a, b) => a - b).map((fdi) => (
                           <span
                             key={fdi}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-semibold"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#1f75fe]/10 text-[#1f75fe] text-xs font-semibold"
                           >
                             {t("procedure.toothFdi", { fdi })}
                             <button
                               type="button"
                               onClick={() => toggleTooth(fdi)}
-                              className="hover:text-red-500 transition-colors ml-0.5"
+                              className="hover:text-[#dc2626] transition-colors ml-0.5"
                             >
                               <X className="w-3 h-3" />
                             </button>
@@ -348,28 +348,28 @@ function NewProcedureModal({
           {/* Doctor */}
           {user?.role !== "doctor" && (
             <div>
-              <label className="block text-sm font-semibold text-muted-foreground mb-1.5">
+              <label className="block text-sm font-semibold text-[#64748b] mb-1.5">
                 {t("procedure.doctor")}
               </label>
               <div className="relative">
                 <select
                   value={form.doctorId}
                   onChange={(e) => setForm({ ...form, doctorId: e.target.value })}
-                  className="w-full border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none appearance-none pr-10 bg-white"
+                  className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 text-sm text-[#0f172a] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none appearance-none pr-10 bg-white"
                 >
                   <option value="">{t("procedure.noDoctor")}</option>
                   {doctors.map((d) => (
                     <option key={d.id} value={d.id}>{d.name}</option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8] pointer-events-none" />
               </div>
             </div>
           )}
 
           {/* Name */}
           <div>
-            <label className="block text-sm font-semibold text-muted-foreground mb-1.5">
+            <label className="block text-sm font-semibold text-[#64748b] mb-1.5">
               {t("procedure.name")} *
             </label>
             <input
@@ -377,7 +377,7 @@ function NewProcedureModal({
               type="text"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="w-full border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+              className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 text-sm text-[#0f172a] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none"
               placeholder={t("procedure.namePlaceholder")}
             />
           </div>
@@ -385,7 +385,7 @@ function NewProcedureModal({
           {/* Price & Date */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-semibold text-muted-foreground mb-1.5">
+              <label className="block text-sm font-semibold text-[#64748b] mb-1.5">
                 {t("procedure.price")} (₸)
               </label>
               <input
@@ -394,33 +394,33 @@ function NewProcedureModal({
                 step="100"
                 value={form.price}
                 onChange={(e) => setForm({ ...form, price: e.target.value })}
-                className="w-full border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 text-sm text-[#0f172a] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none"
                 placeholder="0"
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-muted-foreground mb-1.5">
+              <label className="block text-sm font-semibold text-[#64748b] mb-1.5">
                 {t("procedure.scheduledAt")}
               </label>
               <input
                 type="datetime-local"
                 value={form.scheduledAt}
                 onChange={(e) => setForm({ ...form, scheduledAt: e.target.value })}
-                className="w-full border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 text-sm text-[#0f172a] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none"
               />
             </div>
           </div>
 
           {/* Notes */}
           <div>
-            <label className="block text-sm font-semibold text-muted-foreground mb-1.5">
+            <label className="block text-sm font-semibold text-[#64748b] mb-1.5">
               {t("procedure.notes")}
             </label>
             <textarea
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
               rows={2}
-              className="w-full border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-none"
+              className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 text-sm text-[#0f172a] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none resize-none"
               placeholder={t("procedure.notesPlaceholder")}
             />
           </div>
@@ -429,11 +429,11 @@ function NewProcedureModal({
           {inventoryItems.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-semibold text-muted-foreground">{t("procedure.materials")}</label>
+                <label className="text-sm font-semibold text-[#64748b]">{t("procedure.materials")}</label>
                 <button
                   type="button"
                   onClick={addMaterial}
-                  className="flex items-center gap-1 text-xs text-primary font-semibold hover:underline"
+                  className="flex items-center gap-1 text-xs text-[#1f75fe] font-semibold hover:underline"
                 >
                   <Plus className="w-3.5 h-3.5" /> {t("procedure.addMaterial")}
                 </button>
@@ -444,7 +444,7 @@ function NewProcedureModal({
                     <select
                       value={mat.itemId}
                       onChange={(e) => updateMaterial(idx, "itemId", e.target.value)}
-                      className="flex-1 border border-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white"
+                      className="flex-1 border border-[#e8e3d9] rounded-xl px-3 py-2 text-sm text-[#0f172a] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none bg-white"
                     >
                       {inventoryItems.map((item) => (
                         <option key={item.id} value={item.id}>{item.name}</option>
@@ -455,12 +455,12 @@ function NewProcedureModal({
                       min="1"
                       value={mat.quantity}
                       onChange={(e) => updateMaterial(idx, "quantity", Number(e.target.value))}
-                      className="w-20 border border-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-center"
+                      className="w-20 border border-[#e8e3d9] rounded-xl px-3 py-2 text-sm text-[#0f172a] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none text-center"
                     />
                     <button
                       type="button"
                       onClick={() => removeMaterial(idx)}
-                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      className="p-2 text-[#dc2626] hover:bg-[#fef2f2] rounded-xl transition-colors"
                     >
                       <Minus className="w-4 h-4" />
                     </button>
@@ -475,14 +475,14 @@ function NewProcedureModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-3 border border-border rounded-xl text-sm font-semibold text-muted-foreground hover:bg-slate-50 transition-colors"
+              className="flex-1 py-3 border border-[#e8e3d9] rounded-xl text-sm font-semibold text-[#64748b] hover:bg-[#f1ede4] transition-colors"
             >
               {t("common.cancel")}
             </button>
             <button
               type="submit"
               disabled={createMutation.isPending}
-              className="flex-1 py-3 bg-primary text-white rounded-xl text-sm font-semibold hover:-translate-y-0.5 transition-all shadow-lg shadow-primary/25 disabled:opacity-50"
+              className="flex-1 py-3 bg-[#1f75fe] text-white rounded-full text-sm font-semibold hover:bg-[#1a65e8] hover:scale-105 transition-all disabled:opacity-50 disabled:hover:scale-100"
             >
               {createMutation.isPending ? t("common.saving") : t("procedure.create")}
             </button>
@@ -546,22 +546,22 @@ function ProcedureRow({
     <motion.tr
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="hover:bg-slate-50/70 transition-colors group"
+      className="hover:bg-[#faf8f4] transition-colors group"
     >
       <td className="px-4 py-3">
-        <div className="font-semibold text-sm text-foreground">{proc.name}</div>
+        <div className="font-semibold text-sm text-[#0f172a]">{proc.name}</div>
         {proc.notes && (
-          <div className="text-xs text-muted-foreground truncate max-w-[180px]">{proc.notes}</div>
+          <div className="text-xs text-[#64748b] truncate max-w-[180px]">{proc.notes}</div>
         )}
       </td>
-      <td className="px-4 py-3 text-sm text-muted-foreground">{proc.doctorName ?? "—"}</td>
+      <td className="px-4 py-3 text-sm text-[#64748b]">{proc.doctorName ?? "—"}</td>
       <td className="px-4 py-3">
         <StatusBadge status={proc.status} />
       </td>
-      <td className="px-4 py-3 text-sm font-semibold text-foreground">
+      <td className="px-4 py-3 text-sm font-semibold text-[#0f172a]">
         {proc.price ? `₸ ${Number(proc.price).toLocaleString("ru-KZ")}` : "—"}
       </td>
-      <td className="px-4 py-3 text-xs text-muted-foreground">
+      <td className="px-4 py-3 text-xs text-[#64748b]">
         {proc.scheduledAt
           ? new Date(proc.scheduledAt).toLocaleDateString("ru-RU", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
           : "—"}
@@ -571,7 +571,7 @@ function ProcedureRow({
           <div className="relative">
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="p-1.5 rounded-lg text-muted-foreground hover:bg-slate-100 transition-colors opacity-0 group-hover:opacity-100"
+              className="p-1.5 rounded-xl text-[#64748b] hover:bg-[#f1ede4] transition-colors opacity-0 group-hover:opacity-100"
             >
               <MoreVertical className="w-4 h-4" />
             </button>
@@ -581,23 +581,23 @@ function ProcedureRow({
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }}
-                  className="absolute right-0 top-8 z-10 bg-white rounded-xl border border-border shadow-xl min-w-[160px] overflow-hidden"
+                  className="absolute right-0 top-8 z-10 bg-white rounded-xl border border-[#e8e3d9] shadow-xl min-w-[160px] overflow-hidden"
                   onBlur={() => setMenuOpen(false)}
                 >
                   {canEdit && nextStatuses.map((s) => (
                     <button
                       key={s}
                       onClick={() => handleStatusClick(s)}
-                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 transition-colors flex items-center gap-2"
+                      className="w-full text-left px-4 py-2.5 text-sm text-[#0f172a] hover:bg-[#faf8f4] transition-colors flex items-center gap-2"
                     >
-                      {React.createElement(STATUS_ICONS[s], { className: "w-4 h-4 text-muted-foreground" })}
+                      {React.createElement(STATUS_ICONS[s], { className: "w-4 h-4 text-[#64748b]" })}
                       {t(`procedure.markAs.${s}`)}
                     </button>
                   ))}
                   {canDelete && (
                     <button
                       onClick={() => { setMenuOpen(false); setShowDeleteConfirm(true); }}
-                      className="w-full text-left px-4 py-2.5 text-sm text-destructive hover:bg-destructive/5 transition-colors flex items-center gap-2"
+                      className="w-full text-left px-4 py-2.5 text-sm text-[#dc2626] hover:bg-[#fef2f2] transition-colors flex items-center gap-2"
                     >
                       <Trash2 className="w-4 h-4" />
                       {t("common.delete")}
@@ -621,19 +621,19 @@ function ProcedureRow({
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
-          className="bg-white rounded-2xl shadow-2xl w-full max-w-sm"
+          className="bg-white rounded-2xl border border-[#e8e3d9] shadow-xl w-full max-w-sm"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="p-6 border-b border-border/50">
-            <h2 className="text-lg font-bold text-foreground">
+          <div className="p-6 border-b border-[#e8e3d9]">
+            <h2 className="text-lg font-bold text-[#0f172a]">
               {t(`procedure.markAs.${selectedStatus}`)}
             </h2>
-            <p className="text-sm text-muted-foreground mt-1">{proc.name}</p>
+            <p className="text-sm text-[#64748b] mt-1">{proc.name}</p>
           </div>
 
           <div className="p-6 space-y-4">
             <div>
-              <label className="block text-sm font-semibold text-muted-foreground mb-2">
+              <label className="block text-sm font-semibold text-[#64748b] mb-2">
                 {t("procedure.comments")}
               </label>
               <textarea
@@ -641,7 +641,7 @@ function ProcedureRow({
                 onChange={(e) => setModalNotes(e.target.value)}
                 rows={3}
                 placeholder={t("procedure.commentsPlaceholder")}
-                className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-none"
+                className="w-full border border-[#e8e3d9] rounded-xl px-3 py-2 text-sm text-[#0f172a] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none resize-none"
               />
             </div>
 
@@ -649,7 +649,7 @@ function ProcedureRow({
               <button
                 type="button"
                 onClick={() => setStatusModalOpen(false)}
-                className="flex-1 py-2.5 border border-border rounded-xl text-sm font-semibold text-muted-foreground hover:bg-slate-50 transition-colors"
+                className="flex-1 py-2.5 border border-[#e8e3d9] rounded-xl text-sm font-semibold text-[#64748b] hover:bg-[#f1ede4] transition-colors"
               >
                 {t("common.cancel")}
               </button>
@@ -657,7 +657,7 @@ function ProcedureRow({
                 type="button"
                 onClick={handleStatusSubmit}
                 disabled={statusMutation.isPending}
-                className="flex-1 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                className="flex-1 py-2.5 bg-[#1f75fe] text-white rounded-full text-sm font-semibold hover:bg-[#1a65e8] hover:scale-105 transition-all disabled:opacity-50 disabled:hover:scale-100"
               >
                 {statusMutation.isPending ? t("common.saving") : t("common.save")}
               </button>
@@ -710,7 +710,7 @@ export function ProceduresContent({ onAdd }: { onAdd?: () => void } = {}) {
         <div className="flex justify-end">
           <button
             onClick={handleShowNew}
-            className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-sm font-semibold rounded-xl shadow-sm hover:bg-primary/90 transition-colors"
+            className="flex items-center gap-1.5 px-4 py-2 bg-[#1f75fe] text-white text-sm font-semibold rounded-full hover:bg-[#1a65e8] hover:scale-105 transition-all"
           >
             <Plus className="w-4 h-4" />
             {t("procedure.new")}
@@ -726,8 +726,8 @@ export function ProceduresContent({ onAdd }: { onAdd?: () => void } = {}) {
             onClick={() => setFilter(s)}
             className={`px-4 py-2 rounded-full text-sm font-semibold border transition-all ${
               filterStatus === s
-                ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
-                : "bg-white text-muted-foreground border-border hover:border-primary/30"
+                ? "bg-[#1f75fe] text-white border-[#1f75fe] shadow-md"
+                : "bg-white text-[#64748b] border-[#e8e3d9] hover:border-[#1f75fe]/30 hover:bg-[#faf8f4]"
             }`}
           >
             {s === "all" ? t("procedure.statusAll") : t(`procedure.status.${s}`)}
@@ -740,36 +740,36 @@ export function ProceduresContent({ onAdd }: { onAdd?: () => void } = {}) {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8]" />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={t("procedure.searchPlaceholder")}
-          className="w-full bg-white border border-border rounded-xl pl-10 pr-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+          className="w-full bg-white border border-[#e8e3d9] rounded-xl pl-10 pr-4 py-3 text-sm text-[#0f172a] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none"
         />
         {search && (
-          <button onClick={() => setSearch("")} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+          <button onClick={() => setSearch("")} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#0f172a]">
             <X className="w-4 h-4" />
           </button>
         )}
       </div>
 
       {/* Table */}
-      <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-md overflow-hidden">
         {isLoading ? (
           <div className="p-12 text-center">
-            <div className="inline-block w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-            <p className="text-muted-foreground mt-3 text-sm">{t("common.loading")}</p>
+            <div className="inline-block w-8 h-8 border-4 border-[#1f75fe]/20 border-t-[#1f75fe] rounded-full animate-spin" />
+            <p className="text-[#64748b] mt-3 text-sm">{t("common.loading")}</p>
           </div>
         ) : filtered.length === 0 ? (
           <div className="p-16 text-center">
-            <ClipboardList className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
-            <h3 className="font-bold font-display text-lg">{t("procedure.emptyTitle")}</h3>
-            <p className="text-muted-foreground text-sm mt-1">{t("procedure.emptyDesc")}</p>
+            <ClipboardList className="w-12 h-12 text-[#94a3b8]/30 mx-auto mb-3" />
+            <h3 className="font-bold text-lg text-[#0f172a]">{t("procedure.emptyTitle")}</h3>
+            <p className="text-[#64748b] text-sm mt-1">{t("procedure.emptyDesc")}</p>
             {canCreate && (
               <button
                 onClick={handleShowNew}
-                className="mt-4 px-5 py-2.5 bg-primary text-white font-semibold rounded-xl shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all text-sm"
+                className="mt-4 px-5 py-2.5 bg-[#1f75fe] text-white font-semibold rounded-full hover:bg-[#1a65e8] hover:scale-105 transition-all text-sm"
               >
                 {t("procedure.new")}
               </button>
@@ -778,17 +778,17 @@ export function ProceduresContent({ onAdd }: { onAdd?: () => void } = {}) {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-slate-50/80 border-b border-border/50">
+              <thead className="bg-[#faf8f4] border-b border-[#e8e3d9]">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("procedure.col.name")}</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("procedure.col.doctor")}</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("procedure.col.status")}</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("procedure.col.price")}</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("procedure.col.scheduled")}</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wide">{t("procedure.col.name")}</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wide">{t("procedure.col.doctor")}</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wide">{t("procedure.col.status")}</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wide">{t("procedure.col.price")}</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wide">{t("procedure.col.scheduled")}</th>
                   <th className="px-4 py-3 w-12" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/30">
+              <tbody className="divide-y divide-[#e8e3d9]">
                 {filtered.map((p) => (
                   <ProcedureRow
                     key={p.id}
@@ -824,22 +824,22 @@ export default function ProceduresPage() {
   const [showNew, setShowNew] = useState(false);
 
   return (
-    <div className="min-h-full bg-[#f2f2f7]">
-      <div className="bg-white px-4 pt-5 pb-4 flex items-center gap-3 border-b border-gray-100">
+    <div className="min-h-full bg-[#faf8f4] font-manrope">
+      <div className="bg-white px-4 pt-5 pb-4 flex items-center gap-3 border-b border-[#e8e3d9]">
         <button
           onClick={() => window.history.back()}
-          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-500 shrink-0"
+          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#f1ede4] active:bg-[#e8e3d9] transition-colors text-[#64748b] shrink-0"
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
-        <ClipboardList className="w-5 h-5 text-primary shrink-0" strokeWidth={1.8} />
-        <h1 className="text-[17px] font-semibold text-gray-900 flex-1 min-w-0 truncate">
+        <ClipboardList className="w-5 h-5 text-[#1f75fe] shrink-0" strokeWidth={1.8} />
+        <h1 className="text-[17px] font-semibold text-[#0f172a] flex-1 min-w-0 truncate">
           {t("procedure.pageTitle")}
         </h1>
         {canCreate && (
           <button
             onClick={() => setShowNew(true)}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-primary text-white hover:bg-primary/90 transition-colors shrink-0"
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-[#1f75fe] text-white hover:bg-[#1a65e8] transition-colors shrink-0"
           >
             <Plus className="w-4 h-4" />
           </button>

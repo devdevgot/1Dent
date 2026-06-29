@@ -39,9 +39,9 @@ const PLANS: Plan[] = [
     price: 99000,
     subtitle: "Для небольших стоматологий до 10 сотрудников.",
     icon: Sparkles,
-    gradient: "from-blue-50 to-indigo-50",
-    iconBg: "bg-blue-100 text-blue-600",
-    accentColor: "#3b82f6",
+    gradient: "from-[#e0f2fe]/50 to-[#1f75fe]/5",
+    iconBg: "bg-[#1f75fe]/15 text-[#1f75fe]",
+    accentColor: "#1f75fe",
     features: [
       { title: "Все пациенты в одной системе", description: "Больше не нужно искать информацию в разных программах, таблицах и чатах." },
       { title: "Полный контроль расписания", description: "Все записи, переносы и отмены находятся в одном месте." },
@@ -68,8 +68,8 @@ const PLANS: Plan[] = [
     subtitle: "Для клиник, которые хотят расти быстрее.",
     icon: Star,
     badge: "Рекомендуемый",
-    gradient: "from-primary/5 to-blue-50",
-    iconBg: "bg-primary/15 text-primary",
+    gradient: "from-[#1f75fe]/5 to-[#e0f2fe]/50",
+    iconBg: "bg-[#1f75fe]/15 text-[#1f75fe]",
     accentColor: "#1f75fe",
     includesFrom: "START",
     features: [
@@ -93,9 +93,9 @@ const PLANS: Plan[] = [
     price: 199000,
     subtitle: "Для крупных клиник и сетей.",
     icon: Rocket,
-    gradient: "from-amber-50 to-orange-50",
-    iconBg: "bg-amber-100 text-amber-600",
-    accentColor: "#f59e0b",
+    gradient: "from-[#fef3c7]/50 to-[#fff7ed]",
+    iconBg: "bg-[#fef3c7] text-[#d97706]",
+    accentColor: "#d97706",
     includesFrom: "PRO",
     features: [
       { title: "Неограниченное количество сотрудников" },
@@ -201,21 +201,21 @@ function CurrentSubscriptionBanner({ clinic }: { clinic: Clinic | null }) {
 
   if (status.kind === "active_plan") {
     return (
-      <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
+      <div className="bg-[#f0fdf4] border border-[#16a34a]/30 rounded-2xl p-4">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
-            <Check className="w-5 h-5 text-emerald-600" strokeWidth={3} />
+          <div className="w-10 h-10 rounded-xl bg-[#16a34a]/15 flex items-center justify-center shrink-0">
+            <Check className="w-5 h-5 text-[#16a34a]" strokeWidth={3} />
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">Ваш тариф</p>
-            <p className="text-[18px] font-black text-emerald-900 mt-0.5">{PLAN_DISPLAY_NAMES[status.plan]}</p>
+            <p className="text-[11px] font-bold text-[#16a34a] uppercase tracking-wider">Ваш тариф</p>
+            <p className="text-[18px] font-black text-[#0f172a] mt-0.5">{PLAN_DISPLAY_NAMES[status.plan]}</p>
             {status.expiresAt ? (
-              <p className="text-[13px] text-emerald-700 mt-1 flex items-center gap-1.5">
+              <p className="text-[13px] text-[#16a34a] mt-1 flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5 shrink-0" />
                 Действует до {formatExpiryDate(status.expiresAt)}
               </p>
             ) : (
-              <p className="text-[13px] text-emerald-700 mt-1">Подписка активна</p>
+              <p className="text-[13px] text-[#16a34a] mt-1">Подписка активна</p>
             )}
           </div>
         </div>
@@ -225,15 +225,15 @@ function CurrentSubscriptionBanner({ clinic }: { clinic: Clinic | null }) {
 
   if (status.kind === "active_trial") {
     return (
-      <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
+      <div className="bg-[#e0f2fe] border border-[#0284c7]/30 rounded-2xl p-4">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
-            <Clock className="w-5 h-5 text-blue-600" />
+          <div className="w-10 h-10 rounded-xl bg-[#0284c7]/15 flex items-center justify-center shrink-0">
+            <Clock className="w-5 h-5 text-[#0284c7]" />
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] font-bold text-blue-700 uppercase tracking-wider">Пробный период</p>
-            <p className="text-[18px] font-black text-blue-900 mt-0.5">Активен</p>
-            <p className="text-[13px] text-blue-700 mt-1 flex items-center gap-1.5">
+            <p className="text-[11px] font-bold text-[#0284c7] uppercase tracking-wider">Пробный период</p>
+            <p className="text-[18px] font-black text-[#0f172a] mt-0.5">Активен</p>
+            <p className="text-[13px] text-[#0284c7] mt-1 flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 shrink-0" />
               Действует до {formatExpiryDate(status.expiresAt)}
             </p>
@@ -245,15 +245,15 @@ function CurrentSubscriptionBanner({ clinic }: { clinic: Clinic | null }) {
 
   if (status.kind === "expired_plan") {
     return (
-      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+      <div className="bg-[#fef3c7] border border-[#d97706]/30 rounded-2xl p-4">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
-            <AlertCircle className="w-5 h-5 text-amber-600" />
+          <div className="w-10 h-10 rounded-xl bg-[#d97706]/15 flex items-center justify-center shrink-0">
+            <AlertCircle className="w-5 h-5 text-[#d97706]" />
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wider">Тариф истёк</p>
-            <p className="text-[18px] font-black text-amber-900 mt-0.5">{PLAN_DISPLAY_NAMES[status.plan]}</p>
-            <p className="text-[13px] text-amber-700 mt-1 flex items-center gap-1.5">
+            <p className="text-[11px] font-bold text-[#d97706] uppercase tracking-wider">Тариф истёк</p>
+            <p className="text-[18px] font-black text-[#0f172a] mt-0.5">{PLAN_DISPLAY_NAMES[status.plan]}</p>
+            <p className="text-[13px] text-[#d97706] mt-1 flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 shrink-0" />
               Истёк {formatExpiryDate(status.expiresAt)}
             </p>
@@ -265,15 +265,15 @@ function CurrentSubscriptionBanner({ clinic }: { clinic: Clinic | null }) {
 
   if (status.kind === "expired_trial") {
     return (
-      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+      <div className="bg-[#fef3c7] border border-[#d97706]/30 rounded-2xl p-4">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
-            <AlertCircle className="w-5 h-5 text-amber-600" />
+          <div className="w-10 h-10 rounded-xl bg-[#d97706]/15 flex items-center justify-center shrink-0">
+            <AlertCircle className="w-5 h-5 text-[#d97706]" />
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wider">Пробный период</p>
-            <p className="text-[18px] font-black text-amber-900 mt-0.5">Закончился</p>
-            <p className="text-[13px] text-amber-700 mt-1 flex items-center gap-1.5">
+            <p className="text-[11px] font-bold text-[#d97706] uppercase tracking-wider">Пробный период</p>
+            <p className="text-[18px] font-black text-[#0f172a] mt-0.5">Закончился</p>
+            <p className="text-[13px] text-[#d97706] mt-1 flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 shrink-0" />
               Истёк {formatExpiryDate(status.expiresAt)}
             </p>
@@ -284,15 +284,15 @@ function CurrentSubscriptionBanner({ clinic }: { clinic: Clinic | null }) {
   }
 
   return (
-    <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4">
+    <div className="bg-white border border-[#e8e3d9] rounded-2xl p-4">
       <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
-          <AlertCircle className="w-5 h-5 text-gray-500" />
+        <div className="w-10 h-10 rounded-xl bg-[#f1ede4] flex items-center justify-center shrink-0">
+          <AlertCircle className="w-5 h-5 text-[#64748b]" />
         </div>
         <div className="min-w-0">
-          <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Текущий статус</p>
-          <p className="text-[18px] font-black text-gray-900 mt-0.5">Тариф не подключён</p>
-          <p className="text-[13px] text-gray-500 mt-1">Выберите тариф ниже, чтобы подключить систему</p>
+          <p className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider">Текущий статус</p>
+          <p className="text-[18px] font-black text-[#0f172a] mt-0.5">Тариф не подключён</p>
+          <p className="text-[13px] text-[#64748b] mt-1">Выберите тариф ниже, чтобы подключить систему</p>
         </div>
       </div>
     </div>
@@ -341,20 +341,20 @@ export default function PricingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f2f2f7] pb-10">
+    <div className="min-h-screen bg-[#faf8f4] font-manrope pb-10">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-white border-b border-gray-100 flex items-center gap-3 px-4 py-3">
-        <Link href="/menu" className="p-1.5 -ml-1.5 rounded-xl active:bg-gray-100 transition-colors">
-          <ChevronLeft className="w-5 h-5 text-gray-600" />
+      <div className="sticky top-0 z-10 bg-white border-b border-[#e8e3d9] flex items-center gap-3 px-4 py-3">
+        <Link href="/menu" className="p-1.5 -ml-1.5 rounded-xl hover:bg-[#f1ede4] active:bg-[#f1ede4] transition-colors">
+          <ChevronLeft className="w-5 h-5 text-[#64748b]" />
         </Link>
-        <h1 className="text-[17px] font-semibold text-gray-900">Тарифы</h1>
+        <h1 className="text-[17px] font-semibold text-[#0f172a]">Тарифы</h1>
       </div>
 
       <div className="px-4 pt-6 space-y-5">
         {/* Hero */}
         <div className="text-center space-y-2">
-          <h2 className="text-[22px] font-bold text-gray-900">Тарифы 1Dent</h2>
-          <p className="text-[14px] text-gray-500 leading-relaxed max-w-xs mx-auto">
+          <h2 className="text-[22px] font-bold text-[#0f172a]">Тарифы 1Dent</h2>
+          <p className="text-[14px] text-[#64748b] leading-relaxed max-w-xs mx-auto">
             Подберите план, который подходит именно вашей клинике
           </p>
         </div>
@@ -373,22 +373,22 @@ export default function PricingPage() {
                 className={cn(
                   "relative bg-white rounded-2xl border-2 overflow-hidden",
                   plan.badge
-                    ? "border-primary shadow-lg shadow-primary/10"
+                    ? "border-[#1f75fe] shadow-md shadow-[#1f75fe]/10"
                     : isCurrentPlan
-                    ? "border-emerald-400 shadow-md"
-                    : "border-gray-100 shadow-sm",
+                    ? "border-[#16a34a] shadow-md"
+                    : "border-[#e8e3d9] shadow-md",
                 )}
               >
                 {plan.badge && (
                   <div className="absolute top-0 right-0">
-                    <div className="bg-primary text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl flex items-center gap-1">
+                    <div className="bg-[#1f75fe] text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl flex items-center gap-1">
                       <Star className="w-3 h-3" /> {plan.badge}
                     </div>
                   </div>
                 )}
                 {isCurrentPlan && (
                   <div className="absolute top-0 right-0">
-                    <div className="bg-emerald-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl">
+                    <div className="bg-[#16a34a] text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl">
                       Текущий
                     </div>
                   </div>
@@ -401,26 +401,26 @@ export default function PricingPage() {
                       <Icon className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className="text-[20px] font-black text-gray-900 tracking-tight">{plan.name}</h3>
-                      <p className="text-[12px] text-gray-500 mt-0.5 leading-relaxed">{plan.subtitle}</p>
+                      <h3 className="text-[20px] font-black text-[#0f172a] tracking-tight">{plan.name}</h3>
+                      <p className="text-[12px] text-[#64748b] mt-0.5 leading-relaxed">{plan.subtitle}</p>
                     </div>
                   </div>
 
                   {/* Price */}
                   <div className="mb-5">
                     <div className="flex items-baseline gap-1.5">
-                      <span className="text-[30px] font-black text-gray-900">
+                      <span className="text-[30px] font-black text-[#0f172a]">
                         {plan.price.toLocaleString("ru-KZ")}
                       </span>
-                      <span className="text-[14px] text-gray-500 font-medium">₸ / мес</span>
+                      <span className="text-[14px] text-[#64748b] font-medium">₸ / мес</span>
                     </div>
                   </div>
 
                   {/* Includes from */}
                   {plan.includesFrom && (
-                    <div className="mb-4 px-3 py-2 bg-white/60 border border-gray-200/60 rounded-xl">
-                      <p className="text-[12px] text-gray-600 font-medium">
-                        Всё из тарифа <span className="font-bold text-gray-900">{plan.includesFrom}</span>, а также:
+                    <div className="mb-4 px-3 py-2 bg-white/60 border border-[#e8e3d9]/60 rounded-xl">
+                      <p className="text-[12px] text-[#64748b] font-medium">
+                        Всё из тарифа <span className="font-bold text-[#0f172a]">{plan.includesFrom}</span>, а также:
                       </p>
                     </div>
                   )}
@@ -433,9 +433,9 @@ export default function PricingPage() {
                           <Check className="w-3 h-3" strokeWidth={3} style={{ color: plan.accentColor }} />
                         </div>
                         <div>
-                          <p className="text-[13px] font-semibold text-gray-800 leading-snug">{feature.title}</p>
+                          <p className="text-[13px] font-semibold text-[#0f172a] leading-snug">{feature.title}</p>
                           {feature.description && (
-                            <p className="text-[12px] text-gray-500 leading-relaxed mt-0.5">{feature.description}</p>
+                            <p className="text-[12px] text-[#64748b] leading-relaxed mt-0.5">{feature.description}</p>
                           )}
                         </div>
                       </div>
@@ -443,13 +443,13 @@ export default function PricingPage() {
                   </div>
 
                   {/* Limits */}
-                  <div className="bg-white/70 border border-gray-100 rounded-xl p-3.5 mb-5">
-                    <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Лимиты</p>
+                  <div className="bg-white/70 border border-[#e8e3d9] rounded-xl p-3.5 mb-5">
+                    <p className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider mb-2">Лимиты</p>
                     <div className="space-y-1.5">
                       {plan.limits.map((limit, i) => (
                         <div key={i} className="flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-gray-300 shrink-0" />
-                          <span className="text-[12px] text-gray-600">{limit.text}</span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#94a3b8] shrink-0" />
+                          <span className="text-[12px] text-[#64748b]">{limit.text}</span>
                         </div>
                       ))}
                     </div>
@@ -460,12 +460,12 @@ export default function PricingPage() {
                     disabled={isCurrentPlan}
                     onClick={() => !isCurrentPlan && setRequestPlan(plan.name)}
                     className={cn(
-                      "w-full py-3.5 rounded-xl text-[14px] font-bold transition-all",
+                      "w-full py-3.5 rounded-full text-[14px] font-semibold transition-all",
                       isCurrentPlan
-                        ? "bg-emerald-100 text-emerald-700 cursor-default"
+                        ? "bg-[#f0fdf4] text-[#16a34a] cursor-default"
                         : plan.badge
-                        ? "bg-primary text-white hover:bg-primary/90 active:scale-[0.98] shadow-md"
-                        : "bg-gray-900 text-white hover:bg-gray-800 active:scale-[0.98]",
+                        ? "bg-[#1f75fe] text-white hover:bg-[#1a65e8] hover:scale-105 active:scale-95 shadow-md"
+                        : "bg-[#0f172a] text-white hover:bg-[#1e293b] hover:scale-105 active:scale-95",
                     )}
                   >
                     {isCurrentPlan ? "Текущий план" : "Выбрать план"}
@@ -477,20 +477,20 @@ export default function PricingPage() {
         </div>
 
         {/* Common features */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-md p-5">
           <div className="flex items-center gap-2.5 mb-4">
-            <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
-              <Shield className="w-4.5 h-4.5 text-emerald-600" />
+            <div className="w-9 h-9 rounded-xl bg-[#f0fdf4] flex items-center justify-center shrink-0">
+              <Shield className="w-4.5 h-4.5 text-[#16a34a]" />
             </div>
-            <h3 className="text-[15px] font-bold text-gray-900">Во все тарифы входит</h3>
+            <h3 className="text-[15px] font-bold text-[#0f172a]">Во все тарифы входит</h3>
           </div>
           <div className="space-y-2.5">
             {COMMON_FEATURES.map((feature, i) => (
               <div key={i} className="flex items-center gap-2.5">
-                <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
-                  <Check className="w-3 h-3 text-emerald-600" strokeWidth={3} />
+                <div className="w-5 h-5 rounded-full bg-[#f0fdf4] flex items-center justify-center shrink-0">
+                  <Check className="w-3 h-3 text-[#16a34a]" strokeWidth={3} />
                 </div>
-                <span className="text-[13px] text-gray-700">{feature}</span>
+                <span className="text-[13px] text-[#0f172a]">{feature}</span>
               </div>
             ))}
           </div>
@@ -498,7 +498,7 @@ export default function PricingPage() {
 
         {/* Footer */}
         <div className="text-center pt-2 pb-4">
-          <p className="text-[12px] text-gray-400 leading-relaxed">
+          <p className="text-[12px] text-[#94a3b8] leading-relaxed">
             Все цены указаны в тенге (₸). Оплата через Kaspi.
             <br />
             Есть вопросы? Напишите нам в WhatsApp.
@@ -509,27 +509,27 @@ export default function PricingPage() {
       {/* Request form modal */}
       {requestPlan && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <div className="bg-white w-full max-w-md rounded-2xl border border-[#e8e3d9] shadow-xl overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#e8e3d9]">
               <div>
-                <h3 className="font-bold text-gray-900">Заявка на тариф {requestPlan}</h3>
-                <p className="text-xs text-gray-500 mt-0.5">Мы свяжемся с вами для подключения</p>
+                <h3 className="font-bold text-[#0f172a]">Заявка на тариф {requestPlan}</h3>
+                <p className="text-xs text-[#64748b] mt-0.5">Мы свяжемся с вами для подключения</p>
               </div>
-              <button onClick={() => { setRequestPlan(null); setSubmitted(false); }} className="p-1.5 rounded-lg hover:bg-gray-100">
-                <X className="w-5 h-5 text-gray-400" />
+              <button onClick={() => { setRequestPlan(null); setSubmitted(false); }} className="p-1.5 rounded-xl hover:bg-[#f1ede4] transition-colors">
+                <X className="w-5 h-5 text-[#94a3b8]" />
               </button>
             </div>
 
             {submitted ? (
               <div className="p-8 text-center">
-                <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
-                  <Check className="w-7 h-7 text-emerald-600" strokeWidth={3} />
+                <div className="w-14 h-14 rounded-full bg-[#f0fdf4] flex items-center justify-center mx-auto mb-4">
+                  <Check className="w-7 h-7 text-[#16a34a]" strokeWidth={3} />
                 </div>
-                <h4 className="text-lg font-bold text-gray-900 mb-1">Заявка отправлена!</h4>
-                <p className="text-sm text-gray-500 mb-5">Мы свяжемся с вами в ближайшее время для подключения тарифа.</p>
+                <h4 className="text-lg font-bold text-[#0f172a] mb-1">Заявка отправлена!</h4>
+                <p className="text-sm text-[#64748b] mb-5">Мы свяжемся с вами в ближайшее время для подключения тарифа.</p>
                 <button
                   onClick={() => { setRequestPlan(null); setSubmitted(false); }}
-                  className="px-6 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold"
+                  className="px-6 py-2.5 bg-[#1f75fe] hover:bg-[#1a65e8] text-white rounded-full text-sm font-semibold transition-all hover:scale-105 active:scale-95"
                 >
                   Закрыть
                 </button>
@@ -537,42 +537,42 @@ export default function PricingPage() {
             ) : (
               <div className="p-5 space-y-3">
                 <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Имя <span className="text-red-400">*</span></label>
+                  <label className="text-xs font-medium text-[#64748b] mb-1 block">Имя <span className="text-[#dc2626]">*</span></label>
                   <input
                     type="text" value={formName} onChange={(e) => setFormName(e.target.value)}
                     placeholder="Ваше имя"
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="w-full bg-white border border-[#e8e3d9] rounded-xl px-3 py-2.5 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Телефон <span className="text-red-400">*</span></label>
+                  <label className="text-xs font-medium text-[#64748b] mb-1 block">Телефон <span className="text-[#dc2626]">*</span></label>
                   <input
                     type="tel" value={formPhone} onChange={(e) => setFormPhone(e.target.value)}
                     placeholder="+7 (___) ___-__-__"
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="w-full bg-white border border-[#e8e3d9] rounded-xl px-3 py-2.5 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Email</label>
+                  <label className="text-xs font-medium text-[#64748b] mb-1 block">Email</label>
                   <input
                     type="email" value={formEmail} onChange={(e) => setFormEmail(e.target.value)}
                     placeholder="email@example.com"
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="w-full bg-white border border-[#e8e3d9] rounded-xl px-3 py-2.5 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Комментарий</label>
+                  <label className="text-xs font-medium text-[#64748b] mb-1 block">Комментарий</label>
                   <textarea
                     value={formMessage} onChange={(e) => setFormMessage(e.target.value)}
                     placeholder="Дополнительная информация..."
                     rows={2}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                    className="w-full bg-white border border-[#e8e3d9] rounded-xl px-3 py-2.5 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 resize-none transition-colors"
                   />
                 </div>
                 <button
                   onClick={() => void handleSubmitRequest()}
                   disabled={submitting || !formName.trim() || !formPhone.trim()}
-                  className="w-full py-3 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-[#1f75fe] hover:bg-[#1a65e8] text-white rounded-full text-sm font-semibold hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2"
                 >
                   {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
                   Отправить заявку

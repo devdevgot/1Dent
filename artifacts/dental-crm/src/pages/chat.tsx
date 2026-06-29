@@ -35,9 +35,9 @@ import { WhatsAppConnectModal, WhatsAppIcon, type WaStatus } from "@/components/
 
 const BRAND      = "#1f75fe";
 const BRAND_DARK = "#0c1e3d";
-const CHAT_BG    = "#ECE5DD";
+const CHAT_BG    = "#faf8f4";
 
-const DOT_PATTERN = `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='2' cy='2' r='1' fill='%23b2a898' fill-opacity='0.22'/%3E%3C/svg%3E")`;
+const DOT_PATTERN = `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='2' cy='2' r='1' fill='%23d4cfc6' fill-opacity='0.35'/%3E%3C/svg%3E")`;
 
 const AVATAR_COLORS = [
   { bg: "#fde68a", text: "#92400e" },
@@ -126,7 +126,7 @@ function DeliveryIcon({ status }: { status: DeliveryStatus }) {
   if (status === "pending")   return <Clock      className="w-3 h-3 inline ml-0.5 opacity-60" />;
   if (status === "sent")      return <Check      className="w-3 h-3 inline ml-0.5 opacity-80" />;
   if (status === "delivered") return <CheckCheck className="w-3 h-3 inline ml-0.5 opacity-90" />;
-  if (status === "failed")    return <XCircle    className="w-3 h-3 inline ml-0.5 text-red-300" />;
+  if (status === "failed")    return <XCircle    className="w-3 h-3 inline ml-0.5 text-[#fca5a5]" />;
   return null;
 }
 
@@ -255,10 +255,10 @@ function MessageBubble({ message, isOutbound }: { message: Message; isOutbound: 
         )}
         style={
           isOutbound
-            ? { backgroundColor: BRAND, color: BRAND_DARK }
+            ? { backgroundColor: BRAND, color: "#ffffff" }
             : isAlert
-            ? { backgroundColor: "#fef2f2", color: "#1f2937" }
-            : { backgroundColor: "#ffffff", color: "#1f2937" }
+            ? { backgroundColor: "#fef2f2", color: "#0f172a" }
+            : { backgroundColor: "#ffffff", color: "#0f172a" }
         }
       >
         {isOutbound ? <BubbleTailOut /> : <BubbleTailIn alert={isAlert} />}
@@ -266,7 +266,7 @@ function MessageBubble({ message, isOutbound }: { message: Message; isOutbound: 
           <div className="text-[10px] opacity-60 mb-0.5 font-medium">🤖 Бот</div>
         )}
         {isAlert && !isOutbound && (
-          <div className="flex items-center gap-1 text-red-600 mb-1 text-xs font-semibold">
+          <div className="flex items-center gap-1 text-[#dc2626] mb-1 text-xs font-semibold">
             <AlertTriangle className="w-3 h-3 shrink-0" />
             <span>{t("chat.redAlert")}</span>
           </div>
@@ -307,7 +307,7 @@ function MessageBubble({ message, isOutbound }: { message: Message; isOutbound: 
         <div
           className={cn(
             "flex items-center justify-end gap-0.5 mt-0.5 text-[10px] select-none",
-            isOutbound ? "opacity-60" : "text-gray-400",
+            isOutbound ? "opacity-70 text-white/80" : "text-[#94a3b8]",
           )}
         >
           <span>{formatTime(message.createdAt)}</span>
@@ -327,8 +327,8 @@ function SessionEventBubble({ kind, ts, name }: { kind: "session_start" | "sessi
         className={cn(
           "inline-flex items-center gap-1.5 text-[11px] font-medium px-3 py-1 rounded-full shadow-sm",
           isStart
-            ? "bg-green-100 text-green-700 border border-green-200"
-            : "bg-red-50 text-red-600 border border-red-200",
+            ? "bg-[#f0fdf4] text-[#16a34a] border border-[#16a34a]/20"
+            : "bg-[#fef2f2] text-[#dc2626] border border-[#dc2626]/20",
         )}
       >
         {isStart ? (
@@ -501,13 +501,12 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
     <div className="flex flex-col h-full min-w-0">
       {/* ── Header ── */}
       <div
-        className="flex items-center gap-3 px-4 py-3 border-b border-border/30 shrink-0"
-        style={{ background: "linear-gradient(135deg,#ffffff 0%,#f8fdf0 100%)" }}
+        className="flex items-center gap-3 px-4 py-3 border-b border-[#e8e3d9] bg-white shadow-sm shrink-0 font-manrope"
       >
         {onBack && (
           <button
             onClick={onBack}
-            className="md:hidden p-1.5 -ml-1 rounded-xl hover:bg-slate-100 text-muted-foreground transition-colors"
+            className="md:hidden p-1.5 -ml-1 rounded-xl hover:bg-[#f1ede4] text-[#64748b] transition-colors"
             aria-label="Back"
           >
             <ChevronLeft className="w-5 h-5" />
@@ -518,14 +517,14 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <p className="font-bold text-[15px] text-foreground truncate">{patient.name}</p>
+            <p className="font-bold text-[15px] text-[#0f172a] truncate">{patient.name}</p>
             <WhatsAppIcon size={15} />
           </div>
-          <p className="text-xs text-muted-foreground truncate">{patient.phone}</p>
+          <p className="text-xs text-[#64748b] truncate">{patient.phone}</p>
         </div>
 
         {hasRedAlert && (
-          <Badge variant="destructive" className="flex items-center gap-1 shrink-0 text-xs">
+          <Badge variant="destructive" className="flex items-center gap-1 shrink-0 text-xs bg-[#fef2f2] text-[#dc2626] border border-[#dc2626]/20 hover:bg-[#fef2f2]">
             <AlertTriangle className="w-3 h-3" />
             {t("chat.redAlert")}
           </Badge>
@@ -534,12 +533,12 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
 
       {/* ── Message feed ── */}
       <div
-        className="flex-1 overflow-y-auto overflow-x-hidden py-3"
+        className="flex-1 overflow-y-auto overflow-x-hidden py-3 font-manrope"
         style={{ backgroundColor: CHAT_BG, backgroundImage: DOT_PATTERN }}
       >
         {isLoading && (
           <div className="flex items-center justify-center h-full">
-            <div className="bg-white/80 rounded-2xl px-5 py-3 text-sm text-muted-foreground shadow-sm">
+            <div className="bg-white rounded-2xl border border-[#e8e3d9] px-5 py-3 text-sm text-[#64748b] shadow-sm">
               {t("chat.loadingMessages")}
             </div>
           </div>
@@ -547,14 +546,14 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
 
         {isError && (
           <div className="flex flex-col items-center justify-center h-full gap-3 px-8 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center">
-              <AlertTriangle className="w-7 h-7 text-red-500" />
+            <div className="w-14 h-14 rounded-2xl bg-[#fef2f2] border border-[#dc2626]/20 flex items-center justify-center">
+              <AlertTriangle className="w-7 h-7 text-[#dc2626]" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-gray-700">
+              <p className="text-sm font-semibold text-[#0f172a]">
                 {t("chat.loadError", { defaultValue: "Не удалось загрузить переписку" })}
               </p>
-              <p className="text-xs text-gray-400 mt-0.5">
+              <p className="text-xs text-[#94a3b8] mt-0.5">
                 {t("chat.loadErrorHint", { defaultValue: "Проверьте подключение и попробуйте снова" })}
               </p>
             </div>
@@ -564,14 +563,13 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
         {!isLoading && !isError && messages.length === 0 && sessionHistory.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-3 px-8 text-center">
             <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-md"
-              style={{ backgroundColor: BRAND + "25" }}
+              className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-md border border-[#e8e3d9] bg-[#1f75fe]/10"
             >
               <WhatsAppIcon size={34} color={BRAND} />
             </div>
             <div>
-              <p className="text-sm font-semibold text-gray-600">{t("chat.noMessages")}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{t("chat.startConversation")}</p>
+              <p className="text-sm font-semibold text-[#0f172a]">{t("chat.noMessages")}</p>
+              <p className="text-xs text-[#94a3b8] mt-0.5">{t("chat.startConversation")}</p>
             </div>
           </div>
         )}
@@ -579,7 +577,7 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
         {!isLoading && !isError && grouped.map((group) => (
           <div key={group.date}>
             <div className="flex justify-center my-3 px-4">
-              <span className="text-[11px] font-medium bg-white/80 text-gray-500 px-3 py-1 rounded-full shadow-sm backdrop-blur-sm">
+              <span className="text-[11px] font-medium bg-white text-[#64748b] border border-[#e8e3d9] px-3 py-1 rounded-full shadow-sm">
                 {group.date}
               </span>
             </div>
@@ -609,16 +607,15 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
       </div>
 
       {/* ── Input area ── */}
-      <div className="flex flex-col gap-0 border-t border-border/30 shrink-0 bg-[#f0f2f5]">
+      <div className="flex flex-col gap-0 border-t border-[#e8e3d9] shrink-0 bg-[#faf8f4] font-manrope">
         <div className="flex items-end gap-2 px-3 py-2.5">
-          {/* File attachment button */}
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploadingFile}
-            className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-gray-500 hover:bg-white/80 active:scale-95 transition-all disabled:opacity-40"
+            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-[#64748b] hover:bg-[#f1ede4] active:scale-95 transition-all disabled:opacity-40"
           >
             {uploadingFile ? (
-              <Loader2 className="w-5 h-5 animate-spin text-primary" />
+              <Loader2 className="w-5 h-5 animate-spin text-[#1f75fe]" />
             ) : (
               <Paperclip className="w-5 h-5" />
             )}
@@ -632,7 +629,7 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
           />
 
           {/* Message textarea */}
-          <div className="flex-1 bg-white rounded-2xl px-3.5 py-2 shadow-sm border border-border/20 flex items-end min-h-[44px]">
+          <div className="flex-1 bg-white rounded-xl px-3.5 py-2 shadow-sm border border-[#e8e3d9] flex items-end min-h-[44px] focus-within:border-[#1f75fe] focus-within:ring-2 focus-within:ring-[#1f75fe]/20">
             <textarea
               ref={textareaRef}
               value={text}
@@ -640,7 +637,7 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
               onKeyDown={handleKeyDown}
               placeholder={t("chat.messagePlaceholder")}
               rows={1}
-              className="w-full resize-none outline-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground leading-relaxed"
+              className="w-full resize-none outline-none bg-transparent text-sm text-[#0f172a] placeholder:text-[#94a3b8] leading-relaxed"
               style={{ maxHeight: 120, minHeight: 24 }}
             />
           </div>
@@ -649,10 +646,9 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
           <button
             onClick={handleSend}
             disabled={!text.trim() || sendMutation.isPending}
-            className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition-all active:scale-95 disabled:opacity-40 shadow-md"
-            style={{ backgroundColor: BRAND }}
+            className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition-all hover:scale-105 active:scale-95 disabled:opacity-40 shadow-md bg-[#1f75fe] hover:bg-[#1a65e8]"
           >
-            <Send className="w-4 h-4" style={{ color: BRAND_DARK }} />
+            <Send className="w-4 h-4 text-white" />
           </button>
         </div>
       </div>
@@ -773,24 +769,23 @@ export default function ChatPage() {
   const waConfigured = waStatus?.configured ?? false;
 
   return (
-    <div className="flex overflow-hidden h-full w-full max-w-full">
+    <div className="flex overflow-hidden h-full w-full max-w-full font-manrope">
       <aside
         className={cn(
-          "flex flex-col border-r border-border/40",
+          "flex flex-col border-r border-[#e8e3d9] bg-[#faf8f4]",
           "w-full md:w-80 md:shrink-0",
           selectedPatientId ? "hidden md:flex" : "flex",
         )}
-        style={{ background: "linear-gradient(180deg,#ffffff 0%,#f9fdf2 100%)" }}
       >
-        <div className="px-4 pt-4 pb-3 border-b border-border/40">
+        <div className="px-4 pt-4 pb-3 border-b border-[#e8e3d9] bg-white shadow-sm">
           <div className="flex items-center gap-2 mb-3">
             <WhatsAppIcon size={18} />
-            <h2 className="font-bold text-[15px] text-foreground flex-1">{t("chat.title")}</h2>
+            <h2 className="font-bold text-[15px] text-[#0f172a] flex-1">{t("chat.title")}</h2>
             {isOwner && (waConnected || waConfigured) && (
               <button
                 onClick={handleOpenChangeModal}
                 title="Изменить WhatsApp"
-                className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors px-2 py-1 rounded-lg hover:bg-gray-100"
+                className="flex items-center gap-1 text-xs text-[#94a3b8] hover:text-[#64748b] transition-colors px-2 py-1 rounded-xl hover:bg-[#f1ede4]"
               >
                 <Pencil className="w-3 h-3" />
                 <span>Изменить</span>
@@ -799,8 +794,8 @@ export default function ChatPage() {
           </div>
 
           {!waStatusLoading && !waConnected && !isOwner && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3">
-              <p className="text-xs text-amber-700 leading-relaxed">
+            <div className="bg-[#fef3c7] border border-[#d97706]/20 rounded-xl p-3 mb-3">
+              <p className="text-xs text-[#d97706] leading-relaxed">
                 WhatsApp не подключён. Обратитесь к Владельцу клиники, чтобы он подключил WhatsApp.
               </p>
             </div>
@@ -808,18 +803,18 @@ export default function ChatPage() {
 
           {!waStatusLoading && waConnected && waStatus?.phone && (
             <div className="flex items-center gap-1.5 mb-3 px-1">
-              <div className="w-2 h-2 rounded-full bg-green-500" />
-              <p className="text-xs text-gray-500 font-mono">+{waStatus.phone}</p>
+              <div className="w-2 h-2 rounded-full bg-[#16a34a]" />
+              <p className="text-xs text-[#64748b] font-mono">+{waStatus.phone}</p>
             </div>
           )}
 
           <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t("chat.searchPlaceholder")}
-              className="w-full pl-9 pr-4 py-2.5 bg-white/80 border border-border/40 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/40 transition-all"
+              className="w-full pl-9 pr-4 py-2.5 bg-white border border-[#e8e3d9] rounded-xl text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 transition-all"
             />
           </div>
         </div>
@@ -828,14 +823,14 @@ export default function ChatPage() {
           {patientsLoading && (
             <div className="p-3 space-y-2">
               {[0,1,2,3,4].map(i => (
-                <div key={i} className="h-16 bg-slate-100 rounded-xl animate-pulse" />
+                <div key={i} className="h-16 bg-[#f1ede4] rounded-xl animate-pulse" />
               ))}
             </div>
           )}
           {!patientsLoading && filtered.length === 0 && (
             <div className="p-8 text-center">
-              <MessageSquare className="w-8 h-8 mx-auto mb-2 text-muted-foreground/30" />
-              <p className="text-sm text-muted-foreground">{t("chat.noPatients")}</p>
+              <MessageSquare className="w-8 h-8 mx-auto mb-2 text-[#94a3b8]/40" />
+              <p className="text-sm text-[#64748b]">{t("chat.noPatients")}</p>
             </div>
           )}
           {!patientsLoading && filtered.map((patient) => (
@@ -860,18 +855,17 @@ export default function ChatPage() {
           <ChatPanel patient={selectedPatient} onBack={handleBack} />
         ) : (
           <div
-            className="flex-1 flex flex-col items-center justify-center gap-4 px-8 text-center"
+            className="flex-1 flex flex-col items-center justify-center gap-4 px-8 text-center font-manrope"
             style={{ backgroundColor: CHAT_BG, backgroundImage: DOT_PATTERN }}
           >
             <div
-              className="w-20 h-20 rounded-3xl flex items-center justify-center shadow-lg"
-              style={{ backgroundColor: BRAND + "25" }}
+              className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg border border-[#e8e3d9] bg-[#1f75fe]/10"
             >
               <WhatsAppIcon size={44} color={BRAND} />
             </div>
             <div>
-              <p className="font-semibold text-gray-700 text-base">{t("chat.selectPatient")}</p>
-              <p className="text-sm text-gray-400 mt-1">{t("chat.selectPatientHint")}</p>
+              <p className="font-semibold text-[#0f172a] text-base">{t("chat.selectPatient")}</p>
+              <p className="text-sm text-[#94a3b8] mt-1">{t("chat.selectPatientHint")}</p>
             </div>
           </div>
         )}
@@ -912,12 +906,11 @@ function PatientListItem({
     <button
       onClick={onSelect}
       className={cn(
-        "w-full flex items-center gap-3 px-4 py-3.5 text-left transition-all border-b border-border/20",
+        "w-full flex items-center gap-3 px-4 py-3.5 text-left transition-all border-b border-[#e8e3d9]",
         isSelected
-          ? "bg-[#f2fbea] border-l-[3px]"
-          : "hover:bg-white/70 border-l-[3px] border-l-transparent",
+          ? "bg-[#1f75fe]/10 border-l-[3px] border-l-[#1f75fe]"
+          : "hover:bg-[#faf8f4] border-l-[3px] border-l-transparent",
       )}
-      style={isSelected ? { borderLeftColor: BRAND } : undefined}
     >
       <div className="relative shrink-0">
         <div
@@ -930,26 +923,25 @@ function PatientListItem({
         {isActive && (
           <span
             className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white"
-            style={{ backgroundColor: "#22c55e" }}
+            style={{ backgroundColor: "#16a34a" }}
           />
         )}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <p className={cn("font-semibold text-sm truncate", isSelected ? "text-[#0c1e3d]" : "text-foreground")}>
+          <p className={cn("font-semibold text-sm truncate", isSelected ? "text-[#1f75fe]" : "text-[#0f172a]")}>
             {patient.name}
           </p>
           {isActive && (
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0"
-              style={{ backgroundColor: BRAND + "30", color: BRAND_DARK }}>
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 bg-[#1f75fe]/10 text-[#1f75fe]">
               активен
             </span>
           )}
         </div>
-        <p className="text-xs text-muted-foreground truncate mt-0.5">{patient.phone}</p>
+        <p className="text-xs text-[#64748b] truncate mt-0.5">{patient.phone}</p>
       </div>
       {isSelected && (
-        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: BRAND }} />
+        <div className="w-2 h-2 rounded-full shrink-0 bg-[#1f75fe]" />
       )}
     </button>
   );

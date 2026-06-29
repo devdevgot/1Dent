@@ -30,6 +30,35 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return res.json() as Promise<T>;
 }
 
+function reportTmaError(message: string, metadata?: Record<string, unknown>) {
+  void fetch("/api/errors/report", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      source: "tg-admin",
+      message,
+      url: typeof window !== "undefined" ? window.location.href : null,
+      metadata,
+    }),
+  }).catch(() => {});
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("error", (event) => {
+    reportTmaError(event.message || "window.onerror", {
+      stack: event.error instanceof Error ? event.error.stack : undefined,
+      filename: event.filename,
+    });
+  });
+  window.addEventListener("unhandledrejection", (event) => {
+    const reason = event.reason;
+    reportTmaError(reason instanceof Error ? reason.message : String(reason), {
+      stack: reason instanceof Error ? reason.stack : undefined,
+      code: "UNHANDLED_REJECTION",
+    });
+  });
+}
+
 export const api = {
   get: <T>(path: string) => request<T>("GET", path),
   post: <T>(path: string, body?: unknown) => request<T>("POST", path, body),
@@ -79,6 +108,25 @@ export interface LogEntry {
   entityType: string;
   entityId: string | null;
   details: string | null;
+  createdAt: string;
+}
+
+export interface ErrorEventEntry {
+  id: string;
+  source: string;
+  severity: string;
+  message: string;
+  stack: string | null;
+  code: string | null;
+  clinicId: string | null;
+  userId: string | null;
+  requestId: string | null;
+  url: string | null;
+  method: string | null;
+  userAgent: string | null;
+  metadata: Record<string, unknown> | null;
+  fingerprint: string | null;
+  resolvedAt: string | null;
   createdAt: string;
 }
 

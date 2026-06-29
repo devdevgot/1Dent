@@ -1,0 +1,71 @@
+# CI/CD: checks on every PR/push to master.
+#
+# Railway deploy — два режима (см. docs/RAILWAY_DEPLOY.md):
+#
+#   A) Auto-deploy (проще): Railway Settings → Source → branch master, auto-deploy ON.
+#      GitHub Actions только проверяет сборку. Секрет RAILWAY_DEPLOY_HOOK не нужен.
+#
+#   B) Deploy hook: Railway auto-deploy OFF, в GitHub Secrets добавить RAILWAY_DEPLOY_HOOK.
+#      Деплой запускается после успешного job Checks.
+#
+# Flow (вариант B):
+#   push master → GitHub Actions (checks) → POST deploy hook → Railway
+
+name: CI/CD
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+# Не отменять прогоны на master — иначе deploy hook не успевает сработать
+concurrency:
+  group: ci-cd-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  checks:
+    name: Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install and build (same as Railway)
+        run: bash ./scripts/deploy-build.sh
+
+  deploy:
+    name: Deploy to Railway
+    needs: checks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: production
+      url: https://1dent.kz
+    steps:
+      - name: Trigger Railway deploy (optional — via deploy hook)
+        env:
+          RAILWAY_DEPLOY_HOOK: ${{ secrets.RAILWAY_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$RAILWAY_DEPLOY_HOOK" ]; then
+            echo "::notice::RAILWAY_DEPLOY_HOOK не задан — деплой через hook пропущен."
+            echo "Включите auto-deploy в Railway (ветка master) или добавьте секрет RAILWAY_DEPLOY_HOOK."
+            echo "Инструкция: docs/RAILWAY_DEPLOY.md"
+            exit 0
+          fi
+          curl --fail --silent --show-error --request POST "$RAILWAY_DEPLOY_HOOK"
+          echo "Railway deploy triggered via hook."

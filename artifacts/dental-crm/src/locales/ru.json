@@ -107,6 +107,13 @@
     "errorTitle": "Ошибка",
     "errorDesc": "Не удалось выйти из системы. Попробуйте снова."
   },
+  "menuPage": {
+    "title": "Меню",
+    "settings": "Настройки",
+    "language": "Язык приложения",
+    "notifications": "Уведомления",
+    "copyright": "© 2025 1Dent"
+  },
   "role": {
     "owner": "Владелец",
     "admin": "Администратор",
@@ -1014,6 +1021,13 @@
   },
   "settingsPage": {
     "title": "Настройки",
+    "accountTitle": "Настройки аккаунта",
+    "name": "Имя",
+    "email": "Email",
+    "password": "Пароль",
+    "changePhoto": "Изменить фото",
+    "photoUpdated": "Фото профиля обновлено",
+    "photoUpdateError": "Не удалось обновить фото",
     "profile": "Профиль",
     "security": "Безопасность",
     "appearance": "Внешний вид",

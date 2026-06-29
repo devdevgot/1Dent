@@ -3,6 +3,7 @@ import { pool } from "@workspace/db";
 
 const EXEMPT_PREFIXES = [
   "/api/auth/",
+  "/api/errors/",
   "/api/healthz",
   "/api/tma/",
   "/api/webhook/",

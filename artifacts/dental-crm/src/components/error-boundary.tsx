@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from "react";
 import { RefreshCw } from "lucide-react";
+import { reportClientError } from "@/lib/report-error";
 
 interface Props {
   children: ReactNode;
@@ -23,6 +24,14 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: { componentStack: string }) {
     console.error("[ErrorBoundary] caught:", error, info.componentStack);
+    reportClientError({
+      source: "dental-crm",
+      message: error.message,
+      stack: error.stack ?? null,
+      code: "REACT_BOUNDARY",
+      url: typeof window !== "undefined" ? window.location.href : null,
+      metadata: { componentStack: info.componentStack },
+    });
   }
 
   reset = () => {

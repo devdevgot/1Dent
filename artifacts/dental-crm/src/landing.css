@@ -1,0 +1,355 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&display=swap');
+
+/* ── Design tokens ───────────────────────────────────────────────────────── */
+.landing-page {
+  --bg: #faf8f4;
+  --surface: #ffffff;
+  --surface-2: #f1ede4;
+  --border: #e8e3d9;
+  --border-strong: #d4cfc6;
+  --text: #0f172a;
+  --text-secondary: #64748b;
+  --text-subtle: #94a3b8;
+  --primary: #1f75fe;
+  --primary-hover: #1a65e8;
+  --primary-active: #1555cc;
+  --primary-light: rgba(31, 117, 254, 0.1);
+  --primary-fg: #ffffff;
+  --dark-bg: #0f172a;
+  --dark-surface: rgba(255, 255, 255, 0.05);
+  --dark-border: rgba(255, 255, 255, 0.1);
+  --dark-text: #ffffff;
+  --dark-secondary: rgba(255, 255, 255, 0.6);
+  --dark-subtle: rgba(255, 255, 255, 0.3);
+  --accent-blue-light: #60a5fa;
+  --danger: #dc2626;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.06);
+  --shadow-lg: 0 8px 32px rgba(15, 23, 42, 0.08);
+  --shadow-xl: 0 16px 48px rgba(15, 23, 42, 0.1);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+  font-family: 'Manrope', sans-serif;
+  color: var(--text);
+  background-color: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.font-manrope {
+  font-family: 'Manrope', sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* ── Typography ──────────────────────────────────────────────────────────── */
+.landing-display {
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  font-size: clamp(2.75rem, 7.5vw, 5.5rem);
+}
+
+.landing-h2 {
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  font-size: clamp(2rem, 5vw, 4rem);
+}
+
+.landing-h3 {
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+}
+
+.landing-lead {
+  font-size: 1.125rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.landing-body {
+  font-size: 0.875rem;
+  line-height: 1.65;
+  color: var(--text-secondary);
+}
+
+.landing-gradient-text {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent-blue-light) 50%, var(--primary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.landing-gradient-text-dark {
+  color: var(--accent-blue-light);
+}
+
+/* ── Sections ────────────────────────────────────────────────────────────── */
+.landing-section {
+  padding-top: 7rem;
+  padding-bottom: 7rem;
+}
+
+.landing-section-sm {
+  padding-top: 6rem;
+  padding-bottom: 6rem;
+}
+
+/* ── Backgrounds ─────────────────────────────────────────────────────────── */
+.landing-grid-bg {
+  background-image:
+    linear-gradient(to right, var(--border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%);
+}
+
+.landing-hero-glow {
+  background: radial-gradient(ellipse at 50% 0%, rgba(31, 117, 254, 0.12) 0%, transparent 70%);
+}
+
+.landing-dark-glow-blue {
+  background: radial-gradient(circle, rgba(31, 117, 254, 0.15) 0%, transparent 70%);
+}
+
+.landing-dark-glow-purple {
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.08) 0%, transparent 70%);
+}
+
+.landing-dark-grid {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 70% 50% at 50% 50%, black 30%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 50% at 50% 50%, black 30%, transparent 100%);
+}
+
+/* ── Badges ──────────────────────────────────────────────────────────────── */
+.landing-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border-radius: var(--radius-full);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.landing-badge-light {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+
+.landing-badge-light:hover {
+  border-color: rgba(31, 117, 254, 0.35);
+}
+
+.landing-badge-primary {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.landing-badge-dark {
+  background: var(--dark-surface);
+  border: 1px solid var(--dark-border);
+  color: var(--dark-secondary);
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.landing-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-radius: var(--radius-full);
+  padding: 0.875rem 1.75rem;
+  transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.landing-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.landing-btn-primary {
+  background: var(--text);
+  color: var(--primary-fg);
+  box-shadow: var(--shadow-md);
+}
+
+.landing-btn-primary:hover {
+  background: #1e293b;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
+}
+
+.landing-btn-accent {
+  background: var(--primary);
+  color: var(--primary-fg);
+}
+
+.landing-btn-accent:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.landing-btn-secondary {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.landing-btn-secondary:hover {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+}
+
+.landing-btn-ghost {
+  color: var(--text);
+  border: 1px solid var(--border);
+  background: transparent;
+  padding: 0.625rem 1.25rem;
+}
+
+.landing-btn-ghost:hover {
+  background: var(--surface-2);
+}
+
+/* ── Cards ───────────────────────────────────────────────────────────────── */
+.landing-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.25s ease, transform 0.25s ease, border-color 0.25s ease;
+}
+
+.landing-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.landing-card-elevated {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.landing-card-dark {
+  background: var(--dark-surface);
+  border: 1px solid var(--dark-border);
+  border-radius: var(--radius-xl);
+  backdrop-filter: blur(8px);
+}
+
+.landing-mockup {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.landing-mockup:hover {
+  box-shadow: var(--shadow-xl);
+}
+
+/* ── Navbar ──────────────────────────────────────────────────────────────── */
+.landing-nav {
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.landing-nav-scrolled {
+  background: rgba(250, 248, 244, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.landing-nav-link {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: color 0.2s ease;
+}
+
+.landing-nav-link:hover {
+  color: var(--text);
+}
+
+.landing-nav-link:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+/* ── Form inputs (dark) ──────────────────────────────────────────────────── */
+.landing-input-dark {
+  width: 100%;
+  background: var(--dark-surface);
+  border: 1px solid var(--dark-border);
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+  font-size: 0.875rem;
+  color: var(--dark-text);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.landing-input-dark::placeholder {
+  color: var(--dark-subtle);
+}
+
+.landing-input-dark:focus {
+  outline: none;
+  border-color: rgba(31, 117, 254, 0.5);
+  box-shadow: 0 0 0 3px rgba(31, 117, 254, 0.15);
+}
+
+/* ── Pricing featured ──────────────────────────────────────────────────────── */
+.landing-pricing-featured {
+  border-color: var(--primary);
+  box-shadow: 0 8px 32px rgba(31, 117, 254, 0.12);
+}
+
+/* ── Stat numbers ──────────────────────────────────────────────────────────── */
+.landing-stat-value {
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-size: clamp(3rem, 6vw, 5rem);
+  line-height: 1;
+  color: var(--text);
+}
+
+/* ── Divider ───────────────────────────────────────────────────────────────── */
+.landing-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--border), transparent);
+}
+
+/* ── Reduced motion ────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .landing-btn:hover,
+  .landing-card:hover,
+  .landing-mockup:hover {
+    transform: none;
+  }
+}

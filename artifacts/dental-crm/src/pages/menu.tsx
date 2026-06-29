@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
+import { motion } from "framer-motion";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useLogout } from "@workspace/api-client-react";
 import { clearAuthToken } from "@/lib/auth-token";
@@ -7,6 +8,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import i18n from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { PageShell } from "@/components/layout/page-shell";
+import { IosGroup, IosGroupRow, IosSection } from "@/components/layout/ios-group";
+import { Button } from "@/components/ui/button";
 import {
   Users,
   BarChart3,
@@ -46,6 +50,21 @@ const ALL_NAV_ITEMS = [
   { nameKey: "nav.branches",          href: "/branches",           icon: MapPin,       roles: ["owner"] },
 ];
 
+const LANG_LABEL: Record<Lang, string> = { ru: "Рус", kz: "Қаз", en: "Eng" };
+
+const gridVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.04, delayChildren: 0.06 },
+  },
+};
+
+const gridItemVariants = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] } },
+};
+
 export default function MenuPage() {
   const { t } = useTranslation();
   const { user, clearAuth } = useAuthStore();
@@ -82,14 +101,14 @@ export default function MenuPage() {
     setCurrentLang(lang);
   };
 
-  const LANG_LABEL: Record<Lang, string> = { ru: "Рус", kz: "Қаз", en: "Eng" };
-
   return (
-    <div className="min-h-full bg-[#f2f2f7] pb-6">
-      {/* Profile card */}
-      <Link href="/account-settings" className="block bg-white px-4 pt-5 pb-3 mb-5 active:bg-gray-50 transition-colors">
-        <div className="flex items-center gap-3 py-1">
-          <div className="w-11 h-11 rounded-full overflow-hidden bg-primary/15 text-primary flex items-center justify-center font-bold text-base shrink-0">
+    <PageShell className="pb-6 bg-[#faf8f4] font-manrope text-[#0f172a]">
+      <Link
+        href="/account-settings"
+        className="block bg-white px-4 pt-5 pb-4 mb-4 border-b border-[#e8e3d9]/50 active:bg-[#f1ede4] transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-full overflow-hidden bg-[#1f75fe]/12 text-[#1f75fe] flex items-center justify-center font-bold text-base shrink-0 ring-2 ring-[#1f75fe]/10">
             {(user as typeof user & { photoUrl?: string | null })?.photoUrl ? (
               <img
                 src={(user as typeof user & { photoUrl?: string | null })?.photoUrl!}
@@ -101,62 +120,61 @@ export default function MenuPage() {
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-gray-900 text-[15px] leading-tight truncate">{user?.name}</p>
-            <p className="text-sm text-gray-400 truncate">{user?.email}</p>
+            <p className="font-semibold text-[#0f172a] text-body leading-tight truncate">{user?.name}</p>
+            <p className="text-caption text-[#64748b] truncate">{user?.email}</p>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-bold text-primary uppercase tracking-wider bg-primary/10 px-2 py-0.5 rounded-full">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-micro font-bold text-[#1f75fe] uppercase tracking-wider bg-[#1f75fe]/10 px-2 py-0.5 rounded-full">
               {user?.role ? t(`role.${user.role}`) : user?.role}
             </span>
-            <ChevronRight className="w-4 h-4 text-gray-300" />
+            <ChevronRight className="w-4 h-4 text-[#94a3b8]" />
           </div>
         </div>
       </Link>
 
-      {/* Services grid */}
-      <div className="px-4 mb-5">
-        <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Меню</p>
-        <div className="bg-white rounded-2xl py-3 px-2">
-          <div className="grid grid-cols-4">
+      <IosSection title={t("menuPage.title")} className="mb-5">
+        <IosGroup className="py-2 px-1">
+          <motion.div
+            className="grid grid-cols-4"
+            variants={gridVariants}
+            initial="hidden"
+            animate="show"
+          >
             {navItems.map((item) => (
+              <motion.div key={item.href} variants={gridItemVariants}>
                 <Link
-                  key={item.href}
                   href={item.href}
-                  className="flex flex-col items-center gap-1.5 py-3 px-1 relative"
+                  className="flex flex-col items-center gap-1.5 py-3 px-1 rounded-xl hover:bg-[#f1ede4] active:bg-[#f1ede4] transition-colors"
                 >
-                  <item.icon
-                    className="w-6 h-6 text-primary"
-                    strokeWidth={1.8}
-                  />
-                  <span className="text-[11px] text-gray-600 text-center leading-tight font-medium">
+                  <item.icon className="w-6 h-6 text-[#1f75fe]" strokeWidth={1.8} />
+                  <span className="text-micro text-[#64748b] text-center leading-tight font-medium line-clamp-2">
                     {item.name}
                   </span>
                 </Link>
+              </motion.div>
             ))}
-          </div>
-        </div>
-      </div>
+          </motion.div>
+        </IosGroup>
+      </IosSection>
 
-      {/* Settings */}
       {user?.role !== "admin" && (
-        <div className="px-4 mb-3">
-          <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Настройки</p>
-          <div className="bg-white rounded-2xl overflow-hidden divide-y divide-gray-100">
-            {/* Language */}
-            <div className="flex items-center justify-between px-4 py-3.5">
-              <span className="text-[15px] text-gray-800">Язык приложения</span>
-              <div className="flex items-center gap-1">
-                <span className="text-sm text-gray-400 mr-1">{LANG_LABEL[currentLang]}</span>
-                <div className="flex bg-gray-100 rounded-lg p-0.5">
+        <IosSection title={t("menuPage.settings")} className="mb-4">
+          <IosGroup>
+            <IosGroupRow>
+              <span className="text-body">{t("menuPage.language")}</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-caption text-[#64748b] mr-0.5">{LANG_LABEL[currentLang]}</span>
+                <div className="flex bg-[#f1ede4] rounded-lg p-0.5">
                   {SUPPORTED_LANGS.map((lang) => (
                     <button
                       key={lang}
+                      type="button"
                       onClick={() => handleLangChange(lang)}
                       className={cn(
-                        "text-[11px] font-semibold px-2.5 py-1.5 rounded-md transition-all",
+                        "text-micro font-semibold px-2.5 py-1.5 rounded-md transition-all",
                         currentLang === lang
-                          ? "bg-white text-primary shadow-sm"
-                          : "text-gray-400",
+                          ? "bg-white text-[#1f75fe] shadow-sm"
+                          : "text-[#64748b] hover:text-[#0f172a]",
                       )}
                     >
                       {LANG_LABEL[lang]}
@@ -164,56 +182,52 @@ export default function MenuPage() {
                   ))}
                 </div>
               </div>
-            </div>
+            </IosGroupRow>
 
-            <Link
-              href="/ai-credits"
-              className="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 transition-colors"
-            >
-              <span className="text-[15px] text-gray-800">{t("nav.aiCredits")}</span>
-              <ChevronRight className="w-4 h-4 text-gray-300" />
+            <Link href="/ai-credits" className="block">
+              <IosGroupRow className="border-b-0">
+                <span className="text-body">{t("nav.aiCredits")}</span>
+                <ChevronRight className="w-4 h-4 text-[#94a3b8] shrink-0" />
+              </IosGroupRow>
             </Link>
 
-            {/* Audit Log — owner only */}
             {user?.role === "owner" && (
-              <Link href="/logs" className="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 transition-colors">
-                <div className="flex items-center gap-2.5">
-                  <span className="text-[15px] text-gray-800">{t("nav.logs")}</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-gray-300" />
+              <Link href="/logs" className="block">
+                <IosGroupRow>
+                  <span className="text-body">{t("nav.logs")}</span>
+                  <ChevronRight className="w-4 h-4 text-[#94a3b8] shrink-0" />
+                </IosGroupRow>
               </Link>
             )}
 
-            {/* Notifications */}
-            <div className="flex items-center justify-between px-4 py-3.5">
-              <span className="text-[15px] text-gray-800">Уведомления</span>
-              <div className="flex items-center gap-1 text-gray-400">
+            <IosGroupRow>
+              <span className="text-body">{t("menuPage.notifications")}</span>
+              <div className="flex items-center gap-1 text-[#94a3b8]">
                 <Bell className="w-4 h-4" />
                 <ChevronRight className="w-4 h-4" />
               </div>
-            </div>
-          </div>
-        </div>
+            </IosGroupRow>
+          </IosGroup>
+        </IosSection>
       )}
 
-      {/* Logout */}
-      <div className="px-4 mt-5">
-        <button
+      <IosSection className="mt-2">
+        <Button
+          variant="outline"
+          className="w-full justify-start gap-3 h-auto py-3.5 text-[#dc2626] border-[#e8e3d9] hover:text-[#dc2626] hover:bg-[#fef2f2]"
           onClick={() => logoutMutation.mutate()}
           disabled={logoutMutation.isPending}
-          className="w-full bg-white rounded-2xl flex items-center px-4 py-3.5 text-red-500 gap-3"
         >
-          <LogOut className="w-[18px] h-[18px] text-red-500 shrink-0" />
-          <span className="text-[15px] font-medium">
+          <LogOut className="w-[18px] h-[18px] shrink-0" />
+          <span className="text-body font-medium">
             {logoutMutation.isPending ? t("account.signingOut") : t("account.signOut")}
           </span>
-        </button>
-      </div>
+        </Button>
+      </IosSection>
 
-      {/* Footer */}
-      <div className="mt-8 text-center">
-        <p className="text-xs text-gray-300">© 2025 1Dent</p>
-      </div>
-    </div>
+      <p className="mt-8 text-center text-caption text-[#94a3b8]">
+        {t("menuPage.copyright")}
+      </p>
+    </PageShell>
   );
 }

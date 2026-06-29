@@ -258,30 +258,30 @@ export default function AdminFinancePage() {
   const today = new Date();
 
   return (
-    <div className="min-h-full bg-[#f2f2f7]">
+    <div className="min-h-full bg-[#faf8f4] font-manrope">
 
       {/* ── Header ── */}
-      <div className="bg-white px-4 py-4 border-b border-gray-100 sticky top-0 z-20">
+      <div className="bg-white px-4 py-4 border-b border-[#e8e3d9] shadow-sm sticky top-0 z-20">
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-[#1f75fe] flex items-center justify-center shrink-0">
             <Wallet className="w-4.5 h-4.5 text-white" size={18} />
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-[17px] font-semibold text-gray-900">{t("adminFinance.title")}</h1>
-            <p className="text-xs text-muted-foreground">{t("adminFinance.subtitle")}</p>
+            <h1 className="text-[17px] font-semibold text-[#0f172a]">{t("adminFinance.title")}</h1>
+            <p className="text-xs text-[#64748b]">{t("adminFinance.subtitle")}</p>
           </div>
         </div>
 
         {/* Period pills */}
         <div className="flex items-center gap-1.5 flex-wrap">
-          <CalendarDays className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+          <CalendarDays className="w-3.5 h-3.5 text-[#94a3b8] shrink-0" />
           {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
               className={cn(
                 "px-3 py-1.5 text-xs rounded-xl font-semibold transition-all",
-                period === p ? "bg-primary text-white shadow-sm" : "bg-slate-100 text-gray-600 hover:bg-slate-200",
+                period === p ? "bg-[#1f75fe] text-white shadow-sm" : "bg-[#f1ede4] text-[#64748b] hover:bg-[#e8e3d9]",
               )}
             >
               {PERIOD_LABELS[p]}
@@ -296,15 +296,15 @@ export default function AdminFinancePage() {
               type="date"
               value={customFrom}
               onChange={(e) => setCustomFrom(e.target.value)}
-              className="text-xs px-2.5 py-1.5 rounded-lg border border-border/60 bg-white focus:outline-none focus:ring-2 focus:ring-primary/40 w-36"
+              className="text-xs px-2.5 py-1.5 rounded-xl border border-[#e8e3d9] bg-white text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe] w-36"
             />
-            <span className="text-xs text-muted-foreground">—</span>
+            <span className="text-xs text-[#94a3b8]">—</span>
             <input
               type="date"
               value={customTo}
               min={customFrom}
               onChange={(e) => setCustomTo(e.target.value)}
-              className="text-xs px-2.5 py-1.5 rounded-lg border border-border/60 bg-white focus:outline-none focus:ring-2 focus:ring-primary/40 w-36"
+              className="text-xs px-2.5 py-1.5 rounded-xl border border-[#e8e3d9] bg-white text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe] w-36"
             />
           </div>
         )}
@@ -316,74 +316,74 @@ export default function AdminFinancePage() {
         {anyLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[0,1,2,3].map((i) => (
-              <div key={i} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm animate-pulse">
-                <div className="h-3 w-16 bg-slate-200 rounded mb-3" />
-                <div className="h-7 w-24 bg-slate-200 rounded" />
+              <div key={i} className="bg-white rounded-2xl border border-[#e8e3d9] p-4 shadow-md animate-pulse">
+                <div className="h-3 w-16 bg-[#f1ede4] rounded mb-3" />
+                <div className="h-7 w-24 bg-[#f1ede4] rounded" />
               </div>
             ))}
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {/* Заработали */}
-            <div className="bg-white rounded-2xl border border-border/50 shadow-sm p-4">
-              <p className="text-[11px] font-semibold text-muted-foreground mb-1.5">Заработали</p>
-              <p className="text-xl font-extrabold text-emerald-700 leading-tight">
+            <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-md p-4">
+              <p className="text-[11px] font-semibold text-[#64748b] mb-1.5">Заработали</p>
+              <p className="text-xl font-extrabold text-[#16a34a] leading-tight">
                 {(totalRevenue >= 1_000_000
                   ? `₸${(totalRevenue / 1_000_000).toFixed(1)}M`
                   : totalRevenue >= 1000
                     ? `₸${Math.round(totalRevenue / 1000)}K`
                     : fmt(totalRevenue))}
               </p>
-              <p className="text-[10px] text-muted-foreground mt-1">{paymentsCount} оплат</p>
+              <p className="text-[10px] text-[#64748b] mt-1">{paymentsCount} оплат</p>
             </div>
 
             {/* Ожидается */}
             <button
               onClick={() => setShowPending(!showPending)}
-              className="bg-amber-50 rounded-2xl border border-amber-200 shadow-sm p-4 text-left hover:bg-amber-100 transition-colors"
+              className="bg-[#fef3c7] rounded-2xl border border-[#fde68a] shadow-md p-4 text-left hover:bg-[#fde68a]/50 transition-colors"
             >
-              <p className="text-[11px] font-semibold text-amber-700 mb-1.5">Ожидается</p>
-              <p className="text-xl font-extrabold text-amber-700 leading-tight">
+              <p className="text-[11px] font-semibold text-[#d97706] mb-1.5">Ожидается</p>
+              <p className="text-xl font-extrabold text-[#d97706] leading-tight">
                 {pendingTotal >= 1000
                   ? `₸${Math.round(pendingTotal / 1000)}K`
                   : fmt(pendingTotal)}
               </p>
-              <p className="text-[10px] text-amber-600 mt-1">{pendingProcedures.length} записей</p>
+              <p className="text-[10px] text-[#d97706] mt-1">{pendingProcedures.length} записей</p>
             </button>
 
             {/* Расходы */}
             <div className={cn(
-              "bg-white rounded-2xl border border-border/50 shadow-sm p-4",
-              totalExpenses > totalRevenue ? "bg-red-50 border-red-200" : "bg-white border-border/50",
+              "bg-white rounded-2xl border shadow-md p-4",
+              totalExpenses > totalRevenue ? "bg-[#fef2f2] border-[#fecaca]" : "border-[#e8e3d9]",
             )}>
-              <p className={cn("text-[11px] font-semibold mb-1.5", totalExpenses > totalRevenue ? "text-red-600" : "text-muted-foreground")}>
+              <p className={cn("text-[11px] font-semibold mb-1.5", totalExpenses > totalRevenue ? "text-[#dc2626]" : "text-[#64748b]")}>
                 Расходы
               </p>
-              <p className={cn("text-xl font-extrabold leading-tight", totalExpenses > totalRevenue ? "text-red-600" : "text-gray-700")}>
+              <p className={cn("text-xl font-extrabold leading-tight", totalExpenses > totalRevenue ? "text-[#dc2626]" : "text-[#0f172a]")}>
                 {totalExpenses >= 1000
                   ? `₸${Math.round(totalExpenses / 1000)}K`
                   : fmt(totalExpenses)}
               </p>
-              <p className="text-[10px] text-muted-foreground mt-1">материалы + опер.</p>
+              <p className="text-[10px] text-[#64748b] mt-1">материалы + опер.</p>
             </div>
 
             {/* Долги */}
             <button
               onClick={() => setShowDebts(!showDebts)}
               className={cn(
-                "rounded-2xl border shadow-sm p-4 text-left transition-colors",
+                "rounded-2xl border shadow-md p-4 text-left transition-colors",
                 debtCount > 0
-                  ? "bg-red-50 border-red-200 hover:bg-red-100"
-                  : "bg-white border-border/50 hover:bg-slate-50",
+                  ? "bg-[#fef2f2] border-[#fecaca] hover:bg-[#fecaca]/30"
+                  : "bg-white border-[#e8e3d9] hover:bg-[#faf8f4]",
               )}
             >
-              <p className={cn("text-[11px] font-semibold mb-1.5", debtCount > 0 ? "text-red-600" : "text-muted-foreground")}>
+              <p className={cn("text-[11px] font-semibold mb-1.5", debtCount > 0 ? "text-[#dc2626]" : "text-[#64748b]")}>
                 Долги пациентов
               </p>
-              <p className={cn("text-xl font-extrabold leading-tight", debtCount > 0 ? "text-red-600" : "text-gray-400")}>
+              <p className={cn("text-xl font-extrabold leading-tight", debtCount > 0 ? "text-[#dc2626]" : "text-[#94a3b8]")}>
                 {debtCount}
               </p>
-              <p className={cn("text-[10px] mt-1", debtCount > 0 ? "text-red-500" : "text-muted-foreground")}>
+              <p className={cn("text-[10px] mt-1", debtCount > 0 ? "text-[#dc2626]" : "text-[#64748b]")}>
                 {debtCount > 0 ? "нажмите для просмотра" : "всё оплачено"}
               </p>
             </button>
@@ -393,23 +393,23 @@ export default function AdminFinancePage() {
         {/* ── Чистая прибыль + Маржа ── */}
         {!anyLoading && (
           <div className="grid grid-cols-2 gap-3">
-            <div className={cn("rounded-2xl border p-4 shadow-sm", netProfit >= 0 ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200")}>
+            <div className={cn("rounded-2xl border p-4 shadow-md", netProfit >= 0 ? "bg-[#f0fdf4] border-[#bbf7d0]" : "bg-[#fef2f2] border-[#fecaca]")}>
               <div className="flex items-center gap-2 mb-1">
                 {netProfit >= 0
-                  ? <TrendingUp className="w-4 h-4 text-emerald-600" />
-                  : <TrendingDown className="w-4 h-4 text-red-500" />}
-                <span className="text-xs font-semibold text-muted-foreground">Чистая прибыль</span>
+                  ? <TrendingUp className="w-4 h-4 text-[#16a34a]" />
+                  : <TrendingDown className="w-4 h-4 text-[#dc2626]" />}
+                <span className="text-xs font-semibold text-[#64748b]">Чистая прибыль</span>
               </div>
-              <p className={cn("text-xl font-bold", netProfit >= 0 ? "text-emerald-700" : "text-red-600")}>
+              <p className={cn("text-xl font-bold", netProfit >= 0 ? "text-[#16a34a]" : "text-[#dc2626]")}>
                 {netProfit.toLocaleString("ru-RU")} ₸
               </p>
             </div>
-            <div className={cn("col-span-1 rounded-2xl border p-4 shadow-sm", netProfit >= 0 ? "bg-emerald-50/60 border-emerald-100" : "bg-red-50/60 border-red-100")}>
+            <div className={cn("col-span-1 rounded-2xl border p-4 shadow-md", netProfit >= 0 ? "bg-[#f0fdf4]/60 border-[#bbf7d0]" : "bg-[#fef2f2]/60 border-[#fecaca]")}>
               <div className="flex items-center gap-2 mb-1">
-                <Wallet className={cn("w-4 h-4", netProfit >= 0 ? "text-emerald-600" : "text-red-500")} />
-                <span className="text-xs font-semibold text-muted-foreground">{t("financials.margin")}</span>
+                <Wallet className={cn("w-4 h-4", netProfit >= 0 ? "text-[#16a34a]" : "text-[#dc2626]")} />
+                <span className="text-xs font-semibold text-[#64748b]">{t("financials.margin")}</span>
               </div>
-              <p className={cn("text-xl font-bold", netProfit >= 0 ? "text-emerald-700" : "text-red-600")}>
+              <p className={cn("text-xl font-bold", netProfit >= 0 ? "text-[#16a34a]" : "text-[#dc2626]")}>
                 {marginPct}%
               </p>
             </div>
@@ -419,22 +419,22 @@ export default function AdminFinancePage() {
         {/* ── Дополнительные метрики ── */}
         {!anyLoading && (
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white rounded-2xl border border-border/50 shadow-sm p-4 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
-                <CreditCard className="w-4 h-4 text-blue-600" />
+            <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-md p-4 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-[#e0f2fe] flex items-center justify-center shrink-0">
+                <CreditCard className="w-4 h-4 text-[#0284c7]" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">В среднем за один визит</p>
-                <p className="text-base font-bold text-gray-900">{fmt(avgCheck)}</p>
+                <p className="text-xs text-[#64748b]">В среднем за один визит</p>
+                <p className="text-base font-bold text-[#0f172a]">{fmt(avgCheck)}</p>
               </div>
             </div>
-            <div className="bg-white rounded-2xl border border-border/50 shadow-sm p-4 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center shrink-0">
-                <Zap className="w-4 h-4 text-violet-600" />
+            <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-md p-4 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-[#1f75fe]/10 flex items-center justify-center shrink-0">
+                <Zap className="w-4 h-4 text-[#1f75fe]" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Выполнено процедур</p>
-                <p className="text-base font-bold text-gray-900">{paymentsCount}</p>
+                <p className="text-xs text-[#64748b]">Выполнено процедур</p>
+                <p className="text-base font-bold text-[#0f172a]">{paymentsCount}</p>
               </div>
             </div>
           </div>
@@ -442,15 +442,15 @@ export default function AdminFinancePage() {
 
         {/* ── Долги пациентов (развёртка) ── */}
         {showDebts && debtProcedures.length > 0 && (
-          <div className="bg-white rounded-2xl border border-red-100 shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-red-50 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-red-500" />
-              <h2 className="text-sm font-bold text-gray-900">Долги пациентов</h2>
-              <span className="ml-auto text-xs font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">
+          <div className="bg-white rounded-2xl border border-[#fecaca] shadow-md overflow-hidden">
+            <div className="px-4 py-3 border-b border-[#fecaca] flex items-center gap-2 bg-[#fef2f2]">
+              <AlertCircle className="w-4 h-4 text-[#dc2626]" />
+              <h2 className="text-sm font-bold text-[#0f172a]">Долги пациентов</h2>
+              <span className="ml-auto text-xs font-bold text-[#dc2626] bg-[#fef2f2] px-2 py-0.5 rounded-full border border-[#fecaca]">
                 {debtProcedures.length}
               </span>
             </div>
-            <div className="divide-y divide-gray-50">
+            <div className="divide-y divide-[#e8e3d9]">
               {debtProcedures.slice(0, 20).map((proc) => {
                 const dateStr = proc.completedAt ?? proc.scheduledAt;
                 let daysAgo = 0;
@@ -460,29 +460,29 @@ export default function AdminFinancePage() {
                   <div
                     key={proc.id}
                     className={cn(
-                      "px-4 py-3 flex items-start justify-between gap-3",
-                      isOverdue ? "bg-red-50/60" : "",
+                      "px-4 py-3 flex items-start justify-between gap-3 hover:bg-[#faf8f4] transition-colors",
+                      isOverdue ? "bg-[#fef2f2]/60" : "",
                     )}
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 truncate">
+                      <p className="text-sm font-semibold text-[#0f172a] truncate">
                         {patientMap.get(proc.patientId ?? "") ?? "—"}
                       </p>
-                      <p className="text-xs text-muted-foreground truncate">{proc.name}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-[#64748b] truncate">{proc.name}</p>
+                      <p className="text-xs text-[#64748b]">
                         {proc.doctorId ? (doctorMap.get(proc.doctorId) ?? "—") : "—"}
                       </p>
                     </div>
                     <div className="text-right shrink-0">
                       {isOverdue ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-red-100 text-red-700">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#fef2f2] text-[#dc2626] border border-[#fecaca]">
                           {daysAgo} дн.
                         </span>
                       ) : (
-                        <span className="text-xs text-muted-foreground">{daysAgo} дн. назад</span>
+                        <span className="text-xs text-[#64748b]">{daysAgo} дн. назад</span>
                       )}
                       {dateStr && (
-                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                        <p className="text-[10px] text-[#94a3b8] mt-0.5">
                           {(() => { try { return format(parseISO(dateStr), "dd.MM.yyyy"); } catch { return "—"; } })()}
                         </p>
                       )}
@@ -496,46 +496,46 @@ export default function AdminFinancePage() {
 
         {/* ── Ожидают оплаты ── */}
         {pendingProcedures.length > 0 && (
-          <div className="bg-white rounded-2xl border border-amber-200 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-2xl border border-[#fde68a] shadow-md overflow-hidden">
             <button
               onClick={() => setShowPending(!showPending)}
-              className="w-full px-4 py-3 border-b border-amber-100 flex items-center gap-2 hover:bg-amber-50/50 transition-colors"
+              className="w-full px-4 py-3 border-b border-[#fde68a] flex items-center gap-2 hover:bg-[#fef3c7]/50 transition-colors"
             >
-              <Clock className="w-4 h-4 text-amber-500" />
-              <h2 className="text-sm font-bold text-gray-900">Ожидается оплата</h2>
-              <span className="ml-1 text-xs font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">
+              <Clock className="w-4 h-4 text-[#d97706]" />
+              <h2 className="text-sm font-bold text-[#0f172a]">Ожидается оплата</h2>
+              <span className="ml-1 text-xs font-bold text-[#d97706] bg-[#fef3c7] px-2 py-0.5 rounded-full">
                 {pendingProcedures.length}
               </span>
-              <span className="ml-auto text-sm font-bold text-amber-700">{fmt(pendingTotal)}</span>
-              <ChevronDown className={cn("w-4 h-4 text-gray-400 transition-transform", showPending ? "rotate-180" : "")} />
+              <span className="ml-auto text-sm font-bold text-[#d97706]">{fmt(pendingTotal)}</span>
+              <ChevronDown className={cn("w-4 h-4 text-[#94a3b8] transition-transform", showPending ? "rotate-180" : "")} />
             </button>
             {showPending && (
-              <div className="divide-y divide-gray-50">
+              <div className="divide-y divide-[#e8e3d9]">
                 {pendingProcedures.map((proc) => {
                   const dateStr = proc.completedAt ?? proc.scheduledAt;
                   const isSelecting = selectingPayment === proc.id;
                   const isSaving = updatePayment.isPending;
                   return (
-                    <div key={proc.id} className="px-4 py-3 space-y-2">
+                    <div key={proc.id} className="px-4 py-3 space-y-2 hover:bg-[#faf8f4] transition-colors">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-gray-900 truncate">
+                          <p className="text-sm font-semibold text-[#0f172a] truncate">
                             {patientMap.get(proc.patientId ?? "") ?? "—"}
                           </p>
-                          <p className="text-xs text-muted-foreground truncate">{proc.name}</p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-[#64748b] truncate">{proc.name}</p>
+                          <p className="text-xs text-[#64748b]">
                             {proc.doctorId ? (doctorMap.get(proc.doctorId) ?? "—") : "—"}
                             {dateStr && ` · ${(() => { try { return format(parseISO(dateStr), "dd.MM.yyyy"); } catch { return ""; } })()}`}
                           </p>
                         </div>
                         <div className="text-right shrink-0">
-                          <p className="text-sm font-bold text-gray-900">
+                          <p className="text-sm font-bold text-[#0f172a]">
                             {proc.price ? fmt(proc.price) : "—"}
                           </p>
                           {!isSelecting && (
                             <button
                               onClick={() => setSelectingPayment(proc.id)}
-                              className="mt-1 flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors"
+                              className="mt-1 flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-[#fef3c7] text-[#d97706] hover:bg-[#fde68a] transition-colors"
                             >
                               <CheckCircle2 className="w-3 h-3" />
                               Оплатить
@@ -550,14 +550,14 @@ export default function AdminFinancePage() {
                               key={method}
                               disabled={isSaving}
                               onClick={() => updatePayment.mutate({ id: proc.id, data: { paymentMethod: method } })}
-                              className="px-2 py-1 text-xs rounded-lg border border-gray-200 hover:border-primary hover:bg-primary/10 hover:text-primary transition-colors disabled:opacity-50"
+                              className="px-2 py-1 text-xs rounded-xl border border-[#e8e3d9] hover:border-[#1f75fe] hover:bg-[#1f75fe]/10 hover:text-[#1f75fe] transition-colors disabled:opacity-50"
                             >
                               {PAYMENT_METHOD_LABELS[method]}
                             </button>
                           ))}
                           <button
                             onClick={() => setSelectingPayment(null)}
-                            className="px-2 py-1 text-xs rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 transition-colors"
+                            className="px-2 py-1 text-xs rounded-xl border border-[#e8e3d9] text-[#94a3b8] hover:bg-[#f1ede4] transition-colors"
                           >
                             Отмена
                           </button>
@@ -572,31 +572,31 @@ export default function AdminFinancePage() {
         )}
 
         {/* ── Операционные расходы ── */}
-        <div className="bg-white rounded-2xl border border-border/50 overflow-hidden shadow-sm">
-          <div className="px-4 py-3 border-b border-border/50 flex items-center justify-between">
-            <span className="text-sm font-bold text-gray-900">{t("financials.opExpensesList")}</span>
+        <div className="bg-white rounded-2xl border border-[#e8e3d9] overflow-hidden shadow-md">
+          <div className="px-4 py-3 border-b border-[#e8e3d9] flex items-center justify-between">
+            <span className="text-sm font-bold text-[#0f172a]">{t("financials.opExpensesList")}</span>
             {canCreate && (
               <button
                 onClick={() => { setEditingExpense(null); setExpenseDialogOpen(true); }}
-                className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:bg-primary/10 px-2.5 py-1.5 rounded-lg transition-colors"
+                className="flex items-center gap-1.5 text-xs font-semibold text-[#1f75fe] hover:bg-[#1f75fe]/10 px-2.5 py-1.5 rounded-xl transition-colors"
               >
                 {t("expenses.add")}
               </button>
             )}
           </div>
           {expenses.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground text-sm">{t("expenses.empty")}</div>
+            <div className="p-8 text-center text-[#64748b] text-sm">{t("expenses.empty")}</div>
           ) : (
-            <div className="divide-y divide-border/50">
+            <div className="divide-y divide-[#e8e3d9]">
               {expenses.map((e) => (
-                <div key={e.id} className="px-4 py-3 flex items-start justify-between gap-2">
+                <div key={e.id} className="px-4 py-3 flex items-start justify-between gap-2 hover:bg-[#faf8f4] transition-colors">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="inline-block w-2 h-2 rounded-full flex-none" style={{ backgroundColor: CATEGORY_COLORS[e.category] ?? "#B2BEC3" }} />
-                      <p className="text-sm font-medium text-gray-900">
+                      <p className="text-sm font-medium text-[#0f172a]">
                         {t(`expenses.cat.${e.category}`)}
                         {e.subcategory && (
-                          <span className="text-muted-foreground font-normal">
+                          <span className="text-[#64748b] font-normal">
                             {" "}
                             ·{" "}
                             {e.subcategory.startsWith("аванс:")
@@ -608,23 +608,23 @@ export default function AdminFinancePage() {
                         )}
                       </p>
                     </div>
-                    {e.description && <p className="text-xs text-muted-foreground mt-0.5 ml-4 truncate">{e.description}</p>}
-                    <p className="text-xs text-muted-foreground mt-0.5 ml-4">{fmtDate(e.expenseDate)}</p>
+                    {e.description && <p className="text-xs text-[#64748b] mt-0.5 ml-4 truncate">{e.description}</p>}
+                    <p className="text-xs text-[#94a3b8] mt-0.5 ml-4">{fmtDate(e.expenseDate)}</p>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <p className="text-sm font-semibold text-gray-950 mr-1">{Number(e.amount).toLocaleString("ru-RU")} ₸</p>
+                    <p className="text-sm font-semibold text-[#0f172a] mr-1">{Number(e.amount).toLocaleString("ru-RU")} ₸</p>
                     {canWrite && (
                       <>
                         <button
                           onClick={() => { setEditingExpense(e); setExpenseDialogOpen(true); }}
-                          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-muted-foreground"
+                          className="w-7 h-7 flex items-center justify-center rounded-xl hover:bg-[#f1ede4] text-[#64748b] transition-colors"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
                         {!e.payrollRef && (
                           <button
                             onClick={() => handleDeleteExpense(e.id)}
-                            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-500"
+                            className="w-7 h-7 flex items-center justify-center rounded-xl hover:bg-[#fef2f2] text-[#64748b] hover:text-[#dc2626] transition-colors"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -639,13 +639,13 @@ export default function AdminFinancePage() {
         </div>
 
         {/* ── Как менялась выручка ── */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h2 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-primary" />
+        <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-md p-5">
+          <h2 className="text-sm font-bold text-[#0f172a] mb-4 flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-[#1f75fe]" />
             Как менялась выручка
           </h2>
           {chartData.length === 0 ? (
-            <div className="h-48 flex items-center justify-center text-gray-400 text-sm">
+            <div className="h-48 flex items-center justify-center text-[#94a3b8] text-sm">
               Нет данных за выбранный период
             </div>
           ) : (
@@ -669,9 +669,9 @@ export default function AdminFinancePage() {
 
         {/* ── Кто из врачей принёс больше всего ── */}
         {revenueByDoctor.length > 0 && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <h2 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Users className="w-4 h-4 text-primary" />
+          <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-md p-5">
+            <h2 className="text-sm font-bold text-[#0f172a] mb-4 flex items-center gap-2">
+              <Users className="w-4 h-4 text-[#1f75fe]" />
               Кто из врачей принёс больше всего
             </h2>
             <div className="space-y-3">
@@ -682,15 +682,15 @@ export default function AdminFinancePage() {
                   <div key={row.name}>
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-gray-400 w-4">{i + 1}</span>
-                        <span className="text-sm font-medium text-gray-900">{row.name}</span>
-                        <span className="text-xs text-muted-foreground">{row.count} проц.</span>
+                        <span className="text-xs font-bold text-[#94a3b8] w-4">{i + 1}</span>
+                        <span className="text-sm font-medium text-[#0f172a]">{row.name}</span>
+                        <span className="text-xs text-[#64748b]">{row.count} проц.</span>
                       </div>
-                      <span className="text-sm font-bold text-emerald-700">{fmt(row.revenue)}</span>
+                      <span className="text-sm font-bold text-[#16a34a]">{fmt(row.revenue)}</span>
                     </div>
-                    <div className="ml-6 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="ml-6 h-1.5 bg-[#f1ede4] rounded-full overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-primary transition-all"
+                        className="h-full rounded-full bg-[#1f75fe] transition-all"
                         style={{ width: `${pct}%` }}
                       />
                     </div>
@@ -703,9 +703,9 @@ export default function AdminFinancePage() {
 
         {/* ── Какие услуги самые прибыльные ── */}
         {topProcedures.length > 0 && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <h2 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-primary" />
+          <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-md p-5">
+            <h2 className="text-sm font-bold text-[#0f172a] mb-4 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-[#1f75fe]" />
               Какие услуги самые прибыльные
             </h2>
             <div className="space-y-3">
@@ -716,15 +716,15 @@ export default function AdminFinancePage() {
                   <div key={proc.name}>
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-gray-400 w-4">{i + 1}</span>
-                        <span className="text-sm font-medium text-gray-900 truncate max-w-[180px]">{proc.name}</span>
-                        <span className="text-xs text-muted-foreground shrink-0">{proc.count} раз</span>
+                        <span className="text-xs font-bold text-[#94a3b8] w-4">{i + 1}</span>
+                        <span className="text-sm font-medium text-[#0f172a] truncate max-w-[180px]">{proc.name}</span>
+                        <span className="text-xs text-[#64748b] shrink-0">{proc.count} раз</span>
                       </div>
-                      <span className="text-sm font-bold text-emerald-700 shrink-0">{fmt(proc.revenue)}</span>
+                      <span className="text-sm font-bold text-[#16a34a] shrink-0">{fmt(proc.revenue)}</span>
                     </div>
-                    <div className="ml-6 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="ml-6 h-1.5 bg-[#f1ede4] rounded-full overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-emerald-400 transition-all"
+                        className="h-full rounded-full bg-[#16a34a] transition-all"
                         style={{ width: `${pct}%` }}
                       />
                     </div>
@@ -739,8 +739,8 @@ export default function AdminFinancePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* ── Расходы: пирог ── */}
           {pieData.length > 0 && (
-            <div className="bg-white rounded-2xl border border-border/50 p-4 shadow-sm">
-              <h3 className="text-sm font-bold text-gray-900 mb-3">Куда уходят деньги?</h3>
+            <div className="bg-white rounded-2xl border border-[#e8e3d9] p-4 shadow-md">
+              <h3 className="text-sm font-bold text-[#0f172a] mb-3">Куда уходят деньги?</h3>
               <ResponsiveContainer width="100%" height={180}>
                 <PieChart>
                   <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} innerRadius={40}>
@@ -757,8 +757,8 @@ export default function AdminFinancePage() {
 
           {/* ── Способы оплаты ── */}
           {paymentMethodData.length > 0 && (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-              <h2 className="text-sm font-bold text-gray-900 mb-3">Как платят пациенты?</h2>
+            <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-md p-4">
+              <h2 className="text-sm font-bold text-[#0f172a] mb-3">Как платят пациенты?</h2>
               <ResponsiveContainer width="100%" height={180}>
                 <PieChart>
                   <Pie
@@ -782,38 +782,38 @@ export default function AdminFinancePage() {
 
         {/* ── Расход материалов ── */}
         {consumption.length > 0 && (
-          <div className="bg-white rounded-2xl border border-border/50 overflow-hidden shadow-sm">
-            <div className="px-4 py-3 border-b border-border/50 flex items-center gap-2">
-              <Package className="w-4 h-4 text-amber-600" />
-              <span className="text-sm font-bold text-gray-900">{t("financials.materialsBreakdown")}</span>
+          <div className="bg-white rounded-2xl border border-[#e8e3d9] overflow-hidden shadow-md">
+            <div className="px-4 py-3 border-b border-[#e8e3d9] flex items-center gap-2">
+              <Package className="w-4 h-4 text-[#d97706]" />
+              <span className="text-sm font-bold text-[#0f172a]">{t("financials.materialsBreakdown")}</span>
             </div>
-            <div className="divide-y divide-border/50">
+            <div className="divide-y divide-[#e8e3d9]">
               {consumption.slice(0, 5).map((row) => (
-                <div key={row.itemId} className="px-4 py-3 flex items-center justify-between gap-2">
+                <div key={row.itemId} className="px-4 py-3 flex items-center justify-between gap-2 hover:bg-[#faf8f4] transition-colors">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-950 truncate">{row.itemName}</p>
-                    <p className="text-xs text-muted-foreground">{row.totalQuantity} {row.unit ?? "ед."} · {row.procedureCount} {t("financials.proceduresPcs")}</p>
+                    <p className="text-sm font-medium text-[#0f172a] truncate">{row.itemName}</p>
+                    <p className="text-xs text-[#64748b]">{row.totalQuantity} {row.unit ?? "ед."} · {row.procedureCount} {t("financials.proceduresPcs")}</p>
                   </div>
-                  <p className="text-sm font-semibold text-amber-700 shrink-0">{(row.totalCost ?? 0).toLocaleString("ru-RU")} ₸</p>
+                  <p className="text-sm font-semibold text-[#d97706] shrink-0">{(row.totalCost ?? 0).toLocaleString("ru-RU")} ₸</p>
                 </div>
               ))}
               {consumption.length > 5 && (
-                <div className="px-4 py-2 text-xs text-center text-muted-foreground">+{consumption.length - 5} {t("financials.moreItems")}</div>
+                <div className="px-4 py-2 text-xs text-center text-[#94a3b8]">+{consumption.length - 5} {t("financials.moreItems")}</div>
               )}
             </div>
           </div>
         )}
 
         {/* ── Таблица платежей ── */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-50 space-y-3">
-            <h2 className="text-sm font-bold text-gray-900">{t("adminFinance.paymentsTable")}</h2>
+        <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-md overflow-hidden">
+          <div className="px-4 py-3 border-b border-[#e8e3d9] space-y-3">
+            <h2 className="text-sm font-bold text-[#0f172a]">{t("adminFinance.paymentsTable")}</h2>
 
             <div className="flex flex-wrap gap-2">
               <select
                 value={filterDoctorId}
                 onChange={(e) => setFilterDoctorId(e.target.value)}
-                className="text-xs px-2.5 py-1.5 rounded-xl border border-gray-200 bg-white focus:outline-none"
+                className="text-xs px-2.5 py-1.5 rounded-xl border border-[#e8e3d9] bg-white text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
               >
                 <option value="">{t("adminFinance.allDoctors")}</option>
                 {doctors.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
@@ -821,7 +821,7 @@ export default function AdminFinancePage() {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="text-xs px-2.5 py-1.5 rounded-xl border border-gray-200 bg-white focus:outline-none"
+                className="text-xs px-2.5 py-1.5 rounded-xl border border-[#e8e3d9] bg-white text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
               >
                 <option value="">{t("adminFinance.allStatuses")}</option>
                 <option value="completed">{t("adminFinance.completed")}</option>
@@ -833,7 +833,7 @@ export default function AdminFinancePage() {
               <select
                 value={filterPaymentMethod}
                 onChange={(e) => setFilterPaymentMethod(e.target.value)}
-                className="text-xs px-2.5 py-1.5 rounded-xl border border-gray-200 bg-white focus:outline-none"
+                className="text-xs px-2.5 py-1.5 rounded-xl border border-[#e8e3d9] bg-white text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
               >
                 <option value="">{t("adminFinance.allPayments")}</option>
                 {Object.entries(PAYMENT_METHOD_LABELS).map(([key, label]) => (
@@ -845,18 +845,18 @@ export default function AdminFinancePage() {
             {/* Patient search */}
             <div className="relative w-full sm:w-72">
               {selectedPatient ? (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-primary/30 bg-primary/5 text-sm">
-                  <span className="font-medium text-gray-800 flex-1 truncate">{selectedPatient.name}</span>
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-[#1f75fe]/30 bg-[#1f75fe]/5 text-sm">
+                  <span className="font-medium text-[#0f172a] flex-1 truncate">{selectedPatient.name}</span>
                   <button
                     onClick={() => { setFilterPatientId(""); setPatientSearch(""); }}
-                    className="text-xs text-primary hover:underline shrink-0"
+                    className="text-xs text-[#1f75fe] hover:underline shrink-0"
                   >
                     {t("common.cancel")}
                   </button>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary">
-                  <Search className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-[#e8e3d9] focus-within:ring-2 focus-within:ring-[#1f75fe]/20 focus-within:border-[#1f75fe] bg-white">
+                  <Search className="w-3.5 h-3.5 text-[#94a3b8] shrink-0" />
                   <input
                     value={patientSearch}
                     onChange={(e) => { setPatientSearch(e.target.value); setShowPatientList(true); }}
@@ -867,19 +867,19 @@ export default function AdminFinancePage() {
                 </div>
               )}
               {showPatientList && !selectedPatient && (
-                <div className="absolute z-20 mt-1.5 w-full bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden max-h-48 overflow-y-auto">
+                <div className="absolute z-20 mt-1.5 w-full bg-white rounded-xl border border-[#e8e3d9] shadow-lg overflow-hidden max-h-48 overflow-y-auto">
                   {filteredPatientSearch.length === 0 ? (
-                    <div className="p-3 text-sm text-gray-400 text-center">Нет пациентов</div>
+                    <div className="p-3 text-sm text-[#94a3b8] text-center">Нет пациентов</div>
                   ) : (
                     filteredPatientSearch.map((p) => (
                       <button
                         key={p.id}
                         type="button"
                         onClick={() => { setFilterPatientId(p.id); setPatientSearch(p.name); setShowPatientList(false); }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left border-b border-gray-50 last:border-0"
+                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[#faf8f4] transition-colors text-left border-b border-[#e8e3d9]/60 last:border-0"
                       >
-                        <span className="text-sm font-medium text-gray-900">{p.name}</span>
-                        <span className="text-xs text-gray-400 ml-auto">{p.phone}</span>
+                        <span className="text-sm font-medium text-[#0f172a]">{p.name}</span>
+                        <span className="text-xs text-[#94a3b8] ml-auto">{p.phone}</span>
                       </button>
                     ))
                   )}
@@ -890,14 +890,14 @@ export default function AdminFinancePage() {
 
           {isLoading ? (
             <div className="p-8 flex justify-center">
-              <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+              <div className="w-8 h-8 border-4 border-[#1f75fe]/20 border-t-[#1f75fe] rounded-full animate-spin" />
             </div>
           ) : filtered.length === 0 ? (
-            <div className="p-8 text-center text-gray-400 text-sm">{t("adminFinance.noData")}</div>
+            <div className="p-8 text-center text-[#94a3b8] text-sm">{t("adminFinance.noData")}</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                <thead className="bg-[#faf8f4] text-xs font-semibold text-[#64748b] uppercase tracking-wide">
                   <tr>
                     <th className="px-4 py-3 text-left">{t("adminFinance.colPatient")}</th>
                     <th className="px-4 py-3 text-left">{t("adminFinance.colDoctor")}</th>
@@ -908,14 +908,14 @@ export default function AdminFinancePage() {
                     <th className="px-4 py-3 text-left">{t("adminFinance.colStatus")}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-[#e8e3d9]">
                   {filtered.slice(0, 50).map((proc) => {
                     const statusColors: Record<string, string> = {
-                      scheduled:       "bg-blue-100 text-blue-700",
-                      in_progress:     "bg-amber-100 text-amber-700",
-                      completed:       "bg-green-100 text-green-700",
-                      cancelled:       "bg-gray-100 text-gray-500",
-                      pending_payment: "bg-amber-100 text-amber-700",
+                      scheduled:       "bg-[#e0f2fe] text-[#0284c7]",
+                      in_progress:     "bg-[#fef3c7] text-[#d97706]",
+                      completed:       "bg-[#f0fdf4] text-[#16a34a]",
+                      cancelled:       "bg-[#f1f5f9] text-[#94a3b8]",
+                      pending_payment: "bg-[#fef3c7] text-[#d97706]",
                     };
                     const statusLabels: Record<string, string> = {
                       scheduled:       t("adminFinance.scheduled"),
@@ -926,25 +926,25 @@ export default function AdminFinancePage() {
                     };
                     const dateStr = proc.completedAt ?? proc.scheduledAt;
                     return (
-                      <tr key={proc.id} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-4 py-3 font-medium text-gray-900">
+                      <tr key={proc.id} className="hover:bg-[#faf8f4] transition-colors">
+                        <td className="px-4 py-3 font-medium text-[#0f172a]">
                           {patientMap.get(proc.patientId ?? "") ?? "—"}
                         </td>
-                        <td className="px-4 py-3 text-gray-500">
+                        <td className="px-4 py-3 text-[#64748b]">
                           {proc.doctorId ? (doctorMap.get(proc.doctorId) ?? "—") : "—"}
                         </td>
-                        <td className="px-4 py-3 text-gray-700 max-w-[180px] truncate">{proc.name}</td>
-                        <td className="px-4 py-3 text-right font-semibold text-gray-900">
+                        <td className="px-4 py-3 text-[#0f172a] max-w-[180px] truncate">{proc.name}</td>
+                        <td className="px-4 py-3 text-right font-semibold text-[#0f172a]">
                           {proc.price ? fmt(proc.price) : "—"}
                         </td>
-                        <td className="px-4 py-3 text-gray-500">
+                        <td className="px-4 py-3 text-[#64748b]">
                           {proc.paymentMethod ? (PAYMENT_METHOD_LABELS[proc.paymentMethod] ?? proc.paymentMethod) : "—"}
                         </td>
-                        <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                        <td className="px-4 py-3 text-[#64748b] whitespace-nowrap">
                           {dateStr ? (() => { try { return format(parseISO(dateStr), "dd.MM.yy"); } catch { return "—"; } })() : "—"}
                         </td>
                         <td className="px-4 py-3">
-                          <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full", statusColors[proc.status] ?? "bg-gray-100 text-gray-500")}>
+                          <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full", statusColors[proc.status] ?? "bg-[#f1f5f9] text-[#94a3b8]")}>
                             {statusLabels[proc.status] ?? proc.status}
                           </span>
                         </td>
@@ -954,7 +954,7 @@ export default function AdminFinancePage() {
                 </tbody>
               </table>
               {filtered.length > 50 && (
-                <div className="px-4 py-3 text-center text-xs text-muted-foreground border-t border-gray-50">
+                <div className="px-4 py-3 text-center text-xs text-[#64748b] border-t border-[#e8e3d9]">
                   Показано 50 из {filtered.length} записей
                 </div>
               )}

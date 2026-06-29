@@ -9,6 +9,7 @@ import { saveAuthToken } from "@/lib/auth-token";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff } from "lucide-react";
+import { getApiErrorMessage } from "@/lib/api-error-message";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
 import { useTranslation } from "react-i18next";
 
@@ -42,7 +43,7 @@ export default function Login() {
       onError: (error) => {
         toast({
           title: t("auth.loginErrorTitle"),
-          description: (error.data as { error?: string })?.error || t("auth.loginErrorDesc"),
+          description: getApiErrorMessage(error, t("auth.loginErrorDesc")),
           variant: "destructive",
         });
       },
@@ -54,12 +55,12 @@ export default function Login() {
   };
 
   return (
-    <div className="h-[100dvh] w-full bg-white flex flex-col items-center justify-center px-6 overflow-hidden">
+    <div className="h-[100dvh] w-full bg-[#faf8f4] font-manrope flex flex-col items-center justify-center px-6 overflow-hidden">
       <motion.div
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-sm"
+        className="w-full max-w-sm bg-white rounded-2xl border border-[#e8e3d9] shadow-md p-6"
       >
         {/* Logo */}
         <div className="flex flex-col items-center mb-7">
@@ -68,12 +69,12 @@ export default function Login() {
             alt="1Dent"
             className="w-20 h-20 mb-3"
           />
-          <h1 className="text-lg font-display font-bold text-gray-900">1Dent</h1>
-          <p className="text-xs text-gray-400 mt-0.5">Управление клиникой</p>
+          <h1 className="text-lg font-manrope font-bold text-[#0f172a]">1Dent</h1>
+          <p className="text-xs text-[#94a3b8] mt-0.5">Управление клиникой</p>
         </div>
 
         {/* Title */}
-        <h2 className="text-xl font-display font-bold text-gray-900 text-center mb-5">
+        <h2 className="text-xl font-manrope font-bold text-[#0f172a] text-center mb-5">
           {t("auth.welcome")}
         </h2>
 
@@ -81,10 +82,10 @@ export default function Login() {
           {/* Email field */}
           <div>
             <div className={`
-              w-full px-3.5 py-2.5 rounded-xl border-2 bg-gray-50 transition-all
-              ${errors.email ? "border-destructive bg-red-50" : "border-gray-200 focus-within:border-primary focus-within:bg-white"}
+              w-full px-3.5 py-2.5 rounded-xl border bg-white transition-all
+              ${errors.email ? "border-[#dc2626] bg-[#fef2f2]" : "border-[#e8e3d9] focus-within:border-[#1f75fe] focus-within:ring-2 focus-within:ring-[#1f75fe]/20"}
             `}>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">
+              <p className="text-[10px] font-semibold text-[#94a3b8] uppercase tracking-wide mb-0.5">
                 {t("auth.email")}
               </p>
               <input
@@ -92,21 +93,21 @@ export default function Login() {
                 type="email"
                 placeholder="doctor@clinic.com"
                 autoComplete="email"
-                className="w-full bg-transparent text-sm text-gray-900 placeholder:text-gray-300 outline-none"
+                className="w-full bg-transparent text-sm text-[#0f172a] placeholder:text-[#94a3b8] outline-none"
               />
             </div>
             {errors.email && (
-              <p className="text-xs text-destructive font-medium mt-1 px-1">{errors.email.message}</p>
+              <p className="text-xs text-[#dc2626] font-medium mt-1 px-1">{errors.email.message}</p>
             )}
           </div>
 
           {/* Password field */}
           <div>
             <div className={`
-              w-full px-3.5 py-2.5 rounded-xl border-2 bg-gray-50 transition-all relative
-              ${errors.password ? "border-destructive bg-red-50" : "border-gray-200 focus-within:border-primary focus-within:bg-white"}
+              w-full px-3.5 py-2.5 rounded-xl border bg-white transition-all relative
+              ${errors.password ? "border-[#dc2626] bg-[#fef2f2]" : "border-[#e8e3d9] focus-within:border-[#1f75fe] focus-within:ring-2 focus-within:ring-[#1f75fe]/20"}
             `}>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">
+              <p className="text-[10px] font-semibold text-[#94a3b8] uppercase tracking-wide mb-0.5">
                 {t("auth.password")}
               </p>
               <div className="flex items-center">
@@ -115,25 +116,25 @@ export default function Login() {
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   autoComplete="current-password"
-                  className="flex-1 bg-transparent text-sm text-gray-900 placeholder:text-gray-300 outline-none"
+                  className="flex-1 bg-transparent text-sm text-[#0f172a] placeholder:text-[#94a3b8] outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors ml-2"
+                  className="text-[#94a3b8] hover:text-[#64748b] transition-colors ml-2"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
             {errors.password && (
-              <p className="text-xs text-destructive font-medium mt-1 px-1">{errors.password.message}</p>
+              <p className="text-xs text-[#dc2626] font-medium mt-1 px-1">{errors.password.message}</p>
             )}
           </div>
 
           {/* Forgot password */}
           <div className="text-right">
-            <Link href="/forgot-password" className="text-xs font-medium text-destructive hover:opacity-80 transition-opacity">
+            <Link href="/forgot-password" className="text-xs font-medium text-[#1f75fe] hover:opacity-80 transition-opacity">
               {t("auth.forgotPassword")}
             </Link>
           </div>
@@ -142,16 +143,16 @@ export default function Login() {
           <button
             type="submit"
             disabled={loginMutation.isPending}
-            className="w-full py-3 rounded-xl text-sm font-bold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.98] mt-1 bg-primary text-primary-foreground"
+            className="w-full py-3 rounded-full text-sm font-semibold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed hover:scale-105 active:scale-95 mt-1 bg-[#1f75fe] hover:bg-[#1a65e8] text-white"
           >
             {loginMutation.isPending ? t("auth.signingIn") : t("auth.signIn")}
           </button>
 
           {/* Register link */}
           <div className="text-center pt-1">
-            <Link href="/register" className="text-sm text-gray-400">
+            <Link href="/register" className="text-sm text-[#94a3b8]">
               Нет аккаунта?{" "}
-              <span className="font-semibold text-gray-600">Создать</span>
+              <span className="font-semibold text-[#1f75fe]">Создать</span>
             </Link>
           </div>
         </form>

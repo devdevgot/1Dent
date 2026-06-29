@@ -107,6 +107,13 @@
     "errorTitle": "Қате",
     "errorDesc": "Жүйеден шығу мүмкін болмады. Қайталап көріңіз."
   },
+  "menuPage": {
+    "title": "Мәзір",
+    "settings": "Баптаулар",
+    "language": "Қолданба тілі",
+    "notifications": "Хабарландырулар",
+    "copyright": "© 2025 1Dent"
+  },
   "role": {
     "owner": "Иесі",
     "admin": "Әкімші",
@@ -1006,6 +1013,13 @@
   },
   "settingsPage": {
     "title": "Баптаулар",
+    "accountTitle": "Аккаунт баптаулары",
+    "name": "Аты",
+    "email": "Email",
+    "password": "Құпия сөз",
+    "changePhoto": "Фотоны өзгерту",
+    "photoUpdated": "Профиль фотосы жаңартылды",
+    "photoUpdateError": "Фотоны жаңарту мүмкін болмады",
     "profile": "Профиль",
     "security": "Қауіпсіздік",
     "appearance": "Сыртқы түр",

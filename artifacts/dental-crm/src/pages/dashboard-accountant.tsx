@@ -1,4 +1,7 @@
 import { useAuthStore } from "@/hooks/use-auth";
+import { useEffect } from "react";
+import { SITE } from "@/config/site";
+import "@/styles/dashboard.css";
 import {
   useGetOwnerAnalytics,
   getGetOwnerAnalyticsQueryKey,
@@ -39,26 +42,25 @@ function StatCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
-      className="bg-card p-6 rounded-2xl border border-border/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-shadow group relative overflow-hidden"
+      className="dash-stat-card group"
     >
-      <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors" />
-      <div className="flex justify-between items-start mb-4">
-        <div className="p-3 bg-slate-50 text-primary rounded-xl ring-1 ring-border/50">
-          <Icon className="w-6 h-6" />
+      <div className="flex justify-between items-start mb-4 relative z-10">
+        <div className="dash-stat-icon">
+          <Icon className="w-5 h-5" />
         </div>
       </div>
-      <h3 className="text-muted-foreground font-medium text-sm mb-1">{t(titleKey)}</h3>
-      <div className="text-3xl font-display font-bold text-foreground">{value}</div>
+      <h3 className="dash-stat-label relative z-10">{t(titleKey)}</h3>
+      <div className="dash-stat-value relative z-10">{value}</div>
     </motion.div>
   );
 }
 
 function SkeletonCard() {
   return (
-    <div className="bg-card p-6 rounded-2xl border border-border/50 animate-pulse">
-      <div className="w-12 h-12 bg-slate-200 rounded-xl mb-4" />
-      <div className="w-24 h-4 bg-slate-200 rounded mb-2" />
-      <div className="w-20 h-8 bg-slate-200 rounded" />
+    <div className="dash-stat-card">
+      <div className="dash-skeleton w-11 h-11 rounded-xl mb-4" />
+      <div className="dash-skeleton w-24 h-4 rounded mb-2" />
+      <div className="dash-skeleton w-20 h-8 rounded" />
     </div>
   );
 }
@@ -140,35 +142,43 @@ export default function AccountantDashboard() {
     { titleKey: "accountantDashboard.netProfit", value: netProfit !== undefined ? fmtMoney(netProfit) : "—", icon: netProfit !== undefined && netProfit >= 0 ? TrendingUp : TrendingDown, delay: 0.15 },
   ];
 
+  useEffect(() => {
+    document.title = SITE.dashboardTitles.accountant;
+  }, []);
+
   return (
-    <div className="space-y-4 p-4 pb-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-white p-6 rounded-2xl border border-border shadow-sm">
+    <div className="dashboard-page min-h-full">
+      <div className="dash-page-inner dash-stack">
+      <div className="dash-page-header">
         <div>
-          <h2 className="text-3xl font-display font-bold text-foreground">
+          <h2 className="dash-page-title">
             {t("dashboard.welcomeBack", { name: (user?.name || "").split(" ")[0] })}
           </h2>
-          <p className="text-muted-foreground mt-1 text-lg">
+          <p className="dash-page-subtitle">
             {t("accountantDashboard.subtitle", { clinic: clinic?.name })}
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <button
+            type="button"
+            aria-label={t("common.refresh", "Обновить")}
             onClick={() => refetch()}
-            className="p-2.5 border border-border rounded-xl text-muted-foreground hover:bg-slate-50 transition-colors"
+            className="dash-btn-icon"
           >
             <RefreshCw className="w-5 h-5" />
           </button>
           <button
+            type="button"
             onClick={() => setShowExpenseDialog(true)}
-            className="px-4 py-2.5 border border-primary text-primary font-semibold rounded-xl hover:bg-primary/5 transition-all flex items-center gap-2"
+            className="dash-btn dash-btn-secondary"
           >
             <PlusCircle className="w-4 h-4" />
             {t("expenses.add")}
           </button>
           <button
+            type="button"
             onClick={() => navigate("/financials")}
-            className="px-5 py-2.5 bg-primary text-white font-semibold rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2"
+            className="dash-btn dash-btn-primary"
           >
             <Wallet className="w-4 h-4" />
             {t("accountantDashboard.financials")}
@@ -187,55 +197,55 @@ export default function AccountantDashboard() {
 
       {/* ─── ФОТ (Payroll Fund) Card ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="bg-card rounded-2xl border border-border/50 p-6 shadow-sm">
+        <div className="dash-card dash-card-padded dash-card-elevated">
           <div className="flex items-center gap-2 mb-4">
             <div className="p-2 bg-[#1f75fe]/10 rounded-xl">
               <Banknote className="w-5 h-5 text-[#1f75fe]" />
             </div>
             <div className="flex-1">
-              <h3 className="text-sm font-bold font-display">{t("payroll.fot")}</h3>
-              <p className="text-xs text-muted-foreground">
+              <h3 className="dash-section-title text-sm">{t("payroll.fot")}</h3>
+              <p className="text-xs text-[#64748b]">
                 {`${currentMonth.toString().padStart(2, "0")}/${currentYear}`}
               </p>
             </div>
             <button
               onClick={() => setShowApproveModal(true)}
-              className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary/90 transition-colors"
+              className="dash-btn dash-btn-primary text-xs py-1.5 px-3"
             >
               <PlusCircle className="w-3.5 h-3.5" />
               {t("payroll.approveFot", "Утвердить ФОТ")}
             </button>
           </div>
 
-          <div className="text-3xl font-display font-bold text-foreground mb-3">
+          <div className="dash-stat-value text-3xl mb-3">
             ₸ {fotTotal.toLocaleString("ru-KZ")}
           </div>
 
           {approvedThisMonth.length > 0 ? (
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
+              <p className="text-xs font-semibold text-[#16a34a] flex items-center gap-1">
                 <CheckCircle className="w-3.5 h-3.5" />
                 {approvedThisMonth.length} {t("payroll.fotApproved", "сотр. утверждено")}
               </p>
               {approvedThisMonth.slice(0, 3).map((r) => (
                 <div
                   key={r.id}
-                  className="flex items-center justify-between p-2.5 bg-emerald-50 rounded-lg border border-emerald-100"
+                  className="flex items-center justify-between p-2.5 bg-[#f0fdf4] rounded-lg border border-[#f0fdf4]"
                 >
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold text-foreground truncate">{r.userName ?? "—"}</p>
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-xs font-semibold text-[#0f172a] truncate">{r.userName ?? "—"}</p>
+                    <p className="text-[11px] text-[#64748b]">
                       {r.periodMonth.toString().padStart(2, "0")}/{r.periodYear}
                     </p>
                   </div>
-                  <span className="ml-2 text-xs font-bold text-emerald-700">
+                  <span className="ml-2 text-xs font-bold text-[#16a34a]">
                     ₸{Number(r.approvedAmount ?? r.calculatedAmount).toLocaleString("ru-KZ")}
                   </span>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 text-muted-foreground">
+            <div className="flex items-center gap-1.5 text-[#64748b]">
               <Clock className="w-4 h-4" />
               <span className="text-xs">{t("payroll.fotNotApproved", "ФОТ за текущий месяц не утверждён")}</span>
             </div>
@@ -243,15 +253,15 @@ export default function AccountantDashboard() {
         </div>
 
         {/* Revenue by Doctor — computed from procedures (accessible to accountants) */}
-        <div className="lg:col-span-2 bg-card rounded-2xl border border-border/50 p-6 shadow-sm">
+        <div className="lg:col-span-2 dash-card dash-card-padded dash-card-elevated">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold font-display flex items-center gap-2">
-              <Stethoscope className="w-5 h-5 text-primary" />
+            <h3 className="dash-section-title text-lg">
+              <Stethoscope className="w-5 h-5 text-[#1f75fe]" />
               {t("accountantDashboard.revenueByDoctor")}
             </h3>
             <button
               onClick={() => navigate("/procedures")}
-              className="text-sm text-primary font-semibold flex items-center gap-1 hover:underline"
+              className="text-sm text-[#1f75fe] font-semibold flex items-center gap-1 hover:underline"
             >
               {t("dashboard.viewAll")} <ChevronRight className="w-4 h-4" />
             </button>
@@ -259,8 +269,8 @@ export default function AccountantDashboard() {
 
           {doctorRevenueList.length === 0 ? (
             <div className="text-center py-8">
-              <TrendingUp className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="text-muted-foreground font-medium">{t("accountantDashboard.noData")}</p>
+              <TrendingUp className="w-10 h-10 text-[#94a3b8]/30 mx-auto mb-3" />
+              <p className="text-[#64748b] font-medium">{t("accountantDashboard.noData")}</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -274,22 +284,22 @@ export default function AccountantDashboard() {
                     transition={{ delay: i * 0.05 }}
                     className="flex items-center gap-4"
                   >
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs flex-none">
+                    <div className="w-8 h-8 rounded-full bg-[#1f75fe]/10 flex items-center justify-center text-[#1f75fe] font-bold text-xs flex-none">
                       {d.name.charAt(0)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm font-medium text-foreground truncate">{d.name}</span>
+                        <span className="text-sm font-medium text-[#0f172a] truncate">{d.name}</span>
                         <div className="ml-2 flex-none text-right">
-                          <span className="text-sm font-semibold text-foreground">
+                          <span className="text-sm font-semibold text-[#0f172a]">
                             ₸ {d.revenue.toLocaleString("ru-KZ")}
                           </span>
-                          <span className="text-xs text-muted-foreground ml-1">({d.count} {t("dashboard.procedures").toLowerCase()})</span>
+                          <span className="text-xs text-[#64748b] ml-1">({d.count} {t("dashboard.procedures").toLowerCase()})</span>
                         </div>
                       </div>
-                      <div className="w-full bg-slate-100 rounded-full h-1.5">
+                      <div className="w-full bg-[#f1ede4] rounded-full h-1.5">
                         <div
-                          className="bg-primary rounded-full h-1.5 transition-all"
+                          className="bg-[#1f75fe] rounded-full h-1.5 transition-all"
                           style={{ width: `${pct}%` }}
                         />
                       </div>
@@ -297,9 +307,9 @@ export default function AccountantDashboard() {
                   </motion.div>
                 );
               })}
-              <div className="pt-3 mt-2 border-t border-border/50 flex justify-between items-center">
-                <span className="text-sm font-semibold text-muted-foreground">{t("accountantDashboard.totalRevenue")}</span>
-                <span className="text-lg font-bold text-foreground">₸ {totalRevenue.toLocaleString("ru-KZ")}</span>
+              <div className="pt-3 mt-2 border-t border-[#e8e3d9] flex justify-between items-center">
+                <span className="text-sm font-semibold text-[#64748b]">{t("accountantDashboard.totalRevenue")}</span>
+                <span className="text-lg font-bold text-[#0f172a]">₸ {totalRevenue.toLocaleString("ru-KZ")}</span>
               </div>
             </div>
           )}
@@ -307,39 +317,39 @@ export default function AccountantDashboard() {
       </div>
 
       {/* Billing Queue */}
-      <div className="bg-card rounded-2xl border border-border/50 p-6 shadow-sm">
-        <h3 className="text-lg font-bold font-display mb-4 flex items-center gap-2">
-          <Wallet className="w-5 h-5 text-primary" />
+      <div className="dash-card dash-card-padded dash-card-elevated">
+        <h3 className="dash-section-title text-lg mb-4">
+          <Wallet className="w-5 h-5 text-[#1f75fe]" />
           {t("accountantDashboard.billingQueue")}
           {completedNoBilling.length > 0 && (
-            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 ml-auto">
+            <span className="dash-badge dash-badge-warning ml-auto">
               {completedNoBilling.length}
             </span>
           )}
         </h3>
         {completedNoBilling.length === 0 ? (
           <div className="text-center py-8">
-            <div className="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-3">
-              <TrendingUp className="w-6 h-6 text-emerald-600" />
+            <div className="w-12 h-12 bg-[#f0fdf4] rounded-full flex items-center justify-center mx-auto mb-3">
+              <TrendingUp className="w-6 h-6 text-[#16a34a]" />
             </div>
-            <p className="text-emerald-600 font-semibold">{t("accountantDashboard.allBilled")}</p>
-            <p className="text-sm text-muted-foreground mt-1">{t("accountantDashboard.allBilledDesc")}</p>
+            <p className="text-[#16a34a] font-semibold">{t("accountantDashboard.allBilled")}</p>
+            <p className="text-sm text-[#64748b] mt-1">{t("accountantDashboard.allBilledDesc")}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {completedNoBilling.slice(0, 6).map((proc) => (
-              <div key={proc.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50">
-                <div className="w-2 h-2 rounded-full bg-amber-400 flex-none" />
+              <div key={proc.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-[#faf8f4]">
+                <div className="w-2 h-2 rounded-full bg-[#d97706] flex-none" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-foreground truncate">{proc.name}</p>
-                  <p className="text-xs text-muted-foreground">{proc.doctorName ?? "—"}</p>
+                  <p className="text-sm font-medium text-[#0f172a] truncate">{proc.name}</p>
+                  <p className="text-xs text-[#64748b]">{proc.doctorName ?? "—"}</p>
                 </div>
               </div>
             ))}
             {completedNoBilling.length > 6 && (
               <button
                 onClick={() => navigate("/procedures")}
-                className="w-full text-center text-sm text-primary font-semibold mt-2 hover:underline"
+                className="w-full text-center text-sm text-[#1f75fe] font-semibold mt-2 hover:underline"
               >
                 +{completedNoBilling.length - 6} {t("accountantDashboard.more")}
               </button>
@@ -365,6 +375,7 @@ export default function AccountantDashboard() {
           }}
         />
       )}
+      </div>
     </div>
   );
 }
