@@ -164,7 +164,7 @@ export default function AccountSettings() {
                   onClick={() => setLocation(item.href)}
                   className="w-full"
                 >
-                  <IosGroupRow as="div" className="cursor-pointer">
+                  <IosGroupRow as="div" className="cursor-pointer hover:bg-[#faf8f4]">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", item.iconClass)}>
                         <item.icon className="w-[18px] h-[18px]" />

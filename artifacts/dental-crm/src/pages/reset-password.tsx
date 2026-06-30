@@ -64,8 +64,8 @@ export default function ResetPassword() {
     return (
       <div className="min-h-screen w-full bg-[#faf8f4] font-manrope flex flex-col items-center justify-center px-6">
         <div className="w-full max-w-sm text-center bg-white rounded-2xl border border-[#e8e3d9] shadow-md p-6">
-          <h2 className="text-xl font-manrope font-bold text-[#0f172a] mb-3">Недействительная ссылка</h2>
-          <p className="text-sm text-[#64748b] mb-6">Эта ссылка для сброса пароля недействительна или устарела.</p>
+          <h2 className="text-xl font-bold text-[#0f172a] mb-3">Недействительная ссылка</h2>
+          <p className="text-body text-[#64748b] mb-6">Эта ссылка для сброса пароля недействительна или устарела.</p>
           <button
             onClick={() => setLocation("/forgot-password")}
             className="w-full py-4 rounded-full text-base font-semibold hover:scale-105 active:scale-95 bg-[#1f75fe] hover:bg-[#1a65e8] text-white transition-all"
@@ -97,7 +97,7 @@ export default function ResetPassword() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
         >
-          <h2 className="text-2xl font-manrope font-bold text-[#0f172a] text-center mb-8">
+          <h2 className="text-2xl font-bold text-[#0f172a] text-center mb-8">
             Придумайте новый пароль
           </h2>
 
@@ -107,7 +107,7 @@ export default function ResetPassword() {
               w-full px-4 py-3.5 rounded-xl border bg-white transition-all
               ${error ? "border-[#dc2626] bg-[#fef2f2]" : "border-[#e8e3d9] focus-within:border-[#1f75fe] focus-within:ring-2 focus-within:ring-[#1f75fe]/20"}
             `}>
-              <p className="text-[11px] font-semibold text-[#94a3b8] uppercase tracking-wide mb-0.5">
+              <p className="section-label mb-0.5">
                 Придумайте новый пароль
               </p>
               <div className="flex items-center">
@@ -134,7 +134,7 @@ export default function ResetPassword() {
               w-full px-4 py-3.5 rounded-xl border bg-white transition-all
               ${error ? "border-[#dc2626] bg-[#fef2f2]" : "border-[#e8e3d9] focus-within:border-[#1f75fe] focus-within:ring-2 focus-within:ring-[#1f75fe]/20"}
             `}>
-              <p className="text-[11px] font-semibold text-[#94a3b8] uppercase tracking-wide mb-0.5">
+              <p className="section-label mb-0.5">
                 Повторите новый пароль
               </p>
               <div className="flex items-center">
@@ -157,7 +157,7 @@ export default function ResetPassword() {
             </div>
 
             {error && (
-              <p className="text-xs text-[#dc2626] font-medium px-1">{error}</p>
+              <p className="text-caption text-[#dc2626] font-medium px-1">{error}</p>
             )}
 
             <button
@@ -177,7 +177,7 @@ export default function ResetPassword() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="fixed inset-0 z-50 flex items-end justify-center bg-black/20 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 backdrop-blur-sm p-4"
           >
             <motion.div
               initial={{ opacity: 0, y: 80 }}
@@ -196,7 +196,7 @@ export default function ResetPassword() {
                 </div>
               </div>
 
-              <h3 className="text-lg font-manrope font-bold text-[#0f172a] mb-6">
+              <h3 className="text-lg font-bold text-[#0f172a] mb-6">
                 Ваш новый пароль сохранён
               </h3>
 

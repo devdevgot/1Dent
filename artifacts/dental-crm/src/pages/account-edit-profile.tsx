@@ -3,8 +3,12 @@ import { useLocation } from "wouter";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useUpdateProfile } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Camera, Loader2 } from "lucide-react";
+import { Camera, Loader2 } from "lucide-react";
 import PhotoCropModal from "@/components/account/photo-crop-modal";
+import { PageShell } from "@/components/layout/page-shell";
+import { PageHeader } from "@/components/layout/page-header";
+import { IosGroup } from "@/components/layout/ios-group";
+import { Button } from "@/components/ui/button";
 
 export default function AccountEditProfile() {
   const [, setLocation] = useLocation();
@@ -66,16 +70,14 @@ export default function AccountEditProfile() {
   const initials = (user?.name ?? "?").charAt(0).toUpperCase();
 
   return (
-    <div className="min-h-full bg-[#faf8f4] font-manrope">
-      <div className="bg-white px-4 pt-12 pb-3 flex items-center gap-3 border-b border-[#e8e3d9] shadow-sm">
-        <button onClick={() => setLocation("/account-settings")} className="p-1 -ml-1 text-[#64748b] hover:bg-[#f1ede4] rounded-xl transition-colors">
-          <ChevronLeft className="w-6 h-6" />
-        </button>
-        <h1 className="text-lg font-semibold text-[#0f172a]">Имя и фото</h1>
-      </div>
+    <PageShell animate={false}>
+      <PageHeader
+        title="Имя и фото"
+        onBack={() => setLocation("/account-settings")}
+        sticky
+      />
 
       <div className="px-4 py-6 space-y-5">
-        {/* Avatar */}
         <div className="flex flex-col items-center gap-2">
           <div className="relative">
             <div className="w-24 h-24 rounded-full overflow-hidden bg-[#1f75fe]/10 flex items-center justify-center text-[#1f75fe] font-bold text-3xl border border-[#e8e3d9] shadow-sm transition-transform active:scale-95 duration-100">
@@ -86,44 +88,46 @@ export default function AccountEditProfile() {
               )}
             </div>
             <button
+              type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-[#1f75fe] flex items-center justify-center shadow-lg border border-white hover:bg-[#1a65e8] transition-colors"
+              className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-[#1f75fe] flex items-center justify-center shadow-lg border-2 border-white hover:bg-[#1a65e8] transition-colors"
             >
               <Camera className="w-4 h-4 text-white" />
             </button>
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
           </div>
-          <button
+          <Button
+            variant="link"
+            size="sm"
+            className="text-caption h-auto p-0 text-[#1f75fe]"
             onClick={() => fileInputRef.current?.click()}
-            className="text-[13px] text-[#1f75fe] font-semibold hover:underline"
           >
             Изменить фото
-          </button>
+          </Button>
         </div>
 
-        {/* Name */}
-        <div className="bg-white rounded-2xl overflow-hidden shadow-md border border-[#e8e3d9]">
+        <IosGroup>
           <label className="flex flex-col px-4 py-3.5 gap-0.5">
-            <span className="text-[11px] text-[#94a3b8] uppercase tracking-wider font-medium">Ваше имя</span>
+            <span className="section-label">Ваше имя</span>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="text-[15px] text-[#0f172a] bg-transparent outline-none placeholder-[#94a3b8] mt-0.5 focus:ring-0"
+              className="text-body text-[#0f172a] bg-transparent outline-none placeholder:text-[#94a3b8] mt-0.5"
               placeholder="Введите имя"
               autoFocus
             />
           </label>
-        </div>
+        </IosGroup>
 
-        <button
+        <Button
+          className="w-full py-3.5 rounded-full text-body font-semibold hover:scale-105 active:scale-95"
           onClick={handleSave}
           disabled={mutation.isPending}
-          className="w-full py-3.5 rounded-full font-semibold text-[15px] flex items-center justify-center gap-2 bg-[#1f75fe] text-white hover:bg-[#1a65e8] hover:scale-105 transition-all shadow-md disabled:opacity-50 disabled:hover:scale-100"
         >
           {mutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
           Сохранить
-        </button>
+        </Button>
       </div>
 
       {selectedImage && (
@@ -138,6 +142,6 @@ export default function AccountEditProfile() {
           onCrop={handleCropComplete}
         />
       )}
-    </div>
+    </PageShell>
   );
 }

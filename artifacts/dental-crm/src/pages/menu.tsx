@@ -102,7 +102,7 @@ export default function MenuPage() {
   };
 
   return (
-    <PageShell className="pb-6 bg-[#faf8f4] font-manrope text-[#0f172a]">
+    <PageShell className="pb-6">
       <Link
         href="/account-settings"
         className="block bg-white px-4 pt-5 pb-4 mb-4 border-b border-[#e8e3d9]/50 active:bg-[#f1ede4] transition-colors"

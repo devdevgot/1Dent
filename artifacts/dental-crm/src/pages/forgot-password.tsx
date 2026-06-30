@@ -67,10 +67,10 @@ export default function ForgotPassword() {
               exit={{ opacity: 0, y: -16 }}
               transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
             >
-              <h2 className="text-2xl font-manrope font-bold text-[#0f172a] text-center mb-3">
+              <h2 className="text-2xl font-bold text-[#0f172a] text-center mb-3">
                 Восстановить пароль
               </h2>
-              <p className="text-sm text-[#64748b] text-center mb-8 leading-relaxed">
+              <p className="text-body text-[#64748b] text-center mb-8 leading-relaxed">
                 Введите email, который вы использовали при регистрации, чтобы установить новый пароль.
               </p>
 
@@ -79,7 +79,7 @@ export default function ForgotPassword() {
                   w-full px-4 py-3.5 rounded-xl border bg-white transition-all
                   ${error ? "border-[#dc2626] bg-[#fef2f2]" : "border-[#e8e3d9] focus-within:border-[#1f75fe] focus-within:ring-2 focus-within:ring-[#1f75fe]/20"}
                 `}>
-                  <p className="text-[11px] font-semibold text-[#94a3b8] uppercase tracking-wide mb-0.5">
+                  <p className="section-label mb-0.5">
                     Email
                   </p>
                   <input
@@ -92,7 +92,7 @@ export default function ForgotPassword() {
                   />
                 </div>
                 {error && (
-                  <p className="text-xs text-[#dc2626] font-medium px-1">{error}</p>
+                  <p className="text-caption text-[#dc2626] font-medium px-1">{error}</p>
                 )}
 
                 <button
@@ -119,10 +119,10 @@ export default function ForgotPassword() {
                 </div>
               </div>
 
-              <h2 className="text-2xl font-manrope font-bold text-[#0f172a] mb-3">
+              <h2 className="text-2xl font-bold text-[#0f172a] mb-3">
                 Ссылка отправлена
               </h2>
-              <p className="text-sm text-[#64748b] leading-relaxed mb-8">
+              <p className="text-body text-[#64748b] leading-relaxed mb-8">
                 Мы отправили ссылку для сброса пароля на{" "}
                 <span className="font-semibold text-[#0f172a]">{email}</span>.
                 Проверьте ящик входящих и папку «Спам».
@@ -131,10 +131,10 @@ export default function ForgotPassword() {
               {/* Dev mode: show direct link */}
               {devToken && (
                 <div className="mb-6 p-4 rounded-2xl border border-dashed border-[#e8e3d9] bg-[#faf8f4] text-left">
-                  <p className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wide mb-2">
+                  <p className="section-label mb-2">
                     Режим разработки
                   </p>
-                  <p className="text-xs text-[#64748b] mb-3">
+                  <p className="text-caption text-[#64748b] mb-3">
                     Email не настроен — используйте ссылку напрямую:
                   </p>
                   <button

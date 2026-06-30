@@ -3,7 +3,11 @@ import { useLocation } from "wouter";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useUpdateProfile } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Loader2, Mail, CheckCircle2 } from "lucide-react";
+import { Loader2, Mail, CheckCircle2 } from "lucide-react";
+import { PageShell } from "@/components/layout/page-shell";
+import { PageHeader } from "@/components/layout/page-header";
+import { IosGroup } from "@/components/layout/ios-group";
+import { Button } from "@/components/ui/button";
 
 type Step = "enter-email" | "enter-code" | "done";
 
@@ -57,109 +61,111 @@ export default function AccountChangeEmail() {
     mutation.mutate({ email: newEmail.trim() });
   }
 
+  const handleBack = () => {
+    if (step === "enter-code") setStep("enter-email");
+    else setLocation("/account-settings");
+  };
+
   return (
-    <div className="min-h-full bg-[#faf8f4] font-manrope">
-      <div className="bg-white px-4 pt-12 pb-3 flex items-center gap-3 border-b border-[#e8e3d9]">
-        <button
-          onClick={() => step === "enter-code" ? setStep("enter-email") : setLocation("/account-settings")}
-          className="p-1 -ml-1 text-[#64748b] hover:bg-[#f1ede4] rounded-xl transition-colors"
-        >
-          <ChevronLeft className="w-6 h-6" />
-        </button>
-        <h1 className="text-lg font-semibold text-[#0f172a]">Изменить email</h1>
-      </div>
+    <PageShell animate={false}>
+      <PageHeader
+        title="Изменить email"
+        onBack={handleBack}
+        sticky
+      />
 
       <div className="px-4 py-6 space-y-5">
         {step === "done" ? (
           <div className="flex flex-col items-center gap-4 py-10">
             <CheckCircle2 className="w-16 h-16 text-[#1f75fe]" />
-            <p className="text-[17px] font-semibold text-[#0f172a]">Email обновлён</p>
-            <p className="text-[14px] text-[#94a3b8] text-center">
+            <p className="text-nav-title font-semibold text-[#0f172a]">Email обновлён</p>
+            <p className="text-caption text-[#94a3b8] text-center">
               Ваш новый email: <span className="text-[#64748b] font-medium">{newEmail}</span>
             </p>
-            <button
+            <Button
+              className="mt-4 w-full py-3.5 rounded-full text-body font-semibold hover:scale-105 active:scale-95"
               onClick={() => setLocation("/account-settings")}
-              className="mt-4 w-full py-3.5 rounded-full font-semibold text-[15px] bg-[#1f75fe] text-white hover:bg-[#1a65e8] hover:scale-105 transition-all"
             >
               Готово
-            </button>
+            </Button>
           </div>
         ) : step === "enter-email" ? (
           <>
-            <div className="bg-white rounded-2xl overflow-hidden border border-[#e8e3d9] shadow-md">
+            <IosGroup>
               <div className="px-4 py-3 border-b border-[#e8e3d9]">
-                <p className="text-[12px] text-[#94a3b8]">Текущий email</p>
-                <p className="text-[15px] text-[#64748b] mt-0.5">{user?.email}</p>
+                <p className="text-caption text-[#94a3b8]">Текущий email</p>
+                <p className="text-body text-[#64748b] mt-0.5">{user?.email}</p>
               </div>
               <label className="flex flex-col px-4 py-3.5 gap-0.5">
-                <span className="text-[11px] text-[#94a3b8] uppercase tracking-wider font-medium">Новый email</span>
+                <span className="section-label">Новый email</span>
                 <input
                   type="email"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
-                  className="text-[15px] text-[#0f172a] bg-transparent outline-none placeholder-[#94a3b8] mt-0.5"
+                  className="text-body text-[#0f172a] bg-transparent outline-none placeholder:text-[#94a3b8] mt-0.5"
                   placeholder="новый@email.com"
                   autoCapitalize="none"
                   autoCorrect="off"
                   autoFocus
                 />
               </label>
-            </div>
+            </IosGroup>
 
-            <button
+            <Button
+              className="w-full py-3.5 rounded-full text-body font-semibold hover:scale-105 active:scale-95"
               onClick={handleSendCode}
               disabled={sending}
-              className="w-full py-3.5 rounded-full font-semibold text-[15px] flex items-center justify-center gap-2 bg-[#1f75fe] text-white hover:bg-[#1a65e8] hover:scale-105 transition-all disabled:hover:scale-100"
             >
               {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
               Отправить код подтверждения
-            </button>
+            </Button>
           </>
         ) : (
           <>
             <div className="bg-[#1f75fe]/10 border border-[#1f75fe]/20 rounded-2xl px-4 py-3.5 flex items-start gap-3">
               <Mail className="w-5 h-5 text-[#1f75fe] mt-0.5 shrink-0" />
               <div>
-                <p className="text-[14px] text-[#0f172a] font-medium">Код отправлен</p>
-                <p className="text-[13px] text-[#94a3b8] mt-0.5">
+                <p className="text-body text-[#0f172a] font-medium">Код отправлен</p>
+                <p className="text-caption text-[#94a3b8] mt-0.5">
                   Проверьте почту <span className="text-[#64748b]">{newEmail}</span>
                 </p>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl overflow-hidden border border-[#e8e3d9] shadow-md">
+            <IosGroup>
               <label className="flex flex-col px-4 py-3.5 gap-0.5">
-                <span className="text-[11px] text-[#94a3b8] uppercase tracking-wider font-medium">Код подтверждения</span>
+                <span className="section-label">Код подтверждения</span>
                 <input
                   type="text"
                   value={code}
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                  className="text-[22px] font-bold tracking-[0.3em] text-[#0f172a] bg-transparent outline-none placeholder-[#e8e3d9] mt-1"
+                  className="text-[22px] font-bold tracking-[0.3em] text-[#0f172a] bg-transparent outline-none placeholder:text-[#e8e3d9] mt-1"
                   placeholder="------"
                   inputMode="numeric"
                   autoFocus
                 />
               </label>
-            </div>
+            </IosGroup>
 
-            <button
+            <Button
+              className="w-full py-3.5 rounded-full text-body font-semibold hover:scale-105 active:scale-95"
               onClick={handleVerify}
               disabled={mutation.isPending}
-              className="w-full py-3.5 rounded-full font-semibold text-[15px] flex items-center justify-center gap-2 bg-[#1f75fe] text-white hover:bg-[#1a65e8] hover:scale-105 transition-all disabled:hover:scale-100"
             >
               {mutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
               Подтвердить
-            </button>
+            </Button>
 
             <button
+              type="button"
               onClick={() => { setCode(""); setStep("enter-email"); }}
-              className="w-full py-3 text-[14px] text-[#94a3b8] hover:text-[#64748b] transition-colors"
+              className="w-full py-3 text-caption text-[#94a3b8] hover:text-[#64748b] transition-colors"
             >
               Изменить email
             </button>
           </>
         )}
       </div>
-    </div>
+    </PageShell>
   );
 }

@@ -56,13 +56,13 @@ function InputField({
             : "border-[#e8e3d9] focus-within:border-[#1f75fe] focus-within:ring-2 focus-within:ring-[#1f75fe]/20"
         }`}
       >
-        <p className="text-[10px] font-semibold text-[#94a3b8] uppercase tracking-wide mb-0.5">
+        <p className="section-label mb-0.5">
           {label}
         </p>
         {children}
       </div>
       {error && (
-        <p className="text-xs text-[#dc2626] font-medium mt-1 px-1">{error}</p>
+        <p className="text-caption text-[#dc2626] font-medium mt-1 px-1">{error}</p>
       )}
     </div>
   );
@@ -193,14 +193,14 @@ export default function Register() {
                 >
                   <ShieldCheck className="w-7 h-7 text-[#1f75fe]" />
                 </div>
-                <h2 className="text-xl font-manrope font-bold text-[#0f172a] mb-3">
+                <h2 className="text-xl font-bold text-[#0f172a] mb-3">
                   Прежде чем начать
                 </h2>
-                <p className="text-sm text-[#64748b] leading-relaxed">
+                <p className="text-body text-[#64748b] leading-relaxed">
                   Регистрация в <span className="font-semibold text-[#0f172a]">1Dent</span> предназначена
                   исключительно для <span className="font-semibold text-[#0f172a]">владельцев клиник</span>.
                 </p>
-                <p className="text-sm text-[#64748b] leading-relaxed mt-2">
+                <p className="text-body text-[#64748b] leading-relaxed mt-2">
                   Если вы являетесь сотрудником клиники, пожалуйста, не создавайте новый аккаунт —
                   войдите в систему с помощью данных, которые вам предоставил руководитель.
                 </p>
@@ -214,7 +214,7 @@ export default function Register() {
               </button>
 
               <div className="text-center mt-3">
-                <Link href="/login" className="text-sm text-[#94a3b8]">
+                <Link href="/login" className="text-body text-[#94a3b8]">
                   Уже есть аккаунт?{" "}
                   <span className="font-semibold text-[#1f75fe]">Войти</span>
                 </Link>
@@ -240,10 +240,10 @@ export default function Register() {
                   <UserRound className="w-4 h-4 text-[#1f75fe]" />
                 </div>
                 <div>
-                  <h2 className="text-base font-manrope font-bold text-[#0f172a] leading-tight">
+                  <h2 className="text-body font-bold text-[#0f172a] leading-tight">
                     Личные данные
                   </h2>
-                  <p className="text-xs text-[#94a3b8]">Шаг 1 из 2</p>
+                  <p className="text-caption text-[#94a3b8]">Шаг 1 из 2</p>
                 </div>
               </div>
 
@@ -316,10 +316,10 @@ export default function Register() {
                   <Building2 className="w-4 h-4 text-[#1f75fe]" />
                 </div>
                 <div>
-                  <h2 className="text-base font-manrope font-bold text-[#0f172a] leading-tight">
+                  <h2 className="text-body font-bold text-[#0f172a] leading-tight">
                     Данные клиники
                   </h2>
-                  <p className="text-xs text-[#94a3b8]">Шаг 2 из 2</p>
+                  <p className="text-caption text-[#94a3b8]">Шаг 2 из 2</p>
                 </div>
               </div>
 
@@ -338,7 +338,7 @@ export default function Register() {
                 <div>
                   <div className="flex items-center gap-1.5 mb-2.5">
                     <Sparkles className="w-3.5 h-3.5 text-[#1f75fe]" />
-                    <p className="text-xs font-semibold text-[#64748b]">
+                    <p className="text-caption font-semibold text-[#64748b]">
                       Для чего планируете использовать?
                     </p>
                   </div>
@@ -371,13 +371,13 @@ export default function Register() {
                           </div>
                           <div className="min-w-0">
                             <p
-                              className={`text-xs font-semibold leading-tight truncate ${
+                              className={`text-caption font-semibold leading-tight truncate ${
                                 selected ? "text-[#0f172a]" : "text-[#64748b]"
                               }`}
                             >
                               {label}
                             </p>
-                            <p className="text-[10px] text-[#94a3b8] leading-tight truncate">{sub}</p>
+                            <p className="text-micro text-[#94a3b8] leading-tight truncate">{sub}</p>
                           </div>
                         </button>
                       );

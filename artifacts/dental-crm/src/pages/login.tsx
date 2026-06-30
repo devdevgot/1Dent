@@ -69,12 +69,12 @@ export default function Login() {
             alt="1Dent"
             className="w-20 h-20 mb-3"
           />
-          <h1 className="text-lg font-manrope font-bold text-[#0f172a]">1Dent</h1>
-          <p className="text-xs text-[#94a3b8] mt-0.5">Управление клиникой</p>
+          <h1 className="text-lg font-bold text-[#0f172a]">1Dent</h1>
+          <p className="text-caption text-[#94a3b8] mt-0.5">Управление клиникой</p>
         </div>
 
         {/* Title */}
-        <h2 className="text-xl font-manrope font-bold text-[#0f172a] text-center mb-5">
+        <h2 className="text-xl font-bold text-[#0f172a] text-center mb-5">
           {t("auth.welcome")}
         </h2>
 
@@ -85,7 +85,7 @@ export default function Login() {
               w-full px-3.5 py-2.5 rounded-xl border bg-white transition-all
               ${errors.email ? "border-[#dc2626] bg-[#fef2f2]" : "border-[#e8e3d9] focus-within:border-[#1f75fe] focus-within:ring-2 focus-within:ring-[#1f75fe]/20"}
             `}>
-              <p className="text-[10px] font-semibold text-[#94a3b8] uppercase tracking-wide mb-0.5">
+              <p className="section-label mb-0.5">
                 {t("auth.email")}
               </p>
               <input
@@ -107,7 +107,7 @@ export default function Login() {
               w-full px-3.5 py-2.5 rounded-xl border bg-white transition-all relative
               ${errors.password ? "border-[#dc2626] bg-[#fef2f2]" : "border-[#e8e3d9] focus-within:border-[#1f75fe] focus-within:ring-2 focus-within:ring-[#1f75fe]/20"}
             `}>
-              <p className="text-[10px] font-semibold text-[#94a3b8] uppercase tracking-wide mb-0.5">
+              <p className="section-label mb-0.5">
                 {t("auth.password")}
               </p>
               <div className="flex items-center">
@@ -134,7 +134,7 @@ export default function Login() {
 
           {/* Forgot password */}
           <div className="text-right">
-            <Link href="/forgot-password" className="text-xs font-medium text-[#1f75fe] hover:opacity-80 transition-opacity">
+            <Link href="/forgot-password" className="text-caption font-medium text-[#1f75fe] hover:opacity-80 transition-opacity">
               {t("auth.forgotPassword")}
             </Link>
           </div>
@@ -150,7 +150,7 @@ export default function Login() {
 
           {/* Register link */}
           <div className="text-center pt-1">
-            <Link href="/register" className="text-sm text-[#94a3b8]">
+            <Link href="/register" className="text-body text-[#94a3b8]">
               Нет аккаунта?{" "}
               <span className="font-semibold text-[#1f75fe]">Создать</span>
             </Link>
