@@ -63,7 +63,7 @@ async function main() {
 
   await page.screenshot({ path: path.join(OUT, "dashboard-full.png"), fullPage: true });
 
-  const illustration = page.locator('svg[viewBox="0 0 320 240"]');
+  const illustration = page.locator('img[src="/images/revenue-empty-illustration.png"]');
   if (await illustration.count()) {
     await illustration.screenshot({ path: path.join(OUT, "illustration-only.png") });
   }

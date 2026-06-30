@@ -3,8 +3,6 @@ import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
 import { useKanbanStore } from "@/hooks/use-kanban";
-import { RevenueGrowthIllustration } from "./revenue-growth-illustration";
-
 export function RevenueEmptyState() {
   const { t } = useTranslation();
   const [, navigate] = useLocation();
@@ -22,7 +20,13 @@ export function RevenueEmptyState() {
       transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
       className="flex flex-col items-center px-6 pt-6 pb-7 text-center"
     >
-      <RevenueGrowthIllustration className="w-full max-w-[300px] h-[220px] sm:h-[230px] mb-5" />
+      <img
+        src="/images/revenue-empty-illustration.png"
+        alt=""
+        aria-hidden
+        draggable={false}
+        className="w-full max-w-[320px] h-auto object-contain mb-5"
+      />
 
       <h3 className="text-lg font-bold text-[var(--text)] tracking-tight">
         {t("ownerDashboard.revenueEmptyTitle")}
