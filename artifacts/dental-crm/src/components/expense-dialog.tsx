@@ -122,15 +122,15 @@ export default function ExpenseDialog({ expense, onClose, onSuccess }: ExpenseDi
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-xl p-6">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-sm">
+      <div className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border border-[#e8e3d9] shadow-xl p-6">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-bold text-foreground">
             {expense ? t("expenses.editTitle") : t("expenses.addTitle")}
           </h2>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500"
+            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#f1ede4] text-muted-foreground"
           >
             <X className="w-5 h-5" />
           </button>

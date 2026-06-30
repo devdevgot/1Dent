@@ -165,14 +165,14 @@ function DateTimePickerModal({ date, time, onConfirm, onClose }: DateTimePickerM
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+      <div className="relative z-10 bg-white rounded-2xl border border-[#e8e3d9] shadow-xl w-full max-w-sm mx-4 overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <p className="font-semibold text-gray-900">Дата и время</p>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#e8e3d9]">
+          <p className="font-semibold text-foreground">Дата и время</p>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -182,22 +182,22 @@ function DateTimePickerModal({ date, time, onConfirm, onClose }: DateTimePickerM
           {/* Month nav */}
           <div className="flex items-center justify-between mb-3">
             <button onClick={prevMonth}
-              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors">
-              <ChevronLeft className="w-4 h-4 text-gray-600" />
+              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[#f1ede4] transition-colors">
+              <ChevronLeft className="w-4 h-4 text-muted-foreground" />
             </button>
-            <span className="text-sm font-semibold text-gray-800">
+            <span className="text-sm font-semibold text-foreground">
               {MONTHS_RU[viewMonth]} {viewYear}
             </span>
             <button onClick={nextMonth}
-              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors">
-              <ChevronRight className="w-4 h-4 text-gray-600" />
+              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[#f1ede4] transition-colors">
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </button>
           </div>
 
           {/* Day headers */}
           <div className="grid grid-cols-7 mb-1">
             {DAYS_RU.map(d => (
-              <div key={d} className="text-center text-xs font-medium text-gray-400 py-1">{d}</div>
+              <div key={d} className="text-center text-xs font-medium text-muted-foreground py-1">{d}</div>
             ))}
           </div>
 
@@ -221,7 +221,7 @@ function DateTimePickerModal({ date, time, onConfirm, onClose }: DateTimePickerM
                       !day && "invisible",
                       isSelected && "bg-primary text-white font-semibold shadow-sm",
                       !isSelected && isToday && "text-primary font-semibold",
-                      !isSelected && !isToday && day && "text-gray-700 hover:bg-primary/10",
+                      !isSelected && !isToday && day && "text-foreground hover:bg-primary/10",
                     )}
                   >
                     {day}
@@ -233,13 +233,13 @@ function DateTimePickerModal({ date, time, onConfirm, onClose }: DateTimePickerM
         </div>
 
         {/* Divider */}
-        <div className="mx-5 border-t border-gray-100 my-1" />
+        <div className="mx-5 border-t border-[#e8e3d9] my-1" />
 
         {/* ── Time list ── */}
         <div className="px-5 pb-2">
           <div className="flex items-center gap-1.5 mb-2">
-            <Clock className="w-3.5 h-3.5 text-gray-400" />
-            <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Время</span>
+            <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Время</span>
           </div>
           <div ref={timeRef} className="h-36 overflow-y-scroll custom-scrollbar space-y-0.5 pr-1">
             {TIME_SLOTS.map(slot => (
@@ -252,7 +252,7 @@ function DateTimePickerModal({ date, time, onConfirm, onClose }: DateTimePickerM
                   "w-full text-left px-3 py-1.5 rounded-lg text-sm transition-all",
                   slot === selTime
                     ? "bg-primary text-white font-semibold"
-                    : "text-gray-700 hover:bg-primary/10",
+                    : "text-foreground hover:bg-primary/10",
                 )}
               >
                 {slot}
@@ -262,7 +262,7 @@ function DateTimePickerModal({ date, time, onConfirm, onClose }: DateTimePickerM
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t border-gray-100 flex gap-3">
+        <div className="px-5 py-4 border-t border-[#e8e3d9] flex gap-3">
           <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
             Отмена
           </Button>
@@ -377,21 +377,21 @@ export function AppointmentModal({
     <>
       <div className="fixed inset-0 z-50">
         {/* Backdrop */}
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+        <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
 
         {/* Panel */}
         <div className={cn(
-          "absolute z-10 bg-white shadow-2xl flex flex-col",
+          "absolute z-10 bg-white border border-[#e8e3d9] shadow-xl flex flex-col",
           "bottom-0 left-0 right-0 rounded-t-2xl max-h-[90dvh]",
           "sm:bottom-auto sm:top-[8%] sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-md sm:rounded-2xl",
         )}>
           {/* Drag handle */}
           <div className="flex justify-center pt-3 pb-1 sm:hidden shrink-0">
-            <div className="w-10 h-1 rounded-full bg-gray-200" />
+            <div className="w-10 h-1 rounded-full bg-[#e8e3d9]" />
           </div>
 
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 shrink-0 border-b border-gray-100">
+          <div className="flex items-center justify-between px-6 py-4 shrink-0 border-b border-[#e8e3d9]">
             <h2 className="text-lg font-bold">
               {procedure ? "Редактировать запись" : "Новая запись"}
             </h2>
@@ -576,12 +576,12 @@ export function AppointmentModal({
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 border-t border-gray-100 shrink-0 flex gap-3 bg-white rounded-b-2xl">
+          <div className="px-6 py-4 border-t border-[#e8e3d9] shrink-0 flex gap-3 bg-white rounded-b-2xl">
             {confirmDelete ? (
               <>
                 <span className="text-sm text-red-600 flex-1 flex items-center">Удалить запись?</span>
                 <button onClick={() => setConfirmDelete(false)}
-                  className="px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">Нет</button>
+                  className="px-4 py-2 rounded-xl border border-[#e8e3d9] text-sm text-muted-foreground hover:bg-[#faf8f4]">Нет</button>
                 <button onClick={onDelete}
                   className="px-4 py-2 rounded-xl bg-red-500 text-white text-sm font-medium hover:bg-red-600">Удалить</button>
               </>

@@ -88,8 +88,8 @@ export function AttendanceCheckModal() {
     : "";
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/65 backdrop-blur-md p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         <div className="bg-amber-500 px-5 py-4 flex items-center gap-3">
           <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center">
             <AlertTriangle className="w-4 h-4 text-white" />
@@ -101,27 +101,27 @@ export function AttendanceCheckModal() {
         </div>
 
         <div className="px-5 py-5 space-y-4">
-          <p className="text-sm font-semibold text-gray-800 text-center leading-relaxed">
+          <p className="text-sm font-semibold text-foreground text-center leading-relaxed">
             Пожалуйста, отметьте, пришёл ли пациент на приём?
           </p>
 
-          <div className="bg-slate-50 rounded-xl p-3.5 space-y-2.5 border border-slate-100">
+          <div className="rounded-xl p-3.5 space-y-2.5 border border-[#e8e3d9] bg-[#faf8f4]">
             <div className="flex items-center gap-2.5">
-              <User className="w-4 h-4 text-slate-400 shrink-0" />
-              <span className="text-xs font-semibold text-slate-500 w-20">Пациент:</span>
-              <span className="text-xs font-bold text-slate-800 truncate">{patientName}</span>
+              <User className="w-4 h-4 text-muted-foreground shrink-0" />
+              <span className="text-xs font-semibold text-muted-foreground w-20">Пациент:</span>
+              <span className="text-xs font-bold text-foreground truncate">{patientName}</span>
             </div>
 
             <div className="flex items-center gap-2.5">
-              <Stethoscope className="w-4 h-4 text-slate-400 shrink-0" />
-              <span className="text-xs font-semibold text-slate-500 w-20">Процедура:</span>
-              <span className="text-xs font-bold text-slate-800 truncate">{currentProc.name}</span>
+              <Stethoscope className="w-4 h-4 text-muted-foreground shrink-0" />
+              <span className="text-xs font-semibold text-muted-foreground w-20">Процедура:</span>
+              <span className="text-xs font-bold text-foreground truncate">{currentProc.name}</span>
             </div>
 
             <div className="flex items-center gap-2.5">
-              <Clock className="w-4 h-4 text-slate-400 shrink-0" />
-              <span className="text-xs font-semibold text-slate-500 w-20">Врач:</span>
-              <span className="text-xs font-bold text-slate-800 truncate">
+              <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
+              <span className="text-xs font-semibold text-muted-foreground w-20">Врач:</span>
+              <span className="text-xs font-bold text-foreground truncate">
                 {currentProc.doctorName ?? "—"}
               </span>
             </div>

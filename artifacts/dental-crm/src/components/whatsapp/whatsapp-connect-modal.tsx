@@ -352,14 +352,14 @@ export function WhatsAppConnectModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/30 backdrop-blur-sm"
         onClick={isConnected ? onClose : undefined}
       />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div className="relative bg-white rounded-2xl border border-[#e8e3d9] shadow-xl w-full max-w-md overflow-hidden">
         {(step === "setup" || isConnected) && (
           <button
             onClick={onClose}
-            className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 transition-colors"
+            className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center rounded-full text-muted-foreground hover:bg-[#f1ede4] transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -370,7 +370,7 @@ export function WhatsAppConnectModal({
           <div className="flex flex-col items-center px-8 py-10 text-center">
             <button
               onClick={onClose}
-              className="absolute top-3 left-3 w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 transition-colors"
+              className="absolute top-3 left-3 w-8 h-8 flex items-center justify-center rounded-full text-muted-foreground hover:bg-[#f1ede4] transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -380,8 +380,8 @@ export function WhatsAppConnectModal({
             >
               <WhatsAppIcon size={46} color="#25D366" />
             </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Подключите WhatsApp</h2>
-            <p className="text-sm text-gray-500 leading-relaxed mb-6">
+            <h2 className="text-xl font-bold text-foreground mb-2">Подключите WhatsApp</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-6">
               Подключите WhatsApp вашей клиники, чтобы отправлять сообщения пациентам,
               напоминания и постоперационные уведомления прямо из CRM.
             </p>
@@ -398,7 +398,7 @@ export function WhatsAppConnectModal({
                   >
                     {i + 1}
                   </div>
-                  <p className="text-sm text-gray-600">{s}</p>
+                  <p className="text-sm text-muted-foreground">{s}</p>
                 </div>
               ))}
             </div>
@@ -417,7 +417,7 @@ export function WhatsAppConnectModal({
           <div className="p-6">
             <button
               onClick={onClose}
-              className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 transition-colors"
+              className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center rounded-full text-muted-foreground hover:bg-[#f1ede4] transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -429,16 +429,16 @@ export function WhatsAppConnectModal({
                 <WhatsAppIcon size={20} color="#25D366" />
               </div>
               <div>
-                <h2 className="text-base font-bold text-gray-900 leading-tight">Номер WhatsApp клиники</h2>
-                <p className="text-xs text-gray-400">Шаг 1 из 2</p>
+                <h2 className="text-base font-bold text-foreground leading-tight">Номер WhatsApp клиники</h2>
+                <p className="text-xs text-muted-foreground">Шаг 1 из 2</p>
               </div>
             </div>
-            <p className="text-sm text-gray-500 mb-4 leading-relaxed">
+            <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
               Введите номер телефона, на котором работает WhatsApp вашей клиники. Он будет использоваться для реферальных ссылок и отображения в CRM.
             </p>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">
+                <label className="block text-xs font-medium text-muted-foreground mb-1">
                   Номер WhatsApp (международный формат)
                 </label>
                 <input
@@ -450,7 +450,7 @@ export function WhatsAppConnectModal({
                   onKeyDown={e => { if (e.key === "Enter") void handleClinicPhoneSave(); }}
                   autoFocus
                 />
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   Введите цифры без «+» и пробелов. Например: <span className="font-mono">77071234567</span>
                 </p>
               </div>
@@ -479,7 +479,7 @@ export function WhatsAppConnectModal({
                 <WhatsAppIcon size={20} color="#25D366" />
               </div>
               <div>
-                <h2 className="text-base font-bold text-gray-900 leading-tight">
+                <h2 className="text-base font-bold text-foreground leading-tight">
                   {initialLoading ? "Загрузка..." :
                     isConnected ? "WhatsApp подключён" :
                     waitingForInit ? "Инициализация инстанса..." :
@@ -487,7 +487,7 @@ export function WhatsAppConnectModal({
                     configured ? "Сканирование QR" :
                     "Подключение WhatsApp"}
                 </h2>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-muted-foreground">
                   {isConnected ? "Подключён" : "Шаг 2 из 2"}
                 </p>
               </div>
@@ -496,8 +496,8 @@ export function WhatsAppConnectModal({
             {/* Loading initial state */}
             {initialLoading && (
               <div className="flex flex-col items-center justify-center py-10 gap-3">
-                <Loader2 className="w-8 h-8 animate-spin text-gray-300" />
-                <p className="text-sm text-gray-400">Проверка статуса...</p>
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Проверка статуса...</p>
               </div>
             )}
 
@@ -505,10 +505,10 @@ export function WhatsAppConnectModal({
             {!initialLoading && isConnected && (
               <div className="text-center py-4">
                 <CheckCircle2 className="w-14 h-14 mx-auto mb-3 text-green-500" />
-                <p className="font-semibold text-gray-800 text-base mb-1">WhatsApp успешно подключён!</p>
+                <p className="font-semibold text-foreground text-base mb-1">WhatsApp успешно подключён!</p>
                 {status?.phone && (
-                  <p className="text-sm text-gray-500">
-                    Номер <span className="font-mono font-semibold text-gray-700">+{status.phone}</span>{" "}
+                  <p className="text-sm text-muted-foreground">
+                    Номер <span className="font-mono font-semibold text-foreground">+{status.phone}</span>{" "}
                     добавлен в раздел Каналы
                   </p>
                 )}
@@ -530,8 +530,8 @@ export function WhatsAppConnectModal({
                 </div>
                 <Loader2 className="w-8 h-8 animate-spin" style={{ color: BRAND }} />
                 <div className="text-center">
-                  <p className="text-sm font-semibold text-gray-800">Создаём инстанс в Green API</p>
-                  <p className="text-xs text-gray-400 mt-1">Обычно занимает несколько секунд...</p>
+                  <p className="text-sm font-semibold text-foreground">Создаём инстанс в Green API</p>
+                  <p className="text-xs text-muted-foreground mt-1">Обычно занимает несколько секунд...</p>
                 </div>
               </div>
             )}
@@ -551,12 +551,12 @@ export function WhatsAppConnectModal({
                   </div>
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-gray-800">Инстанс создан, ожидаем готовности</p>
-                  <p className="text-xs text-gray-400 mt-1 leading-relaxed max-w-xs">
+                  <p className="text-sm font-semibold text-foreground">Инстанс создан, ожидаем готовности</p>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed max-w-xs">
                     Инициализация занимает до 5 минут. Пожалуйста, не закрывайте это окно.
                   </p>
                 </div>
-                <div className="flex items-center gap-1.5 text-xs text-gray-400 bg-gray-50 rounded-lg px-4 py-2">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-[#faf8f4] rounded-lg px-4 py-2">
                   <Loader2 className="w-3 h-3 animate-spin" />
                   <span>Прошло: {formatElapsed(elapsedSeconds)}</span>
                 </div>
@@ -566,7 +566,7 @@ export function WhatsAppConnectModal({
             {/* Provision button + error */}
             {!initialLoading && !isConnected && !provisioning && !waitingForInit && !configured && (
               <div className="flex flex-col gap-4">
-                <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-500 leading-relaxed">
+                <div className="bg-[#faf8f4] rounded-xl p-4 text-sm text-muted-foreground leading-relaxed">
                   Нажмите кнопку ниже — система автоматически создаст WhatsApp инстанс
                   и покажет QR-код для сканирования с телефона клиники.
                 </div>
@@ -595,8 +595,8 @@ export function WhatsAppConnectModal({
               <>
                 {!qr && !qrError && (
                   <div className="flex flex-col items-center justify-center py-8 gap-3">
-                    <Loader2 className="w-8 h-8 animate-spin text-gray-300" />
-                    <p className="text-sm text-gray-400">Запрашиваем QR-код у Green API...</p>
+                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">Запрашиваем QR-код у Green API...</p>
                   </div>
                 )}
 
@@ -606,8 +606,8 @@ export function WhatsAppConnectModal({
                       <AlertTriangle className="w-6 h-6 text-red-400" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-gray-700 mb-1">Не удалось получить QR-код</p>
-                      <p className="text-xs text-gray-400 leading-relaxed max-w-xs">{qrError}</p>
+                      <p className="text-sm font-semibold text-foreground mb-1">Не удалось получить QR-код</p>
+                      <p className="text-xs text-muted-foreground leading-relaxed max-w-xs">{qrError}</p>
                     </div>
                     <button
                       type="button"
@@ -625,7 +625,7 @@ export function WhatsAppConnectModal({
                   <div className="text-center">
                     {qr.type === "qrCode" ? (
                       <>
-                        <p className="text-xs text-gray-500 mb-3">
+                        <p className="text-xs text-muted-foreground mb-3">
                           Отсканируйте QR с телефона → WhatsApp → Привязанные устройства
                         </p>
                         <div className="flex justify-center mb-3">
@@ -635,7 +635,7 @@ export function WhatsAppConnectModal({
                             className="w-48 h-48 rounded-xl border border-border shadow-sm"
                           />
                         </div>
-                        <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400">
+                        <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
                           <Loader2 className="w-3 h-3 animate-spin" />
                           Ожидание сканирования...
                         </div>
@@ -643,11 +643,11 @@ export function WhatsAppConnectModal({
                     ) : qr.type === "alreadyLogged" ? (
                       <div className="py-2">
                         <CheckCircle2 className="w-10 h-10 mx-auto mb-2 text-green-500" />
-                        <p className="text-sm font-semibold text-gray-700">WhatsApp уже подключён</p>
+                        <p className="text-sm font-semibold text-foreground">WhatsApp уже подключён</p>
                       </div>
                     ) : (
                       <div className="py-2">
-                        <p className="text-sm text-gray-500">{qr.type}: {qr.message}</p>
+                        <p className="text-sm text-muted-foreground">{qr.type}: {qr.message}</p>
                       </div>
                     )}
                   </div>

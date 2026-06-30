@@ -173,16 +173,16 @@ export default function PhotoCropModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-white w-full max-w-[360px] rounded-2xl overflow-hidden shadow-2xl flex flex-col border border-slate-100 animate-in fade-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+      <div className="bg-white w-full max-w-[360px] rounded-2xl overflow-hidden shadow-xl flex flex-col border border-[#e8e3d9] animate-in fade-in zoom-in-95 duration-150">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-100">
-          <span className="font-semibold text-gray-900 text-[16px]">{t("settingsPage.cropPhoto", "Обрезка фото")}</span>
+        <div className="flex items-center justify-between px-4 py-3.5 border-b border-[#e8e3d9]">
+          <span className="font-semibold text-foreground text-[16px]">{t("settingsPage.cropPhoto", "Обрезка фото")}</span>
           <button
             onClick={onClose}
             disabled={isSaving}
-            className="p-1 rounded-full text-gray-400 hover:bg-slate-100 transition-colors disabled:opacity-50"
+            className="p-1 rounded-full text-muted-foreground hover:bg-[#f1ede4] transition-colors disabled:opacity-50"
           >
             <X className="w-5 h-5" />
           </button>
@@ -226,15 +226,15 @@ export default function PhotoCropModal({
         </div>
 
         {/* Zoom Controls */}
-        <div className="p-4 space-y-4 bg-slate-50/50 border-t border-slate-100">
+        <div className="p-4 space-y-4 bg-[#faf8f4] border-t border-[#e8e3d9]">
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => setZoom((z) => clampZoom(z - 0.2))}
               disabled={isSaving}
-              className="p-1 rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-50"
+              className="p-1 rounded-lg hover:bg-[#f1ede4] transition-colors disabled:opacity-50"
             >
-              <ZoomOut className="w-4 h-4 text-gray-500" />
+              <ZoomOut className="w-4 h-4 text-muted-foreground" />
             </button>
             <input
               type="range"
@@ -244,19 +244,19 @@ export default function PhotoCropModal({
               value={zoom}
               onChange={(e) => setZoom(parseFloat(e.target.value))}
               disabled={isSaving}
-              className="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary disabled:opacity-50"
+              className="flex-1 h-1.5 bg-[#e8e3d9] rounded-lg appearance-none cursor-pointer accent-primary disabled:opacity-50"
             />
             <button
               type="button"
               onClick={() => setZoom((z) => clampZoom(z + 0.2))}
               disabled={isSaving}
-              className="p-1 rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-50"
+              className="p-1 rounded-lg hover:bg-[#f1ede4] transition-colors disabled:opacity-50"
             >
-              <ZoomIn className="w-4 h-4 text-gray-500" />
+              <ZoomIn className="w-4 h-4 text-muted-foreground" />
             </button>
           </div>
 
-          <p className="text-center text-[11px] text-gray-400">
+          <p className="text-center text-[11px] text-muted-foreground">
             {Math.round(zoom * 100)}%
           </p>
 
@@ -265,7 +265,7 @@ export default function PhotoCropModal({
             <button
               onClick={onClose}
               disabled={isSaving}
-              className="flex-1 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-gray-600 hover:bg-slate-50 transition-colors disabled:opacity-50"
+              className="flex-1 py-2.5 rounded-xl border border-[#e8e3d9] bg-white text-sm font-semibold text-muted-foreground hover:bg-[#faf8f4] transition-colors disabled:opacity-50"
             >
               {t("common.cancel", "Отмена")}
             </button>

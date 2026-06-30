@@ -60,8 +60,8 @@ export function AppointmentReminderModal() {
   const isOneHour = payload.reminderType === "1h";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-xl w-full max-w-sm overflow-hidden">
         <div className="bg-primary px-5 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center">

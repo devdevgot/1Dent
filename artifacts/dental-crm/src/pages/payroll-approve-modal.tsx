@@ -77,8 +77,8 @@ export default function PayrollApproveModal({ onClose, onSuccess, filterUserId }
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 font-manrope">
-      <div className="bg-white rounded-2xl shadow-lg w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border border-[#e8e3d9]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 font-manrope">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border border-[#e8e3d9]">
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#e8e3d9] shrink-0">
           <div>
             <h3 className="text-lg font-bold text-[#0f172a]">{t("payroll.approveTitle")}</h3>

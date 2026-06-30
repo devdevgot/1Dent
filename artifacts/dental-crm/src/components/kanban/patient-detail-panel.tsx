@@ -442,9 +442,9 @@ function ToothActionModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center" onClick={handleAbort}>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 backdrop-blur-sm" onClick={handleAbort}>
       <div
-        className="bg-white rounded-2xl shadow-2xl w-80 border border-[#e8e3d9]/50 overflow-hidden"
+        className="bg-white rounded-2xl border border-[#e8e3d9] shadow-xl w-80 overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {blockingTreatment ? (
@@ -756,9 +756,9 @@ function DiagnosisSummaryModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center" onClick={onClose}>
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/30 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl shadow-2xl w-[360px] max-h-[80vh] flex flex-col border border-[#e8e3d9]/50"
+        className="bg-white rounded-2xl border border-[#e8e3d9] shadow-xl w-[360px] max-h-[80vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#e8e3d9]/40">
@@ -2766,7 +2766,7 @@ export function PatientDetailPanel() {
                         className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4"
                         onClick={(e) => { if (e.target === e.currentTarget) setWhatsappNotConnectedOpen(false); }}
                       >
-                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+                        <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-xl w-full max-w-sm overflow-hidden">
                           <div className="p-6 text-center">
                             <div className="w-14 h-14 rounded-full bg-[#f1ede4] flex items-center justify-center mx-auto mb-4">
                               <svg className="w-7 h-7 text-[#94a3b8]" viewBox="0 0 24 24" fill="currentColor">
@@ -2803,7 +2803,7 @@ export function PatientDetailPanel() {
                         className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4"
                         onClick={(e) => { if (e.target === e.currentTarget) setBundlePreviewOpen(false); }}
                       >
-                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl h-[85vh] flex flex-col overflow-hidden">
+                        <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-xl w-full max-w-2xl h-[85vh] flex flex-col overflow-hidden">
                           <div className="flex items-center justify-between px-4 py-3 border-b border-[#e8e3d9] shrink-0">
                             <div>
                               <p className="text-sm font-semibold text-[#0f172a]">Предпросмотр пакета договоров</p>
@@ -2883,7 +2883,7 @@ export function PatientDetailPanel() {
       {/* Bundle required modal — blocks proceeding after extraction diagnosis until contracts are sent */}
       {bundleRequiredModalOpen && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+          <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-xl w-full max-w-sm overflow-hidden">
 
             {/* Header */}
             <div className="px-5 pt-5 pb-4 text-center">

@@ -139,7 +139,7 @@ function BundleModal({ bundle, onClose }: { bundle: BundleGroup; onClose: () => 
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-sm p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-xl w-full max-w-sm overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3.5 border-b border-[#e8e3d9]">
           <div className="flex items-center gap-2.5">

@@ -262,8 +262,7 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-end justify-center"
-          style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 backdrop-blur-sm"
           onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
         >
           <motion.div
@@ -272,7 +271,7 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 28, stiffness: 300 }}
-            className="w-full max-w-lg bg-white rounded-t-3xl overflow-hidden flex flex-col font-manrope"
+            className="w-full max-w-lg bg-white rounded-t-3xl border border-[#e8e3d9] shadow-xl overflow-hidden flex flex-col font-manrope"
             style={{ maxHeight: "92dvh" }}
           >
             {/* Header */}
