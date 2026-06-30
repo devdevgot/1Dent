@@ -28,23 +28,23 @@ function NotificationItem({
     <button
       onClick={() => !notification.read && onRead(notification.id)}
       className={cn(
-        "w-full text-left px-4 py-3 border-b border-border/30 flex items-start gap-3 transition-colors",
-        notification.read ? "opacity-60" : "bg-white hover:bg-slate-50",
-        isRedAlert && !notification.read && "bg-red-50 hover:bg-red-100",
-        isAppointmentReminder && !notification.read && "bg-blue-50 hover:bg-blue-100",
-        isPendingPayment && !notification.read && "bg-orange-50 hover:bg-orange-100",
+        "w-full text-left px-4 py-3 border-b border-[#e8e3d9] flex items-start gap-3 transition-colors font-manrope",
+        notification.read ? "opacity-60" : "bg-white hover:bg-[#faf8f4]",
+        isRedAlert && !notification.read && "bg-[#fef2f2] hover:bg-[#fef2f2]/80",
+        isAppointmentReminder && !notification.read && "bg-[#1f75fe]/5 hover:bg-[#1f75fe]/10",
+        isPendingPayment && !notification.read && "bg-[#fef3c7] hover:bg-[#fef3c7]/80",
       )}
     >
       <div
         className={cn(
           "mt-0.5 w-8 h-8 rounded-full flex items-center justify-center shrink-0",
           isRedAlert
-            ? "bg-red-100 text-red-600"
+            ? "bg-[#fef2f2] text-[#dc2626]"
             : isAppointmentReminder
-            ? "bg-primary/10 text-primary"
+            ? "bg-[#1f75fe]/10 text-[#1f75fe]"
             : isPendingPayment
-            ? "bg-orange-100 text-orange-600"
-            : "bg-blue-100 text-blue-600",
+            ? "bg-[#fef3c7] text-[#d97706]"
+            : "bg-[#e0f2fe] text-[#0284c7]",
         )}
       >
         {isRedAlert ? (
@@ -58,8 +58,8 @@ function NotificationItem({
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-xs text-foreground leading-relaxed">{notification.message}</p>
-        <p className="text-[10px] text-muted-foreground mt-1">
+        <p className="text-xs text-[#0f172a] leading-relaxed">{notification.message}</p>
+        <p className="text-[10px] text-[#94a3b8] mt-1">
           {new Date(notification.createdAt).toLocaleTimeString(undefined, {
             hour: "2-digit",
             minute: "2-digit",
@@ -71,7 +71,7 @@ function NotificationItem({
           })}
         </p>
       </div>
-      {!notification.read && <div className="w-2 h-2 rounded-full bg-primary mt-2 shrink-0" />}
+      {!notification.read && <div className="w-2 h-2 rounded-full bg-[#1f75fe] mt-2 shrink-0" />}
     </button>
   );
 }
@@ -92,17 +92,17 @@ export function NotificationBell() {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button className="relative p-2 rounded-xl hover:bg-slate-100 transition-colors">
-          <Bell className="w-5 h-5 text-muted-foreground" />
+        <button className="relative p-2 rounded-xl hover:bg-[#f1ede4] transition-colors">
+          <Bell className="w-5 h-5 text-[#64748b]" />
           {count > 0 && (
             <span
               className={cn(
                 "absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full text-[10px] font-bold flex items-center justify-center text-white px-1",
                 unreadRedAlerts > 0
-                  ? "bg-red-500 animate-pulse"
+                  ? "bg-[#dc2626] animate-pulse"
                   : unreadPendingPayments > 0
-                  ? "bg-orange-500 animate-pulse"
-                  : "bg-primary",
+                  ? "bg-[#d97706] animate-pulse"
+                  : "bg-[#1f75fe]",
               )}
             >
               {count > 99 ? "99+" : count}
@@ -110,10 +110,10 @@ export function NotificationBell() {
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-96 p-0 shadow-xl bg-white border-t-[#ffffff] border-r-[#ffffff] border-b-[#ffffff] border-l-[#ffffff]" align="end">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
+      <PopoverContent className="w-96 p-0 shadow-xl bg-white border border-[#e8e3d9] rounded-2xl font-manrope" align="end">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[#e8e3d9]">
           <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-sm">{t("notifications.title")}</h3>
+            <h3 className="font-semibold text-sm text-[#0f172a]">{t("notifications.title")}</h3>
             {unreadRedAlerts > 0 && (
               <Badge variant="destructive" className="text-[10px] py-0">
                 {t("notifications.redAlerts", { count: unreadRedAlerts })}
@@ -129,7 +129,7 @@ export function NotificationBell() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 text-xs text-muted-foreground"
+              className="h-7 text-xs text-[#64748b] hover:text-[#0f172a] hover:bg-[#f1ede4]"
               onClick={() => markAllMutation.mutate()}
               disabled={markAllMutation.isPending}
             >
@@ -142,42 +142,42 @@ export function NotificationBell() {
         {unreadRedAlerts > 0 && (
           <button
             onClick={() => navigate("/kanban")}
-            className="w-full bg-red-50 border-b border-red-100 p-3.5 flex items-center gap-3 text-left hover:bg-red-100 transition-colors"
+            className="w-full bg-[#fef2f2] border-b border-[#e8e3d9] p-3.5 flex items-center gap-3 text-left hover:bg-[#fef2f2]/80 transition-colors"
           >
-            <div className="w-9 h-9 bg-red-500 rounded-xl flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 bg-[#dc2626] rounded-xl flex items-center justify-center shrink-0">
               <Bell className="w-4 h-4 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-red-700">
+              <p className="text-sm font-bold text-[#dc2626]">
                 {t("dashboard.redAlertTitle", { count: unreadRedAlerts })}
               </p>
-              <p className="text-xs text-red-500">{t("dashboard.redAlertDesc")}</p>
+              <p className="text-xs text-[#dc2626]/80">{t("dashboard.redAlertDesc")}</p>
             </div>
-            <ChevronRight className="w-4 h-4 text-red-400 shrink-0" />
+            <ChevronRight className="w-4 h-4 text-[#dc2626]/60 shrink-0" />
           </button>
         )}
 
         {unreadPendingPayments > 0 && (
           <button
             onClick={() => navigate("/admin/finance")}
-            className="w-full bg-orange-50 border-b border-orange-100 p-3.5 flex items-center gap-3 text-left hover:bg-orange-100 transition-colors"
+            className="w-full bg-[#fef3c7] border-b border-[#e8e3d9] p-3.5 flex items-center gap-3 text-left hover:bg-[#fef3c7]/80 transition-colors"
           >
-            <div className="w-9 h-9 bg-orange-500 rounded-xl flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 bg-[#d97706] rounded-xl flex items-center justify-center shrink-0">
               <Wallet className="w-4 h-4 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-orange-700">
+              <p className="text-sm font-bold text-[#d97706]">
                 {unreadPendingPayments} {unreadPendingPayments === 1 ? "процедура ожидает" : "процедур ожидают"} оплаты
               </p>
-              <p className="text-xs text-orange-500">Перейти в раздел финансов</p>
+              <p className="text-xs text-[#d97706]/80">Перейти в раздел финансов</p>
             </div>
-            <ChevronRight className="w-4 h-4 text-orange-400 shrink-0" />
+            <ChevronRight className="w-4 h-4 text-[#d97706]/60 shrink-0" />
           </button>
         )}
 
         <ScrollArea className="max-h-96">
           {notifications.length === 0 && (
-            <div className="py-8 text-center text-sm text-muted-foreground">
+            <div className="py-8 text-center text-sm text-[#64748b]">
               {t("notifications.empty")}
             </div>
           )}

@@ -22,7 +22,7 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "bg-surface border-b border-border/60 safe-area-top",
+        "bg-white border-b border-[#e8e3d9] safe-area-top font-manrope",
         sticky && "sticky top-0 z-20",
         className,
       )}
@@ -33,14 +33,14 @@ export function PageHeader({
             type="button"
             onClick={onBack}
             aria-label={backLabel}
-            className="p-1.5 -ml-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors active:scale-95"
+            className="p-1.5 -ml-1.5 rounded-xl text-[#64748b] hover:text-[#0f172a] hover:bg-[#f1ede4] transition-colors active:scale-95"
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
         ) : (
           <div className="w-9 shrink-0" />
         )}
-        <h1 className="flex-1 text-nav-title font-display font-semibold text-foreground truncate">
+        <h1 className="flex-1 text-nav-title font-semibold text-[#0f172a] truncate">
           {title}
         </h1>
         <div className="shrink-0 min-w-[36px] flex justify-end">{right}</div>

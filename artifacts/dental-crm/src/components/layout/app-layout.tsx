@@ -115,42 +115,42 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const mainClinicName = clinic?.name ?? "Основная клиника";
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-background overflow-hidden">
+    <div className="flex flex-col h-[100dvh] bg-[#faf8f4] overflow-hidden font-manrope">
       <AppointmentReminderModal />
       <AttendanceCheckModal />
 
       {/* Home page header */}
       {isHomePage && (
-        <header className="flex-none bg-white border-b border-gray-100 z-20 safe-area-top border-t-[1px]">
+        <header className="flex-none bg-white border-b border-[#e8e3d9] z-20 safe-area-top border-t-[1px]">
           {/* Branch selector — owner only, only when branches exist */}
           {showBranchSelector && (
             <div className="px-4 pt-2.5 pb-1.5">
               <div className="relative">
                 <button
                   onClick={() => setBranchPickerOpen(!branchPickerOpen)}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl border border-gray-200 bg-gray-50/80 hover:bg-gray-100 transition-colors"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl border border-[#e8e3d9] bg-[#faf8f4] hover:bg-[#f1ede4] transition-colors"
                 >
-                  <Building2 className="w-4 h-4 text-primary shrink-0" />
-                  <span className="flex-1 text-left text-[13px] font-medium text-gray-700 truncate">
+                  <Building2 className="w-4 h-4 text-[#1f75fe] shrink-0" />
+                  <span className="flex-1 text-left text-[13px] font-medium text-[#0f172a] truncate">
                     {selectedBranch ? selectedBranch.name : mainClinicName}
                   </span>
-                  <ChevronDown className={cn("w-4 h-4 text-gray-400 transition-transform", branchPickerOpen && "rotate-180")} />
+                  <ChevronDown className={cn("w-4 h-4 text-[#94a3b8] transition-transform", branchPickerOpen && "rotate-180")} />
                 </button>
 
                 {branchPickerOpen && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setBranchPickerOpen(false)} />
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-100 rounded-xl shadow-lg z-20 overflow-hidden max-h-[240px] overflow-y-auto">
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#e8e3d9] rounded-xl shadow-lg z-20 overflow-hidden max-h-[240px] overflow-y-auto">
                       <button
                         onClick={() => handleBranchSelect(null)}
                         className={cn(
                           "w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] transition-colors",
-                          !selectedBranchId ? "bg-primary/5 text-primary font-semibold" : "text-gray-700 hover:bg-gray-50",
+                          !selectedBranchId ? "bg-[#1f75fe]/10 text-[#1f75fe] font-semibold" : "text-[#64748b] hover:bg-[#f1ede4] hover:text-[#0f172a]",
                         )}
                       >
                         <Building2 className="w-4 h-4 shrink-0" />
                         <span className="flex-1 text-left">{mainClinicName}</span>
-                        {!selectedBranchId && <Check className="w-4 h-4 text-primary shrink-0" />}
+                        {!selectedBranchId && <Check className="w-4 h-4 text-[#1f75fe] shrink-0" />}
                       </button>
                       {branches.map((branch) => (
                         <button
@@ -158,12 +158,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
                           onClick={() => handleBranchSelect(branch.id)}
                           className={cn(
                             "w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] transition-colors",
-                            selectedBranchId === branch.id ? "bg-primary/5 text-primary font-semibold" : "text-gray-700 hover:bg-gray-50",
+                            selectedBranchId === branch.id ? "bg-[#1f75fe]/10 text-[#1f75fe] font-semibold" : "text-[#64748b] hover:bg-[#f1ede4] hover:text-[#0f172a]",
                           )}
                         >
                           <MapPin className="w-4 h-4 shrink-0" />
                           <span className="flex-1 text-left truncate">{branch.name}</span>
-                          {selectedBranchId === branch.id && <Check className="w-4 h-4 text-primary shrink-0" />}
+                          {selectedBranchId === branch.id && <Check className="w-4 h-4 text-[#1f75fe] shrink-0" />}
                         </button>
                       ))}
                     </div>
@@ -184,9 +184,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       {/* Geo restriction banner — shown when outside zone */}
       {isRestricted && hasBranches && (
-        <div className="flex-none flex items-center gap-2 px-4 py-2 bg-amber-50 border-b border-amber-200 z-10">
-          <MapPin className="w-4 h-4 text-amber-500 shrink-0" />
-          <p className="text-xs text-amber-700 font-medium">
+        <div className="flex-none flex items-center gap-2 px-4 py-2 bg-[#fef3c7] border-b border-[#e8e3d9] z-10">
+          <MapPin className="w-4 h-4 text-[#d97706] shrink-0" />
+          <p className="text-xs text-[#d97706] font-medium">
             Вы вне клиники — часть функций недоступна
           </p>
         </div>
@@ -194,9 +194,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       {/* Status indicator when geo is loading or denied (only if branches exist) */}
       {hasBranches && status === "denied" && (
-        <div className="flex-none flex items-center gap-2 px-4 py-2 bg-gray-50 border-b border-gray-200 z-10">
-          <AlertTriangle className="w-4 h-4 text-gray-400 shrink-0" />
-          <p className="text-xs text-gray-500">
+        <div className="flex-none flex items-center gap-2 px-4 py-2 bg-[#faf8f4] border-b border-[#e8e3d9] z-10">
+          <AlertTriangle className="w-4 h-4 text-[#94a3b8] shrink-0" />
+          <p className="text-xs text-[#64748b]">
             Геолокация недоступна — разрешите доступ в настройках браузера
           </p>
         </div>
@@ -206,12 +206,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
       <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative">
         {pageBlocked ? (
           <div className="flex flex-col items-center justify-center h-full gap-4 px-6 text-center">
-            <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center">
-              <MapPin className="w-8 h-8 text-amber-500" />
+            <div className="w-16 h-16 rounded-full bg-[#fef3c7] flex items-center justify-center">
+              <MapPin className="w-8 h-8 text-[#d97706]" />
             </div>
             <div>
-              <h2 className="text-[17px] font-semibold text-gray-900 mb-1">Вы вне клиники</h2>
-              <p className="text-[13px] text-gray-500 leading-relaxed">
+              <h2 className="text-[17px] font-semibold text-[#0f172a] mb-1">Вы вне клиники</h2>
+              <p className="text-[13px] text-[#64748b] leading-relaxed">
                 Этот раздел доступен только когда вы находитесь в клинике.
                 {activeBranch && ` Ближайший филиал: ${activeBranch.name}`}
               </p>
@@ -223,7 +223,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       </main>
 
       {/* Bottom navigation */}
-      <nav className="flex-none h-16 bg-white border-t border-border/50 flex items-stretch z-20 safe-area-bottom">
+      <nav className="flex-none h-16 bg-white border-t border-[#e8e3d9] flex items-stretch z-20 safe-area-bottom">
         {bottomItems.map((item) => {
           const isActive = location === item.href || location.startsWith(`${item.href}/`);
           const blocked = isRestricted && hasBranches && item.geoRestricted;
@@ -233,8 +233,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 key={item.href}
                 className="flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium select-none relative opacity-35"
               >
-                <item.icon className="w-5 h-5 text-muted-foreground" strokeWidth={1.8} />
-                <span className="text-muted-foreground">{item.name}</span>
+                <item.icon className="w-5 h-5 text-[#94a3b8]" strokeWidth={1.8} />
+                <span className="text-[#94a3b8]">{item.name}</span>
               </div>
             );
           }
@@ -244,16 +244,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
               href={item.href}
               className={cn(
                 "flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors select-none relative",
-                isActive ? "text-primary" : "text-muted-foreground",
+                isActive ? "text-[#1f75fe]" : "text-[#64748b]",
               )}
             >
               <item.icon
-                className={cn("w-5 h-5", isActive ? "text-primary" : "text-muted-foreground")}
+                className={cn("w-5 h-5", isActive ? "text-[#1f75fe]" : "text-[#64748b]")}
                 strokeWidth={isActive ? 2.5 : 1.8}
               />
               <span>{item.name}</span>
               {isActive && (
-                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-primary" />
+                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-[#1f75fe]" />
               )}
             </Link>
           );
@@ -263,16 +263,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
           href="/menu"
           className={cn(
             "flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors select-none relative",
-            location === "/menu" ? "text-primary" : "text-muted-foreground",
+            location === "/menu" ? "text-[#1f75fe]" : "text-[#64748b]",
           )}
         >
           <MoreHorizontal
-            className={cn("w-5 h-5", location === "/menu" ? "text-primary" : "text-muted-foreground")}
+            className={cn("w-5 h-5", location === "/menu" ? "text-[#1f75fe]" : "text-[#64748b]")}
             strokeWidth={location === "/menu" ? 2.5 : 1.8}
           />
           <span>{t("nav.more")}</span>
           {location === "/menu" && (
-            <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-primary" />
+            <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-[#1f75fe]" />
           )}
         </Link>
       </nav>

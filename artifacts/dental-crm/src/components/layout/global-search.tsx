@@ -50,15 +50,15 @@ const PAGE_ITEMS: {
   iconBg: string;
   iconColor: string;
 }[] = [
-  { label: "Дашборд",    href: "dashboard",       roles: ["owner","admin","doctor","accountant","warehouse"], Icon: LayoutDashboard, iconBg: "bg-blue-100",   iconColor: "text-blue-600" },
-  { label: "Пациенты",   href: "/patients",                  roles: ["owner","admin","doctor","accountant"],        Icon: Users,           iconBg: "bg-sky-100",    iconColor: "text-sky-600" },
-  { label: "Расписание", href: "/schedule",        roles: ["doctor"],                                         Icon: Calendar,        iconBg: "bg-orange-100", iconColor: "text-orange-600" },
-  { label: "Аналитика",  href: "/analytics",       roles: ["owner"],                                          Icon: BarChart3,       iconBg: "bg-pink-100",   iconColor: "text-pink-600" },
-  { label: "Аналитика врача", href: "/doctor-analytics", roles: ["doctor"],                                   Icon: BarChart3,       iconBg: "bg-pink-100",   iconColor: "text-pink-600" },
-  { label: "Финансы",    href: "/financials",      roles: ["owner","accountant"],                             Icon: Wallet,          iconBg: "bg-emerald-100",iconColor: "text-emerald-600" },
-  { label: "WhatsApp",   href: "/chat",            roles: ["owner","admin","doctor"],                         Icon: FaWhatsapp,      iconBg: "bg-green-100",  iconColor: "text-green-600" },
-  { label: "Сотрудники", href: "/users",           roles: ["owner"],                                          Icon: Contact,         iconBg: "bg-slate-100",  iconColor: "text-slate-600" },
-  { label: "Чат-бот",   href: "/chatbot",          roles: ["owner"],                                          Icon: Bot,             iconBg: "bg-purple-100", iconColor: "text-purple-600" },
+  { label: "Дашборд",    href: "dashboard",       roles: ["owner","admin","doctor","accountant","warehouse"], Icon: LayoutDashboard, iconBg: "bg-[#e0e7ff]",   iconColor: "text-[#4f46e5]" },
+  { label: "Пациенты",   href: "/patients",                  roles: ["owner","admin","doctor","accountant"],        Icon: Users,           iconBg: "bg-[#e0f2fe]",    iconColor: "text-[#0284c7]" },
+  { label: "Расписание", href: "/schedule",        roles: ["doctor"],                                         Icon: Calendar,        iconBg: "bg-[#fef3c7]", iconColor: "text-[#d97706]" },
+  { label: "Аналитика",  href: "/analytics",       roles: ["owner"],                                          Icon: BarChart3,       iconBg: "bg-[#f0fdf4]",   iconColor: "text-[#16a34a]" },
+  { label: "Аналитика врача", href: "/doctor-analytics", roles: ["doctor"],                                   Icon: BarChart3,       iconBg: "bg-[#f0fdf4]",   iconColor: "text-[#16a34a]" },
+  { label: "Финансы",    href: "/financials",      roles: ["owner","accountant"],                             Icon: Wallet,          iconBg: "bg-[#fef3c7]",iconColor: "text-[#d97706]" },
+  { label: "WhatsApp",   href: "/chat",            roles: ["owner","admin","doctor"],                         Icon: FaWhatsapp,      iconBg: "bg-[#d1fae5]",  iconColor: "text-[#059669]" },
+  { label: "Сотрудники", href: "/users",           roles: ["owner"],                                          Icon: Contact,         iconBg: "bg-[#f1ede4]",  iconColor: "text-[#64748b]" },
+  { label: "Чат-бот",   href: "/chatbot",          roles: ["owner"],                                          Icon: Bot,             iconBg: "bg-[#e0e7ff]", iconColor: "text-[#4f46e5]" },
 ];
 
 const ROLE_DASHBOARD: Record<string, string> = {
@@ -157,8 +157,8 @@ export function GlobalSearch() {
           href: "/patients?view=kanban",
           patientId: p.id,
           Icon: Users,
-          iconBg: "bg-sky-100",
-          iconColor: "text-sky-600",
+          iconBg: "bg-[#e0f2fe]",
+          iconColor: "text-[#0284c7]",
         }));
       if (patients.length) result.push({ category: "Пациенты", results: patients });
     }
@@ -175,8 +175,8 @@ export function GlobalSearch() {
           subtitle: p.status,
           href: "/procedures",
           Icon: Stethoscope,
-          iconBg: "bg-green-100",
-          iconColor: "text-green-600",
+          iconBg: "bg-[#f0fdf4]",
+          iconColor: "text-[#16a34a]",
         }));
       if (procs.length) result.push({ category: "Процедуры", results: procs });
     }
@@ -193,8 +193,8 @@ export function GlobalSearch() {
           subtitle: `${u.role} · ${u.email}`,
           href: "/users",
           Icon: UserCog,
-          iconBg: "bg-slate-100",
-          iconColor: "text-slate-600",
+          iconBg: "bg-[#f1ede4]",
+          iconColor: "text-[#64748b]",
         }));
       if (staff.length) result.push({ category: "Сотрудники", results: staff });
     }
@@ -217,37 +217,36 @@ export function GlobalSearch() {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="flex-1 flex items-center gap-2 bg-gray-100 rounded-xl px-3 py-2 text-left cursor-pointer"
+        className="flex-1 flex items-center gap-2 bg-[#f1ede4] rounded-xl px-3 py-2 text-left cursor-pointer hover:bg-[#e8e3d9]/60 transition-colors"
       >
-        <Search className="w-4 h-4 text-gray-400 shrink-0" />
-        <span className="text-sm text-gray-400 select-none">Поиск по имени, телефону, ИИН...</span>
+        <Search className="w-4 h-4 text-[#94a3b8] shrink-0" />
+        <span className="text-sm text-[#94a3b8] select-none font-manrope">Поиск по имени, телефону, ИИН...</span>
       </button>
 
       {/* Overlay */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-[#f2f2f7]">
+        <div className="fixed inset-0 z-50 flex flex-col bg-[#faf8f4] font-manrope">
           {/* Search header — same height/position as the regular header */}
-          <div className="bg-white px-4 py-2.5 border-b border-gray-100 flex items-center gap-3 safe-area-top">
-            <div className="flex-1 flex items-center gap-2 bg-gray-100 rounded-xl px-3 py-2">
-              <Search className="w-4 h-4 text-gray-400 shrink-0" />
+          <div className="bg-white px-4 py-2.5 border-b border-[#e8e3d9] flex items-center gap-3 safe-area-top">
+            <div className="flex-1 flex items-center gap-2 bg-[#f1ede4] rounded-xl px-3 py-2">
+              <Search className="w-4 h-4 text-[#94a3b8] shrink-0" />
               <input
                 ref={inputRef}
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Имя, телефон или ИИН..."
-                className="flex-1 text-[15px] bg-transparent outline-none text-gray-900 placeholder-gray-400"
+                className="flex-1 text-[15px] bg-transparent outline-none text-[#0f172a] placeholder:text-[#94a3b8] font-manrope"
               />
               {query && (
-                <button onClick={() => setQuery("")} className="shrink-0 text-gray-400">
+                <button onClick={() => setQuery("")} className="shrink-0 text-[#94a3b8] hover:text-[#64748b]">
                   <X className="w-4 h-4" />
                 </button>
               )}
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="text-[15px] font-medium shrink-0"
-              style={{ color: "#1f75fe" }}
+              className="text-[15px] font-medium shrink-0 text-[#1f75fe]"
             >
               Отмена
             </button>
@@ -257,15 +256,15 @@ export function GlobalSearch() {
           <div className="flex-1 overflow-y-auto">
             {!query.trim() && (
               <div className="flex flex-col items-center justify-center py-20 gap-3">
-                <Search className="w-12 h-12 text-gray-200" />
-                <p className="text-[15px] text-gray-400">Введите запрос для поиска</p>
+                <Search className="w-12 h-12 text-[#e8e3d9]" />
+                <p className="text-[15px] text-[#94a3b8]">Введите запрос для поиска</p>
               </div>
             )}
 
             {isEmpty && (
               <div className="flex flex-col items-center justify-center py-20 gap-3">
-                <p className="text-[15px] text-gray-400">Ничего не найдено</p>
-                <p className="text-[13px] text-gray-300">Попробуйте другой запрос</p>
+                <p className="text-[15px] text-[#94a3b8]">Ничего не найдено</p>
+                <p className="text-[13px] text-[#94a3b8]/70">Попробуйте другой запрос</p>
               </div>
             )}
 
@@ -273,26 +272,26 @@ export function GlobalSearch() {
               <div className="px-4 py-4 space-y-5">
                 {groups.map((group) => (
                   <div key={group.category}>
-                    <p className="text-[12px] font-semibold text-gray-400 uppercase tracking-wider mb-2 px-1">
+                    <p className="text-[12px] font-semibold text-[#94a3b8] uppercase tracking-wider mb-2 px-1">
                       {group.category}
                     </p>
-                    <div className="bg-white rounded-2xl overflow-hidden divide-y divide-gray-100">
+                    <div className="bg-white rounded-2xl overflow-hidden border border-[#e8e3d9] divide-y divide-[#e8e3d9]">
                       {group.results.map((result) => (
                         <button
                           key={result.id}
                           onClick={() => navigate(result.href, result.patientId)}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-gray-50"
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-[#f1ede4] hover:bg-[#faf8f4] transition-colors"
                         >
                           <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0", result.iconBg)}>
                             <result.Icon className={cn("w-4 h-4", result.iconColor)} />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-[15px] text-gray-900 truncate">{result.label}</p>
+                            <p className="text-[15px] text-[#0f172a] truncate">{result.label}</p>
                             {result.subtitle && (
-                              <p className="text-[12px] text-gray-400 truncate">{result.subtitle}</p>
+                              <p className="text-[12px] text-[#94a3b8] truncate">{result.subtitle}</p>
                             )}
                           </div>
-                          <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
+                          <ChevronRight className="w-4 h-4 text-[#94a3b8] shrink-0" />
                         </button>
                       ))}
                     </div>
