@@ -147,20 +147,20 @@ export function CreatePatientDialog({ onClose, onExistingPatient }: CreatePatien
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
 
       {/* Panel */}
       <div className="relative bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md sm:mx-4 z-10 flex flex-col max-h-[90dvh]">
 
         {/* Drag handle (mobile only) */}
         <div className="flex justify-center pt-3 pb-1 sm:hidden shrink-0">
-          <div className="w-10 h-1 rounded-full bg-gray-200" />
+          <div className="w-10 h-1 rounded-full bg-[#e8e3d9]" />
         </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 shrink-0 border-b border-gray-100">
+        <div className="flex items-center justify-between px-6 py-4 shrink-0 border-b border-[#e8e3d9]">
           <h2 className="text-lg font-bold">{t("createPatient.title")}</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors p-1">
+          <button onClick={onClose} className="text-[#64748b] hover:text-[#0f172a] transition-colors p-1">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -171,7 +171,7 @@ export function CreatePatientDialog({ onClose, onExistingPatient }: CreatePatien
 
             {/* ИИН */}
             <div>
-              <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.iin")}</label>
+              <label className="text-sm font-medium text-[#0f172a] mb-1 block">{t("createPatient.iin")}</label>
               <input
                 type="text"
                 value={iin}
@@ -179,13 +179,13 @@ export function CreatePatientDialog({ onClose, onExistingPatient }: CreatePatien
                 maxLength={12}
                 inputMode="numeric"
                 className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono ${
-                  iinError ? "border-red-400 bg-red-50" : foundPatient ? "border-green-400 bg-green-50" : "border-border"
+                  iinError ? "border-red-400 bg-red-50" : foundPatient ? "border-green-400 bg-green-50" : "border-[#e8e3d9]"
                 }`}
                 placeholder={t("createPatient.iinPlaceholder")}
               />
               {iinError && <p className="text-xs text-red-500 mt-1">{iinError}</p>}
               {!iinError && iin.length === 0 && (
-                <p className="text-xs text-muted-foreground mt-1">{t("createPatient.iinHint")}</p>
+                <p className="text-xs text-[#64748b] mt-1">{t("createPatient.iinHint")}</p>
               )}
             </div>
 
@@ -197,13 +197,13 @@ export function CreatePatientDialog({ onClose, onExistingPatient }: CreatePatien
                   <p className="text-sm font-semibold text-green-800">{t("createPatient.foundPatientTitle")}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-gray-900">{foundPatient.name}</p>
-                  <p className="text-xs text-gray-500">{foundPatient.phone}</p>
+                  <p className="text-sm font-medium text-[#0f172a]">{foundPatient.name}</p>
+                  <p className="text-xs text-[#64748b]">{foundPatient.phone}</p>
                   {foundPatient.dateOfBirth && (
-                    <p className="text-xs text-gray-500">{formatDob(foundPatient.dateOfBirth)}</p>
+                    <p className="text-xs text-[#64748b]">{formatDob(foundPatient.dateOfBirth)}</p>
                   )}
                   {foundPatient.gender && (
-                    <p className="text-xs text-gray-500">{genderLabel(foundPatient.gender)}</p>
+                    <p className="text-xs text-[#64748b]">{genderLabel(foundPatient.gender)}</p>
                   )}
                 </div>
                 <p className="text-xs text-green-700">{t("createPatient.foundPatientHint")}</p>
@@ -231,58 +231,58 @@ export function CreatePatientDialog({ onClose, onExistingPatient }: CreatePatien
             {!foundPatient && (
               <>
                 <div>
-                  <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.fullName")}</label>
+                  <label className="text-sm font-medium text-[#0f172a] mb-1 block">{t("createPatient.fullName")}</label>
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
                     minLength={2}
-                    className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    className="w-full border border-[#e8e3d9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                     placeholder={t("createPatient.fullNamePlaceholder")}
                   />
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.phone")}</label>
+                  <label className="text-sm font-medium text-[#0f172a] mb-1 block">{t("createPatient.phone")}</label>
                   <input
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     required
                     minLength={5}
-                    className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    className="w-full border border-[#e8e3d9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                     placeholder={t("createPatient.phonePlaceholder")}
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.dateOfBirth")}</label>
+                    <label className="text-sm font-medium text-[#0f172a] mb-1 block">{t("createPatient.dateOfBirth")}</label>
                     <div className={`w-full border rounded-lg px-3 py-2 text-sm min-h-[38px] flex items-center ${
-                      dateOfBirth ? "border-primary/30 bg-primary/5 text-gray-800" : "border-border bg-gray-50 text-gray-400"
+                      dateOfBirth ? "border-primary/30 bg-primary/5 text-[#0f172a]" : "border-[#e8e3d9] bg-[#faf8f4] text-[#94a3b8]"
                     }`}>
                       {dateOfBirth
                         ? new Date(dateOfBirth).toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" })
-                        : <span className="text-gray-300">из ИИН</span>}
+                        : <span className="text-[#94a3b8]">из ИИН</span>}
                     </div>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.gender")}</label>
+                    <label className="text-sm font-medium text-[#0f172a] mb-1 block">{t("createPatient.gender")}</label>
                     <div className={`w-full border rounded-lg px-3 py-2 text-sm min-h-[38px] flex items-center ${
-                      gender ? "border-primary/30 bg-primary/5 text-gray-800" : "border-border bg-gray-50 text-gray-400"
+                      gender ? "border-primary/30 bg-primary/5 text-[#0f172a]" : "border-[#e8e3d9] bg-[#faf8f4] text-[#94a3b8]"
                     }`}>
-                      {gender ? genderLabel(gender) : <span className="text-gray-300">из ИИН</span>}
+                      {gender ? genderLabel(gender) : <span className="text-[#94a3b8]">из ИИН</span>}
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.source")}</label>
+                  <label className="text-sm font-medium text-[#0f172a] mb-1 block">{t("createPatient.source")}</label>
                   <select
                     value={source}
                     onChange={(e) => setSource(e.target.value)}
-                    className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
+                    className="w-full border border-[#e8e3d9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
                   >
                     {SOURCE_KEYS.map((s) => (
                       <option key={s} value={s}>{t(`source.${s}`)}</option>
@@ -299,11 +299,11 @@ export function CreatePatientDialog({ onClose, onExistingPatient }: CreatePatien
 
                 {doctors.length > 0 && (
                   <div>
-                    <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.doctor")}</label>
+                    <label className="text-sm font-medium text-[#0f172a] mb-1 block">{t("createPatient.doctor")}</label>
                     <select
                       value={doctorId}
                       onChange={(e) => setDoctorId(e.target.value)}
-                      className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
+                      className="w-full border border-[#e8e3d9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
                     >
                       <option value="">{t("createPatient.noDoctor")}</option>
                       {doctors.map((d) => (
@@ -314,12 +314,12 @@ export function CreatePatientDialog({ onClose, onExistingPatient }: CreatePatien
                 )}
 
                 <div>
-                  <label className="text-sm font-medium text-foreground mb-1 block">{t("createPatient.notes")}</label>
+                  <label className="text-sm font-medium text-[#0f172a] mb-1 block">{t("createPatient.notes")}</label>
                   <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     rows={2}
-                    className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+                    className="w-full border border-[#e8e3d9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
                     placeholder={t("createPatient.notesPlaceholder")}
                   />
                 </div>
@@ -331,7 +331,7 @@ export function CreatePatientDialog({ onClose, onExistingPatient }: CreatePatien
 
         {/* Sticky footer — action buttons (only when not showing found patient) */}
         {!foundPatient && (
-          <div className="px-6 py-4 border-t border-gray-100 shrink-0 flex gap-3 bg-white rounded-b-2xl">
+          <div className="px-6 py-4 border-t border-[#e8e3d9] shrink-0 flex gap-3 bg-white rounded-b-2xl">
             <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
               {t("createPatient.cancel")}
             </Button>

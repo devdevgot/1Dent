@@ -226,7 +226,7 @@ function SortablePlanItem({
             ? "border-primary bg-white shadow-2xl ring-2 ring-primary/30 scale-[1.03]"
             : isSelected
             ? "border-primary bg-primary/8 ring-1 ring-primary/20"
-            : "border-border/50 bg-slate-50"
+            : "border-[#e8e3d9]/50 bg-[#faf8f4]"
         }`}
       >
         <div
@@ -234,19 +234,19 @@ function SortablePlanItem({
           onClick={() => !isOverlay && onSelect(item.id)}
         >
           <span className={`shrink-0 min-w-[18px] h-[18px] rounded-full text-[10px] font-bold flex items-center justify-center mt-0.5 ${
-            isFirst ? "bg-primary text-white" : "bg-gray-100 text-gray-500"
+            isFirst ? "bg-primary text-white" : "bg-[#f1ede4] text-[#64748b]"
           }`}>
             {idx + 1}
           </span>
           <div className="flex-1 min-w-0">
-            <span className="text-xs font-medium text-gray-800 leading-tight block">{item.title}</span>
+            <span className="text-xs font-medium text-[#0f172a] leading-tight block">{item.title}</span>
             {isFirst && (
               <p className="text-[9px] font-semibold text-primary mt-0.5 uppercase tracking-wide">
                 Приоритет №1
               </p>
             )}
           </div>
-          <span className="text-xs font-semibold text-gray-600 shrink-0 whitespace-nowrap mt-0.5">
+          <span className="text-xs font-semibold text-[#64748b] shrink-0 whitespace-nowrap mt-0.5">
             {item.price.toLocaleString("ru")} ₸
           </span>
           <div
@@ -255,7 +255,7 @@ function SortablePlanItem({
             className="shrink-0 mt-0.5 p-0.5 touch-none cursor-grab active:cursor-grabbing"
             onClick={(e) => e.stopPropagation()}
           >
-            <GripVertical className="w-4 h-4 text-gray-300" />
+            <GripVertical className="w-4 h-4 text-[#94a3b8]" />
           </div>
         </div>
         {isSelected && !isOverlay && (
@@ -444,7 +444,7 @@ function ToothActionModal({
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center" onClick={handleAbort}>
       <div
-        className="bg-white rounded-2xl shadow-2xl w-80 border border-border/50 overflow-hidden"
+        className="bg-white rounded-2xl shadow-2xl w-80 border border-[#e8e3d9]/50 overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {blockingTreatment ? (
@@ -454,7 +454,7 @@ function ToothActionModal({
                 <Clock className="w-4 h-4 text-amber-600" />
                 <h3 className="font-bold text-sm text-amber-900">Лечение уже идёт</h3>
               </div>
-              <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+              <button onClick={onClose} className="text-[#64748b] hover:text-[#0f172a]">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -469,11 +469,11 @@ function ToothActionModal({
                 </p>
               </div>
 
-              <div className="rounded-xl bg-slate-50 border border-border/40 px-3 py-2.5">
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">
+              <div className="rounded-xl bg-[#faf8f4] border border-[#e8e3d9]/40 px-3 py-2.5">
+                <p className="text-[10px] font-semibold text-[#64748b] uppercase tracking-wide mb-0.5">
                   Текущая услуга
                 </p>
-                <p className="text-xs font-medium text-gray-800 leading-snug">
+                <p className="text-xs font-medium text-[#0f172a] leading-snug">
                   {blockingTreatment.description}
                 </p>
               </div>
@@ -493,7 +493,7 @@ function ToothActionModal({
         ) : treatmentPhase === "in_progress" ? (
           <>
             {/* In-progress header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border/40 bg-green-50/60">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[#e8e3d9]/40 bg-green-50/60">
               <div className="flex items-center gap-2">
                 <span className="relative flex h-3 w-3">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
@@ -501,7 +501,7 @@ function ToothActionModal({
                 </span>
                 <h3 className="font-bold text-sm text-green-800">Зуб {fdi} — Лечение</h3>
               </div>
-              <button onClick={handleAbort} className="text-muted-foreground hover:text-foreground">
+              <button onClick={handleAbort} className="text-[#64748b] hover:text-[#0f172a]">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -510,9 +510,9 @@ function ToothActionModal({
             <div className="px-5 py-6 flex flex-col items-center gap-4">
               {/* Service label */}
               {inProgressLabel && (
-                <div className="w-full rounded-xl bg-slate-50 border border-border/40 px-3 py-2.5 text-center">
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Услуга</p>
-                  <p className="text-xs font-medium text-gray-800 leading-snug">{inProgressLabel}</p>
+                <div className="w-full rounded-xl bg-[#faf8f4] border border-[#e8e3d9]/40 px-3 py-2.5 text-center">
+                  <p className="text-[10px] font-semibold text-[#64748b] uppercase tracking-wide mb-0.5">Услуга</p>
+                  <p className="text-xs font-medium text-[#0f172a] leading-snug">{inProgressLabel}</p>
                 </div>
               )}
 
@@ -525,8 +525,8 @@ function ToothActionModal({
                     <Activity className="w-5 h-5 text-white" />
                   </div>
                 </div>
-                <p className="text-2xl font-mono font-bold text-gray-800 tabular-nums">{formatElapsed(elapsedSeconds)}</p>
-                <p className="text-[11px] text-muted-foreground">Процедура выполняется</p>
+                <p className="text-2xl font-mono font-bold text-[#0f172a] tabular-nums">{formatElapsed(elapsedSeconds)}</p>
+                <p className="text-[11px] text-[#64748b]">Процедура выполняется</p>
               </div>
 
               {/* Complete button */}
@@ -547,9 +547,9 @@ function ToothActionModal({
         ) : (
           <>
             {/* Selection header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border/40">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[#e8e3d9]/40">
               <h3 className="font-bold text-base">{t("tooth.actionModalTitle", { fdi })}</h3>
-              <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+              <button onClick={onClose} className="text-[#64748b] hover:text-[#0f172a]">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -557,7 +557,7 @@ function ToothActionModal({
             {/* Plan items list */}
             {orderedItems.length > 0 ? (
               <div className="p-3 max-h-72 overflow-y-auto">
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide px-1 mb-2">
+                <p className="text-[10px] font-semibold text-[#64748b] uppercase tracking-wide px-1 mb-2">
                   Услуги из плана лечения
                 </p>
                 <DndContext
@@ -605,7 +605,7 @@ function ToothActionModal({
               </div>
             ) : (
               <div className="p-4 space-y-2">
-                <p className="text-xs text-muted-foreground italic text-center pb-1">Нет позиций в плане лечения</p>
+                <p className="text-xs text-[#64748b] italic text-center pb-1">Нет позиций в плане лечения</p>
                 <Button
                   className="w-full justify-start gap-2"
                   variant="outline"
@@ -628,13 +628,13 @@ function ToothActionModal({
             )}
 
             {/* Footer */}
-            <div className="border-t border-border/30 px-4 py-2.5">
+            <div className="border-t border-[#e8e3d9]/30 px-4 py-2.5">
               <Button
                 className="w-full justify-start gap-2 h-8"
                 variant="ghost"
                 onClick={onNavigate}
               >
-                <ArrowUpRight className="w-4 h-4 text-muted-foreground" />
+                <ArrowUpRight className="w-4 h-4 text-[#64748b]" />
                 {t("tooth.viewDetails")}
               </Button>
             </div>
@@ -676,11 +676,11 @@ function TreatmentTaskItem({
     : "bg-red-50 text-red-700 border-red-200";
 
   return (
-    <div className="flex items-center justify-between gap-2 bg-slate-50 rounded-xl p-3 border border-border/30">
+    <div className="flex items-center justify-between gap-2 bg-[#faf8f4] rounded-xl p-3 border border-[#e8e3d9]/30">
       <div className="flex items-center gap-2 min-w-0">
         <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
         <div className="min-w-0">
-          <p className="text-xs font-semibold text-foreground">
+          <p className="text-xs font-semibold text-[#0f172a]">
             {t("tooth.title", { fdi: task.toothFdi })}
           </p>
           <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${typeColor}`}>
@@ -758,34 +758,34 @@ function DiagnosisSummaryModal({
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl shadow-2xl w-[360px] max-h-[80vh] flex flex-col border border-border/50"
+        className="bg-white rounded-2xl shadow-2xl w-[360px] max-h-[80vh] flex flex-col border border-[#e8e3d9]/50"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border/40">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#e8e3d9]/40">
           <h3 className="font-bold text-base">Заключение диагностики</h3>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <button onClick={onClose} className="text-[#64748b] hover:text-[#0f172a]">
             <X className="w-4 h-4" />
           </button>
         </div>
 
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-2">
           {nonHealthy.length === 0 ? (
-            <p className="text-sm text-muted-foreground italic text-center py-4">
+            <p className="text-sm text-[#64748b] italic text-center py-4">
               Все зубы здоровы
             </p>
           ) : (
             nonHealthy.map((e) => {
               const label = CONDITION_CONFIG[e.condition]?.label ?? e.condition;
               return (
-                <div key={e.fdi} className="flex items-center justify-between gap-2 py-1.5 border-b border-border/20 last:border-0">
+                <div key={e.fdi} className="flex items-center justify-between gap-2 py-1.5 border-b border-[#e8e3d9]/20 last:border-0">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground">
+                    <p className="text-sm font-medium text-[#0f172a]">
                       {t("tooth.title", { fdi: e.fdi })} — {label}
                     </p>
-                    <p className="text-xs text-muted-foreground">{e.mkb10}</p>
+                    <p className="text-xs text-[#64748b]">{e.mkb10}</p>
                   </div>
                   {e.price > 0 && (
-                    <span className="text-sm font-semibold text-gray-800 shrink-0">
+                    <span className="text-sm font-semibold text-[#0f172a] shrink-0">
                       {e.price.toLocaleString("ru-RU")} ₸
                     </span>
                   )}
@@ -796,13 +796,13 @@ function DiagnosisSummaryModal({
         </div>
 
         {total > 0 && (
-          <div className="px-5 py-3 bg-primary/5 border-t border-border/40 flex items-center justify-between">
-            <span className="text-sm font-semibold text-muted-foreground">Итого:</span>
+          <div className="px-5 py-3 bg-primary/5 border-t border-[#e8e3d9]/40 flex items-center justify-between">
+            <span className="text-sm font-semibold text-[#64748b]">Итого:</span>
             <span className="text-lg font-bold text-primary">{total.toLocaleString("ru-RU")} ₸</span>
           </div>
         )}
 
-        <div className="flex gap-2 px-5 py-4 border-t border-border/40">
+        <div className="flex gap-2 px-5 py-4 border-t border-[#e8e3d9]/40">
           <Button
             variant="outline"
             size="sm"
@@ -1680,7 +1680,7 @@ export function PatientDetailPanel() {
 
   const currentColumn = patient ? KANBAN_COLUMNS.find((c) => c.id === patient.status) : null;
   const sourceLabel = patient ? (SOURCE_LABELS[patient.source] ?? patient.source) : "";
-  const sourceColor = patient ? (SOURCE_COLORS[patient.source] ?? "bg-slate-100 text-slate-600") : "";
+  const sourceColor = patient ? (SOURCE_COLORS[patient.source] ?? "bg-[#f1ede4] text-[#64748b]") : "";
 
   const tabs = [
     { id: "info"      as const, label: "Информация" },
@@ -1702,7 +1702,7 @@ export function PatientDetailPanel() {
     scheduled: "bg-blue-50 text-blue-700 border-blue-200",
     in_progress: "bg-amber-50 text-amber-700 border-amber-200",
     completed: "bg-green-50 text-green-700 border-green-200",
-    cancelled: "bg-gray-50 text-gray-500 border-gray-200",
+    cancelled: "bg-[#faf8f4] text-[#64748b] border-[#e8e3d9]",
   };
 
   const diagnosisDisplayMap: Map<number, ToothRecord> = useMemo(() => {
@@ -1749,12 +1749,12 @@ export function PatientDetailPanel() {
   return (
     <>
       <div
-        className="fixed inset-0 z-40 bg-black/20"
+        className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
         onClick={() => { setSelectedPatientId(null); setActiveTab("info"); setTreatmentStep(1); }}
       />
       <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl z-50 flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border/50">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#e8e3d9]/50">
           <h2 className="font-bold text-lg">{t("patient.card")}</h2>
           <button
             onClick={() => {
@@ -1765,14 +1765,14 @@ export function PatientDetailPanel() {
               setDiagnosisMap(new Map());
               setDiagnosisNotesMap(new Map());
             }}
-            className="text-muted-foreground hover:text-foreground transition-colors"
+            className="text-[#64748b] hover:text-[#0f172a] transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Tab bar */}
-        <div className="flex border-b border-border/50 px-6 bg-white shrink-0">
+        <div className="flex border-b border-[#e8e3d9]/50 px-6 bg-white shrink-0">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -1780,7 +1780,7 @@ export function PatientDetailPanel() {
               className={`py-3 px-1 mr-6 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === tab.id
                   ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
+                  : "border-transparent text-[#64748b] hover:text-[#0f172a]"
               }`}
             >
               {tab.label}
@@ -1801,15 +1801,15 @@ export function PatientDetailPanel() {
                 <div className="px-6 py-5 space-y-5">
                   {/* Header */}
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900">{patient.name}</h3>
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <h3 className="text-xl font-bold text-[#0f172a]">{patient.name}</h3>
+                    <p className="text-xs text-[#94a3b8] mt-0.5">
                       Зарегистрирован: {new Date(patient.createdAt).toLocaleDateString("ru", { day: "2-digit", month: "long", year: "numeric" })}
                     </p>
                   </div>
 
                   {/* Contact info */}
-                  <div className="bg-gray-50 rounded-2xl p-4 space-y-3">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Контакты</p>
+                  <div className="bg-[#faf8f4] rounded-2xl p-4 space-y-3">
+                    <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide">Контакты</p>
                     <a
                       href={`tel:${patient.phone}`}
                       className="flex items-center gap-3 group"
@@ -1817,20 +1817,20 @@ export function PatientDetailPanel() {
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                         <Phone className="w-4 h-4 text-primary" />
                       </div>
-                      <span className="font-mono text-sm font-semibold text-gray-800 group-hover:text-primary transition-colors">
+                      <span className="font-mono text-sm font-semibold text-[#0f172a] group-hover:text-primary transition-colors">
                         {patient.phone}
                       </span>
                     </a>
                     {patient.dateOfBirth && (
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                          <User className="w-4 h-4 text-gray-400" />
+                        <div className="w-8 h-8 rounded-full bg-[#f1ede4] flex items-center justify-center">
+                          <User className="w-4 h-4 text-[#94a3b8]" />
                         </div>
                         <div>
-                          <p className="text-sm text-gray-700">
+                          <p className="text-sm text-[#0f172a]">
                             {calculateAge(patient.dateOfBirth)} лет · {formatDateOfBirth(patient.dateOfBirth)}
                             {patient.gender && (
-                              <span className="ml-1 text-xs text-gray-500">
+                              <span className="ml-1 text-xs text-[#64748b]">
                                 ({patient.gender === "male" ? "муж." : patient.gender === "female" ? "жен." : "другой"})
                               </span>
                             )}
@@ -1840,31 +1840,31 @@ export function PatientDetailPanel() {
                     )}
                     {!patient.dateOfBirth && patient.gender && (
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                          <User className="w-4 h-4 text-gray-400" />
+                        <div className="w-8 h-8 rounded-full bg-[#f1ede4] flex items-center justify-center">
+                          <User className="w-4 h-4 text-[#94a3b8]" />
                         </div>
-                        <span className="text-sm text-gray-700">
+                        <span className="text-sm text-[#0f172a]">
                           {patient.gender === "male" ? "Мужской" : patient.gender === "female" ? "Женский" : "Другой"}
                         </span>
                       </div>
                     )}
                     {patient.iin && (
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                          <IdCard className="w-4 h-4 text-gray-400" />
+                        <div className="w-8 h-8 rounded-full bg-[#f1ede4] flex items-center justify-center">
+                          <IdCard className="w-4 h-4 text-[#94a3b8]" />
                         </div>
                         <div>
-                          <p className="text-xs text-gray-500">ИИН</p>
-                          <p className="text-sm font-mono text-gray-700">{maskIIN(patient.iin)}</p>
+                          <p className="text-xs text-[#64748b]">ИИН</p>
+                          <p className="text-sm font-mono text-[#0f172a]">{maskIIN(patient.iin)}</p>
                         </div>
                       </div>
                     )}
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                        <Calendar className="w-4 h-4 text-gray-400" />
+                      <div className="w-8 h-8 rounded-full bg-[#f1ede4] flex items-center justify-center">
+                        <Calendar className="w-4 h-4 text-[#94a3b8]" />
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500">Источник</p>
+                        <p className="text-xs text-[#64748b]">Источник</p>
                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${sourceColor}`}>
                           {sourceLabel}
                         </span>
@@ -1873,48 +1873,48 @@ export function PatientDetailPanel() {
                   </div>
 
                   {/* Doctor */}
-                  <div className="bg-gray-50 rounded-2xl p-4">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Лечащий врач</p>
+                  <div className="bg-[#faf8f4] rounded-2xl p-4">
+                    <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide mb-3">Лечащий врач</p>
                     {doctorUser ? (
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary text-sm font-bold shrink-0">
                           {doctorUser.name[0]?.toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-gray-800">{doctorUser.name}</p>
-                          <p className="text-xs text-gray-400">{doctorUser.email}</p>
+                          <p className="text-sm font-semibold text-[#0f172a]">{doctorUser.name}</p>
+                          <p className="text-xs text-[#94a3b8]">{doctorUser.email}</p>
                         </div>
                       </div>
                     ) : (
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center">
-                          <Stethoscope className="w-4 h-4 text-gray-300" />
+                        <div className="w-9 h-9 rounded-full bg-[#f1ede4] flex items-center justify-center">
+                          <Stethoscope className="w-4 h-4 text-[#94a3b8]" />
                         </div>
-                        <p className="text-sm text-gray-400 italic">Врач не назначен</p>
+                        <p className="text-sm text-[#94a3b8] italic">Врач не назначен</p>
                       </div>
                     )}
                   </div>
 
                   {/* Status */}
                   {canChangeStatus && (
-                    <div className="bg-gray-50 rounded-2xl p-4">
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Статус лечения</p>
+                    <div className="bg-[#faf8f4] rounded-2xl p-4">
+                      <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide mb-3">Статус лечения</p>
                       <div className="relative">
                         <button
                           onClick={() => setIsStatusOpen(!isStatusOpen)}
-                          className="w-full flex items-center justify-between px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm font-medium hover:bg-white transition-colors bg-white"
+                          className="w-full flex items-center justify-between px-3.5 py-2.5 border border-[#e8e3d9] rounded-xl text-sm font-medium hover:bg-white transition-colors bg-white"
                         >
                           <span>{currentColumn?.label ?? patient.status}</span>
                           <ChevronDown className={`w-4 h-4 transition-transform ${isStatusOpen ? "rotate-180" : ""}`} />
                         </button>
                         {isStatusOpen && (
-                          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-10 overflow-hidden">
+                          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#e8e3d9] rounded-xl shadow-xl z-10 overflow-hidden">
                             {KANBAN_COLUMNS.map((col) => (
                               <button
                                 key={col.id}
                                 onClick={() => handleStatusChange(col.id)}
                                 disabled={statusMutation.isPending}
-                                className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors ${patient.status === col.id ? "font-semibold text-primary bg-primary/5" : ""}`}
+                                className={`w-full text-left px-4 py-2.5 text-sm hover:bg-[#faf8f4] transition-colors ${patient.status === col.id ? "font-semibold text-primary bg-primary/5" : ""}`}
                               >
                                 {col.label}
                               </button>
@@ -1940,10 +1940,10 @@ export function PatientDetailPanel() {
                         onClick={() => setFinancialCollapsed((v) => !v)}
                         className="w-full flex items-center justify-between group"
                       >
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                        <span className="text-xs font-semibold text-[#64748b] uppercase tracking-wide">
                           Финансы
                         </span>
-                        <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-150 ${financialCollapsed ? "" : "rotate-180"}`} />
+                        <ChevronDown className={`w-3.5 h-3.5 text-[#64748b] transition-transform duration-150 ${financialCollapsed ? "" : "rotate-180"}`} />
                       </button>
 
                       {!financialCollapsed && (
@@ -1953,27 +1953,27 @@ export function PatientDetailPanel() {
                               <p className="text-xl font-bold text-primary">
                                 {financials.paid.toLocaleString("ru-RU")} ₸
                               </p>
-                              <p className="text-xs text-gray-500 mt-0.5">Оплачено</p>
+                              <p className="text-xs text-[#64748b] mt-0.5">Оплачено</p>
                             </div>
-                            <div className="bg-gray-50 rounded-2xl p-3.5 text-center">
-                              <p className="text-xl font-bold text-gray-700">
+                            <div className="bg-[#faf8f4] rounded-2xl p-3.5 text-center">
+                              <p className="text-xl font-bold text-[#0f172a]">
                                 {patientProcedures.length}
                               </p>
-                              <p className="text-xs text-gray-500 mt-0.5">Процедур</p>
+                              <p className="text-xs text-[#64748b] mt-0.5">Процедур</p>
                             </div>
                           </div>
 
                           {Object.keys(financials.methodCounts).length > 0 && (
-                            <div className="bg-gray-50 rounded-2xl p-4 space-y-2">
-                              <p className="text-xs font-semibold text-gray-500 mb-1">Способы оплаты</p>
+                            <div className="bg-[#faf8f4] rounded-2xl p-4 space-y-2">
+                              <p className="text-xs font-semibold text-[#64748b] mb-1">Способы оплаты</p>
                               {Object.entries(financials.methodCounts).map(([method, data]) => (
                                 <div key={method} className="flex items-center justify-between text-sm">
                                   <div className="flex items-center gap-2">
-                                    <CreditCard className="w-3.5 h-3.5 text-gray-400" />
-                                    <span className="text-gray-600">{PAYMENT_LABELS[method] ?? method}</span>
-                                    <span className="text-xs text-gray-400">×{data.count}</span>
+                                    <CreditCard className="w-3.5 h-3.5 text-[#94a3b8]" />
+                                    <span className="text-[#64748b]">{PAYMENT_LABELS[method] ?? method}</span>
+                                    <span className="text-xs text-[#94a3b8]">×{data.count}</span>
                                   </div>
-                                  <span className="font-semibold text-gray-800">
+                                  <span className="font-semibold text-[#0f172a]">
                                     {data.sum.toLocaleString("ru-RU")} ₸
                                   </span>
                                 </div>
@@ -1992,10 +1992,10 @@ export function PatientDetailPanel() {
                         onClick={() => setProceduresCollapsed((v) => !v)}
                         className="w-full flex items-center justify-between group"
                       >
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                        <span className="text-xs font-semibold text-[#64748b] uppercase tracking-wide">
                           История процедур ({patientProcedures.length})
                         </span>
-                        <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-150 ${proceduresCollapsed ? "" : "rotate-180"}`} />
+                        <ChevronDown className={`w-3.5 h-3.5 text-[#64748b] transition-transform duration-150 ${proceduresCollapsed ? "" : "rotate-180"}`} />
                       </button>
 
                       {!proceduresCollapsed && (
@@ -2009,21 +2009,21 @@ export function PatientDetailPanel() {
                                 : "—";
                               const payLabel = PAYMENT_LABELS[(proc as any).paymentMethod ?? ""] ?? "—";
                               return (
-                                <div key={proc.id} className="bg-white rounded-xl border border-gray-100 p-3 space-y-1.5">
+                                <div key={proc.id} className="bg-white rounded-2xl border border-[#e8e3d9] p-3 space-y-1.5">
                                   <div className="flex items-start justify-between gap-2">
-                                    <p className="text-sm font-medium text-gray-800 flex-1 leading-tight">{proc.name}</p>
+                                    <p className="text-sm font-medium text-[#0f172a] flex-1 leading-tight">{proc.name}</p>
                                     <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0 ${STATUS_COLORS[proc.status ?? "scheduled"]}`}>
                                       {STATUS_LABELS[proc.status ?? "scheduled"]}
                                     </span>
                                   </div>
-                                  <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-gray-500">
+                                  <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-[#64748b]">
                                     {proc.scheduledAt && (
                                       <span>{new Date(proc.scheduledAt).toLocaleDateString("ru", { day: "2-digit", month: "short", year: "numeric" })}</span>
                                     )}
                                     {proc.doctorId && <span>👨‍⚕️ {docName}</span>}
                                     {(proc as any).paymentMethod && <span>💳 {payLabel}</span>}
                                     {proc.price != null && proc.price > 0 && (
-                                      <span className="font-semibold text-gray-700">{proc.price.toLocaleString("ru-RU")} ₸</span>
+                                      <span className="font-semibold text-[#0f172a]">{proc.price.toLocaleString("ru-RU")} ₸</span>
                                     )}
                                   </div>
                                 </div>
@@ -2044,7 +2044,7 @@ export function PatientDetailPanel() {
               <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
 
                 {/* Step indicator */}
-                <div className="flex items-center justify-center gap-0 px-3 py-2 border-b border-border/30 bg-white shrink-0">
+                <div className="flex items-center justify-center gap-0 px-3 py-2 border-b border-[#e8e3d9]/30 bg-white shrink-0">
                   {([
                     { id: 1 as const, label: "Карта зубов" },
                     { id: 2 as const, label: "Планы лечения" },
@@ -2065,14 +2065,14 @@ export function PatientDetailPanel() {
                         }}
                         className={cn(
                           "flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-semibold transition-colors",
-                          treatmentStep === step.id ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-slate-100",
+                          treatmentStep === step.id ? "bg-primary/10 text-primary" : "text-[#64748b] hover:bg-[#f1ede4]",
                           stepLocked && "opacity-40 cursor-not-allowed hover:bg-transparent",
                         )}
                       >
-                        <span className={`w-4.5 h-4.5 w-[18px] h-[18px] rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 ${treatmentStep === step.id ? "bg-primary text-white" : "bg-slate-200 text-slate-500"}`}>{step.id}</span>
+                        <span className={`w-4.5 h-4.5 w-[18px] h-[18px] rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 ${treatmentStep === step.id ? "bg-primary text-white" : "bg-[#e8e3d9] text-[#64748b]"}`}>{step.id}</span>
                         {step.label}
                       </button>
-                      {idx < 2 && <ChevronRight className="w-3 h-3 text-muted-foreground/40 mx-0.5 shrink-0" />}
+                      {idx < 2 && <ChevronRight className="w-3 h-3 text-[#64748b]/40 mx-0.5 shrink-0" />}
                     </div>
                     );
                   })}
@@ -2086,9 +2086,9 @@ export function PatientDetailPanel() {
                     {/* Loading skeleton — show until teeth are loaded */}
                     {!chartReady && !isDiagnosisMode && (
                       <div className="space-y-3 animate-pulse">
-                        <div className="h-4 w-32 bg-slate-100 rounded" />
-                        <div className="h-36 bg-slate-100 rounded-2xl" />
-                        <div className="h-36 bg-slate-100 rounded-2xl" />
+                        <div className="h-4 w-32 bg-[#f1ede4] rounded" />
+                        <div className="h-36 bg-[#f1ede4] rounded-2xl" />
+                        <div className="h-36 bg-[#f1ede4] rounded-2xl" />
                       </div>
                     )}
                     {/* Diagnosis mode (primary — no teeth yet, or manual re-diagnosis) */}
@@ -2108,14 +2108,14 @@ export function PatientDetailPanel() {
                         />
 
                         {voiceDraftExists && (
-                          <div className="mt-3 bg-slate-100 border border-slate-200 rounded-xl p-3 flex items-center justify-between gap-3 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-200">
+                          <div className="mt-3 bg-[#f1ede4] border border-[#e8e3d9] rounded-xl p-3 flex items-center justify-between gap-3 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-200">
                             <div className="flex items-start gap-2.5">
-                              <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-700 shrink-0 mt-0.5">
+                              <div className="w-8 h-8 rounded-full bg-[#e8e3d9] flex items-center justify-center text-[#0f172a] shrink-0 mt-0.5">
                                 <Mic className="w-4.5 h-4.5" />
                               </div>
                               <div>
-                                <h4 className="text-xs font-semibold text-slate-900">Черновик голосовой диагностики</h4>
-                                <p className="text-[11px] text-slate-600 mt-0.5">
+                                <h4 className="text-xs font-semibold text-[#0f172a]">Черновик голосовой диагностики</h4>
+                                <p className="text-[11px] text-[#64748b] mt-0.5">
                                   Найден сохраненный черновик от {voiceDraftTime ? new Date(voiceDraftTime).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }) : ""}.
                                 </p>
                               </div>
@@ -2126,7 +2126,7 @@ export function PatientDetailPanel() {
                                   setRestoreVoiceDraft(true);
                                   setShowVoiceModal(true);
                                 }}
-                                className="text-[11px] font-medium text-slate-800 bg-slate-200 hover:bg-slate-300 px-3 py-1.5 rounded-lg transition-colors"
+                                className="text-[11px] font-medium text-[#0f172a] bg-[#e8e3d9] hover:bg-[#d4cfc6] px-3 py-1.5 rounded-lg transition-colors"
                               >
                                 Восстановить
                               </button>
@@ -2138,7 +2138,7 @@ export function PatientDetailPanel() {
                                   setVoiceDraftTime(null);
                                   setRestoreVoiceDraft(false);
                                 }}
-                                className="text-[11px] font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-200/50 p-1.5 rounded-lg transition-colors"
+                                className="text-[11px] font-medium text-[#64748b] hover:text-[#0f172a] hover:bg-[#e8e3d9]/50 p-1.5 rounded-lg transition-colors"
                                 title="Сбросить черновик"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -2148,15 +2148,15 @@ export function PatientDetailPanel() {
                         )}
 
                         {diagnosisToothFdi !== null && (
-                          <div className="bg-slate-50 rounded-xl p-3 border border-border/30 space-y-3">
-                            <p className="text-xs font-semibold text-muted-foreground">
+                          <div className="bg-[#faf8f4] rounded-xl p-3 border border-[#e8e3d9]/30 space-y-3">
+                            <p className="text-xs font-semibold text-[#64748b]">
                               {t("tooth.title", { fdi: diagnosisToothFdi })} — {t("tooth.conditionLabel")}
                             </p>
                             {/* ── 2-level picker: conditions → services ── */}
                             {pickerCategory === null ? (
                               /* Level 1 — Condition (disease) selection */
                               <div className="space-y-2">
-                                <p className="text-[11px] text-muted-foreground font-medium">Выберите диагноз зуба:</p>
+                                <p className="text-[11px] text-[#64748b] font-medium">Выберите диагноз зуба:</p>
                                 <div className="grid grid-cols-2 gap-1.5">
                                   {(Object.entries(CONDITION_CONFIG) as [ToothCondition, typeof CONDITION_CONFIG[ToothCondition]][]).map(([cond, cfg]) => {
                                     const currentCondition = diagnosisMap.get(diagnosisToothFdi!) ?? teethMap.get(diagnosisToothFdi!)?.condition ?? "healthy";
@@ -2175,14 +2175,14 @@ export function PatientDetailPanel() {
                                         className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border text-left text-xs transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                                           isSelected
                                             ? "border-primary bg-primary/10 ring-1 ring-primary/30"
-                                            : "border-border hover:border-primary/40 hover:bg-slate-50"
+                                            : "border-[#e8e3d9] hover:border-primary/40 hover:bg-[#faf8f4]"
                                         }`}
                                       >
                                         <span
                                           className="w-3 h-3 rounded border shrink-0"
                                           style={{ background: cfg.crownFill, borderColor: cfg.stroke }}
                                         />
-                                        <span className="font-medium text-foreground leading-tight">{cfg.label}</span>
+                                        <span className="font-medium text-[#0f172a] leading-tight">{cfg.label}</span>
                                         {isSelected && <span className="ml-auto text-primary">✓</span>}
                                       </button>
                                     );
@@ -2194,7 +2194,7 @@ export function PatientDetailPanel() {
                               <div ref={servicePickerRef} className="space-y-1.5">
                                 <button
                                   onClick={() => { setPickerCategory(null); setPickerSearch(""); }}
-                                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                  className="flex items-center gap-1.5 text-xs text-[#64748b] hover:text-[#0f172a] transition-colors"
                                 >
                                   <ArrowLeft className="w-3.5 h-3.5" />
                                   <span>Назад к диагнозу</span>
@@ -2213,8 +2213,8 @@ export function PatientDetailPanel() {
                                   return (
                                     <div className="flex items-center gap-1.5 px-1 flex-wrap">
                                       <span className="w-2.5 h-2.5 rounded border shrink-0" style={{ background: cfg.crownFill, borderColor: cfg.stroke }} />
-                                      <span className="text-[11px] text-muted-foreground">
-                                        Услуги для: <span className="font-semibold text-foreground">{cfg.label}</span>
+                                      <span className="text-[11px] text-[#64748b]">
+                                        Услуги для: <span className="font-semibold text-[#0f172a]">{cfg.label}</span>
                                         {canalLabel && (
                                           <span className="ml-1 px-1.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 font-medium text-[10px]">
                                             {canalLabel}
@@ -2226,18 +2226,18 @@ export function PatientDetailPanel() {
                                 })()}
                                 {/* Search input */}
                                 <div className="relative">
-                                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
+                                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-[#64748b] pointer-events-none" />
                                   <input
                                     type="text"
                                     value={pickerSearch}
                                     onChange={(e) => setPickerSearch(e.target.value)}
                                     placeholder="Поиск услуги..."
-                                    className="w-full pl-7 pr-7 py-1.5 text-xs rounded-lg border border-border bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/60"
+                                    className="w-full pl-7 pr-7 py-1.5 text-xs rounded-lg border border-[#e8e3d9] bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-[#94a3b8]/60"
                                   />
                                   {pickerSearch && (
                                     <button
                                       onClick={() => setPickerSearch("")}
-                                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[#64748b] hover:text-[#0f172a]"
                                     >
                                       <X className="w-3 h-3" />
                                     </button>
@@ -2245,12 +2245,12 @@ export function PatientDetailPanel() {
                                 </div>
                                 {pickerLoading ? (
                                   <div className="flex items-center justify-center py-5">
-                                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                                    <Loader2 className="w-4 h-4 animate-spin text-[#64748b]" />
                                   </div>
                                 ) : pickerTemplates.length === 0 ? (
-                                  <p className="text-xs text-muted-foreground text-center py-4">Нет услуг в этой категории</p>
+                                  <p className="text-xs text-[#64748b] text-center py-4">Нет услуг в этой категории</p>
                                 ) : filteredPickerTemplates.length === 0 ? (
-                                  <p className="text-xs text-muted-foreground text-center py-4">
+                                  <p className="text-xs text-[#64748b] text-center py-4">
                                     Ничего не найдено по «{pickerSearch}»
                                   </p>
                                 ) : (
@@ -2273,18 +2273,18 @@ export function PatientDetailPanel() {
                                         className={`w-full flex items-start gap-2 px-2.5 py-2 rounded-lg border text-left text-xs transition-all ${
                                           isChecked
                                             ? "border-primary bg-primary/8 ring-1 ring-primary/30"
-                                            : "border-border hover:border-primary/40 hover:bg-slate-50"
+                                            : "border-[#e8e3d9] hover:border-primary/40 hover:bg-[#faf8f4]"
                                         }`}
                                       >
                                         <span className="mt-0.5 shrink-0">
                                           {isChecked
                                             ? <CheckSquare className="w-3.5 h-3.5 text-primary" />
-                                            : <Square className="w-3.5 h-3.5 text-muted-foreground" />
+                                            : <Square className="w-3.5 h-3.5 text-[#64748b]" />
                                           }
                                         </span>
                                         <span className="flex-1 min-w-0">
-                                          <span className="block font-medium text-foreground leading-snug">
-                                            {svc.code ? <span className="text-muted-foreground mr-1 font-mono">{svc.code}</span> : null}
+                                          <span className="block font-medium text-[#0f172a] leading-snug">
+                                            {svc.code ? <span className="text-[#64748b] mr-1 font-mono">{svc.code}</span> : null}
                                             {svc.name}
                                           </span>
                                           <span className="block mt-0.5 text-primary font-semibold">
@@ -2298,12 +2298,12 @@ export function PatientDetailPanel() {
                               </div>
                             )}
                             <div>
-                              <label className="text-xs font-medium text-muted-foreground block mb-1">
+                              <label className="text-xs font-medium text-[#64748b] block mb-1">
                                 {t("tooth.notesLabel")}
                               </label>
                               <textarea
                                 rows={2}
-                                className="w-full text-xs rounded-lg border border-border bg-white px-2.5 py-1.5 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                className="w-full text-xs rounded-lg border border-[#e8e3d9] bg-white px-2.5 py-1.5 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
                                 placeholder={t("tooth.notesPlaceholder")}
                                 value={diagnosisNotesMap.get(diagnosisToothFdi) ?? teethMap.get(diagnosisToothFdi)?.notes ?? ""}
                                 onChange={(e) => {
@@ -2331,7 +2331,7 @@ export function PatientDetailPanel() {
                     {chartReady && (hasDiagnosis || isAdmin) && !isDiagnosisMode && (
                       <div className="space-y-3">
                         <div className="flex items-center justify-between gap-2">
-                          <p className="text-[11px] text-muted-foreground">
+                          <p className="text-[11px] text-[#64748b]">
                             {isAdmin ? "Карта зубов (только чтение)" : t("patient.clickTooth")}
                           </p>
                           {!isAdmin && (
@@ -2355,14 +2355,14 @@ export function PatientDetailPanel() {
                         />
 
                         {voiceDraftExists && (
-                          <div className="mt-3 bg-slate-100 border border-slate-200 rounded-xl p-3 flex items-center justify-between gap-3 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-200">
+                          <div className="mt-3 bg-[#f1ede4] border border-[#e8e3d9] rounded-xl p-3 flex items-center justify-between gap-3 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-200">
                             <div className="flex items-start gap-2.5">
-                              <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-700 shrink-0 mt-0.5">
+                              <div className="w-8 h-8 rounded-full bg-[#e8e3d9] flex items-center justify-center text-[#0f172a] shrink-0 mt-0.5">
                                 <Mic className="w-4.5 h-4.5" />
                               </div>
                               <div>
-                                <h4 className="text-xs font-semibold text-slate-900">Черновик голосовой диагностики</h4>
-                                <p className="text-[11px] text-slate-600 mt-0.5">
+                                <h4 className="text-xs font-semibold text-[#0f172a]">Черновик голосовой диагностики</h4>
+                                <p className="text-[11px] text-[#64748b] mt-0.5">
                                   Найден сохраненный черновик от {voiceDraftTime ? new Date(voiceDraftTime).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }) : ""}.
                                 </p>
                               </div>
@@ -2373,7 +2373,7 @@ export function PatientDetailPanel() {
                                   setRestoreVoiceDraft(true);
                                   setShowVoiceModal(true);
                                 }}
-                                className="text-[11px] font-medium text-slate-800 bg-slate-200 hover:bg-slate-300 px-3 py-1.5 rounded-lg transition-colors"
+                                className="text-[11px] font-medium text-[#0f172a] bg-[#e8e3d9] hover:bg-[#d4cfc6] px-3 py-1.5 rounded-lg transition-colors"
                               >
                                 Восстановить
                               </button>
@@ -2385,7 +2385,7 @@ export function PatientDetailPanel() {
                                   setVoiceDraftTime(null);
                                   setRestoreVoiceDraft(false);
                                 }}
-                                className="text-[11px] font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-200/50 p-1.5 rounded-lg transition-colors"
+                                className="text-[11px] font-medium text-[#64748b] hover:text-[#0f172a] hover:bg-[#e8e3d9]/50 p-1.5 rounded-lg transition-colors"
                                 title="Сбросить черновик"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -2403,7 +2403,7 @@ export function PatientDetailPanel() {
 
               {/* ── Pinned bottom bar: diagnosis action buttons ── */}
               {(isDiagnosisMode || (chartReady && !hasDiagnosis)) && (
-                <div className="shrink-0 border-t border-border/30 bg-white/95 backdrop-blur-sm safe-area-bottom">
+                <div className="shrink-0 border-t border-[#e8e3d9]/30 bg-white/95 backdrop-blur-sm safe-area-bottom">
                   <div className="flex items-center justify-center gap-8 py-3 px-6">
 
                     {/* Отмена */}
@@ -2417,11 +2417,11 @@ export function PatientDetailPanel() {
                           setDiagnosisServicesMap(new Map());
                           setPickerCategory(null);
                         }}
-                        className="w-14 h-14 rounded-full border-2 border-border flex items-center justify-center text-muted-foreground hover:bg-slate-100 hover:border-slate-300 transition-colors"
+                        className="w-14 h-14 rounded-full border-2 border-[#e8e3d9] flex items-center justify-center text-[#64748b] hover:bg-[#f1ede4] hover:border-[#d4cfc6] transition-colors"
                       >
                         <X className="w-6 h-6" />
                       </button>
-                      <span className="text-[11px] text-muted-foreground">{t("tooth.cancel")}</span>
+                      <span className="text-[11px] text-[#64748b]">{t("tooth.cancel")}</span>
                     </div>
 
                     {/* Голосовая диагностика */}
@@ -2432,7 +2432,7 @@ export function PatientDetailPanel() {
                       >
                         <Mic className="w-6 h-6" />
                       </button>
-                      <span className="text-[11px] text-muted-foreground">Голос</span>
+                      <span className="text-[11px] text-[#64748b]">Голос</span>
                     </div>
 
                     {/* Завершить диагностику */}
@@ -2444,7 +2444,7 @@ export function PatientDetailPanel() {
                       >
                         <CheckCircle2 className="w-6 h-6" />
                       </button>
-                      <span className="text-[11px] text-muted-foreground">Завершить</span>
+                      <span className="text-[11px] text-[#64748b]">Завершить</span>
                     </div>
 
                   </div>
@@ -2467,12 +2467,12 @@ export function PatientDetailPanel() {
                 {/* State: no diagnosis yet */}
                 {!planLoading && !plansLoading && !hasDiagnosis && (
                   <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6 py-10 text-center">
-                    <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center">
-                      <ClipboardList className="w-7 h-7 text-slate-400" />
+                    <div className="w-14 h-14 rounded-2xl bg-[#f1ede4] flex items-center justify-center">
+                      <ClipboardList className="w-7 h-7 text-[#94a3b8]" />
                     </div>
                     <div>
-                      <p className="font-semibold text-gray-800">Зубная карта не заполнена</p>
-                      <p className="text-xs text-muted-foreground mt-1 max-w-xs">
+                      <p className="font-semibold text-[#0f172a]">Зубная карта не заполнена</p>
+                      <p className="text-xs text-[#64748b] mt-1 max-w-xs">
                         Сначала проведите осмотр зубов пациента на вкладке «Зубная карта»
                       </p>
                     </div>
@@ -2495,23 +2495,23 @@ export function PatientDetailPanel() {
                   return (
                     <div className="flex-1 overflow-y-auto custom-scrollbar">
                       <div className="px-6 py-5 space-y-3">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Активный план</p>
+                        <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide">Активный план</p>
                         {activePlan ? (
-                          <button onClick={() => setPlanDetailId(activePlan.id)} className="w-full text-left bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                          <button onClick={() => setPlanDetailId(activePlan.id)} className="w-full text-left bg-white border border-[#e8e3d9] rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
                             <div className="h-1 bg-primary" />
                             <div className="px-4 py-4">
                               {/* Header */}
                               <div className="flex items-start justify-between mb-4">
                                 <div>
-                                  <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-0.5">Активный план</p>
-                                  <p className="text-[15px] font-bold text-gray-900">
+                                  <p className="text-[10px] text-[#94a3b8] font-semibold uppercase tracking-wide mb-0.5">Активный план</p>
+                                  <p className="text-[15px] font-bold text-[#0f172a]">
                                     План #{String(activePlan.planNumber).padStart(4, "0")}
                                   </p>
-                                  <p className="text-[11px] text-gray-400 mt-0.5">
+                                  <p className="text-[11px] text-[#94a3b8] mt-0.5">
                                     Создан {new Date(activePlan.createdAt).toLocaleDateString("ru", { day: "2-digit", month: "long", year: "numeric" })}
                                   </p>
                                 </div>
-                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0 mt-0.5 ${activePlan.status === "draft" ? "bg-slate-50 text-slate-600 border-slate-200" : activePlan.status === "approved" ? "bg-blue-50 text-blue-700 border-blue-200" : activePlan.status === "in_progress" ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-emerald-50 text-emerald-700 border-emerald-200"}`}>
+                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0 mt-0.5 ${activePlan.status === "draft" ? "bg-[#faf8f4] text-[#64748b] border-[#e8e3d9]" : activePlan.status === "approved" ? "bg-blue-50 text-blue-700 border-blue-200" : activePlan.status === "in_progress" ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-emerald-50 text-emerald-700 border-emerald-200"}`}>
                                   {activePlan.status === "draft" ? "Черновик" : activePlan.status === "approved" ? "Согласован" : activePlan.status === "in_progress" ? "В работе" : "Завершён"}
                                 </span>
                               </div>
@@ -2532,23 +2532,23 @@ export function PatientDetailPanel() {
                                   );
                                 })()}
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-[11px] text-gray-400 mb-0.5">Итого по плану</p>
-                                  <p className="text-[22px] font-bold text-gray-900 leading-none">{activePlan.totalCost.toLocaleString("ru-KZ")} ₸</p>
+                                  <p className="text-[11px] text-[#94a3b8] mb-0.5">Итого по плану</p>
+                                  <p className="text-[22px] font-bold text-[#0f172a] leading-none">{activePlan.totalCost.toLocaleString("ru-KZ")} ₸</p>
                                   <div className="mt-2 space-y-1">
                                     <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" /><span className="text-[11px] text-gray-500">Выполнено</span></div>
+                                      <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" /><span className="text-[11px] text-[#64748b]">Выполнено</span></div>
                                       <span className="text-[11px] font-semibold text-emerald-600">{apPaid.toLocaleString("ru-KZ")} ₸</span>
                                     </div>
                                     <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-primary/30 shrink-0" /><span className="text-[11px] text-gray-500">Остаток</span></div>
-                                      <span className="text-[11px] font-semibold text-gray-600">{(activePlan.totalCost - apPaid).toLocaleString("ru-KZ")} ₸</span>
+                                      <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-primary/30 shrink-0" /><span className="text-[11px] text-[#64748b]">Остаток</span></div>
+                                      <span className="text-[11px] font-semibold text-[#64748b]">{(activePlan.totalCost - apPaid).toLocaleString("ru-KZ")} ₸</span>
                                     </div>
                                   </div>
                                 </div>
                               </div>
 
                               {/* Footer CTA */}
-                              <div className="flex items-center justify-end pt-3 border-t border-gray-100">
+                              <div className="flex items-center justify-end pt-3 border-t border-[#e8e3d9]">
                                 <div className="flex items-center gap-1 text-primary text-[12px] font-semibold">
                                   Открыть план <ChevronRight className="w-3.5 h-3.5" />
                                 </div>
@@ -2567,7 +2567,7 @@ export function PatientDetailPanel() {
                             </div>
                           </div>
                         ) : (
-                          <button className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border border-dashed border-gray-200 text-sm font-medium text-gray-400 hover:bg-gray-50 transition-colors"
+                          <button className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border border-dashed border-[#e8e3d9] text-sm font-medium text-[#94a3b8] hover:bg-[#faf8f4] transition-colors"
                             onClick={() => createPlanMutation.mutate({ id: selectedPatientId, data: {} })}
                             disabled={createPlanMutation.isPending}
                           >
@@ -2576,7 +2576,7 @@ export function PatientDetailPanel() {
                           </button>
                         )}
                         {activePlan && (activePlan.status === "completed" || activePlan.status === "in_progress") && !needsRediagnosis && (
-                          <button className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-dashed border-gray-200 text-sm font-medium text-gray-400 hover:bg-gray-50 transition-colors mt-2"
+                          <button className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-dashed border-[#e8e3d9] text-sm font-medium text-[#94a3b8] hover:bg-[#faf8f4] transition-colors mt-2"
                             onClick={() => createPlanMutation.mutate({ id: selectedPatientId, data: {} })} disabled={createPlanMutation.isPending}
                           >
                             {createPlanMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
@@ -2596,7 +2596,7 @@ export function PatientDetailPanel() {
                   if (!detailPlan) {
                     return (
                       <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 py-10 text-center">
-                        <p className="text-sm text-muted-foreground">План не найден или ещё загружается</p>
+                        <p className="text-sm text-[#64748b]">План не найден или ещё загружается</p>
                         <Button variant="outline" size="sm" onClick={() => setPlanDetailId(null)}>
                           К списку планов
                         </Button>
@@ -2608,7 +2608,7 @@ export function PatientDetailPanel() {
                   const pct = nc.length > 0 ? Math.round((done / nc.length) * 100) : 0;
                   const paid = nc.filter((i) => i.status === "completed").reduce((s, i) => s + i.price * (1 - (i.discount ?? 0) / 100), 0);
                   const badge = isActive && activePlan
-                    ? activePlan.status === "draft" ? { label: "Черновик", cls: "bg-slate-50 text-slate-600 border-slate-200" }
+                    ? activePlan.status === "draft" ? { label: "Черновик", cls: "bg-[#faf8f4] text-[#64748b] border-[#e8e3d9]" }
                       : activePlan.status === "approved" ? { label: "Согласован", cls: "bg-blue-50 text-blue-700 border-blue-200" }
                       : activePlan.status === "in_progress" ? { label: "В работе", cls: "bg-amber-50 text-amber-700 border-amber-200" }
                       : { label: "Завершён", cls: "bg-green-50 text-green-700 border-green-200" }
@@ -2620,7 +2620,7 @@ export function PatientDetailPanel() {
                       <div className="flex-1 overflow-y-auto custom-scrollbar">
                         <div className="px-4 py-4 space-y-3">
                           {/* Financial summary card */}
-                          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+                          <div className="bg-white border border-[#e8e3d9] rounded-2xl shadow-sm overflow-hidden">
                             <div className="h-0.5 bg-primary" />
                             <div className="px-4 py-4">
                               {/* Ring chart + totals */}
@@ -2639,9 +2639,9 @@ export function PatientDetailPanel() {
                                   );
                                 })()}
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-[11px] text-gray-400 mb-0.5">Сумма плана</p>
-                                  <p className="text-[22px] font-bold text-gray-900 leading-none">{detailPlan.totalCost.toLocaleString("ru-KZ")} ₸</p>
-                                  <p className="text-[11px] text-gray-400 mt-0.5">Оплачено {done} из {nc.length} услуг</p>
+                                  <p className="text-[11px] text-[#94a3b8] mb-0.5">Сумма плана</p>
+                                  <p className="text-[22px] font-bold text-[#0f172a] leading-none">{detailPlan.totalCost.toLocaleString("ru-KZ")} ₸</p>
+                                  <p className="text-[11px] text-[#94a3b8] mt-0.5">Оплачено {done} из {nc.length} услуг</p>
                                 </div>
                               </div>
                               {/* Paid / Remaining rows */}
@@ -2649,16 +2649,16 @@ export function PatientDetailPanel() {
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-2">
                                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0" />
-                                    <span className="text-[12px] text-gray-600">Выполнено</span>
+                                    <span className="text-[12px] text-[#64748b]">Выполнено</span>
                                   </div>
                                   <span className="text-[13px] font-bold text-emerald-600">{paid.toLocaleString("ru-KZ")} ₸</span>
                                 </div>
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-2">
                                     <span className="w-2.5 h-2.5 rounded-full bg-primary/30 shrink-0" />
-                                    <span className="text-[12px] text-gray-600">Остаток к оплате</span>
+                                    <span className="text-[12px] text-[#64748b]">Остаток к оплате</span>
                                   </div>
-                                  <span className="text-[13px] font-bold text-gray-700">{(detailPlan.totalCost - paid).toLocaleString("ru-KZ")} ₸</span>
+                                  <span className="text-[13px] font-bold text-[#0f172a]">{(detailPlan.totalCost - paid).toLocaleString("ru-KZ")} ₸</span>
                                 </div>
                               </div>
                             </div>
@@ -2681,7 +2681,7 @@ export function PatientDetailPanel() {
                           {!isActive && (
                             <div className="space-y-2">
                               {nc.length === 0 ? (
-                                <p className="text-sm text-gray-400 text-center py-6">Нет позиций</p>
+                                <p className="text-sm text-[#94a3b8] text-center py-6">Нет позиций</p>
                               ) : (
                                 nc.map((item) => (
                                   <div
@@ -2689,33 +2689,33 @@ export function PatientDetailPanel() {
                                     className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border shadow-sm ${
                                       item.status === "completed"
                                         ? "bg-emerald-50/60 border-emerald-100"
-                                        : "bg-white border-gray-100"
+                                        : "bg-white border-[#e8e3d9]"
                                     }`}
                                   >
                                     {item.status === "completed"
                                       ? <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
-                                      : <Circle className="w-5 h-5 text-gray-200 shrink-0" />
+                                      : <Circle className="w-5 h-5 text-[#e8e3d9] shrink-0" />
                                     }
                                     <div className="flex-1 min-w-0">
-                                      <p className={`text-[13px] font-medium leading-snug truncate ${item.status === "completed" ? "line-through text-gray-400" : "text-gray-800"}`}>
+                                      <p className={`text-[13px] font-medium leading-snug truncate ${item.status === "completed" ? "line-through text-[#94a3b8]" : "text-[#0f172a]"}`}>
                                         {item.title}
                                       </p>
                                       {item.toothFdi != null && (
-                                        <p className="text-[11px] text-gray-400 mt-0.5">Зуб №{item.toothFdi}</p>
+                                        <p className="text-[11px] text-[#94a3b8] mt-0.5">Зуб №{item.toothFdi}</p>
                                       )}
                                     </div>
                                     <div className="text-right flex flex-col items-end shrink-0">
                                       {item.discount > 0 ? (
                                         <>
-                                          <span className="text-[10px] text-gray-400 line-through leading-none">
+                                          <span className="text-[10px] text-[#94a3b8] line-through leading-none">
                                             {item.price.toLocaleString("ru-KZ")} ₸
                                           </span>
-                                          <span className={`text-[13px] font-bold leading-tight mt-0.5 ${item.status === "completed" ? "text-emerald-600" : "text-gray-800"}`}>
+                                          <span className={`text-[13px] font-bold leading-tight mt-0.5 ${item.status === "completed" ? "text-emerald-600" : "text-[#0f172a]"}`}>
                                             {(item.price * (1 - item.discount / 100)).toLocaleString("ru-KZ")} ₸
                                           </span>
                                         </>
                                       ) : (
-                                        <span className={`text-[13px] font-semibold shrink-0 ${item.status === "completed" ? "text-emerald-600" : "text-gray-600"}`}>
+                                        <span className={`text-[13px] font-semibold shrink-0 ${item.status === "completed" ? "text-emerald-600" : "text-[#64748b]"}`}>
                                           {item.price.toLocaleString("ru-KZ")} ₸
                                         </span>
                                       )}
@@ -2763,19 +2763,19 @@ export function PatientDetailPanel() {
                     {/* WhatsApp not connected modal */}
                     {whatsappNotConnectedOpen && (
                       <div
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4"
                         onClick={(e) => { if (e.target === e.currentTarget) setWhatsappNotConnectedOpen(false); }}
                       >
                         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
                           <div className="p-6 text-center">
-                            <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
-                              <svg className="w-7 h-7 text-slate-400" viewBox="0 0 24 24" fill="currentColor">
+                            <div className="w-14 h-14 rounded-full bg-[#f1ede4] flex items-center justify-center mx-auto mb-4">
+                              <svg className="w-7 h-7 text-[#94a3b8]" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
                                 <path d="M12 0C5.373 0 0 5.373 0 12c0 2.117.549 4.107 1.514 5.836L0 24l6.335-1.493A11.935 11.935 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.028-1.383l-.36-.214-3.732.979.997-3.645-.235-.374A9.786 9.786 0 012.182 12C2.182 6.58 6.58 2.182 12 2.182S21.818 6.58 21.818 12 17.42 21.818 12 21.818z"/>
                               </svg>
                             </div>
-                            <h3 className="text-base font-bold text-gray-900 mb-1">WhatsApp не подключён</h3>
-                            <p className="text-sm text-muted-foreground mb-5">
+                            <h3 className="text-base font-bold text-[#0f172a] mb-1">WhatsApp не подключён</h3>
+                            <p className="text-sm text-[#64748b] mb-5">
                               Чтобы отправить договоры пациенту, сначала подключите WhatsApp в настройках каналов.
                             </p>
                             <div className="flex flex-col gap-2">
@@ -2787,7 +2787,7 @@ export function PatientDetailPanel() {
                               </button>
                               <button
                                 onClick={() => setWhatsappNotConnectedOpen(false)}
-                                className="w-full h-10 bg-slate-100 text-slate-700 rounded-xl text-sm font-medium hover:bg-slate-200 transition-colors"
+                                className="w-full h-10 bg-[#f1ede4] text-[#0f172a] rounded-xl text-sm font-medium hover:bg-[#e8e3d9] transition-colors"
                               >
                                 Закрыть
                               </button>
@@ -2800,27 +2800,27 @@ export function PatientDetailPanel() {
                     {/* Bundle preview dialog */}
                     {bundlePreviewOpen && bundleToken && (
                       <div
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4"
                         onClick={(e) => { if (e.target === e.currentTarget) setBundlePreviewOpen(false); }}
                       >
                         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl h-[85vh] flex flex-col overflow-hidden">
-                          <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
+                          <div className="flex items-center justify-between px-4 py-3 border-b border-[#e8e3d9] shrink-0">
                             <div>
-                              <p className="text-sm font-semibold text-gray-900">Предпросмотр пакета договоров</p>
-                              <p className="text-xs text-muted-foreground mt-0.5">4 документа · удаление зуба</p>
+                              <p className="text-sm font-semibold text-[#0f172a]">Предпросмотр пакета договоров</p>
+                              <p className="text-xs text-[#64748b] mt-0.5">4 документа · удаление зуба</p>
                             </div>
                             <div className="flex items-center gap-2">
                               <a
                                 href={bundleUrl ?? `/p/bundle/${bundleToken}`}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="text-xs px-2.5 py-1.5 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition-colors"
+                                className="text-xs px-2.5 py-1.5 bg-[#f1ede4] text-[#0f172a] rounded-lg font-medium hover:bg-[#e8e3d9] transition-colors"
                               >
                                 ↗ В новой вкладке
                               </a>
                               <button
                                 onClick={() => setBundlePreviewOpen(false)}
-                                className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-slate-100 transition-colors"
+                                className="w-7 h-7 rounded-full flex items-center justify-center text-[#64748b] hover:bg-[#f1ede4] transition-colors"
                               >
                                 <X className="w-4 h-4" />
                               </button>
@@ -2842,7 +2842,7 @@ export function PatientDetailPanel() {
 
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
+          <div className="flex-1 flex items-center justify-center text-[#64748b] text-sm">
             {t("patient.loading")}
           </div>
         )}
@@ -2882,7 +2882,7 @@ export function PatientDetailPanel() {
 
       {/* Bundle required modal — blocks proceeding after extraction diagnosis until contracts are sent */}
       {bundleRequiredModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
 
             {/* Header */}
@@ -2890,22 +2890,22 @@ export function PatientDetailPanel() {
               <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto mb-3 border border-amber-100">
                 <ClipboardList className="w-7 h-7 text-amber-500" />
               </div>
-              <h3 className="text-[15px] font-bold text-gray-900">Отправьте договоры пациенту</h3>
-              <p className="text-[12px] text-muted-foreground mt-1.5 leading-relaxed">
+              <h3 className="text-[15px] font-bold text-[#0f172a]">Отправьте договоры пациенту</h3>
+              <p className="text-[12px] text-[#64748b] mt-1.5 leading-relaxed">
                 Перед началом лечения ({matchedCatsState.join(", ")}) необходимо отправить пакет документов и получить согласие пациента.
               </p>
             </div>
 
             {/* Bundle card */}
             <div className="px-5 pb-4">
-              <div className="rounded-xl border border-gray-100 overflow-hidden bg-gray-50/50">
-                <div className="flex items-center gap-2.5 px-3.5 py-2.5 border-b border-gray-100 bg-white">
+              <div className="rounded-xl border border-[#e8e3d9] overflow-hidden bg-[#faf8f4]/50">
+                <div className="flex items-center gap-2.5 px-3.5 py-2.5 border-b border-[#e8e3d9] bg-white">
                   <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                     <FileText className="w-3.5 h-3.5 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[12px] font-bold text-gray-900">Пакет договоров</p>
-                    <p className="text-[10px] text-gray-400">Договоры, согласия и памятки для пациента</p>
+                    <p className="text-[12px] font-bold text-[#0f172a]">Пакет договоров</p>
+                    <p className="text-[10px] text-[#94a3b8]">Договоры, согласия и памятки для пациента</p>
                   </div>
                   {bundleSent && (
                     <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
@@ -2914,7 +2914,7 @@ export function PatientDetailPanel() {
 
                 <div className="px-3.5 py-3">
                   {bundlePreparing && (
-                    <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
+                    <div className="flex items-center gap-2 text-[12px] text-[#64748b]">
                       <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
                       Формируем документы…
                     </div>
@@ -2924,7 +2924,7 @@ export function PatientDetailPanel() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => setBundlePreviewOpen(true)}
-                        className="flex-1 h-8 text-[12px] font-medium text-gray-700 border border-border rounded-lg hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5"
+                        className="flex-1 h-8 text-[12px] font-medium text-[#0f172a] border border-[#e8e3d9] rounded-lg hover:bg-[#faf8f4] transition-colors flex items-center justify-center gap-1.5"
                       >
                         <FileText className="w-3.5 h-3.5" />
                         Предпросмотр
@@ -2971,7 +2971,7 @@ export function PatientDetailPanel() {
                   "w-full h-11 rounded-xl text-[14px] font-semibold transition-all flex items-center justify-center gap-2",
                   bundleSent
                     ? "bg-primary text-white hover:bg-primary/90 shadow-sm"
-                    : "bg-gray-100 text-gray-400 cursor-not-allowed",
+                    : "bg-[#f1ede4] text-[#94a3b8] cursor-not-allowed",
                 )}
               >
                 {bundleSent ? "Продолжить к плану лечения →" : "Сначала отправьте договоры"}

@@ -136,18 +136,18 @@ function BundleModal({ bundle, onClose }: { bundle: BundleGroup; onClose: () => 
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-sm p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3.5 border-b border-gray-100">
+        <div className="flex items-center justify-between px-4 py-3.5 border-b border-[#e8e3d9]">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
               <Package className="w-4.5 h-4.5 text-primary" />
             </div>
             <div>
-              <p className="text-[13px] font-bold text-gray-900">Пакет договоров</p>
+              <p className="text-[13px] font-bold text-[#0f172a]">Пакет договоров</p>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className={cn(
                   "inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold border",
@@ -156,19 +156,19 @@ function BundleModal({ bundle, onClose }: { bundle: BundleGroup; onClose: () => 
                   {aggCfg.icon}
                   {STATUS_LABELS[aggStatus]}
                 </span>
-                <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                <span className="text-[10px] text-[#94a3b8] flex items-center gap-1">
                   <Clock className="w-2.5 h-2.5" />
                   {formatDateShort(bundle.createdAt)}
                 </span>
                 {bundle.sentByName && (
-                  <span className="text-[10px] text-gray-400">· {bundle.sentByName}</span>
+                  <span className="text-[10px] text-[#94a3b8]">· {bundle.sentByName}</span>
                 )}
               </div>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors"
+            className="w-7 h-7 rounded-full flex items-center justify-center text-[#94a3b8] hover:bg-[#f1ede4] transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -179,18 +179,18 @@ function BundleModal({ bundle, onClose }: { bundle: BundleGroup; onClose: () => 
           {bundle.contracts.map((c) => {
             const cfg = STATUS_CONFIG[c.status] ?? STATUS_CONFIG.sent;
             return (
-              <div key={c.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-gray-100 bg-gray-50/50">
+              <div key={c.id} className="flex items-center gap-3 px-3 py-2.5 rounded-2xl border border-[#e8e3d9] bg-[#faf8f4]/50">
                 <div className="relative shrink-0">
-                  <div className="w-8 h-8 rounded-lg bg-white border border-gray-100 shadow-sm flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-lg bg-white border border-[#e8e3d9] shadow-sm flex items-center justify-center">
                     <FileText className="w-3.5 h-3.5 text-primary/70" />
                   </div>
                   <span className={cn(
-                    "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-gray-50",
+                    "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#e8e3d9]/50",
                     cfg.dot,
                   )} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[12px] font-semibold text-gray-800 leading-snug line-clamp-1">
+                  <p className="text-[12px] font-semibold text-[#0f172a] leading-snug line-clamp-1">
                     {c.templateName}
                   </p>
                   <div className="flex items-center gap-1 mt-0.5">
@@ -212,7 +212,7 @@ function BundleModal({ bundle, onClose }: { bundle: BundleGroup; onClose: () => 
                   href={`/p/contract/${c.token}?preview=1`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-gray-300 hover:text-primary hover:bg-white transition-colors border border-transparent hover:border-gray-100"
+                  className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-[#94a3b8] hover:text-primary hover:bg-white transition-colors border border-transparent hover:border-[#e8e3d9]"
                   title="Открыть договор"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
@@ -228,7 +228,7 @@ function BundleModal({ bundle, onClose }: { bundle: BundleGroup; onClose: () => 
             href={`/p/bundle/${bundle.bundleToken}?preview=1`}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-gray-200 text-[13px] font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-colors"
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-[#e8e3d9] text-[13px] font-medium text-[#64748b] hover:bg-[#faf8f4] hover:border-[#d4cfc6] transition-colors"
           >
             <ExternalLink className="w-3.5 h-3.5" />
             Открыть весь пакет
@@ -282,29 +282,29 @@ export function ContractsTab({ patientId, bundle }: ContractsTabProps) {
         <div className="px-4 py-4 space-y-5">
 
           {/* ── Send contract card ── */}
-          <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm bg-white">
-            <div className="px-4 pt-4 pb-3 border-b border-gray-50">
+          <div className="rounded-2xl overflow-hidden border border-[#e8e3d9] shadow-sm bg-white">
+            <div className="px-4 pt-4 pb-3 border-b border-[#e8e3d9]/50">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                   <FileSignature className="w-4 h-4 text-primary" />
                 </div>
                 <div>
-                  <p className="text-[13px] font-bold text-gray-900">Отправить договор</p>
-                  <p className="text-[11px] text-gray-400">Выберите шаблон и отправьте через WhatsApp</p>
+                  <p className="text-[13px] font-bold text-[#0f172a]">Отправить договор</p>
+                  <p className="text-[11px] text-[#94a3b8]">Выберите шаблон и отправьте через WhatsApp</p>
                 </div>
               </div>
             </div>
 
             <div className="px-4 pb-4 pt-3 space-y-3">
               {templatesLoading ? (
-                <div className="flex items-center gap-2 py-3 text-[12px] text-gray-400">
+                <div className="flex items-center gap-2 py-3 text-[12px] text-[#94a3b8]">
                   <RefreshCw className="w-3.5 h-3.5 animate-spin shrink-0" />
                   Загрузка шаблонов…
                 </div>
               ) : templates.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 py-4 text-center">
-                  <FileText className="w-8 h-8 text-gray-200" />
-                  <p className="text-[12px] text-gray-500">
+                  <FileText className="w-8 h-8 text-[#e8e3d9]" />
+                  <p className="text-[12px] text-[#64748b]">
                     Нет шаблонов.{" "}
                     <span className="font-medium text-primary">Меню → Шаблоны договоров</span>
                   </p>
@@ -316,16 +316,16 @@ export function ContractsTab({ patientId, bundle }: ContractsTabProps) {
                       "flex items-center gap-2.5 rounded-xl border px-3 py-0 transition-all",
                       selectedTemplateId
                         ? "border-primary/40 bg-primary/3 ring-1 ring-primary/20"
-                        : "border-gray-200 bg-gray-50 hover:border-gray-300",
+                        : "border-[#e8e3d9] bg-[#faf8f4] hover:border-[#d4cfc6]",
                     )}>
                       <FileText className={cn(
                         "w-4 h-4 shrink-0 transition-colors",
-                        selectedTemplateId ? "text-primary" : "text-gray-400",
+                        selectedTemplateId ? "text-primary" : "text-[#94a3b8]",
                       )} />
                       <select
                         value={selectedTemplateId}
                         onChange={(e) => setSelectedTemplateId(e.target.value)}
-                        className="flex-1 bg-transparent text-[13px] font-medium text-gray-700 py-3 outline-none appearance-none cursor-pointer"
+                        className="flex-1 bg-transparent text-[13px] font-medium text-[#0f172a] py-3 outline-none appearance-none cursor-pointer"
                       >
                         <option value="">— Выберите шаблон —</option>
                         {templates.map((tmpl) => (
@@ -334,7 +334,7 @@ export function ContractsTab({ patientId, bundle }: ContractsTabProps) {
                       </select>
                       <ChevronDown className={cn(
                         "w-4 h-4 shrink-0 transition-all pointer-events-none",
-                        selectedTemplateId ? "text-primary" : "text-gray-400",
+                        selectedTemplateId ? "text-primary" : "text-[#94a3b8]",
                       )} />
                     </div>
                   </div>
@@ -347,7 +347,7 @@ export function ContractsTab({ patientId, bundle }: ContractsTabProps) {
                       "w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl text-[14px] font-semibold transition-all",
                       selectedTemplateId
                         ? "bg-[#25D366] hover:bg-[#22c55e] active:bg-[#16a34a] text-white shadow-md shadow-[#25D366]/25"
-                        : "bg-gray-100 text-gray-400 cursor-not-allowed",
+                        : "bg-[#f1ede4] text-[#94a3b8] cursor-not-allowed",
                     )}
                   >
                     {sendMutation.isPending ? (
@@ -370,19 +370,19 @@ export function ContractsTab({ patientId, bundle }: ContractsTabProps) {
 
           {/* ── Extraction bundle card ── */}
           {bundle?.hasExtractionInPlan && (
-            <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm bg-white">
-              <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-50">
-                <span className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
-                  <ClipboardList className="w-4 h-4 text-slate-500" />
+            <div className="rounded-2xl overflow-hidden border border-[#e8e3d9] shadow-sm bg-white">
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-[#e8e3d9]/50">
+                <span className="w-8 h-8 rounded-lg bg-[#f1ede4] flex items-center justify-center shrink-0">
+                  <ClipboardList className="w-4 h-4 text-[#64748b]" />
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-bold text-gray-900 leading-tight">Пакет договоров</p>
-                  <p className="text-[11px] text-gray-400 mt-0.5 leading-tight">Договор · ИДС · Вкладыш · Памятка</p>
+                  <p className="text-[13px] font-bold text-[#0f172a] leading-tight">Пакет договоров</p>
+                  <p className="text-[11px] text-[#94a3b8] mt-0.5 leading-tight">Договор · ИДС · Вкладыш · Памятка</p>
                 </div>
               </div>
               <div className="px-4 py-3">
                 {bundle.bundlePreparing && (
-                  <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
+                  <div className="flex items-center gap-2 text-[12px] text-[#64748b]">
                     <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
                     Формируем документы…
                   </div>
@@ -391,7 +391,7 @@ export function ContractsTab({ patientId, bundle }: ContractsTabProps) {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={bundle.onOpenPreview}
-                      className="flex-1 h-8 text-[12px] font-medium text-gray-700 border border-border rounded-lg hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5"
+                      className="flex-1 h-8 text-[12px] font-medium text-[#0f172a] border border-[#e8e3d9] rounded-lg hover:bg-[#faf8f4] transition-colors flex items-center justify-center gap-1.5"
                     >
                       <FileText className="w-3.5 h-3.5" />
                       Предпросмотр
@@ -418,7 +418,7 @@ export function ContractsTab({ patientId, bundle }: ContractsTabProps) {
                     </div>
                     <button
                       onClick={bundle.onOpenPreview}
-                      className="text-[12px] font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                      className="text-[12px] font-medium text-[#64748b] hover:text-[#0f172a] transition-colors flex items-center gap-1"
                     >
                       <FileText className="w-3 h-3" />
                       Открыть
@@ -446,32 +446,32 @@ export function ContractsTab({ patientId, bundle }: ContractsTabProps) {
               className="w-full flex items-center justify-between mb-3 group"
             >
               <div className="flex items-center gap-2">
-                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">
+                <p className="text-[11px] font-semibold text-[#94a3b8] uppercase tracking-wide">
                   История договоров
                 </p>
                 {historyItems.length > 0 && (
-                  <span className="text-[10px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">
+                  <span className="text-[10px] font-bold bg-[#f1ede4] text-[#64748b] px-1.5 py-0.5 rounded-full">
                     {historyItems.length}
                   </span>
                 )}
               </div>
               {historyOpen
-                ? <ChevronUp className="w-3.5 h-3.5 text-gray-300 group-hover:text-gray-400 transition-colors" />
-                : <ChevronDown className="w-3.5 h-3.5 text-gray-300 group-hover:text-gray-400 transition-colors" />}
+                ? <ChevronUp className="w-3.5 h-3.5 text-[#94a3b8] group-hover:text-[#94a3b8] transition-colors" />
+                : <ChevronDown className="w-3.5 h-3.5 text-[#94a3b8] group-hover:text-[#94a3b8] transition-colors" />}
             </button>
 
             {historyOpen && (
               <>
                 {contractsLoading ? (
                   <div className="flex items-center justify-center py-8">
-                    <RefreshCw className="w-4 h-4 text-gray-300 animate-spin" />
+                    <RefreshCw className="w-4 h-4 text-[#94a3b8] animate-spin" />
                   </div>
                 ) : historyItems.length === 0 ? (
                   <div className="flex flex-col items-center justify-center gap-2.5 py-8 text-center">
-                    <div className="w-11 h-11 rounded-2xl bg-gray-100 flex items-center justify-center">
-                      <FileText className="w-5 h-5 text-gray-300" />
+                    <div className="w-11 h-11 rounded-2xl bg-[#f1ede4] flex items-center justify-center">
+                      <FileText className="w-5 h-5 text-[#94a3b8]" />
                     </div>
-                    <p className="text-[12px] text-gray-400">Договоров ещё не отправлено</p>
+                    <p className="text-[12px] text-[#94a3b8]">Договоров ещё не отправлено</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -486,7 +486,7 @@ export function ContractsTab({ patientId, bundle }: ContractsTabProps) {
                             key={bundle.bundleToken}
                             type="button"
                             onClick={() => setOpenBundle(bundle)}
-                            className="w-full text-left bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden hover:border-primary/30 hover:shadow-md transition-all group"
+                            className="w-full text-left bg-white rounded-2xl border border-[#e8e3d9] shadow-sm overflow-hidden hover:border-primary/30 hover:shadow-md transition-all group"
                           >
                             <div className="flex items-start gap-3 px-3.5 py-3">
                               <div className="relative shrink-0 mt-0.5">
@@ -501,10 +501,10 @@ export function ContractsTab({ patientId, bundle }: ContractsTabProps) {
 
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-1.5">
-                                  <p className="text-[13px] font-semibold text-gray-800 leading-snug">
+                                  <p className="text-[13px] font-semibold text-[#0f172a] leading-snug">
                                     Пакет договоров
                                   </p>
-                                  <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full font-medium">
+                                  <span className="text-[10px] text-[#94a3b8] bg-[#f1ede4] px-1.5 py-0.5 rounded-full font-medium">
                                     {bundle.contracts.length} док.
                                   </span>
                                 </div>
@@ -520,17 +520,17 @@ export function ContractsTab({ patientId, bundle }: ContractsTabProps) {
                                         ? `${signedCount}/${bundle.contracts.length} подписано`
                                         : STATUS_LABELS[aggStatus]}
                                   </span>
-                                  <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                                  <span className="text-[10px] text-[#94a3b8] flex items-center gap-1">
                                     <Clock className="w-2.5 h-2.5" />
                                     {formatDateShort(bundle.createdAt)}
                                   </span>
                                   {bundle.sentByName && (
-                                    <span className="text-[10px] text-gray-400">· {bundle.sentByName}</span>
+                                    <span className="text-[10px] text-[#94a3b8]">· {bundle.sentByName}</span>
                                   )}
                                 </div>
                               </div>
 
-                              <ChevronDown className="w-4 h-4 text-gray-300 group-hover:text-primary transition-colors shrink-0 mt-2.5 rotate-[-90deg]" />
+                              <ChevronDown className="w-4 h-4 text-[#94a3b8] group-hover:text-primary transition-colors shrink-0 mt-2.5 rotate-[-90deg]" />
                             </div>
                           </button>
                         );
@@ -539,7 +539,7 @@ export function ContractsTab({ patientId, bundle }: ContractsTabProps) {
                       const c = item.contract;
                       const cfg = STATUS_CONFIG[c.status] ?? STATUS_CONFIG.sent;
                       return (
-                        <div key={c.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                        <div key={c.id} className="bg-white rounded-2xl border border-[#e8e3d9] shadow-sm overflow-hidden">
                           <div className="flex items-start gap-3 px-3.5 py-3">
                             <div className="relative shrink-0 mt-0.5">
                               <div className="w-9 h-9 rounded-xl bg-primary/5 flex items-center justify-center">
@@ -551,7 +551,7 @@ export function ContractsTab({ patientId, bundle }: ContractsTabProps) {
                               )} />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-[13px] font-semibold text-gray-800 truncate leading-snug">
+                              <p className="text-[13px] font-semibold text-[#0f172a] truncate leading-snug">
                                 {c.templateName}
                               </p>
                               <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
@@ -562,12 +562,12 @@ export function ContractsTab({ patientId, bundle }: ContractsTabProps) {
                                   {cfg.icon}
                                   {STATUS_LABELS[c.status]}
                                 </span>
-                                <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                                <span className="text-[10px] text-[#94a3b8] flex items-center gap-1">
                                   <Clock className="w-2.5 h-2.5" />
                                   {formatDateShort(c.createdAt)}
                                 </span>
                                 {c.sentByName && (
-                                  <span className="text-[10px] text-gray-400">· {c.sentByName}</span>
+                                  <span className="text-[10px] text-[#94a3b8]">· {c.sentByName}</span>
                                 )}
                               </div>
                               {c.status === "signed" && c.signedAt && (
@@ -581,7 +581,7 @@ export function ContractsTab({ patientId, bundle }: ContractsTabProps) {
                               href={`/p/contract/${c.token}?preview=1`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-gray-300 hover:text-primary hover:bg-primary/5 transition-colors mt-0.5"
+                              className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-[#94a3b8] hover:text-primary hover:bg-primary/5 transition-colors mt-0.5"
                               title="Открыть договор"
                             >
                               <ExternalLink className="w-3.5 h-3.5" />

@@ -12,7 +12,7 @@ const COLORS = {
   paid: "#10b981",
   debt: "#fbbf24",
   pending: "#f87171",
-  track: "#f3f4f6",
+  track: "#f1ede4",
 } as const;
 
 function formatK(n: number): string {
@@ -96,11 +96,11 @@ function DonutChart({
         ))}
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-        <span className="font-bold text-gray-800 leading-none tabular-nums" style={{ fontSize: size * 0.22 }}>
+        <span className="font-bold text-[#0f172a] leading-none tabular-nums" style={{ fontSize: size * 0.22 }}>
           {centerLabel}
         </span>
         {centerSub && (
-          <span className="text-gray-400 leading-none mt-0.5" style={{ fontSize: size * 0.14 }}>
+          <span className="text-[#94a3b8] leading-none mt-0.5" style={{ fontSize: size * 0.14 }}>
             {centerSub}
           </span>
         )}
