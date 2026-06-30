@@ -223,23 +223,28 @@
 }
 
 .dash-btn-primary {
-  background: var(--primary);
-  color: #fff;
+  background: #1f75fe;
+  color: #ffffff;
 }
 
-.dash-btn-primary:hover {
-  background: var(--primary-hover);
+.dash-btn-primary:hover:not(:disabled) {
+  background: #1a65e8;
   transform: translateY(-1px);
 }
 
-.dash-btn-secondary {
-  background: var(--surface);
-  color: var(--primary);
-  border: 1px solid var(--primary);
+.dash-btn-primary:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 
-.dash-btn-secondary:hover {
-  background: var(--primary-light);
+.dash-btn-secondary {
+  background: #ffffff;
+  color: #1f75fe;
+  border: 1px solid #1f75fe;
+}
+
+.dash-btn-secondary:hover:not(:disabled) {
+  background: rgba(31, 117, 254, 0.1);
 }
 
 .dash-btn-ghost {

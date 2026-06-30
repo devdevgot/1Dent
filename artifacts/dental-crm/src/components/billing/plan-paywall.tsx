@@ -125,7 +125,7 @@ export function PlanPaywall() {
               type="button"
               disabled={startingTrial}
               onClick={() => startTrialMutation.mutate()}
-              className="dash-btn dash-btn-primary w-full py-3.5"
+              className="dash-btn dash-btn-primary w-full py-3.5 shadow-md bg-[#1f75fe] hover:bg-[#1a65e8] text-white disabled:opacity-65"
             >
               {startingTrial ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
