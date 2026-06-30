@@ -308,7 +308,7 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
               key={tab.key}
               type="button"
               onClick={() => setActiveTab(tab.key)}
-              className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-xs font-semibold transition-all ${isActive ? "bg-[var(--primary)]/10 text-[var(--primary)]" : "text-[var(--text-secondary)]"}`}
+              className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-xs font-semibold transition-all ${isActive ? "bg-[var(--ds-primary)]/10 text-[var(--ds-primary)]" : "text-[var(--text-secondary)]"}`}
             >
               <Icon className="w-4 h-4" />
               {t(tab.labelKey, tab.key)}

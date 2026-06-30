@@ -445,7 +445,7 @@ export default function PatientsPage() {
         title={t("nav.patients")}
         onBack={() => window.history.back()}
         badge={
-          <span className="bg-[var(--primary-light)] text-[var(--primary)] text-xs font-semibold px-2 py-0.5 rounded-full">
+          <span className="bg-[var(--primary-light)] text-[var(--ds-primary)] text-xs font-semibold px-2 py-0.5 rounded-full">
             {allPatients.length}
           </span>
         }
@@ -465,7 +465,7 @@ export default function PatientsPage() {
             >
               <SlidersHorizontal className="w-4 h-4" />
               {hasActiveFilter && (
-                <span className="absolute top-1 right-1 w-2 h-2 bg-[var(--primary)] rounded-full" />
+                <span className="absolute top-1 right-1 w-2 h-2 bg-[var(--ds-primary)] rounded-full" />
               )}
             </PageHeaderIconButton>
             {canCreate && (
@@ -485,7 +485,7 @@ export default function PatientsPage() {
                 value={filterSearch}
                 onChange={(e) => setFilterSearch(e.target.value)}
                 placeholder={t("patients.searchPlaceholder")}
-                className="w-full pl-9 pr-3 py-2 text-sm border border-[var(--border)] rounded-xl focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 bg-[var(--surface)] text-[var(--text)]"
+                className="w-full pl-9 pr-3 py-2 text-sm border border-[var(--ds-border)] rounded-xl focus:outline-none focus:border-[var(--ds-primary)] focus:ring-2 focus:ring-[var(--ds-primary)]/20 bg-[var(--ds-surface)] text-[var(--text)]"
               />
             </div>
 
@@ -499,7 +499,7 @@ export default function PatientsPage() {
                     className={cn(
                       "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150",
                       view === tab.key
-                        ? "bg-[var(--primary-light)] text-[var(--primary)]"
+                        ? "bg-[var(--primary-light)] text-[var(--ds-primary)]"
                         : "text-[var(--text-secondary)] hover:text-[var(--text)]",
                     )}
                   >
@@ -511,7 +511,7 @@ export default function PatientsPage() {
             </div>
 
             {showFilters && (
-              <div className="mt-2.5 space-y-2.5 border-t border-[var(--border)] pt-2.5">
+              <div className="mt-2.5 space-y-2.5 border-t border-[var(--ds-border)] pt-2.5">
                 <div className="flex items-center gap-1.5 bg-[var(--surface-2)] rounded-xl p-1">
                   {DATE_OPTIONS.map((opt) => (
                     <button
@@ -520,7 +520,7 @@ export default function PatientsPage() {
                       className={cn(
                         "flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all",
                         dateFilter === opt.key
-                          ? "bg-[var(--primary-light)] text-[var(--primary)]"
+                          ? "bg-[var(--primary-light)] text-[var(--ds-primary)]"
                           : "text-[var(--text-secondary)] hover:text-[var(--text)]",
                       )}
                     >
@@ -532,7 +532,7 @@ export default function PatientsPage() {
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value as PatientStatus | "all")}
-                    className="flex-1 text-sm border border-[var(--border)] rounded-xl px-3 py-2 bg-[var(--surface)] focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 text-[var(--text)]"
+                    className="flex-1 text-sm border border-[var(--ds-border)] rounded-xl px-3 py-2 bg-[var(--ds-surface)] focus:outline-none focus:border-[var(--ds-primary)] focus:ring-2 focus:ring-[var(--ds-primary)]/20 text-[var(--text)]"
                   >
                     <option value="all">{t("patients.allStatuses")}</option>
                     {KANBAN_COLUMNS.map((col) => (
@@ -544,7 +544,7 @@ export default function PatientsPage() {
                   <select
                     value={sourceFilter}
                     onChange={(e) => setSourceFilter(e.target.value as PatientSource | "all")}
-                    className="flex-1 text-sm border border-[var(--border)] rounded-xl px-3 py-2 bg-[var(--surface)] focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 text-[var(--text)]"
+                    className="flex-1 text-sm border border-[var(--ds-border)] rounded-xl px-3 py-2 bg-[var(--ds-surface)] focus:outline-none focus:border-[var(--ds-primary)] focus:ring-2 focus:ring-[var(--ds-primary)]/20 text-[var(--text)]"
                   >
                     <option value="all">{t("patients.allSources")}</option>
                     {ALL_SOURCES.map((s) => (

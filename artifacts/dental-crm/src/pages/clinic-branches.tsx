@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
-import { Plus, Pencil, Trash2, Loader2, Building2, X } from "lucide-react";
-import { PageHeader } from "@/components/layout/page-header";
+import { Pencil, Trash2, Loader2, Building2, X } from "lucide-react";
+import { PageHeader, PageHeaderAddButton } from "@/components/layout/page-header";
 import { PageShell } from "@/components/layout/page-shell";
 import { useToast } from "@/hooks/use-toast";
 import { getBaseUrl } from "@/lib/base-url";
@@ -124,13 +124,10 @@ export default function ClinicBranchesPage() {
         title="Филиалы"
         onBack={() => setLocation("/menu")}
         right={
-          <button
-            type="button"
+          <PageHeaderAddButton
+            title="Добавить филиал"
             onClick={() => { setShowAdd(true); setNewName(""); }}
-            className="w-9 h-9 rounded-xl bg-[var(--primary)] flex items-center justify-center text-white hover:bg-[var(--primary-hover)] transition-colors"
-          >
-            <Plus className="w-5 h-5" />
-          </button>
+          />
         }
       />
 
@@ -151,7 +148,7 @@ export default function ClinicBranchesPage() {
 
         {/* Add form */}
         {showAdd && (
-          <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] p-4 space-y-3 shadow-md">
+          <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] p-4 space-y-3 shadow-md">
             <p className="text-[13px] font-semibold text-[var(--text)]">Новый филиал</p>
             <input
               type="text"
@@ -159,20 +156,20 @@ export default function ClinicBranchesPage() {
               onChange={(e) => setNewName(e.target.value)}
               placeholder="Название филиала"
               autoFocus
-              className="w-full border border-[var(--border)] rounded-xl px-3 py-2.5 text-[14px] text-[var(--text)] focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20"
+              className="w-full border border-[var(--ds-border)] rounded-xl px-3 py-2.5 text-[14px] text-[var(--text)] focus:outline-none focus:border-[var(--ds-primary)] focus:ring-2 focus:ring-[var(--ds-primary)]/20"
               onKeyDown={(e) => { if (e.key === "Enter") void handleCreate(); }}
             />
             <div className="flex gap-2">
               <button
                 onClick={() => setShowAdd(false)}
-                className="flex-1 py-2.5 rounded-full border border-[var(--border)] text-[13px] font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-2)] transition-colors"
+                className="flex-1 py-2.5 rounded-full border border-[var(--ds-border)] text-[13px] font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-2)] transition-colors"
               >
                 Отмена
               </button>
               <button
                 onClick={() => void handleCreate()}
                 disabled={saving || !newName.trim()}
-                className="flex-1 py-2.5 rounded-full bg-[var(--primary)] text-white text-[13px] font-semibold hover:bg-[var(--primary-hover)] hover:scale-105 transition-all disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-1.5"
+                className="flex-1 py-2.5 rounded-full bg-[var(--ds-primary)] text-white text-[13px] font-semibold hover:bg-[var(--primary-hover)] hover:scale-105 transition-all disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-1.5"
               >
                 {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                 Добавить
@@ -184,16 +181,16 @@ export default function ClinicBranchesPage() {
         {/* Branch list */}
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-6 h-6 animate-spin text-[var(--primary)]" />
+            <Loader2 className="w-6 h-6 animate-spin text-[var(--ds-primary)]" />
           </div>
         ) : branches.length === 0 ? (
           <div className="text-center py-12">
-            <Building2 className="w-12 h-12 text-[var(--border)] mx-auto mb-3" />
+            <Building2 className="w-12 h-12 text-[var(--ds-border)] mx-auto mb-3" />
             <p className="text-[14px] font-medium text-[var(--text-secondary)]">Филиалов пока нет</p>
             <p className="text-[12px] text-[var(--text-subtle)] mt-1">Нажмите + чтобы добавить первый филиал</p>
           </div>
         ) : (
-          <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] overflow-hidden divide-y divide-[var(--border)] shadow-md">
+          <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] overflow-hidden divide-y divide-[var(--ds-border)]/60 shadow-sm">
             {branches.map((b) => (
               <div key={b.id} className="px-4 py-3.5">
                 {editingId === b.id ? (
@@ -203,13 +200,13 @@ export default function ClinicBranchesPage() {
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
                       autoFocus
-                      className="flex-1 border border-[var(--border)] rounded-xl px-2.5 py-1.5 text-[14px] text-[var(--text)] focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20"
+                      className="flex-1 border border-[var(--ds-border)] rounded-xl px-2.5 py-1.5 text-[14px] text-[var(--text)] focus:outline-none focus:border-[var(--ds-primary)] focus:ring-2 focus:ring-[var(--ds-primary)]/20"
                       onKeyDown={(e) => { if (e.key === "Enter") void handleUpdate(b.id); if (e.key === "Escape") setEditingId(null); }}
                     />
                     <button
                       onClick={() => void handleUpdate(b.id)}
                       disabled={saving}
-                      className="px-3 py-1.5 rounded-full bg-[var(--primary)] text-white text-[12px] font-semibold disabled:opacity-50 hover:bg-[var(--primary-hover)]"
+                      className="px-3 py-1.5 rounded-full bg-[var(--ds-primary)] text-white text-[12px] font-semibold disabled:opacity-50 hover:bg-[var(--primary-hover)]"
                     >
                       {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Сохр."}
                     </button>
@@ -221,7 +218,7 @@ export default function ClinicBranchesPage() {
                   <div className="space-y-2">
                     <p className="text-[13px] text-[var(--danger)] font-medium">Удалить филиал «{b.name}»? Все данные филиала будут удалены.</p>
                     <div className="flex gap-2">
-                      <button onClick={() => setConfirmDelete(null)} className="flex-1 py-2 rounded-full border border-[var(--border)] text-[12px] font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-2)]">
+                      <button onClick={() => setConfirmDelete(null)} className="flex-1 py-2 rounded-full border border-[var(--ds-border)] text-[12px] font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-2)]">
                         Нет
                       </button>
                       <button
@@ -237,7 +234,7 @@ export default function ClinicBranchesPage() {
                 ) : (
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-xl bg-[var(--primary-light)] flex items-center justify-center shrink-0">
-                      <Building2 className="w-4 h-4 text-[var(--primary)]" />
+                      <Building2 className="w-4 h-4 text-[var(--ds-primary)]" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-[14px] font-medium text-[var(--text)] truncate">{b.name}</p>

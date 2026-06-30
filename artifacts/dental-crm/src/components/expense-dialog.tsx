@@ -155,7 +155,7 @@ export default function ExpenseDialog({ expense, onClose, onSuccess }: ExpenseDi
           <select
             value={uiCategory}
             onChange={(e) => handleUiCategoryChange(e.target.value)}
-            className="w-full text-sm px-3 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30"
+            className="w-full text-sm px-3 py-2.5 rounded-xl border border-[var(--ds-border)] bg-[var(--surface-2)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/30"
           >
             {UI_CATEGORIES.map((c) => (
               <option key={c} value={c}>{t(`expenses.cat.${c}`)}</option>
@@ -172,7 +172,7 @@ export default function ExpenseDialog({ expense, onClose, onSuccess }: ExpenseDi
               value={selectedUserId}
               onChange={(e) => setSelectedUserId(e.target.value)}
               required
-              className="w-full text-sm px-3 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30"
+              className="w-full text-sm px-3 py-2.5 rounded-xl border border-[var(--ds-border)] bg-[var(--surface-2)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/30"
             >
               <option value="">{t("expenses.selectEmployee")}</option>
               {employees.map((emp) => (
@@ -194,7 +194,7 @@ export default function ExpenseDialog({ expense, onClose, onSuccess }: ExpenseDi
               value={subcategory}
               onChange={(e) => setSubcategory(e.target.value)}
               placeholder={t("expenses.subcategoryPlaceholder")}
-              className="w-full text-sm px-3 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30"
+              className="w-full text-sm px-3 py-2.5 rounded-xl border border-[var(--ds-border)] bg-[var(--surface-2)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/30"
             />
           </div>
         )}
@@ -211,7 +211,7 @@ export default function ExpenseDialog({ expense, onClose, onSuccess }: ExpenseDi
             min="0"
             step="0.01"
             required
-            className="w-full text-sm px-3 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30"
+            className="w-full text-sm px-3 py-2.5 rounded-xl border border-[var(--ds-border)] bg-[var(--surface-2)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/30"
           />
         </div>
 
@@ -224,7 +224,7 @@ export default function ExpenseDialog({ expense, onClose, onSuccess }: ExpenseDi
             value={expenseDate}
             onChange={(e) => setExpenseDate(e.target.value)}
             required
-            className="w-full text-sm px-3 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30"
+            className="w-full text-sm px-3 py-2.5 rounded-xl border border-[var(--ds-border)] bg-[var(--surface-2)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/30"
           />
         </div>
 
@@ -237,7 +237,7 @@ export default function ExpenseDialog({ expense, onClose, onSuccess }: ExpenseDi
             onChange={(e) => setDescription(e.target.value)}
             placeholder={t("expenses.descriptionPlaceholder")}
             rows={2}
-            className="w-full text-sm px-3 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 resize-none"
+            className="w-full text-sm px-3 py-2.5 rounded-xl border border-[var(--ds-border)] bg-[var(--surface-2)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/30 resize-none"
           />
         </div>
       </form>

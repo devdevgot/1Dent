@@ -1,18 +1,18 @@
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&display=swap');
 
 :root {
-  /* Base palette */
+  /* Base palette — ds-* prefix avoids collision with shadcn HSL channel tokens */
   --bg: #faf8f4;
-  --surface: #ffffff;
+  --ds-surface: #ffffff;
   --surface-2: #f1ede4;
-  --border: #e8e3d9;
+  --ds-border: #e8e3d9;
   --border-strong: #d4cfc6;
   --text: #0f172a;
   --text-secondary: #64748b;
   --text-subtle: #94a3b8;
 
   /* Primary blue */
-  --primary: #1f75fe;
+  --ds-primary: #1f75fe;
   --primary-hover: #1a65e8;
   --primary-active: #1555cc;
   --primary-light: rgba(31, 117, 254, 0.10);

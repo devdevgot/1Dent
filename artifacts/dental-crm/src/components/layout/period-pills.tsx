@@ -33,7 +33,7 @@ export function PeriodPills<T extends string = string>({
               "rounded-xl font-semibold transition-all",
               size === "sm" ? "px-3 py-1.5 text-xs" : "px-3.5 py-2 text-sm",
               active
-                ? "bg-[var(--primary-light)] text-[var(--primary)]"
+                ? "bg-[var(--primary-light)] text-[var(--ds-primary)]"
                 : "text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]",
             )}
           >

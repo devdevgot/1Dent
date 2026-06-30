@@ -42,8 +42,8 @@ export const PatientCardView = memo(function PatientCardView({
   return (
     <div
       className={cn(
-        "bg-[var(--surface)] rounded-2xl border p-3.5 select-none group shadow-sm",
-        hasRedAlert ? "border-red-400 bg-red-50/40" : "border-[var(--border)]/60",
+        "bg-[var(--ds-surface)] rounded-2xl border p-3.5 select-none group shadow-sm",
+        hasRedAlert ? "border-red-400 bg-red-50/40" : "border-[var(--ds-border)]/60",
         onSelect && "cursor-pointer hover:shadow-md",
         className,
       )}
@@ -74,7 +74,7 @@ export const PatientCardView = memo(function PatientCardView({
           <PatientTreatmentProgressBar data={progress} compact />
         ) : (
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-full border-[3px] border-[var(--border)] flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-full border-[3px] border-[var(--ds-border)] flex items-center justify-center shrink-0">
               <span className="text-[10px] text-[var(--text-subtle)]">—</span>
             </div>
             <span className="text-[10px] text-[var(--text-subtle)]">Нет плана</span>

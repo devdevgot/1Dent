@@ -180,7 +180,7 @@ export default function AdminDashboard() {
         <div className="lg:col-span-2 dash-card dash-card-padded dash-card-elevated">
           <div className="flex items-center justify-between mb-5">
             <h3 className="dash-section-title">
-              <Clock className="w-4 h-4 text-[var(--primary)]" />
+              <Clock className="w-4 h-4 text-[var(--ds-primary)]" />
               {t("adminDashboard.todaySchedule")}
               <span className="dash-badge dash-badge-primary ml-1">
                 {todayProcedures.length}
@@ -201,7 +201,7 @@ export default function AdminDashboard() {
               <p className="text-[var(--text-secondary)] font-medium">{t("adminDashboard.noSchedule")}</p>
             </div>
           ) : (
-            <div className="divide-y divide-[var(--border)]">
+            <div className="divide-y divide-[var(--ds-border)]">
               {todayProcedures.slice(0, 8).map((proc, i) => {
                 const patient = patients.find((p) => p.id === proc.patientId);
                 const timeStr = proc.scheduledAt
@@ -216,7 +216,7 @@ export default function AdminDashboard() {
                     className="flex items-center gap-4 py-3"
                   >
                     <div className="w-12 text-center flex-none">
-                      <span className="text-sm font-bold text-[var(--primary)]">{timeStr}</span>
+                      <span className="text-sm font-bold text-[var(--ds-primary)]">{timeStr}</span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-[var(--text)] truncate">{proc.name}</p>
@@ -289,14 +289,14 @@ export default function AdminDashboard() {
                                     key={method}
                                     disabled={isSaving}
                                     onClick={() => updatePayment.mutate({ id: proc.id, data: { paymentMethod: method } })}
-                                    className="px-1.5 py-0.5 text-[9px] font-medium rounded-md border border-[var(--border)] bg-white hover:border-[var(--primary)] hover:bg-[var(--primary-light)] hover:text-[var(--primary)] transition-colors disabled:opacity-50"
+                                    className="px-1.5 py-0.5 text-[9px] font-medium rounded-md border border-[var(--ds-border)] bg-white hover:border-[var(--ds-primary)] hover:bg-[var(--primary-light)] hover:text-[var(--ds-primary)] transition-colors disabled:opacity-50"
                                   >
                                     {PAYMENT_METHOD_LABELS[method]}
                                   </button>
                                 ))}
                                 <button
                                   onClick={() => setSelectingPayment(null)}
-                                  className="px-1.5 py-0.5 text-[9px] font-medium rounded-md border border-[var(--border)] text-[var(--text-subtle)] bg-white hover:bg-[var(--surface-2)] transition-colors"
+                                  className="px-1.5 py-0.5 text-[9px] font-medium rounded-md border border-[var(--ds-border)] text-[var(--text-subtle)] bg-white hover:bg-[var(--surface-2)] transition-colors"
                                 >
                                   Отмена
                                 </button>
@@ -345,14 +345,14 @@ export default function AdminDashboard() {
                                     key={method}
                                     disabled={isSaving}
                                     onClick={() => updatePayment.mutate({ id: proc.id, data: { paymentMethod: method } })}
-                                    className="px-1.5 py-0.5 text-[9px] font-medium rounded-md border border-[var(--border)] bg-white hover:border-[var(--primary)] hover:bg-[var(--primary-light)] hover:text-[var(--primary)] transition-colors disabled:opacity-50"
+                                    className="px-1.5 py-0.5 text-[9px] font-medium rounded-md border border-[var(--ds-border)] bg-white hover:border-[var(--ds-primary)] hover:bg-[var(--primary-light)] hover:text-[var(--ds-primary)] transition-colors disabled:opacity-50"
                                   >
                                     {PAYMENT_METHOD_LABELS[method]}
                                   </button>
                                 ))}
                                 <button
                                   onClick={() => setSelectingPayment(null)}
-                                  className="px-1.5 py-0.5 text-[9px] font-medium rounded-md border border-[var(--border)] text-[var(--text-subtle)] bg-white hover:bg-[var(--surface-2)] transition-colors"
+                                  className="px-1.5 py-0.5 text-[9px] font-medium rounded-md border border-[var(--ds-border)] text-[var(--text-subtle)] bg-white hover:bg-[var(--surface-2)] transition-colors"
                                 >
                                   Отмена
                                 </button>
@@ -372,7 +372,7 @@ export default function AdminDashboard() {
           <div className="dash-card dash-card-padded-sm dash-card-elevated">
             <div className="flex items-center justify-between mb-4">
               <h3 className="dash-section-title">
-                <Stethoscope className="w-4 h-4 text-[var(--primary)]" />
+                <Stethoscope className="w-4 h-4 text-[var(--ds-primary)]" />
                 {t("adminDashboard.topDoctors")}
               </h3>
             </div>
@@ -432,12 +432,12 @@ export default function AdminDashboard() {
               key={item.path}
               type="button"
               onClick={() => navigate(item.path)}
-              className="flex flex-col items-center gap-2 p-4 rounded-xl hover:bg-[var(--surface-2)] border border-[var(--border)] hover:border-[var(--primary)]/25 transition-all group text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+              className="flex flex-col items-center gap-2 p-4 rounded-xl hover:bg-[var(--surface-2)] border border-[var(--ds-border)] hover:border-[var(--ds-primary)]/25 transition-all group text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-primary)]"
             >
               <div className="dash-quick-action-icon w-10 h-10">
                 <item.icon className="w-5 h-5" />
               </div>
-              <span className="text-xs font-medium text-[var(--text-secondary)] group-hover:text-[var(--primary)] transition-colors leading-tight">{item.label}</span>
+              <span className="text-xs font-medium text-[var(--text-secondary)] group-hover:text-[var(--ds-primary)] transition-colors leading-tight">{item.label}</span>
             </button>
           ))}
         </div>

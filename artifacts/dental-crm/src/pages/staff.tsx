@@ -19,7 +19,7 @@ export default function StaffPage() {
   if (isLoading) {
     return (
       <PageShell className="h-full flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-[var(--primary)]/20 border-t-[var(--primary)] rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-[var(--ds-primary)]/20 border-t-[var(--ds-primary)] rounded-full animate-spin" />
       </PageShell>
     );
   }

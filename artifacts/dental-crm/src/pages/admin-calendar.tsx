@@ -325,7 +325,7 @@ export default function AdminCalendar() {
               </PageHeaderIconButton>
               <button
                 onClick={() => setCurrentDate(new Date())}
-                className="px-3 py-1.5 text-sm font-medium text-[var(--text)] rounded-xl border border-[var(--border)] hover:bg-[var(--surface-2)] transition-colors min-w-[90px] capitalize"
+                className="px-3 py-1.5 text-sm font-medium text-[var(--text)] rounded-xl border border-[var(--ds-border)] hover:bg-[var(--surface-2)] transition-colors min-w-[90px] capitalize"
               >
                 {format(currentDate, "LLLL", { locale: ru })}
               </button>
@@ -343,14 +343,14 @@ export default function AdminCalendar() {
               >
                 <SlidersHorizontal className="w-4 h-4" />
                 {filterDoctorId && (
-                  <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-[var(--primary)] rounded-full" />
+                  <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-[var(--ds-primary)] rounded-full" />
                 )}
               </PageHeaderIconButton>
 
               {filterOpen && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setFilterOpen(false)} />
-                  <div className="absolute right-0 top-full mt-1.5 z-20 bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-lg py-1.5 min-w-[180px]">
+                  <div className="absolute right-0 top-full mt-1.5 z-20 bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-2xl shadow-lg py-1.5 min-w-[180px]">
                     {[{ id: "", name: "Все врачи" }, ...doctors].map((d) => (
                       <button
                         key={d.id}
@@ -358,12 +358,12 @@ export default function AdminCalendar() {
                         className={cn(
                           "w-full flex items-center justify-between gap-3 px-4 py-2 text-sm transition-colors text-left",
                           d.id === filterDoctorId
-                            ? "bg-[var(--primary-light)] text-[var(--primary)] font-semibold"
+                            ? "bg-[var(--primary-light)] text-[var(--ds-primary)] font-semibold"
                             : "text-[var(--text)] hover:bg-[var(--bg)]",
                         )}
                       >
                         <span>{d.name}</span>
-                        {d.id === filterDoctorId && <Check className="w-4 h-4 text-[var(--primary)] shrink-0" />}
+                        {d.id === filterDoctorId && <Check className="w-4 h-4 text-[var(--ds-primary)] shrink-0" />}
                       </button>
                     ))}
                   </div>

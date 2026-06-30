@@ -50,7 +50,7 @@ const PAGE_ITEMS: {
   iconBg: string;
   iconColor: string;
 }[] = [
-  { label: "Дашборд",    href: "dashboard",       roles: ["owner","admin","doctor","accountant","warehouse"], Icon: LayoutDashboard, iconBg: "bg-[var(--primary-light)]",   iconColor: "text-[var(--primary)]" },
+  { label: "Дашборд",    href: "dashboard",       roles: ["owner","admin","doctor","accountant","warehouse"], Icon: LayoutDashboard, iconBg: "bg-[var(--primary-light)]",   iconColor: "text-[var(--ds-primary)]" },
   { label: "Пациенты",   href: "/patients",                  roles: ["owner","admin","doctor","accountant"],        Icon: Users,           iconBg: "bg-[var(--info-light)]",    iconColor: "text-[var(--info)]" },
   { label: "Расписание", href: "/schedule",        roles: ["doctor"],                                         Icon: Calendar,        iconBg: "bg-[var(--warning-light)]", iconColor: "text-[var(--warning)]" },
   { label: "Аналитика",  href: "/analytics",       roles: ["owner"],                                          Icon: BarChart3,       iconBg: "bg-[var(--success-light)]",   iconColor: "text-[var(--success)]" },
@@ -58,7 +58,7 @@ const PAGE_ITEMS: {
   { label: "Финансы",    href: "/financials",      roles: ["owner","accountant"],                             Icon: Wallet,          iconBg: "bg-[var(--warning-light)]",iconColor: "text-[var(--warning)]" },
   { label: "WhatsApp",   href: "/chat",            roles: ["owner","admin","doctor"],                         Icon: FaWhatsapp,      iconBg: "bg-[var(--success-light)]",  iconColor: "text-[var(--success)]" },
   { label: "Сотрудники", href: "/users",           roles: ["owner"],                                          Icon: Contact,         iconBg: "bg-[var(--surface-2)]",  iconColor: "text-[var(--text-secondary)]" },
-  { label: "Чат-бот",   href: "/chatbot",          roles: ["owner"],                                          Icon: Bot,             iconBg: "bg-[var(--primary-light)]", iconColor: "text-[var(--primary)]" },
+  { label: "Чат-бот",   href: "/chatbot",          roles: ["owner"],                                          Icon: Bot,             iconBg: "bg-[var(--primary-light)]", iconColor: "text-[var(--ds-primary)]" },
 ];
 
 const ROLE_DASHBOARD: Record<string, string> = {
@@ -217,7 +217,7 @@ export function GlobalSearch() {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="flex-1 flex items-center gap-2 bg-[var(--surface-2)] rounded-xl px-3 py-2 text-left cursor-pointer hover:bg-[var(--border)]/60 transition-colors"
+        className="flex-1 flex items-center gap-2 bg-[var(--surface-2)] rounded-xl px-3 py-2 text-left cursor-pointer hover:bg-[var(--ds-border)]/60 transition-colors"
       >
         <Search className="w-4 h-4 text-[var(--text-subtle)] shrink-0" />
         <span className="text-sm text-[var(--text-subtle)] select-none font-manrope">Поиск по имени, телефону, ИИН...</span>
@@ -227,7 +227,7 @@ export function GlobalSearch() {
       {isOpen && (
         <div className="fixed inset-0 z-50 flex flex-col bg-[var(--bg)] font-manrope">
           {/* Search header — same height/position as the regular header */}
-          <div className="bg-[var(--surface)] px-4 py-2.5 border-b border-[var(--border)] flex items-center gap-3 safe-area-top">
+          <div className="bg-[var(--ds-surface)] px-4 py-2.5 border-b border-[var(--ds-border)] flex items-center gap-3 safe-area-top">
             <div className="flex-1 flex items-center gap-2 bg-[var(--surface-2)] rounded-xl px-3 py-2">
               <Search className="w-4 h-4 text-[var(--text-subtle)] shrink-0" />
               <input
@@ -246,7 +246,7 @@ export function GlobalSearch() {
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="text-[15px] font-medium shrink-0 text-[var(--primary)]"
+              className="text-[15px] font-medium shrink-0 text-[var(--ds-primary)]"
             >
               Отмена
             </button>
@@ -256,7 +256,7 @@ export function GlobalSearch() {
           <div className="flex-1 overflow-y-auto">
             {!query.trim() && (
               <div className="flex flex-col items-center justify-center py-20 gap-3">
-                <Search className="w-12 h-12 text-[var(--border)]" />
+                <Search className="w-12 h-12 text-[var(--ds-border)]" />
                 <p className="text-[15px] text-[var(--text-subtle)]">Введите запрос для поиска</p>
               </div>
             )}
@@ -275,7 +275,7 @@ export function GlobalSearch() {
                     <p className="text-[12px] font-semibold text-[var(--text-subtle)] uppercase tracking-wider mb-2 px-1">
                       {group.category}
                     </p>
-                    <div className="bg-[var(--surface)] rounded-2xl overflow-hidden border border-[var(--border)] divide-y divide-[var(--border)]">
+                    <div className="bg-[var(--ds-surface)] rounded-2xl overflow-hidden border border-[var(--ds-border)] divide-y divide-[var(--ds-border)]">
                       {group.results.map((result) => (
                         <button
                           key={result.id}

@@ -554,8 +554,8 @@ export function ScriptMindMapModal({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[var(--bg)] font-manrope">
-      <div className="shrink-0 flex items-center gap-3 px-4 py-3 bg-[var(--surface)] border-b border-[var(--border)] shadow-sm">
-        <GitBranch className="h-4 w-4 text-[var(--primary)] shrink-0" />
+      <div className="shrink-0 flex items-center gap-3 px-4 py-3 bg-[var(--ds-surface)] border-b border-[var(--ds-border)] shadow-sm">
+        <GitBranch className="h-4 w-4 text-[var(--ds-primary)] shrink-0" />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-[var(--text)]">Скрипт диалога</p>
           <p className="text-xs text-[var(--text-secondary)] leading-tight">

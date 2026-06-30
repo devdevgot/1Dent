@@ -58,9 +58,9 @@ export function TasksBlock({ procedures, patients }: TasksBlockProps) {
   return (
     <>
       <div className="mx-4 mt-4 dashboard-page dash-card overflow-hidden">
-        <div className="px-4 pt-4 pb-3 flex items-center justify-between border-b border-[var(--border)]">
+        <div className="px-4 pt-4 pb-3 flex items-center justify-between border-b border-[var(--ds-border)]">
           <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-[var(--primary)]" />
+            <Clock className="w-4 h-4 text-[var(--ds-primary)]" />
             <span className="text-sm font-bold text-[var(--text)]">Задачи за сегодня</span>
             {todayCount > 0 && (
               <span className="dash-badge dash-badge-warning">
@@ -82,7 +82,7 @@ export function TasksBlock({ procedures, patients }: TasksBlockProps) {
             <p className="text-sm font-medium text-[var(--text-secondary)]">Нет задач на сегодня</p>
           </div>
         ) : (
-          <div className="divide-y divide-[var(--border)]">
+          <div className="divide-y divide-[var(--ds-border)]">
             {todayPending.length > 0 && (
               <div className="px-4 py-3">
                 <div className="flex items-center gap-1.5 mb-2">

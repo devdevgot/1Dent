@@ -212,7 +212,7 @@ export default function FinancialsPage() {
                   value={customFrom}
                   max={customTo}
                   onChange={(e) => setCustomFrom(e.target.value)}
-                  className="text-xs px-2.5 py-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] w-36"
+                  className="text-xs px-2.5 py-1.5 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)] w-36"
                 />
                 <span className="text-xs text-[var(--text-subtle)]">—</span>
                 <input
@@ -220,7 +220,7 @@ export default function FinancialsPage() {
                   value={customTo}
                   min={customFrom}
                   onChange={(e) => setCustomTo(e.target.value)}
-                  className="text-xs px-2.5 py-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] w-36"
+                  className="text-xs px-2.5 py-1.5 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)] w-36"
                 />
               </div>
             )}

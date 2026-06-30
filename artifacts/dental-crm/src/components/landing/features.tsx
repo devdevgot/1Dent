@@ -66,7 +66,7 @@ function KanbanPreview() {
   const stages = ["Новая", "Консульт.", "Лечение", "Завершено"];
   const counts = [3, 5, 4, 8];
   return (
-    <div className="landing-mockup bg-[var(--surface)] p-4 w-full">
+    <div className="landing-mockup bg-[var(--ds-surface)] p-4 w-full">
       <div className="text-xs font-manrope font-bold text-[var(--text)] mb-3">Канбан-доска</div>
       <div className="flex gap-2">
         {stages.map((s, i) => (
@@ -75,7 +75,7 @@ function KanbanPreview() {
             <div className="text-lg font-manrope font-bold text-[var(--text)]">{counts[i]}</div>
             <div className="space-y-1 mt-2">
               {Array.from({ length: Math.min(counts[i], 2) }).map((_, j) => (
-                <div key={j} className="h-1.5 bg-[var(--primary)]/20 rounded-full" />
+                <div key={j} className="h-1.5 bg-[var(--ds-primary)]/20 rounded-full" />
               ))}
             </div>
           </div>
@@ -93,7 +93,7 @@ function WhatsAppPreview() {
     { from: "bot", text: "Отлично! Записал вас на 10:00" },
   ];
   return (
-    <div className="landing-mockup bg-[var(--surface)] p-4 w-full">
+    <div className="landing-mockup bg-[var(--ds-surface)] p-4 w-full">
       <div className="flex items-center gap-2 mb-3">
         <FaWhatsapp size={14} color="#22c55e" />
         <span className="text-xs font-manrope font-bold text-[var(--text)]">WhatsApp чат</span>
@@ -103,7 +103,7 @@ function WhatsAppPreview() {
         {msgs.map((m, i) => (
           <div key={i} className={`flex ${m.from === "bot" ? "justify-end" : "justify-start"}`}>
             <div className={`text-[10px] font-manrope rounded-xl px-3 py-1.5 max-w-[80%] ${
-              m.from === "bot" ? "bg-[var(--primary)] text-white" : "bg-[var(--surface-2)] text-[var(--text)]"
+              m.from === "bot" ? "bg-[var(--ds-primary)] text-white" : "bg-[var(--surface-2)] text-[var(--text)]"
             }`}>
               {m.text}
             </div>
@@ -116,7 +116,7 @@ function WhatsAppPreview() {
 
 function FinancePreview() {
   return (
-    <div className="landing-mockup bg-[var(--surface)] p-4 w-full">
+    <div className="landing-mockup bg-[var(--ds-surface)] p-4 w-full">
       <div className="text-xs font-manrope font-bold text-[var(--text)] mb-3">Финансы июнь</div>
       <div className="grid grid-cols-2 gap-2 mb-3">
         {[
@@ -131,7 +131,7 @@ function FinancePreview() {
       </div>
       <div className="flex gap-1 items-end h-10">
         {[40, 65, 50, 80, 60, 90, 75].map((h, i) => (
-          <div key={i} className="flex-1 rounded-t bg-[var(--primary)]/60" style={{ height: `${h}%` }} />
+          <div key={i} className="flex-1 rounded-t bg-[var(--ds-primary)]/60" style={{ height: `${h}%` }} />
         ))}
       </div>
     </div>
@@ -155,7 +155,7 @@ const DEMO_TEETH = new Map<number, ToothCondition>([
 
 function ToothPreview() {
   return (
-    <div className="landing-mockup bg-[var(--surface)] w-full overflow-hidden">
+    <div className="landing-mockup bg-[var(--ds-surface)] w-full overflow-hidden">
       <div className="px-3 pt-3 pb-1">
         <div className="text-xs font-manrope font-bold text-[var(--text)]">FDI зубная карта</div>
       </div>
@@ -168,7 +168,7 @@ function ToothPreview() {
 
 function ContractPreview() {
   return (
-    <div className="landing-mockup bg-[var(--surface)] p-4 w-full">
+    <div className="landing-mockup bg-[var(--ds-surface)] p-4 w-full">
       <div className="text-xs font-manrope font-bold text-[var(--text)] mb-3">Договор</div>
       <div className="space-y-2">
         {[
@@ -198,7 +198,7 @@ function AnalyticsPreview() {
     { label: "Другое", pct: 13, color: "#94a3b8" },
   ];
   return (
-    <div className="landing-mockup bg-[var(--surface)] p-4 w-full">
+    <div className="landing-mockup bg-[var(--ds-surface)] p-4 w-full">
       <div className="text-xs font-manrope font-bold text-[var(--text)] mb-3">Источники пациентов</div>
       <div className="space-y-2">
         {channels.map((c) => (

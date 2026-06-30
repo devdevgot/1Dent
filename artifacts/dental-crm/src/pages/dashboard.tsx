@@ -185,7 +185,7 @@ export default function Dashboard() {
             <div className="lg:col-span-2 dash-card dash-card-padded dash-card-elevated">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="dash-section-title">
-                  <Stethoscope className="w-5 h-5 text-[var(--primary)]" />
+                  <Stethoscope className="w-5 h-5 text-[var(--ds-primary)]" />
                   {t("dashboard.doctorKpi")}
                 </h3>
                 <button
@@ -207,7 +207,7 @@ export default function Dashboard() {
                       <th className="text-right">{t("dashboard.avgCheck")}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[var(--border)]/40">
+                  <tbody className="divide-y divide-[var(--ds-border)]/40">
                     {kpis.map((kpi, i) => (
                       <motion.tr
                         key={kpi.doctorId}
@@ -217,7 +217,7 @@ export default function Dashboard() {
                       >
                         <td className="py-3 pr-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-[var(--primary-light)] flex items-center justify-center text-[var(--primary)] font-bold text-xs">
+                            <div className="w-8 h-8 rounded-full bg-[var(--primary-light)] flex items-center justify-center text-[var(--ds-primary)] font-bold text-xs">
                               {kpi.doctorName.charAt(0)}
                             </div>
                             <span className="font-medium text-[var(--text)]">{kpi.doctorName}</span>

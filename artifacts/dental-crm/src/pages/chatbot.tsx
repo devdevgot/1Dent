@@ -573,7 +573,7 @@ export default function ChatbotPage() {
                 onClick={() => setTab(key)}
                 className={cn(
                   "flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl font-medium transition-colors shrink-0",
-                  tab === key ? "bg-[var(--primary-light)] text-[var(--primary)]" : "text-[var(--text-secondary)] hover:bg-[var(--surface-2)]",
+                  tab === key ? "bg-[var(--primary-light)] text-[var(--ds-primary)]" : "text-[var(--text-secondary)] hover:bg-[var(--surface-2)]",
                 )}
               >
                 <Icon className="h-3.5 w-3.5" />

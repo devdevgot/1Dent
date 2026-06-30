@@ -189,7 +189,7 @@ export default function DoctorDashboard() {
       <div className="dash-top-strip">
         <div className="mx-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-1.5 text-sm font-semibold text-[var(--text)]">
-            <CalendarDays className="w-4 h-4 text-[var(--primary)]" />
+            <CalendarDays className="w-4 h-4 text-[var(--ds-primary)]" />
             <span className="capitalize">{dateRangeLabel}</span>
           </div>
           <button
@@ -396,10 +396,10 @@ export default function DoctorDashboard() {
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className="flex items-center gap-2.5 p-3 rounded-2xl border border-[var(--border)] hover:border-[var(--primary)]/30 hover:bg-[var(--primary-light)] transition-all text-left group"
+              className="flex items-center gap-2.5 p-3 rounded-2xl border border-[var(--ds-border)] hover:border-[var(--ds-primary)]/30 hover:bg-[var(--primary-light)] transition-all text-left group"
             >
               <div
-                className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors group-hover:bg-[var(--primary)] group-hover:text-white"
+                className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors group-hover:bg-[var(--ds-primary)] group-hover:text-white"
                 style={{ backgroundColor: item.bg, color: item.accent }}
               >
                 <item.icon className="w-4 h-4" />

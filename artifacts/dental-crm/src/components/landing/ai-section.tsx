@@ -15,7 +15,7 @@ function ChatBubble({ text, from, delay }: { text: string; from: "user" | "ai"; 
     >
       <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm font-manrope ${
         from === "ai"
-          ? "bg-[var(--primary)] text-white rounded-br-sm"
+          ? "bg-[var(--ds-primary)] text-white rounded-br-sm"
           : "bg-white/10 text-white/80 rounded-bl-sm border border-white/10"
       }`}>
         {text}
@@ -101,7 +101,7 @@ export function AiSection() {
                   style={{ willChange: "transform, opacity" }}
                   className="flex gap-4 items-start group"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-[var(--primary)]/20 flex items-center justify-center flex-shrink-0 group-hover:bg-[var(--primary)]/30 transition-colors">
+                  <div className="w-10 h-10 rounded-xl bg-[var(--ds-primary)]/20 flex items-center justify-center flex-shrink-0 group-hover:bg-[var(--ds-primary)]/30 transition-colors">
                     <f.icon size={18} className="text-[var(--accent-blue-light)]" />
                   </div>
                   <div>
@@ -116,7 +116,7 @@ export function AiSection() {
           <motion.div {...fadeUp(0.08, 20)}>
             <div className="landing-card-dark p-6">
               <div className="flex items-center gap-3 mb-6 pb-4 border-b border-[var(--dark-border)]">
-                <div className="w-10 h-10 rounded-full bg-[var(--primary)] flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-[var(--ds-primary)] flex items-center justify-center">
                   <Sparkles size={18} className="text-white" />
                 </div>
                 <div>
@@ -144,7 +144,7 @@ export function AiSection() {
                   aria-label="Сообщение"
                   className="flex-1 bg-transparent font-manrope text-white/40 text-sm outline-none placeholder:text-white/30"
                 />
-                <button type="button" aria-label="Отправить" className="w-8 h-8 rounded-xl bg-[var(--primary)] flex items-center justify-center hover:bg-[var(--primary-hover)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50">
+                <button type="button" aria-label="Отправить" className="w-8 h-8 rounded-xl bg-[var(--ds-primary)] flex items-center justify-center hover:bg-[var(--primary-hover)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50">
                   <Send size={14} className="text-white" />
                 </button>
               </div>

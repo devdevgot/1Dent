@@ -28,8 +28,8 @@ function NotificationItem({
     <button
       onClick={() => !notification.read && onRead(notification.id)}
       className={cn(
-        "w-full text-left px-4 py-3 border-b border-[var(--border)] flex items-start gap-3 transition-colors font-manrope",
-        notification.read ? "opacity-60" : "bg-[var(--surface)] hover:bg-[var(--bg)]",
+        "w-full text-left px-4 py-3 border-b border-[var(--ds-border)] flex items-start gap-3 transition-colors font-manrope",
+        notification.read ? "opacity-60" : "bg-[var(--ds-surface)] hover:bg-[var(--bg)]",
         isRedAlert && !notification.read && "bg-[var(--danger-light)] hover:bg-[var(--danger-light)]/80",
         isAppointmentReminder && !notification.read && "bg-[var(--primary-light)] hover:bg-[var(--primary-light)]",
         isPendingPayment && !notification.read && "bg-[var(--warning-light)] hover:bg-[var(--warning-light)]/80",
@@ -41,7 +41,7 @@ function NotificationItem({
           isRedAlert
             ? "bg-[var(--danger-light)] text-[var(--danger)]"
             : isAppointmentReminder
-            ? "bg-[var(--primary-light)] text-[var(--primary)]"
+            ? "bg-[var(--primary-light)] text-[var(--ds-primary)]"
             : isPendingPayment
             ? "bg-[var(--warning-light)] text-[var(--warning)]"
             : "bg-[var(--info-light)] text-[var(--info)]",
@@ -71,7 +71,7 @@ function NotificationItem({
           })}
         </p>
       </div>
-      {!notification.read && <div className="w-2 h-2 rounded-full bg-[var(--primary)] mt-2 shrink-0" />}
+      {!notification.read && <div className="w-2 h-2 rounded-full bg-[var(--ds-primary)] mt-2 shrink-0" />}
     </button>
   );
 }
@@ -102,7 +102,7 @@ export function NotificationBell() {
                   ? "bg-[var(--danger)] animate-pulse"
                   : unreadPendingPayments > 0
                   ? "bg-[var(--warning)] animate-pulse"
-                  : "bg-[var(--primary)]",
+                  : "bg-[var(--ds-primary)]",
               )}
             >
               {count > 99 ? "99+" : count}
@@ -110,8 +110,8 @@ export function NotificationBell() {
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-96 p-0 shadow-xl bg-[var(--surface)] border border-[var(--border)] rounded-2xl font-manrope" align="end">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
+      <PopoverContent className="w-96 p-0 shadow-xl bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-2xl font-manrope" align="end">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--ds-border)]">
           <div className="flex items-center gap-2">
             <h3 className="font-semibold text-sm text-[var(--text)]">{t("notifications.title")}</h3>
             {unreadRedAlerts > 0 && (
@@ -142,7 +142,7 @@ export function NotificationBell() {
         {unreadRedAlerts > 0 && (
           <button
             onClick={() => navigate("/kanban")}
-            className="w-full bg-[var(--danger-light)] border-b border-[var(--border)] p-3.5 flex items-center gap-3 text-left hover:bg-[var(--danger-light)]/80 transition-colors"
+            className="w-full bg-[var(--danger-light)] border-b border-[var(--ds-border)] p-3.5 flex items-center gap-3 text-left hover:bg-[var(--danger-light)]/80 transition-colors"
           >
             <div className="w-9 h-9 bg-[var(--danger)] rounded-xl flex items-center justify-center shrink-0">
               <Bell className="w-4 h-4 text-white" />
@@ -160,7 +160,7 @@ export function NotificationBell() {
         {unreadPendingPayments > 0 && (
           <button
             onClick={() => navigate("/admin/finance")}
-            className="w-full bg-[var(--warning-light)] border-b border-[var(--border)] p-3.5 flex items-center gap-3 text-left hover:bg-[var(--warning-light)]/80 transition-colors"
+            className="w-full bg-[var(--warning-light)] border-b border-[var(--ds-border)] p-3.5 flex items-center gap-3 text-left hover:bg-[var(--warning-light)]/80 transition-colors"
           >
             <div className="w-9 h-9 bg-[var(--warning)] rounded-xl flex items-center justify-center shrink-0">
               <Wallet className="w-4 h-4 text-white" />

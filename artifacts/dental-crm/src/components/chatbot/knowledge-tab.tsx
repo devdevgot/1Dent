@@ -378,11 +378,11 @@ export function KnowledgeTab({
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={uploadingFile}
-          className="w-full flex flex-col items-center justify-center gap-2 h-32 rounded-xl border-2 border-dashed border-[var(--border)] hover:border-[var(--primary)]/50 hover:bg-[var(--primary-light)] transition-colors text-sm text-[var(--text-secondary)] disabled:opacity-50"
+          className="w-full flex flex-col items-center justify-center gap-2 h-32 rounded-xl border-2 border-dashed border-[var(--ds-border)] hover:border-[var(--ds-primary)]/50 hover:bg-[var(--primary-light)] transition-colors text-sm text-[var(--text-secondary)] disabled:opacity-50"
         >
           {uploadingFile ? (
             <>
-              <Loader2 className="h-6 w-6 animate-spin text-[var(--primary)]" />
+              <Loader2 className="h-6 w-6 animate-spin text-[var(--ds-primary)]" />
               <span className="text-xs">Загрузка…</span>
             </>
           ) : (
@@ -431,7 +431,7 @@ export function KnowledgeTab({
             placeholder="Название (например: Адреса клиники)"
             value={textName}
             onChange={(e) => setTextName(e.target.value)}
-            className="w-full h-9 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20"
+            className="w-full h-9 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-3 text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20"
           />
 
           <textarea
@@ -439,7 +439,7 @@ export function KnowledgeTab({
             value={textContent}
             onChange={(e) => setTextContent(e.target.value)}
             rows={7}
-            className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 resize-none"
+            className="w-full rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-3 py-2.5 text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 resize-none"
           />
         </div>
       </AppDialog>
@@ -596,8 +596,8 @@ export function KnowledgeAndScriptModal({
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[var(--bg)] font-manrope">
       {/* Header */}
-      <div className="shrink-0 flex items-center gap-3 px-4 py-3 bg-[var(--surface)] border-b border-[var(--border)] shadow-sm">
-        <BookOpen className="h-4 w-4 text-[var(--primary)] shrink-0" />
+      <div className="shrink-0 flex items-center gap-3 px-4 py-3 bg-[var(--ds-surface)] border-b border-[var(--ds-border)] shadow-sm">
+        <BookOpen className="h-4 w-4 text-[var(--ds-primary)] shrink-0" />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-[var(--text)]">База знаний и скрипт</p>
           <p className="text-xs text-[var(--text-secondary)] leading-tight">Обучение чат-бота и сценарий разговора</p>
@@ -621,13 +621,13 @@ export function KnowledgeAndScriptModal({
         </div>
 
         {/* Divider */}
-        <div className="h-px bg-[var(--border)] mx-4" />
+        <div className="h-px bg-[var(--ds-border)] mx-4" />
 
         {/* Mind map inline section */}
         <div className="px-4 py-4 pb-8 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <GitBranch className="h-4 w-4 text-[var(--primary)] shrink-0" />
+              <GitBranch className="h-4 w-4 text-[var(--ds-primary)] shrink-0" />
               <div>
                 <p className="text-sm font-semibold text-[var(--text)]">Скрипт диалога</p>
                 <p className="text-xs text-[var(--text-secondary)] mt-0.5">
@@ -639,14 +639,14 @@ export function KnowledgeAndScriptModal({
             </div>
             <button
               onClick={() => setMapExpanded(true)}
-              className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--text)] px-2.5 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--surface-2)] transition-colors shrink-0"
+              className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--text)] px-2.5 py-1.5 rounded-lg border border-[var(--ds-border)] hover:bg-[var(--surface-2)] transition-colors shrink-0"
             >
               <Maximize2 className="h-3.5 w-3.5" />
               На весь экран
             </button>
           </div>
           <div
-            className="rounded-2xl border border-[var(--border)] overflow-hidden bg-[var(--surface)]"
+            className="rounded-2xl border border-[var(--ds-border)] overflow-hidden bg-[var(--ds-surface)]"
             style={{ height: 320 }}
           >
             <ScriptMindMap

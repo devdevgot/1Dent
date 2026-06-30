@@ -65,7 +65,7 @@ export default function AiCreditsPage() {
       <div className="px-4 pt-4 space-y-4 max-w-2xl mx-auto">
         <p className="text-xs text-[var(--text-subtle)] -mt-2">{t("aiCredits.subtitle")}</p>
         {isLoading && (
-          <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-md p-6 animate-pulse h-40" />
+          <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] shadow-md p-6 animate-pulse h-40" />
         )}
 
         {isError && (
@@ -111,13 +111,13 @@ export default function AiCreditsPage() {
 
         {summary && (
           <>
-            <div className="bg-[var(--surface)] rounded-2xl p-5 shadow-md border border-[var(--border)]">
+            <div className="bg-[var(--ds-surface)] rounded-2xl p-5 shadow-md border border-[var(--ds-border)]">
               <div className="flex items-start justify-between gap-3 mb-4">
                 <div>
                   <p className="text-xs font-medium text-[var(--text-subtle)] uppercase tracking-wider">
                     {t("aiCredits.available")}
                   </p>
-                  <p className="text-3xl font-bold text-[var(--primary)] mt-1">
+                  <p className="text-3xl font-bold text-[var(--ds-primary)] mt-1">
                     {formatNumber(summary.remaining)}
                   </p>
                   <p className="text-xs text-[var(--text-subtle)] mt-1">
@@ -125,7 +125,7 @@ export default function AiCreditsPage() {
                   </p>
                 </div>
                 <div className="w-12 h-12 rounded-2xl bg-[var(--primary-light)] flex items-center justify-center">
-                  <Sparkles className="w-6 h-6 text-[var(--primary)]" />
+                  <Sparkles className="w-6 h-6 text-[var(--ds-primary)]" />
                 </div>
               </div>
 
@@ -137,7 +137,7 @@ export default function AiCreditsPage() {
                 <div
                   className={cn(
                     "h-full rounded-full transition-all",
-                    usedPercent >= 90 ? "bg-[var(--danger)]" : usedPercent >= 70 ? "bg-[var(--warning)]" : "bg-[var(--primary)]",
+                    usedPercent >= 90 ? "bg-[var(--danger)]" : usedPercent >= 70 ? "bg-[var(--warning)]" : "bg-[var(--ds-primary)]",
                   )}
                   style={{ width: `${usedPercent}%` }}
                 />
@@ -146,7 +146,7 @@ export default function AiCreditsPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-[var(--surface)] rounded-2xl p-4 border border-[var(--border)] shadow-md">
+              <div className="bg-[var(--ds-surface)] rounded-2xl p-4 border border-[var(--ds-border)] shadow-md">
                 <div className="flex items-center gap-2 text-[var(--text-subtle)] mb-2">
                   <TrendingUp className="w-4 h-4" />
                   <span className="text-[11px] font-medium uppercase tracking-wider">
@@ -156,7 +156,7 @@ export default function AiCreditsPage() {
                 <p className="text-xl font-bold text-[var(--text)]">{formatNumber(summary.monthlyLimit)}</p>
                 <p className="text-[11px] text-[var(--text-subtle)] mt-1">{t(`aiCredits.plan.${summary.plan}`)}</p>
               </div>
-              <div className="bg-[var(--surface)] rounded-2xl p-4 border border-[var(--border)] shadow-md">
+              <div className="bg-[var(--ds-surface)] rounded-2xl p-4 border border-[var(--ds-border)] shadow-md">
                 <div className="flex items-center gap-2 text-[var(--text-subtle)] mb-2">
                   <Zap className="w-4 h-4" />
                   <span className="text-[11px] font-medium uppercase tracking-wider">
@@ -170,8 +170,8 @@ export default function AiCreditsPage() {
           </>
         )}
 
-        <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-md overflow-hidden">
-          <div className="px-4 py-3 border-b border-[var(--border)] flex items-center gap-2">
+        <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] shadow-md overflow-hidden">
+          <div className="px-4 py-3 border-b border-[var(--ds-border)] flex items-center gap-2">
             <History className="w-4 h-4 text-[var(--text-subtle)]" />
             <h2 className="text-sm font-semibold text-[var(--text)]">{t("aiCredits.historyTitle")}</h2>
           </div>
@@ -186,17 +186,17 @@ export default function AiCreditsPage() {
 
           {!usageLoading && !usageError && usage.length === 0 && (
             <div className="p-8 text-center">
-              <Sparkles className="w-8 h-8 text-[var(--border)] mx-auto mb-2" />
+              <Sparkles className="w-8 h-8 text-[var(--ds-border)] mx-auto mb-2" />
               <p className="text-sm text-[var(--text-subtle)]">{t("aiCredits.noUsage")}</p>
             </div>
           )}
 
           {!usageLoading && !usageError && usage.length > 0 && (
-            <div className="divide-y divide-[var(--border)]">
+            <div className="divide-y divide-[var(--ds-border)]">
               {usage.map((row) => (
                 <div key={row.id} className="px-4 py-3 flex items-start gap-3 hover:bg-[var(--bg)] transition-colors">
                   <div className="w-8 h-8 rounded-xl bg-[var(--primary-light)] flex items-center justify-center shrink-0 mt-0.5">
-                    <span className="text-xs font-bold text-[var(--primary)]">-{row.credits}</span>
+                    <span className="text-xs font-bold text-[var(--ds-primary)]">-{row.credits}</span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-[var(--text)] truncate">{row.featureLabel}</p>
@@ -217,7 +217,7 @@ export default function AiCreditsPage() {
         {isOwner && (
           <Link
             href="/pricing"
-            className="flex items-center justify-center gap-2 w-full py-3.5 bg-[var(--primary)] text-white rounded-full text-sm font-semibold shadow-md hover:bg-[var(--primary-hover)] hover:scale-105 transition-all"
+            className="flex items-center justify-center gap-2 w-full py-3.5 bg-[var(--ds-primary)] text-white rounded-full text-sm font-semibold shadow-md hover:bg-[var(--primary-hover)] hover:scale-105 transition-all"
           >
             <CreditCard className="w-4 h-4" />
             {t("aiCredits.upgradePlan")}

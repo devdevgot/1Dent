@@ -41,14 +41,16 @@
 }
 
 :root {
-  /* DS tokens (§13) — hex values for direct reference */
+  /* DS tokens — hex values for direct var() usage (ds-* avoids shadcn HSL collision) */
   --bg: #faf8f4;
-  --surface: #ffffff;
+  --ds-surface: #ffffff;
   --surface-2: #f1ede4;
+  --ds-border: #e8e3d9;
   --border-strong: #d4cfc6;
   --text: #0f172a;
   --text-secondary: #64748b;
   --text-subtle: #94a3b8;
+  --ds-primary: #1f75fe;
   --primary-hover: #1a65e8;
   --primary-active: #1555cc;
   --primary-light: rgba(31, 117, 254, 0.10);
@@ -95,9 +97,9 @@
   --ring: 217 99% 56%;               /* #1f75fe */
   --radius: 1rem;
 
-  /* Page canvas and elevated surface */
+  /* Page canvas and elevated surface (shadcn HSL channels) */
   --canvas: 40 37% 97%;              /* #faf8f4 */
-  --surface: 0 0% 100%;              /* #ffffff */
+  --surface: 0 0% 100%;              /* #ffffff — used by hsl(var(--surface)) utilities only */
 }
 
 .dark {

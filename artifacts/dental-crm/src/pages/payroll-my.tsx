@@ -46,7 +46,7 @@ export default function PayrollMyPage() {
           <p className="text-xs text-[var(--text-subtle)] -mt-1">{periodLabel}</p>
         )}
         {isLoading && (
-          <div className="bg-[var(--surface)] rounded-2xl p-5 shadow-md border border-[var(--border)] space-y-3">
+          <div className="bg-[var(--ds-surface)] rounded-2xl p-5 shadow-md border border-[var(--ds-border)] space-y-3">
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="h-5 bg-[var(--surface-2)] rounded-xl animate-pulse" />
             ))}
@@ -54,7 +54,7 @@ export default function PayrollMyPage() {
         )}
 
         {!isLoading && !salary && (
-          <div className="bg-[var(--surface)] rounded-2xl p-8 shadow-md border border-[var(--border)] text-center">
+          <div className="bg-[var(--ds-surface)] rounded-2xl p-8 shadow-md border border-[var(--ds-border)] text-center">
             <Wallet className="w-10 h-10 text-[var(--text-subtle)] mx-auto mb-3" />
             <p className="text-sm text-[var(--text-secondary)]">{t("payroll.noSettings", "Настройки зарплаты не заданы")}</p>
             <p className="text-xs text-[var(--text-subtle)] mt-1">{t("payroll.contactAdmin", "Обратитесь к администратору")}</p>
@@ -64,7 +64,7 @@ export default function PayrollMyPage() {
         {!isLoading && salary && (
           <>
             {/* Main card */}
-            <div className="bg-[var(--surface)] rounded-2xl p-5 shadow-md border border-[var(--border)]">
+            <div className="bg-[var(--ds-surface)] rounded-2xl p-5 shadow-md border border-[var(--ds-border)]">
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <p className="text-xs font-semibold text-[var(--text-subtle)] uppercase tracking-wide mb-1">
@@ -79,7 +79,7 @@ export default function PayrollMyPage() {
                 </span>
               </div>
 
-              <div className="border-t border-[var(--border)] pt-4 space-y-2.5">
+              <div className="border-t border-[var(--ds-border)] pt-4 space-y-2.5">
                 <Row label={t("payroll.salaryType", "Тип")} value={
                   salary.salaryType === "fixed"                ? t("payroll.fixed", "Оклад") :
                   salary.salaryType === "commission"           ? t("payroll.commission", "Комиссия") :
@@ -99,7 +99,7 @@ export default function PayrollMyPage() {
             </div>
 
             {/* History placeholder */}
-            <div className="bg-[var(--surface)] rounded-2xl p-5 shadow-md border border-[var(--border)]">
+            <div className="bg-[var(--ds-surface)] rounded-2xl p-5 shadow-md border border-[var(--ds-border)]">
               <div className="flex items-center gap-2 mb-3">
                 <Clock className="w-4 h-4 text-[var(--text-subtle)]" />
                 <p className="text-sm font-semibold text-[var(--text)]">{t("payroll.history", "История выплат")}</p>

@@ -469,7 +469,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 z-10 bg-[var(--surface)]/95 backdrop-blur-sm flex flex-col items-center justify-center p-8"
+            className="absolute inset-0 z-10 bg-[var(--ds-surface)]/95 backdrop-blur-sm flex flex-col items-center justify-center p-8"
           >
             <div className="w-12 h-12 rounded-2xl bg-[#fef3c7] flex items-center justify-center mb-4">
               <AlertCircle className="w-6 h-6 text-[#d97706]" />
@@ -503,7 +503,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
               key={s}
               className={cn(
                 "flex-1 h-1 rounded-full transition-all duration-300",
-                s <= step ? "bg-[var(--primary)]" : "bg-[var(--surface-2)]",
+                s <= step ? "bg-[var(--ds-primary)]" : "bg-[var(--surface-2)]",
               )}
             />
           ))}

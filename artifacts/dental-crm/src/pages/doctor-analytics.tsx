@@ -167,7 +167,7 @@ export default function DoctorAnalyticsPage() {
       value: scheduledToday,
       sub: t("doctorAnalytics.thisMonth"),
       icon: Calendar,
-      bg: "bg-[var(--primary)]",
+      bg: "bg-[var(--ds-primary)]",
       light: "bg-[var(--info-light)]",
       text: "text-[var(--info)]",
     },
@@ -176,9 +176,9 @@ export default function DoctorAnalyticsPage() {
       value: totalPatients,
       sub: t("doctorAnalytics.thisMonth"),
       icon: Users,
-      bg: "bg-[var(--primary)]",
+      bg: "bg-[var(--ds-primary)]",
       light: "bg-[var(--primary-light)]",
-      text: "text-[var(--primary)]",
+      text: "text-[var(--ds-primary)]",
     },
     {
       label: t("doctorAnalytics.revenue"),
@@ -234,7 +234,7 @@ export default function DoctorAnalyticsPage() {
         icon={<BarChart3 className="w-5 h-5" strokeWidth={1.8} />}
         badge={
           hasActiveFilters ? (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[var(--primary-light)] text-[var(--primary)] rounded-full text-xs font-medium">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[var(--primary-light)] text-[var(--ds-primary)] rounded-full text-xs font-medium">
               <SlidersHorizontal className="w-3 h-3" />
               {t("doctorAnalytics.filterActive")}
             </div>
@@ -247,7 +247,7 @@ export default function DoctorAnalyticsPage() {
             className={cn(
               "flex items-center gap-2 px-3 py-1.5 text-sm font-semibold transition-all",
               hasActiveFilters
-                ? "rounded-full bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white shadow-md hover:scale-105"
+                ? "rounded-full bg-[var(--ds-primary)] hover:bg-[var(--primary-hover)] text-white shadow-md hover:scale-105"
                 : "rounded-xl text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]",
             )}
           >
@@ -261,7 +261,7 @@ export default function DoctorAnalyticsPage() {
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         {isLoading ? (
           <div className="h-full flex items-center justify-center">
-            <div className="w-10 h-10 border-4 border-[var(--primary)]/20 border-t-[var(--primary)] rounded-full animate-spin" />
+            <div className="w-10 h-10 border-4 border-[var(--ds-primary)]/20 border-t-[var(--ds-primary)] rounded-full animate-spin" />
           </div>
         ) : (
           <div className="p-6 space-y-6">
@@ -270,7 +270,7 @@ export default function DoctorAnalyticsPage() {
               {kpiCards.map((card) => {
                 const Icon = card.icon;
                 return (
-                  <div key={card.label} className={`${card.light} rounded-2xl border border-[var(--border)] p-3.5 flex flex-col gap-2 shadow-md`}>
+                  <div key={card.label} className={`${card.light} rounded-2xl border border-[var(--ds-border)] p-3.5 flex flex-col gap-2 shadow-md`}>
                     <div className={`w-9 h-9 rounded-xl ${card.bg} flex items-center justify-center shadow-sm`}>
                       <Icon className="w-4.5 h-4.5 text-white" size={18} />
                     </div>
@@ -284,7 +284,7 @@ export default function DoctorAnalyticsPage() {
             {/* Charts */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Revenue Trend */}
-              <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] p-6 shadow-md">
+              <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] p-6 shadow-md">
                 <h3 className="text-sm font-semibold text-[var(--text)] mb-4">{t("doctorAnalytics.revenueTrend")}</h3>
                 {revenueByMonth.length === 0 ? (
                   <div className="h-[300px] flex items-center justify-center text-sm text-[var(--text-secondary)]">
@@ -304,7 +304,7 @@ export default function DoctorAnalyticsPage() {
               </div>
 
               {/* Procedure Types Bar */}
-              <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] p-6 shadow-md">
+              <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] p-6 shadow-md">
                 <h3 className="text-sm font-semibold text-[var(--text)] mb-4">{t("doctorAnalytics.procedureTypes")}</h3>
                 {proceduresByName.length === 0 ? (
                   <div className="h-[300px] flex items-center justify-center text-sm text-[var(--text-secondary)]">
@@ -324,7 +324,7 @@ export default function DoctorAnalyticsPage() {
               </div>
 
               {/* Patient Status Pie */}
-              <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] p-6 shadow-md">
+              <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] p-6 shadow-md">
                 <h3 className="text-sm font-semibold text-[var(--text)] mb-4">{t("doctorAnalytics.patientStatus")}</h3>
                 {patientStatusData.length === 0 ? (
                   <div className="h-[300px] flex items-center justify-center text-sm text-[var(--text-secondary)]">
@@ -362,7 +362,7 @@ export default function DoctorAnalyticsPage() {
               </div>
 
               {/* Procedures by Status Bar */}
-              <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] p-6 shadow-md">
+              <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] p-6 shadow-md">
                 <h3 className="text-sm font-semibold text-[var(--text)] mb-4">{t("doctorAnalytics.proceduresByStatus")}</h3>
                 {procedureStatusChartData.length === 0 ? (
                   <div className="h-[300px] flex items-center justify-center text-sm text-[var(--text-secondary)]">
@@ -388,9 +388,9 @@ export default function DoctorAnalyticsPage() {
       {/* ── Filters Modal ──────────────────────────────────────────────────── */}
       <Dialog open={showFiltersModal} onOpenChange={setShowFiltersModal}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="border-b border-[var(--border)] pb-4">
+          <DialogHeader className="border-b border-[var(--ds-border)] pb-4">
             <DialogTitle className="flex items-center gap-2">
-              <Filter className="w-5 h-5 text-[var(--primary)]" />
+              <Filter className="w-5 h-5 text-[var(--ds-primary)]" />
               {t("doctorAnalytics.filters")}
             </DialogTitle>
             <DialogClose className="absolute right-4 top-4" />
@@ -407,7 +407,7 @@ export default function DoctorAnalyticsPage() {
                     onClick={() => setPreset(key)}
                     className={`px-3 py-2 text-xs rounded-xl font-medium transition-all ${
                       preset === key
-                        ? "bg-[var(--primary-light)] text-[var(--primary)] font-semibold"
+                        ? "bg-[var(--primary-light)] text-[var(--ds-primary)] font-semibold"
                         : "text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
                     }`}
                   >
@@ -431,7 +431,7 @@ export default function DoctorAnalyticsPage() {
                       value={customFrom}
                       max={customTo || undefined}
                       onChange={(e) => setCustomFrom(e.target.value)}
-                      className="w-full text-sm border border-[var(--border)] rounded-xl px-3 py-2 bg-[var(--surface)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-colors"
+                      className="w-full text-sm border border-[var(--ds-border)] rounded-xl px-3 py-2 bg-[var(--ds-surface)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)] transition-colors"
                     />
                   </div>
                   <div>
@@ -443,7 +443,7 @@ export default function DoctorAnalyticsPage() {
                       value={customTo}
                       min={customFrom || undefined}
                       onChange={(e) => setCustomTo(e.target.value)}
-                      className="w-full text-sm border border-[var(--border)] rounded-xl px-3 py-2 bg-[var(--surface)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-colors"
+                      className="w-full text-sm border border-[var(--ds-border)] rounded-xl px-3 py-2 bg-[var(--ds-surface)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)] transition-colors"
                     />
                   </div>
                 </div>
@@ -456,7 +456,7 @@ export default function DoctorAnalyticsPage() {
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setShowTypeDropdown((v) => !v)}
-                  className="w-full flex items-center justify-between px-3 py-2 text-sm bg-[var(--surface)] border border-[var(--border)] rounded-xl hover:border-[var(--primary)]/40 transition-colors"
+                  className="w-full flex items-center justify-between px-3 py-2 text-sm bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-xl hover:border-[var(--ds-primary)]/40 transition-colors"
                 >
                   <span className={selectedType ? "text-[var(--text)] font-medium" : "text-[var(--text-secondary)]"}>
                     {selectedTypeName}
@@ -464,10 +464,10 @@ export default function DoctorAnalyticsPage() {
                   <ChevronDown className={`w-4 h-4 text-[var(--text-secondary)] transition-transform ${showTypeDropdown ? "rotate-180" : ""}`} />
                 </button>
                 {showTypeDropdown && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-lg z-20 py-1 max-h-48 overflow-y-auto">
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-xl shadow-lg z-20 py-1 max-h-48 overflow-y-auto">
                     <button
                       onClick={() => { setSelectedType(""); setShowTypeDropdown(false); }}
-                      className={`w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] transition-colors ${!selectedType ? "font-semibold text-[var(--primary)] bg-[var(--primary-light)]" : "text-[var(--text-secondary)]"}`}
+                      className={`w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] transition-colors ${!selectedType ? "font-semibold text-[var(--ds-primary)] bg-[var(--primary-light)]" : "text-[var(--text-secondary)]"}`}
                     >
                       {t("doctorAnalytics.allTypes")}
                     </button>
@@ -478,7 +478,7 @@ export default function DoctorAnalyticsPage() {
                       <button
                         key={name}
                         onClick={() => { setSelectedType(name); setShowTypeDropdown(false); }}
-                        className={`w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] transition-colors ${selectedType === name ? "font-semibold text-[var(--primary)] bg-[var(--primary-light)]" : "text-[var(--text)]"}`}
+                        className={`w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] transition-colors ${selectedType === name ? "font-semibold text-[var(--ds-primary)] bg-[var(--primary-light)]" : "text-[var(--text)]"}`}
                       >
                         {name}
                       </button>
@@ -497,27 +497,27 @@ export default function DoctorAnalyticsPage() {
                 value={minRevenueInput}
                 onChange={(e) => setMinRevenueInput(e.target.value)}
                 placeholder="Мин. выручка (₸)"
-                className="w-full text-sm border border-[var(--border)] rounded-xl px-3 py-2 bg-[var(--surface)] text-[var(--text)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-colors"
+                className="w-full text-sm border border-[var(--ds-border)] rounded-xl px-3 py-2 bg-[var(--ds-surface)] text-[var(--text)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)] transition-colors"
               />
             </div>
 
             {/* Filter Summary */}
             {hasActiveFilters && (
-              <div className="border-t border-[var(--border)] pt-4">
+              <div className="border-t border-[var(--ds-border)] pt-4">
                 <p className="text-xs text-[var(--text-secondary)] mb-2">{t("doctorAnalytics.filteredResults")}</p>
                 <div className="flex flex-wrap gap-2">
                   {preset !== "all" && (
-                    <div className="px-2.5 py-1 bg-[var(--primary-light)] text-[var(--primary)] text-xs rounded-full font-medium">
+                    <div className="px-2.5 py-1 bg-[var(--primary-light)] text-[var(--ds-primary)] text-xs rounded-full font-medium">
                       {PRESETS.find((p) => p.key === preset)?.label}
                     </div>
                   )}
                   {selectedType && (
-                    <div className="px-2.5 py-1 bg-[var(--primary-light)] text-[var(--primary)] text-xs rounded-full font-medium">
+                    <div className="px-2.5 py-1 bg-[var(--primary-light)] text-[var(--ds-primary)] text-xs rounded-full font-medium">
                       {selectedType}
                     </div>
                   )}
                   {Number(minRevenueInput) > 0 && (
-                    <div className="px-2.5 py-1 bg-[var(--primary-light)] text-[var(--primary)] text-xs rounded-full font-medium">
+                    <div className="px-2.5 py-1 bg-[var(--primary-light)] text-[var(--ds-primary)] text-xs rounded-full font-medium">
                       ≥ ₸{Number(minRevenueInput).toLocaleString()}
                     </div>
                   )}
@@ -527,7 +527,7 @@ export default function DoctorAnalyticsPage() {
           </div>
 
           {/* Actions */}
-          <div className="border-t border-[var(--border)] pt-4 flex gap-3 justify-end">
+          <div className="border-t border-[var(--ds-border)] pt-4 flex gap-3 justify-end">
             {hasActiveFilters && (
               <button
                 onClick={resetFilters}
@@ -539,7 +539,7 @@ export default function DoctorAnalyticsPage() {
             )}
             <button
               onClick={() => setShowFiltersModal(false)}
-              className="flex items-center gap-1.5 px-6 py-2 text-sm bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white rounded-full hover:scale-105 transition-all font-semibold shadow-md"
+              className="flex items-center gap-1.5 px-6 py-2 text-sm bg-[var(--ds-primary)] hover:bg-[var(--primary-hover)] text-white rounded-full hover:scale-105 transition-all font-semibold shadow-md"
             >
               {t("common.close")}
             </button>

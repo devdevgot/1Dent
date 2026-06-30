@@ -134,7 +134,7 @@ export default function DoctorSchedulePage() {
             <button
               type="button"
               onClick={() => setModalDate(now)}
-              className="w-9 h-9 rounded-full flex items-center justify-center bg-[var(--primary)] text-white hover:opacity-90 hover:scale-105 transition-all shadow-sm"
+              className="w-9 h-9 rounded-full flex items-center justify-center bg-[var(--ds-primary)] text-white hover:opacity-90 hover:scale-105 transition-all shadow-sm"
             >
               <Plus className="w-4 h-4" />
             </button>

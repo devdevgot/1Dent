@@ -82,7 +82,7 @@ html {
 }
 
 .landing-gradient-text {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--accent-blue-light) 50%, var(--primary) 100%);
+  background: linear-gradient(135deg, var(--ds-primary) 0%, var(--accent-blue-light) 50%, var(--ds-primary) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -106,8 +106,8 @@ html {
 /* ── Backgrounds ─────────────────────────────────────────────────────────── */
 .landing-grid-bg {
   background-image:
-    linear-gradient(to right, var(--border) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+    linear-gradient(to right, var(--ds-border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--ds-border) 1px, transparent 1px);
   background-size: 64px 64px;
   mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%);
   -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%);
@@ -147,8 +147,8 @@ html {
 }
 
 .landing-badge-light {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
   color: var(--text);
   box-shadow: var(--shadow-sm);
 }
@@ -159,7 +159,7 @@ html {
 
 .landing-badge-primary {
   background: var(--primary-light);
-  color: var(--primary);
+  color: var(--ds-primary);
 }
 
 .landing-badge-dark {
@@ -182,7 +182,7 @@ html {
 }
 
 .landing-btn:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--ds-primary);
   outline-offset: 2px;
 }
 
@@ -199,7 +199,7 @@ html {
 }
 
 .landing-btn-accent {
-  background: var(--primary);
+  background: var(--ds-primary);
   color: var(--primary-fg);
 }
 
@@ -209,9 +209,9 @@ html {
 }
 
 .landing-btn-secondary {
-  background: var(--surface);
+  background: var(--ds-surface);
   color: var(--text);
-  border: 1px solid var(--border);
+  border: 1px solid var(--ds-border);
 }
 
 .landing-btn-secondary:hover {
@@ -221,7 +221,7 @@ html {
 
 .landing-btn-ghost {
   color: var(--text);
-  border: 1px solid var(--border);
+  border: 1px solid var(--ds-border);
   background: transparent;
   padding: 0.625rem 1.25rem;
 }
@@ -232,8 +232,8 @@ html {
 
 /* ── Cards ───────────────────────────────────────────────────────────────── */
 .landing-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-sm);
   transition: box-shadow 0.25s ease, transform 0.25s ease, border-color 0.25s ease;
@@ -244,8 +244,8 @@ html {
 }
 
 .landing-card-elevated {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
 }
@@ -259,7 +259,7 @@ html {
 
 .landing-mockup {
   border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
+  border: 1px solid var(--ds-border);
   box-shadow: var(--shadow-lg);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
@@ -277,7 +277,7 @@ html {
   background: rgba(250, 248, 244, 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--ds-border);
   box-shadow: var(--shadow-sm);
 }
 
@@ -293,7 +293,7 @@ html {
 }
 
 .landing-nav-link:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--ds-primary);
   outline-offset: 4px;
   border-radius: 4px;
 }
@@ -322,7 +322,7 @@ html {
 
 /* ── Pricing featured ──────────────────────────────────────────────────────── */
 .landing-pricing-featured {
-  border-color: var(--primary);
+  border-color: var(--ds-primary);
   box-shadow: 0 8px 32px rgba(31, 117, 254, 0.12);
 }
 
@@ -338,7 +338,7 @@ html {
 /* ── Divider ───────────────────────────────────────────────────────────────── */
 .landing-divider {
   height: 1px;
-  background: linear-gradient(to right, transparent, var(--border), transparent);
+  background: linear-gradient(to right, transparent, var(--ds-border), transparent);
 }
 
 /* ── Reduced motion ────────────────────────────────────────────────────────── */

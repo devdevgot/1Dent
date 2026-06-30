@@ -107,13 +107,13 @@ export default function PayrollApproveModal({ onClose, onSuccess, filterUserId }
         </>
       }
     >
-      <div className="px-5 py-4 border-b border-[var(--border)] flex items-center gap-3 shrink-0">
+      <div className="px-5 py-4 border-b border-[var(--ds-border)] flex items-center gap-3 shrink-0">
         <div className="flex-1">
           <label className="text-caption font-semibold text-[var(--text-secondary)] block mb-1">{t("payroll.year", "Год")}</label>
           <select
             value={year}
             onChange={(e) => { setYear(Number(e.target.value)); setOverrides({}); }}
-            className="w-full h-9 px-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)]"
+            className="w-full h-9 px-3 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)]"
           >
             {YEARS.map((y) => (
               <option key={y} value={y}>{y}</option>
@@ -125,7 +125,7 @@ export default function PayrollApproveModal({ onClose, onSuccess, filterUserId }
           <select
             value={month}
             onChange={(e) => { setMonth(Number(e.target.value)); setOverrides({}); }}
-            className="w-full h-9 px-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)]"
+            className="w-full h-9 px-3 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)]"
           >
             {MONTHS.map((m) => (
               <option key={m} value={m}>{MONTH_NAMES[m - 1]}</option>
@@ -172,18 +172,18 @@ export default function PayrollApproveModal({ onClose, onSuccess, filterUserId }
                       min={0}
                       value={getApproved(row)}
                       onChange={(e) => handleOverride(row.userId, Number(e.target.value))}
-                      className="w-28 h-8 px-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-sm text-right text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)]"
+                      className="w-28 h-8 px-2 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] text-sm text-right text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)]"
                     />
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
             <TableFooter>
-              <TableRow className="hover:bg-transparent border-t-2 border-[var(--border)] bg-[var(--surface-2)]">
+              <TableRow className="hover:bg-transparent border-t-2 border-[var(--ds-border)] bg-[var(--surface-2)]">
                 <TableCell colSpan={3} className="font-bold text-[var(--text)]">
                   {t("payroll.fotTotal", "Итого ФОТ")}
                 </TableCell>
-                <TableCell className="text-right font-bold text-[var(--primary)]">
+                <TableCell className="text-right font-bold text-[var(--ds-primary)]">
                   ₸{totalFot.toLocaleString("ru-KZ")}
                 </TableCell>
               </TableRow>

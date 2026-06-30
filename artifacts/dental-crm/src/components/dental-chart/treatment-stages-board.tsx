@@ -895,7 +895,7 @@ function StageDetailSheet({
         <div className="flex items-center justify-between px-4 pt-5 pb-3 shrink-0">
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-[var(--surface-2)] hover:bg-[var(--border)] transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-[var(--surface-2)] hover:bg-[var(--ds-border)] transition-colors"
           >
             <ChevronDown className="w-4 h-4 text-[var(--text-secondary)]" />
           </button>
@@ -941,7 +941,7 @@ function StageDetailSheet({
             </div>
             {totalCount > 0 && (
               <>
-                <div className="h-2 bg-[var(--border)] rounded-full overflow-hidden">
+                <div className="h-2 bg-[var(--ds-border)] rounded-full overflow-hidden">
                   <div
                     className="h-full bg-emerald-500 rounded-full transition-all duration-700"
                     style={{ width: `${progressPct}%` }}
@@ -1028,7 +1028,7 @@ function StageDetailSheet({
           {/* Назначено */}
           <div>
             <h3 className="text-[15px] font-bold text-[var(--text)] mb-3">Назначено</h3>
-            <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] divide-y divide-[var(--border)]">
+            <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] divide-y divide-[var(--ds-border)]">
               {(() => {
                 const scheduledItems = planItems
                   .filter((p) => p.status === "pending" && p.scheduledAt)
@@ -1075,7 +1075,7 @@ function StageDetailSheet({
           {/* Комментарий */}
           <div>
             <h3 className="text-[15px] font-bold text-[var(--text)] mb-3">Комментарий</h3>
-            <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] px-4 py-3">
+            <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] px-4 py-3">
               {planNotes ? (
                 <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed">{planNotes}</p>
               ) : (
@@ -2389,7 +2389,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
           }
         }}
       >
-        <DialogContent className="max-w-[90vw] sm:max-w-[400px] rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-xl p-6">
+        <DialogContent className="max-w-[90vw] sm:max-w-[400px] rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] shadow-xl p-6">
           <DialogHeader>
             <DialogTitle className="text-[17px] font-bold text-[var(--text)]">
               Указать скидку для этапа
@@ -2420,7 +2420,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
                       }
                     }
                   }}
-                  className="w-full text-[14px] border border-[var(--border)] rounded-xl px-3.5 py-2.5 pr-10 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 bg-[var(--surface)] text-[var(--text)]"
+                  className="w-full text-[14px] border border-[var(--ds-border)] rounded-xl px-3.5 py-2.5 pr-10 focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/30 bg-[var(--ds-surface)] text-[var(--text)]"
                   placeholder="0"
                   autoFocus
                   onKeyDown={(e) => {
@@ -2460,7 +2460,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
           : null;
         return (
           <Dialog open={completionPromptItemId !== null} onOpenChange={(open) => { if (!open) onDismissPrompt(true); }}>
-            <DialogContent className="max-w-[90vw] rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-xl p-6">
+            <DialogContent className="max-w-[90vw] rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] shadow-xl p-6">
               <DialogHeader>
                 <DialogTitle className="text-[17px] font-bold text-[var(--text)] text-center">
                   Процедура завершена?

@@ -312,9 +312,9 @@ export default function ContractTemplatesPage() {
       <div className="max-w-2xl mx-auto px-4 py-6">
         {/* Upload section */}
         {canEdit && (
-          <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-md p-6 mb-6">
+          <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] shadow-md p-6 mb-6">
             <h2 className="font-semibold text-[var(--text)] mb-4 flex items-center gap-2">
-              <Plus className="w-4 h-4 text-[var(--primary)]" />
+              <Plus className="w-4 h-4 text-[var(--ds-primary)]" />
               Загрузить новый шаблон
             </h2>
 
@@ -328,13 +328,13 @@ export default function ContractTemplatesPage() {
                 placeholder="Например: Договор на лечение зубов"
                 value={customName}
                 onChange={(e) => setCustomName(e.target.value)}
-                className="w-full border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-[var(--text)] outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20"
+                className="w-full border border-[var(--ds-border)] rounded-xl px-3 py-2 text-sm text-[var(--text)] outline-none focus:border-[var(--ds-primary)] focus:ring-2 focus:ring-[var(--ds-primary)]/20"
               />
             </div>
 
             <div
               className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${
-                dragOver ? "border-[var(--primary)] bg-[var(--primary-light)]" : "border-[var(--border)] hover:border-[var(--primary)]/40 hover:bg-[var(--bg)]"
+                dragOver ? "border-[var(--ds-primary)] bg-[var(--primary-light)]" : "border-[var(--ds-border)] hover:border-[var(--ds-primary)]/40 hover:bg-[var(--bg)]"
               }`}
               onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
               onDragLeave={() => setDragOver(false)}
@@ -350,7 +350,7 @@ export default function ContractTemplatesPage() {
               />
               {uploadMutation.isPending ? (
                 <div className="flex flex-col items-center gap-3">
-                  <Loader2 className="w-8 h-8 text-[var(--primary)] animate-spin" />
+                  <Loader2 className="w-8 h-8 text-[var(--ds-primary)] animate-spin" />
                   <div>
                     <p className="text-sm font-medium text-[var(--text)]">Загрузка и анализ файла…</p>
                     <p className="text-xs text-[var(--text-subtle)] mt-1">AI определяет поля для автозаполнения</p>
@@ -359,7 +359,7 @@ export default function ContractTemplatesPage() {
               ) : (
                 <div className="flex flex-col items-center gap-3">
                   <div className="w-12 h-12 rounded-xl bg-[var(--primary-light)] flex items-center justify-center">
-                    <Upload className="w-6 h-6 text-[var(--primary)]" />
+                    <Upload className="w-6 h-6 text-[var(--ds-primary)]" />
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-[var(--text)]">Перетащите файл или нажмите</p>

@@ -54,7 +54,7 @@ export default function ResetPassword() {
   if (!token) {
     return (
       <PageShell className="min-h-screen flex flex-col items-center justify-center px-6">
-        <div className="w-full max-w-sm text-center bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-md p-6">
+        <div className="w-full max-w-sm text-center bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] shadow-md p-6">
           <h2 className="text-xl font-bold text-[var(--text)] mb-3">Недействительная ссылка</h2>
           <p className="text-body text-[var(--text-secondary)] mb-6">Эта ссылка для сброса пароля недействительна или устарела.</p>
           <button
@@ -82,7 +82,7 @@ export default function ResetPassword() {
         </div>
       )}
 
-      <div className="w-full max-w-sm bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-md p-6">
+      <div className="w-full max-w-sm bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] shadow-md p-6">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -95,8 +95,8 @@ export default function ResetPassword() {
           <form onSubmit={handleSubmit} className="space-y-3">
             {/* New password */}
             <div className={`
-              w-full px-4 py-3.5 rounded-xl border bg-[var(--surface)] transition-all
-              ${error ? "border-[var(--danger)] bg-red-50" : "border-[var(--border)] focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--primary)]/20"}
+              w-full px-4 py-3.5 rounded-xl border bg-[var(--ds-surface)] transition-all
+              ${error ? "border-[var(--danger)] bg-red-50" : "border-[var(--ds-border)] focus-within:border-[var(--ds-primary)] focus-within:ring-2 focus-within:ring-[var(--ds-primary)]/20"}
             `}>
               <p className="section-label mb-0.5">
                 Придумайте новый пароль
@@ -122,8 +122,8 @@ export default function ResetPassword() {
 
             {/* Confirm password */}
             <div className={`
-              w-full px-4 py-3.5 rounded-xl border bg-[var(--surface)] transition-all
-              ${error ? "border-[var(--danger)] bg-red-50" : "border-[var(--border)] focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--primary)]/20"}
+              w-full px-4 py-3.5 rounded-xl border bg-[var(--ds-surface)] transition-all
+              ${error ? "border-[var(--danger)] bg-red-50" : "border-[var(--ds-border)] focus-within:border-[var(--ds-primary)] focus-within:ring-2 focus-within:ring-[var(--ds-primary)]/20"}
             `}>
               <p className="section-label mb-0.5">
                 Повторите новый пароль
@@ -172,7 +172,7 @@ export default function ResetPassword() {
         footer={
           <button
             onClick={() => setLocation("/login")}
-            className="dash-btn dash-btn-ghost w-full text-base font-semibold text-[var(--primary)]"
+            className="dash-btn dash-btn-ghost w-full text-base font-semibold text-[var(--ds-primary)]"
           >
             Отлично!
           </button>
@@ -180,7 +180,7 @@ export default function ResetPassword() {
       >
         <div className="flex flex-col items-center text-center py-2">
           <div className="w-16 h-16 rounded-full flex items-center justify-center bg-[var(--primary-light)] mb-4">
-            <CheckCircle2 className="w-8 h-8 text-[var(--primary)]" />
+            <CheckCircle2 className="w-8 h-8 text-[var(--ds-primary)]" />
           </div>
         </div>
       </AppDialog>

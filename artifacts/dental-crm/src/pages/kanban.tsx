@@ -48,7 +48,7 @@ export default function KanbanPage() {
               <RefreshCw className="w-4 h-4" />
             </PageHeaderIconButton>
             {canCreate && (
-              <Button onClick={() => setIsCreateOpen(true)} className="gap-2 shrink-0 rounded-full bg-[var(--primary)] hover:opacity-90 font-semibold h-8 text-xs px-3">
+              <Button onClick={() => setIsCreateOpen(true)} className="gap-2 shrink-0 rounded-full bg-[var(--ds-primary)] hover:opacity-90 font-semibold h-8 text-xs px-3">
                 <Plus className="w-4 h-4" />
                 {t("kanban.newPatient")}
               </Button>
@@ -59,7 +59,7 @@ export default function KanbanPage() {
       <div className="flex flex-col flex-1 overflow-hidden gap-4 p-4">
         {isLoading ? (
           <div className="flex-1 flex items-center justify-center">
-            <div className="w-10 h-10 border-4 border-[var(--primary)]/20 border-t-[var(--primary)] rounded-full animate-spin" />
+            <div className="w-10 h-10 border-4 border-[var(--ds-primary)]/20 border-t-[var(--ds-primary)] rounded-full animate-spin" />
           </div>
         ) : error ? (
           <div className="flex-1 flex items-center justify-center text-[#dc2626] text-sm">

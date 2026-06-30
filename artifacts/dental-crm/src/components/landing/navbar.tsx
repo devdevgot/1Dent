@@ -30,7 +30,7 @@ export function Navbar() {
       }`}
     >
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 rounded-lg">
+        <Link href="/" className="flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-primary)] focus-visible:ring-offset-2 rounded-lg">
           <img src="/logo_clean.png" alt={SITE.name} className="h-9 w-auto" />
         </Link>
 
@@ -59,7 +59,7 @@ export function Navbar() {
           type="button"
           aria-label={menuOpen ? "Закрыть меню" : "Открыть меню"}
           aria-expanded={menuOpen}
-          className="md:hidden p-2 rounded-xl hover:bg-[var(--surface-2)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+          className="md:hidden p-2 rounded-xl hover:bg-[var(--surface-2)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-primary)]"
           onClick={() => setMenuOpen(!menuOpen)}
         >
           {menuOpen ? <X size={22} /> : <Menu size={22} />}
@@ -72,14 +72,14 @@ export function Navbar() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden bg-[var(--bg)] border-t border-[var(--border)] px-6 py-6 flex flex-col gap-2"
+            className="md:hidden bg-[var(--bg)] border-t border-[var(--ds-border)] px-6 py-6 flex flex-col gap-2"
           >
             {links.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
                 onClick={() => setMenuOpen(false)}
-                className="font-manrope text-[var(--text)] font-medium py-3 border-b border-[var(--border)] last:border-0"
+                className="font-manrope text-[var(--text)] font-medium py-3 border-b border-[var(--ds-border)] last:border-0"
               >
                 {link.label}
               </a>

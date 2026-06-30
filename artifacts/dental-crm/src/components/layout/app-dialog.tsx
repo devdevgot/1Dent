@@ -45,15 +45,16 @@ export function AppDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        hideClose
         className={cn(
-          "gap-0 overflow-hidden border-[var(--border)] bg-[var(--surface)] p-0 font-manrope",
+          "gap-0 overflow-hidden border-[var(--ds-border)] bg-[var(--ds-surface)] p-0 font-manrope",
           "max-sm:fixed max-sm:bottom-0 max-sm:top-auto max-sm:left-0 max-sm:right-0 max-sm:translate-x-0 max-sm:translate-y-0",
           "max-sm:rounded-t-3xl max-sm:rounded-b-none max-sm:max-h-[92vh]",
           sizeClasses[size],
           className,
         )}
       >
-        <DialogHeader className="border-b border-[var(--border)] px-5 py-4 text-left space-y-1">
+        <DialogHeader className="border-b border-[var(--ds-border)] px-5 py-4 text-left space-y-1">
           <div className="flex items-start gap-3">
             <div className="min-w-0 flex-1">
               <DialogTitle className="text-lg font-semibold text-[var(--text)] leading-tight">
@@ -81,7 +82,7 @@ export function AppDialog({
         <div className={cn("overflow-y-auto px-5 py-4", bodyClassName)}>{children}</div>
 
         {footer ? (
-          <DialogFooter className="border-t border-[var(--border)] px-5 py-4 gap-2 sm:gap-2">
+          <DialogFooter className="border-t border-[var(--ds-border)] px-5 py-4 gap-2 sm:gap-2">
             {footer}
           </DialogFooter>
         ) : null}

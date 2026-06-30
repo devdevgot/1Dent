@@ -203,7 +203,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top bar — minimal chrome; pages own their PageHeader */}
-        <header className="flex-none h-12 bg-[var(--surface)] border-b border-[var(--border)] flex items-center gap-3 px-4 z-10">
+        <header className="flex-none h-12 bg-[var(--ds-surface)] border-b border-[var(--ds-border)] flex items-center gap-3 px-4 z-10">
           {isMobile ? (
             <button
               type="button"

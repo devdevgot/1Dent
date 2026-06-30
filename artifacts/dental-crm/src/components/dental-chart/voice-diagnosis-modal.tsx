@@ -499,12 +499,12 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-sm sm:p-4 overflow-hidden">
-      <div className="bg-[var(--surface)] rounded-t-2xl sm:rounded-2xl border border-[var(--border)] shadow-xl w-full min-w-0 max-w-[100vw] sm:max-w-3xl flex flex-col overflow-hidden"
+      <div className="bg-[var(--ds-surface)] rounded-t-2xl sm:rounded-2xl border border-[var(--ds-border)] shadow-xl w-full min-w-0 max-w-[100vw] sm:max-w-3xl flex flex-col overflow-hidden"
         style={{ maxHeight: "min(92dvh, 100dvh - env(safe-area-inset-bottom, 0px))" }}
       >
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]/50 shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--ds-border)]/50 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
               <Mic className="w-4 h-4 text-primary" />
@@ -563,7 +563,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
               {phase === "idle" && (
                 <p className="text-sm text-[var(--text-secondary)] text-center max-w-xs leading-relaxed">
                   Нажмите кнопку и продиктуйте состояние зубов. Например:
-                  <span className="block mt-2 italic text-xs bg-[var(--bg)] border border-[var(--border)]/40 rounded-lg px-3 py-2 text-[var(--text)]/70 leading-relaxed">
+                  <span className="block mt-2 italic text-xs bg-[var(--bg)] border border-[var(--ds-border)]/40 rounded-lg px-3 py-2 text-[var(--text)]/70 leading-relaxed">
                     «Шестнадцатый — кариес, пломба композитная. Двадцать первый — коронка циркониевая»
                   </span>
                 </p>
@@ -638,7 +638,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                 <>
                   <button
                     onClick={() => setTranscriptOpen((v) => !v)}
-                    className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-[var(--bg)] border border-[var(--border)]/40 rounded-xl text-left hover:bg-[var(--surface-2)] transition-colors"
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-[var(--bg)] border border-[var(--ds-border)]/40 rounded-xl text-left hover:bg-[var(--surface-2)] transition-colors"
                   >
                     <span className="text-xs font-medium text-[var(--text-secondary)]">Расшифровка речи</span>
                     {transcriptOpen
@@ -646,7 +646,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                       : <ChevronRight className="w-3.5 h-3.5 text-[var(--text-secondary)]" />}
                   </button>
                   {transcriptOpen && (
-                    <p className="text-xs text-[var(--text-secondary)] bg-[var(--bg)] border border-[var(--border)]/40 rounded-xl px-3 py-2 leading-relaxed italic">
+                    <p className="text-xs text-[var(--text-secondary)] bg-[var(--bg)] border border-[var(--ds-border)]/40 rounded-xl px-3 py-2 leading-relaxed italic">
                       «{transcript}»
                     </p>
                   )}
@@ -667,11 +667,11 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                     Проверьте диагнозы. В списке услуг — только позиции, совпадающие со словами из расшифровки.
                   </p>
 
-                  <div className="border border-[var(--border)]/50 rounded-xl overflow-hidden w-full min-w-0 isolate">
+                  <div className="border border-[var(--ds-border)]/50 rounded-xl overflow-hidden w-full min-w-0 isolate">
                     <div className="table-h-scroll w-full min-w-0 touch-pan-x">
                       <table className="text-xs w-full table-fixed min-w-0">
                         <thead>
-                          <tr className="bg-[var(--bg)] border-b border-[var(--border)]/50 text-[10px] uppercase tracking-wide text-[var(--text-secondary)]">
+                          <tr className="bg-[var(--bg)] border-b border-[var(--ds-border)]/50 text-[10px] uppercase tracking-wide text-[var(--text-secondary)]">
                             <th className="text-left font-semibold px-3 py-2 w-[11%]">Зуб</th>
                             <th className="text-left font-semibold px-3 py-2 w-[27%]">Диагноз</th>
                             <th className="text-left font-semibold px-3 py-2 w-[37%]">Услуга</th>
@@ -679,7 +679,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                             <th className="text-center font-semibold px-2 py-2 w-[10%]">Удалить</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-[var(--border)]/40">
+                        <tbody className="divide-y divide-[var(--ds-border)]/40">
                           {entries.map((entry, idx) => {
                             const cfg = CONDITION_CONFIG[entry.condition as ToothCondition];
                             const selectedId =
@@ -690,7 +690,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                             const suggestions = entry.suggestedTemplates ?? [];
 
                             return (
-                              <tr key={entry.fdi} className="bg-[var(--surface)] hover:bg-[var(--bg)]/60">
+                              <tr key={entry.fdi} className="bg-[var(--ds-surface)] hover:bg-[var(--bg)]/60">
                                 <td className="px-3 py-2.5 align-top">
                                   <div className="flex items-center gap-1.5">
                                     {cfg && (
@@ -706,7 +706,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                                   <select
                                     value={entry.condition}
                                     onChange={(e) => handleConditionChange(idx, entry, e.target.value)}
-                                    className="w-full min-w-0 max-w-full text-xs border border-[var(--border)] rounded-lg px-2 py-1.5 bg-[var(--surface)] focus:outline-none focus:ring-2 focus:ring-primary/30 truncate"
+                                    className="w-full min-w-0 max-w-full text-xs border border-[var(--ds-border)] rounded-lg px-2 py-1.5 bg-[var(--ds-surface)] focus:outline-none focus:ring-2 focus:ring-primary/30 truncate"
                                   >
                                     {CONDITION_VALUES.map((c) => (
                                       <option key={c} value={c}>{CONDITION_CONFIG[c]?.label ?? c}</option>
@@ -726,7 +726,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                                     <select
                                       value={selectedId}
                                       onChange={(e) => setServiceForTooth(entry.fdi, e.target.value)}
-                                      className="w-full min-w-0 max-w-full text-xs border border-[var(--border)] rounded-lg px-2 py-1.5 bg-[var(--surface)] focus:outline-none focus:ring-2 focus:ring-primary/30 truncate"
+                                      className="w-full min-w-0 max-w-full text-xs border border-[var(--ds-border)] rounded-lg px-2 py-1.5 bg-[var(--ds-surface)] focus:outline-none focus:ring-2 focus:ring-primary/30 truncate"
                                     >
                                       <option value="">— не выбрано —</option>
                                       {suggestions.map((tpl) => (
@@ -786,7 +786,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
 
         {/* Footer */}
         {phase === "review" && entries.length > 0 && (
-          <div className="shrink-0 border-t border-[var(--border)]/50 bg-[var(--bg)]/50 px-5 py-4 space-y-2">
+          <div className="shrink-0 border-t border-[var(--ds-border)]/50 bg-[var(--bg)]/50 px-5 py-4 space-y-2">
             {/* Cost summary */}
             {totalSelectedServices > 0 && (
               <div className="flex items-center justify-between text-xs">

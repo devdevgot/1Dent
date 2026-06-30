@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type PageHeaderProps = {
@@ -32,7 +32,7 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "bg-[var(--surface)] border-b border-[var(--border)] safe-area-top font-manrope shrink-0",
+        "bg-[var(--ds-surface)] border-b border-[var(--ds-border)] safe-area-top font-manrope shrink-0",
         sticky && "sticky top-0 z-20",
         shadow && "shadow-sm",
         className,
@@ -44,7 +44,7 @@ export function PageHeader({
             type="button"
             onClick={onBack}
             aria-label={backLabel}
-            className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors active:scale-95"
+            className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors active:scale-95"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
@@ -52,7 +52,7 @@ export function PageHeader({
           <div className="w-9 shrink-0" />
         )}
 
-        {icon ? <div className="shrink-0 text-[var(--primary)]">{icon}</div> : null}
+        {icon ? <div className="shrink-0 text-[var(--ds-primary)]">{icon}</div> : null}
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 min-w-0">
@@ -93,14 +93,40 @@ export function PageHeaderIconButton({
       onClick={onClick}
       title={title}
       className={cn(
-        "w-9 h-9 flex items-center justify-center rounded-xl transition-colors",
+        "w-9 h-9 flex items-center justify-center rounded-full transition-colors",
         active
-          ? "text-[var(--primary)] bg-[var(--primary-light)]"
-          : "text-[var(--text-subtle)] hover:text-[var(--primary)] hover:bg-[var(--surface-2)]",
+          ? "text-[var(--ds-primary)] bg-[var(--primary-light)]"
+          : "text-[var(--text-subtle)] hover:text-[var(--ds-primary)] hover:bg-[var(--surface-2)]",
         className,
       )}
     >
       {children}
+    </button>
+  );
+}
+
+type PageHeaderAddButtonProps = {
+  onClick?: () => void;
+  title?: string;
+  className?: string;
+};
+
+/** Circular primary + action for page headers */
+export function PageHeaderAddButton({ onClick, title, className }: PageHeaderAddButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      aria-label={title ?? "Add"}
+      className={cn(
+        "w-9 h-9 shrink-0 flex items-center justify-center rounded-full",
+        "bg-[var(--ds-primary)] text-white hover:bg-[var(--primary-hover)]",
+        "transition-colors active:scale-95 shadow-sm",
+        className,
+      )}
+    >
+      <Plus className="w-5 h-5" />
     </button>
   );
 }

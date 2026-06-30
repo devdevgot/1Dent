@@ -182,7 +182,7 @@ export default function DoctorScheduleDayPage() {
           <button
             type="button"
             onClick={() => setShowModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--primary)] text-white text-xs font-semibold hover:bg-[var(--primary-hover)] hover:scale-105 transition-all shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--ds-primary)] text-white text-xs font-semibold hover:bg-[var(--primary-hover)] hover:scale-105 transition-all shadow-sm"
           >
             <Plus className="w-3.5 h-3.5" />
             Новая запись
@@ -206,14 +206,14 @@ export default function DoctorScheduleDayPage() {
                     onClick={() => navigate(`/schedule/${ds}`)}
                     className="flex flex-col items-center gap-0.5 py-1 rounded-xl transition-colors"
                   >
-                    <span className={`text-[10px] font-semibold uppercase tracking-wide ${isSel ? "text-[var(--primary)]" : "text-[var(--text-secondary)]"}`}>
+                    <span className={`text-[10px] font-semibold uppercase tracking-wide ${isSel ? "text-[var(--ds-primary)]" : "text-[var(--text-secondary)]"}`}>
                       {DOW_SHORT[(d.getDay())]}
                     </span>
                     <span className={`
                       w-8 h-8 flex items-center justify-center rounded-full text-sm font-bold transition-all
-                      ${isSel && isNow  ? "bg-[var(--primary)] text-white shadow-lg"
-                      : isSel           ? "bg-[var(--primary-light)] text-[var(--primary)]"
-                      : isNow           ? "text-[var(--primary)]"
+                      ${isSel && isNow  ? "bg-[var(--ds-primary)] text-white shadow-lg"
+                      : isSel           ? "bg-[var(--primary-light)] text-[var(--ds-primary)]"
+                      : isNow           ? "text-[var(--ds-primary)]"
                       :                   "text-[var(--text)]"}
                     `}>
                       {d.getDate()}
@@ -231,7 +231,7 @@ export default function DoctorScheduleDayPage() {
       />
 
       {/* ── Timeline ── */}
-      <div ref={tlRef} className="flex-1 overflow-y-auto bg-[var(--surface)] border-t border-[var(--border)]">
+      <div ref={tlRef} className="flex-1 overflow-y-auto bg-[var(--ds-surface)] border-t border-[var(--ds-border)]">
         <div className="relative" style={{ height: totalH + HOUR_H }}>
 
           {/* Hour grid */}
@@ -244,7 +244,7 @@ export default function DoctorScheduleDayPage() {
               <span className="w-14 shrink-0 text-right pr-3 text-[11px] text-[var(--text-secondary)] font-medium leading-none -translate-y-[6px] select-none">
                 {h < END_H ? `${String(h).padStart(2,"0")}:00` : ""}
               </span>
-              <div className="flex-1 border-t border-[var(--border)]" />
+              <div className="flex-1 border-t border-[var(--ds-border)]" />
             </div>
           ))}
 
@@ -255,11 +255,11 @@ export default function DoctorScheduleDayPage() {
               style={{ top: nowPx }}
             >
               <div className="w-14 shrink-0 flex justify-end pr-2">
-                <span className="text-[10px] font-bold bg-[var(--primary)] text-white rounded-full px-1.5 py-0.5 leading-tight shadow-md">
+                <span className="text-[10px] font-bold bg-[var(--ds-primary)] text-white rounded-full px-1.5 py-0.5 leading-tight shadow-md">
                   {nowDate.toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}
                 </span>
               </div>
-              <div className="flex-1 h-px bg-[var(--primary)] shadow-sm" />
+              <div className="flex-1 h-px bg-[var(--ds-primary)] shadow-sm" />
             </div>
           )}
 

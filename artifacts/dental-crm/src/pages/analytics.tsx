@@ -291,7 +291,7 @@ export default function AnalyticsPage() {
                   value={customFrom}
                   max={customTo || undefined}
                   onChange={(e) => setCustomFrom(e.target.value)}
-                  className="text-xs border border-[var(--border)] rounded-xl px-2.5 py-1.5 bg-[var(--surface)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] w-36 transition-colors"
+                  className="text-xs border border-[var(--ds-border)] rounded-xl px-2.5 py-1.5 bg-[var(--ds-surface)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)] w-36 transition-colors"
                 />
                 <span className="text-xs text-[var(--text-secondary)]">—</span>
                 <input
@@ -299,7 +299,7 @@ export default function AnalyticsPage() {
                   value={customTo}
                   min={customFrom || undefined}
                   onChange={(e) => setCustomTo(e.target.value)}
-                  className="text-xs border border-[var(--border)] rounded-xl px-2.5 py-1.5 bg-[var(--surface)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] w-36 transition-colors"
+                  className="text-xs border border-[var(--ds-border)] rounded-xl px-2.5 py-1.5 bg-[var(--ds-surface)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)] w-36 transition-colors"
                 />
               </div>
             )}

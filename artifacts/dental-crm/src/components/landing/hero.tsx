@@ -21,7 +21,7 @@ export function Hero() {
           href="#features"
           className="landing-badge landing-badge-light font-manrope mb-8"
         >
-          <Star size={13} className="text-[var(--primary)]" fill="currentColor" />
+          <Star size={13} className="text-[var(--ds-primary)]" fill="currentColor" />
           <span className="font-semibold">Новое:</span>
           <span className="text-[var(--text-secondary)]">{SITE.hero.announcement}</span>
           <ArrowRight size={13} className="text-[var(--text-subtle)]" />
@@ -63,7 +63,7 @@ export function Hero() {
             { icon: Users, text: "Для клиник Казахстана" },
           ].map((b) => (
             <div key={b.text} className="flex items-center gap-2 text-sm font-manrope text-[var(--text-subtle)]">
-              <b.icon size={14} className="text-[var(--primary)]" />
+              <b.icon size={14} className="text-[var(--ds-primary)]" />
               <span>{b.text}</span>
             </div>
           ))}

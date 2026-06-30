@@ -95,7 +95,7 @@ export default function WarehouseDashboard() {
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { icon: Package, label: t("warehouseDashboard.totalItems"), value: isLoading ? "—" : items.length, delay: 0, iconBg: "bg-[var(--surface-2)] text-[var(--primary)]" },
+            { icon: Package, label: t("warehouseDashboard.totalItems"), value: isLoading ? "—" : items.length, delay: 0, iconBg: "bg-[var(--surface-2)] text-[var(--ds-primary)]" },
             { icon: TrendingDown, label: t("warehouseDashboard.lowStock"), value: isLoading ? "—" : lowStockItems.length, delay: 0.05, iconBg: "bg-[var(--warning-light)] text-[var(--warning)]" },
             { icon: Activity, label: t("warehouseDashboard.totalValue"), value: isLoading ? "—" : `₸ ${totalValue.toLocaleString("ru-KZ")}`, delay: 0.1, iconBg: "bg-[var(--success-light)] text-[var(--success)]", small: true },
           ].map((stat) => (
@@ -119,7 +119,7 @@ export default function WarehouseDashboard() {
           <div className="lg:col-span-2 dash-card dash-card-padded dash-card-elevated">
             <div className="flex items-center justify-between mb-6">
               <h3 className="dash-section-title">
-                <Package className="w-5 h-5 text-[var(--primary)]" />
+                <Package className="w-5 h-5 text-[var(--ds-primary)]" />
                 {t("warehouseDashboard.inventoryTitle")}
               </h3>
             </div>
@@ -152,7 +152,7 @@ export default function WarehouseDashboard() {
                       <th className="text-right">{t("warehouseDashboard.colStatus")}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[var(--border)]">
+                  <tbody className="divide-y divide-[var(--ds-border)]">
                     {items.map((item, i) => {
                       const isLow = item.quantity <= item.minQuantity;
                       return (
@@ -196,7 +196,7 @@ export default function WarehouseDashboard() {
 
           <div className="dash-card dash-card-padded dash-card-elevated">
             <h3 className="dash-section-title mb-5">
-              <Activity className="w-5 h-5 text-[var(--primary)]" />
+              <Activity className="w-5 h-5 text-[var(--ds-primary)]" />
               {t("warehouseDashboard.recentWriteoffs")}
             </h3>
             {recentCompleted.length === 0 ? (
@@ -216,9 +216,9 @@ export default function WarehouseDashboard() {
                       initial={{ opacity: 0, y: 4 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.04 }}
-                      className="flex items-start gap-3 py-2 border-b border-[var(--border)] last:border-b-0"
+                      className="flex items-start gap-3 py-2 border-b border-[var(--ds-border)] last:border-b-0"
                     >
-                      <div className="w-2 h-2 rounded-full bg-[var(--primary)] mt-1.5 flex-none" />
+                      <div className="w-2 h-2 rounded-full bg-[var(--ds-primary)] mt-1.5 flex-none" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-[var(--text)] truncate">{proc.name}</p>
                         <p className="text-xs text-[var(--text-secondary)]">{proc.doctorName ?? "—"}</p>

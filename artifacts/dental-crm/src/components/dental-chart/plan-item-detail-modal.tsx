@@ -274,9 +274,9 @@ function TreatmentSchedulePicker({ scheduledAt, onConfirm, onClear, onClose }: T
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-xl w-full max-w-sm mx-4 overflow-hidden">
+      <div className="relative z-10 bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] shadow-xl w-full max-w-sm mx-4 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--ds-border)]">
           <p className="font-semibold text-[var(--text)] text-[15px]">Назначить дату лечения</p>
           <button onClick={onClose} className="text-[var(--text-subtle)] hover:text-[var(--text-secondary)] transition-colors">
             <X className="w-5 h-5" />
@@ -333,7 +333,7 @@ function TreatmentSchedulePicker({ scheduledAt, onConfirm, onClear, onClose }: T
           ))}
         </div>
 
-        <div className="mx-5 border-t border-[var(--border)] my-1" />
+        <div className="mx-5 border-t border-[var(--ds-border)] my-1" />
 
         {/* Time list */}
         <div className="px-5 pb-2">
@@ -362,7 +362,7 @@ function TreatmentSchedulePicker({ scheduledAt, onConfirm, onClear, onClose }: T
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t border-[var(--border)] flex gap-3">
+        <div className="px-5 py-4 border-t border-[var(--ds-border)] flex gap-3">
           {onClear && (
             <button
               type="button"
@@ -387,7 +387,7 @@ function TreatmentSchedulePicker({ scheduledAt, onConfirm, onClear, onClose }: T
               "dash-btn flex-1 py-2 text-sm font-semibold",
               selDate
                 ? "dash-btn-primary"
-                : "!bg-[var(--surface-2)] !text-[var(--text-subtle)] cursor-not-allowed border-[var(--border)]"
+                : "!bg-[var(--surface-2)] !text-[var(--text-subtle)] cursor-not-allowed border-[var(--ds-border)]"
             )}
           >
             Готово
@@ -847,17 +847,17 @@ export function PlanItemDetailModal({
       />
       {/* Panel — takes ~75% of screen height, anchored near bottom */}
       <div
-        className="relative bg-[var(--surface)] w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl border border-[var(--border)] shadow-xl flex flex-col overflow-hidden animate-in-slide"
+        className="relative bg-[var(--ds-surface)] w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl border border-[var(--ds-border)] shadow-xl flex flex-col overflow-hidden animate-in-slide"
         style={{ height: "75dvh" }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-1 shrink-0">
-          <div className="w-10 h-1 rounded-full bg-[var(--border)]" />
+          <div className="w-10 h-1 rounded-full bg-[var(--ds-border)]" />
         </div>
 
         {/* ── Header ── */}
-        <div className="px-4 pt-3 pb-3 border-b border-[var(--border)] shrink-0">
+        <div className="px-4 pt-3 pb-3 border-b border-[var(--ds-border)] shrink-0">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
               <p className="text-[15px] font-bold text-[var(--text)] leading-snug">{item.title}</p>
@@ -1496,7 +1496,7 @@ export function PlanItemDetailModal({
               />
             ) : isPdf(previewPath) ? (
               <div className="w-full h-[75vh] flex flex-col bg-white rounded-2xl overflow-hidden shadow-2xl">
-                <div className="px-4 py-3 bg-[var(--bg)] border-b border-[var(--border)] flex items-center justify-between">
+                <div className="px-4 py-3 bg-[var(--bg)] border-b border-[var(--ds-border)] flex items-center justify-between">
                   <span className="text-xs font-semibold text-[var(--text)] truncate">{fileName(previewPath)}</span>
                   <a
                     href={fileUrl(previewPath)}
@@ -1537,7 +1537,7 @@ export function PlanItemDetailModal({
         const targetDoctor = allUsers.find((u) => u.id === doctorToTransfer);
         return (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-            <div className="bg-[var(--surface)] w-full max-w-[340px] rounded-2xl p-5 shadow-xl border border-[var(--border)] flex flex-col text-center space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="bg-[var(--ds-surface)] w-full max-w-[340px] rounded-2xl p-5 shadow-xl border border-[var(--ds-border)] flex flex-col text-center space-y-4 animate-in zoom-in-95 duration-150">
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto text-primary">
                 <UserRound className="w-6 h-6" />
               </div>

@@ -111,7 +111,7 @@ export function PlanPaywall() {
             return (
               <li key={key} className="flex items-center gap-3 text-sm text-[var(--text-secondary)]">
                 <div className="w-8 h-8 rounded-xl bg-[var(--primary-light)] flex items-center justify-center shrink-0">
-                  <Icon className="w-4 h-4 text-[var(--primary)]" />
+                  <Icon className="w-4 h-4 text-[var(--ds-primary)]" />
                 </div>
                 {t(`paywall.features.${key}`)}
               </li>

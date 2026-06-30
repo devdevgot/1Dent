@@ -26,7 +26,7 @@ export function ConfirmDeleteDialog({
 }: ConfirmDeleteDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={(o) => !o && onCancel()}>
-      <AlertDialogContent className="max-w-[300px] rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-xl">
+      <AlertDialogContent className="max-w-[300px] rounded-2xl bg-[var(--ds-surface)] border border-[var(--ds-border)] shadow-xl">
         <AlertDialogHeader>
           <AlertDialogTitle className="text-base">
             {title ?? "Вы уверены?"}

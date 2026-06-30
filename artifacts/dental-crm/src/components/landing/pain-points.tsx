@@ -47,16 +47,16 @@ export function PainPoints() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-30px" }}
-          className="grid sm:grid-cols-2 gap-px bg-[var(--border)] border border-[var(--border)] rounded-[var(--radius-xl)] overflow-hidden shadow-[var(--shadow-sm)]"
+          className="grid sm:grid-cols-2 gap-px bg-[var(--ds-border)] border border-[var(--ds-border)] rounded-[var(--radius-xl)] overflow-hidden shadow-[var(--shadow-sm)]"
         >
           {pains.map((pain, i) => (
             <motion.div
               key={i}
               variants={staggerChildVariants}
               style={{ willChange: "transform, opacity" }}
-              className="bg-[var(--surface)] p-8 flex flex-col gap-4 group hover:bg-[var(--bg)] transition-colors duration-300"
+              className="bg-[var(--ds-surface)] p-8 flex flex-col gap-4 group hover:bg-[var(--bg)] transition-colors duration-300"
             >
-              <span className="font-manrope font-extrabold text-5xl text-[var(--border)] group-hover:text-red-100 transition-colors duration-300 leading-none select-none">
+              <span className="font-manrope font-extrabold text-5xl text-[var(--ds-border)] group-hover:text-red-100 transition-colors duration-300 leading-none select-none">
                 {pain.num}
               </span>
               <h3 className="font-manrope font-bold text-[var(--text)] text-xl leading-tight tracking-tight">

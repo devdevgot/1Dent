@@ -70,7 +70,7 @@ const roles = [
 
 export function RolesSection() {
   return (
-    <section className="bg-[var(--surface)] landing-section-sm px-6">
+    <section className="bg-[var(--ds-surface)] landing-section-sm px-6">
       <div className="max-w-7xl mx-auto">
         <motion.div {...fadeUp(0)} className="text-center mb-6">
           <div className="landing-badge landing-badge-primary font-manrope mb-6">

@@ -286,7 +286,7 @@ function CurrentSubscriptionBanner({ clinic }: { clinic: Clinic | null }) {
   }
 
   return (
-    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4">
+    <div className="bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-2xl p-4">
       <div className="flex items-start gap-3">
         <div className="w-10 h-10 rounded-xl bg-[var(--surface-2)] flex items-center justify-center shrink-0">
           <AlertCircle className="w-5 h-5 text-[var(--text-secondary)]" />
@@ -369,17 +369,17 @@ export default function PricingPage() {
               <div
                 key={plan.id}
                 className={cn(
-                  "relative bg-[var(--surface)] rounded-2xl border-2 overflow-hidden",
+                  "relative bg-[var(--ds-surface)] rounded-2xl border-2 overflow-hidden",
                   plan.badge
-                    ? "border-[var(--primary)] shadow-md shadow-[var(--primary)]/10"
+                    ? "border-[var(--ds-primary)] shadow-md shadow-[var(--ds-primary)]/10"
                     : isCurrentPlan
                     ? "border-[var(--success)] shadow-md"
-                    : "border-[var(--border)] shadow-md",
+                    : "border-[var(--ds-border)] shadow-md",
                 )}
               >
                 {plan.badge && (
                   <div className="absolute top-0 right-0">
-                    <div className="bg-[var(--primary)] text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl flex items-center gap-1">
+                    <div className="bg-[var(--ds-primary)] text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl flex items-center gap-1">
                       <Star className="w-3 h-3" /> {plan.badge}
                     </div>
                   </div>
@@ -416,7 +416,7 @@ export default function PricingPage() {
 
                   {/* Includes from */}
                   {plan.includesFrom && (
-                    <div className="mb-4 px-3 py-2 bg-[var(--surface)]/60 border border-[var(--border)]/60 rounded-xl">
+                    <div className="mb-4 px-3 py-2 bg-[var(--ds-surface)]/60 border border-[var(--ds-border)]/60 rounded-xl">
                       <p className="text-[12px] text-[var(--text-secondary)] font-medium">
                         Всё из тарифа <span className="font-bold text-[var(--text)]">{plan.includesFrom}</span>, а также:
                       </p>
@@ -441,7 +441,7 @@ export default function PricingPage() {
                   </div>
 
                   {/* Limits */}
-                  <div className="bg-[var(--surface)]/70 border border-[var(--border)] rounded-xl p-3.5 mb-5">
+                  <div className="bg-[var(--ds-surface)]/70 border border-[var(--ds-border)] rounded-xl p-3.5 mb-5">
                     <p className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2">Лимиты</p>
                     <div className="space-y-1.5">
                       {plan.limits.map((limit, i) => (
@@ -462,7 +462,7 @@ export default function PricingPage() {
                       isCurrentPlan
                         ? "bg-[var(--success-light)] text-[var(--success)] cursor-default"
                         : plan.badge
-                        ? "bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)] hover:scale-105 active:scale-95 shadow-md"
+                        ? "bg-[var(--ds-primary)] text-white hover:bg-[var(--primary-hover)] hover:scale-105 active:scale-95 shadow-md"
                         : "bg-[var(--text)] text-white hover:opacity-90 hover:scale-105 active:scale-95",
                     )}
                   >
@@ -475,7 +475,7 @@ export default function PricingPage() {
         </div>
 
         {/* Common features */}
-        <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-md p-5">
+        <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] shadow-md p-5">
           <div className="flex items-center gap-2.5 mb-4">
             <div className="w-9 h-9 rounded-xl bg-[var(--success-light)] flex items-center justify-center shrink-0">
               <Shield className="w-4.5 h-4.5 text-[var(--success)]" />

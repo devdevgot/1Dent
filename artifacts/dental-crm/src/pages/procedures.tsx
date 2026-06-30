@@ -829,7 +829,7 @@ export default function ProceduresPage() {
             <button
               type="button"
               onClick={() => setShowNew(true)}
-              className="w-9 h-9 flex items-center justify-center rounded-full bg-[var(--primary)] text-white hover:opacity-90 transition-opacity shrink-0"
+              className="w-9 h-9 flex items-center justify-center rounded-full bg-[var(--ds-primary)] text-white hover:opacity-90 transition-opacity shrink-0"
               title={t("procedure.new")}
             >
               <Plus className="w-4 h-4" />

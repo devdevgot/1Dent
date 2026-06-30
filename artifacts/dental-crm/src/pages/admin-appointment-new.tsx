@@ -438,9 +438,9 @@ export default function AdminAppointmentNewPage() {
       <form onSubmit={handleSubmit} className="max-w-2xl mx-auto px-4 pb-12 space-y-5">
 
         {/* ── Patient card ── */}
-        <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-md p-5 space-y-4">
+        <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] shadow-md p-5 space-y-4">
           <h2 className="text-sm font-bold text-[var(--text)] flex items-center gap-2">
-            <User className="w-4 h-4 text-[var(--primary)]" />
+            <User className="w-4 h-4 text-[var(--ds-primary)]" />
             {t("adminAppointment.patient")}
             <span className="text-[var(--danger)]">*</span>
           </h2>

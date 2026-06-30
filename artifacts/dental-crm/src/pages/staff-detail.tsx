@@ -274,7 +274,7 @@ export default function StaffDetailPage() {
   if (kpiLoading || proceduresLoading || usersLoading || geoLoading || expensesLoading) {
     return (
       <PageShell className="h-full flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-[var(--primary)]/20 border-t-[var(--primary)] rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-[var(--ds-primary)]/20 border-t-[var(--ds-primary)] rounded-full animate-spin" />
       </PageShell>
     );
   }
@@ -393,7 +393,7 @@ export default function StaffDetailPage() {
         ].filter(Boolean).join(" • ")}
         onBack={() => setLocation("/users")}
         icon={
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--primary)] flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-sm">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--ds-primary)] to-[var(--ds-primary)] flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-sm">
             {getInitials(selectedUser.name)}
           </div>
         }
@@ -406,7 +406,7 @@ export default function StaffDetailPage() {
           >
             <SlidersHorizontal className="w-4 h-4" />
             {dateFilter !== "month" && (
-              <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-[var(--primary)] rounded-full" />
+              <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-[var(--ds-primary)] rounded-full" />
             )}
           </PageHeaderIconButton>
         }
@@ -436,8 +436,8 @@ export default function StaffDetailPage() {
                       className={cn(
                         "px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200",
                         isActive
-                          ? "bg-[var(--primary)] text-white shadow-sm"
-                          : "bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[var(--border)] hover:text-[var(--text)]",
+                          ? "bg-[var(--ds-primary)] text-white shadow-sm"
+                          : "bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[var(--ds-border)] hover:text-[var(--text)]",
                       )}
                     >
                       {item.label}

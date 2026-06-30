@@ -321,7 +321,7 @@ export default function StaffPage() {
             >
               <SlidersHorizontal className="w-4 h-4" />
               {hasActiveFilter && (
-                <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-[var(--primary)] rounded-full" />
+                <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-[var(--ds-primary)] rounded-full" />
               )}
             </PageHeaderIconButton>
             {isOwnerOrAdmin && (

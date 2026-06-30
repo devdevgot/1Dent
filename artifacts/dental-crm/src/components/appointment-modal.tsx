@@ -26,7 +26,7 @@ export const STATUS_PILL: Record<string, string> = {
   scheduled:   "bg-blue-50 text-blue-800 border border-blue-200",
   in_progress: "bg-amber-50 text-amber-800 border border-amber-200",
   completed:   "bg-green-50 text-green-800 border border-green-200",
-  cancelled:   "bg-[var(--surface-2)] text-muted-foreground border border-[var(--border)]",
+  cancelled:   "bg-[var(--surface-2)] text-muted-foreground border border-[var(--ds-border)]",
 };
 
 export const STATUS_OPTIONS = [
@@ -430,7 +430,7 @@ export function AppointmentModal({
                       {STATUS_OPTIONS.map((s) => (
                         <button key={s.value} type="button" onClick={() => setStatus(s.value)}
                           className={cn("px-3 py-1.5 rounded-lg text-xs font-medium border transition-all",
-                            status === s.value ? STATUS_PILL[s.value] : "border-[var(--border)] text-muted-foreground hover:border-[var(--border)]")}>
+                            status === s.value ? STATUS_PILL[s.value] : "border-[var(--ds-border)] text-muted-foreground hover:border-[var(--ds-border)]")}>
                           {s.label}
                         </button>
                       ))}

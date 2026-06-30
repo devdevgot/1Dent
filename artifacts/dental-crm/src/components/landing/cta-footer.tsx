@@ -128,9 +128,9 @@ export function CtaFooter() {
         </div>
       </section>
 
-      <footer className="bg-[var(--bg)] border-t border-[var(--border)] px-6 py-12">
+      <footer className="bg-[var(--bg)] border-t border-[var(--ds-border)] px-6 py-12">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-6">
-          <Link href="/" className="flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] rounded-lg">
+          <Link href="/" className="flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-primary)] rounded-lg">
             <img src="/logo_clean.png" alt={SITE.name} className="h-9 w-auto" />
           </Link>
 
@@ -144,7 +144,7 @@ export function CtaFooter() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="WhatsApp"
-              className="w-10 h-10 rounded-full bg-[var(--border)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+              className="w-10 h-10 rounded-full bg-[var(--ds-border)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-primary)]"
             >
               <FaWhatsapp size={16} />
             </a>
@@ -153,7 +153,7 @@ export function CtaFooter() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Telegram"
-              className="w-10 h-10 rounded-full bg-[var(--border)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+              className="w-10 h-10 rounded-full bg-[var(--ds-border)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-primary)]"
             >
               <FaTelegram size={16} />
             </a>

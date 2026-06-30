@@ -200,7 +200,7 @@ export default function AccountantDashboard() {
         <div className="dash-card dash-card-padded dash-card-elevated">
           <div className="flex items-center gap-2 mb-4">
             <div className="p-2 bg-[var(--primary-light)] rounded-xl">
-              <Banknote className="w-5 h-5 text-[var(--primary)]" />
+              <Banknote className="w-5 h-5 text-[var(--ds-primary)]" />
             </div>
             <div className="flex-1">
               <h3 className="dash-section-title text-sm">{t("payroll.fot")}</h3>
@@ -256,12 +256,12 @@ export default function AccountantDashboard() {
         <div className="lg:col-span-2 dash-card dash-card-padded dash-card-elevated">
           <div className="flex items-center justify-between mb-6">
             <h3 className="dash-section-title text-lg">
-              <Stethoscope className="w-5 h-5 text-[var(--primary)]" />
+              <Stethoscope className="w-5 h-5 text-[var(--ds-primary)]" />
               {t("accountantDashboard.revenueByDoctor")}
             </h3>
             <button
               onClick={() => navigate("/procedures")}
-              className="text-sm text-[var(--primary)] font-semibold flex items-center gap-1 hover:underline"
+              className="text-sm text-[var(--ds-primary)] font-semibold flex items-center gap-1 hover:underline"
             >
               {t("dashboard.viewAll")} <ChevronRight className="w-4 h-4" />
             </button>
@@ -284,7 +284,7 @@ export default function AccountantDashboard() {
                     transition={{ delay: i * 0.05 }}
                     className="flex items-center gap-4"
                   >
-                    <div className="w-8 h-8 rounded-full bg-[var(--primary-light)] flex items-center justify-center text-[var(--primary)] font-bold text-xs flex-none">
+                    <div className="w-8 h-8 rounded-full bg-[var(--primary-light)] flex items-center justify-center text-[var(--ds-primary)] font-bold text-xs flex-none">
                       {d.name.charAt(0)}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -307,7 +307,7 @@ export default function AccountantDashboard() {
                   </motion.div>
                 );
               })}
-              <div className="pt-3 mt-2 border-t border-[var(--border)] flex justify-between items-center">
+              <div className="pt-3 mt-2 border-t border-[var(--ds-border)] flex justify-between items-center">
                 <span className="text-sm font-semibold text-[var(--text-secondary)]">{t("accountantDashboard.totalRevenue")}</span>
                 <span className="text-lg font-bold text-[var(--text)]">₸ {totalRevenue.toLocaleString("ru-KZ")}</span>
               </div>
@@ -319,7 +319,7 @@ export default function AccountantDashboard() {
       {/* Billing Queue */}
       <div className="dash-card dash-card-padded dash-card-elevated">
         <h3 className="dash-section-title text-lg mb-4">
-          <Wallet className="w-5 h-5 text-[var(--primary)]" />
+          <Wallet className="w-5 h-5 text-[var(--ds-primary)]" />
           {t("accountantDashboard.billingQueue")}
           {completedNoBilling.length > 0 && (
             <span className="dash-badge dash-badge-warning ml-auto">
@@ -349,7 +349,7 @@ export default function AccountantDashboard() {
             {completedNoBilling.length > 6 && (
               <button
                 onClick={() => navigate("/procedures")}
-                className="w-full text-center text-sm text-[var(--primary)] font-semibold mt-2 hover:underline"
+                className="w-full text-center text-sm text-[var(--ds-primary)] font-semibold mt-2 hover:underline"
               >
                 +{completedNoBilling.length - 6} {t("accountantDashboard.more")}
               </button>

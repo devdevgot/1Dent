@@ -182,13 +182,13 @@ function BundleModal({ bundle, onClose }: { bundle: BundleGroup; onClose: () => 
       {bundle.contracts.map((c) => {
         const cfg = STATUS_CONFIG[c.status] ?? STATUS_CONFIG.sent;
         return (
-          <div key={c.id} className="flex items-center gap-3 px-3 py-2.5 rounded-2xl border border-[var(--border)] bg-[var(--bg)]/50">
+          <div key={c.id} className="flex items-center gap-3 px-3 py-2.5 rounded-2xl border border-[var(--ds-border)] bg-[var(--bg)]/50">
             <div className="relative shrink-0">
-              <div className="w-8 h-8 rounded-lg bg-[var(--surface)] border border-[var(--border)] shadow-sm flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-[var(--ds-surface)] border border-[var(--ds-border)] shadow-sm flex items-center justify-center">
                 <FileText className="w-3.5 h-3.5 text-primary/70" />
               </div>
               <span className={cn(
-                "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[var(--border)]/50",
+                "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[var(--ds-border)]/50",
                 cfg.dot,
               )} />
             </div>
@@ -215,7 +215,7 @@ function BundleModal({ bundle, onClose }: { bundle: BundleGroup; onClose: () => 
               href={`/p/contract/${c.token}?preview=1`}
               target="_blank"
               rel="noopener noreferrer"
-              className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-subtle)] hover:text-primary hover:bg-[var(--surface)] transition-colors border border-transparent hover:border-[var(--border)]"
+              className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-subtle)] hover:text-primary hover:bg-[var(--ds-surface)] transition-colors border border-transparent hover:border-[var(--ds-border)]"
               title="Открыть договор"
             >
               <ExternalLink className="w-3.5 h-3.5" />
@@ -270,8 +270,8 @@ export function ContractsTab({ patientId, bundle }: ContractsTabProps) {
         <div className="px-4 py-4 space-y-5">
 
           {/* ── Send contract card ── */}
-          <div className="rounded-2xl overflow-hidden border border-[var(--border)] shadow-sm bg-[var(--surface)]">
-            <div className="px-4 pt-4 pb-3 border-b border-[var(--border)]/50">
+          <div className="rounded-2xl overflow-hidden border border-[var(--ds-border)] shadow-sm bg-[var(--ds-surface)]">
+            <div className="px-4 pt-4 pb-3 border-b border-[var(--ds-border)]/50">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                   <FileSignature className="w-4 h-4 text-primary" />
@@ -291,7 +291,7 @@ export function ContractsTab({ patientId, bundle }: ContractsTabProps) {
                 </div>
               ) : templates.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 py-4 text-center">
-                  <FileText className="w-8 h-8 text-[var(--border)]" />
+                  <FileText className="w-8 h-8 text-[var(--ds-border)]" />
                   <p className="text-[12px] text-[var(--text-secondary)]">
                     Нет шаблонов.{" "}
                     <span className="font-medium text-primary">Меню → Шаблоны договоров</span>
@@ -304,7 +304,7 @@ export function ContractsTab({ patientId, bundle }: ContractsTabProps) {
                       "flex items-center gap-2.5 rounded-xl border px-3 py-0 transition-all",
                       selectedTemplateId
                         ? "border-primary/40 bg-primary/3 ring-1 ring-primary/20"
-                        : "border-[var(--border)] bg-[var(--bg)] hover:border-[var(--border-strong)]",
+                        : "border-[var(--ds-border)] bg-[var(--bg)] hover:border-[var(--border-strong)]",
                     )}>
                       <FileText className={cn(
                         "w-4 h-4 shrink-0 transition-colors",
@@ -358,8 +358,8 @@ export function ContractsTab({ patientId, bundle }: ContractsTabProps) {
 
           {/* ── Extraction bundle card ── */}
           {bundle?.hasExtractionInPlan && (
-            <div className="rounded-2xl overflow-hidden border border-[var(--border)] shadow-sm bg-[var(--surface)]">
-              <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--border)]/50">
+            <div className="rounded-2xl overflow-hidden border border-[var(--ds-border)] shadow-sm bg-[var(--ds-surface)]">
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--ds-border)]/50">
                 <span className="w-8 h-8 rounded-lg bg-[var(--surface-2)] flex items-center justify-center shrink-0">
                   <ClipboardList className="w-4 h-4 text-[var(--text-secondary)]" />
                 </span>
@@ -379,7 +379,7 @@ export function ContractsTab({ patientId, bundle }: ContractsTabProps) {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={bundle.onOpenPreview}
-                      className="flex-1 h-8 text-[12px] font-medium text-[var(--text)] border border-[var(--border)] rounded-lg hover:bg-[var(--bg)] transition-colors flex items-center justify-center gap-1.5"
+                      className="flex-1 h-8 text-[12px] font-medium text-[var(--text)] border border-[var(--ds-border)] rounded-lg hover:bg-[var(--bg)] transition-colors flex items-center justify-center gap-1.5"
                     >
                       <FileText className="w-3.5 h-3.5" />
                       Предпросмотр
@@ -474,7 +474,7 @@ export function ContractsTab({ patientId, bundle }: ContractsTabProps) {
                             key={bundle.bundleToken}
                             type="button"
                             onClick={() => setOpenBundle(bundle)}
-                            className="w-full text-left bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-sm overflow-hidden hover:border-primary/30 hover:shadow-md transition-all group"
+                            className="w-full text-left bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] shadow-sm overflow-hidden hover:border-primary/30 hover:shadow-md transition-all group"
                           >
                             <div className="flex items-start gap-3 px-3.5 py-3">
                               <div className="relative shrink-0 mt-0.5">
@@ -527,7 +527,7 @@ export function ContractsTab({ patientId, bundle }: ContractsTabProps) {
                       const c = item.contract;
                       const cfg = STATUS_CONFIG[c.status] ?? STATUS_CONFIG.sent;
                       return (
-                        <div key={c.id} className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-sm overflow-hidden">
+                        <div key={c.id} className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] shadow-sm overflow-hidden">
                           <div className="flex items-start gap-3 px-3.5 py-3">
                             <div className="relative shrink-0 mt-0.5">
                               <div className="w-9 h-9 rounded-xl bg-primary/5 flex items-center justify-center">

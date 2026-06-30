@@ -657,8 +657,8 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
     <div className="space-y-5">
 
       {/* ── Branches card ─────────────────────────────────────────────── */}
-      <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] overflow-hidden">
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--border)]">
+      <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] overflow-hidden">
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--ds-border)]">
           <div className="flex-1">
             <h2 className="font-semibold text-base text-[var(--text)]">Филиалы и геозоны</h2>
             <p className="text-xs text-[var(--text-secondary)] mt-0.5">
@@ -684,10 +684,10 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                 placeholder="Поиск по филиалам…"
                 value={branchSearch}
                 onChange={(e) => setBranchSearch(e.target.value)}
-                className="w-full h-9 pl-9 pr-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/40"
+                className="w-full h-9 pl-9 pr-3 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/40"
               />
               {branchSearch.trim() && (
-                <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-lg overflow-hidden">
+                <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-xl shadow-lg overflow-hidden">
                   {branches.filter((b) => b.name.toLowerCase().includes(branchSearch.toLowerCase())).length === 0 ? (
                     <div className="px-4 py-3 text-sm text-[var(--text-secondary)] text-center">Ничего не найдено</div>
                   ) : (
@@ -702,7 +702,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                             setBranchSearch("");
                           }}
                         >
-                          <MapPin className="w-3.5 h-3.5 text-[var(--primary)] shrink-0" />
+                          <MapPin className="w-3.5 h-3.5 text-[var(--ds-primary)] shrink-0" />
                           <div className="min-w-0">
                             <p className="text-sm font-medium text-[var(--text)] truncate">{b.name}</p>
                             <p className="text-xs text-[var(--text-secondary)]">{b.latitude.toFixed(4)}, {b.longitude.toFixed(4)} · {b.radiusMeters}м</p>
@@ -718,7 +718,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
           {/* Branch list */}
           {loading && (
             <div className="flex justify-center py-6">
-              <Loader2 className="w-5 h-5 text-[var(--primary)] animate-spin" />
+              <Loader2 className="w-5 h-5 text-[var(--ds-primary)] animate-spin" />
             </div>
           )}
           {!loading && branches.length === 0 && (
@@ -733,10 +733,10 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
             {branches.map((b) => (
               <div
                 key={b.id}
-                className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-[var(--surface)] border border-[var(--border)]"
+                className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-[var(--ds-surface)] border border-[var(--ds-border)]"
               >
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <MapPin className="w-4 h-4 text-[var(--primary)] shrink-0" />
+                  <MapPin className="w-4 h-4 text-[var(--ds-primary)] shrink-0" />
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-[var(--text)] truncate">{b.name}</p>
                     <p className="text-xs text-[var(--text-secondary)]">
@@ -747,7 +747,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                 <div className="flex items-center gap-1 shrink-0">
                   <button
                     onClick={() => openJournal(b)}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--primary)] transition-colors"
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--ds-primary)] transition-colors"
                     title="Журнал трекинга"
                   >
                     <ClipboardList className="w-3.5 h-3.5" />
@@ -768,8 +768,8 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
       {/* ── Add branch modal ───────────────────────────────────────────── */}
       <Dialog open={isModalOpen} onOpenChange={(open) => { if (!open) closeModal(); }}>
         <DialogContent className="max-w-lg w-full p-0 gap-0 overflow-hidden rounded-2xl">
-          <DialogHeader className="px-5 py-4 border-b border-[var(--border)] flex-row items-center gap-3 space-y-0">
-            <MapPin className="w-5 h-5 text-[var(--primary)] shrink-0" />
+          <DialogHeader className="px-5 py-4 border-b border-[var(--ds-border)] flex-row items-center gap-3 space-y-0">
+            <MapPin className="w-5 h-5 text-[var(--ds-primary)] shrink-0" />
             <DialogTitle className="flex-1 text-base font-semibold">
               {editingBranch ? "Редактировать филиал" : "Новый филиал"}
             </DialogTitle>
@@ -788,7 +788,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                   placeholder="Поиск адреса…"
                   value={mapQuery}
                   onChange={(e) => handleMapSearch(e.target.value)}
-                  className="w-full h-10 pl-9 pr-8 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/40"
+                  className="w-full h-10 pl-9 pr-8 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/40"
                 />
                 {mapQuery.trim() && (
                   <button
@@ -800,7 +800,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                 )}
               </div>
               {mapQuery.trim() && (mapGeoResults.length > 0 || (searchDone && !mapSearching)) && (
-                <div className="absolute left-4 right-4 top-full z-50 bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-lg overflow-hidden">
+                <div className="absolute left-4 right-4 top-full z-50 bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-xl shadow-lg overflow-hidden">
                   {mapGeoResults.length === 0 ? (
                     <div className="px-4 py-3 text-sm text-[var(--text-secondary)] text-center">Ничего не найдено</div>
                   ) : (
@@ -835,7 +835,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                           setSearchDone(false);
                         }}
                       >
-                        <MapPin className="w-3.5 h-3.5 text-[var(--primary)] shrink-0 mt-0.5" />
+                        <MapPin className="w-3.5 h-3.5 text-[var(--ds-primary)] shrink-0 mt-0.5" />
                         <span className="text-sm text-[var(--text)] leading-snug">{r.name}</span>
                       </button>
                     ))
@@ -845,10 +845,10 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
             </div>
 
             {/* Map */}
-            <div className="relative mx-4 rounded-xl overflow-hidden border border-[var(--border)]" style={{ height: 280 }}>
+            <div className="relative mx-4 rounded-xl overflow-hidden border border-[var(--ds-border)]" style={{ height: 280 }}>
               {!modalMapReady && !modalMapError && (
                 <div className="absolute inset-0 flex items-center justify-center bg-[var(--bg)]">
-                  <Loader2 className="w-6 h-6 text-[var(--primary)] animate-spin" />
+                  <Loader2 className="w-6 h-6 text-[var(--ds-primary)] animate-spin" />
                 </div>
               )}
               {modalMapError && (
@@ -925,7 +925,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                   placeholder="Название филиала"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  className="w-full h-10 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/40"
+                  className="w-full h-10 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/40"
                   autoFocus
                 />
 
@@ -940,8 +940,8 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                         className={cn(
                           "h-8 px-3 rounded-lg text-xs font-medium border transition-colors",
                           !useCustomRadius && newRadius === p.value
-                            ? "bg-[var(--primary)] text-white border-[var(--primary)]"
-                            : "bg-[var(--surface)] text-[var(--text)] border-[var(--border)] hover:border-[var(--primary)]/50",
+                            ? "bg-[var(--ds-primary)] text-white border-[var(--ds-primary)]"
+                            : "bg-[var(--ds-surface)] text-[var(--text)] border-[var(--ds-border)] hover:border-[var(--ds-primary)]/50",
                         )}
                       >
                         {p.label}
@@ -952,8 +952,8 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                       className={cn(
                         "h-8 px-3 rounded-lg text-xs font-medium border transition-colors",
                         useCustomRadius
-                          ? "bg-[var(--primary)] text-white border-[var(--primary)]"
-                          : "bg-[var(--surface)] text-[var(--text)] border-[var(--border)] hover:border-[var(--primary)]/50",
+                          ? "bg-[var(--ds-primary)] text-white border-[var(--ds-primary)]"
+                          : "bg-[var(--ds-surface)] text-[var(--text)] border-[var(--ds-border)] hover:border-[var(--ds-primary)]/50",
                       )}
                     >
                       Другой
@@ -968,7 +968,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                         placeholder="Введите метры"
                         value={customRadius}
                         onChange={(e) => setCustomRadius(e.target.value)}
-                        className="w-full h-10 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/40"
+                        className="w-full h-10 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/40"
                         autoFocus
                       />
                       <span className="text-sm text-[var(--text-secondary)] whitespace-nowrap shrink-0">м</span>
@@ -1045,7 +1045,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                       <button
                         onClick={() => setConfirmingDelete(false)}
                         disabled={deletingId === editingBranch.id}
-                        className="px-4 h-9 rounded-xl border border-[var(--danger)]/30 text-sm text-[var(--danger)] bg-[var(--surface)] hover:bg-[var(--danger-light)] transition-colors disabled:opacity-60"
+                        className="px-4 h-9 rounded-xl border border-[var(--danger)]/30 text-sm text-[var(--danger)] bg-[var(--ds-surface)] hover:bg-[var(--danger-light)] transition-colors disabled:opacity-60"
                       >
                         Отмена
                       </button>
@@ -1061,8 +1061,8 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
       {/* ── Branch journal modal ──────────────────────────────────────── */}
       <Dialog open={!!journalBranch} onOpenChange={(open) => { if (!open) { setJournalBranch(null); setJournalEvents([]); setJournalEmployee("all"); setJournalFiltersOpen(false); } }}>
         <DialogContent className="max-w-2xl w-full p-0 gap-0 overflow-hidden rounded-2xl flex flex-col max-h-[90vh]">
-          <DialogHeader className="px-5 py-4 border-b border-[var(--border)] flex-row items-center gap-3 space-y-0 shrink-0">
-            <ClipboardList className="w-5 h-5 text-[var(--primary)] shrink-0" />
+          <DialogHeader className="px-5 py-4 border-b border-[var(--ds-border)] flex-row items-center gap-3 space-y-0 shrink-0">
+            <ClipboardList className="w-5 h-5 text-[var(--ds-primary)] shrink-0" />
             <DialogTitle className="flex-1 text-base font-semibold">
               Журнал трекинга — {journalBranch?.name}
             </DialogTitle>
@@ -1072,21 +1072,21 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                 className={cn(
                   "relative w-8 h-8 flex items-center justify-center rounded-lg border transition-colors",
                   journalFiltersOpen
-                    ? "border-[var(--primary)]/50 bg-[var(--primary-light)] text-[var(--primary)]"
-                    : "border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]",
+                    ? "border-[var(--ds-primary)]/50 bg-[var(--primary-light)] text-[var(--ds-primary)]"
+                    : "border-[var(--ds-border)] text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]",
                 )}
                 title="Фильтры"
               >
                 <Filter className="w-3.5 h-3.5" />
                 {(journalEmployee !== "all" || journalFrom !== monthStart || journalTo !== todayStr) && !journalFiltersOpen && (
-                  <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-[var(--primary)]" />
+                  <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-[var(--ds-primary)]" />
                 )}
               </button>
               {journalFiltered.length > 0 && (
                 <>
                   <button
                     onClick={exportJournalCSV}
-                    className="flex items-center gap-1.5 h-8 px-3 rounded-xl border border-[var(--border)] text-xs text-[var(--text-secondary)] hover:border-[var(--success)] hover:text-[var(--success)] transition-colors"
+                    className="flex items-center gap-1.5 h-8 px-3 rounded-xl border border-[var(--ds-border)] text-xs text-[var(--text-secondary)] hover:border-[var(--success)] hover:text-[var(--success)] transition-colors"
                     title="Скачать Excel (CSV)"
                   >
                     <FileSpreadsheet className="w-3.5 h-3.5" />
@@ -1094,7 +1094,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                   </button>
                   <button
                     onClick={exportJournalPDF}
-                    className="flex items-center gap-1.5 h-8 px-3 rounded-xl border border-[var(--border)] text-xs text-[var(--text-secondary)] hover:border-[var(--danger)] hover:text-[var(--danger)] transition-colors"
+                    className="flex items-center gap-1.5 h-8 px-3 rounded-xl border border-[var(--ds-border)] text-xs text-[var(--text-secondary)] hover:border-[var(--danger)] hover:text-[var(--danger)] transition-colors"
                     title="Открыть для печати / PDF"
                   >
                     <FileText className="w-3.5 h-3.5" />
@@ -1106,7 +1106,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
           </DialogHeader>
 
           {/* Filters — collapsible */}
-          {journalFiltersOpen && <div className="px-5 py-3 border-b border-[var(--border)] space-y-2.5 shrink-0">
+          {journalFiltersOpen && <div className="px-5 py-3 border-b border-[var(--ds-border)] space-y-2.5 shrink-0">
             {/* Quick presets */}
             <div className="flex gap-1.5 flex-wrap">
               {journalPresets.map(p => (
@@ -1133,7 +1133,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                   value={journalFrom}
                   max={journalTo}
                   onChange={e => setJournalFrom(e.target.value)}
-                  className="flex-1 h-8 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 text-xs text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/40"
+                  className="flex-1 h-8 rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface)] px-2 text-xs text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/40"
                 />
                 <span className="text-xs text-[var(--text-secondary)]">—</span>
                 <input
@@ -1142,7 +1142,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                   min={journalFrom}
                   max={todayStr}
                   onChange={e => setJournalTo(e.target.value)}
-                  className="flex-1 h-8 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 text-xs text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/40"
+                  className="flex-1 h-8 rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface)] px-2 text-xs text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/40"
                 />
               </div>
               {journalStaff.length > 1 && (
@@ -1151,7 +1151,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                   <select
                     value={journalEmployee}
                     onChange={e => setJournalEmployee(e.target.value)}
-                    className="h-8 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 text-xs text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/40 min-w-[140px]"
+                    className="h-8 rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface)] px-2 text-xs text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/40 min-w-[140px]"
                   >
                     <option value="all">Все сотрудники</option>
                     {journalStaff.map(s => (
@@ -1200,10 +1200,10 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
 
                 {/* Table */}
                 <div className="px-5 pb-5">
-                  <div className="rounded-xl border border-[var(--border)] overflow-hidden">
+                  <div className="rounded-xl border border-[var(--ds-border)] overflow-hidden">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="bg-[var(--surface-2)]/50 border-b border-[var(--border)]">
+                        <tr className="bg-[var(--surface-2)]/50 border-b border-[var(--ds-border)]">
                           <th className="text-left px-4 py-2.5 text-xs font-medium text-[var(--text-secondary)]">Сотрудник</th>
                           <th className="text-left px-4 py-2.5 text-xs font-medium text-[var(--text-secondary)]">Событие</th>
                           <th className="text-left px-4 py-2.5 text-xs font-medium text-[var(--text-secondary)]">Дата</th>
@@ -1216,7 +1216,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                           const date = d.toLocaleDateString("ru-RU", { day: "numeric", month: "short", timeZone: "Asia/Almaty" });
                           const time = d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty" });
                           return (
-                            <tr key={e.id} className={cn("border-b border-[var(--border)] last:border-0", i % 2 === 0 ? "bg-[var(--surface)]" : "bg-[var(--surface-2)]/20")}>
+                            <tr key={e.id} className={cn("border-b border-[var(--ds-border)] last:border-0", i % 2 === 0 ? "bg-[var(--ds-surface)]" : "bg-[var(--surface-2)]/20")}>
                               <td className="px-4 py-3 font-medium text-[var(--text)]">{e.userName}</td>
                               <td className="px-4 py-3">
                                 <span className={cn(
@@ -1244,8 +1244,8 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
       </Dialog>
 
       {/* ── Telegram notifications ─────────────────────────────────────── */}
-      <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] overflow-hidden">
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--border)]">
+      <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] overflow-hidden">
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--ds-border)]">
           <div className="flex-1">
             <h2 className="font-semibold text-base text-[var(--text)]">Telegram-уведомления</h2>
             <p className="text-xs text-[var(--text-secondary)] mt-0.5">Получайте уведомления о приходе и уходе сотрудников</p>
@@ -1274,7 +1274,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                 <button
                   onClick={() => void handleTestPlatform()}
                   disabled={testingPlatform}
-                  className="flex-1 h-10 rounded-xl border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:border-[var(--primary)]/40 hover:text-[var(--primary)] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  className="flex-1 h-10 rounded-xl border border-[var(--ds-border)] text-sm text-[var(--text-secondary)] hover:border-[var(--ds-primary)]/40 hover:text-[var(--ds-primary)] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
                   {testingPlatform ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   Проверить
@@ -1292,7 +1292,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
           ) : (
             /* ── Not connected state ── */
             <div className="space-y-3">
-              <div className="flex items-start gap-3 rounded-xl bg-[var(--surface-2)]/50 border border-[var(--border)] p-4">
+              <div className="flex items-start gap-3 rounded-xl bg-[var(--surface-2)]/50 border border-[var(--ds-border)] p-4">
                 <Bot className="w-5 h-5 text-[var(--text-secondary)] mt-0.5 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-[var(--text)]">Подключите Telegram за 1 шаг</p>

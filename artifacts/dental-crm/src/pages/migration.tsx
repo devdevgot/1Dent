@@ -631,7 +631,7 @@ function ExportSection() {
   };
 
   return (
-    <div className="mt-6 bg-[var(--surface)] rounded-2xl shadow-md border border-[var(--border)] p-6 space-y-4">
+    <div className="mt-6 bg-[var(--ds-surface)] rounded-2xl shadow-md border border-[var(--ds-border)] p-6 space-y-4">
       <div>
         <p className="text-sm font-semibold text-[var(--text)]">Экспорт данных</p>
         <p className="text-xs text-[var(--text-subtle)] mt-0.5">
@@ -689,7 +689,7 @@ function ExportSection() {
               type="button"
               onClick={() => setConfirmWipe(false)}
               disabled={wiping}
-              className="flex-1 h-10 rounded-xl border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-2)] transition-colors disabled:opacity-40"
+              className="flex-1 h-10 rounded-xl border border-[var(--ds-border)] text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-2)] transition-colors disabled:opacity-40"
             >
               Отмена
             </button>
@@ -777,7 +777,7 @@ export default function MigrationPage() {
 
       <div className="max-w-2xl mx-auto px-4 py-6">
         {/* Main card */}
-        <div className="bg-[var(--surface)] rounded-2xl shadow-md border border-[var(--border)] p-6">
+        <div className="bg-[var(--ds-surface)] rounded-2xl shadow-md border border-[var(--ds-border)] p-6">
           <AiImportTab />
         </div>
 
