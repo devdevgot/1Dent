@@ -227,7 +227,20 @@ export default function OwnerDashboard() {
   const { data: analyticsData, isLoading: analyticsLoading } = useGetOwnerAnalytics({
     query: { queryKey: getGetOwnerAnalyticsQueryKey() },
   });
-  const { data: summaryData, isLoading: summaryLoading } = useGetFinancialSummary({ dateFrom: dateFromStr, dateTo: dateToStr });
+
+  const rawAnalyticsEarly = (analyticsData?.data?.analytics ?? {}) as Record<string, unknown>;
+  const totalPatientsEarly = Number(rawAnalyticsEarly.totalPatients ?? 0);
+  const completedProceduresEarly = Number(rawAnalyticsEarly.completedProceduresThisMonth ?? 0);
+  const isLikelyEmptyClinic =
+    !analyticsLoading &&
+    Boolean(analyticsData) &&
+    totalPatientsEarly === 0 &&
+    completedProceduresEarly === 0;
+
+  const { data: summaryData, isLoading: summaryLoading } = useGetFinancialSummary(
+    { dateFrom: dateFromStr, dateTo: dateToStr },
+    { query: { enabled: !isLikelyEmptyClinic } },
+  );
   const { data: kpiData } = useGetDoctorKpis({
     query: { queryKey: getGetDoctorKpisQueryKey() },
   });
@@ -235,7 +248,8 @@ export default function OwnerDashboard() {
   const { data: patientsData } = useListPatients();
   const { data: channelsRes } = useListChannels();
 
-  const isLoading = analyticsLoading || summaryLoading;
+  // Empty clinics: show illustration after analytics only — skip waiting on financial summary.
+  const revenueCardLoading = analyticsLoading || (!isLikelyEmptyClinic && summaryLoading);
 
   const allProcedures = proceduresData?.data?.procedures ?? [];
   const allPatients   = patientsData?.data?.patients ?? [];
@@ -317,7 +331,12 @@ export default function OwnerDashboard() {
     }).filter(stat => stat.amount > 0).sort((a, b) => b.amount - a.amount);
   }, [allProcedures, dateRange]);
 
-  const hasNoRevenueInPeriod = !isLoading && paymentStats.length === 0 && realIncome === 0;
+  const hasNoRevenueInPeriod =
+    !revenueCardLoading &&
+    (
+      (isLikelyEmptyClinic && allPatients.length === 0) ||
+      (paymentStats.length === 0 && realIncome === 0)
+    );
 
   const CONDITION_LABELS: Record<string, string> = {
     cavity: "Кариес",
@@ -341,6 +360,7 @@ export default function OwnerDashboard() {
 
   const [conditionStats, setConditionStats] = useState<Array<{ condition: string; label: string; count: number; percent: number; color: string }>>([]);
   useEffect(() => {
+    if (isLikelyEmptyClinic) return;
     const token = localStorage.getItem("auth_token");
     fetch(`/api/patients/condition-stats`, {
       headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
@@ -363,7 +383,7 @@ export default function OwnerDashboard() {
         setConditionStats(list);
       })
       .catch(() => {});
-  }, []);
+  }, [isLikelyEmptyClinic]);
 
   const patientSourceMap = useMemo(() => {
     return new Map(allPatients.map((p) => [p.id, p.source]));
@@ -549,7 +569,7 @@ export default function OwnerDashboard() {
 
         {/* Ring chart or empty state */}
         <div className="pt-4 pb-2 flex justify-center">
-          {isLoading ? (
+          {revenueCardLoading ? (
             <div className="w-[260px] h-[260px] flex items-center justify-center">
               <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
             </div>
@@ -566,7 +586,7 @@ export default function OwnerDashboard() {
         </div>
 
         {/* ─── Payment method list ─── */}
-        {!isLoading && !hasNoRevenueInPeriod && paymentStats.length > 0 && (
+        {!revenueCardLoading && !hasNoRevenueInPeriod && paymentStats.length > 0 && (
           <div className="px-5 pb-5 space-y-0 divide-y divide-[#f1ede4]">
             {paymentStats.map((stat, idx) => {
               const Icon = PAYMENT_ICONS[stat.method] ?? Wallet;

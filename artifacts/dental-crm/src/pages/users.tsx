@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, lazy, Suspense } from "react";
 import { useAuthStore } from "@/hooks/use-auth";
 import {
   useListUsersAll,
@@ -12,19 +12,18 @@ import {
 import type { User, SalaryType } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  Plus, Search, Phone, Calendar, Briefcase,
+  Search, Phone, Calendar, Briefcase,
   ChevronRight, MoreVertical, UserCheck, UserX,
   Trash2, Users, SlidersHorizontal, BarChart2,
   Mail, Shield, Activity, TrendingUp, RefreshCw,
 } from "lucide-react";
 import { PageShell } from "@/components/layout/page-shell";
-import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-header";
+import { PageHeader, PageHeaderAddButton, PageHeaderIconButton } from "@/components/layout/page-header";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,9 +31,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import EmployeeDialog, { type EmployeeFormData } from "./employee-dialog";
-import InviteStaffDialog from "./invite-staff-dialog";
+import type { EmployeeFormData } from "./employee-dialog";
 import { cn } from "@/lib/utils";
+
+const EmployeeDialog = lazy(() => import("./employee-dialog"));
+const InviteStaffDialog = lazy(() => import("./invite-staff-dialog"));
 
 const ROLES = ["admin", "doctor", "accountant", "warehouse", "assistant", "nurse"] as const;
 
@@ -188,7 +189,12 @@ export default function StaffPage() {
 
   const { data, isLoading } = useListUsersAll(
     { includeInactive: showInactive },
-    { query: { queryKey: getListUsersAllQueryKey(showInactive) } },
+    {
+      query: {
+        queryKey: getListUsersAllQueryKey(showInactive),
+        staleTime: 30_000,
+      },
+    },
   );
 
   const rawUsers = (data?.data?.users ?? []) as User[];
@@ -300,7 +306,7 @@ export default function StaffPage() {
   const isSaving = updateMutation.isPending;
 
   return (
-    <PageShell>
+    <PageShell animate={false}>
       <PageHeader
         title="Сотрудники"
         subtitle={!isLoading ? `${rawUsers.length} сотрудников в системе` : undefined}
@@ -325,13 +331,10 @@ export default function StaffPage() {
               )}
             </PageHeaderIconButton>
             {isOwnerOrAdmin && (
-              <Button
+              <PageHeaderAddButton
                 onClick={() => setInviteOpen(true)}
-                className="gap-1.5 h-8 text-xs px-2.5 sm:px-3 rounded-full bg-[#1f75fe] hover:bg-[#1a65e8] hover:scale-105 font-semibold"
-              >
-                <Plus className="w-3.5 h-3.5 shrink-0" />
-                <span className="hidden sm:inline">Пригласить</span>
-              </Button>
+                title="Пригласить"
+              />
             )}
           </>
         }
@@ -578,19 +581,27 @@ export default function StaffPage() {
           )}
         </div>
 
-      {/* ── Dialogs ───────────────────────────────────────────── */}
-      <InviteStaffDialog
-        open={inviteOpen}
-        onClose={() => setInviteOpen(false)}
-      />
+      {/* ── Dialogs (lazy — only load chunk when opened) ─────── */}
+      {inviteOpen && (
+        <Suspense fallback={null}>
+          <InviteStaffDialog
+            open={inviteOpen}
+            onClose={() => setInviteOpen(false)}
+          />
+        </Suspense>
+      )}
 
-      <EmployeeDialog
-        open={editDialogOpen}
-        onClose={() => { setEditDialogOpen(false); setEditingUser(null); }}
-        onSave={handleEditSave}
-        isSaving={isSaving}
-        editUser={editingUser}
-      />
+      {editDialogOpen && (
+        <Suspense fallback={null}>
+          <EmployeeDialog
+            open={editDialogOpen}
+            onClose={() => { setEditDialogOpen(false); setEditingUser(null); }}
+            onSave={handleEditSave}
+            isSaving={isSaving}
+            editUser={editingUser}
+          />
+        </Suspense>
+      )}
 
       <ConfirmDeleteDialog
         open={!!deleteConfirmId}
