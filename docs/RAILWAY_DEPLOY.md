@@ -1,6 +1,7 @@
 # Деплой 1Dent на Railway
 
-Репозиторий использует ветку **`master`** (не `main`).
+Репозиторий использует ветки **`dev`** (staging) и **`master`** (production, не `main`).  
+См. [BRANCHING.md](./BRANCHING.md).
 
 ## Почему Railway не деплоит после push в master
 

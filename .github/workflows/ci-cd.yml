@@ -1,4 +1,7 @@
-# CI/CD: checks on every PR/push to master.
+# CI/CD: checks on PR/push to dev and master.
+#
+# Branch flow: feature/* → dev (staging) → master (production)
+# See docs/BRANCHING.md
 #
 # Railway deploy — два режима (см. docs/RAILWAY_DEPLOY.md):
 #
@@ -10,14 +13,15 @@
 #
 # Flow (вариант B):
 #   push master → GitHub Actions (checks) → POST deploy hook → Railway
+#   push dev    → только Checks (без деплоя в production)
 
 name: CI/CD
 
 on:
   push:
-    branches: [master]
+    branches: [master, dev]
   pull_request:
-    branches: [master]
+    branches: [master, dev]
 
 # Не отменять прогоны на master — иначе deploy hook не успевает сработать
 concurrency:
