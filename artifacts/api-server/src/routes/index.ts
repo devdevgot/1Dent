@@ -29,6 +29,7 @@ import clinicBranchesRouter from "../modules/clinic-branches/clinic-branches.con
 import knowledgeRouter from "../modules/knowledge/knowledge.controller";
 import aiCreditsRouter from "../modules/ai-credits/ai-credits.controller";
 import errorEventsRouter from "../modules/error-events/error-events.controller";
+import planRequestsRouter from "../modules/plan-requests/plan-requests.controller";
 import { actionLogMiddleware } from "../middlewares/action-log.middleware";
 import { authRateLimit } from "../middlewares/rate-limit.middleware";
 import { authMiddleware, roleGuard } from "../middlewares/auth.middleware";
@@ -49,29 +50,7 @@ router.use(geoRouter);
 router.use("/errors", errorEventsRouter);
 
 // Plan request — must be before planGate so it's accessible even without a plan
-router.post("/plan-requests", authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { z } = await import("zod");
-    const schema = z.object({
-      plan: z.string().min(1),
-      contactName: z.string().min(1),
-      contactPhone: z.string().min(5),
-      contactEmail: z.string().email().optional(),
-      message: z.string().optional(),
-    });
-    const parsed = schema.safeParse(req.body);
-    if (!parsed.success) return next(new ValidationError(parsed.error.message));
-
-    const { randomUUID } = await import("crypto");
-    const { pool } = await import("@workspace/db");
-    const id = randomUUID();
-    await pool.query(
-      `INSERT INTO plan_requests (id, clinic_id, plan, contact_name, contact_phone, contact_email, message) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [id, req.user!.clinicId, parsed.data.plan, parsed.data.contactName, parsed.data.contactPhone, parsed.data.contactEmail ?? null, parsed.data.message ?? null],
-    );
-    res.status(201).json({ success: true, data: { id } });
-  } catch (err) { next(err); }
-});
+router.use("/plan-requests", planRequestsRouter);
 
 router.use(planGateMiddleware);
 router.use(actionLogMiddleware);
