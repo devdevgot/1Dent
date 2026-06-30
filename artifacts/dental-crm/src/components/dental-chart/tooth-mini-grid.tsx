@@ -41,7 +41,7 @@ function ToothButton({
         "flex-1 aspect-square max-w-[26px] min-w-0 border-2",
         selected
           ? "border-primary ring-2 ring-primary/40 scale-110 z-10"
-          : "border-transparent hover:border-slate-300",
+          : "border-transparent hover:border-[#d4cfc6]",
         isMidline && "ml-0.5",
       )}
       style={{
@@ -64,7 +64,7 @@ export function ToothMiniGrid({ teeth, selectedFdis, onToggle }: ToothMiniGridPr
   return (
     <div className="select-none w-full">
       <div className="flex items-center gap-1 mb-1 w-full justify-between">
-        <span className="text-[9px] font-semibold text-muted-foreground w-6 text-right shrink-0">Q1</span>
+        <span className="text-[9px] font-semibold text-[#64748b] w-6 text-right shrink-0">Q1</span>
         <div className="flex flex-1 min-w-0 gap-0.5 justify-end">
           {UPPER_LEFT.map((fdi) => (
             <ToothButton
@@ -76,7 +76,7 @@ export function ToothMiniGrid({ teeth, selectedFdis, onToggle }: ToothMiniGridPr
             />
           ))}
         </div>
-        <div className="w-px h-5 bg-slate-200 shrink-0 mx-0.5" />
+        <div className="w-px h-5 bg-[#e8e3d9] shrink-0 mx-0.5" />
         <div className="flex flex-1 min-w-0 gap-0.5 justify-start">
           {UPPER_RIGHT.map((fdi) => (
             <ToothButton
@@ -88,11 +88,11 @@ export function ToothMiniGrid({ teeth, selectedFdis, onToggle }: ToothMiniGridPr
             />
           ))}
         </div>
-        <span className="text-[9px] font-semibold text-muted-foreground w-6 shrink-0">Q2</span>
+        <span className="text-[9px] font-semibold text-[#64748b] w-6 shrink-0">Q2</span>
       </div>
 
       <div className="flex items-center gap-1 w-full justify-between">
-        <span className="text-[9px] font-semibold text-muted-foreground w-6 text-right shrink-0">Q4</span>
+        <span className="text-[9px] font-semibold text-[#64748b] w-6 text-right shrink-0">Q4</span>
         <div className="flex flex-1 min-w-0 gap-0.5 justify-end">
           {LOWER_LEFT.map((fdi) => (
             <ToothButton
@@ -104,7 +104,7 @@ export function ToothMiniGrid({ teeth, selectedFdis, onToggle }: ToothMiniGridPr
             />
           ))}
         </div>
-        <div className="w-px h-5 bg-slate-200 shrink-0 mx-0.5" />
+        <div className="w-px h-5 bg-[#e8e3d9] shrink-0 mx-0.5" />
         <div className="flex flex-1 min-w-0 gap-0.5 justify-start">
           {LOWER_ROW.slice(8).map((fdi) => (
             <ToothButton
@@ -116,18 +116,18 @@ export function ToothMiniGrid({ teeth, selectedFdis, onToggle }: ToothMiniGridPr
             />
           ))}
         </div>
-        <span className="text-[9px] font-semibold text-muted-foreground w-6 shrink-0">Q3</span>
+        <span className="text-[9px] font-semibold text-[#64748b] w-6 shrink-0">Q3</span>
       </div>
 
       <div className="flex mt-1 flex-wrap gap-1">
         {Object.entries(CONDITION_CONFIG).slice(0, 4).map(([cond, cfg]) => (
-          <span key={cond} className="flex items-center gap-1 text-[9px] text-muted-foreground">
+          <span key={cond} className="flex items-center gap-1 text-[9px] text-[#64748b]">
             <span className="inline-block w-2.5 h-2.5 rounded-sm border" style={{ backgroundColor: cfg.crownFill, borderColor: cfg.stroke }} />
             {cfg.label}
           </span>
         ))}
         {Object.entries(CONDITION_CONFIG).slice(4).map(([cond, cfg]) => (
-          <span key={cond} className="flex items-center gap-1 text-[9px] text-muted-foreground">
+          <span key={cond} className="flex items-center gap-1 text-[9px] text-[#64748b]">
             <span className="inline-block w-2.5 h-2.5 rounded-sm border" style={{ backgroundColor: cfg.crownFill, borderColor: cfg.stroke }} />
             {cfg.label}
           </span>

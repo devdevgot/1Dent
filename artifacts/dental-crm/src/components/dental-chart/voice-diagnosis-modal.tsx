@@ -498,20 +498,20 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
   // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm sm:p-4 overflow-hidden">
-      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full min-w-0 max-w-[100vw] sm:max-w-3xl flex flex-col overflow-hidden"
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-sm sm:p-4 overflow-hidden">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl border border-[#e8e3d9] shadow-xl w-full min-w-0 max-w-[100vw] sm:max-w-3xl flex flex-col overflow-hidden"
         style={{ maxHeight: "min(92dvh, 100dvh - env(safe-area-inset-bottom, 0px))" }}
       >
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border/50 shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#e8e3d9]/50 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
               <Mic className="w-4 h-4 text-primary" />
             </div>
             <div>
-              <h2 className="font-bold text-sm text-foreground">Голосовая диагностика</h2>
-              <p className="text-[11px] text-muted-foreground">Диктуйте на русском, казахском или английском</p>
+              <h2 className="font-bold text-sm text-[#0f172a]">Голосовая диагностика</h2>
+              <p className="text-[11px] text-[#64748b]">Диктуйте на русском, казахском или английском</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -524,7 +524,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
             <button
               onClick={onClose}
               disabled={phase === "recording" || phase === "applying"}
-              className="p-1.5 rounded-lg hover:bg-gray-100 text-muted-foreground transition-colors disabled:opacity-40"
+              className="p-1.5 rounded-lg hover:bg-[#f1ede4] text-[#64748b] transition-colors disabled:opacity-40"
             >
               <X className="w-4 h-4" />
             </button>
@@ -561,9 +561,9 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
           {(phase === "idle" || phase === "recording") && (
             <div className="flex flex-col items-center justify-center gap-6 py-10 px-6">
               {phase === "idle" && (
-                <p className="text-sm text-muted-foreground text-center max-w-xs leading-relaxed">
+                <p className="text-sm text-[#64748b] text-center max-w-xs leading-relaxed">
                   Нажмите кнопку и продиктуйте состояние зубов. Например:
-                  <span className="block mt-2 italic text-xs bg-slate-50 border border-border/40 rounded-lg px-3 py-2 text-foreground/70 leading-relaxed">
+                  <span className="block mt-2 italic text-xs bg-[#faf8f4] border border-[#e8e3d9]/40 rounded-lg px-3 py-2 text-[#0f172a]/70 leading-relaxed">
                     «Шестнадцатый — кариес, пломба композитная. Двадцать первый — коронка циркониевая»
                   </span>
                 </p>
@@ -579,10 +579,10 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                     </div>
                   </div>
                   <div className="flex flex-col items-center gap-1">
-                    <p className="text-lg font-mono font-bold tabular-nums text-foreground">
+                    <p className="text-lg font-mono font-bold tabular-nums text-[#0f172a]">
                       {String(Math.floor(recordingSeconds / 60)).padStart(2, "0")}:{String(recordingSeconds % 60).padStart(2, "0")}
                     </p>
-                    <p className="text-xs text-muted-foreground">Говорите чётко, затем нажмите «Готово»</p>
+                    <p className="text-xs text-[#64748b]">Говорите чётко, затем нажмите «Готово»</p>
                   </div>
                   <div className="flex items-end gap-[3px] h-7">
                     {[0.4, 0.7, 1, 0.6, 0.9, 0.5, 0.8, 1, 0.6, 0.4, 0.75, 0.9].map((h, i) => (
@@ -625,7 +625,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
               <div className="text-center">
                 <p className="text-sm font-medium">ИИ обрабатывает запись...</p>
-                <p className="text-xs text-muted-foreground mt-1">Транскрибирование и анализ диагнозов</p>
+                <p className="text-xs text-[#64748b] mt-1">Транскрибирование и анализ диагнозов</p>
               </div>
             </div>
           )}
@@ -638,15 +638,15 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                 <>
                   <button
                     onClick={() => setTranscriptOpen((v) => !v)}
-                    className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-slate-50 border border-border/40 rounded-xl text-left hover:bg-slate-100 transition-colors"
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-[#faf8f4] border border-[#e8e3d9]/40 rounded-xl text-left hover:bg-[#f1ede4] transition-colors"
                   >
-                    <span className="text-xs font-medium text-muted-foreground">Расшифровка речи</span>
+                    <span className="text-xs font-medium text-[#64748b]">Расшифровка речи</span>
                     {transcriptOpen
-                      ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
-                      : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
+                      ? <ChevronDown className="w-3.5 h-3.5 text-[#64748b]" />
+                      : <ChevronRight className="w-3.5 h-3.5 text-[#64748b]" />}
                   </button>
                   {transcriptOpen && (
-                    <p className="text-xs text-muted-foreground bg-slate-50 border border-border/40 rounded-xl px-3 py-2 leading-relaxed italic">
+                    <p className="text-xs text-[#64748b] bg-[#faf8f4] border border-[#e8e3d9]/40 rounded-xl px-3 py-2 leading-relaxed italic">
                       «{transcript}»
                     </p>
                   )}
@@ -655,7 +655,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
 
               {entries.length === 0 ? (
                 <div className="flex flex-col items-center gap-3 py-8 text-center">
-                  <p className="text-sm text-muted-foreground">Не удалось распознать диагнозы. Попробуйте снова.</p>
+                  <p className="text-sm text-[#64748b]">Не удалось распознать диагнозы. Попробуйте снова.</p>
                   <Button variant="outline" onClick={() => setPhase("idle")} className="gap-2">
                     <Mic className="w-3.5 h-3.5" />
                     Записать снова
@@ -663,15 +663,15 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                 </div>
               ) : (
                 <>
-                  <p className="text-xs text-muted-foreground px-1">
+                  <p className="text-xs text-[#64748b] px-1">
                     Проверьте диагнозы. В списке услуг — только позиции, совпадающие со словами из расшифровки.
                   </p>
 
-                  <div className="border border-border/50 rounded-xl overflow-hidden w-full min-w-0 isolate">
+                  <div className="border border-[#e8e3d9]/50 rounded-xl overflow-hidden w-full min-w-0 isolate">
                     <div className="table-h-scroll w-full min-w-0 touch-pan-x">
                       <table className="text-xs w-full table-fixed min-w-0">
                         <thead>
-                          <tr className="bg-slate-50 border-b border-border/50 text-[10px] uppercase tracking-wide text-muted-foreground">
+                          <tr className="bg-[#faf8f4] border-b border-[#e8e3d9]/50 text-[10px] uppercase tracking-wide text-[#64748b]">
                             <th className="text-left font-semibold px-3 py-2 w-[11%]">Зуб</th>
                             <th className="text-left font-semibold px-3 py-2 w-[27%]">Диагноз</th>
                             <th className="text-left font-semibold px-3 py-2 w-[37%]">Услуга</th>
@@ -679,7 +679,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                             <th className="text-center font-semibold px-2 py-2 w-[10%]">Удалить</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-border/40">
+                        <tbody className="divide-y divide-[#e8e3d9]/40">
                           {entries.map((entry, idx) => {
                             const cfg = CONDITION_CONFIG[entry.condition as ToothCondition];
                             const selectedId =
@@ -690,7 +690,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                             const suggestions = entry.suggestedTemplates ?? [];
 
                             return (
-                              <tr key={entry.fdi} className="bg-white hover:bg-slate-50/60">
+                              <tr key={entry.fdi} className="bg-white hover:bg-[#faf8f4]/60">
                                 <td className="px-3 py-2.5 align-top">
                                   <div className="flex items-center gap-1.5">
                                     {cfg && (
@@ -706,14 +706,14 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                                   <select
                                     value={entry.condition}
                                     onChange={(e) => handleConditionChange(idx, entry, e.target.value)}
-                                    className="w-full min-w-0 max-w-full text-xs border border-border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 truncate"
+                                    className="w-full min-w-0 max-w-full text-xs border border-[#e8e3d9] rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 truncate"
                                   >
                                     {CONDITION_VALUES.map((c) => (
                                       <option key={c} value={c}>{CONDITION_CONFIG[c]?.label ?? c}</option>
                                     ))}
                                   </select>
                                   {(entry.diagnosisText || entry.spokenProcedure) && (
-                                    <p className="text-[10px] text-muted-foreground leading-snug">
+                                    <p className="text-[10px] text-[#64748b] leading-snug">
                                       {entry.diagnosisText}
                                       {entry.spokenProcedure && entry.spokenProcedure !== entry.diagnosisText && (
                                         <span className="block italic">«{entry.spokenProcedure}»</span>
@@ -726,7 +726,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                                     <select
                                       value={selectedId}
                                       onChange={(e) => setServiceForTooth(entry.fdi, e.target.value)}
-                                      className="w-full min-w-0 max-w-full text-xs border border-border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 truncate"
+                                      className="w-full min-w-0 max-w-full text-xs border border-[#e8e3d9] rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 truncate"
                                     >
                                       <option value="">— не выбрано —</option>
                                       {suggestions.map((tpl) => (
@@ -737,7 +737,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                                       ))}
                                     </select>
                                   ) : (
-                                    <p className="text-[11px] text-muted-foreground py-1.5">
+                                    <p className="text-[11px] text-[#64748b] py-1.5">
                                       Нет совпадений в расшифровке
                                     </p>
                                   )}
@@ -751,7 +751,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                                     onClick={() => removeEntry(idx)}
                                     title="Удалить"
                                     aria-label="Удалить"
-                                    className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors"
+                                    className="p-1.5 rounded-lg text-[#64748b] hover:text-red-500 hover:bg-red-50 transition-colors"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
                                   </button>
@@ -766,7 +766,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
 
                   <button
                     onClick={() => setPhase("idle")}
-                    className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+                    className="text-xs text-[#64748b] hover:text-[#0f172a] underline underline-offset-2 transition-colors"
                   >
                     Записать снова
                   </button>
@@ -786,11 +786,11 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
 
         {/* Footer */}
         {phase === "review" && entries.length > 0 && (
-          <div className="shrink-0 border-t border-border/50 bg-gray-50/50 px-5 py-4 space-y-2">
+          <div className="shrink-0 border-t border-[#e8e3d9]/50 bg-[#faf8f4]/50 px-5 py-4 space-y-2">
             {/* Cost summary */}
             {totalSelectedServices > 0 && (
               <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">
+                <span className="text-[#64748b]">
                   {totalSelectedServices} {plural(totalSelectedServices, "услуга", "услуги", "услуг")} из прейскуранта
                 </span>
                 <span className="font-bold text-primary">
@@ -799,7 +799,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
               </div>
             )}
             <div className="flex items-center justify-between gap-3">
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs text-[#64748b]">
                 {entries.length} {plural(entries.length, "зуб", "зуба", "зубов")}
               </span>
               <div className="flex gap-2">

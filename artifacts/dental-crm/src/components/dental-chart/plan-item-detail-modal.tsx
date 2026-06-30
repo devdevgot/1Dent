@@ -146,7 +146,7 @@ function AiToothSection({
 
   if (!analysis) {
     return (
-      <p className="text-[12px] text-gray-400 py-1">
+      <p className="text-[12px] text-[#94a3b8] py-1">
         Проведите диагностику зуба для получения анализа
       </p>
     );
@@ -174,7 +174,7 @@ function AiToothSection({
 
       <div className="px-3 py-2.5 space-y-2.5">
         {sections.length === 0 ? (
-          <p className="text-[12px] text-gray-500">Анализ недоступен</p>
+          <p className="text-[12px] text-[#64748b]">Анализ недоступен</p>
         ) : (
           sections.map((sec) => (
             <div key={sec.title}>
@@ -182,7 +182,7 @@ function AiToothSection({
                 {sec.title}
               </p>
               {sec.lines.map((line, i) => (
-                <p key={i} className="text-[12px] text-gray-700 leading-snug flex gap-1.5 mb-0.5">
+                <p key={i} className="text-[12px] text-[#0f172a] leading-snug flex gap-1.5 mb-0.5">
                   <span className="text-primary/60 shrink-0 mt-0.5">•</span>
                   {line}
                 </p>
@@ -191,7 +191,7 @@ function AiToothSection({
           ))
         )}
         {fetchedAt && (
-          <p className="text-[10px] text-gray-400 pt-0.5">
+          <p className="text-[10px] text-[#94a3b8] pt-0.5">
             Обновлено: {fetchedAt.toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}
           </p>
         )}
@@ -273,12 +273,12 @@ function TreatmentSchedulePicker({ scheduledAt, onConfirm, onClear, onClose }: T
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-10 bg-white rounded-2xl border border-[#e8e3d9] shadow-xl w-full max-w-sm mx-4 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <p className="font-semibold text-gray-900 text-[15px]">Назначить дату лечения</p>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#e8e3d9]">
+          <p className="font-semibold text-[#0f172a] text-[15px]">Назначить дату лечения</p>
+          <button onClick={onClose} className="text-[#94a3b8] hover:text-[#64748b] transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -286,19 +286,19 @@ function TreatmentSchedulePicker({ scheduledAt, onConfirm, onClear, onClose }: T
         {/* Calendar */}
         <div className="px-5 pt-4 pb-2">
           <div className="flex items-center justify-between mb-3">
-            <button onClick={prevMonth} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors">
-              <ChevronLeft className="w-4 h-4 text-gray-600" />
+            <button onClick={prevMonth} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[#f1ede4] transition-colors">
+              <ChevronLeft className="w-4 h-4 text-[#64748b]" />
             </button>
-            <span className="text-sm font-semibold text-gray-800">
+            <span className="text-sm font-semibold text-[#0f172a]">
               {MONTHS_RU[viewMonth]} {viewYear}
             </span>
-            <button onClick={nextMonth} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors">
-              <ChevronRight className="w-4 h-4 text-gray-600" />
+            <button onClick={nextMonth} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[#f1ede4] transition-colors">
+              <ChevronRight className="w-4 h-4 text-[#64748b]" />
             </button>
           </div>
           <div className="grid grid-cols-7 mb-1">
             {DAYS_RU.map(d => (
-              <div key={d} className="text-center text-xs font-medium text-gray-400 py-1">{d}</div>
+              <div key={d} className="text-center text-xs font-medium text-[#94a3b8] py-1">{d}</div>
             ))}
           </div>
           {weeks.map((week, wi) => (
@@ -319,10 +319,10 @@ function TreatmentSchedulePicker({ scheduledAt, onConfirm, onClear, onClose }: T
                     className={cn(
                       "aspect-square flex items-center justify-center text-sm rounded-full transition-all m-0.5",
                       !day && "invisible",
-                      isPast && day && "text-gray-300 cursor-not-allowed",
+                      isPast && day && "text-[#94a3b8] cursor-not-allowed",
                       isSelected && "bg-primary text-white font-semibold shadow-sm",
                       !isSelected && isToday && "text-primary font-semibold",
-                      !isSelected && !isToday && day && !isPast && "text-gray-700 hover:bg-primary/10",
+                      !isSelected && !isToday && day && !isPast && "text-[#0f172a] hover:bg-primary/10",
                     )}
                   >
                     {day}
@@ -333,13 +333,13 @@ function TreatmentSchedulePicker({ scheduledAt, onConfirm, onClear, onClose }: T
           ))}
         </div>
 
-        <div className="mx-5 border-t border-gray-100 my-1" />
+        <div className="mx-5 border-t border-[#e8e3d9] my-1" />
 
         {/* Time list */}
         <div className="px-5 pb-2">
           <div className="flex items-center gap-1.5 mb-2">
-            <Clock className="w-3.5 h-3.5 text-gray-400" />
-            <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Время</span>
+            <Clock className="w-3.5 h-3.5 text-[#94a3b8]" />
+            <span className="text-xs font-medium text-[#64748b] uppercase tracking-wide">Время</span>
           </div>
           <div ref={timeRef} className="h-36 overflow-y-scroll custom-scrollbar space-y-0.5 pr-1">
             {SCHEDULE_TIME_SLOTS.map(slot => (
@@ -352,7 +352,7 @@ function TreatmentSchedulePicker({ scheduledAt, onConfirm, onClear, onClose }: T
                   "w-full text-left px-3 py-1.5 rounded-lg text-sm transition-all",
                   slot === selTime
                     ? "bg-primary text-white font-semibold"
-                    : "text-gray-700 hover:bg-primary/10",
+                    : "text-[#0f172a] hover:bg-primary/10",
                 )}
               >
                 {slot}
@@ -362,7 +362,7 @@ function TreatmentSchedulePicker({ scheduledAt, onConfirm, onClear, onClose }: T
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t border-gray-100 flex gap-3">
+        <div className="px-5 py-4 border-t border-[#e8e3d9] flex gap-3">
           {onClear && (
             <button
               type="button"
@@ -375,7 +375,7 @@ function TreatmentSchedulePicker({ scheduledAt, onConfirm, onClear, onClose }: T
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+            className="flex-1 py-2 rounded-xl border border-[#e8e3d9] text-sm font-semibold text-[#64748b] hover:bg-[#faf8f4] transition-colors"
           >
             Отмена
           </button>
@@ -387,7 +387,7 @@ function TreatmentSchedulePicker({ scheduledAt, onConfirm, onClear, onClose }: T
               "flex-1 py-2 rounded-xl text-sm font-semibold transition-colors",
               selDate
                 ? "bg-primary text-white hover:bg-primary/90"
-                : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                : "bg-[#f1ede4] text-[#94a3b8] cursor-not-allowed"
             )}
           >
             Готово
@@ -842,28 +842,28 @@ export function PlanItemDetailModal({
     <div className="fixed inset-0 z-50 flex items-end justify-center animate-in-fade">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/30 backdrop-blur-sm"
         onClick={onClose}
       />
       {/* Panel — takes ~75% of screen height, anchored near bottom */}
       <div
-        className="relative bg-white w-full sm:max-w-md rounded-t-3xl shadow-2xl flex flex-col overflow-hidden animate-in-slide"
+        className="relative bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl border border-[#e8e3d9] shadow-xl flex flex-col overflow-hidden animate-in-slide"
         style={{ height: "75dvh" }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-1 shrink-0">
-          <div className="w-10 h-1 rounded-full bg-gray-200" />
+          <div className="w-10 h-1 rounded-full bg-[#e8e3d9]" />
         </div>
 
         {/* ── Header ── */}
-        <div className="px-4 pt-3 pb-3 border-b border-gray-100 shrink-0">
+        <div className="px-4 pt-3 pb-3 border-b border-[#e8e3d9] shrink-0">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <p className="text-[15px] font-bold text-gray-900 leading-snug">{item.title}</p>
+              <p className="text-[15px] font-bold text-[#0f172a] leading-snug">{item.title}</p>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 {item.toothFdi != null && (
-                  <span className="text-[11px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                  <span className="text-[11px] text-[#64748b] bg-[#f1ede4] px-2 py-0.5 rounded-full">
                     Зуб №{item.toothFdi}
                   </span>
                 )}
@@ -876,13 +876,13 @@ export function PlanItemDetailModal({
                   {isCompleted ? "Завершена" : isCancelled ? "Отменена" : "В ожидании"}
                 </span>
                 {item.discount > 0 ? (
-                  <span className="text-[12px] font-semibold text-gray-700 flex items-center gap-1.5">
-                    <span className="line-through text-gray-400">{item.price.toLocaleString("ru-KZ")} ₸</span>
+                  <span className="text-[12px] font-semibold text-[#0f172a] flex items-center gap-1.5">
+                    <span className="line-through text-[#94a3b8]">{item.price.toLocaleString("ru-KZ")} ₸</span>
                     <span className="text-emerald-600 font-bold">{(item.price * (1 - item.discount / 100)).toLocaleString("ru-KZ")} ₸</span>
                     <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-rose-50 text-rose-600 border border-rose-100">-{item.discount}%</span>
                   </span>
                 ) : (
-                  <span className="text-[12px] font-semibold text-gray-700">
+                  <span className="text-[12px] font-semibold text-[#0f172a]">
                     {item.price.toLocaleString("ru-KZ")} ₸
                   </span>
                 )}
@@ -890,7 +890,7 @@ export function PlanItemDetailModal({
             </div>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors shrink-0"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-[#94a3b8] hover:bg-[#f1ede4] hover:text-[#0f172a] transition-colors shrink-0"
             >
               <X className="w-4 h-4" />
             </button>
@@ -904,7 +904,7 @@ export function PlanItemDetailModal({
                 onClick={() => setTab(id)}
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors",
-                  tab === id ? "bg-primary/10 text-primary" : "text-gray-500 hover:bg-gray-100"
+                  tab === id ? "bg-primary/10 text-primary" : "text-[#64748b] hover:bg-[#f1ede4]"
                 )}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -979,14 +979,14 @@ export function PlanItemDetailModal({
                           {/* Documents list */}
                           <div className="bg-white/80 border border-blue-100/50 rounded-xl p-3 space-y-2">
                             {bundleContracts.length === 0 ? (
-                              <div className="flex items-center gap-2 text-[11px] text-gray-400">
+                              <div className="flex items-center gap-2 text-[11px] text-[#94a3b8]">
                                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
                                 Загрузка списка документов...
                               </div>
                             ) : (
                               bundleContracts.map((c) => (
                                 <div key={c.id} className="flex items-center justify-between text-[11px] gap-2">
-                                  <span className="text-gray-700 font-medium truncate flex-1">{c.templateName}</span>
+                                  <span className="text-[#0f172a] font-medium truncate flex-1">{c.templateName}</span>
                                   <span className={cn(
                                     "px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0",
                                     c.status === "signed" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-orange-50 text-orange-600 border border-orange-100"
@@ -1015,7 +1015,7 @@ export function PlanItemDetailModal({
                               href={`${window.location.origin}/p/bundle/${bundleToken}`}
                               target="_blank"
                               rel="noreferrer"
-                              className="h-9 px-3 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 text-[11px] font-medium flex items-center justify-center gap-1 transition-colors"
+                              className="h-9 px-3 rounded-xl border border-[#e8e3d9] bg-white hover:bg-[#faf8f4] text-[#64748b] text-[11px] font-medium flex items-center justify-center gap-1 transition-colors"
                             >
                               Открыть пакет
                             </a>
@@ -1043,7 +1043,7 @@ export function PlanItemDetailModal({
                   <div className="bg-gradient-to-br from-primary/5 to-blue-50 rounded-2xl p-4 border border-primary/10">
                     <div className="flex items-center gap-2 mb-3">
                       <Clock className="w-4 h-4 text-primary" />
-                      <span className="text-[13px] font-semibold text-gray-800">Таймер лечения</span>
+                      <span className="text-[13px] font-semibold text-[#0f172a]">Таймер лечения</span>
                     </div>
 
                     {isTimerRunning ? (
@@ -1052,7 +1052,7 @@ export function PlanItemDetailModal({
                           <div className="text-[32px] font-bold text-primary tabular-nums">
                             {remaining != null ? formatTimer(remaining) : formatTimer(elapsed)}
                           </div>
-                          <p className="text-[11px] text-gray-400 mt-0.5">
+                          <p className="text-[11px] text-[#94a3b8] mt-0.5">
                             {remaining != null ? "осталось" : "прошло"}
                           </p>
                         </div>
@@ -1081,7 +1081,7 @@ export function PlanItemDetailModal({
                           "w-full h-11 rounded-xl text-[13px] font-semibold flex items-center justify-center gap-2 transition-all shadow-sm",
                           allSigned
                             ? "bg-primary text-white hover:bg-primary/90 active:bg-primary/80"
-                            : "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
+                            : "bg-[#f1ede4] text-[#94a3b8] cursor-not-allowed border border-[#e8e3d9]"
                         )}
                       >
                         {allSigned ? <Play className="w-4 h-4" /> : <Lock className="w-3.5 h-3.5" />}
@@ -1092,29 +1092,29 @@ export function PlanItemDetailModal({
                 </div>
               )}              {/* Doctor assignment */}
               <div>
-                <p className="text-[12px] font-semibold text-gray-500 uppercase tracking-wide mb-2">Врач</p>
+                <p className="text-[12px] font-semibold text-[#64748b] uppercase tracking-wide mb-2">Врач</p>
                 <div className="relative">
                   <button
                     onClick={() => !isAdmin && setShowDoctorPicker(!showDoctorPicker)}
                     disabled={isAdmin}
                     className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-gray-200 bg-white hover:border-primary/40 transition-colors",
-                      isAdmin && "cursor-default opacity-85 hover:border-gray-200"
+                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-[#e8e3d9] bg-white hover:border-primary/40 transition-colors",
+                      isAdmin && "cursor-default opacity-85 hover:border-[#e8e3d9]"
                     )}
                   >
                     <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                       <UserRound className="w-3.5 h-3.5 text-primary" />
                     </div>
-                    <span className="flex-1 text-left text-[13px] font-medium text-gray-700">
+                    <span className="flex-1 text-left text-[13px] font-medium text-[#0f172a]">
                       {assignedUser?.name ?? "Не назначен"}
                     </span>
-                    {!isAdmin && <ChevronDown className={cn("w-4 h-4 text-gray-400 transition-transform", showDoctorPicker && "rotate-180")} />}
+                    {!isAdmin && <ChevronDown className={cn("w-4 h-4 text-[#94a3b8] transition-transform", showDoctorPicker && "rotate-180")} />}
                   </button>
                   {showDoctorPicker && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-100 rounded-xl shadow-lg z-10 overflow-hidden">
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#e8e3d9] rounded-xl shadow-lg z-10 overflow-hidden">
                       <button
                         onClick={() => void handleAssignDoctor("")}
-                        className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-gray-50 text-[13px] text-gray-500 transition-colors"
+                        className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-[#faf8f4] text-[13px] text-[#64748b] transition-colors"
                       >
                         Не назначен
                       </button>
@@ -1124,7 +1124,7 @@ export function PlanItemDetailModal({
                           onClick={() => void handleAssignDoctor(u.id)}
                           className={cn(
                             "w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-primary/5 text-[13px] transition-colors",
-                            selectedDoctor === u.id ? "text-primary font-semibold bg-primary/5" : "text-gray-700"
+                            selectedDoctor === u.id ? "text-primary font-semibold bg-primary/5" : "text-[#0f172a]"
                           )}
                         >
                           <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
@@ -1141,39 +1141,39 @@ export function PlanItemDetailModal({
               {/* Schedule date/time */}
               {isPending && (
                 <div>
-                  <p className="text-[12px] font-semibold text-gray-500 uppercase tracking-wide mb-2">Дата лечения</p>
+                  <p className="text-[12px] font-semibold text-[#64748b] uppercase tracking-wide mb-2">Дата лечения</p>
                   <div className="relative">
                     <button
                       onClick={() => !isAdmin && setShowSchedulePicker(!showSchedulePicker)}
                       disabled={isAdmin}
                       className={cn(
-                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-gray-200 bg-white hover:border-primary/40 transition-colors",
-                        isAdmin && "cursor-default opacity-85 hover:border-gray-200"
+                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-[#e8e3d9] bg-white hover:border-primary/40 transition-colors",
+                        isAdmin && "cursor-default opacity-85 hover:border-[#e8e3d9]"
                       )}
                     >
                       <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                         <CalendarDays className="w-3.5 h-3.5 text-primary" />
                       </div>
                       {scheduledAt ? (
-                        <span className="flex-1 text-left text-[13px] font-medium text-gray-700 flex items-center gap-2">
+                        <span className="flex-1 text-left text-[13px] font-medium text-[#0f172a] flex items-center gap-2">
                           <span>
                             {new Date(scheduledAt).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })}
                           </span>
-                          <span className="text-gray-400">·</span>
-                          <Clock className="w-3 h-3 text-gray-400" />
+                          <span className="text-[#94a3b8]">·</span>
+                          <Clock className="w-3 h-3 text-[#94a3b8]" />
                           <span>
                             {new Date(scheduledAt).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
                           </span>
                         </span>
                       ) : (
-                        <span className="flex-1 text-left text-[13px] text-gray-400">
+                        <span className="flex-1 text-left text-[13px] text-[#94a3b8]">
                           Дата не назначена
                         </span>
                       )}
                       {!isAdmin && (
                         savingSchedule
-                          ? <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
-                          : <ChevronDown className={cn("w-4 h-4 text-gray-400 transition-transform", showSchedulePicker && "rotate-180")} />
+                          ? <Loader2 className="w-4 h-4 text-[#94a3b8] animate-spin" />
+                          : <ChevronDown className={cn("w-4 h-4 text-[#94a3b8] transition-transform", showSchedulePicker && "rotate-180")} />
                       )}
                     </button>
 
@@ -1197,7 +1197,7 @@ export function PlanItemDetailModal({
 
               {/* Scheduled date badge (for completed/cancelled items) */}
               {!isPending && scheduledAt && (
-                <div className="flex items-center gap-2 text-[12px] text-gray-500">
+                <div className="flex items-center gap-2 text-[12px] text-[#64748b]">
                   <CalendarDays className="w-3.5 h-3.5" />
                   <span>
                     Было назначено: {new Date(scheduledAt).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })}{" "}
@@ -1209,7 +1209,7 @@ export function PlanItemDetailModal({
               {/* Notes */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-[12px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+                  <p className="text-[12px] font-semibold text-[#64748b] uppercase tracking-wide flex items-center gap-1.5">
                     <StickyNote className="w-3.5 h-3.5" /> Заметки
                   </p>
                   {notesDirty && !isAdmin && (
@@ -1230,7 +1230,7 @@ export function PlanItemDetailModal({
                   onBlur={() => { if (notesDirty && !isAdmin) void handleSaveNotes(); }}
                   placeholder={isAdmin ? "Нет заметок" : "Добавьте заметки по процедуре…"}
                   rows={4}
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-[13px] text-gray-700 placeholder:text-gray-400 resize-none focus:outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary/40 transition-colors"
+                  className="w-full px-3 py-2.5 rounded-xl border border-[#e8e3d9] text-[13px] text-[#0f172a] placeholder:text-[#94a3b8] resize-none focus:outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary/40 transition-colors"
                 />
               </div>
 
@@ -1259,9 +1259,9 @@ export function PlanItemDetailModal({
                   <Brain className="w-4 h-4 text-primary" />
                 </div>
                 <div>
-                  <p className="text-[13px] font-semibold text-gray-900">ИИ-анализ</p>
+                  <p className="text-[13px] font-semibold text-[#0f172a]">ИИ-анализ</p>
                   {item.toothFdi != null && (
-                    <p className="text-[11px] text-gray-400">Зуб №{item.toothFdi}</p>
+                    <p className="text-[11px] text-[#94a3b8]">Зуб №{item.toothFdi}</p>
                   )}
                 </div>
               </div>
@@ -1275,11 +1275,11 @@ export function PlanItemDetailModal({
 
               {/* Camera viewfinder */}
               {showCamera && (
-                <div className="rounded-2xl overflow-hidden border border-gray-200 bg-black relative">
+                <div className="rounded-2xl overflow-hidden border border-[#e8e3d9] bg-black relative">
                   {cameraError ? (
                     <div className="flex flex-col items-center gap-2 py-10 text-center px-4">
-                      <Camera className="w-8 h-8 text-gray-400" />
-                      <p className="text-[13px] text-gray-400">{cameraError}</p>
+                      <Camera className="w-8 h-8 text-[#94a3b8]" />
+                      <p className="text-[13px] text-[#94a3b8]">{cameraError}</p>
                       <button
                         onClick={stopCamera}
                         className="mt-1 text-[12px] text-primary font-semibold"
@@ -1332,22 +1332,22 @@ export function PlanItemDetailModal({
                   <button
                     onClick={() => void handleOpenCamera("environment")}
                     disabled={uploadingFile}
-                    className="flex flex-col items-center gap-2 py-4 rounded-2xl border-2 border-dashed border-gray-200 hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-50"
+                    className="flex flex-col items-center gap-2 py-4 rounded-2xl border-2 border-dashed border-[#e8e3d9] hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-50"
                   >
-                    <Camera className="w-6 h-6 text-gray-400" />
-                    <span className="text-[12px] font-medium text-gray-600">Сделать фото</span>
+                    <Camera className="w-6 h-6 text-[#94a3b8]" />
+                    <span className="text-[12px] font-medium text-[#64748b]">Сделать фото</span>
                   </button>
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploadingFile}
-                    className="flex flex-col items-center gap-2 py-4 rounded-2xl border-2 border-dashed border-gray-200 hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-50"
+                    className="flex flex-col items-center gap-2 py-4 rounded-2xl border-2 border-dashed border-[#e8e3d9] hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-50"
                   >
                     {uploadingFile ? (
                       <Loader2 className="w-6 h-6 text-primary animate-spin" />
                     ) : (
-                      <Upload className="w-6 h-6 text-gray-400" />
+                      <Upload className="w-6 h-6 text-[#94a3b8]" />
                     )}
-                    <span className="text-[12px] font-medium text-gray-600">
+                    <span className="text-[12px] font-medium text-[#64748b]">
                       {uploadingFile ? "Загружаем…" : "Загрузить файл"}
                     </span>
                   </button>
@@ -1369,13 +1369,13 @@ export function PlanItemDetailModal({
               {/* Attachment list */}
               {attachments.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 py-6 text-center">
-                  <FileText className="w-8 h-8 text-gray-200" />
-                  <p className="text-[12px] text-gray-400">Нет прикреплённых файлов</p>
+                  <FileText className="w-8 h-8 text-[#e8e3d9]" />
+                  <p className="text-[12px] text-[#94a3b8]">Нет прикреплённых файлов</p>
                 </div>
               ) : (
                 <div className="space-y-2">
                   {attachments.map((path) => (
-                    <div key={path} className="flex items-center gap-3 p-3 bg-white border border-gray-100 rounded-xl shadow-sm">
+                    <div key={path} className="flex items-center gap-3 p-3 bg-white border border-[#e8e3d9] rounded-xl shadow-sm">
                       {isImage(path) || isVideo(path) ? (
                         <button
                           type="button"
@@ -1386,10 +1386,10 @@ export function PlanItemDetailModal({
                             <img
                               src={fileUrl(path)}
                               alt={fileName(path)}
-                              className="w-10 h-10 rounded-lg object-cover border border-gray-100 group-hover/img:opacity-85 transition-opacity"
+                              className="w-10 h-10 rounded-lg object-cover border border-[#e8e3d9] group-hover/img:opacity-85 transition-opacity"
                             />
                           ) : (
-                            <div className="w-10 h-10 rounded-lg bg-slate-900 flex items-center justify-center shrink-0 border border-gray-100 relative group-hover/img:opacity-85 transition-opacity">
+                            <div className="w-10 h-10 rounded-lg bg-slate-900 flex items-center justify-center shrink-0 border border-[#e8e3d9] relative group-hover/img:opacity-85 transition-opacity">
                               <Play className="w-4 h-4 text-white fill-white absolute" />
                             </div>
                           )}
@@ -1407,18 +1407,18 @@ export function PlanItemDetailModal({
                         <button
                           type="button"
                           onClick={() => setPreviewPath(path)}
-                          className="text-[12px] font-medium text-gray-700 truncate block hover:text-primary transition-colors text-left w-full focus:outline-none"
+                          className="text-[12px] font-medium text-[#0f172a] truncate block hover:text-primary transition-colors text-left w-full focus:outline-none"
                         >
                           {fileName(path)}
                         </button>
-                        <span className="text-[10px] text-gray-400 block">
+                        <span className="text-[10px] text-[#94a3b8] block">
                           {isImage(path) ? "Изображение" : isVideo(path) ? "Видео" : isPdf(path) ? "Документ PDF" : "Файл"}
                         </span>
                       </div>
                       {!isAdmin && (
                         <button
                           onClick={() => void handleRemoveAttachment(path)}
-                          className="w-7 h-7 rounded-full flex items-center justify-center text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors shrink-0"
+                          className="w-7 h-7 rounded-full flex items-center justify-center text-[#94a3b8] hover:text-red-400 hover:bg-red-50 transition-colors shrink-0"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -1496,8 +1496,8 @@ export function PlanItemDetailModal({
               />
             ) : isPdf(previewPath) ? (
               <div className="w-full h-[75vh] flex flex-col bg-white rounded-2xl overflow-hidden shadow-2xl">
-                <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-gray-700 truncate">{fileName(previewPath)}</span>
+                <div className="px-4 py-3 bg-[#faf8f4] border-b border-[#e8e3d9] flex items-center justify-between">
+                  <span className="text-xs font-semibold text-[#0f172a] truncate">{fileName(previewPath)}</span>
                   <a
                     href={fileUrl(previewPath)}
                     download
@@ -1517,8 +1517,8 @@ export function PlanItemDetailModal({
                   <File className="w-8 h-8 text-primary" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-gray-900 truncate px-2">{fileName(previewPath)}</h3>
-                  <p className="text-xs text-gray-400 mt-1">Данный формат не поддерживается для предпросмотра</p>
+                  <h3 className="text-sm font-bold text-[#0f172a] truncate px-2">{fileName(previewPath)}</h3>
+                  <p className="text-xs text-[#94a3b8] mt-1">Данный формат не поддерживается для предпросмотра</p>
                 </div>
                 <a
                   href={fileUrl(previewPath)}
@@ -1536,23 +1536,23 @@ export function PlanItemDetailModal({
       {doctorToTransfer && (() => {
         const targetDoctor = allUsers.find((u) => u.id === doctorToTransfer);
         return (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-            <div className="bg-white w-full max-w-[340px] rounded-2xl p-5 shadow-2xl border border-slate-100 flex flex-col text-center space-y-4 animate-in zoom-in-95 duration-150">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+            <div className="bg-white w-full max-w-[340px] rounded-2xl p-5 shadow-xl border border-[#e8e3d9] flex flex-col text-center space-y-4 animate-in zoom-in-95 duration-150">
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto text-primary">
                 <UserRound className="w-6 h-6" />
               </div>
               <div className="space-y-1">
-                <h3 className="font-semibold text-gray-900 text-[16px]">Передача лечения</h3>
-                <p className="text-[13px] text-gray-500 leading-relaxed">
+                <h3 className="font-semibold text-[#0f172a] text-[16px]">Передача лечения</h3>
+                <p className="text-[13px] text-[#64748b] leading-relaxed">
                   Вы точно хотите передать это лечение врачу{" "}
-                  <span className="font-semibold text-gray-800">{targetDoctor?.name}</span>? 
+                  <span className="font-semibold text-[#0f172a]">{targetDoctor?.name}</span>? 
                   Имя нового врача обновится на канбан-доске и во всех списках.
                 </p>
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => setDoctorToTransfer(null)}
-                  className="flex-1 py-2 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-gray-600 hover:bg-slate-50 transition-colors"
+                  className="flex-1 py-2 rounded-xl border border-[#e8e3d9] bg-white text-sm font-semibold text-[#64748b] hover:bg-[#faf8f4] transition-colors"
                 >
                   Нет
                 </button>

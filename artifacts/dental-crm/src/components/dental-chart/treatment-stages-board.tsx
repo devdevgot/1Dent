@@ -306,12 +306,12 @@ function PlanItemCard({
     return (
       <div className="rounded-lg border border-blue-200 bg-blue-50/40 px-3 py-2.5 space-y-2">
         <div className="space-y-1.5">
-          <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Название</label>
+          <label className="block text-[10px] font-semibold text-[#64748b] uppercase tracking-wide">Название</label>
           <input
             autoFocus
             value={actions.editDraft.title}
             onChange={(e) => actions.onEditDraftChange("title", e.target.value)}
-            className="w-full text-[12.5px] border border-gray-200 rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+            className="w-full text-[12.5px] border border-[#e8e3d9] rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
             placeholder="Название процедуры"
             onKeyDown={(e) => {
               if (e.key === "Enter") actions.onEditSave(item.id);
@@ -320,13 +320,13 @@ function PlanItemCard({
           />
         </div>
         <div className="space-y-1.5">
-          <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Стоимость (₸)</label>
+          <label className="block text-[10px] font-semibold text-[#64748b] uppercase tracking-wide">Стоимость (₸)</label>
           <input
             type="number"
             min="0"
             value={actions.editDraft.price}
             onChange={(e) => actions.onEditDraftChange("price", e.target.value)}
-            className="w-full text-[12.5px] border border-gray-200 rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+            className="w-full text-[12.5px] border border-[#e8e3d9] rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
             placeholder="0"
             onKeyDown={(e) => {
               if (e.key === "Enter") actions.onEditSave(item.id);
@@ -338,7 +338,7 @@ function PlanItemCard({
           <button
             onClick={actions.onEditCancel}
             disabled={isSavingEdit}
-            className="flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-md border border-gray-200 text-gray-500 hover:bg-gray-100 transition-colors disabled:opacity-50"
+            className="flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-md border border-[#e8e3d9] text-[#64748b] hover:bg-[#f1ede4] transition-colors disabled:opacity-50"
           >
             <X className="w-3 h-3" />
             Отмена
@@ -361,12 +361,12 @@ function PlanItemCard({
       onClick={() => { if (!actions.isEditMode) actions.onOpenModal(item.id); }}
       className={cn(
         "rounded-lg border transition-all duration-200",
-        !actions.isEditMode && "cursor-pointer hover:bg-slate-50/50",
+        !actions.isEditMode && "cursor-pointer hover:bg-[#faf8f4]/50",
         isDone
           ? "border-emerald-100 bg-emerald-50/40"
           : isRunning
           ? "border-blue-200 bg-blue-50/30 shadow-sm"
-          : "border-gray-100 bg-white",
+          : "border-[#e8e3d9] bg-white",
       )}
     >
       {/* Main row */}
@@ -380,7 +380,7 @@ function PlanItemCard({
               <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
             </span>
           ) : (
-            <span className="w-4 h-4 rounded-full border-2 border-gray-200 inline-block" />
+            <span className="w-4 h-4 rounded-full border-2 border-[#e8e3d9] inline-block" />
           )}
         </div>
 
@@ -389,7 +389,7 @@ function PlanItemCard({
           <span
             className={cn(
               "block text-[12.5px] font-medium leading-snug",
-              isDone ? "line-through text-gray-400" : "text-gray-700",
+              isDone ? "line-through text-[#94a3b8]" : "text-[#0f172a]",
             )}
           >
             {item.title}
@@ -398,12 +398,12 @@ function PlanItemCard({
           {/* Badges row */}
           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
             {showTooth && item.toothFdi && (
-              <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-medium">
+              <span className="text-[10px] bg-[#f1ede4] text-[#64748b] px-1.5 py-0.5 rounded font-medium">
                 з.{item.toothFdi}
               </span>
             )}
             {item.price > 0 && (
-              <span className="text-[10px] text-gray-400 font-medium">
+              <span className="text-[10px] text-[#94a3b8] font-medium">
                 {item.discount > 0 ? (
                   <span className="flex items-center gap-1">
                     <span className="line-through">{formatPrice(item.price)}</span>
@@ -428,7 +428,7 @@ function PlanItemCard({
         {actions.isEditMode && isPending && !isEditing && (
           <button
             onClick={() => actions.onEditStart(item)}
-            className="shrink-0 p-1.5 rounded-md text-gray-400 hover:text-blue-500 hover:bg-blue-50 transition-colors mt-0.5"
+            className="shrink-0 p-1.5 rounded-md text-[#94a3b8] hover:text-blue-500 hover:bg-blue-50 transition-colors mt-0.5"
             title="Редактировать позицию"
           >
             <Pencil className="w-3.5 h-3.5" />
@@ -455,7 +455,7 @@ function PlanItemCard({
               <button
                 onClick={() => actions.onStopTimer(item.id)}
                 disabled={isBusy}
-                className="ml-1 p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                className="ml-1 p-1 rounded text-[#94a3b8] hover:text-[#64748b] hover:bg-[#f1ede4] transition-colors"
                 title="Сбросить таймер"
               >
                 <RotateCcw className="w-3 h-3" />
@@ -583,7 +583,7 @@ function SortableSection({
             </span>
             <div className="flex-1 min-w-0 pt-0.5">
               <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                <span className="text-[15px] font-bold text-gray-900 leading-tight">{stage.label}</span>
+                <span className="text-[15px] font-bold text-[#0f172a] leading-tight">{stage.label}</span>
                 {runningCount > 0 ? (
                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100">В процессе</span>
                 ) : pendingItems.length > 0 && completedItems.length === 0 ? (
@@ -594,7 +594,7 @@ function SortableSection({
                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">Завершён</span>
                 ) : null}
               </div>
-              <p className="text-[12px] text-gray-400 leading-tight">
+              <p className="text-[12px] text-[#94a3b8] leading-tight">
                 {teeth.length > 0
                   ? `Зуб${teeth.length > 1 ? "ы" : ""} ${teeth.map((t) => t.toothFdi).join(", ")}`
                   : orphanItems.length > 0
@@ -607,7 +607,7 @@ function SortableSection({
                 {...attributes}
                 {...listeners}
                 onClick={(e) => e.stopPropagation()}
-                className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 transition-colors pt-1.5 shrink-0"
+                className="cursor-grab active:cursor-grabbing text-[#94a3b8] hover:text-[#64748b] transition-colors pt-1.5 shrink-0"
                 aria-label="Перетащить раздел"
               >
                 <GripVertical className="w-4 h-4" />
@@ -616,18 +616,18 @@ function SortableSection({
           </div>
 
           {/* Сумма этапа / Заработано */}
-          <div className="flex items-center justify-between py-1.5 border-t border-gray-100">
+          <div className="flex items-center justify-between py-1.5 border-t border-[#e8e3d9]">
             {sectionOriginalTotal > 0 ? (
               <>
-                <span className="text-[11px] text-gray-400">Сумма этапа</span>
+                <span className="text-[11px] text-[#94a3b8]">Сумма этапа</span>
                 {stageDiscount > 0 ? (
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] text-gray-400 line-through">{formatPrice(sectionOriginalTotal)}</span>
+                    <span className="text-[11px] text-[#94a3b8] line-through">{formatPrice(sectionOriginalTotal)}</span>
                     <span className="text-[11px] font-bold text-emerald-600">{formatPrice(sectionDiscountedTotal)}</span>
                     <span className="text-[9px] font-bold px-1 py-0.2 rounded bg-rose-50 text-rose-600 border border-rose-100">-{stageDiscount}%</span>
                   </div>
                 ) : (
-                  <span className="text-[11px] font-semibold text-gray-600">{formatPrice(sectionOriginalTotal)}</span>
+                  <span className="text-[11px] font-semibold text-[#64748b]">{formatPrice(sectionOriginalTotal)}</span>
                 )}
               </>
             ) : earnedTotal && earnedTotal > 0 ? (
@@ -637,8 +637,8 @@ function SortableSection({
               </>
             ) : (
               <>
-                <span className="text-[11px] text-gray-400">Сумма этапа</span>
-                <span className="text-[11px] font-semibold text-gray-600">—</span>
+                <span className="text-[11px] text-[#94a3b8]">Сумма этапа</span>
+                <span className="text-[11px] font-semibold text-[#64748b]">—</span>
               </>
             )}
           </div>
@@ -648,10 +648,10 @@ function SortableSection({
         <button
           type="button"
           onClick={() => onOpenDetail?.()}
-          className="w-full flex items-center justify-between py-2.5 border-t border-gray-100 px-4 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 transition-colors"
+          className="w-full flex items-center justify-between py-2.5 border-t border-[#e8e3d9] px-4 bg-[#faf8f4] hover:bg-[#f1ede4] active:bg-[#e8e3d9] transition-colors"
         >
           {planItems.filter((p) => p.status !== "cancelled").length > 0 ? (
-            <span className="text-[13px] text-gray-600 font-medium">
+            <span className="text-[13px] text-[#64748b] font-medium">
               Процедур: {planItems.filter((p) => p.status !== "cancelled").length}
             </span>
           ) : earnedCount && earnedCount > 0 ? (
@@ -659,14 +659,14 @@ function SortableSection({
               Выполнено ранее: {earnedCount}
             </span>
           ) : (
-            <span className="text-[13px] text-gray-400 font-medium">Процедур: 0</span>
+            <span className="text-[13px] text-[#94a3b8] font-medium">Процедур: 0</span>
           )}
-          <ChevronRight className="w-4 h-4 text-gray-400" />
+          <ChevronRight className="w-4 h-4 text-[#94a3b8]" />
         </button>
 
         {/* Date + Doctor row — outside <button> */}
-        <div className="flex items-center justify-between py-2.5 border-t border-gray-100 px-4">
-          <div className="flex items-center gap-1.5 text-[12px] text-gray-400">
+        <div className="flex items-center justify-between py-2.5 border-t border-[#e8e3d9] px-4">
+          <div className="flex items-center gap-1.5 text-[12px] text-[#94a3b8]">
             <Calendar className="w-3.5 h-3.5 shrink-0" />
             {(() => {
               const scheduledItems = planItems
@@ -680,7 +680,7 @@ function SortableSection({
                     {d.toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}{" "}
                     {d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
                     {scheduledItems.length > 1 && (
-                      <span className="text-gray-400 font-normal ml-1">+{scheduledItems.length - 1}</span>
+                      <span className="text-[#94a3b8] font-normal ml-1">+{scheduledItems.length - 1}</span>
                     )}
                   </span>
                 );
@@ -695,7 +695,7 @@ function SortableSection({
             )}
           </div>
           {(userRole === "owner" || userRole === "admin") && doctorName && (
-            <span className="text-[11px] text-gray-500 font-medium truncate max-w-[100px]">
+            <span className="text-[11px] text-[#64748b] font-medium truncate max-w-[100px]">
               {doctorName}
             </span>
           )}
@@ -741,10 +741,10 @@ function CompletedStageSection({
             </span>
             <div className="flex-1 min-w-0 pt-0.5">
               <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                <span className="text-[15px] font-bold text-gray-600 leading-tight">{stage.label}</span>
+                <span className="text-[15px] font-bold text-[#64748b] leading-tight">{stage.label}</span>
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">Завершён</span>
               </div>
-              <p className="text-[12px] text-gray-400 leading-tight">
+              <p className="text-[12px] text-[#94a3b8] leading-tight">
                 {teeth.length > 0
                   ? `Зуб${teeth.length > 1 ? "ы" : ""} ${teeth.map((t) => t.toothFdi).join(", ")}`
                   : orphanItems.length > 0 ? "Дополнительные услуги" : "—"}
@@ -753,16 +753,16 @@ function CompletedStageSection({
           </div>
 
           {/* Сумма этапа */}
-          <div className="flex items-center justify-between py-1.5 border-t border-gray-100">
-            <span className="text-[11px] text-gray-400">Сумма этапа</span>
+          <div className="flex items-center justify-between py-1.5 border-t border-[#e8e3d9]">
+            <span className="text-[11px] text-[#94a3b8]">Сумма этапа</span>
             {stageDiscount > 0 ? (
               <div className="flex items-center gap-1.5">
-                <span className="text-[11px] text-gray-400 line-through">{formatPrice(sectionOriginalTotal)}</span>
+                <span className="text-[11px] text-[#94a3b8] line-through">{formatPrice(sectionOriginalTotal)}</span>
                 <span className="text-[11px] font-bold text-emerald-600">{formatPrice(sectionDiscountedTotal)}</span>
                 <span className="text-[9px] font-bold px-1 py-0.2 rounded bg-rose-50 text-rose-600 border border-rose-100">-{stageDiscount}%</span>
               </div>
             ) : (
-              <span className="text-[11px] font-semibold text-gray-400">
+              <span className="text-[11px] font-semibold text-[#94a3b8]">
                 {sectionOriginalTotal > 0 ? formatPrice(sectionOriginalTotal) : "—"}
               </span>
             )}
@@ -773,17 +773,17 @@ function CompletedStageSection({
         <button
           type="button"
           onClick={() => onOpenDetail?.()}
-          className="w-full flex items-center justify-between py-2.5 border-t border-gray-100 px-4 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 transition-colors"
+          className="w-full flex items-center justify-between py-2.5 border-t border-[#e8e3d9] px-4 bg-[#faf8f4] hover:bg-[#f1ede4] active:bg-[#e8e3d9] transition-colors"
         >
-          <span className="text-[13px] text-gray-500 font-medium">
+          <span className="text-[13px] text-[#64748b] font-medium">
             Процедур: {planItems.length}
           </span>
-          <ChevronRight className="w-4 h-4 text-gray-300" />
+          <ChevronRight className="w-4 h-4 text-[#94a3b8]" />
         </button>
 
         {/* Expanded content */}
         {isExpanded && (
-          <div className="border-t border-gray-100 px-3 py-2.5 space-y-2">
+          <div className="border-t border-[#e8e3d9] px-3 py-2.5 space-y-2">
             {teeth.map((tooth) => {
               const condCfg = CONDITION_CONFIG[tooth.condition ?? "healthy"];
               const toothItems = planItems.filter((p) => p.toothFdi === tooth.toothFdi);
@@ -794,7 +794,7 @@ function CompletedStageSection({
                       className="w-2 h-2 rounded-sm shrink-0"
                       style={{ backgroundColor: condCfg?.crownFill ?? "#e5e7eb", border: `1.5px solid ${condCfg?.stroke ?? "#9ca3af"}` }}
                     />
-                    <span className="text-[12px] font-semibold text-gray-500">Зуб {tooth.toothFdi}</span>
+                    <span className="text-[12px] font-semibold text-[#64748b]">Зуб {tooth.toothFdi}</span>
                     <span className="text-[10px] px-1.5 py-0.5 rounded-md font-medium bg-emerald-50 text-emerald-600">
                       {condCfg?.label ?? tooth.condition}
                     </span>
@@ -804,7 +804,7 @@ function CompletedStageSection({
                       {toothItems.map((item) => <PlanItemCard key={item.id} item={item} actions={actions} />)}
                     </div>
                   ) : (
-                    <p className="pl-3.5 text-[11px] text-gray-400 italic">нет позиций плана</p>
+                    <p className="pl-3.5 text-[11px] text-[#94a3b8] italic">нет позиций плана</p>
                   )}
                 </div>
               );
@@ -812,7 +812,7 @@ function CompletedStageSection({
             {orphanItems.length > 0 && (
               <div className="space-y-1.5">
                 {teeth.length > 0 && (
-                  <div className="text-[10px] text-gray-400 font-medium uppercase tracking-wide pt-1">Без привязки к зубу</div>
+                  <div className="text-[10px] text-[#94a3b8] font-medium uppercase tracking-wide pt-1">Без привязки к зубу</div>
                 )}
                 {orphanItems.map((item) => <PlanItemCard key={item.id} item={item} showTooth actions={actions} />)}
               </div>
@@ -875,10 +875,10 @@ function StageDetailSheet({
     if (runningCount > 0) return { text: "В процессе", cls: "bg-blue-50 text-blue-600 border-blue-100" };
     const pending = activeProcedures.filter((p) => p.status === "pending");
     const completed = activeProcedures.filter((p) => p.status === "completed");
-    if (pending.length > 0 && completed.length === 0) return { text: "Запланирован", cls: "bg-slate-100 text-slate-600 border-slate-200" };
+    if (pending.length > 0 && completed.length === 0) return { text: "Запланирован", cls: "bg-[#f1ede4] text-[#64748b] border-[#e8e3d9]" };
     if (pending.length > 0 && completed.length > 0) return { text: "В работе", cls: "bg-amber-50 text-amber-600 border-amber-100" };
     if (completed.length > 0) return { text: "Завершён", cls: "bg-emerald-50 text-emerald-600 border-emerald-100" };
-    return { text: "Запланирован", cls: "bg-slate-100 text-slate-600 border-slate-200" };
+    return { text: "Запланирован", cls: "bg-[#f1ede4] text-[#64748b] border-[#e8e3d9]" };
   })();
 
   const stageDescription = teeth.length > 0
@@ -895,11 +895,11 @@ function StageDetailSheet({
         <div className="flex items-center justify-between px-4 pt-5 pb-3 shrink-0">
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-[#f1ede4] hover:bg-[#e8e3d9] transition-colors"
           >
-            <ChevronDown className="w-4 h-4 text-gray-600" />
+            <ChevronDown className="w-4 h-4 text-[#64748b]" />
           </button>
-          <span className="text-[16px] font-bold text-gray-900">{stage.label}</span>
+          <span className="text-[16px] font-bold text-[#0f172a]">{stage.label}</span>
           <div className="w-8 h-8" />
         </div>
 
@@ -913,15 +913,15 @@ function StageDetailSheet({
           </div>
 
           {/* Description */}
-          <p className="text-center text-[14px] text-gray-500">{stageDescription}</p>
+          <p className="text-center text-[14px] text-[#64748b]">{stageDescription}</p>
 
           {/* Total + progress */}
-          <div className="bg-gray-50 rounded-2xl p-4 space-y-3">
+          <div className="bg-[#faf8f4] rounded-2xl p-4 space-y-3">
             <div>
-              <p className="text-[11px] text-gray-400 mb-0.5">Сумма этапа</p>
+              <p className="text-[11px] text-[#94a3b8] mb-0.5">Сумма этапа</p>
               {stageHasDiscount ? (
                 <div className="space-y-0.5">
-                  <p className="text-[14px] text-gray-400 line-through leading-none">
+                  <p className="text-[14px] text-[#94a3b8] line-through leading-none">
                     {sectionOriginalTotal > 0 ? formatPrice(sectionOriginalTotal) : "—"}
                   </p>
                   <div className="flex items-center gap-2">
@@ -934,24 +934,24 @@ function StageDetailSheet({
                   </div>
                 </div>
               ) : (
-                <p className="text-[24px] font-bold text-gray-900 leading-tight">
+                <p className="text-[24px] font-bold text-[#0f172a] leading-tight">
                   {sectionOriginalTotal > 0 ? formatPrice(sectionOriginalTotal) : "—"}
                 </p>
               )}
             </div>
             {totalCount > 0 && (
               <>
-                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div className="h-2 bg-[#e8e3d9] rounded-full overflow-hidden">
                   <div
                     className="h-full bg-emerald-500 rounded-full transition-all duration-700"
                     style={{ width: `${progressPct}%` }}
                   />
                 </div>
-                <p className="text-[12px] text-gray-400">
+                <p className="text-[12px] text-[#94a3b8]">
                   Выполнено{" "}
-                  <span className="text-gray-700 font-semibold">{completedCount}</span>{" "}
+                  <span className="text-[#0f172a] font-semibold">{completedCount}</span>{" "}
                   из{" "}
-                  <span className="text-gray-700 font-semibold">{totalCount}</span>{" "}
+                  <span className="text-[#0f172a] font-semibold">{totalCount}</span>{" "}
                   процедур
                 </p>
               </>
@@ -961,7 +961,7 @@ function StageDetailSheet({
           {/* Procedures list */}
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <h3 className="text-[15px] font-bold text-gray-900">
+              <h3 className="text-[15px] font-bold text-[#0f172a]">
                 Процедуры ({totalCount})
               </h3>
               {showHistorical && (
@@ -1021,14 +1021,14 @@ function StageDetailSheet({
             </div>
 
             {totalCount === 0 && (
-              <p className="text-center text-[13px] text-gray-400 py-6">Нет процедур</p>
+              <p className="text-center text-[13px] text-[#94a3b8] py-6">Нет процедур</p>
             )}
           </div>
 
           {/* Назначено */}
           <div>
-            <h3 className="text-[15px] font-bold text-gray-900 mb-3">Назначено</h3>
-            <div className="bg-white rounded-2xl border border-gray-100 divide-y divide-gray-100">
+            <h3 className="text-[15px] font-bold text-[#0f172a] mb-3">Назначено</h3>
+            <div className="bg-white rounded-2xl border border-[#e8e3d9] divide-y divide-[#e8e3d9]">
               {(() => {
                 const scheduledItems = planItems
                   .filter((p) => p.status === "pending" && p.scheduledAt)
@@ -1037,8 +1037,8 @@ function StageDetailSheet({
                 if (scheduledItems.length === 0) {
                   return (
                     <div className="flex items-center gap-3 px-4 py-3">
-                      <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
-                      <span className="text-[13px] text-gray-500">Дата не назначена</span>
+                      <Calendar className="w-4 h-4 text-[#94a3b8] shrink-0" />
+                      <span className="text-[13px] text-[#64748b]">Дата не назначена</span>
                     </div>
                   );
                 }
@@ -1049,11 +1049,11 @@ function StageDetailSheet({
                     <div key={si.id} className="flex items-center gap-3 px-4 py-3">
                       <Calendar className="w-4 h-4 text-primary shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <span className="text-[13px] text-gray-700 font-medium">
+                        <span className="text-[13px] text-[#0f172a] font-medium">
                           {d.toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })}{" "}
                           в {d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
                         </span>
-                        <p className="text-[11px] text-gray-400 truncate">{si.title}</p>
+                        <p className="text-[11px] text-[#94a3b8] truncate">{si.title}</p>
                       </div>
                     </div>
                   );
@@ -1066,7 +1066,7 @@ function StageDetailSheet({
                       {doctorName.charAt(0)}
                     </span>
                   </div>
-                  <span className="text-[13px] text-gray-700 font-medium">{doctorName}</span>
+                  <span className="text-[13px] text-[#0f172a] font-medium">{doctorName}</span>
                 </div>
               )}
             </div>
@@ -1074,12 +1074,12 @@ function StageDetailSheet({
 
           {/* Комментарий */}
           <div>
-            <h3 className="text-[15px] font-bold text-gray-900 mb-3">Комментарий</h3>
-            <div className="bg-white rounded-2xl border border-gray-100 px-4 py-3">
+            <h3 className="text-[15px] font-bold text-[#0f172a] mb-3">Комментарий</h3>
+            <div className="bg-white rounded-2xl border border-[#e8e3d9] px-4 py-3">
               {planNotes ? (
-                <p className="text-[13px] text-gray-600 leading-relaxed">{planNotes}</p>
+                <p className="text-[13px] text-[#64748b] leading-relaxed">{planNotes}</p>
               ) : (
-                <p className="text-[13px] text-gray-400 italic">Нет комментария</p>
+                <p className="text-[13px] text-[#94a3b8] italic">Нет комментария</p>
               )}
             </div>
           </div>
@@ -1130,7 +1130,7 @@ function DetailProcedureCard({
         "rounded-2xl border px-4 py-3 bg-white",
         isDone ? "border-emerald-100 bg-emerald-50/30"
           : isRunning ? "border-blue-100 bg-blue-50/20"
-          : "border-gray-100",
+          : "border-[#e8e3d9]",
       )}
     >
       <div className="flex items-start gap-3">
@@ -1143,33 +1143,33 @@ function DetailProcedureCard({
             {toothLabel}
           </span>
         ) : (
-          <span className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-gray-100">
-            <Stethoscope className="w-5 h-5 text-gray-400" />
+          <span className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-[#f1ede4]">
+            <Stethoscope className="w-5 h-5 text-[#94a3b8]" />
           </span>
         )}
 
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
-            <span className={cn("text-[14px] font-semibold leading-snug", isDone ? "line-through text-gray-400" : "text-gray-900")}>
+            <span className={cn("text-[14px] font-semibold leading-snug", isDone ? "line-through text-[#94a3b8]" : "text-[#0f172a]")}>
               {item.title}
             </span>
           </div>
 
           {condCfg && (
-            <p className="text-[11px] text-gray-400 mt-0.5">{condCfg.label}</p>
+            <p className="text-[11px] text-[#94a3b8] mt-0.5">{condCfg.label}</p>
           )}
 
           <div className="mt-2 space-y-1">
             {doctorName && (
-              <div className="flex items-center gap-4 text-[12px] text-gray-500">
-                <span className="text-gray-400 w-16 shrink-0">Доктор:</span>
+              <div className="flex items-center gap-4 text-[12px] text-[#64748b]">
+                <span className="text-[#94a3b8] w-16 shrink-0">Доктор:</span>
                 <span className="font-medium">{doctorName}</span>
               </div>
             )}
             {isRunning && (
-              <div className="flex items-center gap-4 text-[12px] text-gray-500">
-                <span className="text-gray-400 w-16 shrink-0">
+              <div className="flex items-center gap-4 text-[12px] text-[#64748b]">
+                <span className="text-[#94a3b8] w-16 shrink-0">
                   {timerDuration != null ? "Осталось:" : "Прошло:"}
                 </span>
                 {timerDuration != null ? (
@@ -1187,7 +1187,7 @@ function DetailProcedureCard({
               </div>
             )}
             {isRunning && timerDuration != null && (
-              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mt-1">
+              <div className="h-1.5 bg-[#f1ede4] rounded-full overflow-hidden mt-1">
                 <div
                   className={cn(
                     "h-full rounded-full transition-all duration-1000",
@@ -1197,11 +1197,11 @@ function DetailProcedureCard({
                 />
               </div>
             )}
-            <div className="flex items-center gap-4 text-[12px] text-gray-500">
-              <span className="text-gray-400 w-16 shrink-0">Стоимость:</span>
+            <div className="flex items-center gap-4 text-[12px] text-[#64748b]">
+              <span className="text-[#94a3b8] w-16 shrink-0">Стоимость:</span>
               {item.discount > 0 ? (
                 <div className="flex items-center gap-1.5">
-                  <span className="text-gray-400 line-through text-[11px]">
+                  <span className="text-[#94a3b8] line-through text-[11px]">
                     {formatPrice(item.price)}
                   </span>
                   <span className="font-bold text-emerald-600">
@@ -1212,7 +1212,7 @@ function DetailProcedureCard({
                   </span>
                 </div>
               ) : (
-                <span className="font-semibold text-gray-700">{formatPrice(item.price)}</span>
+                <span className="font-semibold text-[#0f172a]">{formatPrice(item.price)}</span>
               )}
             </div>
           </div>
@@ -1228,7 +1228,7 @@ function DetailProcedureCard({
                 Выполняется
               </span>
             ) : (
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#f1ede4] text-[#64748b] border border-[#e8e3d9]">
                 Запланирована
               </span>
             )}
@@ -1239,7 +1239,7 @@ function DetailProcedureCard({
             <div className="mt-3">
               {showPicker ? (
                 <div className="space-y-2">
-                  <p className="text-[11px] text-gray-400 font-medium">Длительность процедуры:</p>
+                  <p className="text-[11px] text-[#94a3b8] font-medium">Длительность процедуры:</p>
                   <div className="flex flex-wrap gap-1.5">
                     {DURATION_OPTIONS.map((opt) => (
                       <button
@@ -1249,7 +1249,7 @@ function DetailProcedureCard({
                           "text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-colors",
                           selectedDuration === opt.ms
                             ? "bg-blue-600 border-blue-600 text-white"
-                            : "border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600",
+                            : "border-[#e8e3d9] text-[#64748b] hover:border-blue-300 hover:text-blue-600",
                         )}
                       >
                         {opt.label}
@@ -1270,7 +1270,7 @@ function DetailProcedureCard({
                     </button>
                     <button
                       onClick={() => { setShowPicker(false); setSelectedDuration(null); }}
-                      className="px-3 py-2 rounded-xl border border-gray-200 text-gray-500 text-[12px] font-semibold active:bg-gray-50"
+                      className="px-3 py-2 rounded-xl border border-[#e8e3d9] text-[#64748b] text-[12px] font-semibold active:bg-[#faf8f4]"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -1348,8 +1348,8 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, ac
         // Completed — green
         isCompleted && "bg-emerald-50/60 border-emerald-100",
         // Normal pending
-        !isActive && !isBlocked && !isCompleted && "bg-white border-gray-100",
-        !isEditMode && !isBlocked && "cursor-pointer active:bg-slate-50",
+        !isActive && !isBlocked && !isCompleted && "bg-white border-[#e8e3d9]",
+        !isEditMode && !isBlocked && "cursor-pointer active:bg-[#faf8f4]",
         !isEditMode && isBlocked && "cursor-pointer active:bg-amber-50",
       )}
       onClick={() => { if (!isEditMode) onOpenModal(item.id); }}
@@ -1359,7 +1359,7 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, ac
           type="button"
           {...attributes}
           {...listeners}
-          className="shrink-0 text-gray-400 hover:text-gray-600 p-1 -m-1 touch-none cursor-grab active:cursor-grabbing"
+          className="shrink-0 text-[#94a3b8] hover:text-[#64748b] p-1 -m-1 touch-none cursor-grab active:cursor-grabbing"
           aria-label="Перетащить"
           onClick={(e) => e.stopPropagation()}
         >
@@ -1370,12 +1370,12 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, ac
           {isCompleted
             ? <CheckCircle2 className="w-5 h-5 text-emerald-500" />
             : item.status === "cancelled"
-              ? <Ban className="w-5 h-5 text-gray-300" />
+              ? <Ban className="w-5 h-5 text-[#94a3b8]" />
               : isActive
                 ? <CircleDot className="w-5 h-5 text-blue-500" />
                 : isBlocked
                   ? <Circle className="w-5 h-5 text-amber-300" />
-                  : <Circle className="w-5 h-5 text-gray-200" />
+                  : <Circle className="w-5 h-5 text-[#e8e3d9]" />
           }
         </div>
       )}
@@ -1383,12 +1383,12 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, ac
       <div className="flex-1 min-w-0">
         <p className={cn(
           "text-[13px] font-medium leading-snug truncate",
-          isCompleted ? "line-through text-gray-400" : isActive ? "text-blue-800" : isBlocked ? "text-amber-700" : "text-gray-800",
+          isCompleted ? "line-through text-[#94a3b8]" : isActive ? "text-blue-800" : isBlocked ? "text-amber-700" : "text-[#0f172a]",
         )}>
           {item.title}
         </p>
         {item.toothFdi != null && (
-          <p className={cn("text-[11px] mt-0.5", isActive ? "text-blue-400" : isBlocked ? "text-amber-400" : "text-gray-400")}>
+          <p className={cn("text-[11px] mt-0.5", isActive ? "text-blue-400" : isBlocked ? "text-amber-400" : "text-[#94a3b8]")}>
             Зуб №{item.toothFdi}
           </p>
         )}
@@ -1398,12 +1398,12 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, ac
         <div className="text-right flex flex-col items-end">
           {item.discount > 0 ? (
             <>
-              <span className="text-[10px] text-gray-400 line-through leading-none">
+              <span className="text-[10px] text-[#94a3b8] line-through leading-none">
                 {item.price.toLocaleString("ru-KZ")} ₸
               </span>
               <span className={cn(
                 "text-[13px] font-bold leading-tight mt-0.5",
-                isCompleted ? "text-emerald-600" : isActive ? "text-blue-600" : isBlocked ? "text-amber-600" : "text-gray-800",
+                isCompleted ? "text-emerald-600" : isActive ? "text-blue-600" : isBlocked ? "text-amber-600" : "text-[#0f172a]",
               )}>
                 {(item.price * (1 - item.discount / 100)).toLocaleString("ru-KZ")} ₸
               </span>
@@ -1411,7 +1411,7 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, ac
           ) : (
             <span className={cn(
               "text-[13px] font-semibold",
-              isCompleted ? "text-emerald-600" : isActive ? "text-blue-600" : isBlocked ? "text-amber-600" : "text-gray-600",
+              isCompleted ? "text-emerald-600" : isActive ? "text-blue-600" : isBlocked ? "text-amber-600" : "text-[#64748b]",
             )}>
               {item.price.toLocaleString("ru-KZ")} ₸
             </span>
@@ -1422,7 +1422,7 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, ac
           <button
             onClick={(e) => { e.stopPropagation(); if (!isCancellingThis) onCancel(item.id); }}
             disabled={isCancellingThis}
-            className="w-5 h-5 flex items-center justify-center rounded-full text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors disabled:opacity-50"
+            className="w-5 h-5 flex items-center justify-center rounded-full text-[#94a3b8] hover:text-red-400 hover:bg-red-50 transition-colors disabled:opacity-50"
           >
             {isCancellingThis ? <Loader2 className="w-3 h-3 animate-spin" /> : <X className="w-3 h-3" />}
           </button>
@@ -1478,12 +1478,12 @@ function StageContainer({
       ref={setNodeRef}
       className={cn(
         "rounded-2xl border p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] space-y-3 transition-all",
-        isEditMode ? "border-dashed border-gray-200 bg-gray-50/10" : "border-gray-100 bg-white"
+        isEditMode ? "border-dashed border-[#e8e3d9] bg-[#faf8f4]/10" : "border-[#e8e3d9] bg-white"
       )}
       style={{ borderLeft: `4px solid ${stage.color}` }}
     >
       {/* Header of the Stage */}
-      <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">
+      <div className="flex items-center justify-between border-b border-[#e8e3d9] pb-2.5">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-full flex items-center justify-center text-white shrink-0 font-semibold text-[13.5px]" style={{ backgroundColor: stage.color }}>
             {stage.indexNumber ? (
@@ -1494,21 +1494,21 @@ function StageContainer({
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <h3 className="font-bold text-gray-900 text-[13.5px] leading-tight">{stage.label}</h3>
+              <h3 className="font-bold text-[#0f172a] text-[13.5px] leading-tight">{stage.label}</h3>
               {stageDiscount > 0 && (
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-100 shrink-0">
                   -{stageDiscount}%
                 </span>
               )}
             </div>
-            <span className="text-[10px] text-gray-400 font-medium">
+            <span className="text-[10px] text-[#94a3b8] font-medium">
               Процедур: {items.length}
             </span>
           </div>
         </div>
         
         <div className="text-right flex flex-col items-end">
-          <span className="text-[9px] text-gray-400 block font-semibold uppercase tracking-wider">Сумма этапа</span>
+          <span className="text-[9px] text-[#94a3b8] block font-semibold uppercase tracking-wider">Сумма этапа</span>
           <div className="flex items-center gap-1.5 mt-0.5">
             {!isAdmin && items.length > 0 && (
               <button
@@ -1521,7 +1521,7 @@ function StageContainer({
                   "p-1 rounded-md transition-colors shrink-0",
                   stageDiscount > 0
                     ? "bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200"
-                    : "text-gray-400 hover:text-blue-500 hover:bg-gray-100 border border-gray-100"
+                    : "text-[#94a3b8] hover:text-blue-500 hover:bg-[#f1ede4] border border-[#e8e3d9]"
                 )}
                 title="Указать скидку этапа"
               >
@@ -1532,7 +1532,7 @@ function StageContainer({
             <div className="flex flex-col items-end shrink-0">
               {stageDiscount > 0 ? (
                 <>
-                  <span className="text-[10px] text-gray-400 line-through leading-none">
+                  <span className="text-[10px] text-[#94a3b8] line-through leading-none">
                     {stageOriginalTotal.toLocaleString("ru-KZ")} ₸
                   </span>
                   <span className="font-bold text-emerald-600 text-[13.5px] leading-tight mt-0.5">
@@ -1540,7 +1540,7 @@ function StageContainer({
                   </span>
                 </>
               ) : (
-                <span className="font-bold text-gray-800 text-[13.5px]">
+                <span className="font-bold text-[#0f172a] text-[13.5px]">
                   {stageOriginalTotal > 0 ? stageOriginalTotal.toLocaleString("ru-KZ") + " ₸" : "—"}
                 </span>
               )}
@@ -1566,8 +1566,8 @@ function StageContainer({
             />
           ))}
           {items.length === 0 && (
-            <div className="flex items-center justify-center py-4 border border-dashed border-gray-200/50 rounded-xl bg-slate-50/30">
-              <span className="text-[11px] text-gray-400 italic">Перетащите сюда процедуры</span>
+            <div className="flex items-center justify-center py-4 border border-dashed border-[#e8e3d9]/50 rounded-xl bg-[#faf8f4]/30">
+              <span className="text-[11px] text-[#94a3b8] italic">Перетащите сюда процедуры</span>
             </div>
           )}
         </div>
@@ -1581,15 +1581,15 @@ function StageContainer({
 function PlanItemCardOverlay({ item }: { item: TreatmentPlanItem }) {
   return (
     <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-primary/20 bg-white shadow-xl select-none cursor-grabbing">
-      <div className="shrink-0 text-gray-400">
+      <div className="shrink-0 text-[#94a3b8]">
         <GripVertical className="w-4 h-4" />
       </div>
       <div className="flex-1 min-w-0 flex flex-col justify-center">
-        <p className="text-[13px] font-semibold leading-snug truncate text-gray-800">
+        <p className="text-[13px] font-semibold leading-snug truncate text-[#0f172a]">
           {item.title}
         </p>
         {item.toothFdi != null && (
-          <p className="text-[11px] mt-0.5 text-gray-400">
+          <p className="text-[11px] mt-0.5 text-[#94a3b8]">
             Зуб №{item.toothFdi}
           </p>
         )}
@@ -1597,7 +1597,7 @@ function PlanItemCardOverlay({ item }: { item: TreatmentPlanItem }) {
       <div className="flex items-center gap-2 shrink-0">
         {item.discount > 0 ? (
           <div className="text-right flex flex-col items-end">
-            <span className="text-[10px] text-gray-400 line-through leading-none">
+            <span className="text-[10px] text-[#94a3b8] line-through leading-none">
               {item.price.toLocaleString("ru-KZ")} ₸
             </span>
             <span className="text-[13px] font-bold text-primary leading-tight mt-0.5">
@@ -2258,7 +2258,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
               "flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-md border transition-colors",
               isEditMode
                 ? "bg-amber-500 border-amber-500 text-white hover:bg-amber-600"
-                : "border-gray-200 text-gray-500 hover:bg-gray-50 hover:border-gray-300",
+                : "border-[#e8e3d9] text-[#64748b] hover:bg-[#faf8f4] hover:border-[#d4cfc6]",
             )}
           >
             {isEditMode ? (
@@ -2280,12 +2280,12 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
       {totalItems > 0 && (
         <div className="px-0.5">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[11px] text-gray-400">
+            <span className="text-[11px] text-[#94a3b8]">
               Выполнено {completedItems} из {totalItems}
             </span>
-            <span className="text-[11px] font-semibold text-gray-500">{progressPct}%</span>
+            <span className="text-[11px] font-semibold text-[#64748b]">{progressPct}%</span>
           </div>
-          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-1.5 bg-[#f1ede4] rounded-full overflow-hidden">
             <div
               className="h-full bg-emerald-500 rounded-full transition-all duration-700"
               style={{ width: `${progressPct}%` }}
@@ -2296,7 +2296,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
 
       {/* Stages columns with DnD reordering */}
       {localItems.length === 0 && archivedItems.length === 0 ? (
-        <p className="text-sm text-gray-400 text-center py-6">Нет позиций в плане</p>
+        <p className="text-sm text-[#94a3b8] text-center py-6">Нет позиций в плане</p>
       ) : (
         <DndContext
           sensors={sensors}
@@ -2389,18 +2389,18 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
           }
         }}
       >
-        <DialogContent className="max-w-[90vw] sm:max-w-[400px] rounded-2xl p-6">
+        <DialogContent className="max-w-[90vw] sm:max-w-[400px] rounded-2xl border border-[#e8e3d9] shadow-xl p-6">
           <DialogHeader>
-            <DialogTitle className="text-[17px] font-bold text-gray-900">
+            <DialogTitle className="text-[17px] font-bold text-[#0f172a]">
               Указать скидку для этапа
             </DialogTitle>
-            <DialogDescription className="text-[13px] text-gray-500 pt-1">
+            <DialogDescription className="text-[13px] text-[#64748b] pt-1">
               Скидка будет применена ко всем процедурам в этом этапе.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-1.5">
-              <label className="block text-[12px] font-medium text-gray-700">
+              <label className="block text-[12px] font-medium text-[#0f172a]">
                 Процент скидки (0-100%)
               </label>
               <div className="relative">
@@ -2420,7 +2420,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
                       }
                     }
                   }}
-                  className="w-full text-[14px] border border-gray-200 rounded-xl px-3.5 py-2.5 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                  className="w-full text-[14px] border border-[#e8e3d9] rounded-xl px-3.5 py-2.5 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
                   placeholder="0"
                   autoFocus
                   onKeyDown={(e) => {
@@ -2428,7 +2428,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
                   }}
                 />
                 <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none">
-                  <Percent className="w-4 h-4 text-gray-400" />
+                  <Percent className="w-4 h-4 text-[#94a3b8]" />
                 </div>
               </div>
             </div>
@@ -2439,7 +2439,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
                 setDiscountModalStageId(null);
                 setDiscountValue("");
               }}
-              className="px-4 py-2 text-[13px] font-medium border border-gray-200 rounded-xl text-gray-500 hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 text-[13px] font-medium border border-[#e8e3d9] rounded-xl text-[#64748b] hover:bg-[#faf8f4] transition-colors"
             >
               Отмена
             </button>
@@ -2460,13 +2460,13 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
           : null;
         return (
           <Dialog open={completionPromptItemId !== null} onOpenChange={(open) => { if (!open) onDismissPrompt(true); }}>
-            <DialogContent className="max-w-[90vw] rounded-2xl p-6">
+            <DialogContent className="max-w-[90vw] rounded-2xl border border-[#e8e3d9] shadow-xl p-6">
               <DialogHeader>
-                <DialogTitle className="text-[17px] font-bold text-gray-900 text-center">
+                <DialogTitle className="text-[17px] font-bold text-[#0f172a] text-center">
                   Процедура завершена?
                 </DialogTitle>
                 {promptItem && (
-                  <DialogDescription className="text-center text-[13px] text-gray-500 pt-1">
+                  <DialogDescription className="text-center text-[13px] text-[#64748b] pt-1">
                     {promptItem.title}
                   </DialogDescription>
                 )}
@@ -2483,7 +2483,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
                 </button>
                 <button
                   onClick={() => onDismissPrompt(true)}
-                  className="w-full py-3 rounded-xl border border-gray-200 text-gray-600 font-semibold text-[15px] active:bg-gray-50 transition-colors"
+                  className="w-full py-3 rounded-xl border border-[#e8e3d9] text-[#64748b] font-semibold text-[15px] active:bg-[#faf8f4] transition-colors"
                 >
                   Нет, продолжить
                 </button>

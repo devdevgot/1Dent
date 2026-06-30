@@ -64,14 +64,14 @@ function ToothAiSection({ patientId, toothFdi }: { patientId: string; toothFdi: 
         heading.toLowerCase().includes("вывод") ||
         heading.toLowerCase().includes("общ");
       elements.push(
-        <p key={key++} className={cn("text-[11px] font-bold mt-2 mb-0.5", inRelevantSection ? "text-primary" : "text-gray-400")}>
+        <p key={key++} className={cn("text-[11px] font-bold mt-2 mb-0.5", inRelevantSection ? "text-primary" : "text-[#94a3b8]")}>
           {heading}
         </p>,
       );
     } else if (inRelevantSection) {
       hasRelevantContent = true;
       elements.push(
-        <p key={key++} className="text-[11px] text-gray-700 leading-relaxed">
+        <p key={key++} className="text-[11px] text-[#0f172a] leading-relaxed">
           {trimmed.replace(/^[-•]\s/, "• ")}
         </p>,
       );
@@ -88,9 +88,9 @@ function ToothAiSection({ patientId, toothFdi }: { patientId: string; toothFdi: 
         <div className="w-5 h-5 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
           <Brain className="w-3 h-3 text-primary" />
         </div>
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex-1">ИИ-анализ</p>
+        <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide flex-1">ИИ-анализ</p>
         {isFetching && <RefreshCw className="w-3 h-3 text-primary animate-spin" />}
-        <span className="text-[10px] text-muted-foreground">
+        <span className="text-[10px] text-[#64748b]">
           {updatedAt.toLocaleDateString("ru", { day: "2-digit", month: "short" })}
         </span>
       </div>
@@ -220,16 +220,16 @@ export function ToothDetailPanel({
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-white shrink-0">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[#e8e3d9]/50 bg-white shrink-0">
         <div>
-          <p className="font-bold text-foreground text-base">{t("tooth.patientCard")}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">
+          <p className="font-bold text-[#0f172a] text-base">{t("tooth.patientCard")}</p>
+          <p className="text-xs text-[#64748b] mt-0.5">
             {patient?.name} • {t("tooth.title", { fdi: toothFdi })}
           </p>
         </div>
         <button
           onClick={onClose}
-          className="p-1.5 rounded-md hover:bg-slate-100 text-muted-foreground"
+          className="p-1.5 rounded-md hover:bg-[#f1ede4] text-[#64748b]"
         >
           <X className="w-4 h-4" />
         </button>
@@ -251,9 +251,9 @@ export function ToothDetailPanel({
         <div className="p-4 space-y-5">
           {teethLoading ? (
             <div className="space-y-3 animate-pulse">
-              <div className="h-8 bg-slate-100 rounded-xl" />
-              <div className="h-20 bg-slate-100 rounded-xl" />
-              <div className="h-10 bg-slate-100 rounded-xl" />
+              <div className="h-8 bg-[#f1ede4] rounded-xl" />
+              <div className="h-20 bg-[#f1ede4] rounded-xl" />
+              <div className="h-10 bg-[#f1ede4] rounded-xl" />
             </div>
           ) : null}
           {/* Diagnosis button */}
@@ -272,7 +272,7 @@ export function ToothDetailPanel({
           {/* Condition selector */}
           {!teethLoading && canWrite && (
             <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+              <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide mb-2">
                 {t("tooth.condition")}
               </p>
               <div className="grid grid-cols-2 gap-1.5">
@@ -289,7 +289,7 @@ export function ToothDetailPanel({
                       "flex items-center gap-2 px-2.5 py-2 rounded-lg border text-left text-xs transition-all",
                       currentCondition === cond
                         ? "ring-2 ring-primary ring-offset-1 border-transparent"
-                        : "border-border hover:border-primary/50",
+                        : "border-[#e8e3d9] hover:border-primary/50",
                     )}
                     style={{
                       background: currentCondition === cond ? cfg.crownFill : undefined,
@@ -314,7 +314,7 @@ export function ToothDetailPanel({
 
           {!canWrite && (
             <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+              <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide mb-2">
                 {t("tooth.condition")}
               </p>
               <div
@@ -331,7 +331,7 @@ export function ToothDetailPanel({
           {/* Notes */}
           {canWrite && (
             <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+              <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide mb-2">
                 {t("tooth.doctorNotes")}
               </p>
               <Textarea
@@ -346,10 +346,10 @@ export function ToothDetailPanel({
 
           {!canWrite && record?.notes && (
             <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+              <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide mb-2">
                 {t("tooth.notes")}
               </p>
-              <p className="text-sm text-foreground">{record.notes}</p>
+              <p className="text-sm text-[#0f172a]">{record.notes}</p>
             </div>
           )}
 
@@ -371,7 +371,7 @@ export function ToothDetailPanel({
           {/* Treatments */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide">
                 {t("tooth.treatmentHistory")}
               </p>
               {canWrite && (
@@ -386,7 +386,7 @@ export function ToothDetailPanel({
 
             {/* Add treatment form */}
             {showAddTreatment && (
-              <div className="bg-slate-50 rounded-xl p-3 space-y-3 mb-3 border border-border/50">
+              <div className="bg-[#faf8f4] rounded-xl p-3 space-y-3 mb-3 border border-[#e8e3d9]/50">
                 <Textarea
                   placeholder={t("tooth.treatmentDescPlaceholder")}
                   value={treatmentDesc}
@@ -437,9 +437,9 @@ export function ToothDetailPanel({
             )}
 
             {treatmentsLoading ? (
-              <div className="text-xs text-muted-foreground py-4 text-center">{t("tooth.loading")}</div>
+              <div className="text-xs text-[#64748b] py-4 text-center">{t("tooth.loading")}</div>
             ) : treatments.length === 0 ? (
-              <div className="text-xs text-muted-foreground py-4 text-center">{t("tooth.noTreatments")}</div>
+              <div className="text-xs text-[#64748b] py-4 text-center">{t("tooth.noTreatments")}</div>
             ) : (
               <div className="space-y-2">
                 {[...treatments]
@@ -447,10 +447,10 @@ export function ToothDetailPanel({
                   .map((tr) => (
                     <div
                       key={tr.id}
-                      className="bg-white rounded-lg p-3 border border-border/50 text-sm"
+                      className="bg-white rounded-lg p-3 border border-[#e8e3d9]/50 text-sm"
                     >
-                      <p className="font-medium text-foreground">{tr.description}</p>
-                      <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
+                      <p className="font-medium text-[#0f172a]">{tr.description}</p>
+                      <div className="flex items-center gap-3 mt-1.5 text-xs text-[#64748b]">
                         <span className="flex items-center gap-1">
                           <Clock className="w-3 h-3" />
                           {formatDate(tr.performedAt)}
