@@ -16,11 +16,13 @@ import {
 import {
   Wallet, TrendingUp, TrendingDown, CreditCard, AlertCircle, BarChart3,
   Search, ChevronDown, Clock, CheckCircle2, CalendarDays,
-  Users, Zap, Plus, Pencil, Trash2, Package, ChevronLeft,
+  Users, Zap, Plus, Pencil, Trash2, Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, startOfDay, startOfWeek, startOfMonth, startOfYear, parseISO, differenceInDays } from "date-fns";
 import { PageShell } from "@/components/layout/page-shell";
+import { PageHeader } from "@/components/layout/page-header";
+import { PeriodPills } from "@/components/layout/period-pills";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -56,6 +58,11 @@ const PERIOD_LABELS: Record<Period, string> = {
   year:   "Год",
   custom: "Период",
 };
+
+const PERIOD_OPTIONS = (Object.keys(PERIOD_LABELS) as Period[]).map((p) => ({
+  value: p,
+  label: PERIOD_LABELS[p],
+}));
 
 const fmt = (v: number) => v.toLocaleString("ru-RU") + " ₸";
 
@@ -263,56 +270,37 @@ export default function AdminFinancePage() {
 
   return (
     <PageShell animate={false}>
-
-      {/* ── Header ── */}
-      <div className="bg-white px-4 py-4 border-b border-[#e8e3d9] shadow-sm sticky top-0 z-20">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-9 h-9 rounded-xl bg-[#1f75fe] flex items-center justify-center shrink-0">
-            <Wallet className="w-4.5 h-4.5 text-white" size={18} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-[17px] font-semibold text-[#0f172a]">{t("adminFinance.title")}</h1>
-            <p className="text-xs text-[#64748b]">{t("adminFinance.subtitle")}</p>
-          </div>
-        </div>
-
-        {/* Period pills */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <CalendarDays className="w-3.5 h-3.5 text-[#94a3b8] shrink-0" />
-          {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className={cn(
-                "px-3 py-1.5 text-xs rounded-xl font-semibold transition-all",
-                period === p ? "bg-[#1f75fe] text-white shadow-sm" : "bg-[#f1ede4] text-[#64748b] hover:bg-[#e8e3d9]",
-              )}
-            >
-              {PERIOD_LABELS[p]}
-            </button>
-          ))}
-        </div>
-
-        {/* Custom date range */}
-        {period === "custom" && (
-          <div className="flex items-center gap-2 mt-2 pl-5">
-            <input
-              type="date"
-              value={customFrom}
-              onChange={(e) => setCustomFrom(e.target.value)}
-              className="text-xs px-2.5 py-1.5 rounded-xl border border-[#e8e3d9] bg-white text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe] w-36"
-            />
-            <span className="text-xs text-[#94a3b8]">—</span>
-            <input
-              type="date"
-              value={customTo}
-              min={customFrom}
-              onChange={(e) => setCustomTo(e.target.value)}
-              className="text-xs px-2.5 py-1.5 rounded-xl border border-[#e8e3d9] bg-white text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe] w-36"
-            />
-          </div>
-        )}
-      </div>
+      <PageHeader
+        title={t("adminFinance.title")}
+        subtitle={t("adminFinance.subtitle")}
+        icon={<Wallet className="w-5 h-5" />}
+        bottom={
+          <>
+            <div className="flex items-center gap-1.5">
+              <CalendarDays className="w-3.5 h-3.5 text-[var(--text-subtle)] shrink-0" />
+              <PeriodPills value={period} options={PERIOD_OPTIONS} onChange={(v) => setPeriod(v as Period)} />
+            </div>
+            {period === "custom" && (
+              <div className="flex items-center gap-2 mt-2 pl-5">
+                <input
+                  type="date"
+                  value={customFrom}
+                  onChange={(e) => setCustomFrom(e.target.value)}
+                  className="text-xs px-2.5 py-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] w-36"
+                />
+                <span className="text-xs text-[var(--text-subtle)]">—</span>
+                <input
+                  type="date"
+                  value={customTo}
+                  min={customFrom}
+                  onChange={(e) => setCustomTo(e.target.value)}
+                  className="text-xs px-2.5 py-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] w-36"
+                />
+              </div>
+            )}
+          </>
+        }
+      />
 
       <div className="p-4 pb-12 space-y-4 max-w-7xl mx-auto">
 

@@ -7,7 +7,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/hooks/use-auth";
 import {
-  Wallet, TrendingUp, TrendingDown, Package, ChevronLeft,
+  Wallet, TrendingUp, TrendingDown, Package,
   Plus, Pencil, Trash2, FileSpreadsheet, FileText, CalendarDays,
   AlertCircle,
 } from "lucide-react";
@@ -19,6 +19,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { getBaseUrl } from "@/lib/base-url";
 import { cn } from "@/lib/utils";
 import { PageShell } from "@/components/layout/page-shell";
+import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-header";
+import { PeriodPills } from "@/components/layout/period-pills";
 
 const CATEGORY_COLORS: Record<string, string> = {
   salary:    "#4B7BEC",
@@ -176,61 +178,55 @@ export default function FinancialsPage() {
   return (
     <PageShell withTabBarOffset animate={false}>
 
-      {/* ── Header ── */}
-      <div className="bg-white px-4 py-4 border-b border-[#e8e3d9] shadow-sm sticky top-0 z-20">
-        <div className="flex items-center gap-3 mb-3">
-          <button
-            onClick={() => window.history.back()}
-            className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#f1ede4] transition-colors text-[#64748b] shrink-0"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <h1 className="text-[17px] font-semibold text-[#0f172a] flex-1">{t("financials.title")}</h1>
-          <button onClick={handleExportExcel} title={t("financials.exportExcel")} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#f1ede4] text-[#64748b] transition-colors">
-            <FileSpreadsheet className="w-4.5 h-4.5" size={18} />
-          </button>
-          <button onClick={handleExportPdf} title={t("financials.exportPdf")} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#f1ede4] text-[#64748b] transition-colors">
-            <FileText className="w-4.5 h-4.5" size={18} />
-          </button>
-        </div>
-
-        {/* Period pills */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <CalendarDays className="w-3.5 h-3.5 text-[#94a3b8] shrink-0" />
-          {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className={cn(
-                "px-3 py-1.5 text-xs rounded-xl font-semibold transition-all",
-                period === p ? "bg-[#1f75fe] text-white shadow-sm" : "bg-[#f1ede4] text-[#64748b] hover:bg-[#e8e3d9]",
-              )}
-            >
-              {PERIOD_LABELS[p]}
-            </button>
-          ))}
-        </div>
-
-        {period === "custom" && (
-          <div className="flex items-center gap-2 mt-2 pl-5">
-            <input
-              type="date"
-              value={customFrom}
-              max={customTo}
-              onChange={(e) => setCustomFrom(e.target.value)}
-              className="text-xs px-2.5 py-1.5 rounded-xl border border-[#e8e3d9] bg-white text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe] w-36"
-            />
-            <span className="text-xs text-[#94a3b8]">—</span>
-            <input
-              type="date"
-              value={customTo}
-              min={customFrom}
-              onChange={(e) => setCustomTo(e.target.value)}
-              className="text-xs px-2.5 py-1.5 rounded-xl border border-[#e8e3d9] bg-white text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe] w-36"
-            />
+      <PageHeader
+        title={t("financials.title")}
+        onBack={() => window.history.back()}
+        sticky
+        right={
+          <>
+            <PageHeaderIconButton onClick={handleExportExcel} title={t("financials.exportExcel")}>
+              <FileSpreadsheet className="w-4 h-4" />
+            </PageHeaderIconButton>
+            <PageHeaderIconButton onClick={handleExportPdf} title={t("financials.exportPdf")}>
+              <FileText className="w-4 h-4" />
+            </PageHeaderIconButton>
+          </>
+        }
+        bottom={
+          <div className="space-y-2">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <CalendarDays className="w-3.5 h-3.5 text-[var(--text-subtle)] shrink-0" />
+              <PeriodPills
+                value={period}
+                options={(Object.keys(PERIOD_LABELS) as Period[]).map((p) => ({
+                  value: p,
+                  label: PERIOD_LABELS[p],
+                }))}
+                onChange={setPeriod}
+              />
+            </div>
+            {period === "custom" && (
+              <div className="flex items-center gap-2 pl-5">
+                <input
+                  type="date"
+                  value={customFrom}
+                  max={customTo}
+                  onChange={(e) => setCustomFrom(e.target.value)}
+                  className="text-xs px-2.5 py-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] w-36"
+                />
+                <span className="text-xs text-[var(--text-subtle)]">—</span>
+                <input
+                  type="date"
+                  value={customTo}
+                  min={customFrom}
+                  onChange={(e) => setCustomTo(e.target.value)}
+                  className="text-xs px-2.5 py-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] w-36"
+                />
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        }
+      />
 
       <div className="p-4 space-y-4 max-w-full">
 

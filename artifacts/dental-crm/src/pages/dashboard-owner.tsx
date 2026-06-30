@@ -26,6 +26,7 @@ import { format } from "date-fns";
 import { OnboardingWizard } from "@/components/dashboard/onboarding-wizard";
 import { RevenueEmptyState } from "@/components/dashboard/revenue-empty-state";
 import { SITE } from "@/config/site";
+import { PeriodPills } from "@/components/layout/period-pills";
 import "@/styles/dashboard.css";
 
 const PAYMENT_ICONS: Record<string, React.ElementType> = {
@@ -648,39 +649,21 @@ export default function OwnerDashboard() {
                   </button>
                 </div>
 
-                {/* Preset list */}
-                <div className="mt-2">
-                  {FILTER_PRESETS.map((p) => (
-                    <button
-                      key={p.key}
-                      onClick={() => {
-                        if (p.key === "custom") {
-                          setPendingPreset("custom");
-                          setShowCustom(true);
-                        } else {
-                          setPendingPreset(p.key);
-                        }
-                      }}
-                      className="w-full flex items-center justify-between px-5 py-4 border-b border-[#f1ede4] last:border-0 bg-white first:rounded-t-2xl"
-                    >
-                      <span className={cn(
-                        "text-sm font-medium",
-                        pendingPreset === p.key ? "text-[#0f172a] font-semibold" : "text-[#64748b]",
-                      )}>
-                        {p.label}
-                      </span>
-                      <span className={cn(
-                        "w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
-                        pendingPreset === p.key
-                          ? "border-[#1f75fe] bg-[#1f75fe]"
-                          : "border-[#e8e3d9]",
-                      )}>
-                        {pendingPreset === p.key && (
-                          <span className="w-2 h-2 rounded-full bg-white" />
-                        )}
-                      </span>
-                    </button>
-                  ))}
+                {/* Preset pills */}
+                <div className="px-5 mt-2">
+                  <PeriodPills
+                    value={pendingPreset}
+                    options={FILTER_PRESETS.map((p) => ({ value: p.key, label: p.label }))}
+                    onChange={(key) => {
+                      if (key === "custom") {
+                        setPendingPreset("custom");
+                        setShowCustom(true);
+                      } else {
+                        setPendingPreset(key);
+                      }
+                    }}
+                    size="md"
+                  />
                 </div>
 
                 {/* Actions */}
@@ -811,30 +794,16 @@ export default function OwnerDashboard() {
             </button>
           </div>
 
-          <div className="flex bg-[#f1ede4] p-1 rounded-xl mx-5 mt-2 mb-4">
-            <button
-              onClick={() => setActiveTab("channels")}
-              className={cn(
-                "flex-1 py-2 text-xs font-bold rounded-lg transition-all",
-                activeTab === "channels"
-                  ? "bg-white text-[#0f172a] shadow-sm"
-                  : "text-[#64748b] hover:text-[#0f172a]"
-              )}
-            >
-              Каналы привлечения
-            </button>
-            <button
-              onClick={() => setActiveTab("conditions")}
-              className={cn(
-                "flex-1 py-2 text-xs font-bold rounded-lg transition-all",
-                activeTab === "conditions"
-                  ? "bg-white text-[#0f172a] shadow-sm"
-                  : "text-[#64748b] hover:text-[#0f172a]"
-              )}
-            >
-              Виды лечения
-            </button>
-          </div>
+          <PeriodPills
+            value={activeTab}
+            options={[
+              { value: "channels", label: "Каналы привлечения" },
+              { value: "conditions", label: "Виды лечения" },
+            ]}
+            onChange={setActiveTab}
+            className="mx-5 mt-2 mb-4"
+            size="md"
+          />
 
           {/* Content */}
           <div className="px-5 max-h-[50dvh] overflow-y-auto">

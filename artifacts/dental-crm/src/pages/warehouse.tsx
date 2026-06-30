@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useListInventory, useGetInventoryConsumption } from "@workspace/api-client-react";
 import { useTranslation } from "react-i18next";
-import { Package, AlertTriangle, TrendingDown, BarChart3, ChevronLeft } from "lucide-react";
+import { Package, AlertTriangle, TrendingDown, BarChart3 } from "lucide-react";
 import { PageShell } from "@/components/layout/page-shell";
+import { PageHeader } from "@/components/layout/page-header";
 
 type Tab = "stock" | "consumption";
 
@@ -86,18 +87,11 @@ export default function WarehousePage() {
 
   return (
     <PageShell withTabBarOffset>
-      <div className="bg-white px-4 pt-5 pb-4 flex items-center gap-3 border-b border-[#e8e3d9] shadow-sm">
-        <button
-          onClick={() => window.history.back()}
-          className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#f1ede4] transition-colors text-[#64748b] shrink-0"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-        <div className="flex items-center gap-2">
-          <Package className="w-5 h-5 text-[#1f75fe] shrink-0" strokeWidth={1.8} />
-          <h1 className="text-[17px] font-semibold text-[#0f172a]">{t("warehouse.title")}</h1>
-        </div>
-      </div>
+      <PageHeader
+        title={t("warehouse.title")}
+        icon={<Package className="w-5 h-5" strokeWidth={1.8} />}
+        onBack={() => window.history.back()}
+      />
       <div className="p-4 space-y-4 max-w-full">
 
       {/* Tabs */}

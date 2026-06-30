@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, Lock, Loader2 } from "lucide-react";
+import { Lock, Loader2 } from "lucide-react";
+import { PageShell } from "@/components/layout/page-shell";
+import { PageHeader } from "@/components/layout/page-header";
 import { ChannelsSettings } from "@/components/channels/channels-settings";
 import { WhatsAppConnectModal, WhatsAppIcon, type WaStatus } from "@/components/whatsapp/whatsapp-connect-modal";
 import { customFetch } from "@workspace/api-client-react";
@@ -36,19 +38,13 @@ export default function ChannelsPage() {
   const isBlocked = !waLoading && !isConnected;
 
   return (
-    <div className="min-h-full bg-[#faf8f4] font-manrope pb-8">
-      <div className="bg-white px-4 py-4 mb-4 flex items-center gap-3 border-b border-[#e8e3d9]">
-        <button onClick={() => window.history.back()} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#f1ede4] active:bg-[#e8e3d9] transition-colors text-[#64748b] shrink-0">
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-        <div>
-          <h1 className="text-[17px] font-semibold text-[#0f172a]">
-            {t("channels.sectionTitle", { defaultValue: "Каналы привлечения" })}
-          </h1>
-        </div>
-      </div>
+    <PageShell className="pb-8">
+      <PageHeader
+        title={t("channels.sectionTitle", { defaultValue: "Каналы привлечения" })}
+        onBack={() => window.history.back()}
+      />
 
-      <div className="px-4 relative">
+      <div className="px-4 pt-4 relative">
         {waLoading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-6 h-6 animate-spin text-[#1f75fe]" />
@@ -106,6 +102,6 @@ export default function ChannelsPage() {
           }}
         />
       )}
-    </div>
+    </PageShell>
   );
 }

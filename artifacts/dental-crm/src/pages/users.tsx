@@ -13,10 +13,12 @@ import type { User, SalaryType } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Plus, Search, Phone, Calendar, Briefcase,
-  ChevronRight, ChevronLeft, MoreVertical, UserCheck, UserX,
+  ChevronRight, MoreVertical, UserCheck, UserX,
   Trash2, Users, SlidersHorizontal, BarChart2,
   Mail, Shield, Activity, TrendingUp, RefreshCw,
 } from "lucide-react";
+import { PageShell } from "@/components/layout/page-shell";
+import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-header";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -298,64 +300,43 @@ export default function StaffPage() {
   const isSaving = updateMutation.isPending;
 
   return (
-    <div className="min-h-full bg-[#faf8f4] font-manrope">
-      {/* ── Premium Header ───────────────────────────────────── */}
-      <div className="bg-white border-b border-[#e8e3d9] shadow-sm">
-        <div className="px-5 pt-5 pb-5">
-          {/* Title + Actions row */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => navigate("/menu")}
-                className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#f1ede4] transition-colors text-[#64748b] shrink-0"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <div>
-                <h1 className="text-xl font-bold text-[#0f172a] tracking-tight">
-                  Сотрудники
-                </h1>
-                <p className="text-xs text-[#94a3b8] mt-0.5">
-                  {!isLoading && `${rawUsers.length} сотрудников в системе`}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => queryClient.invalidateQueries({ queryKey: getListUsersAllQueryKey(showInactive) })}
-                className="text-[#94a3b8] hover:text-[#1f75fe] hover:bg-[#f1ede4] rounded-xl transition-colors p-1.5"
-                title="Обновить"
-              >
-                <RefreshCw className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setShowFilters((v) => !v)}
-                className={cn(
-                  "relative transition-colors p-1.5 rounded-xl",
-                  showFilters || hasActiveFilter ? "text-[#1f75fe] bg-[#1f75fe]/10" : "text-[#94a3b8] hover:text-[#1f75fe] hover:bg-[#f1ede4]",
-                )}
-                title="Фильтры"
-              >
-                <SlidersHorizontal className="w-4 h-4" />
-                {hasActiveFilter && (
-                  <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-[#1f75fe] rounded-full" />
-                )}
-              </button>
-              {isOwnerOrAdmin && (
-                <Button
-                  onClick={() => setInviteOpen(true)}
-                  className="gap-1.5 h-8 text-xs px-2.5 sm:px-3 rounded-full bg-[#1f75fe] hover:bg-[#1a65e8] hover:scale-105 font-semibold"
-                >
-                  <Plus className="w-3.5 h-3.5 shrink-0" />
-                  <span className="hidden sm:inline">Пригласить</span>
-                </Button>
+    <PageShell>
+      <PageHeader
+        title="Сотрудники"
+        subtitle={!isLoading ? `${rawUsers.length} сотрудников в системе` : undefined}
+        onBack={() => navigate("/menu")}
+        right={
+          <>
+            <PageHeaderIconButton
+              onClick={() => queryClient.invalidateQueries({ queryKey: getListUsersAllQueryKey(showInactive) })}
+              title="Обновить"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </PageHeaderIconButton>
+            <PageHeaderIconButton
+              onClick={() => setShowFilters((v) => !v)}
+              active={showFilters || hasActiveFilter}
+              title="Фильтры"
+              className="relative"
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              {hasActiveFilter && (
+                <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-[var(--primary)] rounded-full" />
               )}
-            </div>
-          </div>
-        </div>
-      </div>
+            </PageHeaderIconButton>
+            {isOwnerOrAdmin && (
+              <Button
+                onClick={() => setInviteOpen(true)}
+                className="gap-1.5 h-8 text-xs px-2.5 sm:px-3 rounded-full bg-[#1f75fe] hover:bg-[#1a65e8] hover:scale-105 font-semibold"
+              >
+                <Plus className="w-3.5 h-3.5 shrink-0" />
+                <span className="hidden sm:inline">Пригласить</span>
+              </Button>
+            )}
+          </>
+        }
+      />
 
-      {/* ── Staff tab content ─────────────────────────────────── */}
       <div className="px-5 pt-4 pb-8">
           {/* Collapsible Filters */}
           <AnimatePresence>
@@ -616,6 +597,6 @@ export default function StaffPage() {
         onConfirm={() => { if (deleteConfirmId) deleteMutation.mutate({ id: deleteConfirmId }); }}
         onCancel={() => setDeleteConfirmId(null)}
       />
-    </div>
+    </PageShell>
   );
 }

@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import { Activity, ChevronLeft, ChevronRight, Filter } from "lucide-react";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
+import { PageShell } from "@/components/layout/page-shell";
+import { PageHeader } from "@/components/layout/page-header";
 
 const ACTION_TYPES = ["CREATE", "UPDATE", "DELETE"];
 const ENTITY_TYPES = ["patients", "procedures", "inventory", "users", "followups"];
@@ -146,25 +148,15 @@ export default function LogsPage() {
   }
 
   return (
-    <div className="min-h-full bg-[#faf8f4] font-manrope">
-      {/* Header */}
-      <div className="bg-white px-4 pt-5 pb-4 flex items-center gap-3 border-b border-[#e8e3d9] shadow-sm">
-        <button
-          onClick={() => navigate("/menu")}
-          className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#f1ede4] active:bg-[#e8e3d9] transition-colors text-[#64748b] shrink-0"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-        <div className="flex items-center gap-2">
-          <Activity className="w-5 h-5 text-[#1f75fe] shrink-0 animate-pulse" strokeWidth={1.8} />
-          <div>
-            <h1 className="text-[17px] font-semibold text-[#0f172a] leading-tight">{t("logs.title")}</h1>
-            <p className="text-xs text-[#94a3b8] mt-0.5">{t("logs.subtitle", "Аудит всех изменений в системе")}</p>
-          </div>
-        </div>
-      </div>
+    <PageShell withTabBarOffset>
+      <PageHeader
+        title={t("logs.title")}
+        subtitle={t("logs.subtitle", "Аудит всех изменений в системе")}
+        icon={<Activity className="w-5 h-5 animate-pulse" strokeWidth={1.8} />}
+        onBack={() => navigate("/menu")}
+      />
 
-      <div className="p-4 pb-24 space-y-4 max-w-7xl mx-auto">
+      <div className="p-4 space-y-4 max-w-7xl mx-auto">
         {/* Filters */}
         <div className="bg-white rounded-2xl border border-[#e8e3d9] p-5 space-y-4 shadow-md">
           <div className="flex items-center justify-between border-b border-[#e8e3d9] pb-3">
@@ -337,6 +329,6 @@ export default function LogsPage() {
           )}
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

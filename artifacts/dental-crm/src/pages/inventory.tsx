@@ -24,8 +24,9 @@ import {
 import { cn } from "@/lib/utils";
 import {
   Plus, Package, AlertTriangle, Trash2, Check, X,
-  ShieldCheck, ShieldX, Eye, Shield, Users, ChevronLeft,
+  ShieldCheck, ShieldX, Eye, Shield, Users,
 } from "lucide-react";
+import { PageHeader } from "@/components/layout/page-header";
 import { useTranslation } from "react-i18next";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { PageShell } from "@/components/layout/page-shell";
@@ -244,34 +245,24 @@ export default function InventoryPage() {
 
   return (
     <PageShell>
-      {/* Page Header */}
-      <div className="bg-white px-4 pt-5 pb-4 flex items-center gap-3 border-b border-[#e8e3d9] shadow-sm">
-        <button
-          onClick={() => window.history.back()}
-          className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#f1ede4] transition-colors text-[#64748b] shrink-0"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <Package className="w-5 h-5 text-[#1f75fe] shrink-0" strokeWidth={1.8} />
-            <h1 className="text-[17px] font-semibold text-[#0f172a]">{t("inventory.title")}</h1>
-          </div>
-          <p className="text-xs text-[#64748b] mt-0.5 flex items-center gap-1.5 flex-wrap">
-            {t("inventory.items", { count: items.length })}
-            {lowStock.length > 0 && (
-              <> · <span className="text-[#dc2626] font-semibold">{t("inventory.lowStock", { count: lowStock.length })}</span></>
-            )}
-            {!isOwner && <span className="ml-0.5"><AccessBadge level={myAccess} /></span>}
-          </p>
-        </div>
-        {canWrite && (
-          <Button onClick={() => setShowCreate((v) => !v)} size="sm" className="gap-1.5 shrink-0 rounded-full bg-[#1f75fe] hover:bg-[#1a65e8] hover:scale-105 font-semibold">
-            <Plus className="w-4 h-4" />
-            {t("inventory.add")}
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title={t("inventory.title")}
+        subtitle={[
+          t("inventory.items", { count: items.length }),
+          lowStock.length > 0 ? t("inventory.lowStock", { count: lowStock.length }) : null,
+        ].filter(Boolean).join(" · ")}
+        icon={<Package className="w-5 h-5" strokeWidth={1.8} />}
+        badge={!isOwner ? <AccessBadge level={myAccess} /> : undefined}
+        onBack={() => window.history.back()}
+        right={
+          canWrite ? (
+            <Button onClick={() => setShowCreate((v) => !v)} size="sm" className="gap-1.5 shrink-0 rounded-full bg-[#1f75fe] hover:bg-[#1a65e8] hover:scale-105 font-semibold">
+              <Plus className="w-4 h-4" />
+              {t("inventory.add")}
+            </Button>
+          ) : undefined
+        }
+      />
       <div className="p-4 pb-8 space-y-4">
 
       {/* Read-only notice */}

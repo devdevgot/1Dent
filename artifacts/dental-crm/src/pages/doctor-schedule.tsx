@@ -9,11 +9,13 @@ import {
 import type { Procedure, ProcedureStatus } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
-import { ChevronLeft, ChevronRight, CalendarDays, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { AppointmentModal } from "@/components/appointment-modal";
 import { useAppointmentSave } from "@/hooks/use-appointment-save";
 import type { ProcedureTemplate } from "@/components/appointment-modal";
 import { isCalendarProcedure } from "@/lib/calendar-procedures";
+import { PageShell } from "@/components/layout/page-shell";
+import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-header";
 
 /* ─── Status colours ────────────────────────────────────────────────────────── */
 const STATUS_PILL: Record<ProcedureStatus, string> = {
@@ -117,50 +119,37 @@ export default function DoctorSchedulePage() {
   const next = () => { if (month === 11) { setMonth(0);  setYear(y => y+1); } else setMonth(m => m+1); };
 
   return (
-    <div className="min-h-full bg-[#faf8f4] font-manrope pb-8">
-
-      {/* ── Header ── */}
-      <div className="bg-white border-b border-[#e8e3d9] shadow-sm px-4 pt-5 pb-4">
-        <div className="flex items-end justify-between mb-1">
-          <div>
-            <p className="text-xs text-[#64748b] font-medium uppercase tracking-widest mb-0.5">
-              {year}
-            </p>
-            <h1 className="text-3xl font-black text-[#0f172a] leading-none">
-              {MONTHS[month]}
-            </h1>
-          </div>
-          <div className="flex items-center gap-1 mb-1">
-            <button
-              onClick={prev}
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-[#64748b] hover:bg-[#f1ede4] transition-colors"
-            >
+    <PageShell className="pb-8" animate={false}>
+      <PageHeader
+        title={`${MONTHS[month]} ${year}`}
+        className="[&>div:first-child>div:first-child]:hidden"
+        right={
+          <>
+            <PageHeaderIconButton onClick={prev} title="Предыдущий месяц">
               <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button
-              onClick={next}
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-[#64748b] hover:bg-[#f1ede4] transition-colors"
-            >
+            </PageHeaderIconButton>
+            <PageHeaderIconButton onClick={next} title="Следующий месяц">
               <ChevronRight className="w-4 h-4" />
-            </button>
+            </PageHeaderIconButton>
             <button
+              type="button"
               onClick={() => setModalDate(now)}
-              className="w-8 h-8 rounded-full flex items-center justify-center bg-[#1f75fe] text-white hover:bg-[#1a65e8] hover:scale-105 transition-all ml-1 shadow-sm"
+              className="w-9 h-9 rounded-full flex items-center justify-center bg-[var(--primary)] text-white hover:opacity-90 hover:scale-105 transition-all shadow-sm"
             >
               <Plus className="w-4 h-4" />
             </button>
+          </>
+        }
+        bottom={
+          <div className="grid grid-cols-7">
+            {DOW.map((d) => (
+              <div key={d} className="text-center text-[11px] font-semibold text-[var(--text-secondary)] uppercase tracking-wide py-1">
+                {d}
+              </div>
+            ))}
           </div>
-        </div>
-
-        {/* Weekday row */}
-        <div className="grid grid-cols-7 mt-3">
-          {DOW.map(d => (
-            <div key={d} className="text-center text-[11px] font-semibold text-[#64748b] uppercase tracking-wide py-1">
-              {d}
-            </div>
-          ))}
-        </div>
-      </div>
+        }
+      />
 
       {/* ── Calendar body ── */}
       {isLoading ? (
@@ -260,6 +249,6 @@ export default function DoctorSchedulePage() {
           isSaving={apptSave.isSaving}
         />
       )}
-    </div>
+    </PageShell>
   );
 }

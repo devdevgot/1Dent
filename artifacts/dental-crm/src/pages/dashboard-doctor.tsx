@@ -20,6 +20,7 @@ import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { PeriodPills } from "@/components/layout/period-pills";
 
 const PAYMENT_ICONS: Record<string, React.ElementType> = {
   kaspi_transfer: Send,
@@ -431,36 +432,20 @@ export default function DoctorDashboard() {
                   </button>
                 </div>
 
-                <div className="mt-2">
-                  {FILTER_PRESETS.map((p) => (
-                    <button
-                      key={p.key}
-                      onClick={() => {
-                        if (p.key === "custom") {
-                          setPendingPreset("custom");
-                          setShowCustom(true);
-                        } else {
-                          setPendingPreset(p.key);
-                        }
-                      }}
-                      className="w-full flex items-center justify-between px-5 py-4 border-b border-[#f1ede4] last:border-0 bg-white first:rounded-t-2xl"
-                    >
-                      <span className={cn(
-                        "text-sm font-medium",
-                        pendingPreset === p.key ? "text-[#0f172a] font-semibold" : "text-[#64748b]",
-                      )}>
-                        {p.label}
-                      </span>
-                      <span className={cn(
-                        "w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
-                        pendingPreset === p.key ? "border-[#1f75fe] bg-[#1f75fe]" : "border-[#d4cfc6]",
-                      )}>
-                        {pendingPreset === p.key && (
-                          <span className="w-2 h-2 rounded-full bg-white" />
-                        )}
-                      </span>
-                    </button>
-                  ))}
+                <div className="px-5 mt-2">
+                  <PeriodPills
+                    value={pendingPreset}
+                    options={FILTER_PRESETS.map((p) => ({ value: p.key, label: p.label }))}
+                    onChange={(key) => {
+                      if (key === "custom") {
+                        setPendingPreset("custom");
+                        setShowCustom(true);
+                      } else {
+                        setPendingPreset(key);
+                      }
+                    }}
+                    size="md"
+                  />
                 </div>
 
                 <div className="px-5 mt-4 flex flex-col gap-2.5">

@@ -20,12 +20,15 @@ import {
 import type { Procedure, ProcedureStatus, ToothCondition } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { AppDialog } from "@/components/layout/app-dialog";
 import { ToothMiniGrid } from "@/components/dental-chart/tooth-mini-grid";
 import {
   Plus, Search, Filter, MoreVertical, CheckCircle2,
-  Clock, XCircle, PlayCircle, Trash2, ClipboardList, X, ChevronDown, ChevronLeft, Minus,
+  Clock, XCircle, PlayCircle, Trash2, ClipboardList, X, ChevronDown, Minus,
   Activity,
 } from "lucide-react";
+import { PageShell } from "@/components/layout/page-shell";
+import { PageHeader } from "@/components/layout/page-header";
 
 const STATUS_COLORS: Record<ProcedureStatus, string> = {
   scheduled:       "bg-[#e0f2fe] text-[#0284c7] border-[#0284c7]/20",
@@ -65,9 +68,11 @@ const MANIPULATION_OPTIONS: { value: ToothCondition; labelKey: string }[] = [
 ];
 
 function NewProcedureModal({
+  open,
   onClose,
   onSuccess,
 }: {
+  open: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }) {
@@ -202,22 +207,33 @@ function NewProcedureModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white rounded-2xl border border-[#e8e3d9] shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="p-6 border-b border-[#e8e3d9] flex items-center justify-between">
-          <h2 className="text-xl font-bold text-[#0f172a]">{t("procedure.newProcedure")}</h2>
-          <button onClick={onClose} className="text-[#64748b] hover:text-[#0f172a] hover:bg-[#f1ede4] rounded-xl p-1 transition-colors">
-            <X className="w-5 h-5" />
+    <AppDialog
+      open={open}
+      onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}
+      title={t("procedure.newProcedure")}
+      size="lg"
+      bodyClassName="!py-0"
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={onClose}
+            className="dash-btn dash-btn-secondary flex-1"
+          >
+            {t("common.cancel")}
           </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <button
+            type="submit"
+            form="new-procedure-form"
+            disabled={createMutation.isPending}
+            className="dash-btn dash-btn-primary flex-1"
+          >
+            {createMutation.isPending ? t("common.saving") : t("procedure.create")}
+          </button>
+        </>
+      }
+    >
+      <form id="new-procedure-form" onSubmit={handleSubmit} className="space-y-4 pb-2">
           {/* Template picker */}
           {templates.length > 0 && (
             <div>
@@ -470,26 +486,8 @@ function NewProcedureModal({
             </div>
           )}
 
-          {/* Submit */}
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-3 border border-[#e8e3d9] rounded-xl text-sm font-semibold text-[#64748b] hover:bg-[#f1ede4] transition-colors"
-            >
-              {t("common.cancel")}
-            </button>
-            <button
-              type="submit"
-              disabled={createMutation.isPending}
-              className="flex-1 py-3 bg-[#1f75fe] text-white rounded-full text-sm font-semibold hover:bg-[#1a65e8] hover:scale-105 transition-all disabled:opacity-50 disabled:hover:scale-100"
-            >
-              {createMutation.isPending ? t("common.saving") : t("procedure.create")}
-            </button>
-          </div>
-        </form>
-      </motion.div>
-    </div>
+      </form>
+    </AppDialog>
   );
 }
 
@@ -804,14 +802,11 @@ export function ProceduresContent({ onAdd }: { onAdd?: () => void } = {}) {
         )}
       </div>
 
-      <AnimatePresence>
-        {showNew && (
-          <NewProcedureModal
+      <NewProcedureModal
+            open={showNew}
             onClose={() => setShowNew(false)}
             onSuccess={() => refetch()}
           />
-        )}
-      </AnimatePresence>
       </div>
     </>
   );
@@ -824,36 +819,30 @@ export default function ProceduresPage() {
   const [showNew, setShowNew] = useState(false);
 
   return (
-    <div className="min-h-full bg-[#faf8f4] font-manrope">
-      <div className="bg-white px-4 pt-5 pb-4 flex items-center gap-3 border-b border-[#e8e3d9]">
-        <button
-          onClick={() => window.history.back()}
-          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#f1ede4] active:bg-[#e8e3d9] transition-colors text-[#64748b] shrink-0"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-        <ClipboardList className="w-5 h-5 text-[#1f75fe] shrink-0" strokeWidth={1.8} />
-        <h1 className="text-[17px] font-semibold text-[#0f172a] flex-1 min-w-0 truncate">
-          {t("procedure.pageTitle")}
-        </h1>
-        {canCreate && (
-          <button
-            onClick={() => setShowNew(true)}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-[#1f75fe] text-white hover:bg-[#1a65e8] transition-colors shrink-0"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
-        )}
-      </div>
+    <PageShell animate={false}>
+      <PageHeader
+        title={t("procedure.pageTitle")}
+        onBack={() => window.history.back()}
+        icon={<ClipboardList className="w-5 h-5" strokeWidth={1.8} />}
+        right={
+          canCreate ? (
+            <button
+              type="button"
+              onClick={() => setShowNew(true)}
+              className="w-9 h-9 flex items-center justify-center rounded-full bg-[var(--primary)] text-white hover:opacity-90 transition-opacity shrink-0"
+              title={t("procedure.new")}
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          ) : undefined
+        }
+      />
       <ProceduresContent onAdd={showNew ? undefined : () => setShowNew(true)} />
-      <AnimatePresence>
-        {showNew && (
-          <NewProcedureModal
-            onClose={() => setShowNew(false)}
-            onSuccess={() => setShowNew(false)}
-          />
-        )}
-      </AnimatePresence>
-    </div>
+      <NewProcedureModal
+        open={showNew}
+        onClose={() => setShowNew(false)}
+        onSuccess={() => setShowNew(false)}
+      />
+    </PageShell>
   );
 }

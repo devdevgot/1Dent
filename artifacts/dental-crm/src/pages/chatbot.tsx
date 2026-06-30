@@ -7,7 +7,6 @@ import {
   Trash2,
   RefreshCw,
   Power,
-  ChevronLeft,
   ChevronRight,
   ArrowLeft,
   Phone,
@@ -18,6 +17,8 @@ import {
   FlaskConical,
   BookOpen,
 } from "lucide-react";
+import { PageShell } from "@/components/layout/page-shell";
+import { PageHeader } from "@/components/layout/page-header";
 import {
   useGetChatbotSettings,
   useUpdateChatbotSettings,
@@ -545,54 +546,44 @@ export default function ChatbotPage() {
   }
 
   return (
-    <div className="h-full flex flex-col overflow-hidden bg-[#faf8f4] font-manrope">
-      {/* Header */}
-      <div className="shrink-0 px-4 py-4 border-b border-[#e8e3d9] bg-white">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => window.history.back()}
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#f1ede4] active:bg-[#e8e3d9] transition-colors text-[#64748b] shrink-0"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-[17px] font-semibold text-[#0f172a]">{t("chatbot.title")}</h1>
-            <p className="text-xs text-[#64748b] mt-0.5">{t("chatbot.subtitle")}</p>
+    <PageShell className="h-full flex flex-col overflow-hidden" animate={false}>
+      <PageHeader
+        title={t("chatbot.title")}
+        subtitle={t("chatbot.subtitle")}
+        onBack={() => window.history.back()}
+        right={
+          <div className={cn(
+            "flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border font-medium",
+            effectiveEnabled ? "bg-[#f0fdf4] text-[#16a34a] border-[#f0fdf4]" : "bg-[#fef2f2] text-[#dc2626] border-[#fef2f2]",
+          )}>
+            <Power className="h-3 w-3" />
+            {effectiveEnabled ? t("chatbot.enabled") : t("chatbot.disabled")}
           </div>
-          <div className="ml-auto flex items-center gap-2">
-            <div className={cn(
-              "flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border font-medium",
-              effectiveEnabled ? "bg-[#f0fdf4] text-[#16a34a] border-[#f0fdf4]" : "bg-[#fef2f2] text-[#dc2626] border-[#fef2f2]",
-            )}>
-              <Power className="h-3 w-3" />
-              {effectiveEnabled ? t("chatbot.enabled") : t("chatbot.disabled")}
-            </div>
+        }
+        bottom={
+          <div className="flex gap-1 overflow-x-auto pb-0.5">
+            {([
+              { key: "sessions", label: t("chatbot.tab.sessions"), icon: MessageSquare },
+              { key: "settings", label: t("chatbot.tab.settings"), icon: Settings },
+              { key: "playground", label: "Playground", icon: FlaskConical },
+              { key: "ai-broadcast", label: "ИИ Рассылка", icon: Megaphone },
+            ] as const).map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                onClick={() => setTab(key)}
+                className={cn(
+                  "flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl font-medium transition-colors shrink-0",
+                  tab === key ? "bg-[var(--primary-light)] text-[var(--primary)]" : "text-[var(--text-secondary)] hover:bg-[var(--surface-2)]",
+                )}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </button>
+            ))}
           </div>
-        </div>
+        }
+      />
 
-        <div className="flex gap-1 mt-3 overflow-x-auto pb-0.5">
-          {([
-            { key: "sessions", label: t("chatbot.tab.sessions"), icon: MessageSquare },
-            { key: "settings", label: t("chatbot.tab.settings"), icon: Settings },
-            { key: "playground", label: "Playground", icon: FlaskConical },
-            { key: "ai-broadcast", label: "ИИ Рассылка", icon: Megaphone },
-          ] as const).map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              onClick={() => setTab(key)}
-              className={cn(
-                "flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl font-medium transition-colors shrink-0",
-                tab === key ? "bg-[#1f75fe]/10 text-[#1f75fe]" : "text-[#64748b] hover:bg-[#f1ede4]",
-              )}
-            >
-              <Icon className="h-3.5 w-3.5" />
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Tab content */}
       <div className={cn("flex-1 p-4 min-h-0", tab === "playground" ? "overflow-hidden flex flex-col" : "overflow-y-auto")}>
 
         {/* Sessions tab */}
@@ -645,7 +636,7 @@ export default function ChatbotPage() {
                         </p>
                       )}
                     </div>
-                    <ChevronLeft className="h-4 w-4 text-[#64748b] shrink-0 mt-1 rotate-180" />
+                    <ChevronRight className="h-4 w-4 text-[#64748b] shrink-0 mt-1" />
                     <button
                       onClick={(e) => { e.stopPropagation(); setConfirmResetPhone(session.phone); }}
                       className="shrink-0 p-1.5 rounded-xl text-[#64748b] hover:text-[#dc2626] hover:bg-[#fef2f2] transition-colors"
@@ -730,6 +721,6 @@ export default function ChatbotPage() {
         title={t("chatbot.resetSession")}
         description="Состояние чат-бота для этого номера будет сброшено. Пациент снова получит приветственное сообщение."
       />
-    </div>
+    </PageShell>
   );
 }

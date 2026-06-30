@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, User2, Briefcase, Wallet, Eye, EyeOff, ToggleLeft, ToggleRight, ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { User } from "@workspace/api-client-react";
+import { AppDialog } from "@/components/layout/app-dialog";
 
 const ROLES = ["admin", "doctor", "accountant", "warehouse", "assistant", "nurse"] as const;
 type Role = (typeof ROLES)[number];
@@ -250,65 +251,74 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
     if (e.key === "Enter") e.preventDefault();
   };
 
-  if (!open) return null;
-
   const isEdit = !!editUser;
 
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          key="overlay"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 backdrop-blur-sm"
-          onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-        >
-          <motion.div
-            key="sheet"
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 28, stiffness: 300 }}
-            className="w-full max-w-lg bg-white rounded-t-3xl border border-[#e8e3d9] shadow-xl overflow-hidden flex flex-col font-manrope"
-            style={{ maxHeight: "92dvh" }}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-[#e8e3d9] shrink-0">
-              <h2 className="text-base font-bold text-[#0f172a]">
-                {isEdit ? t("employees.editTitle", "Редактировать сотрудника") : t("employees.addTitle", "Добавить сотрудника")}
-              </h2>
+    <AppDialog
+      open={open}
+      onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}
+      title={isEdit ? t("employees.editTitle", "Редактировать сотрудника") : t("employees.addTitle", "Добавить сотрудника")}
+      size="lg"
+      bodyClassName="!py-0"
+      footer={
+        <div className="flex flex-col gap-2.5 w-full">
+          <div className="flex gap-3 w-full">
+            {activeTab !== "personal" && (
               <button
-                onClick={onClose}
-                className="w-8 h-8 rounded-full bg-[#f1ede4] flex items-center justify-center text-[#64748b] hover:bg-[#f1ede4]"
+                type="button"
+                onClick={() => setActiveTab(activeTab === "salary" ? "position" : "personal")}
+                className="dash-btn dash-btn-secondary flex-1"
               >
-                <X className="w-4 h-4" />
+                {t("common.back", "Назад")}
               </button>
-            </div>
+            )}
+            {activeTab !== "salary" ? (
+              <button
+                type="button"
+                onClick={() => setActiveTab(activeTab === "personal" ? "position" : "salary")}
+                className="dash-btn dash-btn-primary flex-1"
+              >
+                {t("employees.next", "Далее")}
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={isSaving}
+                onClick={() => onSave(form)}
+                className="dash-btn dash-btn-primary flex-1"
+              >
+                {isSaving ? t("common.saving", "Сохранение...") : (isEdit ? t("employees.save", "Сохранить") : t("employees.create", "Создать"))}
+              </button>
+            )}
+          </div>
+          {activeTab === "salary" && !isEdit && (
+            <p className="text-xs text-[var(--text-secondary)] text-center">
+              {t("employees.passwordNote", "После создания пароль будет показан — скопируйте его.")}
+            </p>
+          )}
+        </div>
+      }
+    >
+      <div className="flex gap-1 pb-3 shrink-0">
+        {TABS.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.key;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveTab(tab.key)}
+              className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-xs font-semibold transition-all ${isActive ? "bg-[var(--primary)]/10 text-[var(--primary)]" : "text-[var(--text-secondary)]"}`}
+            >
+              <Icon className="w-4 h-4" />
+              {t(tab.labelKey, tab.key)}
+            </button>
+          );
+        })}
+      </div>
 
-            {/* Tabs */}
-            <div className="flex px-5 pt-3 pb-1 gap-1 shrink-0">
-              {TABS.map((tab) => {
-                const Icon = tab.icon;
-                const isActive = activeTab === tab.key;
-                return (
-                  <button
-                    key={tab.key}
-                    type="button"
-                    onClick={() => setActiveTab(tab.key)}
-                    className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-xs font-semibold transition-all ${isActive ? "bg-[#1f75fe]/10 text-[#1f75fe]" : "text-[#94a3b8]"}`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {t(tab.labelKey, tab.key)}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Form */}
-            <form onSubmit={(e) => e.preventDefault()} onKeyDown={handleKeyDown} className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+      <form onSubmit={(e) => e.preventDefault()} onKeyDown={handleKeyDown}>
+        <div className="space-y-4 pb-2">
                 <AnimatePresence mode="wait">
                   {/* ─── Tab: Personal ───────────────────────────────── */}
                   {activeTab === "personal" && (
@@ -635,51 +645,8 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </div>
-
-              {/* Footer */}
-              <div className="px-5 pb-6 pt-2 flex flex-col gap-2.5 shrink-0 border-t border-[#e8e3d9]">
-                <div className="flex gap-3">
-                  {activeTab !== "personal" && (
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab(activeTab === "salary" ? "position" : "personal")}
-                      className="flex-1 py-3.5 rounded-xl text-sm font-semibold text-[#64748b] bg-[#f1ede4] hover:bg-[#f1ede4]"
-                    >
-                      {t("common.back", "Назад")}
-                    </button>
-                  )}
-
-                  {activeTab !== "salary" ? (
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab(activeTab === "personal" ? "position" : "salary")}
-                      className="flex-1 py-3.5 rounded-full text-sm font-bold text-white bg-[#1f75fe] hover:bg-[#1a65e8] hover:scale-105 font-semibold"
-                    >
-                      {t("employees.next", "Далее")}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={isSaving}
-                      onClick={() => onSave(form)}
-                      className="flex-1 py-3.5 rounded-full text-sm font-bold text-white bg-[#1f75fe] hover:bg-[#1a65e8] hover:scale-105 font-semibold disabled:opacity-60"
-                    >
-                      {isSaving ? t("common.saving", "Сохранение...") : (isEdit ? t("employees.save", "Сохранить") : t("employees.create", "Создать"))}
-                    </button>
-                  )}
-                </div>
-
-                {activeTab === "salary" && !isEdit && (
-                  <p className="text-xs text-[#94a3b8] text-center">
-                    {t("employees.passwordNote", "После создания пароль будет показан — скопируйте его.")}
-                  </p>
-                )}
-              </div>
-            </form>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+        </div>
+      </form>
+    </AppDialog>
   );
 }

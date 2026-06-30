@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { X } from "lucide-react";
 import { useCreateExpense, useUpdateExpense, useListUsersAll, type ClinicExpense, type ExpenseCategory, type CreateExpenseRequest } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
+import { AppDialog } from "@/components/layout/app-dialog";
 import { format } from "date-fns";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -122,132 +122,125 @@ export default function ExpenseDialog({ expense, onClose, onSuccess }: ExpenseDi
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-sm">
-      <div className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border border-[#e8e3d9] shadow-xl p-6">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold text-foreground">
-            {expense ? t("expenses.editTitle") : t("expenses.addTitle")}
-          </h2>
+    <AppDialog
+      open
+      onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}
+      title={expense ? t("expenses.editTitle") : t("expenses.addTitle")}
+      size="md"
+      footer={
+        <>
           <button
+            type="button"
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#f1ede4] text-muted-foreground"
+            className="dash-btn dash-btn-secondary flex-1"
           >
-            <X className="w-5 h-5" />
+            {t("common.cancel")}
           </button>
+          <button
+            type="submit"
+            form="expense-form"
+            disabled={isPending}
+            className="dash-btn dash-btn-primary flex-1"
+          >
+            {isPending ? t("common.saving") : expense ? t("common.save") : t("expenses.add")}
+          </button>
+        </>
+      }
+    >
+      <form id="expense-form" onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-caption font-semibold text-[var(--text-secondary)] mb-1.5">
+            {t("expenses.category")}
+          </label>
+          <select
+            value={uiCategory}
+            onChange={(e) => handleUiCategoryChange(e.target.value)}
+            className="w-full text-sm px-3 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30"
+          >
+            {UI_CATEGORIES.map((c) => (
+              <option key={c} value={c}>{t(`expenses.cat.${c}`)}</option>
+            ))}
+          </select>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {(uiCategory === "advance" || (uiCategory === "salary" && !expense?.payrollRef)) && (
           <div>
-            <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">
-              {t("expenses.category")}
+            <label className="block text-caption font-semibold text-[var(--text-secondary)] mb-1.5">
+              {t("expenses.employee")} *
             </label>
             <select
-              value={uiCategory}
-              onChange={(e) => handleUiCategoryChange(e.target.value)}
-              className="w-full text-sm px-3 py-2.5 rounded-xl border border-border/50 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary/30"
+              value={selectedUserId}
+              onChange={(e) => setSelectedUserId(e.target.value)}
+              required
+              className="w-full text-sm px-3 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30"
             >
-              {UI_CATEGORIES.map((c) => (
-                <option key={c} value={c}>{t(`expenses.cat.${c}`)}</option>
+              <option value="">{t("expenses.selectEmployee")}</option>
+              {employees.map((emp) => (
+                <option key={emp.id} value={emp.id}>
+                  {emp.name} ({ROLE_LABELS[emp.role] || emp.role})
+                </option>
               ))}
             </select>
           </div>
+        )}
 
-          {(uiCategory === "advance" || (uiCategory === "salary" && !expense?.payrollRef)) && (
-            <div>
-              <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">
-                {t("expenses.employee")} *
-              </label>
-              <select
-                value={selectedUserId}
-                onChange={(e) => setSelectedUserId(e.target.value)}
-                required
-                className="w-full text-sm px-3 py-2.5 rounded-xl border border-border/50 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary/30"
-              >
-                <option value="">{t("expenses.selectEmployee")}</option>
-                {employees.map((emp) => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.name} ({ROLE_LABELS[emp.role] || emp.role})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {uiCategory !== "advance" && uiCategory !== "salary" && (
-            <div>
-              <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">
-                {t("expenses.subcategory")}
-              </label>
-              <input
-                type="text"
-                value={subcategory}
-                onChange={(e) => setSubcategory(e.target.value)}
-                placeholder={t("expenses.subcategoryPlaceholder")}
-                className="w-full text-sm px-3 py-2.5 rounded-xl border border-border/50 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
-            </div>
-          )}
-
+        {uiCategory !== "advance" && uiCategory !== "salary" && (
           <div>
-            <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">
-              {t("expenses.amount")} (₸) *
+            <label className="block text-caption font-semibold text-[var(--text-secondary)] mb-1.5">
+              {t("expenses.subcategory")}
             </label>
             <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0"
-              min="0"
-              step="0.01"
-              required
-              className="w-full text-sm px-3 py-2.5 rounded-xl border border-border/50 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary/30"
+              type="text"
+              value={subcategory}
+              onChange={(e) => setSubcategory(e.target.value)}
+              placeholder={t("expenses.subcategoryPlaceholder")}
+              className="w-full text-sm px-3 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30"
             />
           </div>
+        )}
 
-          <div>
-            <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">
-              {t("expenses.date")} *
-            </label>
-            <input
-              type="date"
-              value={expenseDate}
-              onChange={(e) => setExpenseDate(e.target.value)}
-              required
-              className="w-full text-sm px-3 py-2.5 rounded-xl border border-border/50 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary/30"
-            />
-          </div>
+        <div>
+          <label className="block text-caption font-semibold text-[var(--text-secondary)] mb-1.5">
+            {t("expenses.amount")} (₸) *
+          </label>
+          <input
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="0"
+            min="0"
+            step="0.01"
+            required
+            className="w-full text-sm px-3 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30"
+          />
+        </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">
-              {t("expenses.description")}
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder={t("expenses.descriptionPlaceholder")}
-              rows={2}
-              className="w-full text-sm px-3 py-2.5 rounded-xl border border-border/50 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
-            />
-          </div>
+        <div>
+          <label className="block text-caption font-semibold text-[var(--text-secondary)] mb-1.5">
+            {t("expenses.date")} *
+          </label>
+          <input
+            type="date"
+            value={expenseDate}
+            onChange={(e) => setExpenseDate(e.target.value)}
+            required
+            className="w-full text-sm px-3 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30"
+          />
+        </div>
 
-          <div className="flex gap-3 pt-1">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl border border-border text-sm font-semibold text-muted-foreground hover:bg-slate-50"
-            >
-              {t("common.cancel")}
-            </button>
-            <button
-              type="submit"
-              disabled={isPending}
-              className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold shadow-lg shadow-primary/25 hover:bg-primary/90 disabled:opacity-60"
-            >
-              {isPending ? t("common.saving") : expense ? t("common.save") : t("expenses.add")}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div>
+          <label className="block text-caption font-semibold text-[var(--text-secondary)] mb-1.5">
+            {t("expenses.description")}
+          </label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder={t("expenses.descriptionPlaceholder")}
+            rows={2}
+            className="w-full text-sm px-3 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 resize-none"
+          />
+        </div>
+      </form>
+    </AppDialog>
   );
 }

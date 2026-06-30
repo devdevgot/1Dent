@@ -19,14 +19,14 @@ export const STATUS_DOT: Record<string, string> = {
   scheduled:   "bg-blue-400",
   in_progress: "bg-amber-400",
   completed:   "bg-green-400",
-  cancelled:   "bg-gray-400",
+  cancelled:   "bg-muted-foreground",
 };
 
 export const STATUS_PILL: Record<string, string> = {
   scheduled:   "bg-blue-50 text-blue-800 border border-blue-200",
   in_progress: "bg-amber-50 text-amber-800 border border-amber-200",
   completed:   "bg-green-50 text-green-800 border border-green-200",
-  cancelled:   "bg-gray-50 text-gray-500 border border-gray-200",
+  cancelled:   "bg-[var(--surface-2)] text-muted-foreground border border-[var(--border)]",
 };
 
 export const STATUS_OPTIONS = [
@@ -409,7 +409,7 @@ export function AppointmentModal({
                 <>
                   <div>
                     <label className="text-sm font-medium text-foreground mb-1 block">Пациент</label>
-                    <div className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-600 min-h-[38px] flex items-center">
+                    <div className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-[var(--surface-2)] text-[var(--text-secondary)] min-h-[38px] flex items-center">
                       {patients.find((p) => p.id === selectedPatientId)?.name ?? "—"}
                     </div>
                   </div>
@@ -430,7 +430,7 @@ export function AppointmentModal({
                       {STATUS_OPTIONS.map((s) => (
                         <button key={s.value} type="button" onClick={() => setStatus(s.value)}
                           className={cn("px-3 py-1.5 rounded-lg text-xs font-medium border transition-all",
-                            status === s.value ? STATUS_PILL[s.value] : "border-gray-200 text-gray-500 hover:border-gray-300")}>
+                            status === s.value ? STATUS_PILL[s.value] : "border-[var(--border)] text-muted-foreground hover:border-[var(--border)]")}>
                           {s.label}
                         </button>
                       ))}
@@ -466,8 +466,8 @@ export function AppointmentModal({
                         <p className="text-sm font-semibold text-green-800">Пациент найден в базе</p>
                       </div>
                       <div className="space-y-1">
-                        <p className="text-sm font-medium text-gray-900">{foundPatient.name}</p>
-                        {foundPatient.phone && <p className="text-xs text-gray-500">{foundPatient.phone}</p>}
+                        <p className="text-sm font-medium text-foreground">{foundPatient.name}</p>
+                        {foundPatient.phone && <p className="text-xs text-muted-foreground">{foundPatient.phone}</p>}
                       </div>
                       <p className="text-xs text-green-700">Выберите пациента или введите другой ИИН</p>
                       <div className="flex gap-2">
@@ -486,8 +486,8 @@ export function AppointmentModal({
                   {selectedPatientId && (
                     <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-semibold text-gray-900">{patients.find((p) => p.id === selectedPatientId)?.name}</p>
-                        <p className="text-xs text-gray-400">{patients.find((p) => p.id === selectedPatientId)?.phone}</p>
+                        <p className="text-sm font-semibold text-foreground">{patients.find((p) => p.id === selectedPatientId)?.name}</p>
+                        <p className="text-xs text-muted-foreground">{patients.find((p) => p.id === selectedPatientId)?.phone}</p>
                       </div>
                       <button type="button" onClick={resetPatient} className="text-primary/50 hover:text-primary transition-colors">
                         <X className="w-4 h-4" />
@@ -511,17 +511,17 @@ export function AppointmentModal({
                         <div>
                           <label className="text-sm font-medium text-foreground mb-1 block">Дата рождения</label>
                           <div className={cn("w-full border rounded-lg px-3 py-2 text-sm min-h-[38px] flex items-center",
-                            dateOfBirth ? "border-primary/30 bg-primary/5 text-gray-800" : "border-border bg-gray-50")}>
+                            dateOfBirth ? "border-primary/30 bg-primary/5 text-foreground" : "border-border bg-[var(--surface-2)]")}>
                             {dateOfBirth
                               ? new Date(dateOfBirth).toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" })
-                              : <span className="text-gray-300">из ИИН</span>}
+                              : <span className="text-muted-foreground/50">из ИИН</span>}
                           </div>
                         </div>
                         <div>
                           <label className="text-sm font-medium text-foreground mb-1 block">Пол</label>
                           <div className={cn("w-full border rounded-lg px-3 py-2 text-sm min-h-[38px] flex items-center",
-                            gender ? "border-primary/30 bg-primary/5 text-gray-800" : "border-border bg-gray-50")}>
-                            {gender ? genderLabel(gender) : <span className="text-gray-300">из ИИН</span>}
+                            gender ? "border-primary/30 bg-primary/5 text-foreground" : "border-border bg-[var(--surface-2)]")}>
+                            {gender ? genderLabel(gender) : <span className="text-muted-foreground/50">из ИИН</span>}
                           </div>
                         </div>
                       </div>
@@ -560,15 +560,15 @@ export function AppointmentModal({
                 <button
                   type="button"
                   onClick={() => setShowPicker(true)}
-                  className={cn(INPUT, "flex items-center gap-2 text-left bg-white hover:bg-gray-50 transition-colors cursor-pointer")}
+                  className={cn(INPUT, "flex items-center gap-2 text-left bg-white hover:bg-[var(--surface-2)] transition-colors cursor-pointer")}
                 >
                   <CalendarDays className="w-4 h-4 text-primary shrink-0" />
-                  <span className="text-gray-800">
+                  <span className="text-foreground">
                     {formatDisplayDate(apptDate)}
                   </span>
-                  <span className="text-gray-400 mx-0.5">·</span>
-                  <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                  <span className="text-gray-800">{apptTime}</span>
+                  <span className="text-muted-foreground mx-0.5">·</span>
+                  <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                  <span className="text-foreground">{apptTime}</span>
                 </button>
               </div>
 

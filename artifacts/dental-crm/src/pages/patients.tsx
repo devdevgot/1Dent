@@ -13,9 +13,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   Users, KanbanSquare,
   Plus, RefreshCw, Search, Trash2,
-  ChevronLeft, ChevronUp, ChevronDown, ChevronsUpDown, SlidersHorizontal,
+  ChevronUp, ChevronDown, ChevronsUpDown, SlidersHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PageShell } from "@/components/layout/page-shell";
+import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-header";
 import { KanbanBoard } from "@/components/kanban/kanban-board";
 import { PatientDetailPanelGate } from "@/components/kanban/patient-detail-panel-gate";
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -438,157 +440,145 @@ export default function PatientsPage() {
   ];
 
   return (
-    <div className="flex flex-col h-full bg-[#faf8f4] font-manrope overflow-hidden">
-      {/* Page header */}
-      <div className="bg-white border-b border-[#e8e3d9] shadow-sm px-4 pt-3 pb-2.5 shrink-0">
-
-        {/* Row 1: title + actions */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => window.history.back()}
-            className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#f1ede4] transition-colors text-[#64748b] shrink-0"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <h1 className="text-lg font-bold text-[#0f172a]">{t("nav.patients")}</h1>
-          <span className="bg-[#1f75fe]/10 text-[#1f75fe] text-xs font-semibold px-2 py-0.5 rounded-full">
+    <PageShell className="flex flex-col h-full overflow-hidden" animate={false}>
+      <PageHeader
+        title={t("nav.patients")}
+        onBack={() => window.history.back()}
+        badge={
+          <span className="bg-[var(--primary-light)] text-[var(--primary)] text-xs font-semibold px-2 py-0.5 rounded-full">
             {allPatients.length}
           </span>
-          <span className="flex-1" />
-          <button
-            onClick={() => queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() })}
-            className="text-[#94a3b8] hover:text-[#1f75fe] hover:bg-[#f1ede4] rounded-xl transition-colors p-1.5"
-            title={t("kanban.refresh")}
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setShowFilters((v) => !v)}
-            className={cn(
-              "relative rounded-xl transition-colors p-1.5",
-              showFilters || hasActiveFilter ? "text-[#1f75fe] bg-[#1f75fe]/10" : "text-[#94a3b8] hover:text-[#1f75fe] hover:bg-[#f1ede4]",
+        }
+        right={
+          <>
+            <PageHeaderIconButton
+              onClick={() => queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() })}
+              title={t("kanban.refresh")}
+            >
+              <RefreshCw className="w-4 h-4" />
+            </PageHeaderIconButton>
+            <PageHeaderIconButton
+              onClick={() => setShowFilters((v) => !v)}
+              title="Фильтры"
+              active={showFilters || hasActiveFilter}
+              className="relative"
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              {hasActiveFilter && (
+                <span className="absolute top-1 right-1 w-2 h-2 bg-[var(--primary)] rounded-full" />
+              )}
+            </PageHeaderIconButton>
+            {canCreate && (
+              <Button onClick={() => setIsCreateOpen(true)} className="gap-1.5 h-8 text-xs px-2.5 sm:px-3 rounded-full font-semibold">
+                <Plus className="w-3.5 h-3.5 shrink-0" />
+                <span className="hidden sm:inline">{t("kanban.newPatient")}</span>
+              </Button>
             )}
-            title="Фильтры"
-          >
-            <SlidersHorizontal className="w-4 h-4" />
-            {hasActiveFilter && (
-              <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-[#1f75fe] rounded-full" />
-            )}
-          </button>
-          {canCreate && (
-            <Button onClick={() => setIsCreateOpen(true)} className="gap-1.5 h-8 text-xs px-2.5 sm:px-3 rounded-full bg-[#1f75fe] hover:bg-[#1a65e8] hover:scale-105 font-semibold">
-              <Plus className="w-3.5 h-3.5 shrink-0" />
-              <span className="hidden sm:inline">{t("kanban.newPatient")}</span>
-            </Button>
-          )}
-        </div>
-
-        {/* Row 2: search bar — always visible */}
-        <div className="relative mt-2.5">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8]" />
-          <input
-            type="text"
-            value={filterSearch}
-            onChange={(e) => setFilterSearch(e.target.value)}
-            placeholder={t("patients.searchPlaceholder")}
-            className="w-full pl-9 pr-3 py-2 text-sm border border-[#e8e3d9] rounded-xl focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 bg-white"
-          />
-        </div>
-
-        {/* Row 3: view switcher */}
-        <div className="flex items-center bg-[#f1ede4] rounded-xl p-0.5 mt-2.5">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.key}
-                onClick={() => setView(tab.key)}
-                className={cn(
-                  "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150",
-                  view === tab.key
-                    ? "bg-[#1f75fe]/10 text-[#1f75fe]"
-                    : "text-[#64748b] hover:text-[#0f172a]",
-                )}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Filter panel — hidden by default */}
-        {showFilters && (
-          <div className="mt-2.5 space-y-2.5 border-t border-[#e8e3d9] pt-2.5">
-            {/* Date filter */}
-            <div className="flex items-center gap-1.5 bg-[#f1ede4] rounded-xl p-1">
-              {DATE_OPTIONS.map((opt) => (
-                <button
-                  key={opt.key}
-                  onClick={() => setDateFilter(opt.key)}
-                  className={cn(
-                    "flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all",
-                    dateFilter === opt.key
-                      ? "bg-[#1f75fe]/10 text-[#1f75fe]"
-                      : "text-[#64748b] hover:text-[#0f172a]",
-                  )}
-                >
-                  {opt.label}
-                </button>
-              ))}
+          </>
+        }
+        bottom={
+          <>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-subtle)]" />
+              <input
+                type="text"
+                value={filterSearch}
+                onChange={(e) => setFilterSearch(e.target.value)}
+                placeholder={t("patients.searchPlaceholder")}
+                className="w-full pl-9 pr-3 py-2 text-sm border border-[var(--border)] rounded-xl focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 bg-[var(--surface)] text-[var(--text)]"
+              />
             </div>
-            {/* Status + source */}
-            <div className="flex gap-2">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as PatientStatus | "all")}
-                className="flex-1 text-sm border border-[#e8e3d9] rounded-xl px-3 py-2 bg-white focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 text-[#0f172a]"
-              >
-                <option value="all">{t("patients.allStatuses")}</option>
-                {KANBAN_COLUMNS.map((col) => (
-                  <option key={col.id} value={col.id}>
-                    {col.label} {statusCounts[col.id] ? `(${statusCounts[col.id]})` : ""}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={sourceFilter}
-                onChange={(e) => setSourceFilter(e.target.value as PatientSource | "all")}
-                className="flex-1 text-sm border border-[#e8e3d9] rounded-xl px-3 py-2 bg-white focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 text-[#0f172a]"
-              >
-                <option value="all">{t("patients.allSources")}</option>
-                {ALL_SOURCES.map((s) => (
-                  <option key={s} value={s}>{SOURCE_LABELS[s]}</option>
-                ))}
-              </select>
-            </div>
-            {/* Quick status pills */}
-            <div className="flex flex-wrap gap-1.5">
-              {KANBAN_COLUMNS.map((col) => {
-                const count = statusCounts[col.id] ?? 0;
-                if (count === 0) return null;
+
+            <div className="flex items-center bg-[var(--surface-2)] rounded-xl p-0.5 mt-2.5">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
                 return (
                   <button
-                    key={col.id}
-                    onClick={() => setStatusFilter(statusFilter === col.id ? "all" : col.id)}
-                    className={`text-xs px-2.5 py-0.5 rounded-full font-medium transition-all ${COLUMN_HEADER_COLOR[col.id]} ${statusFilter === col.id ? "ring-2 ring-offset-1 ring-current" : "opacity-80 hover:opacity-100"}`}
+                    key={tab.key}
+                    onClick={() => setView(tab.key)}
+                    className={cn(
+                      "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150",
+                      view === tab.key
+                        ? "bg-[var(--primary-light)] text-[var(--primary)]"
+                        : "text-[var(--text-secondary)] hover:text-[var(--text)]",
+                    )}
                   >
-                    {col.label}: {count}
+                    <Icon className="w-3.5 h-3.5" />
+                    {tab.label}
                   </button>
                 );
               })}
             </div>
-          </div>
-        )}
-      </div>
 
-      {/* Content */}
+            {showFilters && (
+              <div className="mt-2.5 space-y-2.5 border-t border-[var(--border)] pt-2.5">
+                <div className="flex items-center gap-1.5 bg-[var(--surface-2)] rounded-xl p-1">
+                  {DATE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.key}
+                      onClick={() => setDateFilter(opt.key)}
+                      className={cn(
+                        "flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all",
+                        dateFilter === opt.key
+                          ? "bg-[var(--primary-light)] text-[var(--primary)]"
+                          : "text-[var(--text-secondary)] hover:text-[var(--text)]",
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value as PatientStatus | "all")}
+                    className="flex-1 text-sm border border-[var(--border)] rounded-xl px-3 py-2 bg-[var(--surface)] focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 text-[var(--text)]"
+                  >
+                    <option value="all">{t("patients.allStatuses")}</option>
+                    {KANBAN_COLUMNS.map((col) => (
+                      <option key={col.id} value={col.id}>
+                        {col.label} {statusCounts[col.id] ? `(${statusCounts[col.id]})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={sourceFilter}
+                    onChange={(e) => setSourceFilter(e.target.value as PatientSource | "all")}
+                    className="flex-1 text-sm border border-[var(--border)] rounded-xl px-3 py-2 bg-[var(--surface)] focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 text-[var(--text)]"
+                  >
+                    <option value="all">{t("patients.allSources")}</option>
+                    {ALL_SOURCES.map((s) => (
+                      <option key={s} value={s}>{SOURCE_LABELS[s]}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {KANBAN_COLUMNS.map((col) => {
+                    const count = statusCounts[col.id] ?? 0;
+                    if (count === 0) return null;
+                    return (
+                      <button
+                        key={col.id}
+                        onClick={() => setStatusFilter(statusFilter === col.id ? "all" : col.id)}
+                        className={`text-xs px-2.5 py-0.5 rounded-full font-medium transition-all ${COLUMN_HEADER_COLOR[col.id]} ${statusFilter === col.id ? "ring-2 ring-offset-1 ring-current" : "opacity-80 hover:opacity-100"}`}
+                      >
+                        {col.label}: {count}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </>
+        }
+      />
+
       <div className="flex-1 min-h-0 overflow-hidden">
         {view === "list"   && <PatientsListView search={filterSearch} statusFilter={statusFilter} sourceFilter={sourceFilter} dateFilterFn={dateFilterFn} />}
         {view === "kanban" && <PatientsKanbanView search={filterSearch} statusFilter={statusFilter} sourceFilter={sourceFilter} dateFilterFn={dateFilterFn} />}
       </div>
 
-      {isCreateOpen && <CreatePatientDialog onClose={() => setIsCreateOpen(false)} />}
-    </div>
+      <CreatePatientDialog open={isCreateOpen} onClose={() => setIsCreateOpen(false)} />
+    </PageShell>
   );
 }

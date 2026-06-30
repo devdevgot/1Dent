@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { customFetch, getListUsersAllQueryKey } from "@workspace/api-client-react";
+import { AppDialog } from "@/components/layout/app-dialog";
 import { cn } from "@/lib/utils";
 
 type Role = "admin" | "doctor" | "accountant" | "warehouse" | "assistant" | "nurse";
@@ -417,93 +418,99 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
     }
   }
 
-  if (!open) return null;
-
   const roleColor = ROLE_COLOR[form.role];
 
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          key="invite-overlay"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 backdrop-blur-sm"
-          onClick={(e) => { if (e.target === e.currentTarget) tryClose(); }}
-        >
+    <AppDialog
+      open={open}
+      onOpenChange={(isOpen) => { if (!isOpen) tryClose(); }}
+      title="Добавить сотрудника"
+      description={`Шаг ${step} из 4 — ${STEP_LABELS[step - 1]}`}
+      size="lg"
+      bodyClassName="relative !py-0"
+      footer={
+        <div className="flex gap-3 w-full">
+          {step > 1 && (
+            <button
+              type="button"
+              onClick={() => setStep((s) => s - 1)}
+              className="dash-btn dash-btn-secondary flex items-center gap-1.5"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Назад
+            </button>
+          )}
+          {step < 4 ? (
+            <button
+              type="button"
+              onClick={goNext}
+              className="dash-btn dash-btn-primary flex-1 flex items-center justify-center gap-2"
+            >
+              Далее
+              <ChevronDown className="w-4 h-4 -rotate-90" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={inviteMutation.isPending}
+              onClick={() => inviteMutation.mutate(form)}
+              className="dash-btn dash-btn-primary flex-1 flex items-center justify-center gap-2"
+            >
+              <Send className="w-4 h-4" />
+              {inviteMutation.isPending ? "Добавление..." : "Добавить и отправить приглашение"}
+            </button>
+          )}
+        </div>
+      }
+    >
+      <AnimatePresence>
+        {confirmClose && (
           <motion.div
-            key="invite-sheet"
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 28, stiffness: 300 }}
-            className="w-full max-w-lg bg-white rounded-t-3xl border border-[#e8e3d9] shadow-xl overflow-hidden flex flex-col font-manrope"
-            style={{ maxHeight: "92dvh" }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-10 bg-[var(--surface)]/95 backdrop-blur-sm flex flex-col items-center justify-center p-8"
           >
-            {/* Close confirm overlay */}
-            <AnimatePresence>
-              {confirmClose && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="absolute inset-0 z-10 bg-white/95 backdrop-blur-sm flex flex-col items-center justify-center p-8 rounded-t-3xl"
-                >
-                  <div className="w-12 h-12 rounded-2xl bg-[#fef3c7] flex items-center justify-center mb-4">
-                    <AlertCircle className="w-6 h-6 text-[#d97706]" />
-                  </div>
-                  <p className="text-base font-bold text-[#0f172a] text-center mb-1">Закрыть без сохранения?</p>
-                  <p className="text-sm text-[#94a3b8] text-center mb-6">Введённые данные будут потеряны</p>
-                  <div className="flex gap-3 w-full max-w-xs">
-                    <button
-                      onClick={() => setConfirmClose(false)}
-                      className="flex-1 py-3 rounded-xl text-sm font-semibold bg-[#f1ede4] text-[#64748b]"
-                    >
-                      Продолжить
-                    </button>
-                    <button
-                      onClick={forceClose}
-                      className="flex-1 py-3 rounded-full text-sm font-bold text-white bg-[#dc2626] hover:scale-105"
-                    >
-                      Закрыть
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 pt-5 pb-4 shrink-0">
-              <div>
-                <h2 className="text-base font-bold text-[#0f172a]">Добавить сотрудника</h2>
-                <p className="text-xs text-[#94a3b8] mt-0.5">Шаг {step} из 4 — {STEP_LABELS[step - 1]}</p>
-              </div>
+            <div className="w-12 h-12 rounded-2xl bg-[#fef3c7] flex items-center justify-center mb-4">
+              <AlertCircle className="w-6 h-6 text-[#d97706]" />
+            </div>
+            <p className="text-base font-bold text-[var(--text)] text-center mb-1">Закрыть без сохранения?</p>
+            <p className="text-sm text-[var(--text-secondary)] text-center mb-6">Введённые данные будут потеряны</p>
+            <div className="flex gap-3 w-full max-w-xs">
               <button
-                onClick={tryClose}
-                className="w-8 h-8 rounded-full bg-[#f1ede4] flex items-center justify-center text-[#64748b]"
+                type="button"
+                onClick={() => setConfirmClose(false)}
+                className="dash-btn dash-btn-secondary flex-1"
               >
-                <X className="w-4 h-4" />
+                Продолжить
+              </button>
+              <button
+                type="button"
+                onClick={forceClose}
+                className="dash-btn flex-1 rounded-full text-sm font-bold text-white bg-[#dc2626] hover:bg-[#b91c1c]"
+              >
+                Закрыть
               </button>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-            {/* Progress bar */}
-            <div className="px-5 pb-4 shrink-0">
-              <div className="flex gap-1.5">
-                {[1, 2, 3, 4].map((s) => (
-                  <div
-                    key={s}
-                    className={cn(
-                      "flex-1 h-1 rounded-full transition-all duration-300",
-                      s <= step ? "bg-[#1f75fe]" : "bg-[#f1ede4]",
-                    )}
-                  />
-                ))}
-              </div>
-            </div>
+      <div className="pb-4 shrink-0">
+        <div className="flex gap-1.5">
+          {[1, 2, 3, 4].map((s) => (
+            <div
+              key={s}
+              className={cn(
+                "flex-1 h-1 rounded-full transition-all duration-300",
+                s <= step ? "bg-[var(--primary)]" : "bg-[var(--surface-2)]",
+              )}
+            />
+          ))}
+        </div>
+      </div>
 
-            {/* Steps */}
-            <div className="flex-1 overflow-y-auto px-5 pb-4">
+      <div className="pb-4">
               <AnimatePresence mode="wait">
                 {/* ── Step 1: Email ── */}
                 {step === 1 && (
@@ -840,47 +847,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                   </motion.div>
                 )}
               </AnimatePresence>
-            </div>
-
-            {/* Footer */}
-            <div className="px-5 pb-6 pt-3 flex flex-col gap-2.5 shrink-0 border-t border-[#e8e3d9]">
-              <div className="flex gap-3">
-                {step > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => setStep((s) => s - 1)}
-                    className="flex items-center gap-1.5 px-4 py-3.5 rounded-xl text-sm font-semibold text-[#64748b] bg-[#f1ede4]"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                    Назад
-                  </button>
-                )}
-
-                {step < 4 ? (
-                  <button
-                    type="button"
-                    onClick={goNext}
-                    className="flex-1 py-3.5 rounded-full text-sm font-bold text-white flex items-center justify-center gap-2 bg-[#1f75fe] hover:bg-[#1a65e8] hover:scale-105 font-semibold"
-                  >
-                    Далее
-                    <ChevronDown className="w-4 h-4 -rotate-90" />
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={inviteMutation.isPending}
-                    onClick={() => inviteMutation.mutate(form)}
-                    className="flex-1 py-3.5 rounded-full text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-60 bg-[#1f75fe] hover:bg-[#1a65e8] hover:scale-105 font-semibold"
-                  >
-                    <Send className="w-4 h-4" />
-                    {inviteMutation.isPending ? "Добавление..." : "Добавить и отправить приглашение"}
-                  </button>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+      </div>
+    </AppDialog>
   );
 }

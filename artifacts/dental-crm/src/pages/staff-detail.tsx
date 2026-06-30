@@ -1,10 +1,12 @@
 import { useParams, useLocation } from "wouter";
 import { useState, useEffect, useMemo } from "react";
 import {
-  ChevronLeft, Users, TrendingUp, DollarSign, Activity,
+  Users, TrendingUp, DollarSign, Activity,
   Banknote, CheckCircle, Clock, Wallet, SlidersHorizontal,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { PageShell } from "@/components/layout/page-shell";
+import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-header";
+import { motion } from "framer-motion";
 import {
   useGetDoctorKpis,
   useGetPayrollRecords,
@@ -271,17 +273,17 @@ export default function StaffDetailPage() {
 
   if (kpiLoading || proceduresLoading || usersLoading || geoLoading || expensesLoading) {
     return (
-      <div className="h-full flex items-center justify-center bg-[#faf8f4] font-manrope">
-        <div className="w-10 h-10 border-4 border-[#1f75fe]/20 border-t-[#1f75fe] rounded-full animate-spin" />
-      </div>
+      <PageShell className="h-full flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-[var(--primary)]/20 border-t-[var(--primary)] rounded-full animate-spin" />
+      </PageShell>
     );
   }
 
   if (!selectedUser) {
     return (
-      <div className="h-full flex items-center justify-center bg-[#faf8f4] font-manrope">
-        <p className="text-[#64748b]">{t("staff.notFound")}</p>
-      </div>
+      <PageShell className="h-full flex items-center justify-center">
+        <p className="text-[var(--text-secondary)]">{t("staff.notFound")}</p>
+      </PageShell>
     );
   }
 
@@ -382,83 +384,71 @@ export default function StaffDetailPage() {
   const finalSalary = calculatedSalary - advance;
 
   return (
-    <div className="h-full flex flex-col overflow-hidden bg-[#faf8f4] font-manrope">
-      <div className="shrink-0 border-b border-[#e8e3d9] bg-white shadow-sm px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setLocation("/users")}
-              className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#f1ede4] transition-colors text-[#64748b] shrink-0"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#1f75fe] to-[#1a65e8] flex items-center justify-center text-white font-bold text-base shrink-0 shadow-sm">
-              {getInitials(selectedUser.name)}
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-[#0f172a] leading-tight">{selectedUser.name}</h1>
-              <p className="text-xs text-[#94a3b8] mt-0.5 font-medium">
-                {ROLE_LABELS[selectedUser.role] ?? selectedUser.role}
-                {selectedUser.specialty && ` • ${selectedUser.specialty}`}
-              </p>
-            </div>
+    <PageShell className="h-full flex flex-col overflow-hidden" animate={false}>
+      <PageHeader
+        title={selectedUser.name ?? ""}
+        subtitle={[
+          ROLE_LABELS[selectedUser.role] ?? selectedUser.role,
+          selectedUser.specialty,
+        ].filter(Boolean).join(" • ")}
+        onBack={() => setLocation("/users")}
+        icon={
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--primary)] flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-sm">
+            {getInitials(selectedUser.name)}
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowFilters((v) => !v)}
-              className={cn(
-                "relative transition-colors p-1.5 rounded-xl",
-                showFilters || dateFilter !== "month" ? "text-[#1f75fe] bg-[#1f75fe]/10" : "text-[#94a3b8] hover:text-[#1f75fe] hover:bg-[#f1ede4]",
-              )}
-              title="Фильтры"
-            >
-              <SlidersHorizontal className="w-4 h-4" />
-              {dateFilter !== "month" && (
-                <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-[#1f75fe] rounded-full" />
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <AnimatePresence>
-        {showFilters && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden bg-white border-b border-[#e8e3d9] px-6 shrink-0"
+        }
+        right={
+          <PageHeaderIconButton
+            onClick={() => setShowFilters((v) => !v)}
+            active={showFilters || dateFilter !== "month"}
+            title="Фильтры"
+            className="relative"
           >
-            <div className="py-3 flex flex-wrap gap-2 items-center">
-              <span className="text-xs font-bold text-[#94a3b8] mr-2 uppercase tracking-wider">Период:</span>
-              {[
-                { value: "today", label: "Сегодня" },
-                { value: "week", label: "На неделю" },
-                { value: "month", label: "На месяц" },
-                { value: "halfYear", label: "На полгода" },
-                { value: "year", label: "На год" },
-              ].map((item) => {
-                const isActive = dateFilter === item.value;
-                return (
-                  <button
-                    key={item.value}
-                    onClick={() => setDateFilter(item.value as any)}
-                    className={cn(
-                      "px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200",
-                      isActive
-                        ? "bg-[#1f75fe] text-white shadow-sm"
-                        : "bg-[#f1ede4] text-[#64748b] hover:bg-[#e8e3d9] hover:text-[#0f172a]"
-                    )}
-                  >
-                    {item.label}
-                  </button>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <SlidersHorizontal className="w-4 h-4" />
+            {dateFilter !== "month" && (
+              <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-[var(--primary)] rounded-full" />
+            )}
+          </PageHeaderIconButton>
+        }
+        bottom={
+          showFilters ? (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className="text-xs font-bold text-[var(--text-subtle)] mr-2 uppercase tracking-wider">Период:</span>
+                {[
+                  { value: "today", label: "Сегодня" },
+                  { value: "week", label: "На неделю" },
+                  { value: "month", label: "На месяц" },
+                  { value: "halfYear", label: "На полгода" },
+                  { value: "year", label: "На год" },
+                ].map((item) => {
+                  const isActive = dateFilter === item.value;
+                  return (
+                    <button
+                      key={item.value}
+                      onClick={() => setDateFilter(item.value as typeof dateFilter)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200",
+                        isActive
+                          ? "bg-[var(--primary)] text-white shadow-sm"
+                          : "bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[var(--border)] hover:text-[var(--text)]",
+                      )}
+                    >
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          ) : undefined
+        }
+      />
 
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         <div className="p-6 space-y-6">
@@ -917,6 +907,6 @@ export default function StaffDetailPage() {
           filterUserId={doctorId}
         />
       )}
-    </div>
+    </PageShell>
   );
 }

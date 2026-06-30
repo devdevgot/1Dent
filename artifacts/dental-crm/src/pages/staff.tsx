@@ -1,7 +1,8 @@
 import { useLocation } from "wouter";
-import { ChevronLeft } from "lucide-react";
 import { useGetDoctorKpis } from "@workspace/api-client-react";
 import { useTranslation } from "react-i18next";
+import { PageShell } from "@/components/layout/page-shell";
+import { PageHeader } from "@/components/layout/page-header";
 
 export default function StaffPage() {
   const { t } = useTranslation();
@@ -17,31 +18,20 @@ export default function StaffPage() {
 
   if (isLoading) {
     return (
-      <div className="h-full flex items-center justify-center bg-[#faf8f4] font-manrope">
-        <div className="w-10 h-10 border-4 border-[#1f75fe]/20 border-t-[#1f75fe] rounded-full animate-spin" />
-      </div>
+      <PageShell className="h-full flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-[var(--primary)]/20 border-t-[var(--primary)] rounded-full animate-spin" />
+      </PageShell>
     );
   }
 
   return (
-    <div className="h-full flex flex-col overflow-hidden bg-[#faf8f4] font-manrope">
-      {/* Header */}
-      <div className="shrink-0 border-b border-[#e8e3d9] bg-white shadow-sm px-6 py-4">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => window.history.back()}
-            className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#f1ede4] transition-colors text-[#64748b] shrink-0"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-[#0f172a]">{t("staff.title")}</h1>
-            <p className="text-sm text-[#64748b] mt-0.5">{t("staff.subtitle")}</p>
-          </div>
-        </div>
-      </div>
+    <PageShell className="h-full flex flex-col overflow-hidden" animate={false}>
+      <PageHeader
+        title={t("staff.title")}
+        subtitle={t("staff.subtitle")}
+        onBack={() => window.history.back()}
+      />
 
-      {/* Content */}
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         {doctors.length === 0 ? (
           <div className="flex items-center justify-center h-full text-[#64748b]">
@@ -97,6 +87,6 @@ export default function StaffPage() {
           </div>
         )}
       </div>
-    </div>
+    </PageShell>
   );
 }

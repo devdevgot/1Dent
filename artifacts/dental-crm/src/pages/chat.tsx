@@ -20,7 +20,6 @@ import {
   CheckCheck,
   Clock,
   XCircle,
-  ChevronLeft,
   Pencil,
   Loader2,
   Paperclip,
@@ -32,6 +31,8 @@ import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
 import { WhatsAppConnectModal, WhatsAppIcon, type WaStatus } from "@/components/whatsapp/whatsapp-connect-modal";
+import { PageShell } from "@/components/layout/page-shell";
+import { PageHeader } from "@/components/layout/page-header";
 
 const BRAND      = "#1f75fe";
 const CHAT_BG    = "#faf8f4";
@@ -498,37 +499,25 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
 
   return (
     <div className="flex flex-col h-full min-w-0">
-      {/* ── Header ── */}
-      <div
-        className="flex items-center gap-3 px-4 py-3 border-b border-[#e8e3d9] bg-white shadow-sm shrink-0 font-manrope"
-      >
-        {onBack && (
-          <button
-            onClick={onBack}
-            className="md:hidden p-1.5 -ml-1 rounded-xl hover:bg-[#f1ede4] text-[#64748b] transition-colors"
-            aria-label="Back"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-        )}
-
-        <Avatar name={patient.name} size={44} />
-
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <p className="font-bold text-[15px] text-[#0f172a] truncate">{patient.name}</p>
+      <PageHeader
+        title={patient.name}
+        subtitle={patient.phone}
+        onBack={onBack}
+        sticky={false}
+        icon={<Avatar name={patient.name} size={36} />}
+        badge={
+          <span className="flex items-center gap-1.5 shrink-0">
             <WhatsAppIcon size={15} />
-          </div>
-          <p className="text-xs text-[#64748b] truncate">{patient.phone}</p>
-        </div>
-
-        {hasRedAlert && (
-          <Badge variant="destructive" className="flex items-center gap-1 shrink-0 text-xs bg-[#fef2f2] text-[#dc2626] border border-[#dc2626]/20 hover:bg-[#fef2f2]">
-            <AlertTriangle className="w-3 h-3" />
-            {t("chat.redAlert")}
-          </Badge>
-        )}
-      </div>
+            {hasRedAlert && (
+              <Badge variant="destructive" className="flex items-center gap-1 shrink-0 text-xs bg-[#fef2f2] text-[#dc2626] border border-[#dc2626]/20 hover:bg-[#fef2f2]">
+                <AlertTriangle className="w-3 h-3" />
+                {t("chat.redAlert")}
+              </Badge>
+            )}
+          </span>
+        }
+        className="md:[&>div:first-child>button:first-child]:hidden md:[&>div:first-child>div:first-child]:hidden"
+      />
 
       {/* ── Message feed ── */}
       <div
@@ -768,55 +757,61 @@ export default function ChatPage() {
   const waConfigured = waStatus?.configured ?? false;
 
   return (
-    <div className="flex overflow-hidden h-full w-full max-w-full font-manrope">
+    <PageShell className="flex overflow-hidden h-full w-full max-w-full" animate={false}>
       <aside
         className={cn(
-          "flex flex-col border-r border-[#e8e3d9] bg-[#faf8f4]",
+          "flex flex-col border-r border-[var(--border)] bg-[var(--bg)]",
           "w-full md:w-80 md:shrink-0",
           selectedPatientId ? "hidden md:flex" : "flex",
         )}
       >
-        <div className="px-4 pt-4 pb-3 border-b border-[#e8e3d9] bg-white shadow-sm">
-          <div className="flex items-center gap-2 mb-3">
-            <WhatsAppIcon size={18} />
-            <h2 className="font-bold text-[15px] text-[#0f172a] flex-1">{t("chat.title")}</h2>
-            {isOwner && (waConnected || waConfigured) && (
+        <PageHeader
+          title={t("chat.title")}
+          icon={<WhatsAppIcon size={18} />}
+          sticky={false}
+          className="[&>div:first-child>div:first-child]:hidden"
+          right={
+            isOwner && (waConnected || waConfigured) ? (
               <button
+                type="button"
                 onClick={handleOpenChangeModal}
                 title="Изменить WhatsApp"
-                className="flex items-center gap-1 text-xs text-[#94a3b8] hover:text-[#64748b] transition-colors px-2 py-1 rounded-xl hover:bg-[#f1ede4]"
+                className="flex items-center gap-1 text-xs text-[var(--text-subtle)] hover:text-[var(--text-secondary)] transition-colors px-2 py-1 rounded-xl hover:bg-[var(--surface-2)]"
               >
                 <Pencil className="w-3 h-3" />
                 <span>Изменить</span>
               </button>
-            )}
-          </div>
+            ) : undefined
+          }
+          bottom={
+            <>
+              {!waStatusLoading && !waConnected && !isOwner && (
+                <div className="bg-[#fef3c7] border border-[#d97706]/20 rounded-xl p-3 mb-3">
+                  <p className="text-xs text-[#d97706] leading-relaxed">
+                    WhatsApp не подключён. Обратитесь к Владельцу клиники, чтобы он подключил WhatsApp.
+                  </p>
+                </div>
+              )}
 
-          {!waStatusLoading && !waConnected && !isOwner && (
-            <div className="bg-[#fef3c7] border border-[#d97706]/20 rounded-xl p-3 mb-3">
-              <p className="text-xs text-[#d97706] leading-relaxed">
-                WhatsApp не подключён. Обратитесь к Владельцу клиники, чтобы он подключил WhatsApp.
-              </p>
-            </div>
-          )}
+              {!waStatusLoading && waConnected && waStatus?.phone && (
+                <div className="flex items-center gap-1.5 mb-3 px-1">
+                  <div className="w-2 h-2 rounded-full bg-[#16a34a]" />
+                  <p className="text-xs text-[var(--text-secondary)] font-mono">+{waStatus.phone}</p>
+                </div>
+              )}
 
-          {!waStatusLoading && waConnected && waStatus?.phone && (
-            <div className="flex items-center gap-1.5 mb-3 px-1">
-              <div className="w-2 h-2 rounded-full bg-[#16a34a]" />
-              <p className="text-xs text-[#64748b] font-mono">+{waStatus.phone}</p>
-            </div>
-          )}
-
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t("chat.searchPlaceholder")}
-              className="w-full pl-9 pr-4 py-2.5 bg-white border border-[#e8e3d9] rounded-xl text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 transition-all"
-            />
-          </div>
-        </div>
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)] pointer-events-none" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder={t("chat.searchPlaceholder")}
+                  className="w-full pl-9 pr-4 py-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-sm text-[var(--text)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 transition-all"
+                />
+              </div>
+            </>
+          }
+        />
 
         <div className="flex-1 overflow-y-auto">
           {patientsLoading && (
@@ -878,7 +873,7 @@ export default function ChatPage() {
           startAtSetup={modalAtSetup}
         />
       )}
-    </div>
+    </PageShell>
   );
 }
 

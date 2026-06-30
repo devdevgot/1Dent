@@ -44,6 +44,8 @@ import {
 } from "@/components/appointment-modal";
 import { useAppointmentSave } from "@/hooks/use-appointment-save";
 import { isCalendarProcedure } from "@/lib/calendar-procedures";
+import { PageShell } from "@/components/layout/page-shell";
+import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-header";
 
 /* ─── Appointment Group ─────────────────────────────────────────────────────
    Multiple procedures belonging to the same patient at the same time slot
@@ -316,92 +318,78 @@ export default function AdminCalendar() {
 
   const isSaving = apptSave.isSaving;
 
-  const periodLabel = format(currentDate, "LLLL yyyy", { locale: ru });
   const DOW_LABELS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-[#faf8f4] font-manrope">
-      {/* Top bar */}
-      <div className="flex-none bg-white border-b border-[#e8e3d9] shadow-sm px-4 py-3">
-        <div className="flex items-center gap-2">
+    <PageShell className="flex flex-col h-full overflow-hidden" animate={false}>
+      <PageHeader
+        title="Календарь"
+        sticky
+        right={
+          <>
+            <div className="flex items-center gap-1">
+              <PageHeaderIconButton onClick={() => setCurrentDate((d) => subMonths(d, 1))} title="Предыдущий месяц">
+                <ChevronLeft className="w-4 h-4" />
+              </PageHeaderIconButton>
+              <button
+                onClick={() => setCurrentDate(new Date())}
+                className="px-3 py-1.5 text-sm font-medium text-[var(--text)] rounded-xl border border-[var(--border)] hover:bg-[var(--surface-2)] transition-colors min-w-[90px] capitalize"
+              >
+                {format(currentDate, "LLLL", { locale: ru })}
+              </button>
+              <PageHeaderIconButton onClick={() => setCurrentDate((d) => addMonths(d, 1))} title="Следующий месяц">
+                <ChevronRight className="w-4 h-4" />
+              </PageHeaderIconButton>
+            </div>
 
-          {/* Left: title + month navigation */}
-          <h1 className="text-base font-bold text-[#0f172a] mr-1">Календарь</h1>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setCurrentDate((d) => subMonths(d, 1))}
-              className="p-2 rounded-xl border border-[#e8e3d9] hover:bg-[#f1ede4] transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4 text-[#64748b]" />
-            </button>
-            <button
-              onClick={() => setCurrentDate(new Date())}
-              className="px-3 py-2 text-sm font-medium text-[#0f172a] rounded-xl border border-[#e8e3d9] hover:bg-[#f1ede4] transition-colors min-w-[90px] capitalize"
-            >
-              {format(currentDate, "LLLL", { locale: ru })}
-            </button>
-            <button
-              onClick={() => setCurrentDate((d) => addMonths(d, 1))}
-              className="p-2 rounded-xl border border-[#e8e3d9] hover:bg-[#f1ede4] transition-colors"
-            >
-              <ChevronRight className="w-4 h-4 text-[#64748b]" />
-            </button>
-          </div>
+            <div className="relative">
+              <PageHeaderIconButton
+                onClick={() => setFilterOpen((v) => !v)}
+                active={!!filterDoctorId}
+                title="Фильтр по врачу"
+                className="relative"
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                {filterDoctorId && (
+                  <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-[var(--primary)] rounded-full" />
+                )}
+              </PageHeaderIconButton>
 
-          <div className="flex-1" />
-
-          {/* Right: filter icon + new appointment */}
-          <div className="relative">
-            <button
-              onClick={() => setFilterOpen((v) => !v)}
-              className={cn(
-                "relative p-1.5 rounded-xl transition-colors",
-                filterDoctorId ? "text-[#1f75fe] bg-[#1f75fe]/10" : "text-[#94a3b8] hover:text-[#1f75fe] hover:bg-[#f1ede4]",
+              {filterOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setFilterOpen(false)} />
+                  <div className="absolute right-0 top-full mt-1.5 z-20 bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-lg py-1.5 min-w-[180px]">
+                    {[{ id: "", name: "Все врачи" }, ...doctors].map((d) => (
+                      <button
+                        key={d.id}
+                        onClick={() => { setFilterDoctorId(d.id); setFilterOpen(false); }}
+                        className={cn(
+                          "w-full flex items-center justify-between gap-3 px-4 py-2 text-sm transition-colors text-left",
+                          d.id === filterDoctorId
+                            ? "bg-[var(--primary-light)] text-[var(--primary)] font-semibold"
+                            : "text-[var(--text)] hover:bg-[var(--bg)]",
+                        )}
+                      >
+                        <span>{d.name}</span>
+                        {d.id === filterDoctorId && <Check className="w-4 h-4 text-[var(--primary)] shrink-0" />}
+                      </button>
+                    ))}
+                  </div>
+                </>
               )}
-              title="Фильтр по врачу"
+            </div>
+
+            <Button
+              onClick={() => openCreateModal(new Date())}
+              size="sm"
+              className="w-9 h-9 p-0 shrink-0 rounded-full bg-[#1f75fe] hover:bg-[#1a65e8] hover:scale-105 font-semibold shadow-sm"
             >
-              <SlidersHorizontal className="w-4 h-4" />
-              {filterDoctorId && (
-                <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-[#1f75fe] rounded-full" />
-              )}
-            </button>
+              <Plus className="w-5 h-5" />
+            </Button>
+          </>
+        }
+      />
 
-            {filterOpen && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setFilterOpen(false)} />
-                <div className="absolute right-0 top-full mt-1.5 z-20 bg-white border border-[#e8e3d9] rounded-2xl shadow-lg py-1.5 min-w-[180px]">
-                  {[{ id: "", name: "Все врачи" }, ...doctors].map((d) => (
-                    <button
-                      key={d.id}
-                      onClick={() => { setFilterDoctorId(d.id); setFilterOpen(false); }}
-                      className={cn(
-                        "w-full flex items-center justify-between gap-3 px-4 py-2 text-sm transition-colors text-left",
-                        d.id === filterDoctorId
-                          ? "bg-[#1f75fe]/10 text-[#1f75fe] font-semibold"
-                          : "text-[#0f172a] hover:bg-[#faf8f4]",
-                      )}
-                    >
-                      <span>{d.name}</span>
-                      {d.id === filterDoctorId && <Check className="w-4 h-4 text-[#1f75fe] shrink-0" />}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-
-          <Button
-            onClick={() => openCreateModal(new Date())}
-            size="sm"
-            className="w-9 h-9 p-0 shrink-0 rounded-full bg-[#1f75fe] hover:bg-[#1a65e8] hover:scale-105 font-semibold shadow-sm"
-          >
-            <Plus className="w-5 h-5" />
-          </Button>
-
-        </div>
-      </div>
-
-      {/* Calendar */}
       <div className="flex-1 overflow-hidden p-3 sm:p-4 flex flex-col gap-2">
         <div className="flex-1 bg-white rounded-2xl shadow-md border border-[#e8e3d9] overflow-hidden flex flex-col">
           {/* Day-of-week header */}
@@ -549,6 +537,6 @@ export default function AdminCalendar() {
           isSaving={isSaving}
         />
       )}
-    </div>
+    </PageShell>
   );
 }

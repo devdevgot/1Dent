@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { X } from "lucide-react";
 import { toast } from "sonner";
 import {
   usePreviewPayroll,
@@ -10,6 +9,7 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter,
 } from "@/components/ui/table";
+import { AppDialog } from "@/components/layout/app-dialog";
 
 interface PayrollApproveModalProps {
   onClose: () => void;
@@ -43,6 +43,21 @@ export default function PayrollApproveModal({ onClose, onSuccess, filterUserId }
     setOverrides((prev) => ({ ...prev, [userId]: value }));
   };
 
+  const MONTH_NAMES = [
+    t("months.january", "Январь"),
+    t("months.february", "Февраль"),
+    t("months.march", "Март"),
+    t("months.april", "Апрель"),
+    t("months.may", "Май"),
+    t("months.june", "Июнь"),
+    t("months.july", "Июль"),
+    t("months.august", "Август"),
+    t("months.september", "Сентябрь"),
+    t("months.october", "Октябрь"),
+    t("months.november", "Ноябрь"),
+    t("months.december", "Декабрь"),
+  ];
+
   const handleApprove = async () => {
     if (rows.length === 0) return;
     try {
@@ -64,135 +79,118 @@ export default function PayrollApproveModal({ onClose, onSuccess, filterUserId }
     }
   };
 
-  const MONTH_NAMES = [
-    t("months.january", "Январь"),
-    t("months.february", "Февраль"),
-    t("months.march", "Март"),
-    t("months.april", "Апрель"),
-    t("months.may", "Май"),
-    t("months.june", "Июнь"),
-    t("months.july", "Июль"),
-    t("months.august", "Август"),
-    t("months.september", "Сентябрь"),
-    t("months.october", "Октябрь"),
-    t("months.november", "Ноябрь"),
-    t("months.december", "Декабрь"),
-  ];
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 font-manrope">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border border-[#e8e3d9]">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#e8e3d9] shrink-0">
-          <div>
-            <h3 className="text-lg font-bold text-[#0f172a]">{t("payroll.approveTitle")}</h3>
-            <p className="text-xs text-[#64748b] mt-0.5">{t("payroll.approveSubtitle", "Утвердите ФОТ за период и зафиксируйте расход")}</p>
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-[#f1ede4] transition-colors">
-            <X className="w-4 h-4 text-[#64748b]" />
-          </button>
-        </div>
-
-        <div className="px-6 py-4 border-b border-[#e8e3d9] shrink-0 flex items-center gap-3">
-          <div className="flex-1">
-            <label className="text-xs font-semibold text-[#64748b] block mb-1">{t("payroll.year", "Год")}</label>
-            <select
-              value={year}
-              onChange={(e) => { setYear(Number(e.target.value)); setOverrides({}); }}
-              className="w-full h-9 px-3 rounded-xl border border-[#e8e3d9] bg-white text-sm text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
-            >
-              {YEARS.map((y) => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex-1">
-            <label className="text-xs font-semibold text-[#64748b] block mb-1">{t("payroll.month", "Месяц")}</label>
-            <select
-              value={month}
-              onChange={(e) => { setMonth(Number(e.target.value)); setOverrides({}); }}
-              className="w-full h-9 px-3 rounded-xl border border-[#e8e3d9] bg-white text-sm text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
-            >
-              {MONTHS.map((m) => (
-                <option key={m} value={m}>{MONTH_NAMES[m - 1]}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          {isFetching ? (
-            <div className="flex items-center justify-center py-12 text-sm text-[#64748b]">
-              {t("common.loading", "Загрузка...")}
-            </div>
-          ) : rows.length === 0 ? (
-            <div className="flex items-center justify-center py-12 text-sm text-[#64748b]">
-              {t("payroll.noStaffSettings", "Нет сотрудников с настроенной зарплатой")}
-            </div>
-          ) : (
-            <Table>
-              <TableHeader className="sticky top-0 bg-[#faf8f4]">
-                <TableRow className="hover:bg-transparent">
-                  <TableHead>{t("payroll.employee", "Сотрудник")}</TableHead>
-                  <TableHead className="text-right">{t("payroll.revenueBase")}</TableHead>
-                  <TableHead className="text-right">{t("payroll.calculated")}</TableHead>
-                  <TableHead className="text-right">{t("payroll.approved")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((row) => (
-                  <TableRow key={row.userId}>
-                    <TableCell>
-                      <p className="font-medium text-[#0f172a]">{row.userName || "—"}</p>
-                      <p className="text-[11px] text-[#94a3b8] capitalize">{row.userRole}</p>
-                    </TableCell>
-                    <TableCell className="text-right text-[#64748b]">
-                      ₸{row.revenueBase.toLocaleString("ru-KZ")}
-                    </TableCell>
-                    <TableCell className="text-right text-[#64748b]">
-                      ₸{row.calculatedAmount.toLocaleString("ru-KZ")}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <input
-                        type="number"
-                        min={0}
-                        value={getApproved(row)}
-                        onChange={(e) => handleOverride(row.userId, Number(e.target.value))}
-                        className="w-28 h-8 px-2 rounded-xl border border-[#e8e3d9] bg-white text-sm text-right text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-              <TableFooter>
-                <TableRow className="hover:bg-transparent border-t-2 border-[#e8e3d9] bg-[#faf8f4]">
-                  <TableCell colSpan={3} className="font-bold text-[#0f172a]">
-                    {t("payroll.fotTotal", "Итого ФОТ")}
-                  </TableCell>
-                  <TableCell className="text-right font-bold text-[#1f75fe]">
-                    ₸{totalFot.toLocaleString("ru-KZ")}
-                  </TableCell>
-                </TableRow>
-              </TableFooter>
-            </Table>
-          )}
-        </div>
-
-        <div className="px-6 py-4 border-t border-[#e8e3d9] shrink-0 flex justify-end gap-3">
+    <AppDialog
+      open
+      onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}
+      title={t("payroll.approveTitle")}
+      description={t("payroll.approveSubtitle", "Утвердите ФОТ за период и зафиксируйте расход")}
+      size="xl"
+      bodyClassName="!p-0"
+      footer={
+        <>
           <button
+            type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl text-sm font-medium text-[#64748b] hover:bg-[#f1ede4] transition-colors"
+            className="dash-btn dash-btn-secondary"
           >
             {t("common.cancel")}
           </button>
           <button
+            type="button"
             onClick={handleApprove}
             disabled={approving || rows.length === 0}
-            className="px-5 py-2 rounded-full text-sm font-semibold bg-[#1f75fe] text-white hover:bg-[#1a65e8] hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+            className="dash-btn dash-btn-primary"
           >
             {approving ? t("payroll.approving") : t("payroll.approveAndRecord", `Утвердить ФОТ ${MONTH_NAMES[month - 1]} ${year}`)}
           </button>
+        </>
+      }
+    >
+      <div className="px-5 py-4 border-b border-[var(--border)] flex items-center gap-3 shrink-0">
+        <div className="flex-1">
+          <label className="text-caption font-semibold text-[var(--text-secondary)] block mb-1">{t("payroll.year", "Год")}</label>
+          <select
+            value={year}
+            onChange={(e) => { setYear(Number(e.target.value)); setOverrides({}); }}
+            className="w-full h-9 px-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)]"
+          >
+            {YEARS.map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex-1">
+          <label className="text-caption font-semibold text-[var(--text-secondary)] block mb-1">{t("payroll.month", "Месяц")}</label>
+          <select
+            value={month}
+            onChange={(e) => { setMonth(Number(e.target.value)); setOverrides({}); }}
+            className="w-full h-9 px-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)]"
+          >
+            {MONTHS.map((m) => (
+              <option key={m} value={m}>{MONTH_NAMES[m - 1]}</option>
+            ))}
+          </select>
         </div>
       </div>
-    </div>
+
+      <div className="flex-1 overflow-y-auto max-h-[50vh]">
+        {isFetching ? (
+          <div className="flex items-center justify-center py-12 text-sm text-[var(--text-secondary)]">
+            {t("common.loading", "Загрузка...")}
+          </div>
+        ) : rows.length === 0 ? (
+          <div className="flex items-center justify-center py-12 text-sm text-[var(--text-secondary)]">
+            {t("payroll.noStaffSettings", "Нет сотрудников с настроенной зарплатой")}
+          </div>
+        ) : (
+          <Table>
+            <TableHeader className="sticky top-0 bg-[var(--surface-2)]">
+              <TableRow className="hover:bg-transparent">
+                <TableHead>{t("payroll.employee", "Сотрудник")}</TableHead>
+                <TableHead className="text-right">{t("payroll.revenueBase")}</TableHead>
+                <TableHead className="text-right">{t("payroll.calculated")}</TableHead>
+                <TableHead className="text-right">{t("payroll.approved")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((row) => (
+                <TableRow key={row.userId}>
+                  <TableCell>
+                    <p className="font-medium text-[var(--text)]">{row.userName || "—"}</p>
+                    <p className="text-[11px] text-[var(--text-secondary)] capitalize">{row.userRole}</p>
+                  </TableCell>
+                  <TableCell className="text-right text-[var(--text-secondary)]">
+                    ₸{row.revenueBase.toLocaleString("ru-KZ")}
+                  </TableCell>
+                  <TableCell className="text-right text-[var(--text-secondary)]">
+                    ₸{row.calculatedAmount.toLocaleString("ru-KZ")}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <input
+                      type="number"
+                      min={0}
+                      value={getApproved(row)}
+                      onChange={(e) => handleOverride(row.userId, Number(e.target.value))}
+                      className="w-28 h-8 px-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-sm text-right text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)]"
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+            <TableFooter>
+              <TableRow className="hover:bg-transparent border-t-2 border-[var(--border)] bg-[var(--surface-2)]">
+                <TableCell colSpan={3} className="font-bold text-[var(--text)]">
+                  {t("payroll.fotTotal", "Итого ФОТ")}
+                </TableCell>
+                <TableCell className="text-right font-bold text-[var(--primary)]">
+                  ₸{totalFot.toLocaleString("ru-KZ")}
+                </TableCell>
+              </TableRow>
+            </TableFooter>
+          </Table>
+        )}
+      </div>
+    </AppDialog>
   );
 }

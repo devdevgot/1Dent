@@ -13,8 +13,10 @@ import { cn } from "@/lib/utils";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Button } from "@/components/ui/button";
 import {
-  Plus, Search, Pencil, Trash2, Check, X, ChevronLeft, ClipboardList,
+  Plus, Search, Pencil, Trash2, Check, X, ClipboardList,
 } from "lucide-react";
+import { PageShell } from "@/components/layout/page-shell";
+import { PageHeader } from "@/components/layout/page-header";
 
 const CATEGORIES = [
   { key: "all",            label: "Все" },
@@ -153,33 +155,26 @@ export default function ServicesPage() {
     : "grid-cols-[56px_1fr_120px]";
 
   return (
-    <div className="h-full flex flex-col bg-[#faf8f4] font-manrope overflow-hidden">
-
-      {/* ── Header ─────────────────────────────────── */}
-      <div className="bg-white px-4 py-4 flex items-center gap-3 border-b border-[#e8e3d9] shrink-0">
-        <button
-          onClick={() => window.history.back()}
-          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#f1ede4] active:bg-[#e8e3d9] transition-colors text-[#64748b] shrink-0"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-[17px] font-semibold text-[#0f172a]">Прейскурант</h1>
-          <p className="text-xs text-[#64748b] mt-0.5">{templates.length} услуг в каталоге</p>
-        </div>
-        {isOwner && (
-          <Button
-            onClick={() => {
-              setShowAdd(true);
-              setTimeout(() => document.getElementById("add-service-name")?.focus(), 50);
-            }}
-            className="gap-1.5 h-8 text-xs px-2.5 sm:px-3 rounded-full bg-[#1f75fe] hover:bg-[#1a65e8] hover:scale-105 font-semibold"
-          >
-            <Plus className="w-3.5 h-3.5 shrink-0" />
-            <span className="hidden sm:inline">Добавить</span>
-          </Button>
-        )}
-      </div>
+    <PageShell className="h-full flex flex-col overflow-hidden" animate={false}>
+      <PageHeader
+        title="Прейскурант"
+        subtitle={`${templates.length} услуг в каталоге`}
+        onBack={() => window.history.back()}
+        right={
+          isOwner ? (
+            <Button
+              onClick={() => {
+                setShowAdd(true);
+                setTimeout(() => document.getElementById("add-service-name")?.focus(), 50);
+              }}
+              className="gap-1.5 h-8 text-xs px-2.5 sm:px-3 rounded-full font-semibold"
+            >
+              <Plus className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden sm:inline">Добавить</span>
+            </Button>
+          ) : undefined
+        }
+      />
 
       {/* ── Category tabs ───────────────────────────── */}
       <div className="bg-white border-b border-[#e8e3d9] overflow-x-auto shrink-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -441,6 +436,6 @@ export default function ServicesPage() {
         onConfirm={() => { handleDelete(confirmDeleteId!); setConfirmDeleteId(null); }}
         onCancel={() => setConfirmDeleteId(null)}
       />
-    </div>
+    </PageShell>
   );
 }

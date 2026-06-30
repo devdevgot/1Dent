@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PageShell } from "@/components/layout/page-shell";
+import { PageHeader } from "@/components/layout/page-header";
+import { PeriodPills } from "@/components/layout/period-pills";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -9,7 +11,7 @@ import {
 } from "recharts";
 import {
   TrendingUp, Users, DollarSign, Zap, AlertCircle, CheckCircle,
-  Radio, ChevronLeft, Repeat2, Heart, ClipboardCheck, Crown,
+  Radio, Repeat2, Heart, ClipboardCheck, Crown,
   CalendarDays, ChevronDown, ChevronUp,
 } from "lucide-react";
 import {
@@ -265,60 +267,45 @@ export default function AnalyticsPage() {
 
   return (
     <PageShell className="h-full flex flex-col overflow-hidden" animate={false}>
-      {/* ── Header ── */}
-      <div className="shrink-0 px-4 py-4 border-b border-[#e8e3d9] bg-white flex items-center gap-3 shadow-sm">
-        <button
-          onClick={() => window.history.back()}
-          className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#f1ede4] active:bg-[#e8e3d9] transition-colors text-[#64748b] shrink-0"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-[17px] font-semibold text-[#0f172a]">{t("analytics.title")}</h1>
-          <p className="text-xs text-[#64748b] mt-0.5">{t("analytics.subtitle")}</p>
-        </div>
-      </div>
-
-      {/* ── Period filter bar ── */}
-      <div className="shrink-0 bg-white border-b border-[#e8e3d9] px-4 py-3 space-y-2">
-        <div className="flex items-center gap-1.5">
-          <CalendarDays className="w-3.5 h-3.5 text-[#64748b] shrink-0" />
-          <div className="flex gap-1 flex-wrap">
-            {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
-              <button
-                key={p}
-                onClick={() => handlePeriod(p)}
-                className={`px-3 py-1.5 text-xs rounded-xl font-semibold transition-all ${
-                  period === p
-                    ? "bg-[#1f75fe]/10 text-[#1f75fe]"
-                    : "text-[#64748b] hover:bg-[#f1ede4] hover:text-[#0f172a]"
-                }`}
-              >
-                {PERIOD_LABELS[p]}
-              </button>
-            ))}
+      <PageHeader
+        title={t("analytics.title")}
+        subtitle={t("analytics.subtitle")}
+        onBack={() => window.history.back()}
+        bottom={
+          <div className="space-y-2">
+            <div className="flex items-center gap-1.5">
+              <CalendarDays className="w-3.5 h-3.5 text-[var(--text-secondary)] shrink-0" />
+              <PeriodPills
+                value={period}
+                options={(Object.keys(PERIOD_LABELS) as Period[]).map((p) => ({
+                  value: p,
+                  label: PERIOD_LABELS[p],
+                }))}
+                onChange={handlePeriod}
+              />
+            </div>
+            {showCustom && (
+              <div className="flex items-center gap-2 pl-5">
+                <input
+                  type="date"
+                  value={customFrom}
+                  max={customTo || undefined}
+                  onChange={(e) => setCustomFrom(e.target.value)}
+                  className="text-xs border border-[var(--border)] rounded-xl px-2.5 py-1.5 bg-[var(--surface)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] w-36 transition-colors"
+                />
+                <span className="text-xs text-[var(--text-secondary)]">—</span>
+                <input
+                  type="date"
+                  value={customTo}
+                  min={customFrom || undefined}
+                  onChange={(e) => setCustomTo(e.target.value)}
+                  className="text-xs border border-[var(--border)] rounded-xl px-2.5 py-1.5 bg-[var(--surface)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] w-36 transition-colors"
+                />
+              </div>
+            )}
           </div>
-        </div>
-        {showCustom && (
-          <div className="flex items-center gap-2 pl-5">
-            <input
-              type="date"
-              value={customFrom}
-              max={customTo || undefined}
-              onChange={(e) => setCustomFrom(e.target.value)}
-              className="text-xs border border-[#e8e3d9] rounded-xl px-2.5 py-1.5 bg-white text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe] w-36 transition-colors"
-            />
-            <span className="text-xs text-[#64748b]">—</span>
-            <input
-              type="date"
-              value={customTo}
-              min={customFrom || undefined}
-              onChange={(e) => setCustomTo(e.target.value)}
-              className="text-xs border border-[#e8e3d9] rounded-xl px-2.5 py-1.5 bg-white text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe] w-36 transition-colors"
-            />
-          </div>
-        )}
-      </div>
+        }
+      />
 
       {/* ── Content ── */}
       <div className="flex-1 overflow-y-auto custom-scrollbar">

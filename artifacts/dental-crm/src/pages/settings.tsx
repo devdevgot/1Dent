@@ -3,8 +3,10 @@ import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useChangePassword } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
-import { User, Shield, Globe, Eye, EyeOff, Settings2, ChevronLeft } from "lucide-react";
+import { User, Shield, Globe, Eye, EyeOff, Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PageShell } from "@/components/layout/page-shell";
+import { PageHeader } from "@/components/layout/page-header";
 
 function RoleBadge({ role }: { role: string }) {
   const { t } = useTranslation();
@@ -89,19 +91,12 @@ export default function SettingsPage() {
   ] as const;
 
   return (
-    <div className="min-h-full bg-[#faf8f4] font-manrope">
-      <div className="bg-white px-4 pt-5 pb-4 flex items-center gap-3 border-b border-[#e8e3d9]">
-        <button
-          onClick={() => window.history.back()}
-          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#f1ede4] active:bg-[#e8e3d9] transition-colors text-[#64748b] shrink-0"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-        <div className="flex items-center gap-2">
-          <Settings2 className="w-5 h-5 text-[#1f75fe] shrink-0" strokeWidth={1.8} />
-          <h1 className="text-[17px] font-semibold text-[#0f172a]">{t("settingsPage.title")}</h1>
-        </div>
-      </div>
+    <PageShell>
+      <PageHeader
+        title={t("settingsPage.title")}
+        icon={<Settings2 className="w-5 h-5" strokeWidth={1.8} />}
+        onBack={() => window.history.back()}
+      />
       <div className="px-4 py-6 pb-safe space-y-4 max-w-xl mx-auto">
 
       {/* Profile */}
@@ -205,6 +200,6 @@ export default function SettingsPage() {
       </Section>
 
       </div>
-    </div>
+    </PageShell>
   );
 }
