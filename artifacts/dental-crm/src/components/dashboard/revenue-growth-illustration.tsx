@@ -8,240 +8,220 @@ const BLUE = "#1f75fe";
 const MUTED = "#94a3b8";
 const BLUE_SOFT = "#e0f2fe";
 const WHITE = "#ffffff";
-const STROKE = 1;
 
 interface RevenueGrowthIllustrationProps {
   className?: string;
 }
 
-function Gear({ cx, cy, r, delay = 0, reduceMotion }: { cx: number; cy: number; r: number; delay?: number; reduceMotion: boolean | null }) {
+function Gear({
+  cx, cy, r, delay = 0, spin,
+}: { cx: number; cy: number; r: number; delay?: number; spin: boolean }) {
   return (
     <motion.g
-      animate={reduceMotion ? undefined : { rotate: 360 }}
+      animate={spin ? { rotate: 360 } : undefined}
       transition={{ duration: 18, repeat: Infinity, ease: "linear", delay }}
       style={{ transformOrigin: `${cx}px ${cy}px` }}
     >
-      <circle cx={cx} cy={cy} r={r} stroke={MUTED} strokeWidth={STROKE * 0.75} strokeOpacity={0.45} />
+      <circle cx={cx} cy={cy} r={r} stroke={MUTED} strokeWidth={0.75} strokeOpacity={0.45} />
       {[0, 60, 120, 180, 240, 300].map((deg) => {
         const rad = (deg * Math.PI) / 180;
-        const x1 = cx + Math.cos(rad) * (r - 1);
-        const y1 = cy + Math.sin(rad) * (r - 1);
-        const x2 = cx + Math.cos(rad) * (r + 3);
-        const y2 = cy + Math.sin(rad) * (r + 3);
         return (
           <line
             key={deg}
-            x1={x1} y1={y1} x2={x2} y2={y2}
+            x1={cx + Math.cos(rad) * (r - 1)}
+            y1={cy + Math.sin(rad) * (r - 1)}
+            x2={cx + Math.cos(rad) * (r + 3)}
+            y2={cy + Math.sin(rad) * (r + 3)}
             stroke={MUTED}
-            strokeWidth={STROKE * 0.75}
+            strokeWidth={0.75}
             strokeOpacity={0.45}
             strokeLinecap="round"
           />
         );
       })}
-      <circle cx={cx} cy={cy} r={r * 0.35} fill={WHITE} stroke={MUTED} strokeWidth={STROKE * 0.5} strokeOpacity={0.35} />
+      <circle cx={cx} cy={cy} r={r * 0.35} fill={WHITE} stroke={MUTED} strokeWidth={0.5} strokeOpacity={0.35} />
     </motion.g>
   );
 }
 
-function ChartPanel({
-  x, y, w, h, delay, reduceMotion, children,
-}: {
-  x: number; y: number; w: number; h: number; delay: number;
-  reduceMotion: boolean | null;
-  children: ReactNode;
-}) {
+function FloatPanel({
+  delay, float, children,
+}: { delay: number; float: boolean; children: ReactNode }) {
   return (
     <motion.g
-      initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+      initial={float ? { opacity: 0, y: 8 } : false}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay, ease: [0.16, 1, 0.3, 1] }}
     >
-      <motion.g
-        animate={reduceMotion ? undefined : { y: [0, -2.5, 0] }}
-        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: delay + 0.8 }}
-      >
-        <rect x={x} y={y} width={w} height={h} rx={10} fill={WHITE} stroke={INK} strokeWidth={STROKE} strokeOpacity={0.12} />
-        <rect x={x} y={y} width={w} height={h} rx={10} fill={BLUE} fillOpacity={0.03} />
-        {children}
-      </motion.g>
+      {float ? (
+        <motion.g
+          animate={{ y: [0, -2.5, 0] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: delay + 0.8 }}
+        >
+          {children}
+        </motion.g>
+      ) : (
+        children
+      )}
     </motion.g>
   );
 }
 
-/** People + analytics panels — flat line art in 1Dent DS colors */
+/** People + analytics scene — flat line art in 1Dent DS colors */
 export function RevenueGrowthIllustration({ className }: RevenueGrowthIllustrationProps) {
   const reduceMotion = useReducedMotion();
-  const ease = [0.16, 1, 0.3, 1] as const;
+  const animate = !reduceMotion;
 
   return (
     <div className={cn("relative flex items-center justify-center", className)} aria-hidden>
-      <motion.svg
+      <svg
         viewBox="0 0 300 220"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className="relative w-full h-full"
-        initial={reduceMotion ? false : { opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5, ease }}
+        preserveAspectRatio="xMidYMid meet"
+        className="w-full h-full"
       >
-        {/* Organic backdrop blob */}
-        <motion.path
+        {/* Organic backdrop */}
+        <path
           d="M 32 128 C 12 92, 22 42, 78 32 C 132 22, 205 28, 255 54 C 288 72, 298 118, 268 152 C 228 188, 142 198, 68 182 C 38 172, 22 156, 32 128 Z"
           fill={BLUE_SOFT}
-          initial={reduceMotion ? false : { opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.7, ease }}
-          style={{ transformOrigin: "150px 115px" }}
+          opacity={0.7}
         />
 
         {/* Ground */}
-        <ellipse cx={150} cy={198} rx={88} ry={10} fill={BLUE} fillOpacity={0.08} />
+        <ellipse cx={150} cy={198} rx={92} ry={11} fill={BLUE} fillOpacity={0.08} />
 
-        <Gear cx={248} cy={28} r={9} delay={0} reduceMotion={reduceMotion} />
-        <Gear cx={268} cy={118} r={7} delay={2} reduceMotion={reduceMotion} />
-        <Gear cx={235} cy={178} r={8} delay={4} reduceMotion={reduceMotion} />
+        <Gear cx={252} cy={30} r={9} delay={0} spin={animate} />
+        <Gear cx={272} cy={120} r={6.5} delay={2} spin={animate} />
+        <Gear cx={236} cy={180} r={8} delay={4} spin={animate} />
 
-        {/* Panel 1 — line chart */}
-        <ChartPanel x={18} y={20} w={104} h={58} delay={0.15} reduceMotion={reduceMotion}>
+        {/* ── Panel 1 — line chart (top-left) ── */}
+        <FloatPanel delay={0.15} float={animate}>
+          <rect x={18} y={18} width={108} height={60} rx={10} fill={WHITE} stroke={INK} strokeWidth={1} strokeOpacity={0.12} />
+          <rect x={18} y={18} width={108} height={60} rx={10} fill={BLUE} fillOpacity={0.03} />
           {[0, 1, 2].map((i) => {
-            const h = 6 + i * 4;
-            return (
-              <rect key={i} x={30 + i * 22} y={64 - h} width={10} height={h} rx={2} fill={BLUE} fillOpacity={0.15 + i * 0.08} />
-            );
+            const h = 8 + i * 5;
+            return <rect key={i} x={32 + i * 24} y={64 - h} width={11} height={h} rx={2} fill={BLUE} fillOpacity={0.15 + i * 0.1} />;
           })}
           <motion.path
-            d="M 30 60 C 42 52, 52 56, 64 44 S 88 38, 104 30"
+            d="M 32 58 C 46 50, 56 54, 70 42 S 98 34, 112 28"
             stroke={BLUE}
-            strokeWidth={1.25}
+            strokeWidth={1.5}
             strokeLinecap="round"
-            initial={reduceMotion ? false : { pathLength: 0 }}
+            initial={animate ? { pathLength: 0 } : false}
             animate={{ pathLength: 1 }}
             transition={{ duration: 0.9, delay: 0.5, ease: "easeInOut" }}
           />
-          {(
-            [
-              { cx: 30, cy: 60 },
-              { cx: 64, cy: 44 },
-              { cx: 104, cy: 30 },
-            ] as const
-          ).map((pt, i) => (
-            <motion.circle
-              key={i}
-              cx={pt.cx} cy={pt.cy} r={2.5}
-              fill={WHITE} stroke={BLUE} strokeWidth={1}
-              initial={reduceMotion ? false : { scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ duration: 0.25, delay: 0.7 + i * 0.12 }}
-              style={{ transformBox: "fill-box", transformOrigin: "center" }}
-            />
-          ))}
-          <line x1={28} y1={64} x2={108} y2={64} stroke={MUTED} strokeWidth={0.5} strokeOpacity={0.35} />
-        </ChartPanel>
+          <line x1={28} y1={64} x2={116} y2={64} stroke={MUTED} strokeWidth={0.5} strokeOpacity={0.35} />
+        </FloatPanel>
 
-        {/* Panel 2 — donut + lines */}
-        <ChartPanel x={200} y={36} w={76} h={52} delay={0.28} reduceMotion={reduceMotion}>
-          <circle cx="236" cy="58" r="14" stroke={MUTED} strokeWidth={0.75} strokeOpacity={0.3} />
+        {/* ── Panel 2 — donut (top-right) ── */}
+        <FloatPanel delay={0.28} float={animate}>
+          <rect x={196} y={34} width={82} height={56} rx={10} fill={WHITE} stroke={INK} strokeWidth={1} strokeOpacity={0.12} />
+          <rect x={196} y={34} width={82} height={56} rx={10} fill={BLUE} fillOpacity={0.03} />
+          <circle cx={228} cy={62} r={15} stroke={MUTED} strokeWidth={3} strokeOpacity={0.25} />
           <motion.circle
-            cx="236" cy="58" r="14"
+            cx={228}
+            cy={62}
+            r={15}
             stroke={BLUE}
             strokeWidth={3}
             strokeLinecap="round"
-            strokeDasharray="44 44"
-            strokeDashoffset="22"
-            initial={reduceMotion ? false : { pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 0.8, delay: 0.55, ease: "easeOut" }}
+            transform="rotate(-90 228 62)"
+            initial={animate ? { pathLength: 0 } : { pathLength: 0.68 }}
+            animate={{ pathLength: 0.68 }}
+            transition={{ duration: 0.9, delay: 0.55, ease: "easeOut" }}
           />
           {[0, 1, 2].map((i) => (
-            <rect key={i} x={210} y={44 + i * 7} width={16 - i * 3} height={2} rx={1} fill={MUTED} fillOpacity={0.35} />
+            <rect key={i} x={250} y={50 + i * 8} width={18 - i * 4} height={2.5} rx={1.25} fill={MUTED} fillOpacity={0.4} />
           ))}
-        </ChartPanel>
+        </FloatPanel>
 
-        {/* Panel 3 — bar chart */}
-        <ChartPanel x={34} y={142} w={80} h={46} delay={0.4} reduceMotion={reduceMotion}>
-          {[0, 1, 2, 3, 4].map((i) => (
-            <motion.rect
-              key={i}
-              x={46 + i * 12}
-              y={168 - (8 + i * 5)}
-              width={7}
-              height={8 + i * 5}
-              rx={2}
-              fill={i === 4 ? BLUE : BLUE}
-              fillOpacity={i === 4 ? 0.85 : 0.2 + i * 0.12}
-              initial={reduceMotion ? false : { scaleY: 0 }}
-              animate={{ scaleY: 1 }}
-              transition={{ duration: 0.4, delay: 0.65 + i * 0.07, ease }}
-              style={{ transformOrigin: `${49.5 + i * 12}px 178px`, transformBox: "fill-box" }}
-            />
-          ))}
-          <line x1={42} y1={178} x2={106} y2={178} stroke={MUTED} strokeWidth={0.5} strokeOpacity={0.35} />
-        </ChartPanel>
+        {/* ── Panel 3 — bar chart (bottom-left) ── */}
+        <FloatPanel delay={0.4} float={animate}>
+          <rect x={30} y={140} width={86} height={50} rx={10} fill={WHITE} stroke={INK} strokeWidth={1} strokeOpacity={0.12} />
+          <rect x={30} y={140} width={86} height={50} rx={10} fill={BLUE} fillOpacity={0.03} />
+          {[0, 1, 2, 3, 4].map((i) => {
+            const h = 8 + i * 5;
+            return (
+              <motion.rect
+                key={i}
+                x={44 + i * 13}
+                y={180 - h}
+                width={8}
+                height={h}
+                rx={2}
+                fill={BLUE}
+                fillOpacity={i === 4 ? 0.85 : 0.2 + i * 0.12}
+                initial={animate ? { scaleY: 0 } : false}
+                animate={{ scaleY: 1 }}
+                transition={{ duration: 0.4, delay: 0.65 + i * 0.07, ease: [0.16, 1, 0.3, 1] }}
+                style={{ transformOrigin: "50% 100%", transformBox: "fill-box" }}
+              />
+            );
+          })}
+          <line x1={40} y1={180} x2={110} y2={180} stroke={MUTED} strokeWidth={0.5} strokeOpacity={0.35} />
+        </FloatPanel>
 
-        {/* Man — points at line chart */}
+        {/* ── Man — points at chart ── */}
         <motion.g
-          initial={reduceMotion ? false : { opacity: 0, x: -6 }}
+          initial={animate ? { opacity: 0, x: -6 } : false}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.55, delay: 0.35, ease }}
+          transition={{ duration: 0.55, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
         >
-          <circle cx="88" cy="108" r="11" fill={WHITE} stroke={INK} strokeWidth={STROKE} strokeOpacity={0.85} />
-          <path d="M 82 102 Q 88 96 94 102" stroke={INK} strokeWidth={STROKE} strokeOpacity={0.5} strokeLinecap="round" fill="none" />
+          {/* head */}
+          <circle cx={92} cy={110} r={11} fill={WHITE} stroke={INK} strokeWidth={1.1} strokeOpacity={0.9} />
+          <path d="M 86 105 Q 92 99 98 105" stroke={INK} strokeWidth={1} strokeOpacity={0.5} strokeLinecap="round" />
+          {/* body */}
           <path
-            d="M 72 120 Q 78 118 88 119 L 98 120 Q 104 122 104 132 L 102 152 L 94 152 L 92 132 L 84 132 L 82 152 L 74 152 L 72 132 Z"
+            d="M 78 124 Q 84 121 92 122 L 100 123 Q 106 125 106 135 L 104 156 L 96 156 L 94 136 L 88 136 L 86 156 L 78 156 L 76 135 Q 76 127 78 124 Z"
             fill={BLUE_SOFT}
             stroke={INK}
-            strokeWidth={STROKE}
-            strokeOpacity={0.85}
+            strokeWidth={1.1}
+            strokeOpacity={0.9}
             strokeLinejoin="round"
           />
-          <path d="M 74 152 L 72 178 M 82 152 L 84 178" stroke={INK} strokeWidth={STROKE * 1.1} strokeLinecap="round" strokeOpacity={0.9} />
-          <motion.path
-            d="M 98 124 L 118 88"
-            stroke={INK}
-            strokeWidth={STROKE}
-            strokeLinecap="round"
-            strokeOpacity={0.85}
-            initial={reduceMotion ? false : { pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 0.45, delay: 0.75, ease: "easeOut" }}
-          />
-          <circle cx="118" cy="88" r="3" fill={BLUE} />
+          {/* legs */}
+          <path d="M 80 156 L 78 182 M 90 156 L 92 182" stroke={INK} strokeWidth={1.3} strokeLinecap="round" strokeOpacity={0.9} />
+          {/* feet */}
+          <path d="M 78 182 L 73 184 M 92 182 L 97 184" stroke={INK} strokeWidth={1.3} strokeLinecap="round" strokeOpacity={0.9} />
+          {/* pointing arm */}
+          <path d="M 102 128 L 120 96" stroke={INK} strokeWidth={1.1} strokeLinecap="round" strokeOpacity={0.9} />
+          <circle cx={120} cy={96} r={2.5} fill={BLUE} />
         </motion.g>
 
-        {/* Woman — clipboard */}
+        {/* ── Woman — clipboard ── */}
         <motion.g
-          initial={reduceMotion ? false : { opacity: 0, x: 6 }}
+          initial={animate ? { opacity: 0, x: 6 } : false}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.55, delay: 0.42, ease }}
+          transition={{ duration: 0.55, delay: 0.42, ease: [0.16, 1, 0.3, 1] }}
         >
-          <circle cx="218" cy="104" r="11" fill={WHITE} stroke={INK} strokeWidth={STROKE} strokeOpacity={0.85} />
+          {/* head */}
+          <circle cx={206} cy={112} r={11} fill={WHITE} stroke={INK} strokeWidth={1.1} strokeOpacity={0.9} />
+          {/* hair */}
+          <path d="M 216 107 C 222 105 227 110 224 118 C 222 123 217 124 214 120" fill={INK} fillOpacity={0.85} />
+          {/* body */}
           <path
-            d="M 228 98 C 234 96 240 100 238 108 C 236 116 228 118 224 112"
-            fill={INK}
-            fillOpacity={0.85}
-          />
-          <path
-            d="M 208 118 L 218 117 L 226 120 L 228 132 L 224 148 L 212 148 L 208 132 Z"
+            d="M 196 126 Q 202 123 206 124 L 214 125 Q 220 127 220 137 L 217 158 L 209 158 L 207 137 L 203 137 L 200 158 L 193 158 L 191 137 Q 191 129 196 126 Z"
             fill={WHITE}
             stroke={INK}
-            strokeWidth={STROKE}
-            strokeOpacity={0.85}
+            strokeWidth={1.1}
+            strokeOpacity={0.9}
             strokeLinejoin="round"
           />
-          <path
-            d="M 210 148 L 208 176 M 222 148 L 224 176"
-            stroke={INK}
-            strokeWidth={STROKE * 1.1}
-            strokeLinecap="round"
-            strokeOpacity={0.9}
-          />
-          <rect x="196" y="122" width="14" height="20" rx="2" fill={WHITE} stroke={INK} strokeWidth={STROKE} strokeOpacity={0.7} />
-          <line x1={199} y1={128} x2={207} y2={128} stroke={MUTED} strokeWidth={0.5} strokeOpacity={0.5} />
-          <line x1={199} y1={133} x2={205} y2={133} stroke={MUTED} strokeWidth={0.5} strokeOpacity={0.5} />
-          <path d="M 212 176 L 208 182 M 224 176 L 228 182" stroke={INK} strokeWidth={STROKE} strokeLinecap="round" strokeOpacity={0.75} />
+          {/* legs */}
+          <path d="M 197 158 L 195 182 M 211 158 L 213 182" stroke={INK} strokeWidth={1.3} strokeLinecap="round" strokeOpacity={0.9} />
+          <path d="M 195 182 L 190 184 M 213 182 L 218 184" stroke={INK} strokeWidth={1.3} strokeLinecap="round" strokeOpacity={0.9} />
+          {/* clipboard */}
+          <rect x={216} y={128} width={15} height={20} rx={2} fill={WHITE} stroke={INK} strokeWidth={1} strokeOpacity={0.8} />
+          <rect x={221} y={126} width={5} height={3} rx={1} fill={BLUE} fillOpacity={0.7} />
+          <line x1={219} y1={134} x2={228} y2={134} stroke={MUTED} strokeWidth={0.75} strokeOpacity={0.5} />
+          <line x1={219} y1={138} x2={226} y2={138} stroke={MUTED} strokeWidth={0.75} strokeOpacity={0.5} />
+          <line x1={219} y1={142} x2={228} y2={142} stroke={MUTED} strokeWidth={0.75} strokeOpacity={0.5} />
+          {/* arm to clipboard */}
+          <path d="M 213 130 L 218 136" stroke={INK} strokeWidth={1.1} strokeLinecap="round" strokeOpacity={0.9} />
         </motion.g>
-      </motion.svg>
+      </svg>
     </div>
   );
 }
