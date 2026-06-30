@@ -196,7 +196,7 @@ export default function DoctorDashboard() {
             onClick={() => { setPendingPreset(filterPreset); setShowCustom(false); setFilterOpen(true); }}
             className="dash-btn-ghost text-xs py-1.5 px-3 flex items-center gap-1.5"
           >
-            <SlidersHorizontal className="w-3.5 h-3.5 text-[#94a3b8]" />
+            <SlidersHorizontal className="w-3.5 h-3.5 text-[var(--text-subtle)]" />
             {filterLabel}
           </button>
         </div>
@@ -387,20 +387,23 @@ export default function DoctorDashboard() {
         </p>
         <div className="grid grid-cols-2 gap-2">
           {[
-            { label: t("nav.patients"),    icon: Users,       path: "/patients",         color: "bg-blue-50 text-blue-600" },
-            { label: t("nav.schedule"),    icon: Calendar,    path: "/schedule",         color: "bg-violet-50 text-violet-600" },
-            { label: t("nav.myAnalytics"), icon: BarChart3,   path: "/doctor-analytics", color: "bg-emerald-50 text-emerald-600" },
-            { label: t("nav.chat"),        icon: UserPlus,    path: "/chat",             color: "bg-amber-50 text-amber-600" },
+            { label: t("nav.patients"),    icon: Users,     path: "/patients",         bg: "#e0e7ff", accent: "#4f46e5" },
+            { label: t("nav.schedule"),    icon: Calendar,  path: "/schedule",         bg: "#f5f3ff", accent: "#7c3aed" },
+            { label: t("nav.myAnalytics"), icon: BarChart3, path: "/doctor-analytics", bg: "#f0fdf4", accent: "#16a34a" },
+            { label: t("nav.chat"),        icon: UserPlus,  path: "/chat",             bg: "#fef3c7", accent: "#d97706" },
           ].map((item) => (
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className="flex items-center gap-2.5 p-3 rounded-2xl border border-[#e8e3d9] hover:border-[#1f75fe]/30 hover:bg-[#1f75fe]/5 transition-all text-left group"
+              className="flex items-center gap-2.5 p-3 rounded-2xl border border-[var(--border)] hover:border-[var(--primary)]/30 hover:bg-[var(--primary-light)] transition-all text-left group"
             >
-              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${item.color} group-hover:bg-[#1f75fe] group-hover:text-white transition-colors`}>
+              <div
+                className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors group-hover:bg-[var(--primary)] group-hover:text-white"
+                style={{ backgroundColor: item.bg, color: item.accent }}
+              >
                 <item.icon className="w-4 h-4" />
               </div>
-              <span className="text-xs font-semibold text-[#0f172a]">{item.label}</span>
+              <span className="text-xs font-semibold text-[var(--text)]">{item.label}</span>
             </button>
           ))}
         </div>

@@ -197,11 +197,11 @@ export default function AdminDashboard() {
 
           {todayProcedures.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
-              <Calendar className="w-10 h-10 text-[#94a3b8] mb-3" />
-              <p className="text-[#64748b] font-medium">{t("adminDashboard.noSchedule")}</p>
+              <Calendar className="w-10 h-10 text-[var(--text-subtle)] mb-3" />
+              <p className="text-[var(--text-secondary)] font-medium">{t("adminDashboard.noSchedule")}</p>
             </div>
           ) : (
-            <div className="divide-y divide-[#e8e3d9]">
+            <div className="divide-y divide-[var(--border)]">
               {todayProcedures.slice(0, 8).map((proc, i) => {
                 const patient = patients.find((p) => p.id === proc.patientId);
                 const timeStr = proc.scheduledAt
@@ -216,16 +216,16 @@ export default function AdminDashboard() {
                     className="flex items-center gap-4 py-3"
                   >
                     <div className="w-12 text-center flex-none">
-                      <span className="text-sm font-bold text-[#1f75fe]">{timeStr}</span>
+                      <span className="text-sm font-bold text-[var(--primary)]">{timeStr}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-[#0f172a] truncate">{proc.name}</p>
-                      <p className="text-xs text-[#64748b]">
+                      <p className="text-sm font-semibold text-[var(--text)] truncate">{proc.name}</p>
+                      <p className="text-xs text-[var(--text-secondary)]">
                         {patient?.name ?? "—"}
                         {proc.doctorName && ` · ${proc.doctorName}`}
                       </p>
                     </div>
-                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[#e0f2fe] text-[#0284c7] flex-none">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[var(--info-light)] text-[var(--info)] flex-none">
                       {t("adminDashboard.scheduled")}
                     </span>
                   </motion.div>
@@ -249,35 +249,35 @@ export default function AdminDashboard() {
               )}
             </h3>
             {pendingPaymentQueue.length === 0 ? (
-              <p className="text-sm text-[#94a3b8] py-2">Нет ожидающих оплат</p>
+              <p className="text-sm text-[var(--text-subtle)] py-2">Нет ожидающих оплат</p>
             ) : (
               <div className="space-y-4">
                 {todayPendingPayment.length > 0 && (
                   <div>
-                    <p className="text-[10px] font-bold text-[#16a34a] uppercase tracking-wide mb-1.5">Сегодня</p>
+                    <p className="text-[10px] font-bold text-[var(--success)] uppercase tracking-wide mb-1.5">Сегодня</p>
                     <div className="space-y-2">
                       {todayPendingPayment.map((proc) => {
                         const patient = patients.find((p) => p.id === proc.patientId);
                         const isSelecting = selectingPayment === proc.id;
                         const isSaving = updatePayment.isPending;
                         return (
-                          <div key={proc.id} className="flex flex-col gap-2 p-3 rounded-xl bg-[#f0fdf4]/50 border border-[#f0fdf4]">
+                          <div key={proc.id} className="flex flex-col gap-2 p-3 rounded-xl bg-[var(--success-light)]/50 border border-[var(--success-light)]">
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1 min-w-0">
-                                <p className="text-xs font-semibold text-[#0f172a] truncate">{proc.name}</p>
-                                <p className="text-[10px] text-[#64748b] truncate">
+                                <p className="text-xs font-semibold text-[var(--text)] truncate">{proc.name}</p>
+                                <p className="text-[10px] text-[var(--text-secondary)] truncate">
                                   {patient?.name ?? "—"}{proc.doctorName && ` · ${proc.doctorName}`}
                                 </p>
-                                <p className="text-[10px] font-bold text-[#16a34a] mt-0.5">
+                                <p className="text-[10px] font-bold text-[var(--success)] mt-0.5">
                                   {proc.price ? formatMoney(proc.price) : "—"}
                                 </p>
                               </div>
                               {!isSelecting && (
                                 <button
                                   onClick={() => setSelectingPayment(proc.id)}
-                                  className="shrink-0 flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold rounded-lg bg-[#f0fdf4] text-[#16a34a] hover:bg-[#f0fdf4]/80 transition-colors"
+                                  className="shrink-0 flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold rounded-lg bg-[var(--success-light)] text-[var(--success)] hover:bg-[var(--success-light)]/80 transition-colors"
                                 >
-                                  <CheckCircle2 className="w-3 h-3 text-[#16a34a]" />
+                                  <CheckCircle2 className="w-3 h-3 text-[var(--success)]" />
                                   Оплата
                                 </button>
                               )}
@@ -289,14 +289,14 @@ export default function AdminDashboard() {
                                     key={method}
                                     disabled={isSaving}
                                     onClick={() => updatePayment.mutate({ id: proc.id, data: { paymentMethod: method } })}
-                                    className="px-1.5 py-0.5 text-[9px] font-medium rounded-md border border-[#e8e3d9] bg-white hover:border-[#1f75fe] hover:bg-[#1f75fe]/10 hover:text-[#1f75fe] transition-colors disabled:opacity-50"
+                                    className="px-1.5 py-0.5 text-[9px] font-medium rounded-md border border-[var(--border)] bg-white hover:border-[var(--primary)] hover:bg-[var(--primary-light)] hover:text-[var(--primary)] transition-colors disabled:opacity-50"
                                   >
                                     {PAYMENT_METHOD_LABELS[method]}
                                   </button>
                                 ))}
                                 <button
                                   onClick={() => setSelectingPayment(null)}
-                                  className="px-1.5 py-0.5 text-[9px] font-medium rounded-md border border-[#e8e3d9] text-[#94a3b8] bg-white hover:bg-[#f1ede4] transition-colors"
+                                  className="px-1.5 py-0.5 text-[9px] font-medium rounded-md border border-[var(--border)] text-[var(--text-subtle)] bg-white hover:bg-[var(--surface-2)] transition-colors"
                                 >
                                   Отмена
                                 </button>
@@ -310,30 +310,30 @@ export default function AdminDashboard() {
                 )}
                 {overduePendingPayment.length > 0 && (
                   <div>
-                    <p className="text-[10px] font-bold text-[#dc2626] uppercase tracking-wide mb-1.5">Незакрытые</p>
+                    <p className="text-[10px] font-bold text-[var(--danger)] uppercase tracking-wide mb-1.5">Незакрытые</p>
                     <div className="space-y-2">
                       {overduePendingPayment.map((proc) => {
                         const patient = patients.find((p) => p.id === proc.patientId);
                         const isSelecting = selectingPayment === proc.id;
                         const isSaving = updatePayment.isPending;
                         return (
-                          <div key={proc.id} className="flex flex-col gap-2 p-3 rounded-xl bg-[#fef2f2]/50 border border-[#fef2f2]">
+                          <div key={proc.id} className="flex flex-col gap-2 p-3 rounded-xl bg-[var(--danger-light)]/50 border border-[var(--danger-light)]">
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1 min-w-0">
-                                <p className="text-xs font-semibold text-[#0f172a] truncate">{proc.name}</p>
-                                <p className="text-[10px] text-[#64748b] truncate">
+                                <p className="text-xs font-semibold text-[var(--text)] truncate">{proc.name}</p>
+                                <p className="text-[10px] text-[var(--text-secondary)] truncate">
                                   {patient?.name ?? "—"}{proc.doctorName && ` · ${proc.doctorName}`}
                                 </p>
-                                <p className="text-[10px] font-bold text-[#dc2626] mt-0.5">
-                                  {proc.price ? formatMoney(proc.price) : "—"} · <span className="text-[9px] text-[#dc2626] font-semibold">{fmtOverdueDate(proc)}</span>
+                                <p className="text-[10px] font-bold text-[var(--danger)] mt-0.5">
+                                  {proc.price ? formatMoney(proc.price) : "—"} · <span className="text-[9px] text-[var(--danger)] font-semibold">{fmtOverdueDate(proc)}</span>
                                 </p>
                               </div>
                               {!isSelecting && (
                                 <button
                                   onClick={() => setSelectingPayment(proc.id)}
-                                  className="shrink-0 flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold rounded-lg bg-[#fef2f2] text-[#dc2626] hover:bg-[#fef2f2]/80 transition-colors"
+                                  className="shrink-0 flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold rounded-lg bg-[var(--danger-light)] text-[var(--danger)] hover:bg-[var(--danger-light)]/80 transition-colors"
                                 >
-                                  <CheckCircle2 className="w-3 h-3 text-[#dc2626]" />
+                                  <CheckCircle2 className="w-3 h-3 text-[var(--danger)]" />
                                   Оплата
                                 </button>
                               )}
@@ -345,14 +345,14 @@ export default function AdminDashboard() {
                                     key={method}
                                     disabled={isSaving}
                                     onClick={() => updatePayment.mutate({ id: proc.id, data: { paymentMethod: method } })}
-                                    className="px-1.5 py-0.5 text-[9px] font-medium rounded-md border border-[#e8e3d9] bg-white hover:border-[#1f75fe] hover:bg-[#1f75fe]/10 hover:text-[#1f75fe] transition-colors disabled:opacity-50"
+                                    className="px-1.5 py-0.5 text-[9px] font-medium rounded-md border border-[var(--border)] bg-white hover:border-[var(--primary)] hover:bg-[var(--primary-light)] hover:text-[var(--primary)] transition-colors disabled:opacity-50"
                                   >
                                     {PAYMENT_METHOD_LABELS[method]}
                                   </button>
                                 ))}
                                 <button
                                   onClick={() => setSelectingPayment(null)}
-                                  className="px-1.5 py-0.5 text-[9px] font-medium rounded-md border border-[#e8e3d9] text-[#94a3b8] bg-white hover:bg-[#f1ede4] transition-colors"
+                                  className="px-1.5 py-0.5 text-[9px] font-medium rounded-md border border-[var(--border)] text-[var(--text-subtle)] bg-white hover:bg-[var(--surface-2)] transition-colors"
                                 >
                                   Отмена
                                 </button>
@@ -378,8 +378,8 @@ export default function AdminDashboard() {
             </div>
             {topDoctors.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-4 text-center">
-                <Stethoscope className="w-8 h-8 text-[#94a3b8] mb-2" />
-                <p className="text-[#64748b] text-sm">{t("adminDashboard.noDoctor")}</p>
+                <Stethoscope className="w-8 h-8 text-[var(--text-subtle)] mb-2" />
+                <p className="text-[var(--text-secondary)] text-sm">{t("adminDashboard.noDoctor")}</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -389,20 +389,20 @@ export default function AdminDashboard() {
                     <div key={doc.doctorId}>
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-xs font-bold text-[#94a3b8] w-4 shrink-0">{i + 1}</span>
-                          <span className="text-sm font-medium text-[#0f172a] truncate">{doc.doctorName}</span>
+                          <span className="text-xs font-bold text-[var(--text-subtle)] w-4 shrink-0">{i + 1}</span>
+                          <span className="text-sm font-medium text-[var(--text)] truncate">{doc.doctorName}</span>
                         </div>
-                        <span className="text-xs font-bold text-[#16a34a] shrink-0 ml-2">
+                        <span className="text-xs font-bold text-[var(--success)] shrink-0 ml-2">
                           {formatMoney(doc.revenueTotal)}
                         </span>
                       </div>
-                      <div className="w-full bg-[#f1ede4] rounded-full h-1.5">
+                      <div className="w-full bg-[var(--surface-2)] rounded-full h-1.5">
                         <div
                           className="h-1.5 rounded-full transition-all"
                           style={{ width: `${pct}%`, backgroundColor: BRAND_BLUE }}
                         />
                       </div>
-                      <p className="text-[10px] text-[#94a3b8] mt-0.5">
+                      <p className="text-[10px] text-[var(--text-subtle)] mt-0.5">
                         {doc.proceduresCount} {t("adminDashboard.procedures")} · {doc.patientsCount} {t("adminDashboard.patients")}
                       </p>
                     </div>

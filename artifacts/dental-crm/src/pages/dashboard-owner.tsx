@@ -603,7 +603,7 @@ export default function OwnerDashboard() {
         </p>
         <div className="grid grid-cols-2 gap-2">
           {[
-            { label: t("ownerDashboard.manageStaff"), icon: Contact, path: "/users", bg: "#f1f5f9", accent: "#64748b" },
+            { label: t("ownerDashboard.manageStaff"), icon: Contact, path: "/users", bg: "#f1ede4", accent: "#64748b" },
             { label: t("nav.patients"), icon: Users, path: "/patients", bg: "#e0e7ff", accent: "#4f46e5" },
             { label: t("nav.procedures"), icon: Stethoscope, path: "/procedures", bg: "#fce7f3", accent: "#db2777" },
           ].map((item) => (

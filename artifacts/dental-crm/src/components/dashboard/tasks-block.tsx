@@ -4,6 +4,7 @@ import {
 } from "lucide-react";
 import { format, parseISO, startOfDay, endOfDay } from "date-fns";
 import type { Procedure } from "@workspace/api-client-react";
+import "@/styles/dashboard.css";
 
 interface Patient {
   id: string;
@@ -56,20 +57,19 @@ export function TasksBlock({ procedures, patients }: TasksBlockProps) {
 
   return (
     <>
-      {/* ─── Задачи за сегодня ─── */}
-      <div className="mx-4 mt-4 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-4 pt-4 pb-3 flex items-center justify-between border-b border-gray-50">
+      <div className="mx-4 mt-4 dashboard-page dash-card overflow-hidden">
+        <div className="px-4 pt-4 pb-3 flex items-center justify-between border-b border-[var(--border)]">
           <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-primary" />
-            <span className="text-sm font-bold text-gray-900">Задачи за сегодня</span>
+            <Clock className="w-4 h-4 text-[var(--primary)]" />
+            <span className="text-sm font-bold text-[var(--text)]">Задачи за сегодня</span>
             {todayCount > 0 && (
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+              <span className="dash-badge dash-badge-warning">
                 {todayCount}
               </span>
             )}
           </div>
           {allClear && (
-            <div className="flex items-center gap-1 text-xs font-semibold text-emerald-600">
+            <div className="flex items-center gap-1 text-xs font-semibold text-[var(--success)]">
               <CheckCircle2 className="w-3.5 h-3.5" />
               Всё закрыто
             </div>
@@ -78,32 +78,32 @@ export function TasksBlock({ procedures, patients }: TasksBlockProps) {
 
         {todayCount === 0 ? (
           <div className="flex flex-col items-center justify-center py-6 gap-1.5">
-            <CheckCircle2 className="w-8 h-8 text-emerald-400" />
-            <p className="text-sm font-medium text-gray-500">Нет задач на сегодня</p>
+            <CheckCircle2 className="w-8 h-8 text-[var(--success)] opacity-60" />
+            <p className="text-sm font-medium text-[var(--text-secondary)]">Нет задач на сегодня</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-50">
+          <div className="divide-y divide-[var(--border)]">
             {todayPending.length > 0 && (
               <div className="px-4 py-3">
                 <div className="flex items-center gap-1.5 mb-2">
-                  <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
-                  <span className="text-xs font-bold text-rose-600 uppercase tracking-wide">Ожидают оплату</span>
-                  <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-600 ml-auto">{todayPending.length}</span>
+                  <AlertCircle className="w-3.5 h-3.5 text-[var(--danger)]" />
+                  <span className="text-xs font-bold text-[var(--danger)] uppercase tracking-wide">Ожидают оплату</span>
+                  <span className="dash-badge dash-badge-danger ml-auto">{todayPending.length}</span>
                 </div>
                 <div className="space-y-1.5">
                   {todayPending.slice(0, 4).map((proc) => {
                     const patient = patients.find((p) => p.id === proc.patientId);
                     return (
-                      <div key={proc.id} className="flex items-center gap-2.5 p-2 rounded-xl bg-rose-50 border border-rose-100">
-                        <div className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0" />
+                      <div key={proc.id} className="flex items-center gap-2.5 p-2 rounded-xl bg-[var(--danger-light)] border border-[var(--danger-light)]">
+                        <div className="w-1.5 h-1.5 rounded-full bg-[var(--danger)] shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-gray-900 truncate">{proc.name}</p>
-                          <p className="text-[10px] text-gray-500 truncate">
+                          <p className="text-xs font-semibold text-[var(--text)] truncate">{proc.name}</p>
+                          <p className="text-[10px] text-[var(--text-secondary)] truncate">
                             {patient?.name ?? "—"}{proc.doctorName ? ` · ${proc.doctorName}` : ""}
                           </p>
                         </div>
                         {proc.price != null && proc.price > 0 && (
-                          <span className="text-xs font-bold text-rose-700 shrink-0">
+                          <span className="text-xs font-bold text-[var(--danger)] shrink-0">
                             {proc.price.toLocaleString("ru-RU")} ₸
                           </span>
                         )}
@@ -111,7 +111,7 @@ export function TasksBlock({ procedures, patients }: TasksBlockProps) {
                     );
                   })}
                   {todayPending.length > 4 && (
-                    <p className="text-[11px] text-gray-400 text-center pt-0.5">+ ещё {todayPending.length - 4}</p>
+                    <p className="text-[11px] text-[var(--text-subtle)] text-center pt-0.5">+ ещё {todayPending.length - 4}</p>
                   )}
                 </div>
               </div>
@@ -120,19 +120,19 @@ export function TasksBlock({ procedures, patients }: TasksBlockProps) {
             {todayInProgress.length > 0 && (
               <div className="px-4 py-3">
                 <div className="flex items-center gap-1.5 mb-2">
-                  <Circle className="w-3.5 h-3.5 text-amber-500" />
-                  <span className="text-xs font-bold text-amber-600 uppercase tracking-wide">В работе</span>
-                  <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 ml-auto">{todayInProgress.length}</span>
+                  <Circle className="w-3.5 h-3.5 text-[var(--warning)]" />
+                  <span className="text-xs font-bold text-[var(--warning)] uppercase tracking-wide">В работе</span>
+                  <span className="dash-badge dash-badge-warning ml-auto">{todayInProgress.length}</span>
                 </div>
                 <div className="space-y-1.5">
                   {todayInProgress.slice(0, 4).map((proc) => {
                     const patient = patients.find((p) => p.id === proc.patientId);
                     return (
-                      <div key={proc.id} className="flex items-center gap-2.5 p-2 rounded-xl bg-amber-50 border border-amber-100">
-                        <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
+                      <div key={proc.id} className="flex items-center gap-2.5 p-2 rounded-xl bg-[var(--warning-light)] border border-[var(--warning-light)]">
+                        <div className="w-1.5 h-1.5 rounded-full bg-[var(--warning)] animate-pulse shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-gray-900 truncate">{proc.name}</p>
-                          <p className="text-[10px] text-gray-500 truncate">
+                          <p className="text-xs font-semibold text-[var(--text)] truncate">{proc.name}</p>
+                          <p className="text-[10px] text-[var(--text-secondary)] truncate">
                             {patient?.name ?? "—"}{proc.doctorName ? ` · ${proc.doctorName}` : ""}
                           </p>
                         </div>
@@ -140,7 +140,7 @@ export function TasksBlock({ procedures, patients }: TasksBlockProps) {
                     );
                   })}
                   {todayInProgress.length > 4 && (
-                    <p className="text-[11px] text-gray-400 text-center pt-0.5">+ ещё {todayInProgress.length - 4}</p>
+                    <p className="text-[11px] text-[var(--text-subtle)] text-center pt-0.5">+ ещё {todayInProgress.length - 4}</p>
                   )}
                 </div>
               </div>
@@ -149,20 +149,20 @@ export function TasksBlock({ procedures, patients }: TasksBlockProps) {
             {todayScheduled.length > 0 && (
               <div className="px-4 py-3">
                 <div className="flex items-center gap-1.5 mb-2">
-                  <CalendarDays className="w-3.5 h-3.5 text-blue-500" />
-                  <span className="text-xs font-bold text-blue-600 uppercase tracking-wide">Расписание на сегодня</span>
-                  <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-600 ml-auto">{todayScheduled.length}</span>
+                  <CalendarDays className="w-3.5 h-3.5 text-[var(--info)]" />
+                  <span className="text-xs font-bold text-[var(--info)] uppercase tracking-wide">Расписание на сегодня</span>
+                  <span className="dash-badge dash-badge-primary ml-auto">{todayScheduled.length}</span>
                 </div>
                 <div className="space-y-1.5">
                   {todayScheduled.slice(0, 5).map((proc) => {
                     const patient = patients.find((p) => p.id === proc.patientId);
                     const timeStr = proc.scheduledAt ? format(parseISO(proc.scheduledAt), "HH:mm") : "—";
                     return (
-                      <div key={proc.id} className="flex items-center gap-2.5 p-2 rounded-xl bg-blue-50 border border-blue-100">
-                        <span className="text-xs font-bold text-blue-700 w-10 shrink-0">{timeStr}</span>
+                      <div key={proc.id} className="flex items-center gap-2.5 p-2 rounded-xl bg-[var(--info-light)] border border-[var(--info-light)]">
+                        <span className="text-xs font-bold text-[var(--info)] w-10 shrink-0">{timeStr}</span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-gray-900 truncate">{proc.name}</p>
-                          <p className="text-[10px] text-gray-500 truncate">
+                          <p className="text-xs font-semibold text-[var(--text)] truncate">{proc.name}</p>
+                          <p className="text-[10px] text-[var(--text-secondary)] truncate">
                             {patient?.name ?? "—"}{proc.doctorName ? ` · ${proc.doctorName}` : ""}
                           </p>
                         </div>
@@ -170,7 +170,7 @@ export function TasksBlock({ procedures, patients }: TasksBlockProps) {
                     );
                   })}
                   {todayScheduled.length > 5 && (
-                    <p className="text-[11px] text-gray-400 text-center pt-0.5">+ ещё {todayScheduled.length - 5}</p>
+                    <p className="text-[11px] text-[var(--text-subtle)] text-center pt-0.5">+ ещё {todayScheduled.length - 5}</p>
                   )}
                 </div>
               </div>
