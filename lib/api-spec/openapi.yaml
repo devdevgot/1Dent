@@ -24,6 +24,8 @@ tags:
     description: Analytics and KPI
   - name: channels
     description: Channel tracking and UTM analytics
+  - name: billing
+    description: Subscription and plan upgrade requests
 
 paths:
   /healthz:
@@ -154,6 +156,95 @@ paths:
                 $ref: "#/components/schemas/SuccessResponse"
         "400":
           description: Wrong current password or validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/forgot-password:
+    post:
+      operationId: forgotPassword
+      tags: [auth]
+      summary: Request password reset email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordRequest"
+      responses:
+        "200":
+          description: Reset email sent if account exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForgotPasswordResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/reset-password:
+    post:
+      operationId: resetPassword
+      tags: [auth]
+      summary: Reset password with token from email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
+      responses:
+        "200":
+          description: Password reset successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /plan-requests:
+    post:
+      operationId: createPlanRequest
+      tags: [billing]
+      summary: Submit plan upgrade or pricing request
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePlanRequest"
+      responses:
+        "201":
+          description: Plan request created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanRequestResponse"
+        "400":
+          description: Validation error
           content:
             application/json:
               schema:
@@ -2505,6 +2596,82 @@ components:
       required:
         - currentPassword
         - newPassword
+
+    ForgotPasswordRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required:
+        - email
+
+    ForgotPasswordResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+        devToken:
+          type: string
+          description: Present only in non-production for testing reset flow
+      required:
+        - success
+        - message
+
+    ResetPasswordRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 1
+        newPassword:
+          type: string
+          minLength: 6
+      required:
+        - token
+        - newPassword
+
+    CreatePlanRequest:
+      type: object
+      properties:
+        plan:
+          type: string
+          minLength: 1
+        contactName:
+          type: string
+          minLength: 1
+        contactPhone:
+          type: string
+          minLength: 5
+        contactEmail:
+          type: string
+          format: email
+        message:
+          type: string
+      required:
+        - plan
+        - contactName
+        - contactPhone
+
+    PlanRequestResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+          required:
+            - id
+      required:
+        - success
+        - data
 
     CreateUserRequest:
       type: object

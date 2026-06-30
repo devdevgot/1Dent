@@ -3,10 +3,10 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 
-import { getBaseUrl } from "@/lib/base-url";
+import { useResetPassword } from "@workspace/api-client-react";
 
 export default function ResetPassword() {
-  const [location, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
 
   // Extract token from query string
   const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
@@ -16,13 +16,20 @@ export default function ResetPassword() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
-  const apiBase = getBaseUrl();
+  const resetMutation = useResetPassword({
+    mutation: {
+      onSuccess: () => setSuccess(true),
+      onError: (err) => {
+        const msg = (err as { data?: { error?: string } }).data?.error;
+        setError(msg ?? "Ссылка недействительна или истекла. Запросите сброс повторно.");
+      },
+    },
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -39,25 +46,7 @@ export default function ResetPassword() {
       return;
     }
 
-    setLoading(true);
-    try {
-      const res = await fetch(`${apiBase}/api/auth/reset-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, newPassword }),
-        credentials: "include",
-      });
-      const data = await res.json() as { success?: boolean; error?: string };
-      if (data.success) {
-        setSuccess(true);
-      } else {
-        setError(data.error ?? "Ссылка недействительна или истекла. Запросите сброс повторно.");
-      }
-    } catch {
-      setError("Произошла ошибка. Проверьте подключение.");
-    } finally {
-      setLoading(false);
-    }
+    resetMutation.mutate({ data: { token, newPassword } });
   };
 
   if (!token) {
@@ -162,10 +151,10 @@ export default function ResetPassword() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={resetMutation.isPending}
               className="w-full py-4 rounded-full text-base font-semibold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed hover:scale-105 active:scale-95 mt-2 bg-[#1f75fe] hover:bg-[#1a65e8] text-white"
             >
-              {loading ? "Сохраняем..." : "Сохранить"}
+              {resetMutation.isPending ? "Сохраняем..." : "Сохранить"}
             </button>
           </form>
         </motion.div>

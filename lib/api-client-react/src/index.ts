@@ -8,7 +8,11 @@ export {
   setUnauthorizedHandler,
   customFetch,
 } from "./custom-fetch";
-export type { AuthTokenGetter, BranchIdGetter, UnauthorizedHandler } from "./custom-fetch";
+export type {
+  AuthTokenGetter,
+  BranchIdGetter,
+  UnauthorizedHandler,
+} from "./custom-fetch";
 
 // ─── Custom hooks (manually maintained) ───────────────────────────────────────
 import { customFetch } from "./custom-fetch";
@@ -134,7 +138,8 @@ export const usePatchChatbotSessionTakeover = <TError = unknown>(options?: {
 }) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ phone, takeover }) => patchChatbotSessionTakeover(phone, takeover),
+    mutationFn: ({ phone, takeover }) =>
+      patchChatbotSessionTakeover(phone, takeover),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/chatbot/sessions"] });
       queryClient.invalidateQueries({
@@ -186,7 +191,9 @@ export const getChatbotFunnelAnalytics = (
 
 export const useGetChatbotFunnelAnalytics = <TError = unknown>(
   days = 30,
-  options?: { query?: UseQueryOptions<GetChatbotFunnelAnalyticsResponse, TError> },
+  options?: {
+    query?: UseQueryOptions<GetChatbotFunnelAnalyticsResponse, TError>;
+  },
 ) =>
   useQuery<GetChatbotFunnelAnalyticsResponse, TError>({
     queryKey: ["/api/chatbot/analytics/funnel", days],
@@ -1285,10 +1292,7 @@ export const useGetContractTemplate = <TError = unknown>(
     >;
   },
 ) =>
-  useQuery<
-    { success: boolean; data: { template: ContractTemplate } },
-    TError
-  >({
+  useQuery<{ success: boolean; data: { template: ContractTemplate } }, TError>({
     queryKey: ["contract-template", id],
     queryFn: () => getContractTemplate(id!),
     enabled: !!id,

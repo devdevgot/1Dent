@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import type { Clinic } from "@workspace/api-client-react";
+import { useCreatePlanRequest, type Clinic } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Check, Star, Sparkles, Rocket, Shield, X, Loader2, Clock, AlertCircle } from "lucide-react";
@@ -313,34 +313,31 @@ export default function PricingPage() {
   const [formPhone, setFormPhone] = useState("");
   const [formEmail, setFormEmail] = useState(user?.email ?? "");
   const [formMessage, setFormMessage] = useState("");
-  const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  const handleSubmitRequest = async () => {
+  const createPlanMutation = useCreatePlanRequest({
+    mutation: {
+      onSuccess: () => {
+        setSubmitted(true);
+        toast({ title: "Заявка отправлена!" });
+      },
+      onError: () => {
+        toast({ title: "Ошибка отправки", variant: "destructive" });
+      },
+    },
+  });
+
+  const handleSubmitRequest = () => {
     if (!formName.trim() || !formPhone.trim() || !requestPlan) return;
-    setSubmitting(true);
-    try {
-      const tok = localStorage.getItem("auth_token");
-      const res = await fetch("/api/plan-requests", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...(tok ? { Authorization: `Bearer ${tok}` } : {}) },
-        credentials: "include",
-        body: JSON.stringify({
-          plan: requestPlan,
-          contactName: formName.trim(),
-          contactPhone: formPhone.trim(),
-          contactEmail: formEmail.trim() || undefined,
-          message: formMessage.trim() || undefined,
-        }),
-      });
-      if (!res.ok) throw new Error("Failed");
-      setSubmitted(true);
-      toast({ title: "Заявка отправлена!" });
-    } catch {
-      toast({ title: "Ошибка отправки", variant: "destructive" });
-    } finally {
-      setSubmitting(false);
-    }
+    createPlanMutation.mutate({
+      data: {
+        plan: requestPlan,
+        contactName: formName.trim(),
+        contactPhone: formPhone.trim(),
+        contactEmail: formEmail.trim() || undefined,
+        message: formMessage.trim() || undefined,
+      },
+    });
   };
 
   return (
@@ -572,10 +569,10 @@ export default function PricingPage() {
                 </div>
                 <button
                   onClick={() => void handleSubmitRequest()}
-                  disabled={submitting || !formName.trim() || !formPhone.trim()}
+                  disabled={createPlanMutation.isPending || !formName.trim() || !formPhone.trim()}
                   className="w-full py-3 bg-[#1f75fe] hover:bg-[#1a65e8] text-white rounded-full text-sm font-semibold hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2"
                 >
-                  {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {createPlanMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
                   Отправить заявку
                 </button>
               </div>

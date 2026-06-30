@@ -107,6 +107,52 @@ export const ChangePasswordResponse = zod.object({
 });
 
 /**
+ * @summary Request password reset email
+ */
+export const ForgotPasswordBody = zod.object({
+  email: zod.string().email(),
+});
+
+export const ForgotPasswordResponse = zod.object({
+  success: zod.literal(true),
+  message: zod.string(),
+  devToken: zod
+    .string()
+    .optional()
+    .describe("Present only in non-production for testing reset flow"),
+});
+
+/**
+ * @summary Reset password with token from email
+ */
+
+export const resetPasswordBodyNewPasswordMin = 6;
+
+export const ResetPasswordBody = zod.object({
+  token: zod.string().min(1),
+  newPassword: zod.string().min(resetPasswordBodyNewPasswordMin),
+});
+
+export const ResetPasswordResponse = zod.object({
+  success: zod.literal(true),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Submit plan upgrade or pricing request
+ */
+
+export const createPlanRequestBodyContactPhoneMin = 5;
+
+export const CreatePlanRequestBody = zod.object({
+  plan: zod.string().min(1),
+  contactName: zod.string().min(1),
+  contactPhone: zod.string().min(createPlanRequestBodyContactPhoneMin),
+  contactEmail: zod.string().email().optional(),
+  message: zod.string().optional(),
+});
+
+/**
  * @summary List users in clinic
  */
 export const ListUsersResponse = zod.object({
@@ -528,7 +574,14 @@ export const SendMessageParams = zod.object({
 export const sendMessageBodyContentMax = 4096;
 
 export const SendMessageBody = zod.object({
-  content: zod.string().min(1).max(sendMessageBodyContentMax),
+  content: zod.string().max(sendMessageBodyContentMax).optional(),
+  attachment: zod
+    .object({
+      objectPath: zod.string(),
+      fileName: zod.string(),
+      contentType: zod.string(),
+    })
+    .optional(),
 });
 
 /**
@@ -2037,6 +2090,54 @@ export const DeleteChatbotSessionParams = zod.object({
 
 export const DeleteChatbotSessionResponse = zod.object({
   success: zod.boolean().optional(),
+});
+
+/**
+ * @summary Chatbot funnel conversion metrics and A/B test results
+ */
+export const getChatbotFunnelAnalyticsQueryDaysDefault = 30;
+
+export const GetChatbotFunnelAnalyticsQueryParams = zod.object({
+  days: zod.coerce.number().default(getChatbotFunnelAnalyticsQueryDaysDefault),
+});
+
+export const GetChatbotFunnelAnalyticsResponse = zod.object({
+  success: zod.boolean().optional(),
+  data: zod
+    .object({
+      analytics: zod.record(zod.string(), zod.unknown()).optional(),
+    })
+    .optional(),
+});
+
+/**
+ * @summary Enable or disable human takeover for a chatbot session
+ */
+export const PatchChatbotSessionTakeoverParams = zod.object({
+  phone: zod.coerce.string(),
+});
+
+export const PatchChatbotSessionTakeoverBody = zod.object({
+  takeover: zod.boolean(),
+});
+
+export const PatchChatbotSessionTakeoverResponse = zod.object({
+  success: zod.boolean().optional(),
+  data: zod
+    .object({
+      session: zod
+        .object({
+          id: zod.string(),
+          clinicId: zod.string(),
+          phone: zod.string(),
+          state: zod.string(),
+          data: zod.record(zod.string(), zod.unknown()).optional(),
+          humanTakeover: zod.boolean(),
+          updatedAt: zod.date(),
+        })
+        .optional(),
+    })
+    .optional(),
 });
 
 /**

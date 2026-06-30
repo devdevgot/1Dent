@@ -5,11 +5,10 @@
  * Dental CRM API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { SendMessageRequestAttachment } from "./sendMessageRequestAttachment";
 
 export interface SendMessageRequest {
-  /**
-   * @minLength 1
-   * @maxLength 4096
-   */
-  content: string;
+  /** @maxLength 4096 */
+  content?: string;
+  attachment?: SendMessageRequestAttachment;
 }
