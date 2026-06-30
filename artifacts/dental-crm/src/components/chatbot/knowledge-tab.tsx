@@ -311,8 +311,8 @@ export function KnowledgeTab({
 
       {/* Header */}
       <div>
-        <p className="text-sm font-semibold text-foreground">База знаний</p>
-        <p className="text-xs text-muted-foreground mt-0.5">
+        <p className="text-sm font-semibold text-[#0f172a]">База знаний</p>
+        <p className="text-xs text-[#64748b] mt-0.5">
           Добавьте ссылки и файлы — ИИ обучится на них и сгенерирует скрипты в майнд-мэпе
         </p>
       </div>
@@ -321,8 +321,8 @@ export function KnowledgeTab({
       {showAddForms && (
         <>
           {/* URL input */}
-          <div className="rounded-xl border border-border/50 bg-card p-4 space-y-3">
-            <p className="text-xs font-medium text-foreground">Добавить ссылку</p>
+          <div className="rounded-2xl border border-[#e8e3d9] bg-white p-4 space-y-3">
+            <p className="text-xs font-medium text-[#0f172a]">Добавить ссылку</p>
             <div className="flex gap-2">
               <input
                 type="url"
@@ -330,18 +330,18 @@ export function KnowledgeTab({
                 value={urlInput}
                 onChange={(e) => setUrlInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") void handleAddUrl(); }}
-                className="flex-1 h-9 rounded-xl border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="flex-1 h-9 rounded-xl border border-[#e8e3d9] bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
               <button
                 onClick={() => void handleAddUrl()}
                 disabled={addingUrl || !urlInput.trim()}
-                className="flex items-center gap-1.5 h-9 px-3 rounded-xl bg-primary text-primary-foreground text-xs font-medium disabled:opacity-50 hover:opacity-90 transition-opacity shrink-0"
+                className="flex items-center gap-1.5 h-9 px-3 rounded-xl bg-[#1f75fe] text-white text-xs font-medium disabled:opacity-50 hover:bg-[#1a65e8] transition-colors shrink-0"
               >
                 {addingUrl ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
                 Добавить
               </button>
             </div>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-[11px] text-[#64748b]">
               Сайт клиники, Instagram, 2GIS, отзывы — любая публичная страница
             </p>
           </div>
@@ -350,14 +350,14 @@ export function KnowledgeTab({
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setFileModalOpen(true)}
-              className="flex items-center gap-2 h-9 px-3 rounded-xl border border-border/60 bg-card hover:bg-muted/60 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="flex items-center gap-2 h-9 px-3 rounded-xl border border-[#e8e3d9] bg-white hover:bg-[#faf8f4] text-xs font-medium text-[#64748b] hover:text-[#0f172a] transition-colors"
             >
               <Upload className="h-3.5 w-3.5 shrink-0" />
               Загрузить файл / фото
             </button>
             <button
               onClick={() => setTextModalOpen(true)}
-              className="flex items-center gap-2 h-9 px-3 rounded-xl border border-border/60 bg-card hover:bg-muted/60 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="flex items-center gap-2 h-9 px-3 rounded-xl border border-[#e8e3d9] bg-white hover:bg-[#faf8f4] text-xs font-medium text-[#64748b] hover:text-[#0f172a] transition-colors"
             >
               <AlignLeft className="h-3.5 w-3.5 shrink-0" />
               Добавить текст
@@ -370,16 +370,16 @@ export function KnowledgeTab({
       {fileModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => !uploadingFile && setFileModalOpen(false)} />
-          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4">
+          <div className="relative bg-white rounded-2xl border border-[#e8e3d9] shadow-xl w-full max-w-sm p-5 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-foreground">Загрузить файл или фото</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Прайс-лист, скрипт, фото актуального — до 10 МБ</p>
+                <p className="text-sm font-semibold text-[#0f172a]">Загрузить файл или фото</p>
+                <p className="text-xs text-[#64748b] mt-0.5">Прайс-лист, скрипт, фото актуального — до 10 МБ</p>
               </div>
               <button
                 onClick={() => setFileModalOpen(false)}
                 disabled={uploadingFile}
-                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-muted-foreground disabled:opacity-40"
+                className="p-1.5 rounded-lg hover:bg-[#f1ede4] transition-colors text-[#64748b] disabled:opacity-40"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -388,18 +388,18 @@ export function KnowledgeTab({
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={uploadingFile}
-              className="w-full flex flex-col items-center justify-center gap-2 h-32 rounded-xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-colors text-sm text-muted-foreground disabled:opacity-50"
+              className="w-full flex flex-col items-center justify-center gap-2 h-32 rounded-xl border-2 border-dashed border-[#e8e3d9] hover:border-[#1f75fe]/50 hover:bg-[#1f75fe]/5 transition-colors text-sm text-[#64748b] disabled:opacity-50"
             >
               {uploadingFile ? (
                 <>
-                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <Loader2 className="h-6 w-6 animate-spin text-[#1f75fe]" />
                   <span className="text-xs">Загрузка…</span>
                 </>
               ) : (
                 <>
-                  <Upload className="h-6 w-6 text-muted-foreground/60" />
+                  <Upload className="h-6 w-6 text-[#94a3b8]/60" />
                   <span className="text-xs font-medium">Нажмите, чтобы выбрать файл</span>
-                  <span className="text-[11px] text-muted-foreground/70">PDF, DOCX, TXT, JPG, PNG, WEBP</span>
+                  <span className="text-[11px] text-[#94a3b8]/70">PDF, DOCX, TXT, JPG, PNG, WEBP</span>
                 </>
               )}
             </button>
@@ -424,16 +424,16 @@ export function KnowledgeTab({
       {textModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => !addingText && setTextModalOpen(false)} />
-          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4">
+          <div className="relative bg-white rounded-2xl border border-[#e8e3d9] shadow-xl w-full max-w-sm p-5 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-foreground">Добавить текст</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Адреса, расписание, прайс — скопируйте из Instagram, 2GIS или напишите вручную</p>
+                <p className="text-sm font-semibold text-[#0f172a]">Добавить текст</p>
+                <p className="text-xs text-[#64748b] mt-0.5">Адреса, расписание, прайс — скопируйте из Instagram, 2GIS или напишите вручную</p>
               </div>
               <button
                 onClick={() => setTextModalOpen(false)}
                 disabled={addingText}
-                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-muted-foreground disabled:opacity-40"
+                className="p-1.5 rounded-lg hover:bg-[#f1ede4] transition-colors text-[#64748b] disabled:opacity-40"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -444,7 +444,7 @@ export function KnowledgeTab({
               placeholder="Название (например: Адреса клиники)"
               value={textName}
               onChange={(e) => setTextName(e.target.value)}
-              className="w-full h-9 rounded-xl border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              className="w-full h-9 rounded-xl border border-[#e8e3d9] bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
 
             <textarea
@@ -452,13 +452,13 @@ export function KnowledgeTab({
               value={textContent}
               onChange={(e) => setTextContent(e.target.value)}
               rows={7}
-              className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
+              className="w-full rounded-xl border border-[#e8e3d9] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
             />
 
             <button
               onClick={() => void handleAddText()}
               disabled={addingText || !textContent.trim()}
-              className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-50 hover:opacity-90 transition-opacity"
+              className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-[#1f75fe] text-white text-sm font-semibold disabled:opacity-50 hover:bg-[#1a65e8] transition-colors"
             >
               {addingText ? <><Loader2 className="h-4 w-4 animate-spin" /> Добавление…</> : <>Добавить источник</>}
             </button>
@@ -469,17 +469,17 @@ export function KnowledgeTab({
       {/* Sources list */}
       {loading ? (
         <div className="flex justify-center py-6">
-          <Loader2 className="h-5 w-5 text-primary animate-spin" />
+          <Loader2 className="h-5 w-5 text-[#1f75fe] animate-spin" />
         </div>
       ) : sources.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">
+          <p className="text-xs font-medium text-[#64748b]">
             {sources.length} источник{sources.length === 1 ? "" : sources.length < 5 ? "а" : "ов"}
             {pendingSources.length > 0 && (
               <span className="ml-2 text-amber-600 animate-pulse">· {pendingSources.length} обрабатывается…</span>
             )}
           </p>
-          <div className="divide-y divide-border/40 rounded-xl border border-border/50 bg-card overflow-hidden">
+          <div className="divide-y divide-[#e8e3d9] rounded-2xl border border-[#e8e3d9] bg-white overflow-hidden">
             {sources.map((source) => {
               const isRescanning = rescanningIds.has(source.id);
               return (
@@ -494,9 +494,9 @@ export function KnowledgeTab({
                       }
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-foreground truncate">{source.name}</p>
+                      <p className="text-xs font-medium text-[#0f172a] truncate">{source.name}</p>
                       {source.url && (
-                        <p className="text-[10px] text-muted-foreground truncate">{source.url}</p>
+                        <p className="text-[10px] text-[#64748b] truncate">{source.url}</p>
                       )}
                     </div>
                     <div className="shrink-0 flex items-center gap-1.5">
@@ -515,14 +515,14 @@ export function KnowledgeTab({
                           onClick={() => void handleRescan(source.id)}
                           disabled={isRescanning || source.status === "pending"}
                           title="Повторно извлечь контент"
-                          className="p-1 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-500 transition-colors disabled:opacity-40"
+                          className="p-1 rounded hover:bg-blue-50 text-[#64748b] hover:text-blue-500 transition-colors disabled:opacity-40"
                         >
                           <RefreshCw className={cn("h-3 w-3", isRescanning && "animate-spin")} />
                         </button>
                       )}
                       <button
                         onClick={() => void handleDeleteSource(source.id)}
-                        className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 transition-colors"
+                        className="p-1 rounded hover:bg-red-50 text-[#64748b] hover:text-red-500 transition-colors"
                       >
                         <Trash2 className="h-3 w-3" />
                       </button>
@@ -539,7 +539,7 @@ export function KnowledgeTab({
       {sources.length > 0 && (
         <button
           onClick={() => setAddSourceOpen((v) => !v)}
-          className="w-full flex items-center justify-center gap-2 h-9 rounded-xl border border-dashed border-border/70 bg-card hover:bg-muted/50 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+          className="w-full flex items-center justify-center gap-2 h-9 rounded-xl border border-dashed border-[#e8e3d9] bg-white hover:bg-[#faf8f4] text-xs font-medium text-[#64748b] hover:text-[#0f172a] transition-colors"
         >
           {addSourceOpen
             ? <><ChevronUp className="h-3.5 w-3.5" /> Скрыть формы добавления</>
@@ -555,8 +555,8 @@ export function KnowledgeTab({
         className={cn(
           "w-full flex items-center justify-center gap-2 h-11 rounded-xl text-sm font-semibold transition-all",
           readySources.length > 0
-            ? "bg-primary text-primary-foreground hover:opacity-90"
-            : "bg-muted text-muted-foreground cursor-not-allowed",
+            ? "bg-[#1f75fe] text-white hover:bg-[#1a65e8]"
+            : "bg-[#f1ede4] text-[#64748b] cursor-not-allowed",
         )}
       >
         {generating
@@ -566,12 +566,12 @@ export function KnowledgeTab({
       </button>
 
       {readySources.length === 0 && sources.length > 0 && pendingSources.length > 0 && (
-        <p className="text-xs text-center text-muted-foreground">
+        <p className="text-xs text-center text-[#64748b]">
           Дождитесь обработки источников, затем нажмите «Сгенерировать»
         </p>
       )}
       {sources.length === 0 && (
-        <p className="text-xs text-center text-muted-foreground">
+        <p className="text-xs text-center text-[#64748b]">
           Добавьте хотя бы один источник, чтобы ИИ мог создать скрипты
         </p>
       )}
@@ -616,19 +616,19 @@ export function KnowledgeAndScriptModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-gray-50">
+    <div className="fixed inset-0 z-50 flex flex-col bg-[#faf8f4]">
       {/* Header */}
-      <div className="shrink-0 flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100 shadow-sm">
-        <BookOpen className="h-4 w-4 text-primary shrink-0" />
+      <div className="shrink-0 flex items-center gap-3 px-4 py-3 bg-white border-b border-[#e8e3d9] shadow-sm">
+        <BookOpen className="h-4 w-4 text-[#1f75fe] shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-800">База знаний и скрипт</p>
-          <p className="text-xs text-gray-400 leading-tight">Обучение чат-бота и сценарий разговора</p>
+          <p className="text-sm font-semibold text-[#0f172a]">База знаний и скрипт</p>
+          <p className="text-xs text-[#64748b] leading-tight">Обучение чат-бота и сценарий разговора</p>
         </div>
         <button
           onClick={onClose}
-          className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors shrink-0"
+          className="p-1.5 rounded-lg hover:bg-[#f1ede4] transition-colors shrink-0"
         >
-          <X className="h-4 w-4 text-gray-500" />
+          <X className="h-4 w-4 text-[#64748b]" />
         </button>
       </div>
 
@@ -643,16 +643,16 @@ export function KnowledgeAndScriptModal({
         </div>
 
         {/* Divider */}
-        <div className="h-px bg-border/50 mx-4" />
+        <div className="h-px bg-[#e8e3d9] mx-4" />
 
         {/* Mind map inline section */}
         <div className="px-4 py-4 pb-8 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <GitBranch className="h-4 w-4 text-primary shrink-0" />
+              <GitBranch className="h-4 w-4 text-[#1f75fe] shrink-0" />
               <div>
-                <p className="text-sm font-semibold text-gray-800">Скрипт диалога</p>
-                <p className="text-xs text-gray-400 mt-0.5">
+                <p className="text-sm font-semibold text-[#0f172a]">Скрипт диалога</p>
+                <p className="text-xs text-[#64748b] mt-0.5">
                   {liveMindMapData?.nodes?.length
                     ? "Нажмите на узел для редактирования"
                     : "Сгенерируйте скрипты выше — они появятся здесь"}
@@ -661,14 +661,14 @@ export function KnowledgeAndScriptModal({
             </div>
             <button
               onClick={() => setMapExpanded(true)}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-lg border border-border/50 hover:bg-gray-100 transition-colors shrink-0"
+              className="flex items-center gap-1.5 text-xs text-[#64748b] hover:text-[#0f172a] px-2.5 py-1.5 rounded-lg border border-[#e8e3d9] hover:bg-[#f1ede4] transition-colors shrink-0"
             >
               <Maximize2 className="h-3.5 w-3.5" />
               На весь экран
             </button>
           </div>
           <div
-            className="rounded-xl border border-border/50 overflow-hidden bg-white"
+            className="rounded-2xl border border-[#e8e3d9] overflow-hidden bg-white"
             style={{ height: 320 }}
           >
             <ScriptMindMap

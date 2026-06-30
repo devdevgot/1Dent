@@ -134,7 +134,7 @@ function MindMapNodeComponent({ id, data }: NodeProps) {
           ? "border-blue-400 bg-blue-50/80"
           : editing
             ? "border-blue-400 shadow-md"
-            : "border-gray-200 hover:border-blue-300 hover:shadow-md",
+            : "border-[#e8e3d9] hover:border-blue-300 hover:shadow-md",
       )}
       onClick={() => { if (!editing) { setEditing(true); } }}
     >
@@ -149,7 +149,7 @@ function MindMapNodeComponent({ id, data }: NodeProps) {
           <>
             <input
               autoFocus
-              className="w-full text-sm font-semibold bg-transparent border-b border-blue-300 outline-none mb-1.5 pb-0.5 text-gray-800"
+              className="w-full text-sm font-semibold bg-transparent border-b border-blue-300 outline-none mb-1.5 pb-0.5 text-[#0f172a]"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && textareaRef.current?.focus()}
@@ -157,7 +157,7 @@ function MindMapNodeComponent({ id, data }: NodeProps) {
             />
             <textarea
               ref={textareaRef}
-              className="w-full text-xs text-gray-500 bg-transparent outline-none resize-y leading-relaxed min-h-[72px]"
+              className="w-full text-xs text-[#64748b] bg-transparent outline-none resize-y leading-relaxed min-h-[72px]"
               rows={5}
               value={content}
               onChange={(e) => setContent(e.target.value)}
@@ -169,7 +169,7 @@ function MindMapNodeComponent({ id, data }: NodeProps) {
               value={fsmState}
               onChange={(e) => setFsmState(e.target.value)}
               onClick={(e) => e.stopPropagation()}
-              className="mt-1.5 w-full text-[10px] border border-gray-200 rounded-md px-1.5 py-1 bg-white text-gray-600"
+              className="mt-1.5 w-full text-[10px] border border-[#e8e3d9] rounded-md px-1.5 py-1 bg-white text-[#64748b]"
             >
               {CHATBOT_FSM_STATES.map((opt) => (
                 <option key={opt.value || "none"} value={opt.value}>{opt.label}</option>
@@ -178,8 +178,8 @@ function MindMapNodeComponent({ id, data }: NodeProps) {
           </>
         ) : (
           <>
-            <p className={cn("text-sm font-semibold leading-snug break-words", d.isRoot ? "text-blue-800" : "text-gray-800")}>
-              {label || <span className="font-normal italic text-gray-400">Без названия</span>}
+            <p className={cn("text-sm font-semibold leading-snug break-words", d.isRoot ? "text-blue-800" : "text-[#0f172a]")}>
+              {label || <span className="font-normal italic text-[#64748b]">Без названия</span>}
             </p>
             {d.fsmState && (
               <p className="text-[10px] font-medium text-violet-600 mt-1 break-words">
@@ -187,9 +187,9 @@ function MindMapNodeComponent({ id, data }: NodeProps) {
               </p>
             )}
             {content ? (
-              <p className="text-xs text-gray-500 mt-1.5 leading-relaxed whitespace-pre-wrap break-words">{content}</p>
+              <p className="text-xs text-[#64748b] mt-1.5 leading-relaxed whitespace-pre-wrap break-words">{content}</p>
             ) : (
-              <p className="text-xs text-gray-400 mt-1 italic">Нажмите для редактирования</p>
+              <p className="text-xs text-[#64748b] mt-1 italic">Нажмите для редактирования</p>
             )}
           </>
         )}
@@ -501,8 +501,8 @@ export function ScriptMindMap({ initialData, onSave, saveStatus = "idle" }: Scri
           proOptions={{ hideAttribution: true }}
           defaultEdgeOptions={EDGE_STYLE}
         >
-          <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#e5e7eb" />
-          <Controls showInteractive={false} className="!shadow-sm !border !border-gray-200 !rounded-xl !overflow-hidden" />
+          <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#e8e3d9" />
+          <Controls showInteractive={false} className="!shadow-sm !border !border-[#e8e3d9] !rounded-xl !overflow-hidden" />
           <Panel position="top-right" className="m-3">
             <button
               onClick={handleSave}
@@ -553,20 +553,20 @@ export function ScriptMindMapModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-gray-50">
-      <div className="shrink-0 flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100 shadow-sm">
-        <GitBranch className="h-4 w-4 text-primary shrink-0" />
+    <div className="fixed inset-0 z-50 flex flex-col bg-[#faf8f4]">
+      <div className="shrink-0 flex items-center gap-3 px-4 py-3 bg-white border-b border-[#e8e3d9] shadow-sm">
+        <GitBranch className="h-4 w-4 text-[#1f75fe] shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-800">Скрипт диалога</p>
-          <p className="text-xs text-gray-400 leading-tight">
+          <p className="text-sm font-semibold text-[#0f172a]">Скрипт диалога</p>
+          <p className="text-xs text-[#64748b] leading-tight">
             Нажмите на карточку чтобы редактировать · «+Шаг» добавляет дочерний · «Ветка» разветвляет
           </p>
         </div>
         <button
           onClick={onClose}
-          className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors shrink-0"
+          className="p-1.5 rounded-lg hover:bg-[#f1ede4] transition-colors shrink-0"
         >
-          <X className="h-4 w-4 text-gray-500" />
+          <X className="h-4 w-4 text-[#64748b]" />
         </button>
       </div>
       <div className="flex-1 min-h-0">

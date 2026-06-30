@@ -33,33 +33,33 @@ export function ManagerExamplesTab() {
 
   return (
     <div className="space-y-4 max-w-2xl">
-      <div className="rounded-xl border border-border/50 bg-card p-4">
-        <p className="text-sm font-medium text-foreground">Стиль менеджера</p>
-        <p className="text-xs text-muted-foreground mt-1">
+      <div className="rounded-2xl border border-[#e8e3d9] bg-white p-4">
+        <p className="text-sm font-medium text-[#0f172a]">Стиль менеджера</p>
+        <p className="text-xs text-[#64748b] mt-1">
           Примеры пар «вопрос пациента → ответ менеджера». Бот копирует тон, длину и эмодзи из этих примеров.
         </p>
       </div>
 
-      <div className="rounded-xl border border-border/50 bg-card p-4 space-y-3">
+      <div className="rounded-2xl border border-[#e8e3d9] bg-white p-4 space-y-3">
         <input
           type="text"
           placeholder="Сообщение пациента"
           value={userMessage}
           onChange={(e) => setUserMessage(e.target.value)}
-          className="w-full text-sm border border-border/50 rounded-lg px-3 py-2"
+          className="w-full text-sm border border-[#e8e3d9] rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
         <textarea
           placeholder="Ответ менеджера"
           value={managerResponse}
           onChange={(e) => setManagerResponse(e.target.value)}
           rows={3}
-          className="w-full text-sm border border-border/50 rounded-lg px-3 py-2 resize-none"
+          className="w-full text-sm border border-[#e8e3d9] rounded-xl px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
         <button
           type="button"
           onClick={handleAdd}
           disabled={createExample.isPending || !userMessage.trim() || !managerResponse.trim()}
-          className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg font-medium bg-primary text-primary-foreground disabled:opacity-50"
+          className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl font-medium bg-[#1f75fe] text-white disabled:opacity-50 hover:bg-[#1a65e8] transition-colors"
         >
           {createExample.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
           Добавить пример
@@ -67,20 +67,20 @@ export function ManagerExamplesTab() {
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-muted-foreground text-center py-6">Загрузка…</p>
+        <p className="text-sm text-[#64748b] text-center py-6">Загрузка…</p>
       ) : examples.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border/50 p-8 text-center text-sm text-muted-foreground">
+        <div className="rounded-2xl border border-dashed border-[#e8e3d9] p-8 text-center text-sm text-[#64748b]">
           <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-40" />
           Пока нет примеров — добавьте 3–5 типичных диалогов
         </div>
       ) : (
         <div className="space-y-2">
           {examples.map((ex) => (
-            <div key={ex.id} className="rounded-xl border border-border/50 bg-card p-3 text-sm">
-              <p className="text-muted-foreground text-xs mb-1">Пациент</p>
-              <p className="mb-2">{ex.userMessage}</p>
-              <p className="text-muted-foreground text-xs mb-1">Менеджер</p>
-              <p className="whitespace-pre-wrap">{ex.managerResponse}</p>
+            <div key={ex.id} className="rounded-2xl border border-[#e8e3d9] bg-white p-3 text-sm">
+              <p className="text-[#64748b] text-xs mb-1">Пациент</p>
+              <p className="mb-2 text-[#0f172a]">{ex.userMessage}</p>
+              <p className="text-[#64748b] text-xs mb-1">Менеджер</p>
+              <p className="whitespace-pre-wrap text-[#0f172a]">{ex.managerResponse}</p>
               <button
                 type="button"
                 onClick={() => deleteExample.mutate(ex.id, { onSuccess: () => refetch() })}

@@ -52,16 +52,16 @@ export function ChatbotCalendarAbSettings({ localSettings, onChange }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-border/50 bg-card p-4 space-y-4">
+      <div className="rounded-2xl border border-[#e8e3d9] bg-white p-4 space-y-4">
         <div>
-          <h3 className="text-sm font-semibold">Календарь записи</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
+          <h3 className="text-sm font-semibold text-[#0f172a]">Календарь записи</h3>
+          <p className="text-xs text-[#64748b] mt-0.5">
             Реальные слоты из расписания процедур — бот предлагает только свободное время
           </p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <label className="space-y-1">
-            <span className="text-xs text-muted-foreground">Шаг слота (мин)</span>
+            <span className="text-xs text-[#64748b]">Шаг слота (мин)</span>
             <input
               type="number"
               min={15}
@@ -69,11 +69,11 @@ export function ChatbotCalendarAbSettings({ localSettings, onChange }: Props) {
               step={15}
               value={calendar.slotDurationMinutes ?? 30}
               onChange={(e) => patchCalendar("slotDurationMinutes", Number(e.target.value))}
-              className="w-full rounded-md border border-border px-2 py-1.5 text-sm"
+              className="w-full rounded-xl border border-[#e8e3d9] px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>
           <label className="space-y-1">
-            <span className="text-xs text-muted-foreground">Длительность приёма (мин)</span>
+            <span className="text-xs text-[#64748b]">Длительность приёма (мин)</span>
             <input
               type="number"
               min={15}
@@ -81,11 +81,11 @@ export function ChatbotCalendarAbSettings({ localSettings, onChange }: Props) {
               step={15}
               value={calendar.defaultAppointmentMinutes ?? 60}
               onChange={(e) => patchCalendar("defaultAppointmentMinutes", Number(e.target.value))}
-              className="w-full rounded-md border border-border px-2 py-1.5 text-sm"
+              className="w-full rounded-xl border border-[#e8e3d9] px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>
           <label className="space-y-1">
-            <span className="text-xs text-muted-foreground">Буфер между приёмами (мин)</span>
+            <span className="text-xs text-[#64748b]">Буфер между приёмами (мин)</span>
             <input
               type="number"
               min={0}
@@ -93,20 +93,20 @@ export function ChatbotCalendarAbSettings({ localSettings, onChange }: Props) {
               step={5}
               value={calendar.bufferMinutes ?? 0}
               onChange={(e) => patchCalendar("bufferMinutes", Number(e.target.value))}
-              className="w-full rounded-md border border-border px-2 py-1.5 text-sm"
+              className="w-full rounded-xl border border-[#e8e3d9] px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>
         </div>
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-[11px] text-[#64748b]">
           Рабочие часы по умолчанию: {DAY_LABELS.slice(1).join(", ")} 09:00–18:00, {DAY_LABELS[0]} — выходной
         </p>
       </div>
 
-      <div className="rounded-xl border border-border/50 bg-card p-4 space-y-3">
+      <div className="rounded-2xl border border-[#e8e3d9] bg-white p-4 space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h3 className="text-sm font-semibold">A/B тест скриптов</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <h3 className="text-sm font-semibold text-[#0f172a]">A/B тест скриптов</h3>
+            <p className="text-xs text-[#64748b] mt-0.5">
               Новые пациенты случайно получают вариант A (основной) или B — метрики в разделе «Аналитика»
             </p>
           </div>
@@ -115,8 +115,8 @@ export function ChatbotCalendarAbSettings({ localSettings, onChange }: Props) {
             onClick={toggleAb}
             className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${
               abEnabled
-                ? "bg-primary text-primary-foreground border-primary"
-                : "bg-muted text-muted-foreground border-border"
+                ? "bg-[#1f75fe] text-white border-[#1f75fe]"
+                : "bg-[#f1ede4] text-[#64748b] border-[#e8e3d9]"
             }`}
           >
             {abEnabled ? "Включён" : "Выключен"}
@@ -124,16 +124,16 @@ export function ChatbotCalendarAbSettings({ localSettings, onChange }: Props) {
         </div>
 
         {abEnabled && (
-          <div className="space-y-2 pt-2 border-t border-border/40">
+          <div className="space-y-2 pt-2 border-t border-[#e8e3d9]">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-medium">Вариант A — основной скрипт</span>
-              <span className="text-muted-foreground">{100 - (variants[0]?.weight ?? 50)}%</span>
+              <span className="font-medium text-[#0f172a]">Вариант A — основной скрипт</span>
+              <span className="text-[#64748b]">{100 - (variants[0]?.weight ?? 50)}%</span>
             </div>
             {variants.map((v) => (
               <div key={v.id} className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-medium">{v.name}</span>
-                  <span className="text-muted-foreground">{v.weight}%</span>
+                  <span className="font-medium text-[#0f172a]">{v.name}</span>
+                  <span className="text-[#64748b]">{v.weight}%</span>
                 </div>
                 <input
                   type="range"
