@@ -13,7 +13,13 @@ export type UnauthorizedHandler = () => void;
 const NO_BODY_STATUS = new Set([204, 205, 304]);
 const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 
-const SKIP_UNAUTHORIZED_PATHS = ["/api/auth/login", "/api/auth/me", "/api/auth/register"];
+const SKIP_UNAUTHORIZED_PATHS = [
+  "/api/auth/login",
+  "/api/auth/me",
+  "/api/auth/register",
+  "/api/auth/forgot-password",
+  "/api/auth/reset-password",
+];
 const SKIP_BRANCH_HEADER_PATHS = ["/api/auth/", "/api/clinic-branches"];
 
 // ---------------------------------------------------------------------------
