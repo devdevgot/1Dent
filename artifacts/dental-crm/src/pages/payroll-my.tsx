@@ -1,8 +1,10 @@
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
-import { ChevronLeft, Wallet, Clock } from "lucide-react";
+import { Wallet, Clock } from "lucide-react";
 import { useGetMySalary } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
+import { PageShell } from "@/components/layout/page-shell";
+import { PageHeader } from "@/components/layout/page-header";
 
 const fmt = (v: number | string | undefined) =>
   v !== undefined && v !== null
@@ -32,19 +34,17 @@ export default function PayrollMyPage() {
     : null;
 
   return (
-    <div className="min-h-full bg-[#faf8f4] font-manrope pb-10">
-      {/* Header */}
-      <div className="bg-white border-b border-[#e8e3d9] shadow-sm px-4 pt-4 pb-3 flex items-center gap-3">
-        <button onClick={() => navigate(-1 as unknown as string)} className="p-1.5 -ml-1 rounded-xl hover:bg-[#f1ede4] transition-colors">
-          <ChevronLeft className="w-5 h-5 text-[#64748b]" />
-        </button>
-        <div>
-          <h1 className="text-base font-bold text-[#0f172a]">{t("payroll.mySalary", "Моя зарплата")}</h1>
-          {periodLabel && <p className="text-xs text-[#94a3b8]">{periodLabel}</p>}
-        </div>
-      </div>
+    <PageShell className="pb-10">
+      <PageHeader
+        title={t("payroll.mySalary", "Моя зарплата")}
+        onBack={() => navigate(-1 as unknown as string)}
+        sticky
+      />
 
       <div className="px-4 mt-4 space-y-3">
+        {periodLabel && (
+          <p className="text-xs text-[#94a3b8] -mt-1">{periodLabel}</p>
+        )}
         {isLoading && (
           <div className="bg-white rounded-2xl p-5 shadow-md border border-[#e8e3d9] space-y-3">
             {[1, 2, 3, 4].map((i) => (
@@ -109,7 +109,7 @@ export default function PayrollMyPage() {
           </>
         )}
       </div>
-    </div>
+    </PageShell>
   );
 }
 

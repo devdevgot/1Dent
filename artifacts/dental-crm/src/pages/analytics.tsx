@@ -1,5 +1,9 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { PageShell } from "@/components/layout/page-shell";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
 } from "recharts";
@@ -260,7 +264,7 @@ export default function AnalyticsPage() {
   const scheduledToday = (analytics?.scheduledToday ?? 0) as number;
 
   return (
-    <div className="h-full flex flex-col overflow-hidden bg-[#faf8f4] font-manrope">
+    <PageShell className="h-full flex flex-col overflow-hidden" animate={false}>
       {/* ── Header ── */}
       <div className="shrink-0 px-4 py-4 border-b border-[#e8e3d9] bg-white flex items-center gap-3 shadow-sm">
         <button
@@ -437,27 +441,27 @@ export default function AnalyticsPage() {
                 <div className="bg-white rounded-2xl border border-[#e8e3d9] p-4 shadow-md">
                   <h4 className="text-sm font-semibold text-[#0f172a] mb-3">{t("analytics.cohortTitle")}</h4>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="border-b border-[#e8e3d9]">
-                          <th className="text-left font-semibold text-[#64748b] uppercase tracking-wide py-2 px-3">{t("analytics.cohortMonth")}</th>
-                          <th className="text-right font-semibold text-[#64748b] uppercase tracking-wide py-2 px-3">{t("analytics.cohortNewPatients")}</th>
-                          <th className="text-right font-semibold text-[#64748b] uppercase tracking-wide py-2 px-3">{t("analytics.cohortReturn3m")}</th>
-                          <th className="text-right font-semibold text-[#64748b] uppercase tracking-wide py-2 px-3">{t("analytics.cohortReturn6m")}</th>
-                          <th className="text-right font-semibold text-[#64748b] uppercase tracking-wide py-2 px-3">{t("analytics.cohortReturn12m")}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="hover:bg-transparent">
+                          <TableHead>{t("analytics.cohortMonth")}</TableHead>
+                          <TableHead className="text-right">{t("analytics.cohortNewPatients")}</TableHead>
+                          <TableHead className="text-right">{t("analytics.cohortReturn3m")}</TableHead>
+                          <TableHead className="text-right">{t("analytics.cohortReturn6m")}</TableHead>
+                          <TableHead className="text-right">{t("analytics.cohortReturn12m")}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {pm.retentionCohorts.map((cohort) => (
-                          <tr key={cohort.month} className="border-b border-[#e8e3d9] hover:bg-[#faf8f4] transition-colors">
-                            <td className="py-2 px-3 font-medium text-[#0f172a]">{cohort.month}</td>
-                            <td className="py-2 px-3 text-right text-[#0f172a]">{cohort.newPatients}</td>
+                          <TableRow key={cohort.month}>
+                            <TableCell className="font-medium text-[#0f172a]">{cohort.month}</TableCell>
+                            <TableCell className="text-right text-[#0f172a]">{cohort.newPatients}</TableCell>
                             {([
                               { count: cohort.returnedIn3m,  total: cohort.newPatients },
                               { count: cohort.returnedIn6m,  total: cohort.newPatients },
                               { count: cohort.returnedIn12m, total: cohort.newPatients },
                             ] as { count: number; total: number }[]).map((cell, ci) => (
-                              <td key={ci} className="py-2 px-3 text-right">
+                              <TableCell key={ci} className="text-right">
                                 {cell.total > 0 ? (
                                   <span className={`px-1.5 py-0.5 rounded font-medium ${
                                     cell.count / cell.total >= 0.5 ? "bg-[#f0fdf4] text-[#16a34a]" :
@@ -468,12 +472,12 @@ export default function AnalyticsPage() {
                                       : "—"}
                                   </span>
                                 ) : "—"}
-                              </td>
+                              </TableCell>
                             ))}
-                          </tr>
+                          </TableRow>
                         ))}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </div>
                 </div>
               )}
@@ -640,6 +644,6 @@ export default function AnalyticsPage() {
 
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

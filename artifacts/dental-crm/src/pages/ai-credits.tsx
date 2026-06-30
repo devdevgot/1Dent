@@ -1,9 +1,8 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import {
   Sparkles,
   AlertTriangle,
-  ChevronLeft,
   RefreshCw,
   CreditCard,
   TrendingUp,
@@ -13,6 +12,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useAiCreditsSummary, useAiCreditsUsage } from "@/hooks/use-ai-credits";
 import { useAuthStore } from "@/hooks/use-auth";
+import { PageShell } from "@/components/layout/page-shell";
+import { PageHeader } from "@/components/layout/page-header";
 
 function formatNumber(n: number) {
   return n.toLocaleString("ru-RU");
@@ -29,6 +30,7 @@ function formatDateTime(iso: string) {
 
 export default function AiCreditsPage() {
   const { t } = useTranslation();
+  const [, setLocation] = useLocation();
   const { user } = useAuthStore();
   const isOwner = user?.role === "owner";
   const { data: summary, isLoading, isError, error, refetch, isFetching } = useAiCreditsSummary();
@@ -43,21 +45,12 @@ export default function AiCreditsPage() {
       : 0;
 
   return (
-    <div className="min-h-full bg-[#faf8f4] font-manrope pb-8">
-      <div className="bg-white border-b border-[#e8e3d9] px-4 py-4 sticky top-0 z-10">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/menu"
-            className="p-2 -ml-2 rounded-xl hover:bg-[#f1ede4] text-[#64748b] transition-colors"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </Link>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-bold text-[#0f172a] truncate">
-              {t("aiCredits.title")}
-            </h1>
-            <p className="text-xs text-[#94a3b8] truncate">{t("aiCredits.subtitle")}</p>
-          </div>
+    <PageShell className="pb-8">
+      <PageHeader
+        title={t("aiCredits.title")}
+        onBack={() => setLocation("/menu")}
+        sticky
+        right={
           <button
             onClick={() => void refetch()}
             disabled={isFetching}
@@ -66,10 +59,11 @@ export default function AiCreditsPage() {
           >
             <RefreshCw className={cn("w-4 h-4", isFetching && "animate-spin")} />
           </button>
-        </div>
-      </div>
+        }
+      />
 
       <div className="px-4 pt-4 space-y-4 max-w-2xl mx-auto">
+        <p className="text-xs text-[#94a3b8] -mt-2">{t("aiCredits.subtitle")}</p>
         {isLoading && (
           <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-md p-6 animate-pulse h-40" />
         )}
@@ -230,6 +224,6 @@ export default function AiCreditsPage() {
           </Link>
         )}
       </div>
-    </div>
+    </PageShell>
   );
 }

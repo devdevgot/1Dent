@@ -20,6 +20,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, startOfDay, startOfWeek, startOfMonth, startOfYear, parseISO, differenceInDays } from "date-fns";
+import { PageShell } from "@/components/layout/page-shell";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
 
 type Period = "day" | "week" | "month" | "year" | "custom";
 
@@ -258,7 +262,7 @@ export default function AdminFinancePage() {
   const today = new Date();
 
   return (
-    <div className="min-h-full bg-[#faf8f4] font-manrope">
+    <PageShell animate={false}>
 
       {/* ── Header ── */}
       <div className="bg-white px-4 py-4 border-b border-[#e8e3d9] shadow-sm sticky top-0 z-20">
@@ -652,9 +656,9 @@ export default function AdminFinancePage() {
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={chartData} margin={{ left: 0, right: 8, top: 4, bottom: 4 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#9ca3af" }} />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#94a3b8" }} />
                 <YAxis
-                  tick={{ fontSize: 11, fill: "#9ca3af" }}
+                  tick={{ fontSize: 11, fill: "#94a3b8" }}
                   tickFormatter={(v) => `${(v / 1000).toFixed(0)}K`}
                 />
                 <Tooltip
@@ -896,25 +900,25 @@ export default function AdminFinancePage() {
             <div className="p-8 text-center text-[#94a3b8] text-sm">{t("adminFinance.noData")}</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-[#faf8f4] text-xs font-semibold text-[#64748b] uppercase tracking-wide">
-                  <tr>
-                    <th className="px-4 py-3 text-left">{t("adminFinance.colPatient")}</th>
-                    <th className="px-4 py-3 text-left">{t("adminFinance.colDoctor")}</th>
-                    <th className="px-4 py-3 text-left">{t("adminFinance.colService")}</th>
-                    <th className="px-4 py-3 text-right">{t("adminFinance.colAmount")}</th>
-                    <th className="px-4 py-3 text-left">{t("adminFinance.colPayment")}</th>
-                    <th className="px-4 py-3 text-left">{t("adminFinance.colDate")}</th>
-                    <th className="px-4 py-3 text-left">{t("adminFinance.colStatus")}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#e8e3d9]">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead>{t("adminFinance.colPatient")}</TableHead>
+                    <TableHead>{t("adminFinance.colDoctor")}</TableHead>
+                    <TableHead>{t("adminFinance.colService")}</TableHead>
+                    <TableHead className="text-right">{t("adminFinance.colAmount")}</TableHead>
+                    <TableHead>{t("adminFinance.colPayment")}</TableHead>
+                    <TableHead>{t("adminFinance.colDate")}</TableHead>
+                    <TableHead>{t("adminFinance.colStatus")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {filtered.slice(0, 50).map((proc) => {
                     const statusColors: Record<string, string> = {
                       scheduled:       "bg-[#e0f2fe] text-[#0284c7]",
                       in_progress:     "bg-[#fef3c7] text-[#d97706]",
                       completed:       "bg-[#f0fdf4] text-[#16a34a]",
-                      cancelled:       "bg-[#f1f5f9] text-[#94a3b8]",
+                      cancelled:       "bg-[#f1ede4] text-[#94a3b8]",
                       pending_payment: "bg-[#fef3c7] text-[#d97706]",
                     };
                     const statusLabels: Record<string, string> = {
@@ -926,33 +930,33 @@ export default function AdminFinancePage() {
                     };
                     const dateStr = proc.completedAt ?? proc.scheduledAt;
                     return (
-                      <tr key={proc.id} className="hover:bg-[#faf8f4] transition-colors">
-                        <td className="px-4 py-3 font-medium text-[#0f172a]">
+                      <TableRow key={proc.id}>
+                        <TableCell className="font-medium text-[#0f172a]">
                           {patientMap.get(proc.patientId ?? "") ?? "—"}
-                        </td>
-                        <td className="px-4 py-3 text-[#64748b]">
+                        </TableCell>
+                        <TableCell className="text-[#64748b]">
                           {proc.doctorId ? (doctorMap.get(proc.doctorId) ?? "—") : "—"}
-                        </td>
-                        <td className="px-4 py-3 text-[#0f172a] max-w-[180px] truncate">{proc.name}</td>
-                        <td className="px-4 py-3 text-right font-semibold text-[#0f172a]">
+                        </TableCell>
+                        <TableCell className="text-[#0f172a] max-w-[180px] truncate">{proc.name}</TableCell>
+                        <TableCell className="text-right font-semibold text-[#0f172a]">
                           {proc.price ? fmt(proc.price) : "—"}
-                        </td>
-                        <td className="px-4 py-3 text-[#64748b]">
+                        </TableCell>
+                        <TableCell className="text-[#64748b]">
                           {proc.paymentMethod ? (PAYMENT_METHOD_LABELS[proc.paymentMethod] ?? proc.paymentMethod) : "—"}
-                        </td>
-                        <td className="px-4 py-3 text-[#64748b] whitespace-nowrap">
+                        </TableCell>
+                        <TableCell className="text-[#64748b] whitespace-nowrap">
                           {dateStr ? (() => { try { return format(parseISO(dateStr), "dd.MM.yy"); } catch { return "—"; } })() : "—"}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full", statusColors[proc.status] ?? "bg-[#f1f5f9] text-[#94a3b8]")}>
+                        </TableCell>
+                        <TableCell>
+                          <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full", statusColors[proc.status] ?? "bg-[#f1ede4] text-[#94a3b8]")}>
                             {statusLabels[proc.status] ?? proc.status}
                           </span>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
               {filtered.length > 50 && (
                 <div className="px-4 py-3 text-center text-xs text-[#64748b] border-t border-[#e8e3d9]">
                   Показано 50 из {filtered.length} записей
@@ -971,6 +975,6 @@ export default function AdminFinancePage() {
           onSuccess={handleExpenseSuccess}
         />
       )}
-    </div>
+    </PageShell>
   );
 }

@@ -23,6 +23,7 @@ import {
   type DoctorDetailedAnalyticsProceduresByNameItem,
   type GetDoctorDetailedAnalyticsMeParams,
 } from "@workspace/api-client-react";
+import { PageShell } from "@/components/layout/page-shell";
 
 const COLORS = ["#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#ef4444", "#06b6d4"];
 
@@ -223,7 +224,7 @@ export default function DoctorAnalyticsPage() {
   const selectedTypeName = selectedType || t("doctorAnalytics.allTypes");
 
   return (
-    <div className="h-full flex flex-col overflow-hidden bg-[#faf8f4] font-manrope">
+    <PageShell className="h-full flex flex-col overflow-hidden" animate={false}>
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="shrink-0 border-b border-[#e8e3d9] bg-white px-4 pt-5 pb-4 flex items-center gap-3 shadow-sm">
         <button
@@ -549,6 +550,6 @@ export default function DoctorAnalyticsPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageShell>
   );
 }

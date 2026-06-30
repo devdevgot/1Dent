@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { PageShell } from "@/components/layout/page-shell";
 
 const CATEGORY_KEYS = [
   "materials", "instruments", "medications",
@@ -41,7 +42,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   consumables: "bg-[#fef3c7] text-[#d97706]",
   prosthetics: "bg-[#fef2f2] text-[#dc2626]",
   implants:    "bg-[#e0f2fe] text-[#0284c7]",
-  other:       "bg-[#f1f5f9] text-[#64748b]",
+  other:       "bg-[#f1ede4] text-[#64748b]",
 };
 
 interface CreateForm {
@@ -227,7 +228,8 @@ export default function InventoryPage() {
   /* ── Access denied screen ── */
   if (myAccess === "denied" && !isOwner) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center font-manrope bg-[#faf8f4]">
+      <PageShell>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center">
         <div className="w-16 h-16 rounded-full bg-[#fef2f2] flex items-center justify-center mb-4">
           <ShieldX className="w-8 h-8 text-[#dc2626]" />
         </div>
@@ -235,12 +237,13 @@ export default function InventoryPage() {
         <p className="text-sm text-[#64748b] max-w-xs">
           Владелец клиники закрыл вам доступ к складу. Обратитесь к нему для получения прав.
         </p>
-      </div>
+        </div>
+      </PageShell>
     );
   }
 
   return (
-    <div className="min-h-full bg-[#faf8f4] font-manrope">
+    <PageShell>
       {/* Page Header */}
       <div className="bg-white px-4 pt-5 pb-4 flex items-center gap-3 border-b border-[#e8e3d9] shadow-sm">
         <button
@@ -463,6 +466,6 @@ export default function InventoryPage() {
         onCancel={() => setConfirmDeleteId(null)}
       />
       </div>
-    </div>
+    </PageShell>
   );
 }

@@ -7,6 +7,9 @@ import {
   useApprovePayrollPeriod,
   type PayrollPreviewRow,
 } from "@workspace/api-client-react";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter,
+} from "@/components/ui/table";
 
 interface PayrollApproveModalProps {
   onClose: () => void;
@@ -126,29 +129,29 @@ export default function PayrollApproveModal({ onClose, onSuccess, filterUserId }
               {t("payroll.noStaffSettings", "Нет сотрудников с настроенной зарплатой")}
             </div>
           ) : (
-            <table className="w-full text-sm">
-              <thead className="border-b border-[#e8e3d9] bg-[#faf8f4] sticky top-0">
-                <tr>
-                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-[#64748b] uppercase tracking-wide">{t("payroll.employee", "Сотрудник")}</th>
-                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-[#64748b] uppercase tracking-wide">{t("payroll.revenueBase")}</th>
-                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-[#64748b] uppercase tracking-wide">{t("payroll.calculated")}</th>
-                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-[#64748b] uppercase tracking-wide">{t("payroll.approved")}</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <TableHeader className="sticky top-0 bg-[#faf8f4]">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>{t("payroll.employee", "Сотрудник")}</TableHead>
+                  <TableHead className="text-right">{t("payroll.revenueBase")}</TableHead>
+                  <TableHead className="text-right">{t("payroll.calculated")}</TableHead>
+                  <TableHead className="text-right">{t("payroll.approved")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {rows.map((row) => (
-                  <tr key={row.userId} className="border-b border-[#e8e3d9]/60 hover:bg-[#faf8f4] transition-colors">
-                    <td className="px-4 py-3">
+                  <TableRow key={row.userId}>
+                    <TableCell>
                       <p className="font-medium text-[#0f172a]">{row.userName || "—"}</p>
                       <p className="text-[11px] text-[#94a3b8] capitalize">{row.userRole}</p>
-                    </td>
-                    <td className="px-4 py-3 text-right text-[#64748b]">
+                    </TableCell>
+                    <TableCell className="text-right text-[#64748b]">
                       ₸{row.revenueBase.toLocaleString("ru-KZ")}
-                    </td>
-                    <td className="px-4 py-3 text-right text-[#64748b]">
+                    </TableCell>
+                    <TableCell className="text-right text-[#64748b]">
                       ₸{row.calculatedAmount.toLocaleString("ru-KZ")}
-                    </td>
-                    <td className="px-4 py-3 text-right">
+                    </TableCell>
+                    <TableCell className="text-right">
                       <input
                         type="number"
                         min={0}
@@ -156,21 +159,21 @@ export default function PayrollApproveModal({ onClose, onSuccess, filterUserId }
                         onChange={(e) => handleOverride(row.userId, Number(e.target.value))}
                         className="w-28 h-8 px-2 rounded-xl border border-[#e8e3d9] bg-white text-sm text-right text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
                       />
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-              <tfoot className="border-t-2 border-[#e8e3d9] bg-[#faf8f4]">
-                <tr>
-                  <td colSpan={3} className="px-4 py-3 text-sm font-bold text-[#0f172a]">
+              </TableBody>
+              <TableFooter>
+                <TableRow className="hover:bg-transparent border-t-2 border-[#e8e3d9] bg-[#faf8f4]">
+                  <TableCell colSpan={3} className="font-bold text-[#0f172a]">
                     {t("payroll.fotTotal", "Итого ФОТ")}
-                  </td>
-                  <td className="px-4 py-3 text-right font-bold text-[#1f75fe]">
+                  </TableCell>
+                  <TableCell className="text-right font-bold text-[#1f75fe]">
                     ₸{totalFot.toLocaleString("ru-KZ")}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
+                  </TableCell>
+                </TableRow>
+              </TableFooter>
+            </Table>
           )}
         </div>
 

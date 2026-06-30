@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import type { Clinic } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Check, Star, Sparkles, Rocket, Shield, X, Loader2, Clock, AlertCircle } from "lucide-react";
+import { Check, Star, Sparkles, Rocket, Shield, X, Loader2, Clock, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PageShell } from "@/components/layout/page-shell";
+import { PageHeader } from "@/components/layout/page-header";
 
 type PlanId = "free" | "starter" | "professional" | "enterprise";
 
@@ -302,6 +304,7 @@ function CurrentSubscriptionBanner({ clinic }: { clinic: Clinic | null }) {
 export default function PricingPage() {
   const { clinic, user } = useAuthStore();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const subscriptionStatus = getSubscriptionStatus(clinic);
   const activePaidPlan =
     subscriptionStatus.kind === "active_plan" ? subscriptionStatus.plan : null;
@@ -341,14 +344,12 @@ export default function PricingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#faf8f4] font-manrope pb-10">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-white border-b border-[#e8e3d9] flex items-center gap-3 px-4 py-3">
-        <Link href="/menu" className="p-1.5 -ml-1.5 rounded-xl hover:bg-[#f1ede4] active:bg-[#f1ede4] transition-colors">
-          <ChevronLeft className="w-5 h-5 text-[#64748b]" />
-        </Link>
-        <h1 className="text-[17px] font-semibold text-[#0f172a]">Тарифы</h1>
-      </div>
+    <PageShell className="pb-10">
+      <PageHeader
+        title="Тарифы"
+        onBack={() => setLocation("/menu")}
+        sticky
+      />
 
       <div className="px-4 pt-6 space-y-5">
         {/* Hero */}
@@ -582,6 +583,6 @@ export default function PricingPage() {
           </div>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

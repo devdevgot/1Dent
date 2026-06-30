@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useListInventory, useGetInventoryConsumption } from "@workspace/api-client-react";
 import { useTranslation } from "react-i18next";
 import { Package, AlertTriangle, TrendingDown, BarChart3, ChevronLeft } from "lucide-react";
+import { PageShell } from "@/components/layout/page-shell";
 
 type Tab = "stock" | "consumption";
 
@@ -32,7 +33,7 @@ export default function WarehousePage() {
     consumables: "bg-[#fef3c7] text-[#d97706]",
     prosthetics: "bg-[#fef2f2] text-[#dc2626]",
     implants:    "bg-[#e0f2fe] text-[#0284c7]",
-    other:       "bg-[#f1f5f9] text-[#64748b]",
+    other:       "bg-[#f1ede4] text-[#64748b]",
   };
 
   function stockBarWidth(qty: number, min: number): string {
@@ -84,7 +85,7 @@ export default function WarehousePage() {
   );
 
   return (
-    <div className="min-h-full bg-[#faf8f4] font-manrope">
+    <PageShell withTabBarOffset>
       <div className="bg-white px-4 pt-5 pb-4 flex items-center gap-3 border-b border-[#e8e3d9] shadow-sm">
         <button
           onClick={() => window.history.back()}
@@ -97,7 +98,7 @@ export default function WarehousePage() {
           <h1 className="text-[17px] font-semibold text-[#0f172a]">{t("warehouse.title")}</h1>
         </div>
       </div>
-      <div className="p-4 pb-24 space-y-4 max-w-full">
+      <div className="p-4 space-y-4 max-w-full">
 
       {/* Tabs */}
       <div className="flex bg-[#f1ede4] rounded-xl p-1 gap-1">
@@ -236,6 +237,6 @@ export default function WarehousePage() {
         </>
       )}
       </div>
-    </div>
+    </PageShell>
   );
 }

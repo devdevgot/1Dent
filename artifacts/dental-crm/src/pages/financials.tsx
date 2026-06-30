@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { getBaseUrl } from "@/lib/base-url";
 import { cn } from "@/lib/utils";
+import { PageShell } from "@/components/layout/page-shell";
 
 const CATEGORY_COLORS: Record<string, string> = {
   salary:    "#4B7BEC",
@@ -173,7 +174,7 @@ export default function FinancialsPage() {
   const goalLow       = goalProgress !== null && goalProgress < 70;
 
   return (
-    <div className="min-h-full bg-[#faf8f4] font-manrope">
+    <PageShell withTabBarOffset animate={false}>
 
       {/* ── Header ── */}
       <div className="bg-white px-4 py-4 border-b border-[#e8e3d9] shadow-sm sticky top-0 z-20">
@@ -231,7 +232,7 @@ export default function FinancialsPage() {
         )}
       </div>
 
-      <div className="p-4 pb-24 space-y-4 max-w-full">
+      <div className="p-4 space-y-4 max-w-full">
 
         {/* ── HERO: три главные цифры ── */}
         <div className="grid grid-cols-3 gap-3">
@@ -521,6 +522,6 @@ export default function FinancialsPage() {
           onSuccess={handleExpenseSuccess}
         />
       )}
-    </div>
+    </PageShell>
   );
 }
