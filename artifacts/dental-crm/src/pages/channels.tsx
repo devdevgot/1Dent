@@ -57,9 +57,9 @@ export default function ChannelsPage() {
           <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
             <div
               className="w-20 h-20 rounded-3xl flex items-center justify-center shadow-lg mb-5"
-              style={{ backgroundColor: "#25D366" + "20" }}
+              style={{ backgroundColor: "#25d366" + "20" }}
             >
-              <WhatsAppIcon size={46} color="#25D366" />
+              <WhatsAppIcon size={46} color="#25d366" />
             </div>
 
             <div className="flex items-center gap-2 mb-2">
@@ -76,7 +76,7 @@ export default function ChannelsPage() {
               <button
                 onClick={() => setModalOpen(true)}
                 className="flex items-center gap-2.5 h-12 px-6 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98] shadow-md"
-                style={{ backgroundColor: "#25D366" }}
+                style={{ backgroundColor: "#25d366" }}
               >
                 <WhatsAppIcon size={18} color="white" />
                 Подключить WhatsApp

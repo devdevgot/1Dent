@@ -448,7 +448,7 @@ export default function AdminAppointmentNewPage() {
           <h2 className="text-sm font-bold text-[#0f172a] flex items-center gap-2">
             <User className="w-4 h-4 text-[#1f75fe]" />
             {t("adminAppointment.patient")}
-            <span className="text-red-500">*</span>
+            <span className="text-[#dc2626]">*</span>
           </h2>
 
           <SmartPatientInput
@@ -488,7 +488,7 @@ export default function AdminAppointmentNewPage() {
                 <label className="block text-xs font-medium text-[#64748b] mb-1.5">
                   <span className="flex items-center gap-1">
                     <Phone className="w-3.5 h-3.5" />
-                    Телефон <span className="text-red-500">*</span>
+                    Телефон <span className="text-[#dc2626]">*</span>
                   </span>
                 </label>
                 <input

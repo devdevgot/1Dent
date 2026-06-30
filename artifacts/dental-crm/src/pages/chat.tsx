@@ -34,7 +34,6 @@ import { getRoleDashboardPath } from "@/lib/role-redirect";
 import { WhatsAppConnectModal, WhatsAppIcon, type WaStatus } from "@/components/whatsapp/whatsapp-connect-modal";
 
 const BRAND      = "#1f75fe";
-const BRAND_DARK = "#0c1e3d";
 const CHAT_BG    = "#faf8f4";
 
 const DOT_PATTERN = `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='2' cy='2' r='1' fill='%23d4cfc6' fill-opacity='0.35'/%3E%3C/svg%3E")`;
@@ -251,7 +250,7 @@ function MessageBubble({ message, isOutbound }: { message: Message; isOutbound: 
           isOutbound
             ? "rounded-2xl rounded-tr-none mr-1.5 self-end"
             : "rounded-2xl rounded-tl-none ml-1.5 self-start",
-          isAlert && !isOutbound && "ring-1 ring-inset ring-red-300",
+          isAlert && !isOutbound && "ring-1 ring-inset ring-[#dc2626]/30",
         )}
         style={
           isOutbound
