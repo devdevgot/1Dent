@@ -236,29 +236,20 @@ export default function OwnerDashboard() {
     Boolean(analyticsData) &&
     totalPatientsEarly === 0 &&
     completedProceduresEarly === 0;
-  const needsDashboardDetails =
-    !analyticsLoading && Boolean(analyticsData) && !isLikelyEmptyClinic;
 
   const { data: summaryData, isLoading: summaryLoading } = useGetFinancialSummary(
     { dateFrom: dateFromStr, dateTo: dateToStr },
-    { query: { enabled: needsDashboardDetails } },
+    { query: { enabled: !isLikelyEmptyClinic } },
   );
   const { data: kpiData } = useGetDoctorKpis({
-    query: { queryKey: getGetDoctorKpisQueryKey(), enabled: needsDashboardDetails },
+    query: { queryKey: getGetDoctorKpisQueryKey() },
   });
-  const { data: proceduresData, isLoading: proceduresLoading } = useListProcedures({
-    query: { enabled: needsDashboardDetails },
-  });
-  const { data: patientsData } = useListPatients({
-    query: { enabled: needsDashboardDetails },
-  });
-  const { data: channelsRes } = useListChannels({
-    query: { enabled: needsDashboardDetails },
-  });
+  const { data: proceduresData } = useListProcedures();
+  const { data: patientsData } = useListPatients();
+  const { data: channelsRes } = useListChannels();
 
-  const revenueCardLoading =
-    analyticsLoading ||
-    (needsDashboardDetails && (summaryLoading || proceduresLoading));
+  // Empty clinics: show illustration after analytics only — skip waiting on financial summary.
+  const revenueCardLoading = analyticsLoading || (!isLikelyEmptyClinic && summaryLoading);
 
   const allProcedures = proceduresData?.data?.procedures ?? [];
   const allPatients   = patientsData?.data?.patients ?? [];
@@ -342,7 +333,10 @@ export default function OwnerDashboard() {
 
   const hasNoRevenueInPeriod =
     !revenueCardLoading &&
-    (isLikelyEmptyClinic || (paymentStats.length === 0 && realIncome === 0));
+    (
+      (isLikelyEmptyClinic && allPatients.length === 0) ||
+      (paymentStats.length === 0 && realIncome === 0)
+    );
 
   const CONDITION_LABELS: Record<string, string> = {
     cavity: "Кариес",
@@ -366,7 +360,7 @@ export default function OwnerDashboard() {
 
   const [conditionStats, setConditionStats] = useState<Array<{ condition: string; label: string; count: number; percent: number; color: string }>>([]);
   useEffect(() => {
-    if (!needsDashboardDetails) return;
+    if (isLikelyEmptyClinic) return;
     const token = localStorage.getItem("auth_token");
     fetch(`/api/patients/condition-stats`, {
       headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
@@ -389,7 +383,7 @@ export default function OwnerDashboard() {
         setConditionStats(list);
       })
       .catch(() => {});
-  }, [needsDashboardDetails]);
+  }, [isLikelyEmptyClinic]);
 
   const patientSourceMap = useMemo(() => {
     return new Map(allPatients.map((p) => [p.id, p.source]));
