@@ -183,6 +183,44 @@ export interface ChangePasswordRequest {
   newPassword: string;
 }
 
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ForgotPasswordResponse {
+  success: boolean;
+  message: string;
+  /** Present only in non-production for testing reset flow */
+  devToken?: string;
+}
+
+export interface ResetPasswordRequest {
+  /** @minLength 1 */
+  token: string;
+  /** @minLength 6 */
+  newPassword: string;
+}
+
+export interface CreatePlanRequest {
+  /** @minLength 1 */
+  plan: string;
+  /** @minLength 1 */
+  contactName: string;
+  /** @minLength 5 */
+  contactPhone: string;
+  contactEmail?: string;
+  message?: string;
+}
+
+export type PlanRequestResponseData = {
+  id: string;
+};
+
+export interface PlanRequestResponse {
+  success: boolean;
+  data: PlanRequestResponseData;
+}
+
 export interface CreateUserRequest {
   /** @minLength 2 */
   name: string;
@@ -424,14 +462,16 @@ export interface Message {
   createdAt: string;
 }
 
+export type SendMessageRequestAttachment = {
+  objectPath: string;
+  fileName: string;
+  contentType: string;
+};
+
 export interface SendMessageRequest {
   /** @maxLength 4096 */
   content?: string;
-  attachment?: {
-    objectPath: string;
-    fileName: string;
-    contentType: string;
-  };
+  attachment?: SendMessageRequestAttachment;
 }
 
 export type MessagesResponseData = {
@@ -1410,6 +1450,36 @@ export type ListChatbotSessions200 = {
 
 export type DeleteChatbotSession200 = {
   success?: boolean;
+};
+
+export type GetChatbotFunnelAnalyticsParams = {
+  days?: number;
+};
+
+export type GetChatbotFunnelAnalytics200DataAnalytics = {
+  [key: string]: unknown;
+};
+
+export type GetChatbotFunnelAnalytics200Data = {
+  analytics?: GetChatbotFunnelAnalytics200DataAnalytics;
+};
+
+export type GetChatbotFunnelAnalytics200 = {
+  success?: boolean;
+  data?: GetChatbotFunnelAnalytics200Data;
+};
+
+export type PatchChatbotSessionTakeoverBody = {
+  takeover: boolean;
+};
+
+export type PatchChatbotSessionTakeover200Data = {
+  session?: ChatbotSession;
+};
+
+export type PatchChatbotSessionTakeover200 = {
+  success?: boolean;
+  data?: PatchChatbotSessionTakeover200Data;
 };
 
 export type GetDoctorDetailedAnalyticsMeParams = {

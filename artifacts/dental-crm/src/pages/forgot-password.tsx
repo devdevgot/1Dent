@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Mail, CheckCircle2 } from "lucide-react";
 
-import { getBaseUrl } from "@/lib/base-url";
+import { useForgotPassword } from "@workspace/api-client-react";
 
 type Step = "form" | "sent";
 
@@ -12,38 +12,28 @@ export default function ForgotPassword() {
   const [step, setStep] = useState<Step>("form");
   const [email, setEmail] = useState("");
   const [devToken, setDevToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const apiBase = getBaseUrl();
+  const forgotMutation = useForgotPassword({
+    mutation: {
+      onSuccess: (data) => {
+        if (data.devToken) setDevToken(data.devToken);
+        setStep("sent");
+      },
+      onError: () => {
+        setError("Произошла ошибка. Проверьте подключение.");
+      },
+    },
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) {
       setError("Введите email");
       return;
     }
     setError("");
-    setLoading(true);
-    try {
-      const res = await fetch(`${apiBase}/api/auth/forgot-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-        credentials: "include",
-      });
-      const data = await res.json() as { success?: boolean; devToken?: string };
-      if (data.success) {
-        if (data.devToken) setDevToken(data.devToken);
-        setStep("sent");
-      } else {
-        setError("Произошла ошибка. Попробуйте снова.");
-      }
-    } catch {
-      setError("Произошла ошибка. Проверьте подключение.");
-    } finally {
-      setLoading(false);
-    }
+    forgotMutation.mutate({ data: { email } });
   };
 
   return (
@@ -97,10 +87,10 @@ export default function ForgotPassword() {
 
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={forgotMutation.isPending}
                   className="w-full py-4 rounded-full text-base font-semibold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed hover:scale-105 active:scale-95 mt-2 bg-[#1f75fe] hover:bg-[#1a65e8] text-white"
                 >
-                  {loading ? "Отправляем..." : "Восстановить"}
+                  {forgotMutation.isPending ? "Отправляем..." : "Восстановить"}
                 </button>
               </form>
             </motion.div>

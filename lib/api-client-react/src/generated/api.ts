@@ -34,6 +34,7 @@ import type {
   CreateFollowupsRequest,
   CreateInventoryItemRequest,
   CreatePatientRequest,
+  CreatePlanRequest,
   CreateProcedureBody,
   CreateProcedureTemplate201,
   CreateProcedureTemplateBody,
@@ -48,8 +49,12 @@ import type {
   ExcelPreviewResponse,
   FollowupResponse,
   FollowupsResponse,
+  ForgotPasswordRequest,
+  ForgotPasswordResponse,
   GetActionLogsParams,
   GetChannelStatsParams,
+  GetChatbotFunnelAnalytics200,
+  GetChatbotFunnelAnalyticsParams,
   GetChatbotSettings200,
   GetDoctorDetailedAnalyticsMeParams,
   GetDoctorDetailedAnalyticsParams,
@@ -72,14 +77,18 @@ import type {
   MigrationJobsResponse,
   NotificationResponse,
   NotificationsResponse,
+  PatchChatbotSessionTakeover200,
+  PatchChatbotSessionTakeoverBody,
   PatchUserCapacityRequest,
   PatientDetailResponse,
   PatientResponse,
   PatientsListResponse,
+  PlanRequestResponse,
   ProcedureListResponse,
   ProcedureResponse,
   ProcedureTemplateListResponse,
   RegisterRequest,
+  ResetPasswordRequest,
   SendMessageRequest,
   SuccessMessage,
   SuccessResponse,
@@ -602,6 +611,264 @@ export const useChangePassword = <
   TContext
 > => {
   return useMutation(getChangePasswordMutationOptions(options));
+};
+
+/**
+ * @summary Request password reset email
+ */
+export const getForgotPasswordUrl = () => {
+  return `/api/auth/forgot-password`;
+};
+
+export const forgotPassword = async (
+  forgotPasswordRequest: ForgotPasswordRequest,
+  options?: RequestInit,
+): Promise<ForgotPasswordResponse> => {
+  return customFetch<ForgotPasswordResponse>(getForgotPasswordUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(forgotPasswordRequest),
+  });
+};
+
+export const getForgotPasswordMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof forgotPassword>>,
+    TError,
+    { data: BodyType<ForgotPasswordRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof forgotPassword>>,
+  TError,
+  { data: BodyType<ForgotPasswordRequest> },
+  TContext
+> => {
+  const mutationKey = ["forgotPassword"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof forgotPassword>>,
+    { data: BodyType<ForgotPasswordRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return forgotPassword(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ForgotPasswordMutationResult = NonNullable<
+  Awaited<ReturnType<typeof forgotPassword>>
+>;
+export type ForgotPasswordMutationBody = BodyType<ForgotPasswordRequest>;
+export type ForgotPasswordMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Request password reset email
+ */
+export const useForgotPassword = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof forgotPassword>>,
+    TError,
+    { data: BodyType<ForgotPasswordRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof forgotPassword>>,
+  TError,
+  { data: BodyType<ForgotPasswordRequest> },
+  TContext
+> => {
+  return useMutation(getForgotPasswordMutationOptions(options));
+};
+
+/**
+ * @summary Reset password with token from email
+ */
+export const getResetPasswordUrl = () => {
+  return `/api/auth/reset-password`;
+};
+
+export const resetPassword = async (
+  resetPasswordRequest: ResetPasswordRequest,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getResetPasswordUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(resetPasswordRequest),
+  });
+};
+
+export const getResetPasswordMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resetPassword>>,
+    TError,
+    { data: BodyType<ResetPasswordRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resetPassword>>,
+  TError,
+  { data: BodyType<ResetPasswordRequest> },
+  TContext
+> => {
+  const mutationKey = ["resetPassword"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resetPassword>>,
+    { data: BodyType<ResetPasswordRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return resetPassword(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResetPasswordMutationResult = NonNullable<
+  Awaited<ReturnType<typeof resetPassword>>
+>;
+export type ResetPasswordMutationBody = BodyType<ResetPasswordRequest>;
+export type ResetPasswordMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Reset password with token from email
+ */
+export const useResetPassword = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resetPassword>>,
+    TError,
+    { data: BodyType<ResetPasswordRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof resetPassword>>,
+  TError,
+  { data: BodyType<ResetPasswordRequest> },
+  TContext
+> => {
+  return useMutation(getResetPasswordMutationOptions(options));
+};
+
+/**
+ * @summary Submit plan upgrade or pricing request
+ */
+export const getCreatePlanRequestUrl = () => {
+  return `/api/plan-requests`;
+};
+
+export const createPlanRequest = async (
+  createPlanRequest: CreatePlanRequest,
+  options?: RequestInit,
+): Promise<PlanRequestResponse> => {
+  return customFetch<PlanRequestResponse>(getCreatePlanRequestUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createPlanRequest),
+  });
+};
+
+export const getCreatePlanRequestMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createPlanRequest>>,
+    TError,
+    { data: BodyType<CreatePlanRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createPlanRequest>>,
+  TError,
+  { data: BodyType<CreatePlanRequest> },
+  TContext
+> => {
+  const mutationKey = ["createPlanRequest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createPlanRequest>>,
+    { data: BodyType<CreatePlanRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createPlanRequest(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreatePlanRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createPlanRequest>>
+>;
+export type CreatePlanRequestMutationBody = BodyType<CreatePlanRequest>;
+export type CreatePlanRequestMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Submit plan upgrade or pricing request
+ */
+export const useCreatePlanRequest = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createPlanRequest>>,
+    TError,
+    { data: BodyType<CreatePlanRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createPlanRequest>>,
+  TError,
+  { data: BodyType<CreatePlanRequest> },
+  TContext
+> => {
+  return useMutation(getCreatePlanRequestMutationOptions(options));
 };
 
 /**
@@ -5989,6 +6256,206 @@ export const useDeleteChatbotSession = <
   TContext
 > => {
   return useMutation(getDeleteChatbotSessionMutationOptions(options));
+};
+
+/**
+ * @summary Chatbot funnel conversion metrics and A/B test results
+ */
+export const getGetChatbotFunnelAnalyticsUrl = (
+  params?: GetChatbotFunnelAnalyticsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/chatbot/analytics/funnel?${stringifiedParams}`
+    : `/api/chatbot/analytics/funnel`;
+};
+
+export const getChatbotFunnelAnalytics = async (
+  params?: GetChatbotFunnelAnalyticsParams,
+  options?: RequestInit,
+): Promise<GetChatbotFunnelAnalytics200> => {
+  return customFetch<GetChatbotFunnelAnalytics200>(
+    getGetChatbotFunnelAnalyticsUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetChatbotFunnelAnalyticsQueryKey = (
+  params?: GetChatbotFunnelAnalyticsParams,
+) => {
+  return [
+    `/api/chatbot/analytics/funnel`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetChatbotFunnelAnalyticsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getChatbotFunnelAnalytics>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetChatbotFunnelAnalyticsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getChatbotFunnelAnalytics>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetChatbotFunnelAnalyticsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getChatbotFunnelAnalytics>>
+  > = ({ signal }) =>
+    getChatbotFunnelAnalytics(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getChatbotFunnelAnalytics>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetChatbotFunnelAnalyticsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getChatbotFunnelAnalytics>>
+>;
+export type GetChatbotFunnelAnalyticsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Chatbot funnel conversion metrics and A/B test results
+ */
+
+export function useGetChatbotFunnelAnalytics<
+  TData = Awaited<ReturnType<typeof getChatbotFunnelAnalytics>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetChatbotFunnelAnalyticsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getChatbotFunnelAnalytics>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetChatbotFunnelAnalyticsQueryOptions(
+    params,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Enable or disable human takeover for a chatbot session
+ */
+export const getPatchChatbotSessionTakeoverUrl = (phone: string) => {
+  return `/api/chatbot/sessions/${phone}/takeover`;
+};
+
+export const patchChatbotSessionTakeover = async (
+  phone: string,
+  patchChatbotSessionTakeoverBody: PatchChatbotSessionTakeoverBody,
+  options?: RequestInit,
+): Promise<PatchChatbotSessionTakeover200> => {
+  return customFetch<PatchChatbotSessionTakeover200>(
+    getPatchChatbotSessionTakeoverUrl(phone),
+    {
+      ...options,
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(patchChatbotSessionTakeoverBody),
+    },
+  );
+};
+
+export const getPatchChatbotSessionTakeoverMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof patchChatbotSessionTakeover>>,
+    TError,
+    { phone: string; data: BodyType<PatchChatbotSessionTakeoverBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof patchChatbotSessionTakeover>>,
+  TError,
+  { phone: string; data: BodyType<PatchChatbotSessionTakeoverBody> },
+  TContext
+> => {
+  const mutationKey = ["patchChatbotSessionTakeover"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof patchChatbotSessionTakeover>>,
+    { phone: string; data: BodyType<PatchChatbotSessionTakeoverBody> }
+  > = (props) => {
+    const { phone, data } = props ?? {};
+
+    return patchChatbotSessionTakeover(phone, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PatchChatbotSessionTakeoverMutationResult = NonNullable<
+  Awaited<ReturnType<typeof patchChatbotSessionTakeover>>
+>;
+export type PatchChatbotSessionTakeoverMutationBody =
+  BodyType<PatchChatbotSessionTakeoverBody>;
+export type PatchChatbotSessionTakeoverMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Enable or disable human takeover for a chatbot session
+ */
+export const usePatchChatbotSessionTakeover = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof patchChatbotSessionTakeover>>,
+    TError,
+    { phone: string; data: BodyType<PatchChatbotSessionTakeoverBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof patchChatbotSessionTakeover>>,
+  TError,
+  { phone: string; data: BodyType<PatchChatbotSessionTakeoverBody> },
+  TContext
+> => {
+  return useMutation(getPatchChatbotSessionTakeoverMutationOptions(options));
 };
 
 /**
