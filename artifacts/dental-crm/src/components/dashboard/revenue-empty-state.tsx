@@ -22,7 +22,7 @@ export function RevenueEmptyState() {
       transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
       className="flex flex-col items-center px-6 pt-6 pb-7 text-center"
     >
-      <RevenueGrowthIllustration className="w-44 h-44 sm:w-48 sm:h-48 mb-5" />
+      <RevenueGrowthIllustration className="w-full max-w-[280px] h-[200px] sm:h-[210px] mb-5" />
 
       <h3 className="text-lg font-bold text-[var(--text)] tracking-tight">
         {t("ownerDashboard.revenueEmptyTitle")}
