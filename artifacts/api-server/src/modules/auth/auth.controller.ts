@@ -106,6 +106,19 @@ router.get("/me", authMiddleware, async (req: Request, res: Response, next: Next
   res.json({ success: true, data: result });
 });
 
+router.post("/start-trial", authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await authService.startTrial(
+      req.user!.userId,
+      req.user!.clinicId,
+      req.user!.role,
+    );
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
 const updateProfileSchema = z.object({
   name: z.string().min(2).optional(),
   email: z.string().email().optional(),

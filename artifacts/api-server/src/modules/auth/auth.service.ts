@@ -113,6 +113,36 @@ export class AuthService {
     return { user: safeUser, clinic };
   }
 
+  async startTrial(
+    userId: string,
+    clinicId: string,
+    role: UserRole,
+  ): Promise<{ user: Omit<User, "passwordHash">; clinic: SafeClinic }> {
+    if (role !== "owner") {
+      throw new ForbiddenError("Только владелец клиники может активировать пробный период");
+    }
+
+    const clinic = await this.repo.findClinicById(clinicId);
+    if (!clinic) throw new NotFoundError("Clinic not found");
+
+    if (clinic.plan !== "free") {
+      throw new ValidationError("Пробный период доступен только без активного тарифа");
+    }
+    if (clinic.trialEndsAt) {
+      throw new ValidationError("Пробный период уже был использован");
+    }
+
+    const trialEndsAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+    const updatedClinic = await this.repo.setTrialEndsAt(clinicId, trialEndsAt);
+    if (!updatedClinic) throw new NotFoundError("Clinic not found");
+
+    const user = await this.repo.findUserByIdAndClinic(userId, clinicId);
+    if (!user) throw new NotFoundError("User not found");
+
+    const { passwordHash: _, ...safeUser } = user;
+    return { user: safeUser, clinic: updatedClinic };
+  }
+
   async requestPasswordReset(email: string): Promise<{ token: string }> {
     const user = await this.repo.findUserByEmail(email);
     if (!user) {

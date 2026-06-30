@@ -388,6 +388,29 @@
     "kz": "Қаз",
     "en": "Eng"
   },
+  "paywall": {
+    "badge": "System access",
+    "titleNoPlan": "Choose a plan to get started",
+    "titleExpiredTrial": "Trial period ended",
+    "titleExpiredPlan": "Subscription expired",
+    "descNoPlanOwner": "Start a free 3-day trial or choose a plan to unlock all {{app}} features for your clinic.",
+    "descNoPlanStaff": "The clinic owner needs to activate a trial or choose a plan for system access.",
+    "descExpiredTrial": "Your trial has ended. Choose a plan to continue working with patients and analytics.",
+    "descExpiredPlan": "Your subscription has expired. Renew to continue without limits.",
+    "startTrial": "Try 3 days for free",
+    "viewPlans": "View plans",
+    "contactUs": "Contact us",
+    "trialStartedTitle": "Trial activated!",
+    "trialStartedDesc": "You have 3 days of full access to all features.",
+    "trialErrorTitle": "Could not activate trial",
+    "trialErrorDesc": "Please try again or contact support.",
+    "footer": "{{app}} — dental clinic CRM",
+    "features": {
+      "patients": "Patients, scheduling and treatment plans",
+      "whatsapp": "WhatsApp and AI chatbot for bookings",
+      "analytics": "Finance, analytics and team oversight"
+    }
+  },
   "ownerDashboard": {
     "manageStaff": "Staff",
     "noDoctors": "No doctors added",

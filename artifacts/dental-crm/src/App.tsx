@@ -52,6 +52,7 @@ import ContractTemplatesPage from "@/pages/contract-templates";
 import BranchesPage from "@/pages/branches";
 import ClinicBranchesPage from "@/pages/clinic-branches";
 import PricingPage from "@/pages/pricing";
+import { PlanPaywall } from "@/components/billing/plan-paywall";
 import AiCreditsPage from "@/pages/ai-credits";
 import LandingPage from "@/pages/landing";
 import NotFound from "@/pages/not-found";
@@ -162,81 +163,6 @@ function ProceduresRedirect() {
   const [, setLocation] = useLocation();
   useEffect(() => { setLocation("/patients", { replace: true }); }, [setLocation]);
   return null;
-}
-
-function PlanPaywall() {
-  const { clinic, setAuth, user } = useAuthStore();
-  const [, navigate] = useLocation();
-  const [loc] = useLocation();
-  const clinicAny = clinic as any;
-
-  useEffect(() => {
-    if (!user) return;
-    const refresh = async () => {
-      try {
-        const tok = localStorage.getItem("auth_token");
-        const res = await fetch("/api/auth/me", {
-          headers: { ...(tok ? { Authorization: `Bearer ${tok}` } : {}) },
-          credentials: "include",
-        });
-        if (!res.ok) return;
-        const json = await res.json();
-        if (json?.success && json.data?.user && json.data?.clinic) {
-          setAuth(json.data.user, json.data.clinic);
-        }
-      } catch {}
-    };
-    const iv = setInterval(refresh, 15_000);
-    refresh();
-    return () => clearInterval(iv);
-  }, [user?.id]);
-
-  const plan = clinicAny?.plan ?? "free";
-  const trialEndsAt = clinicAny?.trialEndsAt;
-  const planExpiresAt = clinicAny?.planExpiresAt;
-  const now = new Date();
-  const hasPaidPlan = plan !== "free";
-  const planNotExpired = !planExpiresAt || new Date(planExpiresAt) > now;
-  const trialActive = trialEndsAt && new Date(trialEndsAt) > now;
-  const planActive = (hasPaidPlan && planNotExpired) || trialActive;
-
-  if (planActive) return null;
-  if (loc === "/pricing") return null;
-
-  const trialExpired = trialEndsAt && new Date(trialEndsAt) <= now;
-  const subExpired = hasPaidPlan && !planNotExpired;
-
-  return (
-    <div className="fixed inset-0 z-[200] bg-white flex flex-col items-center justify-center px-6 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-5">
-        <svg className="w-8 h-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-      </div>
-      <h1 className="text-xl font-bold text-gray-900 mb-2">
-        {subExpired ? "Срок подписки истёк" : trialExpired ? "Пробный период закончился" : "Тариф не подключён"}
-      </h1>
-      <p className="text-sm text-gray-500 leading-relaxed max-w-xs mb-6">
-        {subExpired
-          ? "Срок действия вашего тарифа истёк. Продлите подписку для продолжения работы."
-          : trialExpired
-          ? "Ваш пробный период истёк. Для продолжения работы необходимо подключить тарифный план."
-          : "Для доступа к системе необходимо подключить тарифный план."}
-      </p>
-      <button
-        onClick={() => navigate("/pricing")}
-        className="w-full max-w-xs px-6 py-3 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors mb-3"
-      >
-        Посмотреть тарифы
-      </button>
-      <a
-        href="https://wa.me/77001234567"
-        target="_blank"
-        rel="noreferrer"
-        className="text-sm text-gray-400 hover:text-primary transition-colors"
-      >
-        Связаться с нами
-      </a>
-    </div>
-  );
 }
 
 function Router() {
