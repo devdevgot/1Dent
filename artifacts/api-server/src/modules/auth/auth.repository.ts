@@ -137,4 +137,21 @@ export class AuthRepository {
       .returning();
     return user as any;
   }
+
+  async setTrialEndsAt(clinicId: string, trialEndsAt: Date): Promise<SafeClinic | undefined> {
+    const [clinic] = await db
+      .update(clinicsTable)
+      .set({ trialEndsAt })
+      .where(eq(clinicsTable.id, clinicId))
+      .returning({
+        id: clinicsTable.id,
+        name: clinicsTable.name,
+        plan: clinicsTable.plan,
+        whatsappPhone: clinicsTable.whatsappPhone,
+        trialEndsAt: clinicsTable.trialEndsAt,
+        planExpiresAt: clinicsTable.planExpiresAt,
+        createdAt: clinicsTable.createdAt,
+      });
+    return clinic as SafeClinic | undefined;
+  }
 }
