@@ -12,12 +12,11 @@ import { calculateAge, formatDateOfBirth, maskIIN } from "@workspace/api-zod";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Users, KanbanSquare,
-  Plus, RefreshCw, Search, Trash2,
+  RefreshCw, Search, Trash2,
   ChevronUp, ChevronDown, ChevronsUpDown, SlidersHorizontal,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { PageShell } from "@/components/layout/page-shell";
-import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-header";
+import { PageHeader, PageHeaderAddButton, PageHeaderIconButton } from "@/components/layout/page-header";
 import { KanbanBoard } from "@/components/kanban/kanban-board";
 import { PatientDetailPanelGate } from "@/components/kanban/patient-detail-panel-gate";
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -469,10 +468,10 @@ export default function PatientsPage() {
               )}
             </PageHeaderIconButton>
             {canCreate && (
-              <Button onClick={() => setIsCreateOpen(true)} className="gap-1.5 h-8 text-xs px-2.5 sm:px-3 rounded-full font-semibold">
-                <Plus className="w-3.5 h-3.5 shrink-0" />
-                <span className="hidden sm:inline">{t("kanban.newPatient")}</span>
-              </Button>
+              <PageHeaderAddButton
+                onClick={() => setIsCreateOpen(true)}
+                title={t("kanban.newPatient")}
+              />
             )}
           </>
         }

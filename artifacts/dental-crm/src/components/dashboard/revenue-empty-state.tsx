@@ -1,8 +1,8 @@
 import { Users, Stethoscope } from "lucide-react";
-import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
 import { useKanbanStore } from "@/hooks/use-kanban";
+
 export function RevenueEmptyState() {
   const { t } = useTranslation();
   const [, navigate] = useLocation();
@@ -14,17 +14,15 @@ export function RevenueEmptyState() {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-      className="flex flex-col items-center px-6 pt-6 pb-7 text-center"
-    >
+    <div className="flex flex-col items-center px-6 pt-6 pb-7 text-center">
       <img
         src="/images/revenue-empty-illustration.png"
         alt=""
         aria-hidden
         draggable={false}
+        decoding="async"
+        width={320}
+        height={240}
         className="w-full max-w-[320px] h-auto object-contain mb-5"
       />
 
@@ -52,6 +50,6 @@ export function RevenueEmptyState() {
           {t("ownerDashboard.createFirstProcedure")}
         </button>
       </div>
-    </motion.div>
+    </div>
   );
 }

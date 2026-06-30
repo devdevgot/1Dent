@@ -11,12 +11,11 @@ import type { ProcedureTemplate } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
-import { Button } from "@/components/ui/button";
 import {
   Plus, Search, Pencil, Trash2, Check, X, ClipboardList,
 } from "lucide-react";
 import { PageShell } from "@/components/layout/page-shell";
-import { PageHeader } from "@/components/layout/page-header";
+import { PageHeader, PageHeaderAddButton } from "@/components/layout/page-header";
 
 const CATEGORIES = [
   { key: "all",            label: "Все" },
@@ -162,16 +161,13 @@ export default function ServicesPage() {
         onBack={() => window.history.back()}
         right={
           isOwner ? (
-            <Button
+            <PageHeaderAddButton
               onClick={() => {
                 setShowAdd(true);
                 setTimeout(() => document.getElementById("add-service-name")?.focus(), 50);
               }}
-              className="gap-1.5 h-8 text-xs px-2.5 sm:px-3 rounded-full font-semibold"
-            >
-              <Plus className="w-3.5 h-3.5 shrink-0" />
-              <span className="hidden sm:inline">Добавить</span>
-            </Button>
+              title="Добавить"
+            />
           ) : undefined
         }
       />
