@@ -83,8 +83,9 @@ const DEV_MOCK_USER: User = {
 const DEV_MOCK_CLINIC: Clinic = {
   id: "dev-bypass-clinic",
   name: "Dev Clinic",
-  createdAt: new Date().toISOString(),
-};
+  createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+  trialEndsAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+} as Clinic;
 
 // API base URL: VITE_API_URL for split hosting; omit for same-origin (Render/Replit single service).
 const apiBaseUrl = import.meta.env.VITE_API_URL as string | undefined;

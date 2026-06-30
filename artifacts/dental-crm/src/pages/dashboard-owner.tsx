@@ -544,7 +544,7 @@ export default function OwnerDashboard() {
       )}
 
       {/* ─── Revenue Donut Card ─── */}
-      <div className="mx-4 mt-3 dash-card overflow-hidden">
+      <div className={cn("mx-4 mt-3 dash-card", !hasNoRevenueInPeriod && "overflow-hidden")}>
 
         {/* Ring chart or empty state */}
         <div className="pt-4 pb-2 flex justify-center">
