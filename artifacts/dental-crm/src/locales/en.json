@@ -392,7 +392,12 @@
     "manageStaff": "Staff",
     "noDoctors": "No doctors added",
     "noDoctorsDesc": "Add doctors to see their KPI and rankings.",
-    "addStaff": "Add staff member"
+    "addStaff": "Add staff member",
+    "revenueEmptyTitle": "No revenue data yet",
+    "revenueEmptyDesc": "The chart will appear here once you record your first payment.",
+    "revenueEmptyHint": "Start with a patient — the system will show revenue and payment breakdown.",
+    "addFirstPatient": "Add first patient",
+    "createFirstProcedure": "Create procedure"
   },
   "adminDashboard": {
     "subtitle": "Operations dashboard for {{clinic}}.",

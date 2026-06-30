@@ -392,7 +392,12 @@
     "manageStaff": "Қызметкерлер",
     "noDoctors": "Дәрігерлер қосылмаған",
     "noDoctorsDesc": "KPI мен рейтингті көру үшін дәрігерлер қосыңыз.",
-    "addStaff": "Қызметкер қосу"
+    "addStaff": "Қызметкер қосу",
+    "revenueEmptyTitle": "Табыс деректері әлі жоқ",
+    "revenueEmptyDesc": "Бірінші төлем жасалғаннан кейін диаграмма осында пайда болады.",
+    "revenueEmptyHint": "Пациенттен бастаңыз — жүйе табыс пен төлем түрлерін көрсетеді.",
+    "addFirstPatient": "Бірінші пациентті қосу",
+    "createFirstProcedure": "Процедура жасау"
   },
   "adminDashboard": {
     "subtitle": "{{clinic}} клиникасының жедел панелі.",

@@ -24,6 +24,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { OnboardingWizard } from "@/components/dashboard/onboarding-wizard";
+import { RevenueEmptyState } from "@/components/dashboard/revenue-empty-state";
 import { SITE } from "@/config/site";
 import "@/styles/dashboard.css";
 
@@ -315,6 +316,8 @@ export default function OwnerDashboard() {
     }).filter(stat => stat.amount > 0).sort((a, b) => b.amount - a.amount);
   }, [allProcedures, dateRange]);
 
+  const hasNoRevenueInPeriod = !isLoading && paymentStats.length === 0 && realIncome === 0;
+
   const CONDITION_LABELS: Record<string, string> = {
     cavity: "Кариес",
     root_canal: "Пульпит / Каналы",
@@ -543,12 +546,14 @@ export default function OwnerDashboard() {
       {/* ─── Revenue Donut Card ─── */}
       <div className="mx-4 mt-3 dash-card overflow-hidden">
 
-        {/* Ring chart */}
+        {/* Ring chart or empty state */}
         <div className="pt-4 pb-2 flex justify-center">
           {isLoading ? (
             <div className="w-[260px] h-[260px] flex items-center justify-center">
               <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
             </div>
+          ) : hasNoRevenueInPeriod ? (
+            <RevenueEmptyState />
           ) : (
             <DonutChart
               data={paymentStats}
@@ -560,7 +565,7 @@ export default function OwnerDashboard() {
         </div>
 
         {/* ─── Payment method list ─── */}
-        {!isLoading && paymentStats.length > 0 && (
+        {!isLoading && !hasNoRevenueInPeriod && paymentStats.length > 0 && (
           <div className="px-5 pb-5 space-y-0 divide-y divide-[#f1ede4]">
             {paymentStats.map((stat, idx) => {
               const Icon = PAYMENT_ICONS[stat.method] ?? Wallet;
@@ -589,10 +594,6 @@ export default function OwnerDashboard() {
               );
             })}
           </div>
-        )}
-
-        {!isLoading && paymentStats.length === 0 && revenueThisMonth === 0 && (
-          <p className="py-6 text-center text-sm text-[#94a3b8]">Нет выручки в этом периоде</p>
         )}
       </div>
 
