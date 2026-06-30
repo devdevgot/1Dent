@@ -553,20 +553,20 @@ export function ScriptMindMapModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[#faf8f4]">
-      <div className="shrink-0 flex items-center gap-3 px-4 py-3 bg-white border-b border-[#e8e3d9] shadow-sm">
-        <GitBranch className="h-4 w-4 text-[#1f75fe] shrink-0" />
+    <div className="fixed inset-0 z-50 flex flex-col bg-[var(--bg)] font-manrope">
+      <div className="shrink-0 flex items-center gap-3 px-4 py-3 bg-[var(--surface)] border-b border-[var(--border)] shadow-sm">
+        <GitBranch className="h-4 w-4 text-[var(--primary)] shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-[#0f172a]">Скрипт диалога</p>
-          <p className="text-xs text-[#64748b] leading-tight">
+          <p className="text-sm font-semibold text-[var(--text)]">Скрипт диалога</p>
+          <p className="text-xs text-[var(--text-secondary)] leading-tight">
             Нажмите на карточку чтобы редактировать · «+Шаг» добавляет дочерний · «Ветка» разветвляет
           </p>
         </div>
         <button
           onClick={onClose}
-          className="p-1.5 rounded-lg hover:bg-[#f1ede4] transition-colors shrink-0"
+          className="p-1.5 rounded-lg hover:bg-[var(--surface-2)] transition-colors shrink-0"
         >
-          <X className="h-4 w-4 text-[#64748b]" />
+          <X className="h-4 w-4 text-[var(--text-secondary)]" />
         </button>
       </div>
       <div className="flex-1 min-h-0">

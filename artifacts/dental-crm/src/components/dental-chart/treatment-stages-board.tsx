@@ -895,11 +895,11 @@ function StageDetailSheet({
         <div className="flex items-center justify-between px-4 pt-5 pb-3 shrink-0">
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-[#f1ede4] hover:bg-[#e8e3d9] transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-[var(--surface-2)] hover:bg-[var(--border)] transition-colors"
           >
-            <ChevronDown className="w-4 h-4 text-[#64748b]" />
+            <ChevronDown className="w-4 h-4 text-[var(--text-secondary)]" />
           </button>
-          <span className="text-[16px] font-bold text-[#0f172a]">{stage.label}</span>
+          <span className="text-[16px] font-bold text-[var(--text)]">{stage.label}</span>
           <div className="w-8 h-8" />
         </div>
 
@@ -913,15 +913,15 @@ function StageDetailSheet({
           </div>
 
           {/* Description */}
-          <p className="text-center text-[14px] text-[#64748b]">{stageDescription}</p>
+          <p className="text-center text-[14px] text-[var(--text-secondary)]">{stageDescription}</p>
 
           {/* Total + progress */}
-          <div className="bg-[#faf8f4] rounded-2xl p-4 space-y-3">
+          <div className="bg-[var(--bg)] rounded-2xl p-4 space-y-3">
             <div>
-              <p className="text-[11px] text-[#94a3b8] mb-0.5">Сумма этапа</p>
+              <p className="text-[11px] text-[var(--text-subtle)] mb-0.5">Сумма этапа</p>
               {stageHasDiscount ? (
                 <div className="space-y-0.5">
-                  <p className="text-[14px] text-[#94a3b8] line-through leading-none">
+                  <p className="text-[14px] text-[var(--text-subtle)] line-through leading-none">
                     {sectionOriginalTotal > 0 ? formatPrice(sectionOriginalTotal) : "—"}
                   </p>
                   <div className="flex items-center gap-2">
@@ -934,24 +934,24 @@ function StageDetailSheet({
                   </div>
                 </div>
               ) : (
-                <p className="text-[24px] font-bold text-[#0f172a] leading-tight">
+                <p className="text-[24px] font-bold text-[var(--text)] leading-tight">
                   {sectionOriginalTotal > 0 ? formatPrice(sectionOriginalTotal) : "—"}
                 </p>
               )}
             </div>
             {totalCount > 0 && (
               <>
-                <div className="h-2 bg-[#e8e3d9] rounded-full overflow-hidden">
+                <div className="h-2 bg-[var(--border)] rounded-full overflow-hidden">
                   <div
                     className="h-full bg-emerald-500 rounded-full transition-all duration-700"
                     style={{ width: `${progressPct}%` }}
                   />
                 </div>
-                <p className="text-[12px] text-[#94a3b8]">
+                <p className="text-[12px] text-[var(--text-subtle)]">
                   Выполнено{" "}
-                  <span className="text-[#0f172a] font-semibold">{completedCount}</span>{" "}
+                  <span className="text-[var(--text)] font-semibold">{completedCount}</span>{" "}
                   из{" "}
-                  <span className="text-[#0f172a] font-semibold">{totalCount}</span>{" "}
+                  <span className="text-[var(--text)] font-semibold">{totalCount}</span>{" "}
                   процедур
                 </p>
               </>
@@ -961,7 +961,7 @@ function StageDetailSheet({
           {/* Procedures list */}
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <h3 className="text-[15px] font-bold text-[#0f172a]">
+              <h3 className="text-[15px] font-bold text-[var(--text)]">
                 Процедуры ({totalCount})
               </h3>
               {showHistorical && (
@@ -1027,8 +1027,8 @@ function StageDetailSheet({
 
           {/* Назначено */}
           <div>
-            <h3 className="text-[15px] font-bold text-[#0f172a] mb-3">Назначено</h3>
-            <div className="bg-white rounded-2xl border border-[#e8e3d9] divide-y divide-[#e8e3d9]">
+            <h3 className="text-[15px] font-bold text-[var(--text)] mb-3">Назначено</h3>
+            <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] divide-y divide-[var(--border)]">
               {(() => {
                 const scheduledItems = planItems
                   .filter((p) => p.status === "pending" && p.scheduledAt)
@@ -1074,12 +1074,12 @@ function StageDetailSheet({
 
           {/* Комментарий */}
           <div>
-            <h3 className="text-[15px] font-bold text-[#0f172a] mb-3">Комментарий</h3>
-            <div className="bg-white rounded-2xl border border-[#e8e3d9] px-4 py-3">
+            <h3 className="text-[15px] font-bold text-[var(--text)] mb-3">Комментарий</h3>
+            <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] px-4 py-3">
               {planNotes ? (
-                <p className="text-[13px] text-[#64748b] leading-relaxed">{planNotes}</p>
+                <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed">{planNotes}</p>
               ) : (
-                <p className="text-[13px] text-[#94a3b8] italic">Нет комментария</p>
+                <p className="text-[13px] text-[var(--text-subtle)] italic">Нет комментария</p>
               )}
             </div>
           </div>
@@ -2389,18 +2389,18 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
           }
         }}
       >
-        <DialogContent className="max-w-[90vw] sm:max-w-[400px] rounded-2xl border border-[#e8e3d9] shadow-xl p-6">
+        <DialogContent className="max-w-[90vw] sm:max-w-[400px] rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-xl p-6">
           <DialogHeader>
-            <DialogTitle className="text-[17px] font-bold text-[#0f172a]">
+            <DialogTitle className="text-[17px] font-bold text-[var(--text)]">
               Указать скидку для этапа
             </DialogTitle>
-            <DialogDescription className="text-[13px] text-[#64748b] pt-1">
+            <DialogDescription className="text-[13px] text-[var(--text-secondary)] pt-1">
               Скидка будет применена ко всем процедурам в этом этапе.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-1.5">
-              <label className="block text-[12px] font-medium text-[#0f172a]">
+              <label className="block text-[12px] font-medium text-[var(--text)]">
                 Процент скидки (0-100%)
               </label>
               <div className="relative">
@@ -2420,7 +2420,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
                       }
                     }
                   }}
-                  className="w-full text-[14px] border border-[#e8e3d9] rounded-xl px-3.5 py-2.5 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                  className="w-full text-[14px] border border-[var(--border)] rounded-xl px-3.5 py-2.5 pr-10 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 bg-[var(--surface)] text-[var(--text)]"
                   placeholder="0"
                   autoFocus
                   onKeyDown={(e) => {
@@ -2428,7 +2428,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
                   }}
                 />
                 <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none">
-                  <Percent className="w-4 h-4 text-[#94a3b8]" />
+                  <Percent className="w-4 h-4 text-[var(--text-subtle)]" />
                 </div>
               </div>
             </div>
@@ -2439,13 +2439,13 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
                 setDiscountModalStageId(null);
                 setDiscountValue("");
               }}
-              className="px-4 py-2 text-[13px] font-medium border border-[#e8e3d9] rounded-xl text-[#64748b] hover:bg-[#faf8f4] transition-colors"
+              className="dash-btn dash-btn-secondary px-4 py-2 text-[13px] font-medium"
             >
               Отмена
             </button>
             <button
               onClick={handleSaveStageDiscount}
-              className="px-4 py-2 text-[13px] font-semibold bg-blue-600 text-white hover:bg-blue-700 rounded-xl transition-colors"
+              className="dash-btn dash-btn-primary px-4 py-2 text-[13px] font-semibold"
             >
               Применить
             </button>
@@ -2460,13 +2460,13 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
           : null;
         return (
           <Dialog open={completionPromptItemId !== null} onOpenChange={(open) => { if (!open) onDismissPrompt(true); }}>
-            <DialogContent className="max-w-[90vw] rounded-2xl border border-[#e8e3d9] shadow-xl p-6">
+            <DialogContent className="max-w-[90vw] rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-xl p-6">
               <DialogHeader>
-                <DialogTitle className="text-[17px] font-bold text-[#0f172a] text-center">
+                <DialogTitle className="text-[17px] font-bold text-[var(--text)] text-center">
                   Процедура завершена?
                 </DialogTitle>
                 {promptItem && (
-                  <DialogDescription className="text-center text-[13px] text-[#64748b] pt-1">
+                  <DialogDescription className="text-center text-[13px] text-[var(--text-secondary)] pt-1">
                     {promptItem.title}
                   </DialogDescription>
                 )}
@@ -2477,13 +2477,13 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
                     if (completionPromptItemId) handleComplete(completionPromptItemId);
                     else onDismissPrompt(false);
                   }}
-                  className="w-full py-3 rounded-xl bg-emerald-500 text-white font-semibold text-[15px] active:bg-emerald-600 transition-colors"
+                  className="dash-btn w-full py-3 !bg-emerald-500 hover:!bg-emerald-600 !text-white !border-0 font-semibold text-[15px]"
                 >
                   Да, завершить
                 </button>
                 <button
                   onClick={() => onDismissPrompt(true)}
-                  className="w-full py-3 rounded-xl border border-[#e8e3d9] text-[#64748b] font-semibold text-[15px] active:bg-[#faf8f4] transition-colors"
+                  className="dash-btn dash-btn-secondary w-full py-3 font-semibold text-[15px]"
                 >
                   Нет, продолжить
                 </button>

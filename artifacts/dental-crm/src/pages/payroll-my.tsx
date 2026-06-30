@@ -18,9 +18,9 @@ export default function PayrollMyPage() {
   const salary = data?.data;
 
   const statusColor = (s?: string) => {
-    if (s === "paid")     return "bg-[#f0fdf4] text-[#16a34a]";
-    if (s === "approved") return "bg-[#e0f2fe] text-[#0284c7]";
-    return "bg-[#fef3c7] text-[#d97706]";
+    if (s === "paid")     return "bg-[var(--success-light)] text-[var(--success)]";
+    if (s === "approved") return "bg-[var(--info-light)] text-[var(--info)]";
+    return "bg-[var(--warning-light)] text-[var(--warning)]";
   };
 
   const statusLabel = (s?: string) => {
@@ -43,34 +43,34 @@ export default function PayrollMyPage() {
 
       <div className="px-4 mt-4 space-y-3">
         {periodLabel && (
-          <p className="text-xs text-[#94a3b8] -mt-1">{periodLabel}</p>
+          <p className="text-xs text-[var(--text-subtle)] -mt-1">{periodLabel}</p>
         )}
         {isLoading && (
-          <div className="bg-white rounded-2xl p-5 shadow-md border border-[#e8e3d9] space-y-3">
+          <div className="bg-[var(--surface)] rounded-2xl p-5 shadow-md border border-[var(--border)] space-y-3">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-5 bg-[#f1ede4] rounded-xl animate-pulse" />
+              <div key={i} className="h-5 bg-[var(--surface-2)] rounded-xl animate-pulse" />
             ))}
           </div>
         )}
 
         {!isLoading && !salary && (
-          <div className="bg-white rounded-2xl p-8 shadow-md border border-[#e8e3d9] text-center">
-            <Wallet className="w-10 h-10 text-[#94a3b8] mx-auto mb-3" />
-            <p className="text-sm text-[#64748b]">{t("payroll.noSettings", "Настройки зарплаты не заданы")}</p>
-            <p className="text-xs text-[#94a3b8] mt-1">{t("payroll.contactAdmin", "Обратитесь к администратору")}</p>
+          <div className="bg-[var(--surface)] rounded-2xl p-8 shadow-md border border-[var(--border)] text-center">
+            <Wallet className="w-10 h-10 text-[var(--text-subtle)] mx-auto mb-3" />
+            <p className="text-sm text-[var(--text-secondary)]">{t("payroll.noSettings", "Настройки зарплаты не заданы")}</p>
+            <p className="text-xs text-[var(--text-subtle)] mt-1">{t("payroll.contactAdmin", "Обратитесь к администратору")}</p>
           </div>
         )}
 
         {!isLoading && salary && (
           <>
             {/* Main card */}
-            <div className="bg-white rounded-2xl p-5 shadow-md border border-[#e8e3d9]">
+            <div className="bg-[var(--surface)] rounded-2xl p-5 shadow-md border border-[var(--border)]">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <p className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wide mb-1">
+                  <p className="text-xs font-semibold text-[var(--text-subtle)] uppercase tracking-wide mb-1">
                     {t("payroll.calculated", "Начислено")}
                   </p>
-                  <p className="text-3xl font-bold text-[#0f172a] tracking-tight">
+                  <p className="text-3xl font-bold text-[var(--text)] tracking-tight">
                     {fmt(salary.calculatedSalary)}
                   </p>
                 </div>
@@ -79,7 +79,7 @@ export default function PayrollMyPage() {
                 </span>
               </div>
 
-              <div className="border-t border-[#e8e3d9] pt-4 space-y-2.5">
+              <div className="border-t border-[var(--border)] pt-4 space-y-2.5">
                 <Row label={t("payroll.salaryType", "Тип")} value={
                   salary.salaryType === "fixed"                ? t("payroll.fixed", "Оклад") :
                   salary.salaryType === "commission"           ? t("payroll.commission", "Комиссия") :
@@ -99,12 +99,12 @@ export default function PayrollMyPage() {
             </div>
 
             {/* History placeholder */}
-            <div className="bg-white rounded-2xl p-5 shadow-md border border-[#e8e3d9]">
+            <div className="bg-[var(--surface)] rounded-2xl p-5 shadow-md border border-[var(--border)]">
               <div className="flex items-center gap-2 mb-3">
-                <Clock className="w-4 h-4 text-[#94a3b8]" />
-                <p className="text-sm font-semibold text-[#0f172a]">{t("payroll.history", "История выплат")}</p>
+                <Clock className="w-4 h-4 text-[var(--text-subtle)]" />
+                <p className="text-sm font-semibold text-[var(--text)]">{t("payroll.history", "История выплат")}</p>
               </div>
-              <p className="text-xs text-[#94a3b8]">{t("payroll.historyComingSoon", "История за прошлые месяцы будет доступна в следующем обновлении")}</p>
+              <p className="text-xs text-[var(--text-subtle)]">{t("payroll.historyComingSoon", "История за прошлые месяцы будет доступна в следующем обновлении")}</p>
             </div>
           </>
         )}
@@ -116,8 +116,8 @@ export default function PayrollMyPage() {
 function Row({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-xs text-[#64748b]">{label}</span>
-      <span className={cn("text-sm font-semibold", highlight ? "text-[#16a34a]" : "text-[#0f172a]")}>
+      <span className="text-xs text-[var(--text-secondary)]">{label}</span>
+      <span className={cn("text-sm font-semibold", highlight ? "text-[var(--success)]" : "text-[var(--text)]")}>
         {value}
       </span>
     </div>

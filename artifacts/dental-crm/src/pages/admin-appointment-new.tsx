@@ -15,7 +15,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
 import {
-  ChevronLeft,
   User,
   UserPlus,
   Phone,
@@ -38,6 +37,8 @@ import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import type { ProcedureTemplate, PaymentMethod, PatientSource } from "@workspace/api-client-react";
+import { PageHeader } from "@/components/layout/page-header";
+import { PageShell } from "@/components/layout/page-shell";
 
 const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
   { value: "cash",           label: "Наличные" },
@@ -426,29 +427,22 @@ export default function AdminAppointmentNewPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-6 pb-12 font-manrope bg-[#faf8f4] min-h-full">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <button
-          onClick={() => navigate("/admin/calendar")}
-          className="p-2 rounded-xl hover:bg-[#f1ede4] transition-colors text-[#64748b]"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-        <div>
-          <h1 className="text-2xl font-bold text-[#0f172a]">{t("adminAppointment.title")}</h1>
-          <p className="text-sm text-[#64748b]">{t("adminAppointment.subtitle")}</p>
-        </div>
-      </div>
+    <PageShell>
+      <PageHeader
+        title={t("adminAppointment.title")}
+        subtitle={t("adminAppointment.subtitle")}
+        onBack={() => navigate("/admin/calendar")}
+        backLabel={t("adminAppointment.cancel")}
+      />
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="max-w-2xl mx-auto px-4 pb-12 space-y-5">
 
         {/* ── Patient card ── */}
-        <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-md p-5 space-y-4">
-          <h2 className="text-sm font-bold text-[#0f172a] flex items-center gap-2">
-            <User className="w-4 h-4 text-[#1f75fe]" />
+        <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-md p-5 space-y-4">
+          <h2 className="text-sm font-bold text-[var(--text)] flex items-center gap-2">
+            <User className="w-4 h-4 text-[var(--primary)]" />
             {t("adminAppointment.patient")}
-            <span className="text-[#dc2626]">*</span>
+            <span className="text-[var(--danger)]">*</span>
           </h2>
 
           <SmartPatientInput
@@ -747,6 +741,6 @@ export default function AdminAppointmentNewPage() {
           </Button>
         </div>
       </form>
-    </div>
+    </PageShell>
   );
 }

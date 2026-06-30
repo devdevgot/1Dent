@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react";
 import { Clock, User, Stethoscope, AlertTriangle } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
   useListProcedures,
   useListPatients,
@@ -8,6 +7,7 @@ import {
 } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useQueryClient } from "@tanstack/react-query";
+import { AppDialog } from "@/components/layout/app-dialog";
 
 export function AttendanceCheckModal() {
   const { user } = useAuthStore();
@@ -88,64 +88,69 @@ export function AttendanceCheckModal() {
     : "";
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        <div className="bg-amber-500 px-5 py-4 flex items-center gap-3">
-          <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center">
-            <AlertTriangle className="w-4 h-4 text-white" />
-          </div>
-          <div>
-            <p className="text-white font-bold text-sm">Проверка присутствия</p>
-            <p className="text-white/80 text-xs">Время приёма наступило ({scheduledTimeStr})</p>
-          </div>
-        </div>
-
-        <div className="px-5 py-5 space-y-4">
-          <p className="text-sm font-semibold text-foreground text-center leading-relaxed">
-            Пожалуйста, отметьте, пришёл ли пациент на приём?
-          </p>
-
-          <div className="rounded-xl p-3.5 space-y-2.5 border border-[#e8e3d9] bg-[#faf8f4]">
-            <div className="flex items-center gap-2.5">
-              <User className="w-4 h-4 text-muted-foreground shrink-0" />
-              <span className="text-xs font-semibold text-muted-foreground w-20">Пациент:</span>
-              <span className="text-xs font-bold text-foreground truncate">{patientName}</span>
-            </div>
-
-            <div className="flex items-center gap-2.5">
-              <Stethoscope className="w-4 h-4 text-muted-foreground shrink-0" />
-              <span className="text-xs font-semibold text-muted-foreground w-20">Процедура:</span>
-              <span className="text-xs font-bold text-foreground truncate">{currentProc.name}</span>
-            </div>
-
-            <div className="flex items-center gap-2.5">
-              <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
-              <span className="text-xs font-semibold text-muted-foreground w-20">Врач:</span>
-              <span className="text-xs font-bold text-foreground truncate">
-                {currentProc.doctorName ?? "—"}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="px-5 pb-5 flex gap-3">
-          <Button
+    <AppDialog
+      open
+      onOpenChange={() => {}}
+      title="Проверка присутствия"
+      description={`Время приёма наступило (${scheduledTimeStr})`}
+      size="sm"
+      showClose={false}
+      bodyClassName="!p-0"
+      footer={
+        <>
+          <button
+            type="button"
             onClick={() => handleAttendance(false)}
-            variant="destructive"
-            className="flex-1 rounded-xl font-bold py-5 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 hover:text-red-700"
             disabled={updateStatusMutation.isPending}
+            className="dash-btn dash-btn-secondary flex-1 !text-red-600 !border-red-200 hover:!bg-red-50"
           >
             Нет, не пришёл
-          </Button>
-          <Button
+          </button>
+          <button
+            type="button"
             onClick={() => handleAttendance(true)}
-            className="flex-1 rounded-xl font-bold py-5"
             disabled={updateStatusMutation.isPending}
+            className="dash-btn dash-btn-primary flex-1"
           >
             Да, пришёл
-          </Button>
+          </button>
+        </>
+      }
+    >
+      <div className="bg-amber-500 px-5 py-4 flex items-center gap-3">
+        <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+          <AlertTriangle className="w-4 h-4 text-white" />
+        </div>
+        <p className="text-white font-bold text-sm">Требуется подтверждение</p>
+      </div>
+
+      <div className="px-5 py-5 space-y-4">
+        <p className="text-sm font-semibold text-foreground text-center leading-relaxed">
+          Пожалуйста, отметьте, пришёл ли пациент на приём?
+        </p>
+
+        <div className="rounded-xl p-3.5 space-y-2.5 border border-[#e8e3d9] bg-[#faf8f4]">
+          <div className="flex items-center gap-2.5">
+            <User className="w-4 h-4 text-muted-foreground shrink-0" />
+            <span className="text-xs font-semibold text-muted-foreground w-20">Пациент:</span>
+            <span className="text-xs font-bold text-foreground truncate">{patientName}</span>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <Stethoscope className="w-4 h-4 text-muted-foreground shrink-0" />
+            <span className="text-xs font-semibold text-muted-foreground w-20">Процедура:</span>
+            <span className="text-xs font-bold text-foreground truncate">{currentProc.name}</span>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
+            <span className="text-xs font-semibold text-muted-foreground w-20">Врач:</span>
+            <span className="text-xs font-bold text-foreground truncate">
+              {currentProc.doctorName ?? "—"}
+            </span>
+          </div>
         </div>
       </div>
-    </div>
+    </AppDialog>
   );
 }

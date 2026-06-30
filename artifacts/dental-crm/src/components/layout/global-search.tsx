@@ -50,15 +50,15 @@ const PAGE_ITEMS: {
   iconBg: string;
   iconColor: string;
 }[] = [
-  { label: "Дашборд",    href: "dashboard",       roles: ["owner","admin","doctor","accountant","warehouse"], Icon: LayoutDashboard, iconBg: "bg-[#e0e7ff]",   iconColor: "text-[#4f46e5]" },
-  { label: "Пациенты",   href: "/patients",                  roles: ["owner","admin","doctor","accountant"],        Icon: Users,           iconBg: "bg-[#e0f2fe]",    iconColor: "text-[#0284c7]" },
-  { label: "Расписание", href: "/schedule",        roles: ["doctor"],                                         Icon: Calendar,        iconBg: "bg-[#fef3c7]", iconColor: "text-[#d97706]" },
-  { label: "Аналитика",  href: "/analytics",       roles: ["owner"],                                          Icon: BarChart3,       iconBg: "bg-[#f0fdf4]",   iconColor: "text-[#16a34a]" },
-  { label: "Аналитика врача", href: "/doctor-analytics", roles: ["doctor"],                                   Icon: BarChart3,       iconBg: "bg-[#f0fdf4]",   iconColor: "text-[#16a34a]" },
-  { label: "Финансы",    href: "/financials",      roles: ["owner","accountant"],                             Icon: Wallet,          iconBg: "bg-[#fef3c7]",iconColor: "text-[#d97706]" },
-  { label: "WhatsApp",   href: "/chat",            roles: ["owner","admin","doctor"],                         Icon: FaWhatsapp,      iconBg: "bg-[#d1fae5]",  iconColor: "text-[#059669]" },
-  { label: "Сотрудники", href: "/users",           roles: ["owner"],                                          Icon: Contact,         iconBg: "bg-[#f1ede4]",  iconColor: "text-[#64748b]" },
-  { label: "Чат-бот",   href: "/chatbot",          roles: ["owner"],                                          Icon: Bot,             iconBg: "bg-[#e0e7ff]", iconColor: "text-[#4f46e5]" },
+  { label: "Дашборд",    href: "dashboard",       roles: ["owner","admin","doctor","accountant","warehouse"], Icon: LayoutDashboard, iconBg: "bg-[var(--primary-light)]",   iconColor: "text-[var(--primary)]" },
+  { label: "Пациенты",   href: "/patients",                  roles: ["owner","admin","doctor","accountant"],        Icon: Users,           iconBg: "bg-[var(--info-light)]",    iconColor: "text-[var(--info)]" },
+  { label: "Расписание", href: "/schedule",        roles: ["doctor"],                                         Icon: Calendar,        iconBg: "bg-[var(--warning-light)]", iconColor: "text-[var(--warning)]" },
+  { label: "Аналитика",  href: "/analytics",       roles: ["owner"],                                          Icon: BarChart3,       iconBg: "bg-[var(--success-light)]",   iconColor: "text-[var(--success)]" },
+  { label: "Аналитика врача", href: "/doctor-analytics", roles: ["doctor"],                                   Icon: BarChart3,       iconBg: "bg-[var(--success-light)]",   iconColor: "text-[var(--success)]" },
+  { label: "Финансы",    href: "/financials",      roles: ["owner","accountant"],                             Icon: Wallet,          iconBg: "bg-[var(--warning-light)]",iconColor: "text-[var(--warning)]" },
+  { label: "WhatsApp",   href: "/chat",            roles: ["owner","admin","doctor"],                         Icon: FaWhatsapp,      iconBg: "bg-[var(--success-light)]",  iconColor: "text-[var(--success)]" },
+  { label: "Сотрудники", href: "/users",           roles: ["owner"],                                          Icon: Contact,         iconBg: "bg-[var(--surface-2)]",  iconColor: "text-[var(--text-secondary)]" },
+  { label: "Чат-бот",   href: "/chatbot",          roles: ["owner"],                                          Icon: Bot,             iconBg: "bg-[var(--primary-light)]", iconColor: "text-[var(--primary)]" },
 ];
 
 const ROLE_DASHBOARD: Record<string, string> = {
@@ -157,8 +157,8 @@ export function GlobalSearch() {
           href: "/patients?view=kanban",
           patientId: p.id,
           Icon: Users,
-          iconBg: "bg-[#e0f2fe]",
-          iconColor: "text-[#0284c7]",
+          iconBg: "bg-[var(--info-light)]",
+          iconColor: "text-[var(--info)]",
         }));
       if (patients.length) result.push({ category: "Пациенты", results: patients });
     }
@@ -175,8 +175,8 @@ export function GlobalSearch() {
           subtitle: p.status,
           href: "/procedures",
           Icon: Stethoscope,
-          iconBg: "bg-[#f0fdf4]",
-          iconColor: "text-[#16a34a]",
+          iconBg: "bg-[var(--success-light)]",
+          iconColor: "text-[var(--success)]",
         }));
       if (procs.length) result.push({ category: "Процедуры", results: procs });
     }
@@ -193,8 +193,8 @@ export function GlobalSearch() {
           subtitle: `${u.role} · ${u.email}`,
           href: "/users",
           Icon: UserCog,
-          iconBg: "bg-[#f1ede4]",
-          iconColor: "text-[#64748b]",
+          iconBg: "bg-[var(--surface-2)]",
+          iconColor: "text-[var(--text-secondary)]",
         }));
       if (staff.length) result.push({ category: "Сотрудники", results: staff });
     }
@@ -217,36 +217,36 @@ export function GlobalSearch() {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="flex-1 flex items-center gap-2 bg-[#f1ede4] rounded-xl px-3 py-2 text-left cursor-pointer hover:bg-[#e8e3d9]/60 transition-colors"
+        className="flex-1 flex items-center gap-2 bg-[var(--surface-2)] rounded-xl px-3 py-2 text-left cursor-pointer hover:bg-[var(--border)]/60 transition-colors"
       >
-        <Search className="w-4 h-4 text-[#94a3b8] shrink-0" />
-        <span className="text-sm text-[#94a3b8] select-none font-manrope">Поиск по имени, телефону, ИИН...</span>
+        <Search className="w-4 h-4 text-[var(--text-subtle)] shrink-0" />
+        <span className="text-sm text-[var(--text-subtle)] select-none font-manrope">Поиск по имени, телефону, ИИН...</span>
       </button>
 
       {/* Overlay */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-[#faf8f4] font-manrope">
+        <div className="fixed inset-0 z-50 flex flex-col bg-[var(--bg)] font-manrope">
           {/* Search header — same height/position as the regular header */}
-          <div className="bg-white px-4 py-2.5 border-b border-[#e8e3d9] flex items-center gap-3 safe-area-top">
-            <div className="flex-1 flex items-center gap-2 bg-[#f1ede4] rounded-xl px-3 py-2">
-              <Search className="w-4 h-4 text-[#94a3b8] shrink-0" />
+          <div className="bg-[var(--surface)] px-4 py-2.5 border-b border-[var(--border)] flex items-center gap-3 safe-area-top">
+            <div className="flex-1 flex items-center gap-2 bg-[var(--surface-2)] rounded-xl px-3 py-2">
+              <Search className="w-4 h-4 text-[var(--text-subtle)] shrink-0" />
               <input
                 ref={inputRef}
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Имя, телефон или ИИН..."
-                className="flex-1 text-[15px] bg-transparent outline-none text-[#0f172a] placeholder:text-[#94a3b8] font-manrope"
+                className="flex-1 text-[15px] bg-transparent outline-none text-[var(--text)] placeholder:text-[var(--text-subtle)] font-manrope"
               />
               {query && (
-                <button onClick={() => setQuery("")} className="shrink-0 text-[#94a3b8] hover:text-[#64748b]">
+                <button onClick={() => setQuery("")} className="shrink-0 text-[var(--text-subtle)] hover:text-[var(--text-secondary)]">
                   <X className="w-4 h-4" />
                 </button>
               )}
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="text-[15px] font-medium shrink-0 text-[#1f75fe]"
+              className="text-[15px] font-medium shrink-0 text-[var(--primary)]"
             >
               Отмена
             </button>
@@ -256,15 +256,15 @@ export function GlobalSearch() {
           <div className="flex-1 overflow-y-auto">
             {!query.trim() && (
               <div className="flex flex-col items-center justify-center py-20 gap-3">
-                <Search className="w-12 h-12 text-[#e8e3d9]" />
-                <p className="text-[15px] text-[#94a3b8]">Введите запрос для поиска</p>
+                <Search className="w-12 h-12 text-[var(--border)]" />
+                <p className="text-[15px] text-[var(--text-subtle)]">Введите запрос для поиска</p>
               </div>
             )}
 
             {isEmpty && (
               <div className="flex flex-col items-center justify-center py-20 gap-3">
-                <p className="text-[15px] text-[#94a3b8]">Ничего не найдено</p>
-                <p className="text-[13px] text-[#94a3b8]/70">Попробуйте другой запрос</p>
+                <p className="text-[15px] text-[var(--text-subtle)]">Ничего не найдено</p>
+                <p className="text-[13px] text-[var(--text-subtle)]/70">Попробуйте другой запрос</p>
               </div>
             )}
 
@@ -272,26 +272,26 @@ export function GlobalSearch() {
               <div className="px-4 py-4 space-y-5">
                 {groups.map((group) => (
                   <div key={group.category}>
-                    <p className="text-[12px] font-semibold text-[#94a3b8] uppercase tracking-wider mb-2 px-1">
+                    <p className="text-[12px] font-semibold text-[var(--text-subtle)] uppercase tracking-wider mb-2 px-1">
                       {group.category}
                     </p>
-                    <div className="bg-white rounded-2xl overflow-hidden border border-[#e8e3d9] divide-y divide-[#e8e3d9]">
+                    <div className="bg-[var(--surface)] rounded-2xl overflow-hidden border border-[var(--border)] divide-y divide-[var(--border)]">
                       {group.results.map((result) => (
                         <button
                           key={result.id}
                           onClick={() => navigate(result.href, result.patientId)}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-[#f1ede4] hover:bg-[#faf8f4] transition-colors"
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-[var(--surface-2)] hover:bg-[var(--bg)] transition-colors"
                         >
                           <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0", result.iconBg)}>
                             <result.Icon className={cn("w-4 h-4", result.iconColor)} />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-[15px] text-[#0f172a] truncate">{result.label}</p>
+                            <p className="text-[15px] text-[var(--text)] truncate">{result.label}</p>
                             {result.subtitle && (
-                              <p className="text-[12px] text-[#94a3b8] truncate">{result.subtitle}</p>
+                              <p className="text-[12px] text-[var(--text-subtle)] truncate">{result.subtitle}</p>
                             )}
                           </div>
-                          <ChevronRight className="w-4 h-4 text-[#94a3b8] shrink-0" />
+                          <ChevronRight className="w-4 h-4 text-[var(--text-subtle)] shrink-0" />
                         </button>
                       ))}
                     </div>

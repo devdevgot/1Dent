@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { ArrowLeft, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 
 import { useResetPassword } from "@workspace/api-client-react";
+import { PageShell } from "@/components/layout/page-shell";
+import { AppDialog } from "@/components/layout/app-dialog";
 
 export default function ResetPassword() {
   const [, setLocation] = useLocation();
@@ -51,50 +53,50 @@ export default function ResetPassword() {
 
   if (!token) {
     return (
-      <div className="min-h-screen w-full bg-[#faf8f4] font-manrope flex flex-col items-center justify-center px-6">
-        <div className="w-full max-w-sm text-center bg-white rounded-2xl border border-[#e8e3d9] shadow-md p-6">
-          <h2 className="text-xl font-bold text-[#0f172a] mb-3">Недействительная ссылка</h2>
-          <p className="text-body text-[#64748b] mb-6">Эта ссылка для сброса пароля недействительна или устарела.</p>
+      <PageShell className="min-h-screen flex flex-col items-center justify-center px-6">
+        <div className="w-full max-w-sm text-center bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-md p-6">
+          <h2 className="text-xl font-bold text-[var(--text)] mb-3">Недействительная ссылка</h2>
+          <p className="text-body text-[var(--text-secondary)] mb-6">Эта ссылка для сброса пароля недействительна или устарела.</p>
           <button
             onClick={() => setLocation("/forgot-password")}
-            className="w-full py-4 rounded-full text-base font-semibold hover:scale-105 active:scale-95 bg-[#1f75fe] hover:bg-[#1a65e8] text-white transition-all"
+            className="dash-btn dash-btn-primary w-full py-4 rounded-full text-base font-semibold hover:scale-105 active:scale-95"
           >
             Запросить новую ссылку
           </button>
         </div>
-      </div>
+      </PageShell>
     );
   }
 
   return (
-    <div className="min-h-screen w-full bg-[#faf8f4] font-manrope flex flex-col items-center justify-start px-6 py-12">
+    <PageShell className="min-h-screen flex flex-col items-center justify-start px-6 py-12">
       {/* Back button */}
       {!success && (
         <div className="w-full max-w-sm mb-6">
           <button
             onClick={() => setLocation("/login")}
-            className="flex items-center gap-1.5 text-[#64748b] hover:text-[#0f172a] transition-colors"
+            className="flex items-center gap-1.5 text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
         </div>
       )}
 
-      <div className="w-full max-w-sm bg-white rounded-2xl border border-[#e8e3d9] shadow-md p-6">
+      <div className="w-full max-w-sm bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-md p-6">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
         >
-          <h2 className="text-2xl font-bold text-[#0f172a] text-center mb-8">
+          <h2 className="text-2xl font-bold text-[var(--text)] text-center mb-8">
             Придумайте новый пароль
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-3">
             {/* New password */}
             <div className={`
-              w-full px-4 py-3.5 rounded-xl border bg-white transition-all
-              ${error ? "border-[#dc2626] bg-[#fef2f2]" : "border-[#e8e3d9] focus-within:border-[#1f75fe] focus-within:ring-2 focus-within:ring-[#1f75fe]/20"}
+              w-full px-4 py-3.5 rounded-xl border bg-[var(--surface)] transition-all
+              ${error ? "border-[var(--danger)] bg-red-50" : "border-[var(--border)] focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--primary)]/20"}
             `}>
               <p className="section-label mb-0.5">
                 Придумайте новый пароль
@@ -106,12 +108,12 @@ export default function ResetPassword() {
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="••••••••"
                   autoComplete="new-password"
-                  className="flex-1 bg-transparent text-base text-[#0f172a] placeholder:text-[#94a3b8] outline-none"
+                  className="flex-1 bg-transparent text-base text-[var(--text)] placeholder:text-[var(--text-subtle)] outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => setShowNew((v) => !v)}
-                  className="text-[#94a3b8] hover:text-[#64748b] transition-colors ml-2"
+                  className="text-[var(--text-subtle)] hover:text-[var(--text-secondary)] transition-colors ml-2"
                 >
                   {showNew ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -120,8 +122,8 @@ export default function ResetPassword() {
 
             {/* Confirm password */}
             <div className={`
-              w-full px-4 py-3.5 rounded-xl border bg-white transition-all
-              ${error ? "border-[#dc2626] bg-[#fef2f2]" : "border-[#e8e3d9] focus-within:border-[#1f75fe] focus-within:ring-2 focus-within:ring-[#1f75fe]/20"}
+              w-full px-4 py-3.5 rounded-xl border bg-[var(--surface)] transition-all
+              ${error ? "border-[var(--danger)] bg-red-50" : "border-[var(--border)] focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--primary)]/20"}
             `}>
               <p className="section-label mb-0.5">
                 Повторите новый пароль
@@ -133,12 +135,12 @@ export default function ResetPassword() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
                   autoComplete="new-password"
-                  className="flex-1 bg-transparent text-base text-[#0f172a] placeholder:text-[#94a3b8] outline-none"
+                  className="flex-1 bg-transparent text-base text-[var(--text)] placeholder:text-[var(--text-subtle)] outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirm((v) => !v)}
-                  className="text-[#94a3b8] hover:text-[#64748b] transition-colors ml-2"
+                  className="text-[var(--text-subtle)] hover:text-[var(--text-secondary)] transition-colors ml-2"
                 >
                   {showConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -146,13 +148,13 @@ export default function ResetPassword() {
             </div>
 
             {error && (
-              <p className="text-caption text-[#dc2626] font-medium px-1">{error}</p>
+              <p className="text-caption text-[var(--danger)] font-medium px-1">{error}</p>
             )}
 
             <button
               type="submit"
               disabled={resetMutation.isPending}
-              className="w-full py-4 rounded-full text-base font-semibold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed hover:scale-105 active:scale-95 mt-2 bg-[#1f75fe] hover:bg-[#1a65e8] text-white"
+              className="dash-btn dash-btn-primary w-full py-4 rounded-full text-base font-semibold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed hover:scale-105 active:scale-95 mt-2"
             >
               {resetMutation.isPending ? "Сохраняем..." : "Сохранить"}
             </button>
@@ -160,47 +162,28 @@ export default function ResetPassword() {
         </motion.div>
       </div>
 
-      {/* Success modal overlay */}
-      <AnimatePresence>
-        {success && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 backdrop-blur-sm p-4"
+      {/* Success modal */}
+      <AppDialog
+        open={success}
+        onOpenChange={(open) => { if (!open) setLocation("/login"); }}
+        title="Ваш новый пароль сохранён"
+        size="sm"
+        showClose={false}
+        footer={
+          <button
+            onClick={() => setLocation("/login")}
+            className="dash-btn dash-btn-ghost w-full text-base font-semibold text-[var(--primary)]"
           >
-            <motion.div
-              initial={{ opacity: 0, y: 80 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-              className="bg-white w-full max-w-sm rounded-2xl border border-[#e8e3d9] shadow-xl p-8 text-center mb-4"
-            >
-              <button
-                onClick={() => setLocation("/login")}
-                className="absolute top-4 right-4 text-[#94a3b8] hover:text-[#64748b] transition-colors"
-              />
-
-              <div className="flex items-center justify-center mb-5">
-                <div className="w-16 h-16 rounded-full flex items-center justify-center bg-[#1f75fe]/10">
-                  <CheckCircle2 className="w-8 h-8 text-[#1f75fe]" />
-                </div>
-              </div>
-
-              <h3 className="text-lg font-bold text-[#0f172a] mb-6">
-                Ваш новый пароль сохранён
-              </h3>
-
-              <div className="h-px bg-[#e8e3d9] mb-4" />
-
-              <button
-                onClick={() => setLocation("/login")}
-                className="text-base font-semibold transition-colors text-[#1f75fe] hover:text-[#1a65e8]"
-              >
-                Отлично!
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+            Отлично!
+          </button>
+        }
+      >
+        <div className="flex flex-col items-center text-center py-2">
+          <div className="w-16 h-16 rounded-full flex items-center justify-center bg-[var(--primary-light)] mb-4">
+            <CheckCircle2 className="w-8 h-8 text-[var(--primary)]" />
+          </div>
+        </div>
+      </AppDialog>
+    </PageShell>
   );
 }

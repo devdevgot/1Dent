@@ -13,10 +13,12 @@ import {
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import {
-  FileText, Upload, Trash2, ChevronLeft, Loader2, AlertCircle, CheckCircle2, Plus,
+  FileText, Upload, Trash2, Loader2, AlertCircle, CheckCircle2, Plus,
   ChevronDown, ChevronUp, Pencil, Save, X, Lock, Eye, Folder, FolderOpen, ChevronRight,
 } from "lucide-react";
 import { useLocation } from "wouter";
+import { PageHeader } from "@/components/layout/page-header";
+import { PageShell } from "@/components/layout/page-shell";
 
 const PATIENT_FIELDS = [
   { field: "patient.name",        label: "ФИО пациента" },
@@ -300,49 +302,39 @@ export default function ContractTemplatesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#faf8f4] font-manrope">
-      <div className="max-w-2xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <button
-            onClick={() => setLocation("/menu")}
-            className="text-[#64748b] hover:text-[#0f172a] hover:bg-[#f1ede4] rounded-xl p-1 transition-colors"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-[#0f172a]">Шаблоны договоров</h1>
-            <p className="text-sm text-[#64748b] mt-0.5">
-              Загрузите DOCX или PDF — AI автоматически найдёт поля для заполнения
-            </p>
-          </div>
-        </div>
+    <PageShell>
+      <PageHeader
+        title="Шаблоны договоров"
+        subtitle="Загрузите DOCX или PDF — AI автоматически найдёт поля для заполнения"
+        onBack={() => setLocation("/menu")}
+      />
 
+      <div className="max-w-2xl mx-auto px-4 py-6">
         {/* Upload section */}
         {canEdit && (
-          <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-md p-6 mb-6">
-            <h2 className="font-semibold text-[#0f172a] mb-4 flex items-center gap-2">
-              <Plus className="w-4 h-4 text-[#1f75fe]" />
+          <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-md p-6 mb-6">
+            <h2 className="font-semibold text-[var(--text)] mb-4 flex items-center gap-2">
+              <Plus className="w-4 h-4 text-[var(--primary)]" />
               Загрузить новый шаблон
             </h2>
 
             <div className="mb-3">
-              <label className="block text-xs font-medium text-[#64748b] mb-1.5">
+              <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">
                 Название шаблона{" "}
-                <span className="text-[#94a3b8] font-normal">(необязательно — по умолчанию имя файла)</span>
+                <span className="text-[var(--text-subtle)] font-normal">(необязательно — по умолчанию имя файла)</span>
               </label>
               <input
                 type="text"
                 placeholder="Например: Договор на лечение зубов"
                 value={customName}
                 onChange={(e) => setCustomName(e.target.value)}
-                className="w-full border border-[#e8e3d9] rounded-xl px-3 py-2 text-sm text-[#0f172a] outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20"
+                className="w-full border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-[var(--text)] outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20"
               />
             </div>
 
             <div
               className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${
-                dragOver ? "border-[#1f75fe] bg-[#1f75fe]/5" : "border-[#e8e3d9] hover:border-[#1f75fe]/40 hover:bg-[#faf8f4]"
+                dragOver ? "border-[var(--primary)] bg-[var(--primary-light)]" : "border-[var(--border)] hover:border-[var(--primary)]/40 hover:bg-[var(--bg)]"
               }`}
               onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
               onDragLeave={() => setDragOver(false)}
@@ -358,20 +350,20 @@ export default function ContractTemplatesPage() {
               />
               {uploadMutation.isPending ? (
                 <div className="flex flex-col items-center gap-3">
-                  <Loader2 className="w-8 h-8 text-[#1f75fe] animate-spin" />
+                  <Loader2 className="w-8 h-8 text-[var(--primary)] animate-spin" />
                   <div>
-                    <p className="text-sm font-medium text-[#0f172a]">Загрузка и анализ файла…</p>
-                    <p className="text-xs text-[#94a3b8] mt-1">AI определяет поля для автозаполнения</p>
+                    <p className="text-sm font-medium text-[var(--text)]">Загрузка и анализ файла…</p>
+                    <p className="text-xs text-[var(--text-subtle)] mt-1">AI определяет поля для автозаполнения</p>
                   </div>
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-[#1f75fe]/10 flex items-center justify-center">
-                    <Upload className="w-6 h-6 text-[#1f75fe]" />
+                  <div className="w-12 h-12 rounded-xl bg-[var(--primary-light)] flex items-center justify-center">
+                    <Upload className="w-6 h-6 text-[var(--primary)]" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-[#0f172a]">Перетащите файл или нажмите</p>
-                    <p className="text-xs text-[#94a3b8] mt-1">DOCX или PDF, до 10 МБ</p>
+                    <p className="text-sm font-semibold text-[var(--text)]">Перетащите файл или нажмите</p>
+                    <p className="text-xs text-[var(--text-subtle)] mt-1">DOCX или PDF, до 10 МБ</p>
                   </div>
                 </div>
               )}
@@ -381,9 +373,9 @@ export default function ContractTemplatesPage() {
 
         {/* AI info */}
         {canEdit && (
-          <div className="bg-[#e0f2fe] border border-[#0284c7]/20 rounded-2xl p-4 mb-6 flex gap-3">
-            <AlertCircle className="w-4 h-4 text-[#0284c7] shrink-0 mt-0.5" />
-            <div className="text-xs text-[#0284c7] space-y-1">
+          <div className="bg-[var(--info-light)] border border-[var(--info)]/20 rounded-2xl p-4 mb-6 flex gap-3">
+            <AlertCircle className="w-4 h-4 text-[var(--info)] shrink-0 mt-0.5" />
+            <div className="text-xs text-[var(--info)] space-y-1">
               <p className="font-semibold">Как работает AI-анализ</p>
               <p>
                 После загрузки AI сканирует договор и находит места с пустыми строками, метками
@@ -396,9 +388,9 @@ export default function ContractTemplatesPage() {
 
         {/* System (built-in) templates — read-only */}
         {!isLoading && systemTemplates.length === 0 && (
-          <div className="mb-8 bg-[#fef3c7] border border-[#d97706]/20 rounded-2xl p-4 flex gap-3">
-            <AlertCircle className="w-4 h-4 text-[#d97706] shrink-0 mt-0.5" />
-            <div className="text-xs text-[#d97706] space-y-2">
+          <div className="mb-8 bg-[var(--warning-light)] border border-[var(--warning)]/20 rounded-2xl p-4 flex gap-3">
+            <AlertCircle className="w-4 h-4 text-[var(--warning)] shrink-0 mt-0.5" />
+            <div className="text-xs text-[var(--warning)] space-y-2">
               <p className="font-semibold">Встроенные пакеты документов не загрузились</p>
               <p>Нажмите «Обновить» — шаблоны создаются автоматически для каждой клиники.</p>
               <Button
@@ -417,13 +409,13 @@ export default function ContractTemplatesPage() {
         {!isLoading && systemTemplates.length > 0 && (
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-3">
-              <h2 className="font-semibold text-[#0f172a]">Встроенные пакеты документов</h2>
-              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#64748b] bg-[#f1ede4] px-2 py-0.5 rounded-full">
+              <h2 className="font-semibold text-[var(--text)]">Встроенные пакеты документов</h2>
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--text-secondary)] bg-[var(--surface-2)] px-2 py-0.5 rounded-full">
                 <Lock className="w-2.5 h-2.5" />
                 Только просмотр
               </span>
             </div>
-            <p className="text-xs text-[#94a3b8] mb-4">
+            <p className="text-xs text-[var(--text-subtle)] mb-4">
               Пакеты документов готовятся автоматически в зависимости от услуг в плане лечения.
             </p>
 
@@ -518,7 +510,7 @@ export default function ContractTemplatesPage() {
 
         {/* User templates list */}
         <div>
-          <h2 className="font-semibold text-[#0f172a] mb-3">
+          <h2 className="font-semibold text-[var(--text)] mb-3">
             Загруженные шаблоны {!isLoading && `(${templates.length})`}
           </h2>
 
@@ -641,6 +633,6 @@ export default function ContractTemplatesPage() {
           )}
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

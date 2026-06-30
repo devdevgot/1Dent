@@ -274,11 +274,11 @@ function TreatmentSchedulePicker({ scheduledAt, onConfirm, onClear, onClose }: T
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 bg-white rounded-2xl border border-[#e8e3d9] shadow-xl w-full max-w-sm mx-4 overflow-hidden">
+      <div className="relative z-10 bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-xl w-full max-w-sm mx-4 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#e8e3d9]">
-          <p className="font-semibold text-[#0f172a] text-[15px]">Назначить дату лечения</p>
-          <button onClick={onClose} className="text-[#94a3b8] hover:text-[#64748b] transition-colors">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
+          <p className="font-semibold text-[var(--text)] text-[15px]">Назначить дату лечения</p>
+          <button onClick={onClose} className="text-[var(--text-subtle)] hover:text-[var(--text-secondary)] transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -286,19 +286,19 @@ function TreatmentSchedulePicker({ scheduledAt, onConfirm, onClear, onClose }: T
         {/* Calendar */}
         <div className="px-5 pt-4 pb-2">
           <div className="flex items-center justify-between mb-3">
-            <button onClick={prevMonth} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[#f1ede4] transition-colors">
-              <ChevronLeft className="w-4 h-4 text-[#64748b]" />
+            <button onClick={prevMonth} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[var(--surface-2)] transition-colors">
+              <ChevronLeft className="w-4 h-4 text-[var(--text-secondary)]" />
             </button>
-            <span className="text-sm font-semibold text-[#0f172a]">
+            <span className="text-sm font-semibold text-[var(--text)]">
               {MONTHS_RU[viewMonth]} {viewYear}
             </span>
-            <button onClick={nextMonth} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[#f1ede4] transition-colors">
-              <ChevronRight className="w-4 h-4 text-[#64748b]" />
+            <button onClick={nextMonth} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[var(--surface-2)] transition-colors">
+              <ChevronRight className="w-4 h-4 text-[var(--text-secondary)]" />
             </button>
           </div>
           <div className="grid grid-cols-7 mb-1">
             {DAYS_RU.map(d => (
-              <div key={d} className="text-center text-xs font-medium text-[#94a3b8] py-1">{d}</div>
+              <div key={d} className="text-center text-xs font-medium text-[var(--text-subtle)] py-1">{d}</div>
             ))}
           </div>
           {weeks.map((week, wi) => (
@@ -319,10 +319,10 @@ function TreatmentSchedulePicker({ scheduledAt, onConfirm, onClear, onClose }: T
                     className={cn(
                       "aspect-square flex items-center justify-center text-sm rounded-full transition-all m-0.5",
                       !day && "invisible",
-                      isPast && day && "text-[#94a3b8] cursor-not-allowed",
+                      isPast && day && "text-[var(--text-subtle)] cursor-not-allowed",
                       isSelected && "bg-primary text-white font-semibold shadow-sm",
                       !isSelected && isToday && "text-primary font-semibold",
-                      !isSelected && !isToday && day && !isPast && "text-[#0f172a] hover:bg-primary/10",
+                      !isSelected && !isToday && day && !isPast && "text-[var(--text)] hover:bg-primary/10",
                     )}
                   >
                     {day}
@@ -333,13 +333,13 @@ function TreatmentSchedulePicker({ scheduledAt, onConfirm, onClear, onClose }: T
           ))}
         </div>
 
-        <div className="mx-5 border-t border-[#e8e3d9] my-1" />
+        <div className="mx-5 border-t border-[var(--border)] my-1" />
 
         {/* Time list */}
         <div className="px-5 pb-2">
           <div className="flex items-center gap-1.5 mb-2">
-            <Clock className="w-3.5 h-3.5 text-[#94a3b8]" />
-            <span className="text-xs font-medium text-[#64748b] uppercase tracking-wide">Время</span>
+            <Clock className="w-3.5 h-3.5 text-[var(--text-subtle)]" />
+            <span className="text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wide">Время</span>
           </div>
           <div ref={timeRef} className="h-36 overflow-y-scroll custom-scrollbar space-y-0.5 pr-1">
             {SCHEDULE_TIME_SLOTS.map(slot => (
@@ -352,7 +352,7 @@ function TreatmentSchedulePicker({ scheduledAt, onConfirm, onClear, onClose }: T
                   "w-full text-left px-3 py-1.5 rounded-lg text-sm transition-all",
                   slot === selTime
                     ? "bg-primary text-white font-semibold"
-                    : "text-[#0f172a] hover:bg-primary/10",
+                    : "text-[var(--text)] hover:bg-primary/10",
                 )}
               >
                 {slot}
@@ -362,12 +362,12 @@ function TreatmentSchedulePicker({ scheduledAt, onConfirm, onClear, onClose }: T
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t border-[#e8e3d9] flex gap-3">
+        <div className="px-5 py-4 border-t border-[var(--border)] flex gap-3">
           {onClear && (
             <button
               type="button"
               onClick={onClear}
-              className="px-3 py-2 rounded-xl border border-red-200 text-red-500 text-[12px] font-semibold hover:bg-red-50 transition-colors"
+              className="dash-btn px-3 py-2 !text-red-500 !border-red-200 hover:!bg-red-50 text-[12px] font-semibold"
             >
               Снять
             </button>
@@ -375,7 +375,7 @@ function TreatmentSchedulePicker({ scheduledAt, onConfirm, onClear, onClose }: T
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 py-2 rounded-xl border border-[#e8e3d9] text-sm font-semibold text-[#64748b] hover:bg-[#faf8f4] transition-colors"
+            className="dash-btn dash-btn-secondary flex-1 py-2 text-sm font-semibold"
           >
             Отмена
           </button>
@@ -384,10 +384,10 @@ function TreatmentSchedulePicker({ scheduledAt, onConfirm, onClear, onClose }: T
             disabled={!selDate}
             onClick={() => onConfirm(selDate, selTime)}
             className={cn(
-              "flex-1 py-2 rounded-xl text-sm font-semibold transition-colors",
+              "dash-btn flex-1 py-2 text-sm font-semibold",
               selDate
-                ? "bg-primary text-white hover:bg-primary/90"
-                : "bg-[#f1ede4] text-[#94a3b8] cursor-not-allowed"
+                ? "dash-btn-primary"
+                : "!bg-[var(--surface-2)] !text-[var(--text-subtle)] cursor-not-allowed border-[var(--border)]"
             )}
           >
             Готово
@@ -847,23 +847,23 @@ export function PlanItemDetailModal({
       />
       {/* Panel — takes ~75% of screen height, anchored near bottom */}
       <div
-        className="relative bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl border border-[#e8e3d9] shadow-xl flex flex-col overflow-hidden animate-in-slide"
+        className="relative bg-[var(--surface)] w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl border border-[var(--border)] shadow-xl flex flex-col overflow-hidden animate-in-slide"
         style={{ height: "75dvh" }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-1 shrink-0">
-          <div className="w-10 h-1 rounded-full bg-[#e8e3d9]" />
+          <div className="w-10 h-1 rounded-full bg-[var(--border)]" />
         </div>
 
         {/* ── Header ── */}
-        <div className="px-4 pt-3 pb-3 border-b border-[#e8e3d9] shrink-0">
+        <div className="px-4 pt-3 pb-3 border-b border-[var(--border)] shrink-0">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <p className="text-[15px] font-bold text-[#0f172a] leading-snug">{item.title}</p>
+              <p className="text-[15px] font-bold text-[var(--text)] leading-snug">{item.title}</p>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 {item.toothFdi != null && (
-                  <span className="text-[11px] text-[#64748b] bg-[#f1ede4] px-2 py-0.5 rounded-full">
+                  <span className="text-[11px] text-[var(--text-secondary)] bg-[var(--surface-2)] px-2 py-0.5 rounded-full">
                     Зуб №{item.toothFdi}
                   </span>
                 )}
@@ -876,13 +876,13 @@ export function PlanItemDetailModal({
                   {isCompleted ? "Завершена" : isCancelled ? "Отменена" : "В ожидании"}
                 </span>
                 {item.discount > 0 ? (
-                  <span className="text-[12px] font-semibold text-[#0f172a] flex items-center gap-1.5">
-                    <span className="line-through text-[#94a3b8]">{item.price.toLocaleString("ru-KZ")} ₸</span>
+                  <span className="text-[12px] font-semibold text-[var(--text)] flex items-center gap-1.5">
+                    <span className="line-through text-[var(--text-subtle)]">{item.price.toLocaleString("ru-KZ")} ₸</span>
                     <span className="text-emerald-600 font-bold">{(item.price * (1 - item.discount / 100)).toLocaleString("ru-KZ")} ₸</span>
                     <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-rose-50 text-rose-600 border border-rose-100">-{item.discount}%</span>
                   </span>
                 ) : (
-                  <span className="text-[12px] font-semibold text-[#0f172a]">
+                  <span className="text-[12px] font-semibold text-[var(--text)]">
                     {item.price.toLocaleString("ru-KZ")} ₸
                   </span>
                 )}
@@ -890,7 +890,7 @@ export function PlanItemDetailModal({
             </div>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-[#94a3b8] hover:bg-[#f1ede4] hover:text-[#0f172a] transition-colors shrink-0"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--text-subtle)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] transition-colors shrink-0"
             >
               <X className="w-4 h-4" />
             </button>
@@ -904,7 +904,7 @@ export function PlanItemDetailModal({
                 onClick={() => setTab(id)}
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors",
-                  tab === id ? "bg-primary/10 text-primary" : "text-[#64748b] hover:bg-[#f1ede4]"
+                  tab === id ? "bg-primary/10 text-primary" : "text-[var(--text-secondary)] hover:bg-[var(--surface-2)]"
                 )}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -1496,8 +1496,8 @@ export function PlanItemDetailModal({
               />
             ) : isPdf(previewPath) ? (
               <div className="w-full h-[75vh] flex flex-col bg-white rounded-2xl overflow-hidden shadow-2xl">
-                <div className="px-4 py-3 bg-[#faf8f4] border-b border-[#e8e3d9] flex items-center justify-between">
-                  <span className="text-xs font-semibold text-[#0f172a] truncate">{fileName(previewPath)}</span>
+                <div className="px-4 py-3 bg-[var(--bg)] border-b border-[var(--border)] flex items-center justify-between">
+                  <span className="text-xs font-semibold text-[var(--text)] truncate">{fileName(previewPath)}</span>
                   <a
                     href={fileUrl(previewPath)}
                     download
@@ -1537,29 +1537,29 @@ export function PlanItemDetailModal({
         const targetDoctor = allUsers.find((u) => u.id === doctorToTransfer);
         return (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-            <div className="bg-white w-full max-w-[340px] rounded-2xl p-5 shadow-xl border border-[#e8e3d9] flex flex-col text-center space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="bg-[var(--surface)] w-full max-w-[340px] rounded-2xl p-5 shadow-xl border border-[var(--border)] flex flex-col text-center space-y-4 animate-in zoom-in-95 duration-150">
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto text-primary">
                 <UserRound className="w-6 h-6" />
               </div>
               <div className="space-y-1">
-                <h3 className="font-semibold text-[#0f172a] text-[16px]">Передача лечения</h3>
-                <p className="text-[13px] text-[#64748b] leading-relaxed">
+                <h3 className="font-semibold text-[var(--text)] text-[16px]">Передача лечения</h3>
+                <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed">
                   Вы точно хотите передать это лечение врачу{" "}
-                  <span className="font-semibold text-[#0f172a]">{targetDoctor?.name}</span>? 
+                  <span className="font-semibold text-[var(--text)]">{targetDoctor?.name}</span>? 
                   Имя нового врача обновится на канбан-доске и во всех списках.
                 </p>
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => setDoctorToTransfer(null)}
-                  className="flex-1 py-2 rounded-xl border border-[#e8e3d9] bg-white text-sm font-semibold text-[#64748b] hover:bg-[#faf8f4] transition-colors"
+                  className="dash-btn dash-btn-secondary flex-1 py-2 text-sm font-semibold"
                 >
                   Нет
                 </button>
                 <button
                   onClick={handleConfirmTransfer}
                   disabled={updatePatientMutation.isPending || updateMutation.isPending}
-                  className="flex-1 py-2 rounded-xl bg-primary text-sm font-semibold text-white hover:bg-primary/95 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  className="dash-btn dash-btn-primary flex-1 py-2 text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
                   {(updatePatientMutation.isPending || updateMutation.isPending) ? (
                     <Loader2 className="w-4 h-4 animate-spin" />

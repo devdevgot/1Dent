@@ -203,21 +203,21 @@ function CurrentSubscriptionBanner({ clinic }: { clinic: Clinic | null }) {
 
   if (status.kind === "active_plan") {
     return (
-      <div className="bg-[#f0fdf4] border border-[#16a34a]/30 rounded-2xl p-4">
+      <div className="bg-[var(--success-light)] border border-[var(--success)]/30 rounded-2xl p-4">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#16a34a]/15 flex items-center justify-center shrink-0">
-            <Check className="w-5 h-5 text-[#16a34a]" strokeWidth={3} />
+          <div className="w-10 h-10 rounded-xl bg-[var(--success)]/15 flex items-center justify-center shrink-0">
+            <Check className="w-5 h-5 text-[var(--success)]" strokeWidth={3} />
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] font-bold text-[#16a34a] uppercase tracking-wider">Ваш тариф</p>
-            <p className="text-[18px] font-black text-[#0f172a] mt-0.5">{PLAN_DISPLAY_NAMES[status.plan]}</p>
+            <p className="text-[11px] font-bold text-[var(--success)] uppercase tracking-wider">Ваш тариф</p>
+            <p className="text-[18px] font-black text-[var(--text)] mt-0.5">{PLAN_DISPLAY_NAMES[status.plan]}</p>
             {status.expiresAt ? (
-              <p className="text-[13px] text-[#16a34a] mt-1 flex items-center gap-1.5">
+              <p className="text-[13px] text-[var(--success)] mt-1 flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5 shrink-0" />
                 Действует до {formatExpiryDate(status.expiresAt)}
               </p>
             ) : (
-              <p className="text-[13px] text-[#16a34a] mt-1">Подписка активна</p>
+              <p className="text-[13px] text-[var(--success)] mt-1">Подписка активна</p>
             )}
           </div>
         </div>
@@ -286,15 +286,15 @@ function CurrentSubscriptionBanner({ clinic }: { clinic: Clinic | null }) {
   }
 
   return (
-    <div className="bg-white border border-[#e8e3d9] rounded-2xl p-4">
+    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4">
       <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-xl bg-[#f1ede4] flex items-center justify-center shrink-0">
-          <AlertCircle className="w-5 h-5 text-[#64748b]" />
+        <div className="w-10 h-10 rounded-xl bg-[var(--surface-2)] flex items-center justify-center shrink-0">
+          <AlertCircle className="w-5 h-5 text-[var(--text-secondary)]" />
         </div>
         <div className="min-w-0">
-          <p className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider">Текущий статус</p>
-          <p className="text-[18px] font-black text-[#0f172a] mt-0.5">Тариф не подключён</p>
-          <p className="text-[13px] text-[#64748b] mt-1">Выберите тариф ниже, чтобы подключить систему</p>
+          <p className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">Текущий статус</p>
+          <p className="text-[18px] font-black text-[var(--text)] mt-0.5">Тариф не подключён</p>
+          <p className="text-[13px] text-[var(--text-secondary)] mt-1">Выберите тариф ниже, чтобы подключить систему</p>
         </div>
       </div>
     </div>
@@ -351,8 +351,8 @@ export default function PricingPage() {
       <div className="px-4 pt-6 space-y-5">
         {/* Hero */}
         <div className="text-center space-y-2">
-          <h2 className="text-[22px] font-bold text-[#0f172a]">Тарифы 1Dent</h2>
-          <p className="text-[14px] text-[#64748b] leading-relaxed max-w-xs mx-auto">
+          <h2 className="text-[22px] font-bold text-[var(--text)]">Тарифы 1Dent</h2>
+          <p className="text-[14px] text-[var(--text-secondary)] leading-relaxed max-w-xs mx-auto">
             Подберите план, который подходит именно вашей клинике
           </p>
         </div>
@@ -369,24 +369,24 @@ export default function PricingPage() {
               <div
                 key={plan.id}
                 className={cn(
-                  "relative bg-white rounded-2xl border-2 overflow-hidden",
+                  "relative bg-[var(--surface)] rounded-2xl border-2 overflow-hidden",
                   plan.badge
-                    ? "border-[#1f75fe] shadow-md shadow-[#1f75fe]/10"
+                    ? "border-[var(--primary)] shadow-md shadow-[var(--primary)]/10"
                     : isCurrentPlan
-                    ? "border-[#16a34a] shadow-md"
-                    : "border-[#e8e3d9] shadow-md",
+                    ? "border-[var(--success)] shadow-md"
+                    : "border-[var(--border)] shadow-md",
                 )}
               >
                 {plan.badge && (
                   <div className="absolute top-0 right-0">
-                    <div className="bg-[#1f75fe] text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl flex items-center gap-1">
+                    <div className="bg-[var(--primary)] text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl flex items-center gap-1">
                       <Star className="w-3 h-3" /> {plan.badge}
                     </div>
                   </div>
                 )}
                 {isCurrentPlan && (
                   <div className="absolute top-0 right-0">
-                    <div className="bg-[#16a34a] text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl">
+                    <div className="bg-[var(--success)] text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl">
                       Текущий
                     </div>
                   </div>
@@ -399,26 +399,26 @@ export default function PricingPage() {
                       <Icon className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className="text-[20px] font-black text-[#0f172a] tracking-tight">{plan.name}</h3>
-                      <p className="text-[12px] text-[#64748b] mt-0.5 leading-relaxed">{plan.subtitle}</p>
+                      <h3 className="text-[20px] font-black text-[var(--text)] tracking-tight">{plan.name}</h3>
+                      <p className="text-[12px] text-[var(--text-secondary)] mt-0.5 leading-relaxed">{plan.subtitle}</p>
                     </div>
                   </div>
 
                   {/* Price */}
                   <div className="mb-5">
                     <div className="flex items-baseline gap-1.5">
-                      <span className="text-[30px] font-black text-[#0f172a]">
+                      <span className="text-[30px] font-black text-[var(--text)]">
                         {plan.price.toLocaleString("ru-KZ")}
                       </span>
-                      <span className="text-[14px] text-[#64748b] font-medium">₸ / мес</span>
+                      <span className="text-[14px] text-[var(--text-secondary)] font-medium">₸ / мес</span>
                     </div>
                   </div>
 
                   {/* Includes from */}
                   {plan.includesFrom && (
-                    <div className="mb-4 px-3 py-2 bg-white/60 border border-[#e8e3d9]/60 rounded-xl">
-                      <p className="text-[12px] text-[#64748b] font-medium">
-                        Всё из тарифа <span className="font-bold text-[#0f172a]">{plan.includesFrom}</span>, а также:
+                    <div className="mb-4 px-3 py-2 bg-[var(--surface)]/60 border border-[var(--border)]/60 rounded-xl">
+                      <p className="text-[12px] text-[var(--text-secondary)] font-medium">
+                        Всё из тарифа <span className="font-bold text-[var(--text)]">{plan.includesFrom}</span>, а также:
                       </p>
                     </div>
                   )}
@@ -431,9 +431,9 @@ export default function PricingPage() {
                           <Check className="w-3 h-3" strokeWidth={3} style={{ color: plan.accentColor }} />
                         </div>
                         <div>
-                          <p className="text-[13px] font-semibold text-[#0f172a] leading-snug">{feature.title}</p>
+                          <p className="text-[13px] font-semibold text-[var(--text)] leading-snug">{feature.title}</p>
                           {feature.description && (
-                            <p className="text-[12px] text-[#64748b] leading-relaxed mt-0.5">{feature.description}</p>
+                            <p className="text-[12px] text-[var(--text-secondary)] leading-relaxed mt-0.5">{feature.description}</p>
                           )}
                         </div>
                       </div>
@@ -441,13 +441,13 @@ export default function PricingPage() {
                   </div>
 
                   {/* Limits */}
-                  <div className="bg-white/70 border border-[#e8e3d9] rounded-xl p-3.5 mb-5">
-                    <p className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider mb-2">Лимиты</p>
+                  <div className="bg-[var(--surface)]/70 border border-[var(--border)] rounded-xl p-3.5 mb-5">
+                    <p className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2">Лимиты</p>
                     <div className="space-y-1.5">
                       {plan.limits.map((limit, i) => (
                         <div key={i} className="flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#94a3b8] shrink-0" />
-                          <span className="text-[12px] text-[#64748b]">{limit.text}</span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-subtle)] shrink-0" />
+                          <span className="text-[12px] text-[var(--text-secondary)]">{limit.text}</span>
                         </div>
                       ))}
                     </div>
@@ -460,10 +460,10 @@ export default function PricingPage() {
                     className={cn(
                       "w-full py-3.5 rounded-full text-[14px] font-semibold transition-all",
                       isCurrentPlan
-                        ? "bg-[#f0fdf4] text-[#16a34a] cursor-default"
+                        ? "bg-[var(--success-light)] text-[var(--success)] cursor-default"
                         : plan.badge
-                        ? "bg-[#1f75fe] text-white hover:bg-[#1a65e8] hover:scale-105 active:scale-95 shadow-md"
-                        : "bg-[#0f172a] text-white hover:bg-[#1e293b] hover:scale-105 active:scale-95",
+                        ? "bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)] hover:scale-105 active:scale-95 shadow-md"
+                        : "bg-[var(--text)] text-white hover:opacity-90 hover:scale-105 active:scale-95",
                     )}
                   >
                     {isCurrentPlan ? "Текущий план" : "Выбрать план"}
@@ -475,20 +475,20 @@ export default function PricingPage() {
         </div>
 
         {/* Common features */}
-        <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-md p-5">
+        <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-md p-5">
           <div className="flex items-center gap-2.5 mb-4">
-            <div className="w-9 h-9 rounded-xl bg-[#f0fdf4] flex items-center justify-center shrink-0">
-              <Shield className="w-4.5 h-4.5 text-[#16a34a]" />
+            <div className="w-9 h-9 rounded-xl bg-[var(--success-light)] flex items-center justify-center shrink-0">
+              <Shield className="w-4.5 h-4.5 text-[var(--success)]" />
             </div>
-            <h3 className="text-[15px] font-bold text-[#0f172a]">Во все тарифы входит</h3>
+            <h3 className="text-[15px] font-bold text-[var(--text)]">Во все тарифы входит</h3>
           </div>
           <div className="space-y-2.5">
             {COMMON_FEATURES.map((feature, i) => (
               <div key={i} className="flex items-center gap-2.5">
-                <div className="w-5 h-5 rounded-full bg-[#f0fdf4] flex items-center justify-center shrink-0">
-                  <Check className="w-3 h-3 text-[#16a34a]" strokeWidth={3} />
+                <div className="w-5 h-5 rounded-full bg-[var(--success-light)] flex items-center justify-center shrink-0">
+                  <Check className="w-3 h-3 text-[var(--success)]" strokeWidth={3} />
                 </div>
-                <span className="text-[13px] text-[#0f172a]">{feature}</span>
+                <span className="text-[13px] text-[var(--text)]">{feature}</span>
               </div>
             ))}
           </div>
@@ -496,7 +496,7 @@ export default function PricingPage() {
 
         {/* Footer */}
         <div className="text-center pt-2 pb-4">
-          <p className="text-[12px] text-[#94a3b8] leading-relaxed">
+          <p className="text-[12px] text-[var(--text-subtle)] leading-relaxed">
             Все цены указаны в тенге (₸). Оплата через Kaspi.
             <br />
             Есть вопросы? Напишите нам в WhatsApp.

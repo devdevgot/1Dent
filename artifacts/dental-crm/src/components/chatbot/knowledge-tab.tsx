@@ -5,6 +5,7 @@ import {
   BookOpen, GitBranch, Maximize2, RefreshCw,
 } from "lucide-react";
 import { ScriptMindMap, ScriptMindMapModal, type ScriptMindMapData } from "./script-mindmap";
+import { AppDialog } from "@/components/layout/app-dialog";
 import { cn } from "@/lib/utils";
 import { guessFsmStateFromLabel } from "@/lib/chatbot-fsm-states";
 import { useToast } from "@/hooks/use-toast";
@@ -367,104 +368,81 @@ export function KnowledgeTab({
       )}
 
       {/* File upload modal */}
-      {fileModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => !uploadingFile && setFileModalOpen(false)} />
-          <div className="relative bg-white rounded-2xl border border-[#e8e3d9] shadow-xl w-full max-w-sm p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold text-[#0f172a]">Загрузить файл или фото</p>
-                <p className="text-xs text-[#64748b] mt-0.5">Прайс-лист, скрипт, фото актуального — до 10 МБ</p>
-              </div>
-              <button
-                onClick={() => setFileModalOpen(false)}
-                disabled={uploadingFile}
-                className="p-1.5 rounded-lg hover:bg-[#f1ede4] transition-colors text-[#64748b] disabled:opacity-40"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+      <AppDialog
+        open={fileModalOpen}
+        onOpenChange={(open) => { if (!uploadingFile) setFileModalOpen(open); }}
+        title="Загрузить файл или фото"
+        description="Прайс-лист, скрипт, фото актуального — до 10 МБ"
+        size="sm"
+      >
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploadingFile}
+          className="w-full flex flex-col items-center justify-center gap-2 h-32 rounded-xl border-2 border-dashed border-[var(--border)] hover:border-[var(--primary)]/50 hover:bg-[var(--primary-light)] transition-colors text-sm text-[var(--text-secondary)] disabled:opacity-50"
+        >
+          {uploadingFile ? (
+            <>
+              <Loader2 className="h-6 w-6 animate-spin text-[var(--primary)]" />
+              <span className="text-xs">Загрузка…</span>
+            </>
+          ) : (
+            <>
+              <Upload className="h-6 w-6 text-[var(--text-subtle)]/60" />
+              <span className="text-xs font-medium">Нажмите, чтобы выбрать файл</span>
+              <span className="text-[11px] text-[var(--text-subtle)]/70">PDF, DOCX, TXT, JPG, PNG, WEBP</span>
+            </>
+          )}
+        </button>
 
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploadingFile}
-              className="w-full flex flex-col items-center justify-center gap-2 h-32 rounded-xl border-2 border-dashed border-[#e8e3d9] hover:border-[#1f75fe]/50 hover:bg-[#1f75fe]/5 transition-colors text-sm text-[#64748b] disabled:opacity-50"
-            >
-              {uploadingFile ? (
-                <>
-                  <Loader2 className="h-6 w-6 animate-spin text-[#1f75fe]" />
-                  <span className="text-xs">Загрузка…</span>
-                </>
-              ) : (
-                <>
-                  <Upload className="h-6 w-6 text-[#94a3b8]/60" />
-                  <span className="text-xs font-medium">Нажмите, чтобы выбрать файл</span>
-                  <span className="text-[11px] text-[#94a3b8]/70">PDF, DOCX, TXT, JPG, PNG, WEBP</span>
-                </>
-              )}
-            </button>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,.docx,.txt,.md,.jpg,.jpeg,.png,.webp,.gif,.bmp"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) {
-                  void handleFileUpload(f).then(() => setFileModalOpen(false));
-                }
-              }}
-            />
-          </div>
-        </div>
-      )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf,.docx,.txt,.md,.jpg,.jpeg,.png,.webp,.gif,.bmp"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) {
+              void handleFileUpload(f).then(() => setFileModalOpen(false));
+            }
+          }}
+        />
+      </AppDialog>
 
       {/* Text modal */}
-      {textModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => !addingText && setTextModalOpen(false)} />
-          <div className="relative bg-white rounded-2xl border border-[#e8e3d9] shadow-xl w-full max-w-sm p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold text-[#0f172a]">Добавить текст</p>
-                <p className="text-xs text-[#64748b] mt-0.5">Адреса, расписание, прайс — скопируйте из Instagram, 2GIS или напишите вручную</p>
-              </div>
-              <button
-                onClick={() => setTextModalOpen(false)}
-                disabled={addingText}
-                className="p-1.5 rounded-lg hover:bg-[#f1ede4] transition-colors text-[#64748b] disabled:opacity-40"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+      <AppDialog
+        open={textModalOpen}
+        onOpenChange={(open) => { if (!addingText) setTextModalOpen(open); }}
+        title="Добавить текст"
+        description="Адреса, расписание, прайс — скопируйте из Instagram, 2GIS или напишите вручную"
+        size="sm"
+        footer={
+          <button
+            onClick={() => void handleAddText()}
+            disabled={addingText || !textContent.trim()}
+            className="dash-btn dash-btn-primary w-full flex items-center justify-center gap-2"
+          >
+            {addingText ? <><Loader2 className="h-4 w-4 animate-spin" /> Добавление…</> : <>Добавить источник</>}
+          </button>
+        }
+      >
+        <div className="space-y-3">
+          <input
+            type="text"
+            placeholder="Название (например: Адреса клиники)"
+            value={textName}
+            onChange={(e) => setTextName(e.target.value)}
+            className="w-full h-9 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20"
+          />
 
-            <input
-              type="text"
-              placeholder="Название (например: Адреса клиники)"
-              value={textName}
-              onChange={(e) => setTextName(e.target.value)}
-              className="w-full h-9 rounded-xl border border-[#e8e3d9] bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
-
-            <textarea
-              placeholder={"Вставьте или напишите текст…\n\nНапример:\nАдреса клиники:\n• ул. Абая 12 — пн-пт 9:00–19:00\n• ул. Навои 5 — пн-сб 9:00–20:00"}
-              value={textContent}
-              onChange={(e) => setTextContent(e.target.value)}
-              rows={7}
-              className="w-full rounded-xl border border-[#e8e3d9] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
-            />
-
-            <button
-              onClick={() => void handleAddText()}
-              disabled={addingText || !textContent.trim()}
-              className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-[#1f75fe] text-white text-sm font-semibold disabled:opacity-50 hover:bg-[#1a65e8] transition-colors"
-            >
-              {addingText ? <><Loader2 className="h-4 w-4 animate-spin" /> Добавление…</> : <>Добавить источник</>}
-            </button>
-          </div>
+          <textarea
+            placeholder={"Вставьте или напишите текст…\n\nНапример:\nАдреса клиники:\n• ул. Абая 12 — пн-пт 9:00–19:00\n• ул. Навои 5 — пн-сб 9:00–20:00"}
+            value={textContent}
+            onChange={(e) => setTextContent(e.target.value)}
+            rows={7}
+            className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 resize-none"
+          />
         </div>
-      )}
+      </AppDialog>
 
       {/* Sources list */}
       {loading ? (
@@ -616,19 +594,19 @@ export function KnowledgeAndScriptModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[#faf8f4]">
+    <div className="fixed inset-0 z-50 flex flex-col bg-[var(--bg)] font-manrope">
       {/* Header */}
-      <div className="shrink-0 flex items-center gap-3 px-4 py-3 bg-white border-b border-[#e8e3d9] shadow-sm">
-        <BookOpen className="h-4 w-4 text-[#1f75fe] shrink-0" />
+      <div className="shrink-0 flex items-center gap-3 px-4 py-3 bg-[var(--surface)] border-b border-[var(--border)] shadow-sm">
+        <BookOpen className="h-4 w-4 text-[var(--primary)] shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-[#0f172a]">База знаний и скрипт</p>
-          <p className="text-xs text-[#64748b] leading-tight">Обучение чат-бота и сценарий разговора</p>
+          <p className="text-sm font-semibold text-[var(--text)]">База знаний и скрипт</p>
+          <p className="text-xs text-[var(--text-secondary)] leading-tight">Обучение чат-бота и сценарий разговора</p>
         </div>
         <button
           onClick={onClose}
-          className="p-1.5 rounded-lg hover:bg-[#f1ede4] transition-colors shrink-0"
+          className="p-1.5 rounded-lg hover:bg-[var(--surface-2)] transition-colors shrink-0"
         >
-          <X className="h-4 w-4 text-[#64748b]" />
+          <X className="h-4 w-4 text-[var(--text-secondary)]" />
         </button>
       </div>
 
@@ -643,16 +621,16 @@ export function KnowledgeAndScriptModal({
         </div>
 
         {/* Divider */}
-        <div className="h-px bg-[#e8e3d9] mx-4" />
+        <div className="h-px bg-[var(--border)] mx-4" />
 
         {/* Mind map inline section */}
         <div className="px-4 py-4 pb-8 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <GitBranch className="h-4 w-4 text-[#1f75fe] shrink-0" />
+              <GitBranch className="h-4 w-4 text-[var(--primary)] shrink-0" />
               <div>
-                <p className="text-sm font-semibold text-[#0f172a]">Скрипт диалога</p>
-                <p className="text-xs text-[#64748b] mt-0.5">
+                <p className="text-sm font-semibold text-[var(--text)]">Скрипт диалога</p>
+                <p className="text-xs text-[var(--text-secondary)] mt-0.5">
                   {liveMindMapData?.nodes?.length
                     ? "Нажмите на узел для редактирования"
                     : "Сгенерируйте скрипты выше — они появятся здесь"}
@@ -661,14 +639,14 @@ export function KnowledgeAndScriptModal({
             </div>
             <button
               onClick={() => setMapExpanded(true)}
-              className="flex items-center gap-1.5 text-xs text-[#64748b] hover:text-[#0f172a] px-2.5 py-1.5 rounded-lg border border-[#e8e3d9] hover:bg-[#f1ede4] transition-colors shrink-0"
+              className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--text)] px-2.5 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--surface-2)] transition-colors shrink-0"
             >
               <Maximize2 className="h-3.5 w-3.5" />
               На весь экран
             </button>
           </div>
           <div
-            className="rounded-2xl border border-[#e8e3d9] overflow-hidden bg-white"
+            className="rounded-2xl border border-[var(--border)] overflow-hidden bg-[var(--surface)]"
             style={{ height: 320 }}
           >
             <ScriptMindMap

@@ -27,7 +27,7 @@ export function IosGroup({ children, className }: IosGroupProps) {
   return (
     <div
       className={cn(
-        "bg-white rounded-2xl border border-[#e8e3d9] overflow-hidden",
+        "bg-[var(--surface)] rounded-2xl border border-[var(--border)] overflow-hidden",
         className,
       )}
     >
@@ -55,10 +55,10 @@ export function IosGroupRow({
       type={as === "button" ? "button" : undefined}
       onClick={onClick}
       className={cn(
-        "flex items-center justify-between gap-3 px-4 py-3.5 text-body text-[#0f172a] font-manrope",
-        "border-b border-[#e8e3d9] last:border-b-0",
+        "flex items-center justify-between gap-3 px-4 py-3.5 text-body text-[var(--text)] font-manrope",
+        "border-b border-[var(--border)] last:border-b-0",
         (onClick || as === "button") &&
-          "w-full text-left active:bg-[#f1ede4] transition-colors",
+          "w-full text-left active:bg-[var(--surface-2)] transition-colors",
         className,
       )}
     >

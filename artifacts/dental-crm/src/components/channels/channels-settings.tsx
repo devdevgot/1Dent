@@ -13,6 +13,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/hooks/use-auth";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { AppDialog } from "@/components/layout/app-dialog";
 import { Copy, Download, Trash2, Plus, Globe, Handshake, Megaphone, MapPin, ChevronDown, LogOut, RefreshCw, AlertTriangle, Pencil, Check, X } from "lucide-react";
 import { FaInstagram, FaTelegram, FaWhatsapp } from "react-icons/fa";
 import { WhatsAppConnectModal, WhatsAppIcon, type WaStatus } from "@/components/whatsapp/whatsapp-connect-modal";
@@ -260,42 +261,66 @@ export function ChannelsSettings() {
 
   return (
     <div className="space-y-4">
-      {/* ─── Disconnecting progress overlay ─────────────────────────────────── */}
-      {disconnecting && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 w-80 flex flex-col items-center gap-5 mx-4">
-            {/* Icon */}
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ backgroundColor: "#25d366" + "18" }}>
-              <WhatsAppIcon size={36} color="#25d366" />
-            </div>
-            {/* Title + stage */}
-            <div className="text-center">
-              <p className="text-base font-bold text-[#0f172a] mb-1">Отключение WhatsApp</p>
-              <p className="text-xs text-[#94a3b8] min-h-[16px]">{disconnectStage}</p>
-            </div>
-            {/* Big percentage */}
-            <div
-              className="text-5xl font-bold tabular-nums transition-all duration-200"
-              style={{ color: disconnectProgress === 100 ? "#16a34a" : "#dc2626" }}
-            >
-              {disconnectProgress}%
-            </div>
-            {/* Progress bar */}
-            <div className="w-full h-2.5 bg-[#f1ede4] rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-200 ease-linear"
-                style={{
-                  width: `${disconnectProgress}%`,
-                  backgroundColor: disconnectProgress === 100 ? "#16a34a" : "#dc2626",
-                }}
-              />
-            </div>
-            <p className="text-xs text-[#94a3b8] text-center leading-relaxed">
-              Пожалуйста, не закрывайте страницу.<br />Устройство отвязывается от WhatsApp...
-            </p>
-          </div>
+      <AppDialog
+        open={disconnecting}
+        onOpenChange={() => {}}
+        title="Отключение WhatsApp"
+        description={disconnectStage}
+        size="sm"
+        showClose={false}
+        bodyClassName="flex flex-col items-center gap-5 text-center"
+      >
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ backgroundColor: "#25d366" + "18" }}>
+          <WhatsAppIcon size={36} color="#25d366" />
         </div>
-      )}
+        <div
+          className="text-5xl font-bold tabular-nums transition-all duration-200"
+          style={{ color: disconnectProgress === 100 ? "#16a34a" : "#dc2626" }}
+        >
+          {disconnectProgress}%
+        </div>
+        <div className="w-full h-2.5 bg-[#f1ede4] rounded-full overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-200 ease-linear"
+            style={{
+              width: `${disconnectProgress}%`,
+              backgroundColor: disconnectProgress === 100 ? "#16a34a" : "#dc2626",
+            }}
+          />
+        </div>
+        <p className="text-xs text-[#94a3b8] text-center leading-relaxed">
+          Пожалуйста, не закрывайте страницу.<br />Устройство отвязывается от WhatsApp...
+        </p>
+      </AppDialog>
+
+      <AppDialog
+        open={confirmDisconnect}
+        onOpenChange={(isOpen) => { if (!isOpen) setConfirmDisconnect(false); }}
+        title="Отключить WhatsApp?"
+        description="Входящие сообщения перестанут поступать в приложение."
+        size="sm"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setConfirmDisconnect(false)}
+              className="dash-btn dash-btn-secondary flex-1"
+            >
+              Отмена
+            </button>
+            <button
+              type="button"
+              onClick={handleDisconnect}
+              disabled={disconnecting}
+              className="dash-btn dash-btn-primary flex-1 !bg-[#dc2626] hover:!bg-[#b91c1c]"
+            >
+              {disconnecting ? "Отключение..." : "Да, отключить"}
+            </button>
+          </>
+        }
+      >
+        {null}
+      </AppDialog>
 
       {isOwner && (
         <div className="bg-white border border-[#e8e3d9] rounded-xl p-4">
@@ -395,28 +420,6 @@ export function ChannelsSettings() {
             </div>
           )}
 
-          {confirmDisconnect && (
-            <div className="mt-3 pt-3 border-t border-[#e8e3d9]">
-              <p className="text-xs text-[#64748b] mb-3">
-                Отключить WhatsApp? Входящие сообщения перестанут поступать в приложение.
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setConfirmDisconnect(false)}
-                  className="flex-1 h-8 rounded-lg border border-[#e8e3d9] text-xs font-medium hover:bg-[#faf8f4] transition-colors"
-                >
-                  Отмена
-                </button>
-                <button
-                  onClick={handleDisconnect}
-                  disabled={disconnecting}
-                  className="flex-1 h-8 rounded-lg bg-[#dc2626] text-white text-xs font-semibold hover:bg-[#b91c1c] transition-colors disabled:opacity-60"
-                >
-                  {disconnecting ? "Отключение..." : "Да, отключить"}
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       )}
 

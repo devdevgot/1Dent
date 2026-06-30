@@ -11,7 +11,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
-  X,
   Clock,
   User,
   Check,
@@ -19,6 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { AppDialog } from "@/components/layout/app-dialog";
 import {
   format,
   startOfMonth,
@@ -103,6 +103,7 @@ function buildGroups(
 
 /* ─── Day Appointments List Modal ─── */
 interface DayAppointmentsModalProps {
+  open: boolean;
   day: Date;
   groups: AppointmentGroup[];
   onEditAppointment: (proc: ProcedureItem) => void;
@@ -110,6 +111,7 @@ interface DayAppointmentsModalProps {
 }
 
 function DayAppointmentsModal({
+  open,
   day,
   groups,
   onEditAppointment,
@@ -119,89 +121,79 @@ function DayAppointmentsModal({
   const totalPatients = groups.length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 font-manrope">
-      <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-lg w-full max-w-md overflow-hidden flex flex-col max-h-[85vh]">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#e8e3d9] flex-none">
-          <div>
-            <h2 className="text-lg font-bold text-[#0f172a] capitalize">{dayLabel}</h2>
-            <p className="text-sm text-[#64748b] mt-0.5">
-              {totalPatients === 0
-                ? "Нет записей"
-                : `${totalPatients} пациент${totalPatients === 1 ? "" : totalPatients < 5 ? "а" : "ов"}`}
-            </p>
+    <AppDialog
+      open={open}
+      onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}
+      title={<span className="capitalize">{dayLabel}</span>}
+      description={
+        totalPatients === 0
+          ? "Нет записей"
+          : `${totalPatients} пациент${totalPatients === 1 ? "" : totalPatients < 5 ? "а" : "ов"}`
+      }
+      size="md"
+      className="max-h-[85vh]"
+      bodyClassName="!px-4 !py-3 max-h-[50vh]"
+      footer={
+        <button
+          type="button"
+          onClick={onClose}
+          className="dash-btn dash-btn-secondary"
+        >
+          Закрыть
+        </button>
+      }
+    >
+      <div className="space-y-2">
+        {groups.length === 0 ? (
+          <div className="text-center py-10 text-[#94a3b8] text-sm">
+            Записей на этот день нет
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-[#f1ede4] transition-colors">
-            <X className="w-5 h-5 text-[#64748b]" />
-          </button>
-        </div>
-
-        {/* List */}
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
-          {groups.length === 0 ? (
-            <div className="text-center py-10 text-[#94a3b8] text-sm">
-              Записей на этот день нет
-            </div>
-          ) : (
-            groups.map((group) => (
-              <button
-                key={group.key}
-                type="button"
-                onClick={() => onEditAppointment(group.procedures[0])}
-                className="w-full text-left px-4 py-3 rounded-xl border border-[#e8e3d9] hover:border-[#1f75fe]/30 hover:bg-[#1f75fe]/5 transition-all flex items-start gap-3"
-              >
-                <span
-                  className={cn(
-                    "w-2.5 h-2.5 rounded-full flex-none mt-1.5",
-                    STATUS_DOT[group.status ?? "scheduled"],
-                  )}
-                />
-                <div className="flex-1 min-w-0">
-                  {/* Patient name + time */}
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <span className="text-sm font-semibold text-[#0f172a] truncate">
-                      {group.patientName}
+        ) : (
+          groups.map((group) => (
+            <button
+              key={group.key}
+              type="button"
+              onClick={() => onEditAppointment(group.procedures[0])}
+              className="w-full text-left px-4 py-3 rounded-xl border border-[#e8e3d9] hover:border-[#1f75fe]/30 hover:bg-[#1f75fe]/5 transition-all flex items-start gap-3"
+            >
+              <span
+                className={cn(
+                  "w-2.5 h-2.5 rounded-full flex-none mt-1.5",
+                  STATUS_DOT[group.status ?? "scheduled"],
+                )}
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-sm font-semibold text-[#0f172a] truncate">
+                    {group.patientName}
+                  </span>
+                  {group.timeLabel && (
+                    <span className="flex items-center gap-1 text-xs text-[#64748b] shrink-0">
+                      <Clock className="w-3 h-3" />
+                      {group.timeLabel}
                     </span>
-                    {group.timeLabel && (
-                      <span className="flex items-center gap-1 text-xs text-[#64748b] shrink-0">
-                        <Clock className="w-3 h-3" />
-                        {group.timeLabel}
-                      </span>
-                    )}
-                  </div>
-                  {/* Doctor */}
-                  {group.doctorName && (
-                    <p className="text-xs text-[#64748b] truncate mt-0.5 flex items-center gap-1">
-                      <User className="w-3 h-3" />
-                      {group.doctorName}
-                    </p>
-                  )}
-                  {/* Procedures list */}
-                  {group.procedures.length > 0 && (
-                    <p className="text-xs text-[#94a3b8] truncate mt-0.5">
-                      {group.procedures.map((p) => p.name).join(", ")}
-                    </p>
                   )}
                 </div>
-                <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded-full border self-center shrink-0", STATUS_PILL[group.status ?? "scheduled"])}>
-                  {STATUS_OPTIONS.find((s) => s.value === group.status)?.label ?? group.status}
-                </span>
-              </button>
-            ))
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-[#e8e3d9] flex-none flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-xl border border-[#e8e3d9] text-sm text-[#64748b] hover:bg-[#f1ede4] transition-colors"
-          >
-            Закрыть
-          </button>
-        </div>
+                {group.doctorName && (
+                  <p className="text-xs text-[#64748b] truncate mt-0.5 flex items-center gap-1">
+                    <User className="w-3 h-3" />
+                    {group.doctorName}
+                  </p>
+                )}
+                {group.procedures.length > 0 && (
+                  <p className="text-xs text-[#94a3b8] truncate mt-0.5">
+                    {group.procedures.map((p) => p.name).join(", ")}
+                  </p>
+                )}
+              </div>
+              <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded-full border self-center shrink-0", STATUS_PILL[group.status ?? "scheduled"])}>
+                {STATUS_OPTIONS.find((s) => s.value === group.status)?.label ?? group.status}
+              </span>
+            </button>
+          ))
+        )}
       </div>
-    </div>
+    </AppDialog>
   );
 }
 
@@ -516,6 +508,7 @@ export default function AdminCalendar() {
       {/* Day view */}
       {dayViewDate && !modalDate && (
         <DayAppointmentsModal
+          open
           day={dayViewDate}
           groups={getGroupsForDay(dayViewDate)}
           onEditAppointment={(proc) => openEditModal(proc)}

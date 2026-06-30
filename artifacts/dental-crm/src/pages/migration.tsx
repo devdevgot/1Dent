@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect } from "react";
 import { useLocation } from "wouter";
 import {
   FileSpreadsheet,
-  ChevronLeft,
   Check,
   AlertTriangle,
   RefreshCw,
@@ -29,6 +28,9 @@ import {
 } from "@workspace/api-client-react";
 import type { MigrationJob, AiDetectedCategory } from "@workspace/api-client-react";
 import { getBaseUrl } from "@/lib/base-url";
+import { PageHeader } from "@/components/layout/page-header";
+import { PageShell } from "@/components/layout/page-shell";
+import { AppDialog } from "@/components/layout/app-dialog";
 
 const AI_FIELD_LABELS: Record<string, string> = {
   "": "— не указано —",
@@ -629,10 +631,10 @@ function ExportSection() {
   };
 
   return (
-    <div className="mt-6 bg-white rounded-2xl shadow-md border border-[#e8e3d9] p-6 space-y-4">
+    <div className="mt-6 bg-[var(--surface)] rounded-2xl shadow-md border border-[var(--border)] p-6 space-y-4">
       <div>
-        <p className="text-sm font-semibold text-[#0f172a]">Экспорт данных</p>
-        <p className="text-xs text-[#94a3b8] mt-0.5">
+        <p className="text-sm font-semibold text-[var(--text)]">Экспорт данных</p>
+        <p className="text-xs text-[var(--text-subtle)] mt-0.5">
           Скачайте все данные клиники в XLSX — пациенты, карты зубов, планы лечения, процедуры и шаблоны услуг
         </p>
       </div>
@@ -675,44 +677,44 @@ function ExportSection() {
         </button>
       </div>
 
-      {/* Confirmation dialog */}
-      {confirmWipe && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => !wiping && setConfirmWipe(false)} />
-          <div className="relative bg-white rounded-2xl border border-[#e8e3d9] shadow-xl w-full max-w-sm p-6 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#fef2f2] flex items-center justify-center shrink-0">
-                <ShieldAlert className="w-5 h-5 text-[#dc2626]" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-[#0f172a]">Удалить все данные клиники?</p>
-                <p className="text-xs text-[#94a3b8] mt-0.5">Это действие необратимо</p>
-              </div>
-            </div>
-            <p className="text-sm text-[#64748b] leading-relaxed">
-              Сначала будет скачан XLSX-файл со всеми данными. Затем из системы удалятся все пациенты, карты зубов, планы лечения и процедуры.
-              <br /><br />
-              Для восстановления используйте этот файл через импорт.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setConfirmWipe(false)}
-                disabled={wiping}
-                className="flex-1 h-10 rounded-xl border border-[#e8e3d9] text-sm text-[#64748b] hover:bg-[#f1ede4] transition-colors disabled:opacity-40"
-              >
-                Отмена
-              </button>
-              <button
-                onClick={() => void handleWipe()}
-                disabled={wiping}
-                className="flex-1 h-10 rounded-full bg-[#dc2626] text-white text-sm font-semibold hover:bg-[#b91c1c] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {wiping ? <><Loader2 className="w-4 h-4 animate-spin" /> Удаление…</> : <>Скачать и удалить</>}
-              </button>
-            </div>
+      <AppDialog
+        open={confirmWipe}
+        onOpenChange={(open) => { if (!wiping) setConfirmWipe(open); }}
+        title="Удалить все данные клиники?"
+        description="Это действие необратимо"
+        size="sm"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setConfirmWipe(false)}
+              disabled={wiping}
+              className="flex-1 h-10 rounded-xl border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-2)] transition-colors disabled:opacity-40"
+            >
+              Отмена
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleWipe()}
+              disabled={wiping}
+              className="flex-1 h-10 rounded-full bg-[var(--danger)] text-white text-sm font-semibold hover:opacity-90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {wiping ? <><Loader2 className="w-4 h-4 animate-spin" /> Удаление…</> : <>Скачать и удалить</>}
+            </button>
+          </>
+        }
+      >
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 rounded-xl bg-[var(--danger-light)] flex items-center justify-center shrink-0">
+            <ShieldAlert className="w-5 h-5 text-[var(--danger)]" />
           </div>
         </div>
-      )}
+        <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+          Сначала будет скачан XLSX-файл со всеми данными. Затем из системы удалятся все пациенты, карты зубов, планы лечения и процедуры.
+          <br /><br />
+          Для восстановления используйте этот файл через импорт.
+        </p>
+      </AppDialog>
     </div>
   );
 }
@@ -766,30 +768,22 @@ export default function MigrationPage() {
   const [, setLocation] = useLocation();
 
   return (
-    <div className="min-h-screen bg-[#faf8f4] font-manrope">
-      {/* Header */}
-      <div className="bg-white border-b border-[#e8e3d9] px-4 py-4 flex items-center gap-3 shrink-0">
-        <button
-          onClick={() => setLocation("/menu")}
-          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#f1ede4] active:bg-[#f1ede4] transition-colors text-[#64748b] shrink-0"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-        <div>
-          <h1 className="text-[17px] font-semibold text-[#0f172a]">Миграция данных</h1>
-          <p className="text-xs text-[#64748b] mt-0.5">Excel, CSV или PDF — до 5 000 строк</p>
-        </div>
-      </div>
+    <PageShell>
+      <PageHeader
+        title="Миграция данных"
+        subtitle="Excel, CSV или PDF — до 5 000 строк"
+        onBack={() => setLocation("/menu")}
+      />
 
       <div className="max-w-2xl mx-auto px-4 py-6">
         {/* Main card */}
-        <div className="bg-white rounded-2xl shadow-md border border-[#e8e3d9] p-6">
+        <div className="bg-[var(--surface)] rounded-2xl shadow-md border border-[var(--border)] p-6">
           <AiImportTab />
         </div>
 
         <ExportSection />
         <JobHistory />
       </div>
-    </div>
+    </PageShell>
   );
 }
