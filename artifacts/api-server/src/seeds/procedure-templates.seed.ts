@@ -1,5 +1,5 @@
 import { db, procedureTemplatesTable, clinicsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 export const MACDENT_SERVICES: ReadonlyArray<{
@@ -159,19 +159,46 @@ if (MACDENT_SERVICES.length !== 145) {
   throw new Error(`Expected 145 services, got ${MACDENT_SERVICES.length}`);
 }
 
-export async function seedProcedureTemplates(clinicId: string): Promise<{ inserted: number; skipped: number }> {
+export async function seedProcedureTemplates(
+  clinicId: string,
+): Promise<{ inserted: number; skipped: number; updated: number }> {
   let inserted = 0;
   let skipped = 0;
+  let updated = 0;
 
   const existing = await db
-    .select({ name: procedureTemplatesTable.name })
+    .select({
+      name: procedureTemplatesTable.name,
+      defaultPrice: procedureTemplatesTable.defaultPrice,
+    })
     .from(procedureTemplatesTable)
     .where(eq(procedureTemplatesTable.clinicId, clinicId));
-  const existingNames = new Set(existing.map((r) => r.name));
+  const existingByName = new Map(
+    existing.map((r) => [r.name, Number(r.defaultPrice) || 0]),
+  );
 
   for (const svc of MACDENT_SERVICES) {
-    if (existingNames.has(svc.name)) {
-      skipped++;
+    if (existingByName.has(svc.name)) {
+      const currentPrice = existingByName.get(svc.name) ?? 0;
+      // Backfill standard MacDent prices when a template exists but was saved with 0
+      if (currentPrice === 0 && svc.price > 0) {
+        await db
+          .update(procedureTemplatesTable)
+          .set({
+            defaultPrice: svc.price,
+            category: svc.category,
+            code: svc.code ?? null,
+          })
+          .where(
+            and(
+              eq(procedureTemplatesTable.clinicId, clinicId),
+              eq(procedureTemplatesTable.name, svc.name),
+            ),
+          );
+        updated++;
+      } else {
+        skipped++;
+      }
       continue;
     }
     await db.insert(procedureTemplatesTable).values({
@@ -184,9 +211,9 @@ export async function seedProcedureTemplates(clinicId: string): Promise<{ insert
       materials: "[]",
     });
     inserted++;
-    existingNames.add(svc.name);
+    existingByName.set(svc.name, svc.price);
   }
-  return { inserted, skipped };
+  return { inserted, skipped, updated };
 }
 
 export async function seedAllClinics(): Promise<void> {
@@ -194,16 +221,20 @@ export async function seedAllClinics(): Promise<void> {
   if (clinics.length === 0) return;
 
   let totalInserted = 0;
+  let totalUpdated = 0;
   let clinicsSeeded = 0;
   for (const clinic of clinics) {
     const result = await seedProcedureTemplates(clinic.id);
-    if (result.inserted > 0) {
+    if (result.inserted > 0 || result.updated > 0) {
       clinicsSeeded++;
       totalInserted += result.inserted;
+      totalUpdated += result.updated;
     }
   }
-  if (totalInserted > 0) {
-    console.log(`[seedAllClinics] Inserted ${totalInserted} templates across ${clinicsSeeded} clinics.`);
+  if (totalInserted > 0 || totalUpdated > 0) {
+    console.log(
+      `[seedAllClinics] Inserted ${totalInserted}, updated ${totalUpdated} templates across ${clinicsSeeded} clinics.`,
+    );
   } else {
     console.log(`[seedAllClinics] All ${clinics.length} clinics already have procedure templates.`);
   }
