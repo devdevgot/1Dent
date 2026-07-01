@@ -154,11 +154,15 @@ export class ProceduresRepository {
     const where = category && category !== "all"
       ? and(eq(procedureTemplatesTable.clinicId, clinicId), eq(procedureTemplatesTable.category, category))
       : eq(procedureTemplatesTable.clinicId, clinicId);
-    return db
+    const rows = await db
       .select()
       .from(procedureTemplatesTable)
       .where(where)
       .orderBy(procedureTemplatesTable.name);
+    return rows.map((t) => ({
+      ...t,
+      defaultPrice: Number(t.defaultPrice) || 0,
+    }));
   }
 
   async createTemplate(data: {

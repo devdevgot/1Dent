@@ -33,6 +33,17 @@ const CATEGORIES = [
 
 type CategoryKey = (typeof CATEGORIES)[number]["key"];
 
+function templatePrice(value: unknown): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function formatTemplatePrice(value: unknown): string {
+  const price = templatePrice(value);
+  if (price <= 0) return "бесплатно";
+  return price.toLocaleString("ru-KZ");
+}
+
 interface AddState {
   name: string;
   price: string;
@@ -353,13 +364,13 @@ export default function ServicesPage() {
                             <span
                               className={cn(
                                 "text-sm text-right font-mono tabular-nums",
-                                t.defaultPrice === 0 ? "text-[#94a3b8]" : "text-[#0f172a]",
+                                templatePrice(t.defaultPrice) <= 0 ? "text-[#94a3b8]" : "text-[#0f172a]",
                                 isOwner && "cursor-pointer hover:text-[#1f75fe] transition-colors",
                               )}
-                              onClick={isOwner ? () => setEditing({ id: t.id, price: String(t.defaultPrice) }) : undefined}
+                              onClick={isOwner ? () => setEditing({ id: t.id, price: String(templatePrice(t.defaultPrice)) }) : undefined}
                               title={isOwner ? "Нажмите для изменения цены" : undefined}
                             >
-                              {t.defaultPrice > 0 ? t.defaultPrice.toLocaleString("ru-RU") : "бесплатно"}
+                              {formatTemplatePrice(t.defaultPrice)}
                             </span>
                           )}
 
@@ -387,7 +398,7 @@ export default function ServicesPage() {
                               ) : (
                                 <>
                                   <button
-                                    onClick={() => setEditing({ id: t.id, price: String(t.defaultPrice) })}
+                                    onClick={() => setEditing({ id: t.id, price: String(templatePrice(t.defaultPrice)) })}
                                     className="p-1.5 rounded-xl text-[#94a3b8] hover:text-[#1f75fe] hover:bg-[#1f75fe]/10 transition-colors"
                                     title="Изменить цену"
                                   >
