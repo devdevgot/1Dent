@@ -36,6 +36,9 @@ const DentalAiAnalysisPanel = lazy(() =>
 const ContractsTab = lazy(() =>
   import("./contracts-tab").then((m) => ({ default: m.ContractsTab })),
 );
+const PatientBroadcastHistory = lazy(() =>
+  import("./patient-broadcast-history").then((m) => ({ default: m.PatientBroadcastHistory })),
+);
 import { VoiceDiagnosisModal, type VoiceDiagnosisApplyResult } from "@/components/dental-chart/voice-diagnosis-modal";
 import type { ToothRecord, ToothTreatment, ProcedureTemplate } from "@workspace/api-client-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
@@ -44,7 +47,7 @@ import {
   Phone, User, Calendar, CreditCard, Stethoscope, Copy, Save, IdCard,
   ClipboardList, Plus, BadgeCheck, Circle, ArrowLeft, Square, CheckSquare, Loader2,
   Scissors, Crown, Wrench, Baby, Sparkles, Activity, ScanLine, Paintbrush, Search, GripVertical, Mic, Trash2,
-  FileText, Ban,
+  FileText, Ban, Megaphone,
 } from "lucide-react";
 import { calculateAge, formatDateOfBirth, maskIIN } from "@workspace/api-zod";
 import { getBaseUrl } from "@/lib/base-url";
@@ -1887,6 +1890,17 @@ export function PatientDetailPanel() {
                         <p className="text-sm text-[var(--text-subtle)] italic">Врач не назначен</p>
                       </div>
                     )}
+                  </div>
+
+                  {/* WhatsApp broadcast history */}
+                  <div className="bg-[#faf8f4] rounded-2xl p-4 space-y-3">
+                    <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide flex items-center gap-1.5">
+                      <Megaphone className="h-3.5 w-3.5" />
+                      Рассылки WhatsApp
+                    </p>
+                    <Suspense fallback={<div className="text-xs text-[#94a3b8] py-2">Загрузка…</div>}>
+                      <PatientBroadcastHistory patientId={patient.id} />
+                    </Suspense>
                   </div>
 
                   {/* Status */}

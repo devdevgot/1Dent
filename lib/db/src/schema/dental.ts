@@ -261,9 +261,32 @@ export const dentalBroadcastRunsTable = pgTable("dental_broadcast_runs", {
   totalPatients: integer("total_patients").notNull().default(0),
   processedPatients: integer("processed_patients").notNull().default(0),
   messagesSent: integer("messages_sent").notNull().default(0),
+  repliesCount: integer("replies_count").notNull().default(0),
+  bookingsCount: integer("bookings_count").notNull().default(0),
   errorsCount: integer("errors_count").notNull().default(0),
   startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
   completedAt: timestamp("completed_at", { withTimezone: true }),
 });
 
+export const dentalBroadcastDeliveriesTable = pgTable("dental_broadcast_deliveries", {
+  id: text("id").primaryKey(),
+  clinicId: text("clinic_id")
+    .notNull()
+    .references(() => clinicsTable.id, { onDelete: "cascade" }),
+  runId: text("run_id")
+    .notNull()
+    .references(() => dentalBroadcastRunsTable.id, { onDelete: "cascade" }),
+  patientId: text("patient_id")
+    .notNull()
+    .references(() => patientsTable.id, { onDelete: "cascade" }),
+  messageId: text("message_id"),
+  content: text("content").notNull(),
+  usedAi: boolean("used_ai").default(false).notNull(),
+  sentAt: timestamp("sent_at", { withTimezone: true }).defaultNow().notNull(),
+  repliedAt: timestamp("replied_at", { withTimezone: true }),
+  bookedAt: timestamp("booked_at", { withTimezone: true }),
+});
+
 export type DentalBroadcastRun = typeof dentalBroadcastRunsTable.$inferSelect;
+export type DentalBroadcastDelivery = typeof dentalBroadcastDeliveriesTable.$inferSelect;
+export type InsertDentalBroadcastDelivery = typeof dentalBroadcastDeliveriesTable.$inferInsert;

@@ -3,10 +3,22 @@ import { db, dentalBroadcastRunsTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { runDentalBroadcastForClinic } from "./dental-broadcast.service";
+import { computeRates, listPatientBroadcastHistory } from "./dental-broadcast-metrics";
 import { ValidationError } from "../../shared/errors";
+import { MessagesRepository } from "../messages/messages.repository";
 
 const router = Router();
 const ownerAdmin = roleGuard("owner", "admin");
+const messagesRepo = new MessagesRepository();
+
+function enrichRun(run: typeof dentalBroadcastRunsTable.$inferSelect) {
+  const { replyRate, bookingRate } = computeRates(
+    run.messagesSent,
+    run.repliesCount,
+    run.bookingsCount,
+  );
+  return { ...run, replyRate, bookingRate };
+}
 
 router.get(
   "/runs",
@@ -26,7 +38,29 @@ router.get(
         .orderBy(desc(dentalBroadcastRunsTable.startedAt))
         .limit(limit);
 
-      res.json({ success: true, data: { runs } });
+      res.json({ success: true, data: { runs: runs.map(enrichRun) } });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.get(
+  "/patients/:patientId/history",
+  authMiddleware,
+  ownerAdmin,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const clinicId = req.user!.clinicId;
+      const patientId = String(req.params["patientId"]);
+
+      const patient = await messagesRepo.findPatient(patientId, clinicId);
+      if (!patient) {
+        return next(new ValidationError("Пациент не найден"));
+      }
+
+      const deliveries = await listPatientBroadcastHistory(clinicId, patientId);
+      res.json({ success: true, data: { deliveries } });
     } catch (err) {
       next(err);
     }
@@ -58,7 +92,7 @@ router.post(
 
       const run = await runDentalBroadcastForClinic(clinicId);
 
-      res.status(201).json({ success: true, data: { run } });
+      res.status(201).json({ success: true, data: { run: enrichRun(run) } });
     } catch (err) {
       next(err);
     }

@@ -26,6 +26,7 @@ export const AI_CREDIT_FEATURE_LABELS: Record<string, string> = {
   migration_ai: "AI-миграция данных",
   treatment_plan_ai: "AI-план лечения",
   voice_transcribe: "Голосовая транскрипция",
+  dental_broadcast: "ИИ-рассылка по зубной карте",
 };
 
 export type AiCreditFeature = keyof typeof AI_CREDIT_FEATURE_LABELS;
@@ -42,6 +43,7 @@ export const AI_CREDIT_COSTS: Record<AiCreditFeature, number> = {
   migration_ai: 5,
   treatment_plan_ai: 3,
   voice_transcribe: 2,
+  dental_broadcast: 2,
 };
 
 let schemaReady: Promise<void> | null = null;

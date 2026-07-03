@@ -267,6 +267,13 @@
       "when": 1781615400000,
       "tag": "0037_chatbot_calendar_ab",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1781701800000,
+      "tag": "0038_dental_broadcast_metrics",
+      "breakpoints": true
     }
   ]
 }

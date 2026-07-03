@@ -89,6 +89,7 @@ const settingsUpdateSchema = z.object({
   }).optional(),
   calendarConfig: calendarConfigSchema.optional(),
   abTestEnabled: z.boolean().optional(),
+  broadcastAiEnabled: z.boolean().optional(),
   scriptVariants: z.array(scriptVariantSchema).optional(),
 });
 
