@@ -213,10 +213,12 @@ export class MessagesService {
     content: string,
     whatsappMessageId: string,
   ): Promise<Message | null> {
-    // Resolve phone → patient (may be null for new/unknown contacts)
+    // Resolve phone → patient (may be null for new/unknown contacts).
+    // Duplicate phones in the clinic are resolved in the repository by picking the
+    // most recently updated patient so inbound messages are still stored for staff.
     const patient = await this.repo.findPatientByPhone(senderPhone, clinicId);
 
-    // Always route inbound messages through the chatbot FSM.
+    // Always route inbound messages through the chatbot FSM (even when patient is null).
     // Messages are debounced: if the same sender writes several short messages
     // in quick succession (within 5 s) they are merged into one combined message
     // before being processed. DB storage and alert detection still run per-message.

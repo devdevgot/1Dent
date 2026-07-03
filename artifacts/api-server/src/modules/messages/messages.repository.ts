@@ -6,6 +6,8 @@ import type {
   InsertNotification,
 } from "@workspace/db";
 import { eq, and, desc, asc, sql } from "drizzle-orm";
+import { normalizePhoneDigits, phonesMatch } from "../../shared/phone";
+import { logger } from "../../lib/logger";
 
 export class MessagesRepository {
   async findPatient(patientId: string, clinicId: string) {
@@ -35,21 +37,23 @@ export class MessagesRepository {
       .from(patientsTable)
       .where(eq(patientsTable.clinicId, clinicId));
 
-    // Normalize both sides to digits only for exact comparison.
-    // Meta sends phone numbers without "+" and without spaces, e.g. "79001234567".
-    // Our DB stores them with "+", spaces, or dashes, e.g. "+7 900 123-45-67".
-    // We strip all non-digit chars from both and require an exact match.
-    const incomingDigits = rawPhone.replace(/\D/g, "");
-    if (incomingDigits.length < 7) return null; // Sanity check: reject suspiciously short numbers
+    const incomingDigits = normalizePhoneDigits(rawPhone);
+    if (incomingDigits.length < 7) return null;
 
-    const matches = all.filter((p) => {
-      const storedDigits = p.phone.replace(/\D/g, "");
-      return storedDigits === incomingDigits;
-    });
+    const matches = all.filter((p) => phonesMatch(p.phone, rawPhone));
 
-    // If multiple patients have the same digit-normalized number (data anomaly),
-    // reject to avoid attaching message to the wrong patient.
-    if (matches.length !== 1) return null;
+    if (matches.length === 0) return null;
+
+    if (matches.length > 1) {
+      logger.warn(
+        { clinicId, phoneDigits: incomingDigits, matchCount: matches.length },
+        "Multiple patients share the same phone — using most recently updated patient",
+      );
+      return matches.reduce((latest, p) =>
+        p.updatedAt > latest.updatedAt ? p : latest,
+      );
+    }
+
     return matches[0] ?? null;
   }
 
