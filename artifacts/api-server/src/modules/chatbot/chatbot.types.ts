@@ -68,4 +68,5 @@ export interface ChatbotSessionData {
   handoffSummary?: string;
   createdProcedureId?: string;
   abVariantId?: string;
+  fromRepeatSaleBroadcast?: boolean;
 }
