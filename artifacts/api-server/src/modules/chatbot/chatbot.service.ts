@@ -112,6 +112,10 @@ import {
   isPositiveRepeatSaleReplyKeywords,
 } from "./repeat-sale-reply";
 import {
+  markBroadcastBooking,
+  markBroadcastReply,
+} from "../dental-broadcast/dental-broadcast-metrics";
+import {
   assignRankedDoctor,
   buildBranchPromptFallback,
   buildDoctorPresentationFallback,
@@ -1654,6 +1658,10 @@ export class ChatbotService {
           return finishTurn(session, replyText);
         }
       } else if (patientDb.status === "repeat_sale") {
+        if (!dryRun) {
+          markBroadcastReply(clinicId, patientDb.id).catch(() => {});
+        }
+
         if (isExplicitNegativeRepeatSaleReply(messageText)) {
           session.state = "done";
           session.data = data;
@@ -1673,6 +1681,7 @@ export class ChatbotService {
               .update(patientsTable)
               .set({ status: "initial_consultation", updatedAt: new Date() })
               .where(eq(patientsTable.id, patientDb.id));
+            markBroadcastBooking(clinicId, patientDb.id).catch(() => {});
           } else {
             noteAction("Статус пациента → initial_consultation");
           }
@@ -3334,6 +3343,7 @@ export class ChatbotService {
       scriptMindMap?: ScriptMindMapData;
       calendarConfig?: ChatbotSettings["calendarConfig"];
       abTestEnabled?: boolean;
+      broadcastAiEnabled?: boolean;
       scriptVariants?: ChatbotSettings["scriptVariants"];
     },
   ) {

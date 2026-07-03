@@ -16,6 +16,7 @@ import {
   Loader2,
   FlaskConical,
   BookOpen,
+  Sparkles,
 } from "lucide-react";
 import {
   useGetChatbotSettings,
@@ -306,7 +307,10 @@ function AiBroadcastTab() {
   const queryClient = useQueryClient();
   const [showConfirm, setShowConfirm] = useState(false);
   const { data: settingsRes } = useGetChatbotSettings();
-  const chatbotEnabled = settingsRes?.data?.settings?.enabled ?? true;
+  const updateSettings = useUpdateChatbotSettings();
+  const settings = settingsRes?.data?.settings;
+  const chatbotEnabled = settings?.enabled ?? true;
+  const broadcastAiEnabled = (settings as { broadcastAiEnabled?: boolean } | undefined)?.broadcastAiEnabled ?? false;
   const { data, isLoading } = useListDentalBroadcastRuns(20, {
     query: {
       refetchInterval: (query) => {
@@ -348,10 +352,42 @@ function AiBroadcastTab() {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-[#0f172a]">Рассылка по WhatsApp</p>
             <p className="text-xs text-[#64748b] mt-0.5">
-              Формирует персональное сообщение по данным зубной карты и плана лечения для пациентов с нелечёными находками. Текст собирается по шаблону — без генерации ИИ. Автоматически запускается 15-го числа и в последний день месяца.
+              {broadcastAiEnabled
+                ? "ИИ формирует персональное сообщение по зубной карте и плану лечения для пациентов с нелечёными находками. При ошибке или нехватке кредитов используется шаблон."
+                : "Формирует персональное сообщение по данным зубной карты и плана лечения для пациентов с нелечёными находками. Текст собирается по шаблону."}{" "}
+              Автоматически запускается 15-го числа и в последний день месяца.
             </p>
           </div>
         </div>
+        <label className="flex items-center justify-between gap-3 pt-1 border-t border-[#e8e3d9]/60">
+          <div className="flex items-center gap-2 min-w-0">
+            <Sparkles className="h-4 w-4 text-[#7c3aed] shrink-0" />
+            <div>
+              <p className="text-xs font-medium text-[#0f172a]">ИИ-генерация текста</p>
+              <p className="text-[11px] text-[#94a3b8]">2 кредита за сообщение · fallback на шаблон</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={broadcastAiEnabled}
+            onClick={() =>
+              updateSettings.mutate({
+                data: { broadcastAiEnabled: !broadcastAiEnabled } as ChatbotSettingsUpdate & { broadcastAiEnabled?: boolean },
+              })
+            }
+            disabled={updateSettings.isPending}
+            className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors ${
+              broadcastAiEnabled ? "bg-[#7c3aed]" : "bg-[#cbd5e1]"
+            }`}
+          >
+            <span
+              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform mt-0.5 ${
+                broadcastAiEnabled ? "translate-x-5" : "translate-x-0.5"
+              }`}
+            />
+          </button>
+        </label>
       </div>
 
       {!chatbotEnabled && (
@@ -390,6 +426,24 @@ function AiBroadcastTab() {
               <p className="text-lg font-semibold text-[#0f172a]">{latestRun.messagesSent}</p>
               <p className="text-[10px] text-[#64748b] mt-0.5 uppercase tracking-wide">Отправлено</p>
             </div>
+            <div className="rounded-xl bg-[#faf8f4] border border-[#e8e3d9] px-3 py-2.5 text-center">
+              <p className="text-lg font-semibold text-[#059669]">
+                {latestRun.replyRate ?? 0}%
+              </p>
+              <p className="text-[10px] text-[#64748b] mt-0.5 uppercase tracking-wide">
+                Ответили ({latestRun.repliesCount ?? 0})
+              </p>
+            </div>
+            <div className="rounded-xl bg-[#faf8f4] border border-[#e8e3d9] px-3 py-2.5 text-center">
+              <p className="text-lg font-semibold text-[#2563eb]">
+                {latestRun.bookingRate ?? 0}%
+              </p>
+              <p className="text-[10px] text-[#64748b] mt-0.5 uppercase tracking-wide">
+                Записались ({latestRun.bookingsCount ?? 0})
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
             <div className="rounded-xl bg-[#faf8f4] border border-[#e8e3d9] px-3 py-2.5 text-center">
               <p className={`text-lg font-semibold ${latestRun.errorsCount > 0 ? "text-[#dc2626]" : "text-[#0f172a]"}`}>
                 {latestRun.errorsCount}
@@ -461,6 +515,8 @@ function AiBroadcastTab() {
                 <th className="text-left px-4 py-2.5 font-semibold text-[#64748b] uppercase tracking-wide">Статус</th>
                 <th className="text-right px-4 py-2.5 font-semibold text-[#64748b] uppercase tracking-wide">Охвачено</th>
                 <th className="text-right px-4 py-2.5 font-semibold text-[#64748b] uppercase tracking-wide">Отправлено</th>
+                <th className="text-right px-4 py-2.5 font-semibold text-[#64748b] uppercase tracking-wide">Ответы</th>
+                <th className="text-right px-4 py-2.5 font-semibold text-[#64748b] uppercase tracking-wide">Записи</th>
                 <th className="text-right px-4 py-2.5 font-semibold text-[#64748b] uppercase tracking-wide">Ошибок</th>
               </tr>
             </thead>
@@ -478,6 +534,14 @@ function AiBroadcastTab() {
                     {run.status === "running" ? `${run.processedPatients}/${run.totalPatients}` : run.totalPatients}
                   </td>
                   <td className="px-4 py-2.5 text-right text-[#0f172a] font-medium">{run.messagesSent}</td>
+                  <td className="px-4 py-2.5 text-right text-[#059669] font-medium">
+                    {run.repliesCount ?? 0}
+                    <span className="text-[#94a3b8] font-normal ml-1">({run.replyRate ?? 0}%)</span>
+                  </td>
+                  <td className="px-4 py-2.5 text-right text-[#2563eb] font-medium">
+                    {run.bookingsCount ?? 0}
+                    <span className="text-[#94a3b8] font-normal ml-1">({run.bookingRate ?? 0}%)</span>
+                  </td>
                   <td className={`px-4 py-2.5 text-right font-medium ${run.errorsCount > 0 ? "text-[#dc2626]" : "text-[#64748b]"}`}>
                     {run.errorsCount}
                   </td>
@@ -498,7 +562,9 @@ function AiBroadcastTab() {
               <div>
                 <p className="text-sm font-semibold text-[#0f172a]">Запустить рассылку?</p>
                 <p className="text-xs text-[#64748b] mt-1">
-                  Пациенты с нелечёными находками по зубной карте получат персональное WhatsApp-сообщение по шаблону.
+                  {broadcastAiEnabled
+                    ? "Пациенты с нелечёными находками получат персональное WhatsApp-сообщение, сгенерированное ИИ (2 кредита/сообщение)."
+                    : "Пациенты с нелечёными находками получат персональное WhatsApp-сообщение по шаблону."}
                 </p>
               </div>
             </div>

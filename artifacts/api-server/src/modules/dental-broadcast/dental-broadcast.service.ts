@@ -2,9 +2,11 @@ import { randomUUID } from "crypto";
 import {
   db,
   dentalBroadcastRunsTable,
+  dentalBroadcastDeliveriesTable,
   messagesTable,
   patientsTable,
   clinicsTable,
+  chatbotSettingsTable,
   toothRecordsTable,
   treatmentPlansTable,
   treatmentPlanItemsTable,
@@ -12,6 +14,7 @@ import {
 import { eq, and, isNotNull, ne, sql, inArray, asc } from "drizzle-orm";
 import { sendToPatient } from "../../shared/messaging";
 import { logger } from "../../lib/logger";
+import { generateBroadcastMessageAi } from "./dental-broadcast-ai";
 
 // Conditions that still require active treatment
 const PROBLEM_CONDITIONS = [
@@ -305,6 +308,36 @@ function buildMessage(patientName: string, problems: ToothProblem[]): string | n
   );
 }
 
+async function isBroadcastAiEnabled(clinicId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ broadcastAiEnabled: chatbotSettingsTable.broadcastAiEnabled })
+    .from(chatbotSettingsTable)
+    .where(eq(chatbotSettingsTable.clinicId, clinicId))
+    .limit(1);
+  return row?.broadcastAiEnabled ?? false;
+}
+
+async function resolveBroadcastMessage(
+  clinicId: string,
+  patientName: string,
+  problems: ToothProblem[],
+  aiEnabled: boolean,
+  clinicName?: string,
+): Promise<{ message: string | null; usedAi: boolean }> {
+  const template = buildMessage(patientName, problems);
+  if (!template) return { message: null, usedAi: false };
+  if (!aiEnabled) return { message: template, usedAi: false };
+
+  const { message, usedAi } = await generateBroadcastMessageAi({
+    clinicId,
+    patientName,
+    problems,
+    clinicName,
+    fallbackMessage: template,
+  });
+  return { message, usedAi };
+}
+
 async function insertBroadcastRun(
   clinicId: string,
   totalPatients: number,
@@ -327,6 +360,13 @@ async function insertBroadcastRun(
 
 async function executeBroadcastRun(runId: string, clinicId: string): Promise<void> {
   const patients = await fetchPatientsForBroadcast(clinicId);
+  const aiEnabled = await isBroadcastAiEnabled(clinicId);
+  const [clinicRow] = await db
+    .select({ name: clinicsTable.name })
+    .from(clinicsTable)
+    .where(eq(clinicsTable.id, clinicId))
+    .limit(1);
+  const clinicName = clinicRow?.name;
 
   await db
     .update(dentalBroadcastRunsTable)
@@ -334,7 +374,7 @@ async function executeBroadcastRun(runId: string, clinicId: string): Promise<voi
     .where(eq(dentalBroadcastRunsTable.id, runId));
 
   logger.info(
-    { clinicId, runId, totalPatients: patients.length },
+    { clinicId, runId, totalPatients: patients.length, aiEnabled },
     "[DentalBroadcast] Run started",
   );
 
@@ -358,20 +398,27 @@ async function executeBroadcastRun(runId: string, clinicId: string): Promise<voi
       }
 
       const problems = await getPatientProblems(clinicId, patient.id);
-      const message = buildMessage(patient.name, problems);
+      const { message, usedAi } = await resolveBroadcastMessage(
+        clinicId,
+        patient.name,
+        problems,
+        aiEnabled,
+        clinicName,
+      );
 
       if (message && patient.phone) {
         const msgId = await sendToPatient(clinicId, patient.phone, message);
         if (msgId) {
           messagesSent++;
           logger.info(
-            { patientId: patient.id, msgId, toothCount: problems.length },
+            { patientId: patient.id, msgId, toothCount: problems.length, usedAi },
             "[DentalBroadcast] Message delivered",
           );
+          const messageRowId = randomUUID();
           await db
             .insert(messagesTable)
             .values({
-              id: randomUUID(),
+              id: messageRowId,
               clinicId,
               patientId: patient.id,
               direction: "outbound",
@@ -384,6 +431,23 @@ async function executeBroadcastRun(runId: string, clinicId: string): Promise<voi
               logger.error(
                 { err, patientId: patient.id, msgId },
                 "[DentalBroadcast] Failed to persist outbound message",
+              ),
+            );
+          await db
+            .insert(dentalBroadcastDeliveriesTable)
+            .values({
+              id: randomUUID(),
+              clinicId,
+              runId,
+              patientId: patient.id,
+              messageId: messageRowId,
+              content: message,
+              usedAi,
+            })
+            .catch((err) =>
+              logger.error(
+                { err, patientId: patient.id, runId },
+                "[DentalBroadcast] Failed to persist delivery record",
               ),
             );
           await db

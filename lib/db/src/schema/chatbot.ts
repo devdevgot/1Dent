@@ -101,6 +101,7 @@ export const chatbotSettingsTable = pgTable("chatbot_settings", {
   scriptMindMap: jsonb("script_mind_map").$type<ScriptMindMapData>().default({ nodes: [], edges: [] }),
   calendarConfig: jsonb("calendar_config").$type<ClinicCalendarConfig>().default({}),
   abTestEnabled: boolean("ab_test_enabled").default(false).notNull(),
+  broadcastAiEnabled: boolean("broadcast_ai_enabled").default(false).notNull(),
   scriptVariants: jsonb("script_variants").$type<ScriptVariant[]>().default([]),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

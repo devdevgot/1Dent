@@ -1057,14 +1057,34 @@ export interface DentalBroadcastRun {
   totalPatients: number;
   processedPatients: number;
   messagesSent: number;
+  repliesCount: number;
+  bookingsCount: number;
   errorsCount: number;
+  replyRate?: number;
+  bookingRate?: number;
   startedAt: string;
   completedAt: string | null;
+}
+
+export interface DentalBroadcastDelivery {
+  id: string;
+  runId: string;
+  runDate: string;
+  content: string;
+  usedAi: boolean;
+  sentAt: string;
+  repliedAt: string | null;
+  bookedAt: string | null;
 }
 
 export interface ListDentalBroadcastRunsResponse {
   success: boolean;
   data: { runs: DentalBroadcastRun[] };
+}
+
+export interface ListPatientBroadcastHistoryResponse {
+  success: boolean;
+  data: { deliveries: DentalBroadcastDelivery[] };
 }
 
 export interface TriggerDentalBroadcastResponse {
@@ -1114,6 +1134,31 @@ export const useTriggerDentalBroadcast = <TError = unknown>(options?: {
   useMutation<TriggerDentalBroadcastResponse, TError, void>({
     mutationFn: () => triggerDentalBroadcast(),
     ...options?.mutation,
+  });
+
+export const listPatientBroadcastHistoryQueryKey = (patientId: string) =>
+  ["/api/dental-broadcast/patients", patientId, "history"] as const;
+
+export const listPatientBroadcastHistory = (
+  patientId: string,
+  options?: RequestInit,
+): Promise<ListPatientBroadcastHistoryResponse> =>
+  customFetch<ListPatientBroadcastHistoryResponse>(
+    `/api/dental-broadcast/patients/${patientId}/history`,
+    { method: "GET", ...options },
+  );
+
+export const useListPatientBroadcastHistory = <TError = unknown>(
+  patientId: string | null,
+  options?: {
+    query?: UseQueryOptions<ListPatientBroadcastHistoryResponse, TError>;
+  },
+) =>
+  useQuery<ListPatientBroadcastHistoryResponse, TError>({
+    queryKey: listPatientBroadcastHistoryQueryKey(patientId ?? ""),
+    queryFn: ({ signal }) => listPatientBroadcastHistory(patientId!, { signal }),
+    enabled: !!patientId,
+    ...options?.query,
   });
 
 // ─── Custom: script blocks ────────────────────────────────────────────────────
