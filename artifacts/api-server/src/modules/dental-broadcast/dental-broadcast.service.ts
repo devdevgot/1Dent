@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import {
   db,
   dentalBroadcastRunsTable,
+  messagesTable,
   patientsTable,
   clinicsTable,
   toothRecordsTable,
@@ -27,10 +28,32 @@ const CONDITION_LABEL: Record<string, string> = {
   crown: "требует коронки",
 };
 
+const DEDUP_DAYS = 14;
+const MAX_TOOTH_LINES = 4;
+
+const PROCEDURE_ABBREVIATIONS: Array<[RegExp, string]> = [
+  [/\bэндо\b/gi, "лечение каналов"],
+  [/\bимп\b/gi, "имплантация"],
+  [/\bудал\.?\b/gi, "удаление"],
+  [/\bкоронк\w*/gi, "установка коронки"],
+  [/\bпломб\w*/gi, "пломбирование"],
+  [/\bдепульп\w*/gi, "лечение каналов"],
+  [/\bпульпит\w*/gi, "лечение пульпита"],
+  [/\bпериодонтит\w*/gi, "лечение периодонтита"],
+  [/\bкариес\w*/gi, "лечение кариеса"],
+  [/\bреставрац\w*/gi, "реставрация"],
+  [/\bортоп\w*/gi, "ортопедическое лечение"],
+  [/\bпротез\w*/gi, "протезирование"],
+  [/\bчистк\w*/gi, "профессиональная чистка"],
+  [/\bгигиен\w*/gi, "гигиена полости рта"],
+];
+
 type PatientForBroadcast = {
   id: string;
   name: string;
   phone: string;
+  status: string;
+  updatedAt: Date;
 };
 
 type ToothProblem = {
@@ -42,6 +65,37 @@ function todayDateString(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+function sanitizeProcedureLabel(title: string): string {
+  let label = title.trim();
+  if (!label) return "Лечение";
+
+  for (const [pattern, replacement] of PROCEDURE_ABBREVIATIONS) {
+    label = label.replace(pattern, replacement);
+  }
+
+  label = label.replace(/\s+/g, " ").trim();
+  if (label.length === 0) return "Лечение";
+
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+function wasRecentlyBroadcast(patient: PatientForBroadcast): boolean {
+  if (patient.status !== "repeat_sale") return false;
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - DEDUP_DAYS);
+  return patient.updatedAt >= cutoff;
+}
+
+function formatRemainingTeethCount(count: number): string {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  if (mod10 === 1 && mod100 !== 11) return `${count} зуб`;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+    return `${count} зуба`;
+  }
+  return `${count} зубов`;
+}
+
 async function fetchPatientsForBroadcast(
   clinicId: string,
 ): Promise<PatientForBroadcast[]> {
@@ -50,6 +104,8 @@ async function fetchPatientsForBroadcast(
       id: patientsTable.id,
       name: patientsTable.name,
       phone: patientsTable.phone,
+      status: patientsTable.status,
+      updatedAt: patientsTable.updatedAt,
     })
     .from(toothRecordsTable)
     .innerJoin(patientsTable, eq(patientsTable.id, toothRecordsTable.patientId))
@@ -121,7 +177,10 @@ async function getPatientProblems(
     for (const item of items) {
       if (item.toothFdi !== null && !seen.has(item.toothFdi)) {
         seen.add(item.toothFdi);
-        problems.push({ toothFdi: item.toothFdi, label: item.title });
+        problems.push({
+          toothFdi: item.toothFdi,
+          label: sanitizeProcedureLabel(item.title),
+        });
       }
     }
     if (problems.length > 0) return problems;
@@ -154,6 +213,13 @@ async function getPatientProblems(
  * Priority: extraction > root canal / pulpitis > crown > caries > generic
  */
 function getUrgencyMessage(problems: ToothProblem[]): string {
+  if (problems.length > 1) {
+    return (
+      "Чем раньше продолжим лечение, тем проще восстановить здоровье зубов. " +
+      "При откладывании визита процедуры обычно становятся сложнее и дороже 😔"
+    );
+  }
+
   const text = problems.map((p) => p.label.toLowerCase()).join(" ");
 
   const hasExtraction =
@@ -209,13 +275,24 @@ function getUrgencyMessage(problems: ToothProblem[]): string {
   );
 }
 
+function buildToothLines(problems: ToothProblem[]): string {
+  const visible = problems.slice(0, MAX_TOOTH_LINES);
+  const lines = visible
+    .map((p) => `🦷 Зуб ${p.toothFdi} — ${p.label}`)
+    .join("\n");
+
+  const remaining = problems.length - MAX_TOOTH_LINES;
+  if (remaining > 0) {
+    return `${lines}\n…и ещё ${formatRemainingTeethCount(remaining)} в плане лечения`;
+  }
+  return lines;
+}
+
 function buildMessage(patientName: string, problems: ToothProblem[]): string | null {
   if (problems.length === 0) return null;
 
   const firstName = patientName.trim().split(" ")[0] ?? patientName;
-  const toothLines = problems
-    .map((p) => `🦷 Зуб ${p.toothFdi} — ${p.label}`)
-    .join("\n");
+  const toothLines = buildToothLines(problems);
   const urgency = getUrgencyMessage(problems);
 
   return (
@@ -267,6 +344,19 @@ async function executeBroadcastRun(runId: string, clinicId: string): Promise<voi
   for (let i = 0; i < patients.length; i++) {
     const patient = patients[i]!;
     try {
+      if (wasRecentlyBroadcast(patient)) {
+        logger.info(
+          {
+            patientId: patient.id,
+            status: patient.status,
+            updatedAt: patient.updatedAt,
+            dedupDays: DEDUP_DAYS,
+          },
+          "[DentalBroadcast] Skipping patient — broadcast sent within dedup window",
+        );
+        continue;
+      }
+
       const problems = await getPatientProblems(clinicId, patient.id);
       const message = buildMessage(patient.name, problems);
 
@@ -278,6 +368,24 @@ async function executeBroadcastRun(runId: string, clinicId: string): Promise<voi
             { patientId: patient.id, msgId, toothCount: problems.length },
             "[DentalBroadcast] Message delivered",
           );
+          await db
+            .insert(messagesTable)
+            .values({
+              id: randomUUID(),
+              clinicId,
+              patientId: patient.id,
+              direction: "outbound",
+              senderId: null,
+              content: message,
+              whatsappMessageId: msgId,
+              isRedAlert: false,
+            })
+            .catch((err) =>
+              logger.error(
+                { err, patientId: patient.id, msgId },
+                "[DentalBroadcast] Failed to persist outbound message",
+              ),
+            );
           await db
             .update(patientsTable)
             .set({ status: "repeat_sale", updatedAt: new Date() })
