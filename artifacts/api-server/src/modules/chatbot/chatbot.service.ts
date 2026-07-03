@@ -21,6 +21,7 @@ import {
 } from "@workspace/db";
 import type { StepInstructions } from "@workspace/db";
 import { eq, and, inArray, gte, lte, ne, asc, desc, sql } from "drizzle-orm";
+import { phonesMatch } from "../../shared/phone";
 import { isRedAlert } from "../../shared/whatsapp";
 import { sendTypingToPatient } from "../../shared/messaging";
 import { getAlertQueue } from "../../shared/alert-queue";
@@ -105,6 +106,11 @@ import {
 } from "./clinic-knowledge";
 import { scheduleAppointmentReminders } from "../followups/appointment-reminders.queue";
 import { scheduleFollowups } from "../followups/followup.queue";
+import {
+  isExplicitNegativeRepeatSaleReply,
+  isNeutralRepeatSaleQuestion,
+  isPositiveRepeatSaleReplyKeywords,
+} from "./repeat-sale-reply";
 import {
   assignRankedDoctor,
   buildBranchPromptFallback,
@@ -254,6 +260,40 @@ async function deleteRedisSession(clinicId: string, phone: string): Promise<void
 
 // ─── Chatbot message persistence ─────────────────────────────────────────────
 
+type PatientPhoneRow = {
+  id: string;
+  name: string;
+  phone: string;
+  status: string | null;
+  doctorId: string | null;
+};
+
+async function findPatientByPhoneNormalized(
+  clinicId: string,
+  phone: string,
+): Promise<PatientPhoneRow | undefined> {
+  const rows = await db
+    .select({
+      id: patientsTable.id,
+      name: patientsTable.name,
+      phone: patientsTable.phone,
+      status: patientsTable.status,
+      doctorId: patientsTable.doctorId,
+    })
+    .from(patientsTable)
+    .where(eq(patientsTable.clinicId, clinicId));
+
+  const matches = rows.filter((p) => phonesMatch(p.phone, phone));
+  if (matches.length === 0) return undefined;
+  if (matches.length > 1) {
+    logger.warn(
+      { clinicId, phone, matchCount: matches.length },
+      "[ChatbotService] Multiple patients matched normalized phone",
+    );
+  }
+  return matches[0];
+}
+
 async function saveChatbotMessage(
   clinicId: string,
   phone: string,
@@ -268,11 +308,7 @@ async function saveChatbotMessage(
   // For outbound replies, also save to the main messages table so they
   // appear in the internal chat panel alongside inbound patient messages.
   if (direction === "outbound") {
-    const [patient] = await db
-      .select({ id: patientsTable.id })
-      .from(patientsTable)
-      .where(and(eq(patientsTable.clinicId, clinicId), eq(patientsTable.phone, phone)))
-      .limit(1);
+    const patient = await findPatientByPhoneNormalized(clinicId, phone);
 
     if (patient) {
       await db
@@ -1094,7 +1130,7 @@ async function isComplaintReply(text: string): Promise<boolean> {
 async function isPositiveRepeatSaleReply(text: string): Promise<boolean> {
   const systemPrompt = `Ты — классификатор сообщений пациента стоматологии.
 Определи, соглашается ли пациент на повторный прием, хочет ли записаться на консультацию/прием, или проявляет ли интерес к визиту в клинику в ответ на рассылку.
-Примеры положительного ответа: "да", "давайте", "хочу записаться", "какое время есть", "жазылайын деп едім", "иә", "жазыңыз", "ok", "хорошо", "хочу прийти".
+Примеры положительного ответа: "да", "давайте", "Продолжить", "продолжить", "хочу записаться", "какое время есть", "жазылайын деп едім", "иә", "жазыңыз", "ok", "хорошо", "хочу прийти".
 Примеры отрицательного/нейтрального ответа: "нет", "не надо", "спасибо, не хочу", "пока нет", "жоқ", "сызып тастаңыз".
 
 Ответь строго JSON объектом:
@@ -1121,16 +1157,7 @@ async function isPositiveRepeatSaleReply(text: string): Promise<boolean> {
     return !!parsed?.agreed;
   } catch (err) {
     logger.warn({ err, text }, "[ChatbotService] isPositiveRepeatSaleReply classification failed, fallback to keyword check");
-    const lower = text.toLowerCase();
-    const positiveKeywords = ["да", "давайте", "запис", "хочу", "время", "ок", "хорошо", "иә", "жазы", "кел", "прийти", "приду", "yes", "ok", "agree"];
-    const negativeKeywords = ["нет", "не надо", "не хочу", "жоқ", "кет", "отказ", "no", "stop"];
-    for (const neg of negativeKeywords) {
-      if (lower.includes(neg)) return false;
-    }
-    for (const pos of positiveKeywords) {
-      if (lower.includes(pos)) return true;
-    }
-    return false;
+    return isPositiveRepeatSaleReplyKeywords(text);
   }
 }
 
@@ -1540,12 +1567,10 @@ export class ChatbotService {
         status: scenarioCtx.patient.status,
       };
     } else if (!dryRun) {
-      const [row] = await db
-        .select({ id: patientsTable.id, name: patientsTable.name, status: patientsTable.status })
-        .from(patientsTable)
-        .where(and(eq(patientsTable.clinicId, clinicId), eq(patientsTable.phone, phone)))
-        .limit(1);
-      patientDb = row;
+      const row = await findPatientByPhoneNormalized(clinicId, phone);
+      patientDb = row
+        ? { id: row.id, name: row.name, status: row.status }
+        : undefined;
     }
 
     let state = session.state;
@@ -1629,8 +1654,20 @@ export class ChatbotService {
           return finishTurn(session, replyText);
         }
       } else if (patientDb.status === "repeat_sale") {
-        const agreed = await isPositiveRepeatSaleReply(messageText);
-        if (agreed) {
+        if (isExplicitNegativeRepeatSaleReply(messageText)) {
+          session.state = "done";
+          session.data = data;
+
+          const replyText = "Хорошо! Если решите записаться на осмотр позже, просто напишите нам. Будем рады помочь вам в любое время!";
+          return finishTurn(session, replyText);
+        }
+
+        const showInterest =
+          isNeutralRepeatSaleQuestion(messageText) ||
+          isPositiveRepeatSaleReplyKeywords(messageText) ||
+          await isPositiveRepeatSaleReply(messageText);
+
+        if (showInterest) {
           if (!dryRun) {
             await db
               .update(patientsTable)
@@ -1645,16 +1682,17 @@ export class ChatbotService {
             ...data,
             existingPatientId: patientDb.id,
             patientName: patientDb.name,
+            fromRepeatSaleBroadcast: true,
           };
           await persistSession(session);
 
           state = session.state;
           data = session.data;
         } else {
-          session.state = "done";
+          session.state = state;
           session.data = data;
 
-          const replyText = "Хорошо! Если решите записаться на осмотр позже, просто напишите нам. Будем рады помочь вам в любое время!";
+          const replyText = "Хотите записаться на осмотр? Напишите «да» или «продолжить»";
           return finishTurn(session, replyText);
         }
       }
@@ -1711,13 +1749,9 @@ export class ChatbotService {
             };
           }
         } else if (!dryRun) {
-          const [row] = await db
-            .select({ id: patientsTable.id, name: patientsTable.name })
-            .from(patientsTable)
-            .where(and(eq(patientsTable.clinicId, clinicId), eq(patientsTable.phone, phone)))
-            .limit(1);
+          const row = await findPatientByPhoneNormalized(clinicId, phone);
           if (row) {
-            existingByPhone = row;
+            existingByPhone = { id: row.id, name: row.name };
             const now = new Date();
             const [proc] = await db
               .select({
@@ -2006,11 +2040,7 @@ export class ChatbotService {
 
         let returningPatientDoctorId: string | undefined;
         if (classification.patientType === "returning") {
-          const [existingPatient] = await db
-            .select({ doctorId: patientsTable.doctorId })
-            .from(patientsTable)
-            .where(and(eq(patientsTable.clinicId, clinicId), eq(patientsTable.phone, phone)))
-            .limit(1);
+          const existingPatient = await findPatientByPhoneNormalized(clinicId, phone);
           returningPatientDoctorId = existingPatient?.doctorId ?? undefined;
           if (returningPatientDoctorId) {
             data.returningDoctorId = returningPatientDoctorId;
