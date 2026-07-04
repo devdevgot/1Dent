@@ -44,7 +44,7 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
 
   return (
     <div className="relative flex h-[100dvh] w-full items-center justify-center overflow-hidden bg-[#faf8f4] px-6 font-manrope">
-      <OneDentLogo className="absolute right-5 top-5 h-10" />
+      <OneDentLogo className="absolute left-5 top-5 h-10" />
 
       {/* Декоративный фон */}
       <div className="pointer-events-none absolute inset-0 opacity-60">

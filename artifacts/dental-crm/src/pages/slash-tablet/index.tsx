@@ -64,16 +64,20 @@ export default function SlashTabletPage() {
 function TabletTopBar({ doctor, onLogout }: { doctor: TabletDoctor; onLogout: () => void }) {
   return (
     <header className="flex items-center justify-between border-b border-[#e8e3d9] bg-white px-5 py-3">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4">
+        <OneDentLogo />
         <span className="hidden items-center gap-1.5 text-sm text-[#64748b] sm:flex">
           <LayoutGrid className="h-4 w-4" /> {CABINET.name}
         </span>
+      </div>
+
+      <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-white"
             style={{ backgroundColor: doctor.avatarColor }}>
             {initials(doctor.name)}
           </div>
-          <div className="hidden text-left sm:block">
+          <div className="hidden text-right sm:block">
             <p className="text-sm font-bold leading-tight text-[#0f172a]">{doctor.name}</p>
             <p className="text-xs text-[#94a3b8]">{doctor.specialty}</p>
           </div>
@@ -85,8 +89,6 @@ function TabletTopBar({ doctor, onLogout }: { doctor: TabletDoctor; onLogout: ()
           <LogOut className="h-4 w-4" /> Выход
         </button>
       </div>
-
-      <OneDentLogo />
     </header>
   );
 }
