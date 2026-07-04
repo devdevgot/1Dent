@@ -16,6 +16,7 @@ import { sendPasswordResetEmail, sendStaffInvitationEmail } from "../../lib/emai
 import { logger } from "../../lib/logger";
 import { seedContractTemplatesForClinic } from "../../seeds/contract-templates.seed";
 import { seedProcedureTemplates } from "../../seeds/procedure-templates.seed";
+import { planLimitsService } from "../../shared/plan-limits.service";
 
 const resetTokens = new Map<string, { email: string; expiresAt: number }>();
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
@@ -208,6 +209,8 @@ export class AuthService {
     const existing = await this.repo.findUserByEmail(data.email.toLowerCase());
     if (existing) throw new ConflictError("Email already in use");
 
+    await planLimitsService.assertCanAddStaff(data.clinicId);
+
     const passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
     const user = await this.repo.createUser({
       id: randomUUID(),
@@ -310,6 +313,8 @@ export class AuthService {
 
     const existing = await this.repo.findUserByEmail(data.email.toLowerCase());
     if (existing) throw new ConflictError("Email already in use");
+
+    await planLimitsService.assertCanAddStaff(data.clinicId);
 
     const tempPassword = randomBytes(5).toString("hex").slice(0, 8).toUpperCase();
     const passwordHash = await bcrypt.hash(tempPassword, SALT_ROUNDS);

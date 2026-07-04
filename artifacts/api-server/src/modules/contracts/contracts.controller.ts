@@ -13,6 +13,7 @@ import { logger } from "../../lib/logger";
 import { db, patientsTable, usersTable, clinicsTable, type FieldMapping } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { ObjectStorageService } from "../../lib/objectStorage";
+import { planLimitsService } from "../../shared/plan-limits.service";
 
 const router: IRouter = Router();
 const repo = new ContractsRepository();
@@ -128,6 +129,12 @@ router.post(
     const isDocx =
       file.mimetype.includes("wordprocessingml") || file.originalname.endsWith(".docx");
     const fileType = isDocx ? "docx" : "pdf";
+
+    try {
+      await planLimitsService.assertCanAddTemplate(req.user!.clinicId);
+    } catch (err) {
+      return next(err);
+    }
 
     // 1. Extract text
     let extractedText = "";

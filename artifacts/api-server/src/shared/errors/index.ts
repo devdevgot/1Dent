@@ -59,6 +59,35 @@ export class InsufficientAiCreditsError extends AppError {
   }
 }
 
+export class PlanLimitExceededError extends AppError {
+  constructor(
+    public readonly limitKey: string,
+    public readonly limit: number | null,
+    message?: string,
+  ) {
+    const labels: Record<string, string> = {
+      staff: "сотрудников",
+      branches: "филиалов",
+      aiCredits: "AI-кредитов",
+      chatbotDialogs: "диалогов чат-бота",
+      documentTemplates: "шаблонов договоров",
+    };
+    const label = labels[limitKey] ?? "ресурсов";
+    const limitText =
+      limitKey === "documentTemplates" && limit == null
+        ? "без лимита"
+        : limit != null
+          ? String(limit)
+          : "0";
+    super(
+      message ??
+        `Достигнут лимит ${label} по вашему тарифу (${limitText}). Перейдите на тариф с большим лимитом.`,
+      403,
+      "PLAN_LIMIT_EXCEEDED",
+    );
+  }
+}
+
 export class OpenRouterNotConfiguredError extends AppError {
   constructor(
     message = "AI-чатбот недоступен: не настроен OPENROUTER_API_KEY. Добавьте ключ OpenRouter в переменные окружения сервера.",
