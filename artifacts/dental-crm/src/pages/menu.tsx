@@ -50,8 +50,6 @@ const ALL_NAV_ITEMS = [
   { nameKey: "nav.branches",          href: "/branches",           icon: MapPin,       roles: ["owner"] },
 ];
 
-const LANG_LABEL: Record<Lang, string> = { ru: "Рус", kz: "Қаз", en: "Eng" };
-
 const gridVariants = {
   hidden: { opacity: 0 },
   show: {
@@ -160,27 +158,24 @@ export default function MenuPage() {
       {user?.role !== "admin" && (
         <IosSection title={t("menuPage.settings")} className="mb-4">
           <IosGroup>
-            <IosGroupRow>
-              <span className="text-body">{t("menuPage.language")}</span>
-              <div className="flex items-center gap-1.5">
-                <span className="text-caption text-[#64748b] mr-0.5">{LANG_LABEL[currentLang]}</span>
-                <div className="flex bg-[#f1ede4] rounded-lg p-0.5">
-                  {SUPPORTED_LANGS.map((lang) => (
-                    <button
-                      key={lang}
-                      type="button"
-                      onClick={() => handleLangChange(lang)}
-                      className={cn(
-                        "text-micro font-semibold px-2.5 py-1.5 rounded-md transition-all",
-                        currentLang === lang
-                          ? "bg-white text-[#1f75fe] shadow-sm"
-                          : "text-[#64748b] hover:text-[#0f172a]",
-                      )}
-                    >
-                      {LANG_LABEL[lang]}
-                    </button>
-                  ))}
-                </div>
+            <IosGroupRow className="gap-2">
+              <span className="text-body shrink-0">{t("menuPage.language")}</span>
+              <div className="flex bg-[#f1ede4] rounded-lg p-0.5 shrink-0 ml-auto font-lang">
+                {SUPPORTED_LANGS.map((lang) => (
+                  <button
+                    key={lang}
+                    type="button"
+                    onClick={() => handleLangChange(lang)}
+                    className={cn(
+                      "min-w-[2.5rem] text-center text-caption font-semibold px-2 py-1 rounded-md transition-all",
+                      currentLang === lang
+                        ? "bg-white text-[#1f75fe] shadow-sm"
+                        : "text-[#64748b] hover:text-[#0f172a]",
+                    )}
+                  >
+                    {t(`lang.${lang}`)}
+                  </button>
+                ))}
               </div>
             </IosGroupRow>
 
