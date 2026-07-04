@@ -329,6 +329,7 @@ export function PatientList({ onSelect }: { onSelect: (patientId: string) => voi
         open={createOpen}
         onClose={() => {
           setCreateOpen(false);
+          setDateFilter("all");
           void queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() });
         }}
         onExistingPatient={(id) => {

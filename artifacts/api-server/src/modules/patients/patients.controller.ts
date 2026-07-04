@@ -85,6 +85,7 @@ const addInteractionSchema = z.object({
 router.use(authMiddleware);
 
 const patientReadRoles = roleGuard("owner", "admin", "doctor");
+const patientCreateRoles = roleGuard("owner", "admin", "doctor");
 const patientWriteRoles = roleGuard("owner", "admin");
 const patientDeleteRoles = roleGuard("owner", "admin");
 
@@ -98,7 +99,7 @@ router.get("/", patientReadRoles, async (req: Request, res: Response, next: Next
 });
 
 // POST /patients
-router.post("/", patientWriteRoles, async (req: Request, res: Response, next: NextFunction) => {
+router.post("/", patientCreateRoles, async (req: Request, res: Response, next: NextFunction) => {
   const parsed = createPatientSchema.safeParse(req.body);
   if (!parsed.success) {
     return next(
