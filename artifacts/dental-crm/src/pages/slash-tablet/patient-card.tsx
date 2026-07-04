@@ -6,10 +6,11 @@ import {
   Sparkles, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TabletChartSection } from "./tablet-chart-section";
 import { TabletDentalChart } from "./tablet-dental-chart";
 import {
   getPlanForPatient, VIDEOS, CONDITION_META, STATUS_META, fmtTenge, initials,
-  type TabletPatient, type PlanStage, type TreatmentVideo,
+  type TabletPatient, type PlanStage, type TreatmentVideo, type ToothCondition,
 } from "./mock-data";
 
 type Tab = "chart" | "plan" | "video" | "info";
@@ -23,6 +24,7 @@ const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
 
 export function PatientCard({ patient, onBack }: { patient: TabletPatient; onBack: () => void }) {
   const [tab, setTab] = useState<Tab>("chart");
+  const [teeth, setTeeth] = useState<Record<number, ToothCondition>>(() => ({ ...patient.teeth }));
   const [selectedFdi, setSelectedFdi] = useState<number | null>(null);
   const [presentation, setPresentation] = useState(false);
   const [activeVideo, setActiveVideo] = useState<TreatmentVideo | null>(null);
@@ -39,7 +41,7 @@ export function PatientCard({ patient, onBack }: { patient: TabletPatient; onBac
   const planTotal = allItems.reduce((s, i) => s + i.price, 0);
   const progress = allItems.length ? Math.round((doneCount / allItems.length) * 100) : 0;
 
-  const selectedCond = selectedFdi ? (patient.teeth[selectedFdi] ?? "healthy") : null;
+  const selectedCond = selectedFdi ? (teeth[selectedFdi] ?? "healthy") : null;
   const relatedVideos = selectedCond
     ? VIDEOS.filter((v) => v.relatedConditions.includes(selectedCond))
     : [];
@@ -48,6 +50,7 @@ export function PatientCard({ patient, onBack }: { patient: TabletPatient; onBac
     return (
       <PresentationMode
         patient={patient}
+        teeth={teeth}
         plan={plan}
         planFdis={planFdis}
         planTotal={planTotal}
@@ -113,12 +116,13 @@ export function PatientCard({ patient, onBack }: { patient: TabletPatient; onBac
           <div className="grid h-full gap-4 p-4 lg:grid-cols-[1.15fr_0.85fr]">
             {/* Левая: карта */}
             <div className="flex flex-col gap-4 overflow-auto">
-              <TabletDentalChart
-                teeth={patient.teeth}
-                selectedFdi={selectedFdi}
+              <TabletChartSection
+                patient={patient}
+                teeth={teeth}
+                onTeethChange={setTeeth}
                 planFdis={planFdis}
-                onSelect={(f) => setSelectedFdi((prev) => (prev === f ? null : f))}
-                big
+                selectedFdi={selectedFdi}
+                onSelectFdi={setSelectedFdi}
               />
               {selectedFdi && selectedCond && (
                 <ToothDetail
@@ -460,16 +464,17 @@ function PatientInfo({ patient }: { patient: TabletPatient }) {
 
 // ── Режим презентации ─────────────────────────────────────────────────────────
 function PresentationMode({
-  patient, plan, planFdis, planTotal, onExit,
+  patient, teeth, plan, planFdis, planTotal, onExit,
 }: {
   patient: TabletPatient;
+  teeth: Record<number, ToothCondition>;
   plan: PlanStage[];
   planFdis: Set<number>;
   planTotal: number;
   onExit: () => void;
 }) {
-  const problem = Object.values(patient.teeth).filter((c) => c !== "healthy" && c !== "treated" && c !== "crown" && c !== "implant").length;
-  const done = Object.values(patient.teeth).filter((c) => c === "treated" || c === "crown" || c === "implant").length;
+  const problem = Object.values(teeth).filter((c) => c !== "healthy" && c !== "treated" && c !== "crown" && c !== "implant").length;
+  const done = Object.values(teeth).filter((c) => c === "treated" || c === "crown" || c === "implant").length;
 
   const packages = [
     { name: "Базовый", price: Math.round(planTotal * 0.7), desc: "Только необходимое лечение" },
@@ -493,7 +498,7 @@ function PresentationMode({
         </div>
 
         <TabletDentalChart
-          teeth={patient.teeth}
+          teeth={teeth}
           selectedFdi={null}
           planFdis={planFdis}
           big
