@@ -67,7 +67,7 @@ export function TabletPinSetupModal({
   const current = step === "enter" ? pin : confirm;
 
   return (
-    <AppDialog open={open} onClose={onClose} title="PIN для планшета" size="sm">
+    <AppDialog open={open} onOpenChange={(next) => { if (!next) onClose(); }} title="PIN для планшета" size="sm">
       <div className="flex flex-col items-center px-2 pb-2 font-manrope">
         <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1f75fe]/10">
           <ShieldCheck className="h-6 w-6 text-[#1f75fe]" />

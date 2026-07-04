@@ -37,7 +37,7 @@ export function TabletPinEntryModal({
   };
 
   return (
-    <AppDialog open={open} onClose={onClose} title="PIN планшета" size="sm">
+    <AppDialog open={open} onOpenChange={(next) => { if (!next) onClose(); }} title="PIN планшета" size="sm">
       <div className="flex flex-col items-center px-2 pb-2 font-manrope">
         <ShieldCheck className="mb-3 h-8 w-8 text-[#1f75fe]" />
         <p className="mb-6 text-center text-sm text-[#64748b]">Введите ваш PIN для входа в кабинет</p>

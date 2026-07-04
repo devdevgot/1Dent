@@ -43,6 +43,10 @@ function validatePin(pin: string) {
   }
 }
 
+function generatePairingCode(): string {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
 export class TabletService {
   private repo = new TabletRepository();
 
@@ -56,6 +60,7 @@ export class TabletService {
       clinicId,
       name: `${clinicName} · Кабинет 1`,
       pinHash,
+      pairingCode: generatePairingCode(),
     });
   }
 
@@ -70,9 +75,26 @@ export class TabletService {
       id: c.id,
       name: c.name,
       clinicId: c.clinicId,
+      pairingCode: c.pairingCode,
       tabletUrl: `${base}/tablet?cabinet=${c.id}`,
       createdAt: c.createdAt.toISOString(),
     }));
+  }
+
+  async resolveCabinetByPairingCode(code: string) {
+    const normalized = code.replace(/\D/g, "");
+    if (!/^\d{6}$/.test(normalized)) {
+      throw new ValidationError("Код подключения должен состоять из 6 цифр");
+    }
+
+    const cabinet = await this.repo.findCabinetByPairingCode(normalized);
+    if (!cabinet) throw new NotFoundError("Кабинет с таким кодом не найден");
+
+    return {
+      id: cabinet.id,
+      name: cabinet.name,
+      pairingCode: cabinet.pairingCode,
+    };
   }
 
   async getCabinetPublic(cabinetId: string) {

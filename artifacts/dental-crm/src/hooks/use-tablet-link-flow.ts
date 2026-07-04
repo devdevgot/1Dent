@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { ApiError } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   getTabletMe,
@@ -55,10 +56,7 @@ export function useTabletLinkFlow() {
       try {
         await completeLink(token);
       } catch (linkErr) {
-        const status = linkErr && typeof linkErr === "object" && "status" in linkErr
-          ? Number((linkErr as { status: number }).status)
-          : 0;
-        if (status === 401) {
+        if (linkErr instanceof ApiError && linkErr.status === 401) {
           setPendingToken(token);
           setPinEntryOpen(true);
           return;

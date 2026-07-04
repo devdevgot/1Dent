@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { motion, AnimatePresence } from "framer-motion";
-import { Smartphone, Delete, ShieldCheck, RefreshCw } from "lucide-react";
+import { Smartphone, Delete, ShieldCheck, RefreshCw, KeyRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { OneDentLogo } from "./onedent-logo";
 import type { TabletDoctor } from "./mock-data";
@@ -10,10 +10,12 @@ import {
   getTabletSessionStatus,
   verifyTabletCabinetPin,
   resolveCabinetIdFromUrl,
+  resolveCabinetByPairingCode,
+  applyCabinetIdToUrl,
   type TabletCabinetBrief,
 } from "@/lib/tablet-api";
 
-type Mode = "qr" | "pin";
+type Mode = "qr" | "pin" | "pairing";
 
 export function LockScreen({
   onQrUnlock,
@@ -24,12 +26,14 @@ export function LockScreen({
 }) {
   const [mode, setMode] = useState<Mode>("qr");
   const [pin, setPin] = useState("");
+  const [pairingCode, setPairingCode] = useState("");
   const [error, setError] = useState(false);
   const [pinError, setPinError] = useState("");
+  const [pairingError, setPairingError] = useState("");
+  const [pairingLoading, setPairingLoading] = useState(false);
   const [cabinetId, setCabinetId] = useState<string | null>(() => resolveCabinetIdFromUrl());
   const [cabinetName, setCabinetName] = useState("Кабинет");
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [linkUrl, setLinkUrl] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [bootError, setBootError] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -45,20 +49,22 @@ export function LockScreen({
     }).catch(() => {});
   }, []);
 
-  const bootstrapSession = useCallback(async () => {
-    const id = resolveCabinetIdFromUrl() ?? cabinetId;
+  const bootstrapSession = useCallback(async (forcedCabinetId?: string) => {
+    const id = forcedCabinetId ?? resolveCabinetIdFromUrl() ?? cabinetId;
     if (!id) {
-      setBootError("Откройте планшет по ссылке из CRM: /tablet?cabinet=...");
+      setMode("pairing");
+      setBootError(null);
       setLoading(false);
       return;
     }
     setCabinetId(id);
+    applyCabinetIdToUrl(id);
+    setMode("qr");
     setLoading(true);
     setBootError(null);
     try {
       const res = await createTabletSession(id);
       setSessionId(res.data.sessionId);
-      setLinkUrl(res.data.linkUrl);
       setCabinetName(res.data.cabinet.name);
       await drawQr(res.data.linkUrl);
     } catch {
@@ -102,6 +108,37 @@ export function LockScreen({
     return () => window.clearInterval(poll);
   }, [sessionId, mode, onQrUnlock, bootstrapSession]);
 
+  const submitPairingCode = useCallback(async (code: string) => {
+    const digits = code.replace(/\D/g, "");
+    if (digits.length !== 6) {
+      setPairingError("Введите 6-значный код из CRM");
+      return;
+    }
+    setPairingLoading(true);
+    setPairingError("");
+    try {
+      const res = await resolveCabinetByPairingCode(digits);
+      const cabinet = res.data.cabinet;
+      setCabinetName(cabinet.name);
+      await bootstrapSession(cabinet.id);
+    } catch {
+      setPairingError("Код не найден. Откройте CRM → кнопка «Планшет» рядом с поиском.");
+    } finally {
+      setPairingLoading(false);
+    }
+  }, [bootstrapSession]);
+
+  const pressPairing = (d: string) => {
+    setPairingError("");
+    setPairingCode((p) => {
+      const next = (p + d).slice(0, 6);
+      if (next.length === 6) {
+        setTimeout(() => void submitPairingCode(next), 150);
+      }
+      return next;
+    });
+  };
+
   const press = (d: string) => {
     setError(false);
     setPinError("");
@@ -138,7 +175,48 @@ export function LockScreen({
           <p className="mt-1 text-sm text-[#64748b]">SlashTablet · 1Dent</p>
         </div>
 
-        {bootError ? (
+        {mode === "pairing" ? (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mx-auto flex w-full max-w-sm flex-col items-center rounded-3xl border border-[#e8e3d9] bg-white p-8 shadow-sm"
+          >
+            <div className="mb-2 flex items-center gap-2 text-[#0f172a]">
+              <KeyRound className="h-5 w-5 text-[#1f75fe]" />
+              <span className="text-base font-bold">Подключение кабинета</span>
+            </div>
+            <p className="mb-6 text-center text-sm text-[#64748b]">
+              В CRM нажмите «Планшет» рядом с поиском — там будет 6-значный код. Введите его на этом экране.
+            </p>
+
+            <div className={cn("mb-4 flex gap-2", pairingError && "animate-shake")}>
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <span
+                  key={i}
+                  className={cn(
+                    "flex h-10 w-10 items-center justify-center rounded-xl border-2 text-lg font-bold transition-all",
+                    pairingError ? "border-[#dc2626]" : "border-[#d4cfc6]",
+                    pairingCode.length > i && (pairingError ? "border-[#dc2626] bg-[#fef2f2]" : "border-[#1f75fe] bg-[#eff6ff]"),
+                  )}
+                >
+                  {pairingCode[i] ?? ""}
+                </span>
+              ))}
+            </div>
+            {pairingError && <p className="mb-4 text-sm font-medium text-[#dc2626]">{pairingError}</p>}
+
+            <div className="grid grid-cols-3 gap-3">
+              {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => (
+                <PinKey key={d} onClick={() => pressPairing(d)} disabled={pairingLoading}>{d}</PinKey>
+              ))}
+              <div />
+              <PinKey onClick={() => pressPairing("0")} disabled={pairingLoading}>0</PinKey>
+              <PinKey onClick={() => setPairingCode((p) => p.slice(0, -1))} muted disabled={pairingLoading} aria-label="Стереть">
+                <Delete className="h-6 w-6" />
+              </PinKey>
+            </div>
+          </motion.div>
+        ) : bootError ? (
           <div className="rounded-3xl border border-[#fecaca] bg-[#fef2f2] p-8 text-center">
             <p className="text-sm text-[#dc2626]">{bootError}</p>
             <button
@@ -178,7 +256,7 @@ export function LockScreen({
                     При первом входе нужно будет задать PIN.
                   </p>
 
-                  <div className="mt-6 flex items-center gap-3">
+                  <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
                     <button
                       type="button"
                       onClick={() => { setMode("pin"); setPin(""); setError(false); }}
@@ -248,15 +326,16 @@ export function LockScreen({
 }
 
 function PinKey({
-  children, onClick, muted, ...rest
-}: { children: React.ReactNode; onClick: () => void; muted?: boolean } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  children, onClick, muted, disabled, ...rest
+}: { children: React.ReactNode; onClick: () => void; muted?: boolean; disabled?: boolean } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       {...rest}
       className={cn(
-        "flex h-16 w-16 items-center justify-center rounded-2xl text-2xl font-semibold transition-all active:scale-90",
+        "flex h-16 w-16 items-center justify-center rounded-2xl text-2xl font-semibold transition-all active:scale-90 disabled:opacity-50",
         muted
           ? "text-[#64748b] hover:bg-[#f1ede4]"
           : "bg-[#faf8f4] text-[#0f172a] hover:bg-[#f1ede4] active:bg-[#e8e3d9]",

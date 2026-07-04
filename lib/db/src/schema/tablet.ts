@@ -15,6 +15,7 @@ export const tabletCabinetsTable = pgTable("tablet_cabinets", {
     .references(() => clinicsTable.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   pinHash: text("pin_hash"),
+  pairingCode: text("pairing_code"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

@@ -1,4 +1,4 @@
-import { customFetch } from "@workspace/api-client-react";
+import { customFetch, ApiError } from "@workspace/api-client-react";
 
 export interface TabletCabinetBrief {
   id: string;
@@ -45,6 +45,22 @@ export function storeCabinetId(id: string) {
   } catch {
     /* ignore */
   }
+}
+
+export function applyCabinetIdToUrl(id: string) {
+  storeCabinetId(id);
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  url.searchParams.set("cabinet", id);
+  window.history.replaceState({}, "", url.toString());
+}
+
+export async function resolveCabinetByPairingCode(code: string) {
+  const digits = code.replace(/\D/g, "");
+  return customFetch<{
+    success: boolean;
+    data: { cabinet: TabletCabinetBrief & { pairingCode?: string | null } };
+  }>(`/api/tablet/public/cabinets/by-pairing/${encodeURIComponent(digits)}`);
 }
 
 export function resolveCabinetIdFromUrl(): string | null {
@@ -116,11 +132,10 @@ export async function redeemTabletLink(token: string, pin?: string) {
       body: JSON.stringify({ token, pin }),
     });
   } catch (err) {
-    const status = err && typeof err === "object" && "status" in err
-      ? Number((err as { status: number }).status)
-      : 0;
-    if (status === 428) {
-      const body = (err as { data?: { error?: { code?: string; message?: string; linkToken?: string } } }).data;
+    if (err instanceof ApiError && err.status === 428) {
+      const body = err.data as {
+        error?: { code?: string; message?: string; linkToken?: string };
+      } | null;
       const e = new Error(body?.error?.message ?? "Установите PIN-код") as Error & {
         code: string;
         linkToken: string;
@@ -136,6 +151,13 @@ export async function redeemTabletLink(token: string, pin?: string) {
 export async function listTabletCabinets() {
   return customFetch<{
     success: boolean;
-    data: { cabinets: { id: string; name: string; tabletUrl: string }[] };
+    data: {
+      cabinets: {
+        id: string;
+        name: string;
+        tabletUrl: string;
+        pairingCode?: string | null;
+      }[];
+    };
   }>("/api/tablet/cabinets");
 }

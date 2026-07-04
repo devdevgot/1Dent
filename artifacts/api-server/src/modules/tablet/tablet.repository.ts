@@ -8,6 +8,15 @@ export class TabletRepository {
     return row ?? null;
   }
 
+  async findCabinetByPairingCode(code: string): Promise<TabletCabinet | null> {
+    const [row] = await db
+      .select()
+      .from(tabletCabinetsTable)
+      .where(eq(tabletCabinetsTable.pairingCode, code))
+      .limit(1);
+    return row ?? null;
+  }
+
   async listCabinets(clinicId: string): Promise<TabletCabinet[]> {
     return db
       .select()
@@ -21,6 +30,7 @@ export class TabletRepository {
     clinicId: string;
     name: string;
     pinHash?: string | null;
+    pairingCode?: string | null;
   }): Promise<TabletCabinet> {
     const [row] = await db
       .insert(tabletCabinetsTable)
@@ -29,6 +39,7 @@ export class TabletRepository {
         clinicId: data.clinicId,
         name: data.name,
         pinHash: data.pinHash ?? null,
+        pairingCode: data.pairingCode ?? null,
       })
       .returning();
     return row!;

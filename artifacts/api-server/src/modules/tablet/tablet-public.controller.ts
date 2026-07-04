@@ -38,6 +38,15 @@ router.get("/sessions/:sessionId", async (req: Request, res: Response, next: Nex
   }
 });
 
+router.get("/cabinets/by-pairing/:code", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const data = await service.resolveCabinetByPairingCode(String(req.params.code));
+    res.json({ success: true, data: { cabinet: data } });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get("/cabinets/:cabinetId", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const data = await service.getCabinetPublic(String(req.params.cabinetId));
