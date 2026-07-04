@@ -151,6 +151,8 @@ export class TabletService {
     const cabinet = await this.repo.findCabinetById(cabinetId);
     if (!cabinet) throw new NotFoundError("Кабинет не найден");
 
+    await this.repo.expirePendingSessionsForCabinet(cabinet.id);
+
     const { raw, hash } = generateLinkToken();
     const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
     const session = await this.repo.createSession({
@@ -214,7 +216,7 @@ export class TabletService {
       const user = await this.authRepo.findUserById(session.doctorUserId);
       const clinic = user ? await this.authRepo.findClinicById(session.clinicId) : undefined;
       if (user && clinic) {
-        const { passwordHash: _, ...safeUser } = user;
+        const { passwordHash: _, tabletPinHash: __, ...safeUser } = user;
         const token = jwt.sign(
           {
             userId: user.id,
@@ -292,6 +294,11 @@ export class TabletService {
 
     const session = await this.repo.findPendingSessionByTokenHash(hashToken(linkToken));
     if (!session) throw new NotFoundError("Ссылка устарела или уже использована");
+
+    const user = await this.authRepo.findUserById(userId);
+    if (!user || user.clinicId !== session.clinicId) {
+      throw new ForbiddenError("Сессия не принадлежит вашей клинике");
+    }
 
     const unlocked = await this.repo.unlockSession(session.id, userId);
     if (!unlocked) throw new NotFoundError("Не удалось разблокировать планшет");

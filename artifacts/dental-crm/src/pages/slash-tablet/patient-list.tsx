@@ -45,7 +45,7 @@ export function PatientList({ onSelect }: { onSelect: (patientId: string) => voi
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<PatientStatus | "all">("all");
   const [sourceFilter, setSourceFilter] = useState<PatientSource | "all">("all");
-  const [dateFilter, setDateFilter] = useState<DateFilter>("today");
+  const [dateFilter, setDateFilter] = useState<DateFilter>("all");
   const [showFilters, setShowFilters] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -120,7 +120,7 @@ export function PatientList({ onSelect }: { onSelect: (patientId: string) => voi
   const now = new Date();
   const todayLabel = now.toLocaleDateString("ru", { weekday: "long", day: "numeric", month: "long" });
   const canCreate = user?.role === "owner" || user?.role === "admin" || user?.role === "doctor";
-  const hasActiveFilter = statusFilter !== "all" || sourceFilter !== "all" || dateFilter !== "today";
+  const hasActiveFilter = statusFilter !== "all" || sourceFilter !== "all" || dateFilter !== "all";
 
   const DATE_OPTIONS: { key: DateFilter; label: string }[] = [
     { key: "today", label: "Сегодня" },

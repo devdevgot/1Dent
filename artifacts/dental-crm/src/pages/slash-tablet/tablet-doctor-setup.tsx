@@ -125,7 +125,8 @@ export function TabletDoctorSetup() {
         </div>
         <h1 className="text-2xl font-extrabold text-[#0f172a]">SlashTablet</h1>
         <p className="mt-3 max-w-sm text-sm leading-relaxed text-[#64748b]">
-          Подключите планшет в кабинете: нажмите кнопку ниже, получите код и введите его на экране планшета.
+          Откройте <strong className="text-[#0f172a]">/tablet?setup=1</strong> в CRM, нажмите кнопку ниже,
+          получите код и введите его на экране планшета в кабинете.
         </p>
         <button
           type="button"

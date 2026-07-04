@@ -42,13 +42,19 @@ export function LockScreen({
   const unlockedRef = useRef(false);
 
   const drawQr = useCallback(async (url: string) => {
-    if (!canvasRef.current || !url) return;
-    await QRCode.toCanvas(canvasRef.current, url, {
-      width: 236,
-      margin: 1,
-      color: { dark: "#0f172a", light: "#ffffff" },
-      errorCorrectionLevel: "M",
-    }).catch(() => {});
+    if (!canvasRef.current || !url) return false;
+    try {
+      await QRCode.toCanvas(canvasRef.current, url, {
+        width: 236,
+        margin: 1,
+        color: { dark: "#0f172a", light: "#ffffff" },
+        errorCorrectionLevel: "M",
+      });
+      return true;
+    } catch {
+      setBootError("Не удалось отобразить QR-код");
+      return false;
+    }
   }, []);
 
   const bootstrapSession = useCallback(async (forcedCabinetId?: string) => {
@@ -95,10 +101,13 @@ export function LockScreen({
         const res = await getTabletSessionStatus(sessionId);
         const { status, doctor, cabinet, auth } = res.data;
         if (status === "unlocked" && doctor) {
-          unlockedRef.current = true;
-          if (auth?.token && auth.user && auth.clinic) {
-            bootstrapTabletSessionAuth(auth.token, auth.user, auth.clinic);
+          if (!auth?.token || !auth.user || !auth.clinic) {
+            setBootError("Не удалось авторизовать планшет. Обновите QR-код.");
+            void bootstrapSession();
+            return;
           }
+          unlockedRef.current = true;
+          bootstrapTabletSessionAuth(auth.token, auth.user, auth.clinic);
           onQrUnlock({
             cabinet,
             doctor: {
@@ -158,7 +167,10 @@ export function LockScreen({
       if (next.length === 4 && cabinetId) {
         setTimeout(() => {
           void verifyTabletCabinetPin(cabinetId, next)
-            .then(() => onPinUnlock())
+            .then(() => {
+              setPinError("Аварийный PIN подтверждён. Для работы с пациентами отсканируйте QR-код.");
+              setPin("");
+            })
             .catch(() => {
               setError(true);
               setPinError("Неверный PIN кабинета");
@@ -197,7 +209,7 @@ export function LockScreen({
               <span className="text-base font-bold">Подключение кабинета</span>
             </div>
             <p className="mb-6 text-center text-sm text-[#64748b]">
-              Попросите врача или владельца открыть страницу планшета в CRM и нажать «Подключить планшет» — там будет 6-значный код.
+              Врач или владелец открывает <strong>/tablet?setup=1</strong> в CRM → «Подключить планшет» → введите 6-значный код здесь.
             </p>
 
             <div className={cn("mb-4 flex gap-2", pairingError && "animate-shake")}>

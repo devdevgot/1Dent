@@ -1,8 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { LogOut, LayoutGrid } from "lucide-react";
 import { LockScreen } from "./lock-screen";
-import { CabinetConfirm } from "./cabinet-confirm";
 import { PatientList } from "./patient-list";
 import { PatientCard } from "./patient-card";
 import { TabletDoctorSetup } from "./tablet-doctor-setup";
@@ -12,16 +11,21 @@ import { resolveCabinetIdFromUrl } from "@/lib/tablet-api";
 import { useAuthStore } from "@/hooks/use-auth";
 import { clearTabletSessionAuth } from "@/lib/tablet-auth";
 
-type Step = "lock" | "confirm" | "patients" | "card";
+type Step = "lock" | "patients" | "card";
 
 function isTabletManagerRole(role: string | undefined) {
-  return role === "doctor" || role === "owner";
+  return role === "doctor" || role === "owner" || role === "admin";
 }
 
 export default function SlashTabletPage() {
   const { user, isAuthenticated } = useAuthStore();
   const hasCabinet = Boolean(resolveCabinetIdFromUrl());
-  const showDoctorSetup = isAuthenticated && isTabletManagerRole(user?.role) && !hasCabinet;
+  const setupMode = useMemo(
+    () => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("setup") === "1",
+    [],
+  );
+  const showDoctorSetup =
+    setupMode && isAuthenticated && isTabletManagerRole(user?.role) && !hasCabinet;
 
   const [step, setStep] = useState<Step>("lock");
   const [doctor, setDoctor] = useState<TabletDoctor | null>(null);
@@ -50,15 +54,7 @@ export default function SlashTabletPage() {
                 setCabinetName(cabinet.name);
                 setStep("patients");
               }}
-              onPinUnlock={() => setStep("confirm")}
-            />
-          </motion.div>
-        )}
-
-        {step === "confirm" && (
-          <motion.div key="confirm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <CabinetConfirm
-              onConfirm={(doc) => { setDoctor(doc); setStep("patients"); }}
+              onPinUnlock={() => {}}
             />
           </motion.div>
         )}

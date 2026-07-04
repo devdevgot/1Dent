@@ -125,6 +125,18 @@ export class TabletRepository {
       .where(eq(tabletSessionsTable.id, sessionId));
   }
 
+  async expirePendingSessionsForCabinet(cabinetId: string): Promise<void> {
+    await db
+      .update(tabletSessionsTable)
+      .set({ status: "expired" })
+      .where(
+        and(
+          eq(tabletSessionsTable.cabinetId, cabinetId),
+          eq(tabletSessionsTable.status, "pending"),
+        ),
+      );
+  }
+
   async getDoctorPublic(userId: string) {
     const [row] = await db
       .select({
