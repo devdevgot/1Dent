@@ -13,6 +13,7 @@ export {
   joinChatbotReply,
   mergeReply,
   appendToReply,
+  polishReply,
   normalizeReply,
   parseChatbotReplyJson,
   defaultPauses,

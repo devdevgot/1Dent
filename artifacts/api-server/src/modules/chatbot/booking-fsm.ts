@@ -56,9 +56,10 @@ export function buildScoringOptionsFromSession(
 export async function assignRankedDoctor(
   clinicId: string,
   data: ChatbotSessionData,
-  dryRun: boolean,
+  _dryRun: boolean,
 ): Promise<{ data: ChatbotSessionData; top: DoctorCandidate | null }> {
-  const scoringOpts = buildScoringOptionsFromSession(data, dryRun);
+  // Playground and WhatsApp must recommend the same top-ranked doctor.
+  const scoringOpts = buildScoringOptionsFromSession(data, true);
   const candidates = await rankDoctorCandidates(clinicId, scoringOpts, {
     limit: 3,
     excludeIds: data.excludedDoctorIds ?? [],

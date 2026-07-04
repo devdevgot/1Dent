@@ -27,7 +27,7 @@ import { isRedAlert } from "../../shared/whatsapp";
 import { sendTypingToPatient } from "../../shared/messaging";
 import { getAlertQueue } from "../../shared/alert-queue";
 import { logger } from "../../lib/logger";
-import { pickBestDoctorAdvanced, type AdvancedScoringOptions } from "../analytics/analytics.repository";
+import type { DoctorCandidate } from "../analytics/analytics.repository";
 import { ChannelsRepository } from "../channels/channels.repository";
 import {
   classifyPatientRequest,
@@ -37,6 +37,7 @@ import {
   joinChatbotReply,
   mergeReply,
   appendToReply,
+  polishReply,
   replyFromText,
   type ChatMessage,
   type ChatbotReply,
@@ -62,7 +63,6 @@ import {
   formatAlmatyNowContext,
   formatAlmatySlotCompact,
   formatAlmatyTime,
-  getAlmatyDayBounds,
   getAlmatyYmd,
   KZ_UTC_OFFSET_LABEL,
 } from "./almaty-time";
@@ -349,54 +349,6 @@ async function sendOutboundReply(clinicId: string, phone: string, value: Outboun
     onPartDelivered: (part) => saveChatbotMessage(clinicId, phone, "outbound", part),
   });
   return joinChatbotReply(reply);
-}
-
-// ─── Analytics-based doctor routing ─────────────────────────────────────────
-
-/**
- * Pick the most general/entry-level doctor for low-confidence AI routing.
- * Prefers doctors with specialty matching "therapist"/"general"/"терапевт"/"терапия".
- * Falls back to the doctor with the lowest current load.
- */
-async function pickTherapist(clinicId: string): Promise<{ id: string; name: string } | null> {
-  const THERAPIST_SPECIALTIES = ["therapist", "general", "терапевт", "терапия", "дантист", "dentist"];
-  const doctors = await db
-    .select({ id: usersTable.id, name: usersTable.name, specialty: usersTable.specialty })
-    .from(usersTable)
-    .where(and(eq(usersTable.clinicId, clinicId), eq(usersTable.role, "doctor")));
-
-  if (doctors.length === 0) return null;
-
-  // Prefer doctors with matching specialty
-  const therapist = doctors.find(
-    (d) => d.specialty && THERAPIST_SPECIALTIES.includes(d.specialty.toLowerCase()),
-  );
-  if (therapist) return { id: therapist.id, name: therapist.name };
-
-  // No specialty match — pick least-loaded doctor today using procedure count (Almaty calendar day)
-  const { todayStart, todayEnd } = getAlmatyDayBounds();
-
-  const loads = await Promise.all(
-    doctors.map(async (doc) => {
-      const [result] = await db
-        .select({ count: sql<number>`cast(count(*) as int)` })
-        .from(proceduresTable)
-        .where(
-          and(
-            eq(proceduresTable.clinicId, clinicId),
-            eq(proceduresTable.doctorId, doc.id),
-            ne(proceduresTable.status, "cancelled"),
-            gte(proceduresTable.scheduledAt, todayStart),
-            lte(proceduresTable.scheduledAt, todayEnd),
-          ),
-        );
-      return { id: doc.id, name: doc.name, load: result?.count ?? 0 };
-    }),
-  );
-
-  // Sort by ascending load — pick least busy doctor
-  loads.sort((a, b) => a.load - b.load);
-  return { id: loads[0]!.id, name: loads[0]!.name };
 }
 
 const channelsRepo = new ChannelsRepository();
@@ -875,6 +827,109 @@ function parseMindMapFsmState(fsm?: string): ChatbotState | null {
   return fsm as ChatbotState;
 }
 
+function resolveClinicName(
+  settings: Awaited<ReturnType<typeof getSettings>>,
+  clinicName?: string,
+): string {
+  return (
+    clinicName?.trim() ||
+    settings.greetingTemplate?.match(/«(.+?)»/)?.[1]?.trim() ||
+    settings.greetingTemplate?.match(/"(.+?)"/)?.[1]?.trim() ||
+    "нашу клинику"
+  );
+}
+
+function createPromptPlaceholderResolver(params: {
+  clinicName: string;
+  date: string;
+  time: string;
+  doctorName: string;
+}) {
+  return (text: string) =>
+    text
+      .replace(/\{\{clinic_name\}\}/g, params.clinicName)
+      .replace(/\{\{date\}\}/g, params.date)
+      .replace(/\{\{time\}\}/g, params.time)
+      .replace(/\{\{doctor_name\}\}/g, params.doctorName);
+}
+
+function hydrateMindMapPlaceholders(
+  mindMap: ScriptMindMapData | undefined,
+  resolvePlaceholders: (text: string) => string,
+): ScriptMindMapData | undefined {
+  if (!mindMap?.nodes?.length) return mindMap;
+  return {
+    ...mindMap,
+    nodes: mindMap.nodes.map((node) => ({
+      ...node,
+      label: resolvePlaceholders(node.label ?? ""),
+      content: resolvePlaceholders(node.content ?? ""),
+    })),
+    edges: (mindMap.edges ?? []).map((edge) => ({
+      ...edge,
+      label: edge.label ? resolvePlaceholders(edge.label) : edge.label,
+    })),
+  };
+}
+
+function buildDoctorBackendContext(candidate: DoctorCandidate, data: ChatbotSessionData): string {
+  const reasons = candidate.reasons.length > 0
+    ? candidate.reasons.join(", ")
+    : "оптимальный баланс рейтинга, загрузки и доступных слотов";
+  return [
+    data.selectedBranch ? `Филиал: ${data.selectedBranch}.` : null,
+    `Рекомендация по рейтингу (${candidate.rankPercent}/100): ${candidate.name}.`,
+    candidate.specialty ? `Специализация: ${candidate.specialty}.` : null,
+    `Причины выбора: ${reasons}.`,
+    candidate.nearestSlotMinutes != null
+      ? `Ближайшее окно примерно через ${candidate.nearestSlotMinutes} мин.`
+      : null,
+  ].filter(Boolean).join(" ");
+}
+
+function selectScriptBlocksForState(blocks: ScriptBlock[], state: ChatbotState): ScriptBlock[] {
+  const preferredIds: Partial<Record<ChatbotState, string[]>> = {
+    greeting: ["greeting"],
+    collect_iin: ["qualification"],
+    collect_name: ["appointment"],
+    collect_phone: ["appointment"],
+    collect_problem: ["qualification", "services"],
+    collect_qualification: ["qualification"],
+    suggest_doctor: ["decision"],
+    await_decision: ["decision"],
+    handle_objections: ["objections"],
+    manage_appointment: ["appointment"],
+    show_slots: ["appointment"],
+    collect_datetime: ["appointment"],
+    collect_branch: ["appointment"],
+    confirm_appointment: ["appointment"],
+    dental_qa: ["services"],
+    done: ["followup"],
+    human_takeover: ["objections"],
+    reactivation: ["followup"],
+  };
+  const ids = preferredIds[state] ?? [];
+  const selected = blocks.filter((block) => ids.includes(block.id));
+  return selected.length > 0 ? selected : blocks.slice(0, 1);
+}
+
+function isPlainGreeting(text: string): boolean {
+  const normalized = text.toLowerCase().replace(/[^\p{L}\s]+/gu, " ").replace(/\s+/g, " ").trim();
+  if (!normalized) return true;
+  const greetings = [
+    "здравствуйте",
+    "привет",
+    "добрый день",
+    "доброе утро",
+    "добрый вечер",
+    "салем",
+    "сәлем",
+    "hello",
+    "hi",
+  ];
+  return greetings.some((g) => normalized === g || normalized === `${g} вам`);
+}
+
 type UnifiedScriptPromptOpts = {
   fsmState?: ChatbotState;
   serviceType?: string;
@@ -896,10 +951,11 @@ function buildUnifiedScriptPrompt(
   const channel = opts?.channel ?? "playground";
   const fsmState = opts?.fsmState ?? "greeting";
   const kazakhNote = `ВАЖНО: Пациент может писать на казахском или русском. Отвечай строго на том языке, на котором пишет пациент.`;
+  const resolvedClinicName = resolveClinicName(settings, clinicName);
 
   let doctorsSection = "";
   if (doctorsWithSlots && doctorsWithSlots.length > 0) {
-    doctorsSection = "\n\nВРАЧИ КЛИНИКИ (используй ТОЛЬКО этих врачей):\n";
+    doctorsSection = "\n\nВРАЧИ КЛИНИКИ (используй ТОЛЬКО этих врачей; рейтинг озвучивай только если он есть в контексте ответа):\n";
     for (const doc of doctorsWithSlots) {
       const spec = doc.specialty ? ` — ${doc.specialty}` : "";
       doctorsSection += `• ${doc.name}${spec}\n`;
@@ -912,11 +968,6 @@ function buildUnifiedScriptPrompt(
     }
   }
 
-  const resolvedClinicName =
-    clinicName ??
-    settings.greetingTemplate?.match(/«(.+?)»/)?.[1] ??
-    settings.greetingTemplate?.match(/"(.+?)"/)?.[1] ??
-    "нашу клинику";
   const now = new Date();
   const todayDate = formatAlmatyDayMonth(now);
   const firstDoctor = doctorsWithSlots?.[0];
@@ -925,19 +976,20 @@ function buildUnifiedScriptPrompt(
   const exampleDate =
     firstDoctor?.slots?.[0] ? formatAlmatyDayMonth(firstDoctor.slots[0]) : todayDate;
 
-  const resolvePlaceholders = (text: string) =>
-    text
-      .replace(/\{\{clinic_name\}\}/g, resolvedClinicName)
-      .replace(/\{\{date\}\}/g, exampleDate)
-      .replace(/\{\{time\}\}/g, exampleTime)
-      .replace(/\{\{doctor_name\}\}/g, exampleDoctorName);
+  const resolvePlaceholders = createPromptPlaceholderResolver({
+    clinicName: resolvedClinicName,
+    date: exampleDate,
+    time: exampleTime,
+    doctorName: exampleDoctorName,
+  });
 
   const savedBlocks = (settings.scriptBlocks ?? []) as ScriptBlock[];
   const activeBlocks = savedBlocks.length > 0 ? savedBlocks : STANDARD_SCRIPT_BLOCKS;
   const enabledBlocks = activeBlocks.filter((b) => b.enabled).sort((a, b) => a.order - b.order);
+  const scopedBlocks = selectScriptBlocksForState(enabledBlocks, fsmState);
 
-  let scriptContext = "\n\nСКРИПТ КЛИНИКИ (строго следуй этому скрипту):\n";
-  for (const block of enabledBlocks) {
+  let scriptContext = "\n\nТЕКУЩИЙ БЛОК СКРИПТА КЛИНИКИ (используй только релевантные детали для этого этапа):\n";
+  for (const block of scopedBlocks) {
     scriptContext += `\n--- ${block.title.toUpperCase()} ---\n${resolvePlaceholders(block.content)}\n`;
   }
 
@@ -953,7 +1005,10 @@ function buildUnifiedScriptPrompt(
     ? `\n\nМАТЕРИАЛЫ КЛИНИКИ (сайт, документы — дополнительный источник информации; цены берутся из ПРАЙС-ЛИСТА выше):\n${knowledgeContext}`
     : "";
 
-  const mindMap = settings.scriptMindMap as ScriptMindMapData | undefined;
+  const mindMap = hydrateMindMapPlaceholders(
+    settings.scriptMindMap as ScriptMindMapData | undefined,
+    resolvePlaceholders,
+  );
   const mindMapSection = renderMindMapScript(mindMap);
   const activeMindMapSection = buildActiveMindMapContext(mindMap, fsmState, {
     serviceType: opts?.serviceType,
@@ -1008,17 +1063,19 @@ ${nowContext}
 ⚠️ ЖЁСТКИЕ ПРАВИЛА (приоритет выше скрипта):
 1. ${iinRule}
 2. НЕ спрашивай имя или телефон в начале диалога — имя и телефон собираются только при оформлении записи
-3. Строго следуй майнд-мэпу/скрипту клиники — проходи этапы: знакомство → квалификация (симптомы → филиал) → подбор врача по рейтингу → решение → запись или возражения
-4. На этапе подбора врача озвучь имя, рейтинг (из контекста) и 1–2 причины выбора (специализация, загрузка, ближайший слот). Если пациент просит «другого врача» — предложи альтернативу из топ-3
-5. После подтверждения врача спроси готовность записаться. Если готов — дата и время. Если сомневается — отработай возражения и снова предложи запись. Если отказ — поблагодари и оставь контакт
-6. Если филиал уже выбран — не спрашивай его повторно при выборе времени
-7. Отвечай коротко: 1–3 предложения максимум
-8. Используй только информацию из материалов клиники и списка врачей — не придумывай
-9. Все даты и время — только в часовом поясе Казахстана (${KZ_UTC_OFFSET_LABEL}, Алматы/Астана). Сегодняшняя дата: ${todayYmdPlayground}. НИКОГДА не предлагай и не подтверждай время которое уже прошло (сейчас ${nowTimeStr}). Если пациент называет время из списка свободных слотов — подтверждай его вместе с полной датой из списка. Если пациент называет прошедшее время сегодня — объясни что оно уже прошло и предложи ближайший доступный слот. Все слоты в списке врачей уже являются будущими.
-10. Адреса филиалов, телефоны, часы работы и акции — ТОЛЬКО из материалов клиники (сайт и ссылки в настройках чатбота). Не используй вымышленные адреса. Если материалов нет — не перечисляй филиалы, попроси уточнить адрес или предложи оператора.
-11. Отвечай мгновенно и по делу — как опытный менеджер по продажам: один вопрос за раз, мягко веди к записи, не дави.
-12. Если пациент сомневается — отработай возражение и снова предложи конкретный следующий шаг (время, врач, филиал).
-13. Не завершай диалог, пока пациент явно не отказался («не надо», «не интересно») или не записался — при паузе система отправит follow-up автоматически.
+3. Ты представляешь клинику «${resolvedClinicName}», но НЕ являешься клиникой. НИКОГДА не говори «меня зовут ${resolvedClinicName}», «моё имя ${resolvedClinicName}» или похожее. Правильно: «Я — AI-ассистент клиники «${resolvedClinicName}»».
+4. Не повторяй приветствие, название клиники или один и тот же вопрос дважды в одном ответе. Если уже спросил причину обращения — переходи к уточнению симптомов/филиала.
+5. Строго следуй майнд-мэпу/скрипту клиники — проходи этапы: знакомство → квалификация (симптомы → филиал) → подбор врача по рейтингу → решение → запись или возражения
+6. На этапе подбора врача озвучь имя, рейтинг (из контекста) и 1–2 причины выбора (специализация, загрузка, ближайший слот). Если пациент просит «другого врача» — предложи альтернативу из топ-3
+7. После подтверждения врача спроси готовность записаться. Если готов — дата и время. Если сомневается — отработай возражения и снова предложи запись. Если отказ — поблагодари и оставь контакт
+8. Если филиал уже выбран — не спрашивай его повторно при выборе времени
+9. Отвечай коротко: 1–3 предложения максимум
+10. Используй только информацию из материалов клиники и списка врачей — не придумывай
+11. Все даты и время — только в часовом поясе Казахстана (${KZ_UTC_OFFSET_LABEL}, Алматы/Астана). Сегодняшняя дата: ${todayYmdPlayground}. НИКОГДА не предлагай и не подтверждай время которое уже прошло (сейчас ${nowTimeStr}). Если пациент называет время из списка свободных слотов — подтверждай его вместе с полной датой из списка. Если пациент называет прошедшее время сегодня — объясни что оно уже прошло и предложи ближайший доступный слот. Все слоты в списке врачей уже являются будущими.
+12. Адреса филиалов, телефоны, часы работы и акции — ТОЛЬКО из материалов клиники (сайт и ссылки в настройках чатбота). Не используй вымышленные адреса. Если материалов нет — не перечисляй филиалы, попроси уточнить адрес или предложи оператора.
+13. Отвечай мгновенно и по делу — как опытный менеджер по продажам: один вопрос за раз, мягко веди к записи, не дави.
+14. Если пациент сомневается — отработай возражение и снова предложи конкретный следующий шаг (время, врач, филиал).
+15. Не завершай диалог, пока пациент явно не отказался («не надо», «не интересно») или не записался — при паузе система отправит follow-up автоматически.
 ${kazakhNote}${instructionsExtra}${doctorsSection}${priceListSection}${mindMapSection}${activeMindMapSection}${effectiveScriptContext}${knowledgeSection}${backendSection}`;
 }
 
@@ -1027,20 +1084,16 @@ function renderScriptBlocks(
   settings: Awaited<ReturnType<typeof getSettings>>,
   clinicName?: string,
 ): string {
-  const resolvedClinicName =
-    clinicName ??
-    settings.greetingTemplate?.match(/«(.+?)»/)?.[1] ??
-    settings.greetingTemplate?.match(/"(.+?)"/)?.[1] ??
-    "нашу клинику";
+  const resolvedClinicName = resolveClinicName(settings, clinicName);
   const now = new Date();
   const todayDate = formatAlmatyDayMonth(now);
 
-  const resolvePlaceholders = (text: string) =>
-    text
-      .replace(/\{\{clinic_name\}\}/g, resolvedClinicName)
-      .replace(/\{\{date\}\}/g, todayDate)
-      .replace(/\{\{time\}\}/g, "удобное вам время")
-      .replace(/\{\{doctor_name\}\}/g, "вашего врача");
+  const resolvePlaceholders = createPromptPlaceholderResolver({
+    clinicName: resolvedClinicName,
+    date: todayDate,
+    time: "удобное вам время",
+    doctorName: "вашего врача",
+  });
 
   const savedBlocks = (settings.scriptBlocks ?? []) as ScriptBlock[];
   const activeBlocks = savedBlocks.length > 0 ? savedBlocks : STANDARD_SCRIPT_BLOCKS;
@@ -1193,9 +1246,19 @@ function makeTurnResult(
   session: SessionRecord,
   response: OutboundResponse,
   simulatedActions: string[],
+  opts?: { clinicName?: string | null; maxParts?: number; recentMessages?: ChatMessage[] },
 ): TurnResult {
+  const baseReply = toChatbotReply(response) ?? replyFromText("...");
+  const outbound = polishReply(baseReply, {
+    clinicName: opts?.clinicName,
+    maxParts: opts?.maxParts,
+    recentAssistantTexts: opts?.recentMessages
+      ?.filter((m) => m.role === "assistant")
+      .slice(-3)
+      .map((m) => m.content),
+  });
   return {
-    outbound: toChatbotReply(response),
+    outbound,
     session,
     simulatedActions,
   };
@@ -1213,7 +1276,7 @@ async function finalizeBookingAppointment(params: {
   managerExamples: ManagerExample[];
   up: (state: ChatbotState, opts?: { backendContext?: string }) => string;
   promptState?: ChatbotState;
-}): Promise<{ data: ChatbotSessionData; response: string }> {
+}): Promise<{ data: ChatbotSessionData; response: OutboundResponse }> {
   const {
     clinicId,
     phone,
@@ -1404,7 +1467,7 @@ function formatSimulateMessageResult(
   return {
     reply: joinChatbotReply(outbound),
     parts: outbound.parts,
-    pausesMs: outbound.pausesMs,
+    pausesMs: outbound.pausesMs ?? [0],
     fsmState: turn.session.state,
     humanTakeover: turn.session.humanTakeover,
     sessionData: turn.session.data,
@@ -1442,6 +1505,8 @@ export class ChatbotService {
   ): Promise<TurnResult | null> {
     const dryRun = options?.dryRun ?? false;
     const simulatedActions: string[] = [];
+    let resolvedClinicNameForReply: string | undefined;
+    let recentMessagesForReply: ChatMessage[] = [];
     const noteAction = (msg: string) => {
       if (dryRun) simulatedActions.push(msg);
     };
@@ -1473,7 +1538,11 @@ export class ChatbotService {
         }
       }
       await persistSession(session);
-      return makeTurnResult(session, response, simulatedActions);
+      return makeTurnResult(session, response, simulatedActions, {
+        clinicName: resolvedClinicNameForReply,
+        maxParts: session.state === "greeting" ? 2 : 3,
+        recentMessages: recentMessagesForReply,
+      });
     };
 
     let messageText = text;
@@ -1549,6 +1618,7 @@ export class ChatbotService {
       logger.error({ err }, "ChatbotService: failed to load context");
       return null;
     }
+    resolvedClinicNameForReply = resolveClinicName(settings, clinicName);
 
     const scenarioCtx = dryRun ? buildScenarioContext(options?.scenario, doctorsWithSlots) : null;
 
@@ -1579,6 +1649,7 @@ export class ChatbotService {
             },
             exhaustedReply,
             simulatedActions,
+            { clinicName: resolvedClinicNameForReply, maxParts: 2 },
           );
         }
         throw err;
@@ -1751,6 +1822,7 @@ export class ChatbotService {
       dryRun && options?.historyInput
         ? options.historyInput
         : await this.getRecentHistory(clinicId, phone);
+    recentMessagesForReply = recentMessages;
 
     let response: OutboundResponse = null;
 
@@ -1761,12 +1833,21 @@ export class ChatbotService {
           const blocks = ((settings.scriptBlocks ?? []) as ScriptBlock[]);
           const active = blocks.length > 0 ? blocks : STANDARD_SCRIPT_BLOCKS;
           const greet = active.find((b) => b.id === "greeting" && b.enabled);
-          const clinicName =
-            settings.greetingTemplate?.match(/«(.+?)»/)?.[1] ??
-            settings.greetingTemplate?.match(/"(.+?)"/)?.[1] ??
-            "нашу клинику";
+          const resolvePlaceholders = createPromptPlaceholderResolver({
+            clinicName: resolvedClinicNameForReply ?? resolveClinicName(settings, clinicName),
+            date: formatAlmatyDayMonth(new Date()),
+            time: "удобное вам время",
+            doctorName: "вашего врача",
+          });
           return (greet?.content ?? STANDARD_SCRIPT_BLOCKS[0]!.content)
-            .replace(/\{\{clinic_name\}\}/g, clinicName);
+            .split("\n")
+            .filter((line) => !line.includes("• "))
+            .join("\n")
+            .trim()
+            .replace(/\n{3,}/g, "\n\n")
+            .split("\n")
+            .map(resolvePlaceholders)
+            .join("\n");
         })();
 
         // Identify patient by WhatsApp phone first — no need to ask for IIN if we already know them.
@@ -1804,7 +1885,9 @@ export class ChatbotService {
               )
               .orderBy(asc(proceduresTable.scheduledAt))
               .limit(1);
-            upcomingProc = proc ?? null;
+            upcomingProc = proc?.scheduledAt
+              ? { id: proc.id, scheduledAt: proc.scheduledAt, doctorId: proc.doctorId }
+              : null;
           }
         }
 
@@ -1880,15 +1963,73 @@ export class ChatbotService {
           break;
         }
 
-        // Otherwise — new patient, greet and process their actual first message as the patient input
-        // so the model can immediately address what they wrote (not just send a generic greeting).
+        if (!isPlainGreeting(messageText)) {
+          const firstClassification = await classifyPatientRequest(messageText, recentMessages);
+          if (firstClassification.serviceType !== "unknown" || firstClassification.confidence === "high") {
+            data.problemDescription = messageText.trim().slice(0, 200);
+            data.serviceType = firstClassification.serviceType;
+            data.urgency = firstClassification.urgency;
+            data.patientType = firstClassification.patientType;
+            data.aiConfidence = firstClassification.confidence;
+
+            const mindMapData = settings.scriptMindMap as ScriptMindMapData | undefined;
+            const problemNode = findMindMapNodeByFsmState(mindMapData, "collect_problem");
+            data.activeMindMapNodeId = problemNode
+              ? (matchMindMapBranch(mindMapData, problemNode.id, {
+                  serviceType: firstClassification.serviceType,
+                  userText: messageText,
+                })?.node.id ?? problemNode.id)
+              : resolveMindMapNodeIdForState(mindMapData, "collect_qualification", {
+                  serviceType: firstClassification.serviceType,
+                  userText: messageText,
+                });
+
+            const hasKnowledge = hasClinicKnowledge(knowledgeContext);
+            const earlyBranch = hasKnowledge
+              ? await resolveBranchFromMessage(messageText, knowledgeContext, extractBranchFromText)
+              : null;
+            if (earlyBranch) {
+              data.selectedBranch = earlyBranch;
+              data.qualificationPhase = "branch";
+            } else {
+              data.qualificationPhase = "symptoms";
+            }
+
+            const aiReply = await generateChatbotResponse(
+              up("collect_qualification", {
+                userText: messageText,
+                backendContext:
+                  `Первое сообщение уже содержит запрос пациента: ${firstClassification.summary}. ` +
+                  `Не спрашивай повторно "что беспокоит"; уточни только недостающие симптомы/срочность и филиал.`,
+              }),
+              recentMessages,
+              messageText,
+              managerExamples,
+            );
+            const fallback =
+              `Здравствуйте! 👋 Вы обратились в клинику «${resolvedClinicNameForReply ?? resolveClinicName(settings, clinicName)}». ` +
+              `Понял: ${firstClassification.summary}. Уточните, пожалуйста, есть ли боль/дискомфорт и какой филиал или адрес вам удобнее?`;
+            response = mergeReply(aiReply, fallback, {
+              clinicName: resolvedClinicNameForReply,
+              maxParts: 2,
+            });
+            session.state = "collect_qualification";
+            session.data = data;
+            break;
+          }
+        }
+
+        // Otherwise — new patient greeting only.
         const aiGreeting = await generateChatbotResponse(
           up("greeting"),
           [],
           messageText,
           managerExamples,
         );
-        response = mergeReply(aiGreeting, scriptGreeting);
+        response = mergeReply(aiGreeting, scriptGreeting, {
+          clinicName: resolvedClinicNameForReply,
+          maxParts: 2,
+        });
         session.state = "collect_problem";
         break;
       }
@@ -2118,22 +2259,9 @@ export class ChatbotService {
           break;
         }
 
-        const scoringOpts: AdvancedScoringOptions = {
-          serviceType: classification.serviceType,
-          urgency: classification.urgency,
-          patientType: classification.patientType,
-          returningPatientDoctorId,
-          deterministic: dryRun,
-        };
-        const pickedDoctor =
-          classification.confidence === "low"
-            ? await pickTherapist(clinicId)
-            : await pickBestDoctorAdvanced(clinicId, scoringOpts);
-
-        if (pickedDoctor) {
-          data.suggestedDoctorId = pickedDoctor.id;
-          data.suggestedDoctorName = pickedDoctor.name;
-        }
+        const rankedDoctor = await assignRankedDoctor(clinicId, data, true);
+        data = rankedDoctor.data;
+        const pickedDoctor = rankedDoctor.top;
 
         const activeNode = data.activeMindMapNodeId
           ? mindMapData?.nodes?.find((n) => n.id === data.activeMindMapNodeId)
@@ -2167,8 +2295,8 @@ export class ChatbotService {
 
           const promptState = nodeFsm ?? "collect_problem";
           const doctorBackend =
-            nodeFsm === "suggest_doctor" && data.suggestedDoctorName
-              ? `Рекомендуемый врач: ${data.suggestedDoctorName}.`
+            nodeFsm === "suggest_doctor" && pickedDoctor
+              ? buildDoctorBackendContext(pickedDoctor, data)
               : undefined;
           const aiReply = await generateChatbotResponse(
             up(promptState, { backendContext: doctorBackend }),
@@ -2176,42 +2304,25 @@ export class ChatbotService {
             messageText,
             managerExamples,
           );
-          response = mergeReply(aiReply, `Расскажите, пожалуйста, что вас беспокоит?`);
+          response = mergeReply(
+            aiReply,
+            pickedDoctor && nodeFsm === "suggest_doctor"
+              ? buildDoctorPresentationFallback(pickedDoctor, data.urgency)
+              : `Спасибо, понял запрос. Уточните, пожалуйста, есть ли боль и какой филиал/адрес вам удобнее?`,
+          );
           session.state = nodeFsm && nodeFsm !== "collect_problem" ? nodeFsm : "collect_problem";
           session.data = data;
           break;
         }
 
-        // Legacy flow without mind map
-        if (classification.confidence === "low") {
-          if (pickedDoctor) {
-            const aiReply = await generateChatbotResponse(
-              up("suggest_doctor", { backendContext: `Рекомендуемый врач: ${pickedDoctor.name}.` }),
-              recentMessages,
-              messageText,
-              managerExamples,
-            );
-            response = mergeReply(aiReply, `Понял! Для начала рекомендую записаться на консультацию к врачу *${pickedDoctor.name}* — он определит, какое лечение вам нужно.\n\nЗаписать вас? (Да / Нет)`);
-            session.state = "suggest_doctor";
-          } else {
-            response = `Чтобы подобрать специалиста, уточните: что именно вас беспокоит?`;
-          }
-          session.data = data;
-          break;
-        }
-
         if (pickedDoctor) {
-          const urgencyNote =
-            classification.urgency === "urgent"
-              ? " Вижу, что ситуация срочная — постараемся записать вас как можно скорее! 🚨"
-              : "";
           const aiReply = await generateChatbotResponse(
-            up("suggest_doctor", { backendContext: `Рекомендуемый врач: ${pickedDoctor.name}.` }),
+            up("suggest_doctor", { backendContext: buildDoctorBackendContext(pickedDoctor, data) }),
             recentMessages,
             messageText,
             managerExamples,
           );
-          response = mergeReply(aiReply, `Понял! Рекомендую врача *${pickedDoctor.name}*.${urgencyNote}\n\nЗаписать вас к нему? (Ответьте «Да» или «Нет»)`);
+          response = mergeReply(aiReply, buildDoctorPresentationFallback(pickedDoctor, data.urgency));
           session.state = "suggest_doctor";
         } else {
           response = `К сожалению, сейчас нет доступных врачей. Напишите «оператор», чтобы связаться с администратором.`;
@@ -2312,10 +2423,7 @@ export class ChatbotService {
             activeNodeId: data.activeMindMapNodeId,
           }) ?? data.activeMindMapNodeId;
 
-        const doctorBackend =
-          `Филиал: ${data.selectedBranch}. ` +
-          `Рекомендация по рейтингу (${ranked.top.rankPercent}/100): ${ranked.top.name}. ` +
-          `Причины: ${ranked.top.reasons.join(", ") || "оптимальный баланс загрузки и KPI"}.`;
+        const doctorBackend = buildDoctorBackendContext(ranked.top, data);
 
         const aiDoctor = await generateChatbotResponse(
           up("suggest_doctor", { backendContext: doctorBackend }),
@@ -2598,7 +2706,7 @@ export class ChatbotService {
           if (bookingFlow) {
             const stored = data.doctorCandidates ?? [];
             const nextStored = stored.find((c) => !excluded.includes(c.id));
-            let nextCandidate = nextStored
+            let nextCandidate: DoctorCandidate | null = nextStored
               ? {
                   id: nextStored.id,
                   name: nextStored.name,
@@ -2751,6 +2859,30 @@ export class ChatbotService {
             response = mergeReply(aiManage, `Пожалуйста, уточните: вы хотите *перенести*, *отменить* запись или *оставить* как есть?`);
           }
         }
+        session.data = data;
+        break;
+      }
+
+      case "show_slots": {
+        const slotsText = data.suggestedDoctorId
+          ? await buildSlotsAppendix(clinicId, data.suggestedDoctorId, settings.calendarConfig)
+          : "";
+        const aiReply = await generateChatbotResponse(
+          up("collect_datetime", {
+            backendContext: `Покажи доступные слоты врача ${data.suggestedDoctorName ?? ""} и попроси выбрать дату/время.`,
+          }),
+          recentMessages,
+          messageText,
+          managerExamples,
+        );
+        response = appendToReply(
+          mergeReply(
+            aiReply,
+            `Вот ближайшие окна${data.suggestedDoctorName ? ` к врачу *${data.suggestedDoctorName}*` : ""}. Какое время вам удобно?`,
+          ),
+          slotsText,
+        );
+        session.state = "collect_datetime";
         session.data = data;
         break;
       }

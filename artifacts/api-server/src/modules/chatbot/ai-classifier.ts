@@ -204,7 +204,7 @@ function detectPatientLanguage(messages: ChatMessage[]): "kz" | "en" | null {
 }
 
 export type { ChatbotReply } from "./chatbot-reply";
-export { joinChatbotReply, mergeReply, appendToReply, replyFromText } from "./chatbot-reply";
+export { joinChatbotReply, mergeReply, appendToReply, polishReply, replyFromText } from "./chatbot-reply";
 
 export async function generateChatbotResponse(
   systemPrompt: string,
