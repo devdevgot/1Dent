@@ -19,6 +19,7 @@ const SKIP_UNAUTHORIZED_PATHS = [
   "/api/auth/register",
   "/api/auth/forgot-password",
   "/api/auth/reset-password",
+  "/api/tablet/public/",
 ];
 const SKIP_BRANCH_HEADER_PATHS = ["/api/auth/", "/api/clinic-branches"];
 

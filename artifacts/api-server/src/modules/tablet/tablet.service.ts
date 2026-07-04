@@ -1,6 +1,8 @@
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import { randomUUID, randomBytes, createHash } from "crypto";
 import { TabletRepository } from "./tablet.repository";
+import { AuthRepository } from "../auth/auth.repository";
 import {
   ForbiddenError,
   NotFoundError,
@@ -47,8 +49,19 @@ function generatePairingCode(): string {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
+function getJwtSecret(): string {
+  const secret = process.env["JWT_SECRET"];
+  if (!secret) {
+    throw new Error("JWT_SECRET environment variable is required.");
+  }
+  return secret;
+}
+
+const TABLET_AUTH_TTL = "12h";
+
 export class TabletService {
   private repo = new TabletRepository();
+  private authRepo = new AuthRepository();
 
   async seedDefaultCabinet(clinicId: string, clinicName: string) {
     const existing = await this.repo.findDefaultCabinet(clinicId);
@@ -191,6 +204,31 @@ export class TabletService {
       }
     }
 
+    let auth: {
+      token: string;
+      user: Record<string, unknown>;
+      clinic: Record<string, unknown>;
+    } | null = null;
+
+    if (session.status === "unlocked" && session.doctorUserId) {
+      const user = await this.authRepo.findUserById(session.doctorUserId);
+      const clinic = user ? await this.authRepo.findClinicById(session.clinicId) : undefined;
+      if (user && clinic) {
+        const { passwordHash: _, ...safeUser } = user;
+        const token = jwt.sign(
+          {
+            userId: user.id,
+            clinicId: session.clinicId,
+            role: user.role,
+            email: user.email,
+          },
+          getJwtSecret(),
+          { expiresIn: TABLET_AUTH_TTL },
+        );
+        auth = { token, user: safeUser, clinic };
+      }
+    }
+
     return {
       sessionId: session.id,
       status: session.status,
@@ -200,6 +238,7 @@ export class TabletService {
       doctor,
       expiresAt: session.expiresAt.toISOString(),
       unlockedAt: session.unlockedAt?.toISOString() ?? null,
+      auth,
     };
   }
 

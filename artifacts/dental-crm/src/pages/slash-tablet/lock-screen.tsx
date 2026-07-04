@@ -14,6 +14,7 @@ import {
   applyCabinetIdToUrl,
   type TabletCabinetBrief,
 } from "@/lib/tablet-api";
+import { bootstrapTabletSessionAuth } from "@/lib/tablet-auth";
 
 type Mode = "qr" | "pin" | "pairing";
 
@@ -85,9 +86,12 @@ export function LockScreen({
       if (unlockedRef.current) return;
       try {
         const res = await getTabletSessionStatus(sessionId);
-        const { status, doctor, cabinet } = res.data;
+        const { status, doctor, cabinet, auth } = res.data;
         if (status === "unlocked" && doctor) {
           unlockedRef.current = true;
+          if (auth?.token && auth.user && auth.clinic) {
+            bootstrapTabletSessionAuth(auth.token, auth.user, auth.clinic);
+          }
           onQrUnlock({
             cabinet,
             doctor: {

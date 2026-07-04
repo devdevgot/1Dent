@@ -10,6 +10,7 @@ import { initials, type TabletDoctor } from "./mock-data";
 import { OneDentLogo } from "./onedent-logo";
 import { resolveCabinetIdFromUrl } from "@/lib/tablet-api";
 import { useAuthStore } from "@/hooks/use-auth";
+import { clearTabletSessionAuth } from "@/lib/tablet-auth";
 
 type Step = "lock" | "confirm" | "patients" | "card";
 
@@ -28,6 +29,7 @@ export default function SlashTabletPage() {
   const [patientId, setPatientId] = useState<string | null>(null);
 
   const logout = () => {
+    clearTabletSessionAuth();
     setStep("lock");
     setDoctor(null);
     setPatientId(null);

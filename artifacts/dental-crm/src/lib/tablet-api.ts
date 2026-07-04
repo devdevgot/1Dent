@@ -1,4 +1,5 @@
 import { customFetch, ApiError } from "@workspace/api-client-react";
+import type { User, Clinic } from "@workspace/api-client-react";
 
 export interface TabletCabinetBrief {
   id: string;
@@ -27,6 +28,11 @@ export interface TabletSessionStatus {
   doctor?: TabletDoctorBrief | null;
   expiresAt: string;
   unlockedAt?: string | null;
+  auth?: {
+    token: string;
+    user: User;
+    clinic: Clinic;
+  } | null;
 }
 
 const CABINET_KEY = "1dent:tablet-cabinet-id";

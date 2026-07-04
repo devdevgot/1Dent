@@ -131,6 +131,9 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     if (DEV_BYPASS) return;
 
     setUnauthorizedHandler(() => {
+      const path = window.location.pathname;
+      if (path.startsWith("/tablet")) return;
+
       queryClient.clear();
       clearAuth();
       clearAuthToken();
