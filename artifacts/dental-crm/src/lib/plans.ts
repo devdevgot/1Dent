@@ -16,8 +16,20 @@ export type ComparisonRowKey =
 export interface ComparisonRow {
   key: ComparisonRowKey;
   label: string;
+  hint?: string;
   values: Record<PaidPlanId, string | boolean>;
 }
+
+export interface ComparisonSection {
+  title: string;
+  rows: ComparisonRow[];
+}
+
+export const PLAN_SHORT_NAMES: Record<PaidPlanId, string> = {
+  starter: "START",
+  professional: "PRO",
+  enterprise: "ENT",
+};
 
 export interface PlanConfig {
   id: PaidPlanId;
@@ -111,27 +123,29 @@ export const COMPARISON_ROWS: ComparisonRow[] = [
   {
     key: "staff",
     label: "Сотрудники",
-    values: { starter: "до 10", professional: "до 30", enterprise: "безлимит" },
+    values: { starter: "до 10", professional: "до 30", enterprise: "∞" },
   },
   {
     key: "branches",
     label: "Филиалы",
-    values: { starter: "1", professional: "1", enterprise: "несколько" },
+    values: { starter: "1", professional: "1", enterprise: "неск." },
   },
   {
     key: "aiCredits",
-    label: "AI-кредиты / мес",
+    label: "AI-кредиты",
+    hint: "в месяц",
     values: { starter: "1 000", professional: "5 000", enterprise: "15 000" },
   },
   {
     key: "chatbotDialogs",
-    label: "Диалоги чат-бота / мес",
+    label: "Чат-бот",
+    hint: "диалогов / мес",
     values: { starter: "300", professional: "1 500", enterprise: "5 000" },
   },
   {
     key: "documentTemplates",
-    label: "Шаблоны документов",
-    values: { starter: "до 5", professional: "до 20", enterprise: "безлимит" },
+    label: "Шаблоны",
+    values: { starter: "5", professional: "20", enterprise: "∞" },
   },
   {
     key: "channelAnalytics",
@@ -140,13 +154,28 @@ export const COMPARISON_ROWS: ComparisonRow[] = [
   },
   {
     key: "prioritySupport",
-    label: "Приоритетная поддержка",
+    label: "Приор. поддержка",
     values: { starter: false, professional: true, enterprise: true },
   },
   {
     key: "accountManager",
-    label: "Персональный менеджер",
+    label: "Менеджер",
     values: { starter: false, professional: false, enterprise: true },
+  },
+];
+
+export const COMPARISON_SECTIONS: ComparisonSection[] = [
+  {
+    title: "Лимиты",
+    rows: COMPARISON_ROWS.filter((row) =>
+      ["staff", "branches", "aiCredits", "chatbotDialogs", "documentTemplates"].includes(row.key),
+    ),
+  },
+  {
+    title: "Возможности",
+    rows: COMPARISON_ROWS.filter((row) =>
+      ["channelAnalytics", "prioritySupport", "accountManager"].includes(row.key),
+    ),
   },
 ];
 
