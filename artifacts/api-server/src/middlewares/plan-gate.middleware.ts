@@ -1,6 +1,9 @@
 import type { Request, Response, NextFunction } from "express";
 import { pool } from "@workspace/db";
 
+/** Staging only: set SKIP_PLAN_GATE=true on dev Railway service (not production). */
+const SKIP_PLAN_GATE = process.env.SKIP_PLAN_GATE === "true";
+
 const EXEMPT_PREFIXES = [
   "/api/auth/",
   "/api/errors/",
@@ -17,6 +20,7 @@ function isExempt(url: string): boolean {
 }
 
 export async function planGateMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
+  if (SKIP_PLAN_GATE) return next();
   if (isExempt(req.originalUrl)) return next();
   if (!req.user?.clinicId) return next();
 

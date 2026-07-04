@@ -109,3 +109,18 @@ bash scripts/railway-deploy.sh
 
 Build: `bash ./scripts/deploy-build.sh` (из `railway.toml`)  
 Start: `pnpm --filter @workspace/api-server run start`
+
+## Staging (ветка `dev`)
+
+Можно поднять **отдельный сервис** Railway с веткой `dev` (Settings → Source → Branch: `dev`).
+
+Чтобы на staging не блокировал истёкший пробный период / тариф (только dev, **не** production):
+
+| Переменная | Значение | Где действует |
+|---|---|---|
+| `SKIP_PLAN_GATE` | `true` | API — пропускает `plan-gate` middleware |
+| `VITE_SKIP_PLAN_PAYWALL` | `true` | CRM — не показывает экран «тариф не подключён» |
+
+**Важно:** эти переменные задаются **только на staging-сервисе**. На production (`master`) их **не добавлять** — тарифная защита останется включённой.
+
+После добавления переменных — **Redeploy** staging-сервиса (для `VITE_*` нужна пересборка).

@@ -18,6 +18,9 @@ import "@/styles/dashboard.css";
 
 const SUPPORT_WHATSAPP = "77071234567";
 
+/** Staging only: set VITE_SKIP_PLAN_PAYWALL=true on dev Railway service (not production). */
+const SKIP_PLAN_PAYWALL = import.meta.env.VITE_SKIP_PLAN_PAYWALL === "true";
+
 const FEATURE_KEYS = ["patients", "whatsapp", "analytics"] as const;
 const FEATURE_ICONS = {
   patients: Users,
@@ -32,6 +35,8 @@ export function PlanPaywall() {
   const { toast } = useToast();
   const [loc] = useLocation();
   const [startingTrial, setStartingTrial] = useState(false);
+
+  if (SKIP_PLAN_PAYWALL) return null;
 
   const status = getSubscriptionStatus(clinic);
   const isOwner = user?.role === "owner";
