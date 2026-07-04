@@ -54,6 +54,7 @@ import ClinicBranchesPage from "@/pages/clinic-branches";
 import PricingPage from "@/pages/pricing";
 import AiCreditsPage from "@/pages/ai-credits";
 import LandingPage from "@/pages/landing";
+import SlashTabletPage from "@/pages/slash-tablet";
 import NotFound from "@/pages/not-found";
 
 // Admin-specific pages
@@ -262,6 +263,8 @@ function Router() {
     {isAuthenticated && <PlanPaywall />}
     <Switch>
       <Route path="/" component={LandingPage} />
+      {/* SlashTablet — отдельный планшетный режим для кабинета врача (QR / PIN вход) */}
+      <Route path="/tablet" component={SlashTabletPage} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
       <Route path="/forgot-password" component={ForgotPassword} />
