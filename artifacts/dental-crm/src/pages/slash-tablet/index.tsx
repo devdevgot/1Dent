@@ -79,7 +79,6 @@ function TabletTopBar({ doctor, onLogout }: { doctor: TabletDoctor; onLogout: ()
           </div>
           <div className="hidden text-right sm:block">
             <p className="text-sm font-bold leading-tight text-[#0f172a]">{doctor.name}</p>
-            <p className="text-xs text-[#94a3b8]">{doctor.specialty}</p>
           </div>
         </div>
         <button
