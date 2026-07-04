@@ -1,13 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { motion, AnimatePresence } from "framer-motion";
-import { Smartphone, Delete, ShieldCheck, RefreshCw, LogIn } from "lucide-react";
-import { useLocation } from "wouter";
+import { Smartphone, Delete, ShieldCheck, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAuthStore } from "@/hooks/use-auth";
 import { CABINET } from "./mock-data";
 import { OneDentLogo } from "./onedent-logo";
-import { canAccessTablet } from "./tablet-session";
 
 type Mode = "qr" | "pin";
 
@@ -16,9 +13,6 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
   const [pin, setPin] = useState("");
   const [error, setError] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { user } = useAuthStore();
-  const [, navigate] = useLocation();
-  const crmTabletUser = user && canAccessTablet(user.role) ? user : null;
 
   // Токен для входа зашит в QR (в реале — одноразовый токен сессии кабинета)
   const qrPayload = `https://app.1dent.kz/tablet/link?cabinet=${CABINET.id}&t=${Date.now()}`;
@@ -151,17 +145,6 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
           </AnimatePresence>
         </div>
       </div>
-
-      {crmTabletUser && (
-        <button
-          type="button"
-          onClick={() => navigate("/tablet/workspace/patients")}
-          className="absolute bottom-6 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-2xl border border-[#e8e3d9] bg-white px-5 py-3 text-sm font-semibold text-[#0f172a] shadow-sm transition-colors hover:bg-[#faf8f4]"
-        >
-          <LogIn className="h-4 w-4 text-[#1f75fe]" />
-          Войти как {crmTabletUser.name}
-        </button>
-      )}
     </div>
   );
 }

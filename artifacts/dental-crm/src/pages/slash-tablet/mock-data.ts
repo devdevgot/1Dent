@@ -85,7 +85,6 @@ export const CABINET: TabletCabinet = {
 };
 
 export const DOCTORS: TabletDoctor[] = [
-  { id: "doc-owner", name: "Владелец клиники", specialty: "Владелец · врач", avatarColor: "#7c3aed" },
   { id: "doc-1", name: "Асанова Айгуль", specialty: "Терапевт", avatarColor: "#1f75fe" },
   { id: "doc-2", name: "Ким Сергей", specialty: "Хирург-имплантолог", avatarColor: "#7c3aed" },
   { id: "doc-3", name: "Нурланова Дана", specialty: "Ортодонт", avatarColor: "#0ea5e9" },

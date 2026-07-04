@@ -1,46 +1,61 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft, Eye, Activity, ClipboardList, PlayCircle, Info, FileText,
+  ArrowLeft, Eye, Activity, ClipboardList, PlayCircle, Info,
   ChevronDown, CheckCircle2, Circle, Loader2, Plus, Phone, AlertTriangle,
   Sparkles, X,
 } from "lucide-react";
+import { useGetPatient, useListTeeth, useGetActiveTreatmentPlan } from "@workspace/api-client-react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { TabletChartSection } from "./tablet-chart-section";
 import { TabletPresentationMode } from "./tablet-presentation-mode";
-import { TabletPatientContracts } from "./tablet-pages";
-import type { TabletSession } from "./tablet-session";
 import {
-  getPlanForPatient, VIDEOS, CONDITION_META, STATUS_META, fmtTenge, initials,
-  type TabletPatient, type PlanStage, type TreatmentVideo, type ToothCondition,
+  VIDEOS, CONDITION_META, STATUS_META, fmtTenge, initials,
+  type PlanStage, type TreatmentVideo, type ToothCondition,
 } from "./mock-data";
+import { apiPatientToTablet, apiPlanToStages, apiTeethToMap } from "./tablet-patient-adapter";
+import { KANBAN_COLUMNS } from "@/lib/patient-utils";
 
-type Tab = "info" | "chart" | "plan" | "contracts" | "video";
+type Tab = "chart" | "plan" | "video" | "info";
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
-  { id: "info", label: "Инфо", icon: Info },
   { id: "chart", label: "Карта зубов", icon: Activity },
   { id: "plan", label: "План лечения", icon: ClipboardList },
-  { id: "contracts", label: "Договоры", icon: FileText },
   { id: "video", label: "Видео", icon: PlayCircle },
+  { id: "info", label: "Инфо", icon: Info },
 ];
 
-export function PatientCard({
-  patient,
-  onBack,
-  session: _session,
-}: {
-  patient: TabletPatient;
-  onBack: () => void;
-  session?: TabletSession;
-}) {
+export function PatientCard({ patientId, onBack }: { patientId: string; onBack: () => void }) {
+  const { t } = useTranslation();
+  const { data: patientRes, isLoading, isError } = useGetPatient(patientId);
+  const { data: teethData } = useListTeeth(patientId);
+  const { data: planData } = useGetActiveTreatmentPlan(patientId);
+
+  const apiPatient = patientRes?.data?.patient;
+  const teethFromApi = useMemo(
+    () => apiTeethToMap(teethData?.data?.teeth ?? []),
+    [teethData],
+  );
+  const plan = useMemo(
+    () => apiPlanToStages(planData?.data?.plan),
+    [planData],
+  );
+  const patient = useMemo(
+    () => (apiPatient ? apiPatientToTablet(apiPatient, teethFromApi) : null),
+    [apiPatient, teethFromApi],
+  );
+
   const [tab, setTab] = useState<Tab>("chart");
-  const [teeth, setTeeth] = useState<Record<number, ToothCondition>>(() => ({ ...patient.teeth }));
+  const [teeth, setTeeth] = useState<Record<number, ToothCondition>>({});
   const [selectedFdi, setSelectedFdi] = useState<number | null>(null);
   const [presentation, setPresentation] = useState(false);
   const [activeVideo, setActiveVideo] = useState<TreatmentVideo | null>(null);
 
-  const plan = useMemo(() => getPlanForPatient(patient.id), [patient.id]);
+  useEffect(() => {
+    setTeeth(teethFromApi);
+  }, [teethFromApi]);
+
   const planFdis = useMemo(() => {
     const s = new Set<number>();
     plan.forEach((st) => st.items.forEach((it) => it.tooth && s.add(it.tooth)));
@@ -56,6 +71,18 @@ export function PatientCard({
   const relatedVideos = selectedCond
     ? VIDEOS.filter((v) => v.relatedConditions.includes(selectedCond))
     : [];
+
+  if (isLoading || !patient) {
+    return (
+      <div className="flex h-[100dvh] items-center justify-center bg-[#faf8f4]">
+        {isError ? (
+          <p className="text-sm text-[#dc2626]">{t("kanban.loadError")}</p>
+        ) : (
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#1f75fe]/20 border-t-[#1f75fe]" />
+        )}
+      </div>
+    );
+  }
 
   if (presentation) {
     return (
@@ -87,7 +114,7 @@ export function PatientCard({
           </div>
           <div className="text-center">
             <p className="text-base font-extrabold leading-tight text-[#0f172a]">{patient.name}</p>
-            <p className="text-xs text-[#94a3b8]">{patient.age} лет · {patient.visitType}</p>
+            <p className="text-xs text-[#94a3b8]">{patient.age} лет · {patient.visitType || KANBAN_COLUMNS.find((c) => c.id === patient.status)?.label}</p>
           </div>
         </div>
 
@@ -148,7 +175,8 @@ export function PatientCard({
             {/* Правая: план */}
             <div className="overflow-auto rounded-2xl border border-[#e8e3d9] bg-white">
               <PlanPanel plan={plan} progress={progress} doneCount={doneCount}
-                total={allItems.length} planTotal={planTotal} filterFdi={selectedFdi} />
+                total={allItems.length} planTotal={planTotal} filterFdi={selectedFdi}
+                planNumber={planData?.data?.plan?.planNumber} />
             </div>
           </div>
         )}
@@ -157,17 +185,14 @@ export function PatientCard({
           <div className="mx-auto max-w-3xl p-4">
             <div className="rounded-2xl border border-[#e8e3d9] bg-white">
               <PlanPanel plan={plan} progress={progress} doneCount={doneCount}
-                total={allItems.length} planTotal={planTotal} filterFdi={null} />
+                total={allItems.length} planTotal={planTotal} filterFdi={null}
+                planNumber={planData?.data?.plan?.planNumber} />
             </div>
           </div>
         )}
 
         {tab === "video" && (
           <VideoLibrary onPlay={(v) => setActiveVideo(v)} />
-        )}
-
-        {tab === "contracts" && (
-          <TabletPatientContracts patientName={patient.name} />
         )}
 
         {tab === "info" && <PatientInfo patient={patient} />}
@@ -232,7 +257,7 @@ function ToothDetail({
 
 // ── Панель плана ──────────────────────────────────────────────────────────────
 function PlanPanel({
-  plan, progress, doneCount, total, planTotal, filterFdi,
+  plan, progress, doneCount, total, planTotal, filterFdi, planNumber,
 }: {
   plan: PlanStage[];
   progress: number;
@@ -240,6 +265,7 @@ function PlanPanel({
   total: number;
   planTotal: number;
   filterFdi: number | null;
+  planNumber?: number;
 }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set(plan.map((s) => s.id)));
   const toggle = (id: string) =>
@@ -272,7 +298,7 @@ function PlanPanel({
         <div className="mb-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <ClipboardList className="h-4 w-4 text-[#1f75fe]" />
-            <span className="text-sm font-bold text-[#0f172a]">План лечения №3</span>
+            <span className="text-sm font-bold text-[#0f172a]">План лечения №{planNumber ?? "—"}</span>
           </div>
           <span className="rounded-full bg-[#f0fdf4] px-2.5 py-0.5 text-xs font-bold text-[#16a34a]">Активен</span>
         </div>
@@ -430,8 +456,12 @@ function VideoPlayer({ video, onClose }: { video: TreatmentVideo; onClose: () =>
 }
 
 // ── Инфо о пациенте ───────────────────────────────────────────────────────────
-function PatientInfo({ patient }: { patient: TabletPatient }) {
-  const st = STATUS_META[patient.status];
+function PatientInfo({ patient }: { patient: ReturnType<typeof apiPatientToTablet> }) {
+  const { t } = useTranslation();
+  const st = STATUS_META[patient.status as keyof typeof STATUS_META];
+  const statusLabel = st?.label ?? KANBAN_COLUMNS.find((c) => c.id === patient.status)?.label ?? t(`status.${patient.status}`);
+  const statusColor = st?.color ?? "#64748b";
+  const statusBg = st?.bg ?? "#f1f5f9";
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-4">
       <div className="rounded-2xl border border-[#e8e3d9] bg-white p-5">
@@ -443,7 +473,7 @@ function PatientInfo({ patient }: { patient: TabletPatient }) {
             <p className="text-xl font-extrabold text-[#0f172a]">{patient.name}</p>
             <p className="text-sm text-[#64748b]">{patient.age} лет · {patient.gender === "f" ? "женский" : "мужской"}</p>
             <span className="mt-1 inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold"
-              style={{ color: st.color, backgroundColor: st.bg }}>{st.label}</span>
+              style={{ color: statusColor, backgroundColor: statusBg }}>{statusLabel}</span>
           </div>
         </div>
         <div className="mt-4 flex items-center gap-2 rounded-xl bg-[#faf8f4] px-4 py-3 text-sm">

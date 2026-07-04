@@ -28,7 +28,6 @@ import {
   MapPin,
   Building2,
   CreditCard,
-  Monitor,
 } from "lucide-react";
 
 const SUPPORTED_LANGS = ["ru", "kz", "en"] as const;
@@ -49,7 +48,6 @@ const ALL_NAV_ITEMS = [
   { nameKey: "nav.clinicBranches",    href: "/clinic-branches",    icon: Building2,    roles: ["owner"] },
   { nameKey: "nav.pricing",           href: "/pricing",            icon: CreditCard,   roles: ["owner"] },
   { nameKey: "nav.branches",          href: "/branches",           icon: MapPin,       roles: ["owner"] },
-  { nameKey: "nav.tabletMode",        href: "/tablet/workspace/patients", icon: Monitor, roles: ["owner", "doctor", "admin"] },
 ];
 
 const gridVariants = {
