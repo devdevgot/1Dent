@@ -97,6 +97,33 @@ export class TabletService {
     };
   }
 
+  async issuePairingCode(clinicId: string, cabinetId?: string) {
+    let cabinet = cabinetId
+      ? await this.repo.findCabinetById(cabinetId)
+      : await this.repo.findDefaultCabinet(clinicId);
+
+    if (!cabinet) {
+      cabinet = await this.seedDefaultCabinet(clinicId, "Клиника");
+    }
+
+    if (cabinet.clinicId !== clinicId) {
+      throw new ForbiddenError("Кабинет не принадлежит вашей клинике");
+    }
+
+    const pairingCode = generatePairingCode();
+    const updated = await this.repo.updatePairingCode(cabinet.id, pairingCode);
+    if (!updated) throw new NotFoundError("Кабинет не найден");
+
+    const base = getPublicAppBaseUrl();
+    return {
+      cabinetId: updated.id,
+      name: updated.name,
+      pairingCode,
+      tabletUrl: `${base}/tablet?cabinet=${updated.id}`,
+      expiresInSeconds: 300,
+    };
+  }
+
   async getCabinetPublic(cabinetId: string) {
     const cabinet = await this.repo.findCabinetById(cabinetId);
     if (!cabinet) throw new NotFoundError("Кабинет не найден");

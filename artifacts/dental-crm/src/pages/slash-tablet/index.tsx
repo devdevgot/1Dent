@@ -5,13 +5,23 @@ import { LockScreen } from "./lock-screen";
 import { CabinetConfirm } from "./cabinet-confirm";
 import { PatientList } from "./patient-list";
 import { PatientCard } from "./patient-card";
+import { TabletDoctorSetup } from "./tablet-doctor-setup";
 import { initials, type TabletDoctor } from "./mock-data";
 import { OneDentLogo } from "./onedent-logo";
-import type { TabletCabinetBrief } from "@/lib/tablet-api";
+import { resolveCabinetIdFromUrl } from "@/lib/tablet-api";
+import { useAuthStore } from "@/hooks/use-auth";
 
 type Step = "lock" | "confirm" | "patients" | "card";
 
+function isTabletManagerRole(role: string | undefined) {
+  return role === "doctor" || role === "owner";
+}
+
 export default function SlashTabletPage() {
+  const { user, isAuthenticated } = useAuthStore();
+  const hasCabinet = Boolean(resolveCabinetIdFromUrl());
+  const showDoctorSetup = isAuthenticated && isTabletManagerRole(user?.role) && !hasCabinet;
+
   const [step, setStep] = useState<Step>("lock");
   const [doctor, setDoctor] = useState<TabletDoctor | null>(null);
   const [cabinetName, setCabinetName] = useState("Кабинет");
@@ -22,6 +32,10 @@ export default function SlashTabletPage() {
     setDoctor(null);
     setPatientId(null);
   };
+
+  if (showDoctorSetup) {
+    return <TabletDoctorSetup />;
+  }
 
   return (
     <div className="h-[100dvh] w-full overflow-hidden bg-[#faf8f4] font-manrope">

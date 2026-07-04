@@ -35,6 +35,16 @@ router.get("/me", async (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
+router.post("/cabinets/pairing-code", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const cabinetId = typeof req.body?.cabinetId === "string" ? req.body.cabinetId : undefined;
+    const data = await service.issuePairingCode(req.user!.clinicId, cabinetId);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get("/cabinets", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const cabinets = await service.listCabinets(req.user!.clinicId);

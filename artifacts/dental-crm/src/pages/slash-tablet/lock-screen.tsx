@@ -122,7 +122,7 @@ export function LockScreen({
       setCabinetName(cabinet.name);
       await bootstrapSession(cabinet.id);
     } catch {
-      setPairingError("Код не найден. Откройте CRM → кнопка «Планшет» рядом с поиском.");
+      setPairingError("Код не найден. Запросите новый код у врача или владельца.");
     } finally {
       setPairingLoading(false);
     }
@@ -186,7 +186,7 @@ export function LockScreen({
               <span className="text-base font-bold">Подключение кабинета</span>
             </div>
             <p className="mb-6 text-center text-sm text-[#64748b]">
-              В CRM нажмите «Планшет» рядом с поиском — там будет 6-значный код. Введите его на этом экране.
+              Попросите врача или владельца открыть страницу планшета в CRM и нажать «Подключить планшет» — там будет 6-значный код.
             </p>
 
             <div className={cn("mb-4 flex gap-2", pairingError && "animate-shake")}>

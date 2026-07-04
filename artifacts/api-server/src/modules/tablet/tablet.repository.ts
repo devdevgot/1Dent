@@ -154,4 +154,13 @@ export class TabletRepository {
       .set({ tabletPinHash: pinHash, updatedAt: new Date() })
       .where(eq(usersTable.id, userId));
   }
+
+  async updatePairingCode(cabinetId: string, pairingCode: string): Promise<TabletCabinet | null> {
+    const [row] = await db
+      .update(tabletCabinetsTable)
+      .set({ pairingCode, updatedAt: new Date() })
+      .where(eq(tabletCabinetsTable.id, cabinetId))
+      .returning();
+    return row ?? null;
+  }
 }

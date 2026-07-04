@@ -148,6 +148,22 @@ export async function redeemTabletLink(token: string, pin?: string) {
   }
 }
 
+export async function issueTabletPairingCode(cabinetId?: string) {
+  return customFetch<{
+    success: boolean;
+    data: {
+      cabinetId: string;
+      name: string;
+      pairingCode: string;
+      tabletUrl: string;
+      expiresInSeconds: number;
+    };
+  }>("/api/tablet/cabinets/pairing-code", {
+    method: "POST",
+    body: JSON.stringify(cabinetId ? { cabinetId } : {}),
+  });
+}
+
 export async function listTabletCabinets() {
   return customFetch<{
     success: boolean;
