@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Smartphone, Delete, ShieldCheck, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CABINET } from "./mock-data";
+import { OneDentLogo } from "./onedent-logo";
 
 type Mode = "qr" | "pin";
 
@@ -43,6 +44,8 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
 
   return (
     <div className="relative flex h-[100dvh] w-full items-center justify-center overflow-hidden bg-[#faf8f4] px-6 font-manrope">
+      <OneDentLogo className="absolute right-5 top-5 h-10" />
+
       {/* Декоративный фон */}
       <div className="pointer-events-none absolute inset-0 opacity-60">
         <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-[#1f75fe]/8 blur-3xl" />
@@ -50,13 +53,8 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
       </div>
 
       <div className="relative w-full max-w-4xl">
-        {/* Бренд + кабинет */}
+        {/* Кабинет */}
         <div className="mb-8 flex flex-col items-center text-center">
-          <div className="mb-4 flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#1f75fe] text-white font-black">1</div>
-            <span className="text-xl font-extrabold tracking-tight text-[#0f172a]">1Dent</span>
-            <span className="ml-1 rounded-full bg-[#1f75fe]/10 px-2.5 py-0.5 text-xs font-bold text-[#1f75fe]">Tablet</span>
-          </div>
           <h1 className="text-2xl font-extrabold text-[#0f172a]">{CABINET.name}</h1>
           <p className="mt-1 text-sm text-[#64748b]">{CABINET.clinicName} · {CABINET.address}</p>
         </div>

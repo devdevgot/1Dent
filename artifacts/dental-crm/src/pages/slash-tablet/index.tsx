@@ -6,6 +6,7 @@ import { CabinetConfirm } from "./cabinet-confirm";
 import { PatientList } from "./patient-list";
 import { PatientCard } from "./patient-card";
 import { CABINET, initials, type TabletDoctor, type TabletPatient } from "./mock-data";
+import { OneDentLogo } from "./onedent-logo";
 
 type Step = "lock" | "confirm" | "patients" | "card";
 
@@ -63,22 +64,16 @@ export default function SlashTabletPage() {
 function TabletTopBar({ doctor, onLogout }: { doctor: TabletDoctor; onLogout: () => void }) {
   return (
     <header className="flex items-center justify-between border-b border-[#e8e3d9] bg-white px-5 py-3">
-      <div className="flex items-center gap-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1f75fe] text-sm font-black text-white">1</div>
-        <span className="text-lg font-extrabold tracking-tight text-[#0f172a]">1Dent</span>
-        <span className="rounded-full bg-[#1f75fe]/10 px-2 py-0.5 text-[11px] font-bold text-[#1f75fe]">Tablet</span>
-        <span className="ml-2 hidden items-center gap-1.5 text-sm text-[#64748b] sm:flex">
+      <div className="flex items-center gap-3">
+        <span className="hidden items-center gap-1.5 text-sm text-[#64748b] sm:flex">
           <LayoutGrid className="h-4 w-4" /> {CABINET.name}
         </span>
-      </div>
-
-      <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-white"
             style={{ backgroundColor: doctor.avatarColor }}>
             {initials(doctor.name)}
           </div>
-          <div className="hidden text-right sm:block">
+          <div className="hidden text-left sm:block">
             <p className="text-sm font-bold leading-tight text-[#0f172a]">{doctor.name}</p>
             <p className="text-xs text-[#94a3b8]">{doctor.specialty}</p>
           </div>
@@ -90,6 +85,8 @@ function TabletTopBar({ doctor, onLogout }: { doctor: TabletDoctor; onLogout: ()
           <LogOut className="h-4 w-4" /> Выход
         </button>
       </div>
+
+      <OneDentLogo />
     </header>
   );
 }
