@@ -29,6 +29,7 @@ import { FaWhatsapp } from "react-icons/fa";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { useGeoRestriction } from "@/hooks/use-geo-restriction";
+import { TabletScannerSlot } from "@/components/tablet/tablet-scanner-slot";
 
 const ROLE_DASHBOARD_HREF: Record<string, string> = {
   owner:      "/dashboard",
@@ -175,6 +176,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
           <div className="flex items-center gap-3 px-4 py-2.5">
             <GlobalSearch />
+            {(user?.role === "doctor" || user?.role === "owner") && (
+              <TabletScannerSlot />
+            )}
             <div className="shrink-0">
               <NotificationBell />
             </div>

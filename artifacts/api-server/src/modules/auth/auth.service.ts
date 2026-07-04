@@ -16,6 +16,7 @@ import { sendPasswordResetEmail, sendStaffInvitationEmail } from "../../lib/emai
 import { logger } from "../../lib/logger";
 import { seedContractTemplatesForClinic } from "../../seeds/contract-templates.seed";
 import { seedProcedureTemplates } from "../../seeds/procedure-templates.seed";
+import { TabletService } from "../tablet/tablet.service";
 import { planLimitsService } from "../../shared/plan-limits.service";
 
 const resetTokens = new Map<string, { email: string; expiresAt: number }>();
@@ -63,6 +64,10 @@ export class AuthService {
 
     seedProcedureTemplates(clinic.id).catch((err) => {
       logger.warn({ err, clinicId: clinic.id }, "[auth] procedure template seed failed on register");
+    });
+
+    new TabletService().seedDefaultCabinet(clinic.id, clinic.name).catch((err) => {
+      logger.warn({ err, clinicId: clinic.id }, "[auth] tablet cabinet seed failed on register");
     });
 
     const passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);

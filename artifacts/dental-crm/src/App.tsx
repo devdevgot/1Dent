@@ -56,6 +56,7 @@ import { PlanPaywall } from "@/components/billing/plan-paywall";
 import AiCreditsPage from "@/pages/ai-credits";
 import LandingPage from "@/pages/landing";
 import SlashTabletPage from "@/pages/slash-tablet";
+import TabletLinkPage from "@/pages/slash-tablet/tablet-link";
 import NotFound from "@/pages/not-found";
 
 // Admin-specific pages
@@ -191,6 +192,7 @@ function Router() {
     <Switch>
       <Route path="/" component={LandingPage} />
       {/* SlashTablet — планшетный режим для кабинета врача (QR / PIN вход) */}
+      <Route path="/tablet/link" component={TabletLinkPage} />
       <Route path="/tablet" component={SlashTabletPage} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />

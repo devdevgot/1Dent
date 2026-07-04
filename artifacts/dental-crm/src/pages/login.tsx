@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link, useLocation } from "wouter";
+import { Link, useLocation, useSearch } from "wouter";
 import { createLoginSchema, type LoginFormValues } from "@/lib/schemas";
 import { useLogin } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
@@ -16,6 +16,8 @@ import { useTranslation } from "react-i18next";
 export default function Login() {
   const { t } = useTranslation();
   const [, setLocation] = useLocation();
+  const search = useSearch();
+  const returnTo = new URLSearchParams(search).get("returnTo");
   const { setAuth } = useAuthStore();
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
@@ -37,7 +39,9 @@ export default function Login() {
             title: t("auth.loginSuccessTitle"),
             description: t("auth.loginSuccessDesc", { clinic: response.data.clinic.name }),
           });
-          setLocation(getRoleDashboardPath(response.data.user.role));
+          setLocation(
+            returnTo && returnTo.startsWith("/") ? returnTo : getRoleDashboardPath(response.data.user.role),
+          );
         }
       },
       onError: (error) => {

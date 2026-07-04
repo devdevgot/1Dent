@@ -16,3 +16,4 @@ export * from "./knowledge";
 export * from "./platform";
 export * from "./ai-credits";
 export * from "./error-events";
+export * from "./tablet";

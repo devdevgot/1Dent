@@ -30,6 +30,8 @@ import knowledgeRouter from "../modules/knowledge/knowledge.controller";
 import aiCreditsRouter from "../modules/ai-credits/ai-credits.controller";
 import errorEventsRouter from "../modules/error-events/error-events.controller";
 import planRequestsRouter from "../modules/plan-requests/plan-requests.controller";
+import tabletPublicRouter from "../modules/tablet/tablet-public.controller";
+import tabletRouter from "../modules/tablet/tablet.controller";
 import { actionLogMiddleware } from "../middlewares/action-log.middleware";
 import { authRateLimit } from "../middlewares/rate-limit.middleware";
 import { authMiddleware, roleGuard } from "../middlewares/auth.middleware";
@@ -53,6 +55,8 @@ router.use("/errors", errorEventsRouter);
 router.use("/plan-requests", planRequestsRouter);
 
 router.use(planGateMiddleware);
+router.use("/tablet/public", tabletPublicRouter);
+router.use("/tablet", tabletRouter);
 router.use(actionLogMiddleware);
 router.use("/users", usersRouter);
 router.use("/patients", patientsRouter);

@@ -103,3 +103,24 @@ export class OpenRouterAiFailedError extends AppError {
     super(message, 502, "OPENROUTER_AI_FAILED");
   }
 }
+
+export class TabletPinSetupRequiredError extends AppError {
+  constructor(
+    public readonly linkToken: string,
+    message = "Установите PIN-код для входа в планшетный кабинет",
+  ) {
+    super(message, 428, "TABLET_PIN_SETUP_REQUIRED");
+  }
+}
+
+export class TabletPinRequiredError extends AppError {
+  constructor(message = "Введите PIN-код планшета") {
+    super(message, 401, "TABLET_PIN_REQUIRED");
+  }
+}
+
+export class TabletPinInvalidError extends AppError {
+  constructor(message = "Неверный PIN-код") {
+    super(message, 401, "TABLET_PIN_INVALID");
+  }
+}

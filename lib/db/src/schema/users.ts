@@ -26,6 +26,7 @@ export const usersTable = pgTable("users", {
   specialty: text("specialty"),
   hireDate: date("hire_date"),
   isActive: boolean("is_active").notNull().default(true),
+  tabletPinHash: text("tablet_pin_hash"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

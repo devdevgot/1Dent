@@ -26,6 +26,8 @@ tags:
     description: Channel tracking and UTM analytics
   - name: billing
     description: Subscription and plan upgrade requests
+  - name: tablet
+    description: SlashTablet cabinet sessions and QR linking
 
 paths:
   /healthz:
@@ -222,6 +224,198 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /tablet/public/sessions:
+    post:
+      operationId: createTabletSession
+      tags: [tablet]
+      summary: Create a new tablet QR session (public)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTabletSessionRequest"
+      responses:
+        "201":
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TabletSessionCreateResponse"
+        "404":
+          description: Cabinet not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /tablet/public/sessions/{sessionId}:
+    get:
+      operationId: getTabletSessionStatus
+      tags: [tablet]
+      summary: Poll tablet session unlock status (public)
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Session status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TabletSessionStatusResponse"
+        "404":
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /tablet/public/cabinets/{cabinetId}:
+    get:
+      operationId: getTabletCabinetPublic
+      tags: [tablet]
+      summary: Get cabinet metadata (public)
+      parameters:
+        - name: cabinetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Cabinet info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TabletCabinetPublicResponse"
+        "404":
+          description: Cabinet not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /tablet/public/cabinets/{cabinetId}/verify-pin:
+    post:
+      operationId: verifyTabletCabinetPin
+      tags: [tablet]
+      summary: Verify cabinet PIN on tablet lock screen (public)
+      parameters:
+        - name: cabinetId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyTabletCabinetPinRequest"
+      responses:
+        "200":
+          description: PIN valid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          description: Invalid PIN
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /tablet/me:
+    get:
+      operationId: getTabletMe
+      tags: [tablet]
+      summary: Tablet PIN status for current user
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Tablet user state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TabletMeResponse"
+
+  /tablet/cabinets:
+    get:
+      operationId: listTabletCabinets
+      tags: [tablet]
+      summary: List tablet cabinets for clinic
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Cabinets list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TabletCabinetsListResponse"
+
+  /tablet/pin:
+    post:
+      operationId: setTabletPin
+      tags: [tablet]
+      summary: Set or update user tablet PIN (optionally redeem link)
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetTabletPinRequest"
+      responses:
+        "200":
+          description: PIN saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TabletPinResponse"
+
+  /tablet/link:
+    post:
+      operationId: redeemTabletLink
+      tags: [tablet]
+      summary: Redeem QR link token from phone
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RedeemTabletLinkRequest"
+      responses:
+        "200":
+          description: Tablet unlocked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TabletLinkRedeemResponse"
+        "401":
+          description: PIN required or invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "428":
+          description: PIN setup required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TabletPinSetupRequiredResponse"
 
   /plan-requests:
     post:
@@ -4727,3 +4921,297 @@ components:
           type: string
           format: date-time
           nullable: true
+
+    CreateTabletSessionRequest:
+      type: object
+      properties:
+        cabinetId:
+          type: string
+      required:
+        - cabinetId
+
+    TabletCabinetBrief:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+      required:
+        - id
+        - name
+
+    TabletSessionCreateData:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        linkToken:
+          type: string
+        linkUrl:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        cabinet:
+          $ref: "#/components/schemas/TabletCabinetBrief"
+      required:
+        - sessionId
+        - linkToken
+        - linkUrl
+        - expiresAt
+        - cabinet
+
+    TabletSessionCreateResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: "#/components/schemas/TabletSessionCreateData"
+      required:
+        - success
+        - data
+
+    TabletDoctorBrief:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        specialty:
+          type: string
+          nullable: true
+        avatarColor:
+          type: string
+      required:
+        - id
+        - name
+        - avatarColor
+
+    TabletSessionStatusData:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        status:
+          type: string
+          enum: [pending, unlocked, expired]
+        cabinet:
+          $ref: "#/components/schemas/TabletCabinetBrief"
+        doctor:
+          allOf:
+            - $ref: "#/components/schemas/TabletDoctorBrief"
+          nullable: true
+        expiresAt:
+          type: string
+          format: date-time
+        unlockedAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - sessionId
+        - status
+        - cabinet
+        - expiresAt
+
+    TabletSessionStatusResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: "#/components/schemas/TabletSessionStatusData"
+      required:
+        - success
+        - data
+
+    TabletCabinetPublicResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            cabinet:
+              type: object
+              properties:
+                id:
+                  type: string
+                name:
+                  type: string
+                clinicId:
+                  type: string
+              required:
+                - id
+                - name
+                - clinicId
+          required:
+            - cabinet
+      required:
+        - success
+        - data
+
+    VerifyTabletCabinetPinRequest:
+      type: object
+      properties:
+        pin:
+          type: string
+          minLength: 4
+          maxLength: 4
+      required:
+        - pin
+
+    TabletMeData:
+      type: object
+      properties:
+        hasTabletPin:
+          type: boolean
+      required:
+        - hasTabletPin
+
+    TabletMeResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: "#/components/schemas/TabletMeData"
+      required:
+        - success
+        - data
+
+    TabletCabinet:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        clinicId:
+          type: string
+        tabletUrl:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - clinicId
+        - tabletUrl
+        - createdAt
+
+    TabletCabinetsListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            cabinets:
+              type: array
+              items:
+                $ref: "#/components/schemas/TabletCabinet"
+          required:
+            - cabinets
+      required:
+        - success
+        - data
+
+    SetTabletPinRequest:
+      type: object
+      properties:
+        pin:
+          type: string
+          minLength: 4
+          maxLength: 4
+        linkToken:
+          type: string
+      required:
+        - pin
+
+    RedeemTabletLinkRequest:
+      type: object
+      properties:
+        token:
+          type: string
+        pin:
+          type: string
+          minLength: 4
+          maxLength: 4
+      required:
+        - token
+
+    TabletLinkRedeemData:
+      type: object
+      properties:
+        success:
+          type: boolean
+        sessionId:
+          type: string
+        cabinet:
+          allOf:
+            - $ref: "#/components/schemas/TabletCabinetBrief"
+          nullable: true
+        doctor:
+          allOf:
+            - $ref: "#/components/schemas/TabletDoctorBrief"
+          nullable: true
+
+    TabletLinkRedeemResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: "#/components/schemas/TabletLinkRedeemData"
+      required:
+        - success
+        - data
+
+    TabletPinResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          additionalProperties: true
+      required:
+        - success
+        - data
+
+    TabletPinSetupRequiredResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [false]
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            linkToken:
+              type: string
+          required:
+            - code
+            - message
+            - linkToken
+      required:
+        - success
+        - error
