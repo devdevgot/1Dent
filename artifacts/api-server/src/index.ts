@@ -36,6 +36,19 @@ if (!process.env["JWT_SECRET"]) {
 
 const port = parseInt(process.env["PORT"] ?? "8080", 10);
 
+function isIgnorableMigrationError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  const code =
+    err && typeof err === "object" && "code" in err
+      ? String((err as { code: unknown }).code)
+      : "";
+
+  if (msg.includes("already exists")) return true;
+  // duplicate_column / duplicate_object / duplicate_table
+  if (code === "42701" || code === "42710" || code === "42P07") return true;
+  return false;
+}
+
 // Resilient migration runner — handles "already exists" errors per-statement
 // so a db:push-bootstrapped production DB (empty __drizzle_migrations) never
 // breaks on CREATE TYPE / CREATE TABLE that the schema already has.
@@ -79,8 +92,7 @@ async function runMigrations(migrationsFolder: string): Promise<void> {
         await pool.query(stmt);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        // Treat "already exists" errors as no-ops — the schema is already there
-        if (msg.includes("already exists")) {
+        if (isIgnorableMigrationError(err)) {
           logger.debug({ tag: entry.tag, msg }, "[Migration] Skipping idempotent statement");
         } else {
           throw err;
@@ -127,18 +139,29 @@ async function resolveMigrationsFolder(): Promise<string> {
 async function bootstrapDatabase(): Promise<void> {
   if (!process.env["DATABASE_URL"]) {
     logger.warn("DATABASE_URL not set — skipping migrations");
+    setDatabaseReady(true);
     return;
   }
 
-  try {
-    const migrationsFolder = await resolveMigrationsFolder();
-    await runMigrations(migrationsFolder);
-    logger.info({ migrationsFolder }, "Database migrations applied successfully");
-    setDatabaseReady(true);
-  } catch (err) {
-    logger.error({ err }, "Database migration error — API will return 503 until fixed");
-    setDatabaseReady(false);
-    return;
+  const migrationsFolder = await resolveMigrationsFolder();
+  const maxAttempts = 3;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await runMigrations(migrationsFolder);
+      logger.info({ migrationsFolder, attempt }, "Database migrations applied successfully");
+      setDatabaseReady(true);
+      break;
+    } catch (err) {
+      logger.error({ err, attempt, maxAttempts }, "Database migration error");
+      if (attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, attempt * 2000));
+        continue;
+      }
+      logger.error("Database migration failed after retries — API will return 503 until fixed");
+      setDatabaseReady(false);
+      return;
+    }
   }
 
   try {
