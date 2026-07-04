@@ -7,17 +7,17 @@ import { Check, X, Loader2, Clock, AlertCircle } from "lucide-react";
 import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { PlanCard } from "@/components/pricing/plan-card";
-import { PlanGuide } from "@/components/pricing/plan-guide";
-import { PlanComparisonTable } from "@/components/pricing/plan-comparison-table";
-import { CommonFeaturesAccordion } from "@/components/pricing/common-features-accordion";
-import { ImplementationFeeCard } from "@/components/pricing/implementation-fee-card";
+import { PlanComparisonAccordion } from "@/components/pricing/plan-comparison-accordion";
+import { ImplementationFeeNote } from "@/components/pricing/implementation-fee-note";
 import {
   PLANS,
   PLAN_DISPLAY_NAMES,
+  COMMON_FEATURES_SUMMARY,
   formatPlanPrice,
   IMPLEMENTATION_FEE,
   type PlanId,
 } from "@/lib/plans";
+import { cn } from "@/lib/utils";
 
 type SubscriptionStatus =
   | { kind: "active_plan"; plan: PlanId; expiresAt: Date | null }
@@ -81,102 +81,64 @@ function getSubscriptionStatus(clinic: Clinic | null): SubscriptionStatus {
 function CurrentSubscriptionBanner({ clinic }: { clinic: Clinic | null }) {
   const status = getSubscriptionStatus(clinic);
 
-  if (status.kind === "active_plan") {
-    return (
-      <div className="bg-[#f0fdf4] border border-[#16a34a]/30 rounded-2xl p-4">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#16a34a]/15 flex items-center justify-center shrink-0">
-            <Check className="w-5 h-5 text-[#16a34a]" strokeWidth={3} />
-          </div>
-          <div className="min-w-0">
-            <p className="text-micro font-bold text-[#16a34a] uppercase tracking-wider">Ваш тариф</p>
-            <p className="text-nav-title font-bold text-[#0f172a] mt-0.5">{PLAN_DISPLAY_NAMES[status.plan]}</p>
-            {status.expiresAt ? (
-              <p className="text-caption text-[#16a34a] mt-1 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 shrink-0" />
-                Действует до {formatExpiryDate(status.expiresAt)}
-              </p>
-            ) : (
-              <p className="text-caption text-[#16a34a] mt-1">Подписка активна</p>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const config = {
+    active_plan: {
+      bg: "bg-[#f0fdf4] border-[#16a34a]/25 text-[#16a34a]",
+      icon: Check,
+      label: "Ваш тариф",
+      title: status.kind === "active_plan" ? PLAN_DISPLAY_NAMES[status.plan] : "",
+      detail:
+        status.kind === "active_plan"
+          ? status.expiresAt
+            ? `до ${formatExpiryDate(status.expiresAt)}`
+            : "активна"
+          : "",
+    },
+    active_trial: {
+      bg: "bg-[#e0f2fe] border-[#0284c7]/25 text-[#0284c7]",
+      icon: Clock,
+      label: "Пробный период",
+      title: "Активен",
+      detail:
+        status.kind === "active_trial" ? `до ${formatExpiryDate(status.expiresAt)}` : "",
+    },
+    expired_plan: {
+      bg: "bg-[#fef3c7] border-[#d97706]/25 text-[#d97706]",
+      icon: AlertCircle,
+      label: "Тариф истёк",
+      title: status.kind === "expired_plan" ? PLAN_DISPLAY_NAMES[status.plan] : "",
+      detail:
+        status.kind === "expired_plan" ? formatExpiryDate(status.expiresAt) : "",
+    },
+    expired_trial: {
+      bg: "bg-[#fef3c7] border-[#d97706]/25 text-[#d97706]",
+      icon: AlertCircle,
+      label: "Пробный период",
+      title: "Закончился",
+      detail:
+        status.kind === "expired_trial" ? formatExpiryDate(status.expiresAt) : "",
+    },
+    none: {
+      bg: "bg-white border-[#e8e3d9] text-[#64748b]",
+      icon: AlertCircle,
+      label: "Статус",
+      title: "Тариф не подключён",
+      detail: "Выберите план ниже",
+    },
+  }[status.kind];
 
-  if (status.kind === "active_trial") {
-    return (
-      <div className="bg-[#e0f2fe] border border-[#0284c7]/30 rounded-2xl p-4">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#0284c7]/15 flex items-center justify-center shrink-0">
-            <Clock className="w-5 h-5 text-[#0284c7]" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-micro font-bold text-[#0284c7] uppercase tracking-wider">Пробный период</p>
-            <p className="text-nav-title font-bold text-[#0f172a] mt-0.5">Активен</p>
-            <p className="text-caption text-[#0284c7] mt-1 flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 shrink-0" />
-              Действует до {formatExpiryDate(status.expiresAt)}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (status.kind === "expired_plan") {
-    return (
-      <div className="bg-[#fef3c7] border border-[#d97706]/30 rounded-2xl p-4">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#d97706]/15 flex items-center justify-center shrink-0">
-            <AlertCircle className="w-5 h-5 text-[#d97706]" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-micro font-bold text-[#d97706] uppercase tracking-wider">Тариф истёк</p>
-            <p className="text-nav-title font-bold text-[#0f172a] mt-0.5">{PLAN_DISPLAY_NAMES[status.plan]}</p>
-            <p className="text-caption text-[#d97706] mt-1 flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 shrink-0" />
-              Истёк {formatExpiryDate(status.expiresAt)}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (status.kind === "expired_trial") {
-    return (
-      <div className="bg-[#fef3c7] border border-[#d97706]/30 rounded-2xl p-4">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#d97706]/15 flex items-center justify-center shrink-0">
-            <AlertCircle className="w-5 h-5 text-[#d97706]" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-micro font-bold text-[#d97706] uppercase tracking-wider">Пробный период</p>
-            <p className="text-nav-title font-bold text-[#0f172a] mt-0.5">Закончился</p>
-            <p className="text-caption text-[#d97706] mt-1 flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 shrink-0" />
-              Истёк {formatExpiryDate(status.expiresAt)}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const Icon = config.icon;
 
   return (
-    <div className="bg-white border border-[#e8e3d9] rounded-2xl p-4">
-      <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-xl bg-[#f1ede4] flex items-center justify-center shrink-0">
-          <AlertCircle className="w-5 h-5 text-[#64748b]" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-micro font-bold text-[#64748b] uppercase tracking-wider">Текущий статус</p>
-          <p className="text-nav-title font-bold text-[#0f172a] mt-0.5">Тариф не подключён</p>
-          <p className="text-caption text-[#64748b] mt-1">Выберите тариф ниже, чтобы подключить систему</p>
-        </div>
+    <div className={cn("flex items-center gap-3 rounded-xl border px-3.5 py-2.5", config.bg)}>
+      <Icon className="w-4 h-4 shrink-0" strokeWidth={2.5} />
+      <div className="min-w-0 flex-1">
+        <p className="text-micro font-semibold uppercase tracking-wide opacity-80">{config.label}</p>
+        <p className="text-caption font-semibold text-[#0f172a] truncate">{config.title}</p>
       </div>
+      {config.detail ? (
+        <p className="text-caption font-medium shrink-0">{config.detail}</p>
+      ) : null}
     </div>
   );
 }
@@ -227,24 +189,14 @@ export default function PricingPage() {
   ];
 
   return (
-    <PageShell className="pb-10">
+    <PageShell className="pb-10" animate={false}>
       <PageHeader title="Тарифы" onBack={() => setLocation("/menu")} sticky />
 
-      <div className="px-4 pt-6 space-y-5 max-w-lg mx-auto">
-        <div className="text-center space-y-1.5">
-          <h2 className="text-nav-title font-bold text-[#0f172a]">Тарифы 1Dent</h2>
-          <p className="text-body text-[#64748b] leading-relaxed">
-            Разовое внедрение + ежемесячная подписка по тарифу
-          </p>
-        </div>
-
+      <div className="px-4 pt-4 space-y-4 max-w-lg mx-auto">
         <CurrentSubscriptionBanner clinic={clinic} />
+        <ImplementationFeeNote />
 
-        <ImplementationFeeCard />
-
-        <PlanGuide />
-
-        <div className="space-y-4">
+        <div className="space-y-3">
           {orderedPlans.map((plan) => (
             <PlanCard
               key={plan.id}
@@ -255,14 +207,10 @@ export default function PricingPage() {
           ))}
         </div>
 
-        <PlanComparisonTable />
+        <PlanComparisonAccordion />
 
-        <CommonFeaturesAccordion />
-
-        <p className="text-center text-caption text-[#94a3b8] leading-relaxed pb-2">
-          Внедрение — {formatPlanPrice(IMPLEMENTATION_FEE)} ₸ (разово). Подписка — ежемесячно по тарифу.
-          <br />
-          Оплата через Kaspi. Есть вопросы? Напишите нам в WhatsApp.
+        <p className="text-center text-caption text-[#94a3b8] leading-relaxed pb-2 px-1">
+          {COMMON_FEATURES_SUMMARY}. Оплата через Kaspi.
         </p>
       </div>
 
@@ -273,7 +221,7 @@ export default function PricingPage() {
               <div>
                 <h3 className="font-bold text-[#0f172a]">Заявка на тариф {requestPlan}</h3>
                 <p className="text-caption text-[#64748b] mt-0.5">
-                  Внедрение {formatPlanPrice(IMPLEMENTATION_FEE)} ₸ + подписка по тарифу
+                  Внедрение {formatPlanPrice(IMPLEMENTATION_FEE)} ₸ + подписка
                 </p>
               </div>
               <button
