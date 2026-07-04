@@ -35,6 +35,7 @@ export function LockScreen({
   const [cabinetId, setCabinetId] = useState<string | null>(() => resolveCabinetIdFromUrl());
   const [cabinetName, setCabinetName] = useState("Кабинет");
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [linkUrl, setLinkUrl] = useState("");
   const [loading, setLoading] = useState(true);
   const [bootError, setBootError] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -61,19 +62,25 @@ export function LockScreen({
     setCabinetId(id);
     applyCabinetIdToUrl(id);
     setMode("qr");
+    setLinkUrl("");
     setLoading(true);
     setBootError(null);
     try {
       const res = await createTabletSession(id);
       setSessionId(res.data.sessionId);
       setCabinetName(res.data.cabinet.name);
-      await drawQr(res.data.linkUrl);
+      setLinkUrl(res.data.linkUrl);
     } catch {
       setBootError("Не удалось создать сессию планшета. Проверьте подключение.");
     } finally {
       setLoading(false);
     }
-  }, [cabinetId, drawQr]);
+  }, [cabinetId]);
+
+  useEffect(() => {
+    if (!linkUrl || loading) return;
+    void drawQr(linkUrl);
+  }, [linkUrl, loading, drawQr]);
 
   useEffect(() => {
     void bootstrapSession();
@@ -245,13 +252,17 @@ export function LockScreen({
                     <span className="text-base font-bold">Отсканируйте QR-код смартфоном</span>
                   </div>
 
-                  <div className="rounded-2xl border border-[#e8e3d9] bg-white p-4">
-                    {loading ? (
-                      <div className="flex h-[236px] w-[236px] items-center justify-center">
+                  <div className="relative rounded-2xl border border-[#e8e3d9] bg-white p-4">
+                    <canvas
+                      ref={canvasRef}
+                      className={cn("rounded-lg", loading && "opacity-0")}
+                      width={236}
+                      height={236}
+                    />
+                    {loading && (
+                      <div className="absolute inset-0 flex items-center justify-center">
                         <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#1f75fe]/20 border-t-[#1f75fe]" />
                       </div>
-                    ) : (
-                      <canvas ref={canvasRef} className="rounded-lg" />
                     )}
                   </div>
 
