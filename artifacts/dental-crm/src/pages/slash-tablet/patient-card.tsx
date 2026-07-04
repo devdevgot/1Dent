@@ -1,13 +1,13 @@
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft, Eye, EyeOff, Activity, ClipboardList, PlayCircle, Info,
+  ArrowLeft, Eye, Activity, ClipboardList, PlayCircle, Info,
   ChevronDown, CheckCircle2, Circle, Loader2, Plus, Phone, AlertTriangle,
   Sparkles, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TabletChartSection } from "./tablet-chart-section";
-import { TabletDentalChart } from "./tablet-dental-chart";
+import { TabletPresentationMode } from "./tablet-presentation-mode";
 import {
   getPlanForPatient, VIDEOS, CONDITION_META, STATUS_META, fmtTenge, initials,
   type TabletPatient, type PlanStage, type TreatmentVideo, type ToothCondition,
@@ -48,7 +48,7 @@ export function PatientCard({ patient, onBack }: { patient: TabletPatient; onBac
 
   if (presentation) {
     return (
-      <PresentationMode
+      <TabletPresentationMode
         patient={patient}
         teeth={teeth}
         plan={plan}
@@ -458,83 +458,6 @@ function PatientInfo({ patient }: { patient: TabletPatient }) {
           <p className="text-sm leading-relaxed text-[#64748b]">{patient.notes}</p>
         </div>
       )}
-    </div>
-  );
-}
-
-// ── Режим презентации ─────────────────────────────────────────────────────────
-function PresentationMode({
-  patient, teeth, plan, planFdis, planTotal, onExit,
-}: {
-  patient: TabletPatient;
-  teeth: Record<number, ToothCondition>;
-  plan: PlanStage[];
-  planFdis: Set<number>;
-  planTotal: number;
-  onExit: () => void;
-}) {
-  const problem = Object.values(teeth).filter((c) => c !== "healthy" && c !== "treated" && c !== "crown" && c !== "implant").length;
-  const done = Object.values(teeth).filter((c) => c === "treated" || c === "crown" || c === "implant").length;
-
-  const packages = [
-    { name: "Базовый", price: Math.round(planTotal * 0.7), desc: "Только необходимое лечение" },
-    { name: "Оптимальный", price: planTotal, desc: "Полный план + эстетика", best: true },
-    { name: "Премиум", price: Math.round(planTotal * 1.3), desc: "Премиум-материалы и гарантия" },
-  ];
-
-  return (
-    <div className="relative flex h-[100dvh] w-full flex-col items-center overflow-auto bg-gradient-to-b from-white to-[#faf8f4] px-6 py-8 font-manrope">
-      <button
-        onClick={onExit}
-        className="absolute right-5 top-5 flex items-center gap-2 rounded-xl border border-[#e8e3d9] bg-white px-4 py-2.5 text-sm font-semibold text-[#64748b] transition-colors hover:bg-[#faf8f4]"
-      >
-        <EyeOff className="h-4 w-4" /> Вернуться врачу
-      </button>
-
-      <div className="w-full max-w-4xl">
-        <div className="mb-6 text-center">
-          <h1 className="text-3xl font-extrabold text-[#0f172a]">Ваш план лечения</h1>
-          <p className="mt-1 text-base text-[#64748b]">{patient.name}</p>
-        </div>
-
-        <TabletDentalChart
-          teeth={teeth}
-          selectedFdi={null}
-          planFdis={planFdis}
-          big
-          presentation
-        />
-
-        <div className="mt-6 grid grid-cols-2 gap-4">
-          <div className="rounded-2xl border border-[#fecaca] bg-[#fef2f2] p-5 text-center">
-            <p className="text-4xl font-extrabold text-[#dc2626]">{problem}</p>
-            <p className="mt-1 text-sm font-semibold text-[#dc2626]">зуба требуют лечения</p>
-          </div>
-          <div className="rounded-2xl border border-[#bfdbfe] bg-[#eff6ff] p-5 text-center">
-            <p className="text-4xl font-extrabold text-[#2563eb]">{done}</p>
-            <p className="mt-1 text-sm font-semibold text-[#2563eb]">зубов уже в порядке</p>
-          </div>
-        </div>
-
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          {packages.map((p) => (
-            <div
-              key={p.name}
-              className={cn(
-                "flex flex-col rounded-3xl border-2 bg-white p-5 text-center",
-                p.best ? "border-[#1f75fe] shadow-lg" : "border-[#e8e3d9]",
-              )}
-            >
-              {p.best && (
-                <span className="mx-auto mb-2 rounded-full bg-[#1f75fe] px-3 py-0.5 text-xs font-bold text-white">Рекомендуем</span>
-              )}
-              <p className="text-lg font-bold text-[#0f172a]">{p.name}</p>
-              <p className="mt-2 text-2xl font-extrabold text-[#0f172a]">{fmtTenge(p.price)}</p>
-              <p className="mt-2 text-sm text-[#64748b]">{p.desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
