@@ -71,6 +71,7 @@ export function PlanPaywall() {
 
   if (status.kind === "active_plan" || status.kind === "active_trial") return null;
   if (loc === "/pricing") return null;
+  if (loc.startsWith("/tablet")) return null;
 
   const titleKey =
     status.kind === "expired_plan"

@@ -63,7 +63,8 @@
     "branches": "Трекинг",
     "logs": "Журнал",
     "more": "Көбірек",
-    "settings": "Баптаулар"
+    "settings": "Баптаулар",
+    "tabletMode": "Планшет режимі"
   },
   "page": {
     "dashboard": "Басты бет",

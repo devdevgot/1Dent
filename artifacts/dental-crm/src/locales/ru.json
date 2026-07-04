@@ -63,7 +63,8 @@
     "branches": "Трекинг",
     "logs": "Журнал",
     "more": "Ещё",
-    "settings": "Настройки"
+    "settings": "Настройки",
+    "tabletMode": "Режим планшета"
   },
   "page": {
     "dashboard": "Главная",

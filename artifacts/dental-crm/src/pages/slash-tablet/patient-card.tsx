@@ -1,28 +1,39 @@
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft, Eye, Activity, ClipboardList, PlayCircle, Info,
+  ArrowLeft, Eye, Activity, ClipboardList, PlayCircle, Info, FileText,
   ChevronDown, CheckCircle2, Circle, Loader2, Plus, Phone, AlertTriangle,
   Sparkles, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TabletChartSection } from "./tablet-chart-section";
 import { TabletPresentationMode } from "./tablet-presentation-mode";
+import { TabletPatientContracts } from "./tablet-pages";
+import type { TabletSession } from "./tablet-session";
 import {
   getPlanForPatient, VIDEOS, CONDITION_META, STATUS_META, fmtTenge, initials,
   type TabletPatient, type PlanStage, type TreatmentVideo, type ToothCondition,
 } from "./mock-data";
 
-type Tab = "chart" | "plan" | "video" | "info";
+type Tab = "info" | "chart" | "plan" | "contracts" | "video";
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
+  { id: "info", label: "Инфо", icon: Info },
   { id: "chart", label: "Карта зубов", icon: Activity },
   { id: "plan", label: "План лечения", icon: ClipboardList },
+  { id: "contracts", label: "Договоры", icon: FileText },
   { id: "video", label: "Видео", icon: PlayCircle },
-  { id: "info", label: "Инфо", icon: Info },
 ];
 
-export function PatientCard({ patient, onBack }: { patient: TabletPatient; onBack: () => void }) {
+export function PatientCard({
+  patient,
+  onBack,
+  session: _session,
+}: {
+  patient: TabletPatient;
+  onBack: () => void;
+  session?: TabletSession;
+}) {
   const [tab, setTab] = useState<Tab>("chart");
   const [teeth, setTeeth] = useState<Record<number, ToothCondition>>(() => ({ ...patient.teeth }));
   const [selectedFdi, setSelectedFdi] = useState<number | null>(null);
@@ -153,6 +164,10 @@ export function PatientCard({ patient, onBack }: { patient: TabletPatient; onBac
 
         {tab === "video" && (
           <VideoLibrary onPlay={(v) => setActiveVideo(v)} />
+        )}
+
+        {tab === "contracts" && (
+          <TabletPatientContracts patientName={patient.name} />
         )}
 
         {tab === "info" && <PatientInfo patient={patient} />}

@@ -14,7 +14,7 @@ import {
   Contact, Users, X, ChevronLeft,
   Stethoscope, Send, Banknote, QrCode, CreditCard,
   Clock, Wallet, CalendarDays, SlidersHorizontal, Layers,
-  Globe, Handshake, Megaphone, MapPin, ChevronRight,
+  Globe, Handshake, Megaphone, MapPin, ChevronRight, Monitor,
 } from "lucide-react";
 import { FaInstagram, FaTelegram, FaWhatsapp } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
@@ -628,6 +628,7 @@ export default function OwnerDashboard() {
             { label: t("ownerDashboard.manageStaff"), icon: Contact, path: "/users", bg: "#f1ede4", accent: "#64748b" },
             { label: t("nav.patients"), icon: Users, path: "/patients", bg: "#e0e7ff", accent: "#4f46e5" },
             { label: t("nav.procedures"), icon: Stethoscope, path: "/procedures", bg: "#fce7f3", accent: "#db2777" },
+            { label: t("nav.tabletMode", "Режим планшета"), icon: Monitor, path: "/tablet/workspace/patients", bg: "#e0f2fe", accent: "#0284c7" },
           ].map((item) => (
             <button
               key={item.path}

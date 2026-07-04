@@ -13,7 +13,7 @@ import {
   ChevronRight, X, ChevronLeft,
   Banknote, QrCode, CreditCard,
   Clock, Wallet, Calendar, CalendarDays, SlidersHorizontal, Users,
-  TrendingUp, BarChart3, Send, UserPlus,
+  TrendingUp, BarChart3, Send, UserPlus, Monitor,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
@@ -392,6 +392,7 @@ export default function DoctorDashboard() {
             { label: t("nav.schedule"),    icon: Calendar,  path: "/schedule",         bg: "#f5f3ff", accent: "#7c3aed" },
             { label: t("nav.myAnalytics"), icon: BarChart3, path: "/doctor-analytics", bg: "#f0fdf4", accent: "#16a34a" },
             { label: t("nav.chat"),        icon: UserPlus,  path: "/chat",             bg: "#fef3c7", accent: "#d97706" },
+            { label: t("nav.tabletMode", "Режим планшета"), icon: Monitor, path: "/tablet/workspace/patients", bg: "#e0f2fe", accent: "#0284c7" },
           ].map((item) => (
             <button
               key={item.path}

@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
-import { motion } from "framer-motion";
-import { Search, Clock, ChevronRight, CalendarDays, Users } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Search, Clock, ChevronRight, CalendarDays, Users, Plus, X } from "lucide-react";
+import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import {
   PATIENTS, STATUS_META, CONDITION_META, initials,
@@ -24,8 +25,23 @@ function MiniTeeth({ teeth }: { teeth: Record<number, ToothCondition> }) {
   );
 }
 
-export function PatientList({ onSelect }: { onSelect: (p: TabletPatient) => void }) {
+export function PatientList({
+  onSelect,
+  showCreate = false,
+}: {
+  onSelect: (p: TabletPatient) => void;
+  showCreate?: boolean;
+}) {
   const [query, setQuery] = useState("");
+  const [location, navigate] = useLocation();
+  const [createOpen, setCreateOpen] = useState(false);
+
+  useEffect(() => {
+    if (showCreate && location.includes("create=1")) {
+      setCreateOpen(true);
+      navigate(location.replace(/\?create=1/, "").replace(/&create=1/, "") || "/tablet/workspace/patients", { replace: true });
+    }
+  }, [showCreate, location, navigate]);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
@@ -49,6 +65,15 @@ export function PatientList({ onSelect }: { onSelect: (p: TabletPatient) => void
             <CalendarDays className="h-4 w-4" /> {today} · {PATIENTS.length} приёмов
           </p>
         </div>
+        {showCreate && (
+          <button
+            type="button"
+            onClick={() => setCreateOpen(true)}
+            className="flex items-center gap-2 rounded-2xl bg-[#1f75fe] px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-[#1a65e8]"
+          >
+            <Plus className="h-4 w-4" /> Новый
+          </button>
+        )}
       </div>
 
       {/* Поиск */}
@@ -127,6 +152,63 @@ export function PatientList({ onSelect }: { onSelect: (p: TabletPatient) => void
           })}
         </div>
       )}
+      <AnimatePresence>
+        {createOpen && (
+          <CreatePatientModal onClose={() => setCreateOpen(false)} />
+        )}
+      </AnimatePresence>
     </div>
+  );
+}
+
+function CreatePatientModal({ onClose }: { onClose: () => void }) {
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ y: 40, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 40, opacity: 0 }}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md rounded-3xl border border-[#e8e3d9] bg-white p-6 shadow-xl"
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-extrabold text-[#0f172a]">Новый пациент</h2>
+          <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-[#94a3b8] hover:bg-[#faf8f4]">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="space-y-3">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="ФИО пациента"
+            className="w-full rounded-xl border border-[#e8e3d9] px-4 py-3 text-sm outline-none focus:border-[#1f75fe]"
+          />
+          <input
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="+7 7xx xxx xx xx"
+            className="w-full rounded-xl border border-[#e8e3d9] px-4 py-3 text-sm outline-none focus:border-[#1f75fe]"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-5 w-full rounded-2xl bg-[#1f75fe] py-3.5 text-sm font-bold text-white hover:bg-[#1a65e8]"
+        >
+          Сохранить (демо)
+        </button>
+        <p className="mt-2 text-center text-xs text-[#94a3b8]">После бэкенда — создание через API</p>
+      </motion.div>
+    </motion.div>
   );
 }

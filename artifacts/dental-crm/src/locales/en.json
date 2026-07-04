@@ -63,7 +63,8 @@
     "branches": "Tracking",
     "logs": "Audit Log",
     "more": "More",
-    "settings": "Settings"
+    "settings": "Settings",
+    "tabletMode": "Tablet mode"
   },
   "page": {
     "dashboard": "Dashboard",
