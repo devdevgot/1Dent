@@ -177,3 +177,12 @@ export const COMMON_FEATURES = [
 export function formatPlanPrice(price: number): string {
   return price.toLocaleString("ru-KZ");
 }
+
+/** Разовый платёж за внедрение (не входит в ежемесячную подписку) */
+export const IMPLEMENTATION_FEE = 1_000_000;
+
+export const IMPLEMENTATION_INCLUDES = [
+  "Настройка системы под вашу клинику",
+  "Перенос данных и обучение команды",
+  "Подключение WhatsApp и базовых интеграций",
+] as const;

@@ -10,9 +10,12 @@ import { PlanCard } from "@/components/pricing/plan-card";
 import { PlanGuide } from "@/components/pricing/plan-guide";
 import { PlanComparisonTable } from "@/components/pricing/plan-comparison-table";
 import { CommonFeaturesAccordion } from "@/components/pricing/common-features-accordion";
+import { ImplementationFeeCard } from "@/components/pricing/implementation-fee-card";
 import {
   PLANS,
   PLAN_DISPLAY_NAMES,
+  formatPlanPrice,
+  IMPLEMENTATION_FEE,
   type PlanId,
 } from "@/lib/plans";
 
@@ -231,11 +234,13 @@ export default function PricingPage() {
         <div className="text-center space-y-1.5">
           <h2 className="text-nav-title font-bold text-[#0f172a]">Тарифы 1Dent</h2>
           <p className="text-body text-[#64748b] leading-relaxed">
-            Подберите план под размер вашей клиники
+            Разовое внедрение + ежемесячная подписка по тарифу
           </p>
         </div>
 
         <CurrentSubscriptionBanner clinic={clinic} />
+
+        <ImplementationFeeCard />
 
         <PlanGuide />
 
@@ -255,9 +260,9 @@ export default function PricingPage() {
         <CommonFeaturesAccordion />
 
         <p className="text-center text-caption text-[#94a3b8] leading-relaxed pb-2">
-          Все цены указаны в тенге (₸). Оплата через Kaspi.
+          Внедрение — {formatPlanPrice(IMPLEMENTATION_FEE)} ₸ (разово). Подписка — ежемесячно по тарифу.
           <br />
-          Есть вопросы? Напишите нам в WhatsApp.
+          Оплата через Kaspi. Есть вопросы? Напишите нам в WhatsApp.
         </p>
       </div>
 
@@ -267,7 +272,9 @@ export default function PricingPage() {
             <div className="flex items-center justify-between px-5 py-4 border-b border-[#e8e3d9]">
               <div>
                 <h3 className="font-bold text-[#0f172a]">Заявка на тариф {requestPlan}</h3>
-                <p className="text-caption text-[#64748b] mt-0.5">Мы свяжемся с вами для подключения</p>
+                <p className="text-caption text-[#64748b] mt-0.5">
+                  Внедрение {formatPlanPrice(IMPLEMENTATION_FEE)} ₸ + подписка по тарифу
+                </p>
               </div>
               <button
                 type="button"
