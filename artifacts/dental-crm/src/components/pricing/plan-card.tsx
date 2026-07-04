@@ -15,17 +15,17 @@ export function PlanCard({ plan, isCurrentPlan, onSelect }: PlanCardProps) {
   return (
     <div
       className={cn(
-        "relative bg-white rounded-2xl overflow-hidden transition-shadow",
+        "relative bg-white rounded-2xl overflow-hidden",
         plan.recommended
-          ? "border-2 border-[#1f75fe] shadow-lg shadow-[#1f75fe]/12 ring-1 ring-[#1f75fe]/10"
+          ? "border-2 border-[#1f75fe]/80 shadow-sm"
           : isCurrentPlan
-            ? "border-2 border-[#16a34a] shadow-md"
-            : "border border-[#e8e3d9] shadow-sm",
+            ? "border-2 border-[#16a34a]/70"
+            : "border border-[#e8e3d9]",
       )}
     >
       {plan.badge && !isCurrentPlan && (
-        <div className="absolute -top-px left-1/2 -translate-x-1/2 z-10">
-          <span className="inline-flex items-center gap-1 bg-[#1f75fe] text-white text-micro font-bold uppercase tracking-wide px-3 py-1 rounded-b-xl shadow-sm">
+        <div className="absolute top-3 right-3 z-10">
+          <span className="inline-flex items-center gap-1 bg-[#1f75fe] text-white text-micro font-semibold px-2 py-0.5 rounded-full">
             <Star className="w-3 h-3 fill-white" />
             {plan.badge}
           </span>
@@ -33,68 +33,40 @@ export function PlanCard({ plan, isCurrentPlan, onSelect }: PlanCardProps) {
       )}
 
       {isCurrentPlan && (
-        <div className="absolute top-0 right-0 z-10">
-          <span className="inline-block bg-[#16a34a] text-white text-micro font-bold uppercase tracking-wide px-3 py-1 rounded-bl-xl">
+        <div className="absolute top-3 right-3 z-10">
+          <span className="inline-block bg-[#16a34a] text-white text-micro font-semibold px-2 py-0.5 rounded-full">
             Текущий
           </span>
         </div>
       )}
 
-      <div className={cn("p-5 bg-gradient-to-br", plan.gradient, plan.recommended && "pt-7")}>
-        <div className="flex items-start gap-3 mb-4">
-          <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0", plan.iconBg)}>
-            <Icon className="w-5 h-5" />
+      <div className={cn("p-4", plan.recommended && "bg-[#1f75fe]/[0.03]")}>
+        <div className="flex items-center gap-3 mb-3 pr-20">
+          <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0", plan.iconBg)}>
+            <Icon className="w-4 h-4" />
           </div>
-          <div className="min-w-0 flex-1">
-            <h3
-              className={cn(
-                "font-bold text-[#0f172a] tracking-tight",
-                plan.recommended ? "text-[20px]" : "text-[18px]",
-              )}
-            >
-              {plan.name}
-            </h3>
-            <p className="text-caption text-[#64748b] mt-0.5 leading-snug">{plan.subtitle}</p>
-            <p className="text-caption font-medium text-[#94a3b8] mt-1">{plan.audience}</p>
+          <div className="min-w-0">
+            <h3 className="text-body font-bold text-[#0f172a]">{plan.name}</h3>
+            <p className="text-caption text-[#64748b] mt-0.5">{plan.audience}</p>
           </div>
         </div>
 
-        <div className="mb-1">
-          <div className="flex items-baseline gap-1.5">
-            <span
-              className={cn(
-                "font-black text-[#0f172a] tabular-nums",
-                plan.recommended ? "text-[28px]" : "text-[24px]",
-              )}
-            >
-              {formatPlanPrice(plan.price)}
-            </span>
-            <span className="text-caption text-[#64748b] font-medium">₸ / мес</span>
-          </div>
-          {plan.deltaLabel && (
-            <p className="text-caption text-[#64748b] mt-1">{plan.deltaLabel}</p>
-          )}
+        <div className="flex items-baseline gap-1 mb-3">
+          <span className="text-[22px] font-bold text-[#0f172a] tabular-nums">
+            {formatPlanPrice(plan.price)}
+          </span>
+          <span className="text-caption text-[#64748b]">₸ / мес</span>
         </div>
 
-        {plan.includesFrom && (
-          <div className="mt-4 mb-1 px-3 py-2 bg-white/70 border border-[#e8e3d9]/70 rounded-xl">
-            <p className="text-caption text-[#64748b]">
-              Всё из тарифа{" "}
-              <span className="font-semibold text-[#0f172a]">{plan.includesFrom}</span>, плюс:
-            </p>
-          </div>
-        )}
-
-        <ul className="mt-4 space-y-2.5 mb-5">
+        <ul className="space-y-1.5 mb-4">
           {plan.highlights.map((highlight) => (
-            <li key={highlight} className="flex items-start gap-2.5">
-              <div
-                className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5"
-                style={{ backgroundColor: `${plan.accentColor}18` }}
-              >
-                <Check className="w-3 h-3" strokeWidth={3} style={{ color: plan.accentColor }} />
-              </div>
-              <span className="text-body text-[#0f172a] leading-snug">{highlight}</span>
+            <li key={highlight} className="flex items-start gap-2">
+              <Check
+                className="w-3.5 h-3.5 shrink-0 mt-0.5"
+                strokeWidth={2.5}
+                style={{ color: plan.accentColor }}
+              />
+              <span className="text-caption text-[#475569] leading-snug">{highlight}</span>
             </li>
           ))}
         </ul>
@@ -105,10 +77,9 @@ export function PlanCard({ plan, isCurrentPlan, onSelect }: PlanCardProps) {
           onClick={onSelect}
           variant={plan.recommended && !isCurrentPlan ? "default" : "outline"}
           className={cn(
-            "w-full rounded-full min-h-11 text-body font-semibold",
+            "w-full rounded-full h-10 text-caption font-semibold",
             isCurrentPlan && "bg-[#f0fdf4] text-[#16a34a] border-[#16a34a]/30 hover:bg-[#f0fdf4] cursor-default",
-            !isCurrentPlan && !plan.recommended && "border-[#e8e3d9] text-[#0f172a] hover:bg-[#f1ede4]",
-            plan.recommended && !isCurrentPlan && "shadow-md shadow-[#1f75fe]/20 hover:shadow-lg",
+            !isCurrentPlan && !plan.recommended && "border-[#e8e3d9] text-[#0f172a] hover:bg-[#faf8f4]",
           )}
         >
           {isCurrentPlan ? "Текущий план" : plan.ctaLabel}
