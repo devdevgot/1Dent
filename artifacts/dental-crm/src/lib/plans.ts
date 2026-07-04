@@ -57,9 +57,9 @@ export const PLAN_DISPLAY_NAMES: Record<PlanId, string> = {
 };
 
 export const PLAN_GUIDE: { plan: PaidPlanId; label: string; hint: string }[] = [
-  { plan: "starter", label: "START", hint: "До 10 сотрудников, одна клиника" },
-  { plan: "professional", label: "PRO", hint: "10–30 сотрудников, аналитика и больше AI" },
-  { plan: "enterprise", label: "ENTERPRISE", hint: "Сеть филиалов, персональное сопровождение" },
+  { plan: "starter", label: "START", hint: "До 5 сотрудников, 1 филиал" },
+  { plan: "professional", label: "PRO", hint: "До 15 сотрудников, 3 филиала" },
+  { plan: "enterprise", label: "ENTERPRISE", hint: "До 30 сотрудников, 10 филиалов" },
 ];
 
 export const PLANS: PlanConfig[] = [
@@ -68,11 +68,11 @@ export const PLANS: PlanConfig[] = [
     name: "START",
     price: 99000,
     subtitle: "Для небольших стоматологий",
-    audience: "До 10 сотрудников · 1 филиал",
+    audience: "До 5 сотрудников · 1 филиал",
     icon: Sparkles,
     highlights: [
       "Полный набор инструментов клиники",
-      "До 10 сотрудников · 1 филиал",
+      "До 5 сотрудников · 1 филиал",
     ],
     ctaLabel: "Выбрать START",
     iconBg: "bg-[#1f75fe]/15 text-[#1f75fe]",
@@ -84,15 +84,15 @@ export const PLANS: PlanConfig[] = [
     name: "PRO",
     price: 159000,
     subtitle: "Оптимален для большинства клиник",
-    audience: "10–30 сотрудников · 1 филиал",
+    audience: "До 15 сотрудников · до 3 филиалов",
     icon: Star,
     badge: "Рекомендуемый",
     recommended: true,
     includesFrom: "START",
     deltaLabel: "+60 000 ₸ к START",
     highlights: [
-      "Всё из START · до 30 сотрудников",
-      "5× больше AI и чат-бот · аналитика каналов",
+      "Всё из START · до 15 сотрудников",
+      "3 филиала · 6× больше AI и чат-бот",
     ],
     ctaLabel: "Подключить PRO",
     iconBg: "bg-[#1f75fe]/15 text-[#1f75fe]",
@@ -104,13 +104,13 @@ export const PLANS: PlanConfig[] = [
     name: "ENTERPRISE",
     price: 199000,
     subtitle: "Для крупных клиник и сетей",
-    audience: "Сеть филиалов · без лимита сотрудников",
+    audience: "До 30 сотрудников · до 10 филиалов",
     icon: Rocket,
     includesFrom: "PRO",
     deltaLabel: "+40 000 ₸ к PRO",
     highlights: [
-      "Всё из PRO · несколько филиалов",
-      "Безлимит сотрудников · персональный менеджер",
+      "Всё из PRO · до 10 филиалов",
+      "До 30 сотрудников · персональный менеджер",
     ],
     ctaLabel: "Обсудить ENTERPRISE",
     iconBg: "bg-[#fef3c7] text-[#d97706]",
@@ -123,29 +123,29 @@ export const COMPARISON_ROWS: ComparisonRow[] = [
   {
     key: "staff",
     label: "Сотрудники",
-    values: { starter: "до 10", professional: "до 30", enterprise: "∞" },
+    values: { starter: "до 5", professional: "до 15", enterprise: "до 30" },
   },
   {
     key: "branches",
     label: "Филиалы",
-    values: { starter: "1", professional: "1", enterprise: "неск." },
+    values: { starter: "1", professional: "3", enterprise: "10" },
   },
   {
     key: "aiCredits",
     label: "AI-кредиты",
     hint: "в месяц",
-    values: { starter: "1 000", professional: "5 000", enterprise: "15 000" },
+    values: { starter: "500", professional: "3 000", enterprise: "7 000" },
   },
   {
     key: "chatbotDialogs",
     label: "Чат-бот",
     hint: "диалогов / мес",
-    values: { starter: "300", professional: "1 500", enterprise: "5 000" },
+    values: { starter: "100", professional: "1 000", enterprise: "5 000" },
   },
   {
     key: "documentTemplates",
     label: "Шаблоны",
-    values: { starter: "5", professional: "20", enterprise: "∞" },
+    values: { starter: "5", professional: "30", enterprise: "∞" },
   },
   {
     key: "channelAnalytics",

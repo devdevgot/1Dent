@@ -80,7 +80,8 @@ import type { ChatbotSettings } from "@workspace/db";
 import { STANDARD_SCRIPT_BLOCKS, type ScriptBlock } from "./script-templates";
 import { createChatCompletion, FAST_MODEL, parseLlmJson, assertOpenRouterConfigured } from "../../lib/openrouter-client";
 import { aiCreditsService } from "../../shared/ai-credits";
-import { InsufficientAiCreditsError, OpenRouterAiFailedError } from "../../shared/errors/index";
+import { planLimitsService } from "../../shared/plan-limits.service";
+import { InsufficientAiCreditsError, OpenRouterAiFailedError, PlanLimitExceededError } from "../../shared/errors/index";
 import {
   renderMindMapScript,
   buildActiveMindMapContext,
@@ -1538,11 +1539,14 @@ export class ChatbotService {
 
     if (!dryRun) {
       try {
+        await planLimitsService.assertCanStartChatbotDialog(clinicId, phone);
         await aiCreditsService.consumeCredits({ clinicId, feature: "chatbot_reply" });
       } catch (err) {
-        if (err instanceof InsufficientAiCreditsError) {
+        if (err instanceof InsufficientAiCreditsError || err instanceof PlanLimitExceededError) {
           const exhaustedReply =
-            "К сожалению, AI-кредиты клиники закончились. Администратору нужно докупить кредиты или сменить тариф в разделе «ИИ кредиты».";
+            err instanceof PlanLimitExceededError
+              ? "К сожалению, лимит диалогов чат-бота по вашему тарифу исчерпан. Администратору нужно перейти на тариф с большим лимитом."
+              : "К сожалению, AI-кредиты клиники закончились. Администратору нужно докупить кредиты или сменить тариф в разделе «ИИ кредиты».";
           return makeTurnResult(
             {
               id: randomUUID(),

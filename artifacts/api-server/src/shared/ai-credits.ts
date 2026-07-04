@@ -4,15 +4,23 @@ import { eq, and, gte, lte, desc, sql, like } from "drizzle-orm";
 import type { ClinicPlan } from "@workspace/db";
 import { InsufficientAiCreditsError } from "./errors/index";
 import { logger } from "../lib/logger";
+import {
+  FREE_LIMITS,
+  PLAN_LIMITS,
+  TRIAL_LIMITS,
+  normalizeClinicPlan,
+  resolveMonthlyAiCreditLimit,
+  type ClinicPlanContext,
+} from "./plan-limits";
 
 export const PLAN_AI_CREDIT_LIMITS: Record<ClinicPlan, number> = {
-  free: 0,
-  starter: 1_000,
-  professional: 5_000,
-  enterprise: 15_000,
+  free: FREE_LIMITS.aiCredits,
+  starter: PLAN_LIMITS.starter.aiCredits,
+  professional: PLAN_LIMITS.professional.aiCredits,
+  enterprise: PLAN_LIMITS.enterprise.aiCredits,
 };
 
-export const TRIAL_AI_CREDIT_LIMIT = 1_000;
+export const TRIAL_AI_CREDIT_LIMIT = TRIAL_LIMITS.aiCredits;
 
 export const AI_CREDIT_FEATURE_LABELS: Record<string, string> = {
   chatbot_reply: "Ответ чат-бота",
@@ -86,26 +94,13 @@ function monthBounds(date = new Date()) {
   return { start, end };
 }
 
-function normalizePlan(plan: string | null | undefined): ClinicPlan {
-  if (plan && plan in PLAN_AI_CREDIT_LIMITS) {
-    return plan as ClinicPlan;
-  }
-  return "free";
-}
-
 function resolveMonthlyLimit(
   plan: ClinicPlan,
   trialEndsAt: Date | null,
   planExpiresAt: Date | null,
 ): number {
-  const now = new Date();
-  const trialActive = trialEndsAt != null && trialEndsAt > now;
-  const planActive =
-    plan !== "free" && (planExpiresAt == null || planExpiresAt > now);
-
-  if (planActive) return PLAN_AI_CREDIT_LIMITS[plan];
-  if (trialActive) return TRIAL_AI_CREDIT_LIMIT;
-  return PLAN_AI_CREDIT_LIMITS.free;
+  const context: ClinicPlanContext = { plan, trialEndsAt, planExpiresAt };
+  return resolveMonthlyAiCreditLimit(context);
 }
 
 export interface AiCreditsSummary {
@@ -157,7 +152,7 @@ export class AiCreditsService {
       [clinicId, start.toISOString(), end.toISOString()],
     );
 
-    const plan = normalizePlan(clinic.plan);
+    const plan = normalizeClinicPlan(clinic.plan);
     const trialEndsAt = clinic.trial_ends_at ? new Date(clinic.trial_ends_at) : null;
     const planExpiresAt = clinic.plan_expires_at ? new Date(clinic.plan_expires_at) : null;
     const monthlyLimit = resolveMonthlyLimit(plan, trialEndsAt, planExpiresAt);

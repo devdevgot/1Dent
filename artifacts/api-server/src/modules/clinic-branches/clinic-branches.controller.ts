@@ -8,6 +8,7 @@ import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 import { seedContractTemplatesForClinic } from "../../seeds/contract-templates.seed";
 import { logger } from "../../lib/logger";
+import { planLimitsService } from "../../shared/plan-limits.service";
 
 const router = Router();
 const ownerOnly = roleGuard("owner");
@@ -83,6 +84,8 @@ router.post(
     try {
       await ensureParentColumn();
       const clinicId = req.homeClinicId ?? req.user!.clinicId;
+
+      await planLimitsService.assertCanAddBranch(clinicId);
 
       const { rows: parentRows } = await pool.query<{ plan: string }>(
         `SELECT plan FROM clinics WHERE id = $1 LIMIT 1`,
