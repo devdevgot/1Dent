@@ -110,12 +110,19 @@
     {
       "idx": 15,
       "version": "7",
+      "when": 1747128000000,
+      "tag": "0015_hourly_salary",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
       "when": 1747440000000,
       "tag": "0015_contract_tables",
       "breakpoints": true
     },
     {
-      "idx": 16,
+      "idx": 17,
       "version": "7",
       "when": 1778112000000,
       "tag": "0016_contract_bundles",
@@ -266,6 +273,13 @@
       "version": "7",
       "when": 1781615400000,
       "tag": "0037_chatbot_calendar_ab",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1781701800000,
+      "tag": "0038_dental_broadcast_metrics",
       "breakpoints": true
     },
     {

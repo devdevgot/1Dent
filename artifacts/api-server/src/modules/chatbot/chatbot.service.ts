@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import IORedis from "ioredis";
 import {
   db,
+  pool,
   chatbotSettingsTable,
   chatbotSessionsTable,
   chatbotMessagesTable,
@@ -592,7 +593,27 @@ async function getManagerExamples(clinicId: string): Promise<ManagerExample[]> {
 
 // ─── Settings helpers ────────────────────────────────────────────────────────
 
+let chatbotSettingsSchemaReady: Promise<void> | null = null;
+
+/** Production DB may lag migrations journal — ensure columns Drizzle selects exist. */
+async function ensureChatbotSettingsSchema(): Promise<void> {
+  if (!chatbotSettingsSchemaReady) {
+    chatbotSettingsSchemaReady = (async () => {
+      await pool.query(
+        `ALTER TABLE "chatbot_settings" ADD COLUMN IF NOT EXISTS "broadcast_ai_enabled" boolean DEFAULT false NOT NULL`,
+      );
+    })().catch((err) => {
+      chatbotSettingsSchemaReady = null;
+      logger.error({ err }, "[ChatbotService] Failed to ensure chatbot_settings schema");
+      throw err;
+    });
+  }
+  await chatbotSettingsSchemaReady;
+}
+
 async function getSettings(clinicId: string): Promise<ChatbotSettings> {
+  await ensureChatbotSettingsSchema();
+
   // Try cache first
   const cached = settingsCache.get(clinicId);
   if (cached && cached.expiresAt > Date.now()) return cached.settings;
@@ -3087,46 +3108,63 @@ export class ChatbotService {
     assertOpenRouterConfigured();
 
     try {
-      await aiCreditsService.consumeCredits({
-        clinicId,
-        userId: opts?.userId,
-        feature: "chatbot_test",
+      try {
+        await aiCreditsService.consumeCredits({
+          clinicId,
+          userId: opts?.userId,
+          feature: "chatbot_test",
+        });
+      } catch (err) {
+        if (!(err instanceof InsufficientAiCreditsError)) throw err;
+        logger.info({ clinicId }, "[ChatbotService] Playground test without AI credits — allowed for preview");
+      }
+
+      const settings = getEffectiveSettings(await getSettings(clinicId));
+      const turn = await this.executeTurn(clinicId, PLAYGROUND_SIM_PHONE, userMessage, {
+        dryRun: true,
+        sessionInput: opts?.session,
+        historyInput: opts?.history,
+        scenario: opts?.scenario,
+        initGreeting: opts?.initGreeting,
       });
-    } catch (err) {
-      if (!(err instanceof InsufficientAiCreditsError)) throw err;
-      logger.info({ clinicId }, "[ChatbotService] Playground test without AI credits — allowed for preview");
-    }
 
-    const settings = getEffectiveSettings(await getSettings(clinicId));
-    const turn = await this.executeTurn(clinicId, PLAYGROUND_SIM_PHONE, userMessage, {
-      dryRun: true,
-      sessionInput: opts?.session,
-      historyInput: opts?.history,
-      scenario: opts?.scenario,
-      initGreeting: opts?.initGreeting,
-    });
+      if (!turn) {
+        return {
+          reply: "Чат-бот отключён или недоступен.",
+          parts: ["Чат-бот отключён или недоступен."],
+          pausesMs: [0],
+          fsmState: opts?.session?.state ?? "greeting",
+          humanTakeover: false,
+          sessionData: opts?.session?.data ?? {},
+          mindMapNode: null,
+          simulatedActions: [],
+        };
+      }
 
-    if (!turn) {
+      const resolved = turn.outbound ?? replyFromText("...");
       return {
-        reply: "Чат-бот отключён или недоступен.",
-        parts: ["Чат-бот отключён или недоступен."],
-        pausesMs: [0],
-        fsmState: opts?.session?.state ?? "greeting",
-        humanTakeover: false,
-        sessionData: opts?.session?.data ?? {},
-        mindMapNode: null,
-        simulatedActions: [],
+        ...formatSimulateMessageResult(
+          { ...turn, outbound: resolved },
+          settings,
+          userMessage || "Здравствуйте",
+        ),
       };
+    } catch (err) {
+      if (err instanceof InsufficientAiCreditsError || err instanceof OpenRouterAiFailedError) {
+        throw err;
+      }
+      const errMsg = err instanceof Error ? err.message : String(err);
+      if (
+        errMsg.includes("OpenRouter") ||
+        errMsg.includes("openrouter") ||
+        errMsg.includes("429") ||
+        errMsg.includes("402")
+      ) {
+        throw new OpenRouterAiFailedError();
+      }
+      logger.error({ err, clinicId }, "[ChatbotService] simulateMessage failed");
+      throw err;
     }
-
-    const resolved = turn.outbound ?? replyFromText("...");
-    return {
-      ...formatSimulateMessageResult(
-        { ...turn, outbound: resolved },
-        settings,
-        userMessage || "Здравствуйте",
-      ),
-    };
   }
 
   async triggerReactivation(
