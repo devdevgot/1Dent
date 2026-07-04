@@ -217,10 +217,13 @@ export function GlobalSearch() {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="flex-1 flex items-center gap-2 bg-[var(--surface-2)] rounded-xl px-3 py-2 text-left cursor-pointer hover:bg-[var(--ds-border)]/60 transition-colors"
+        title="Имя, телефон, ИИН"
+        className="flex-1 flex min-w-0 items-center gap-2 bg-[var(--surface-2)] rounded-xl px-3 py-2 text-left cursor-pointer hover:bg-[var(--ds-border)]/60 transition-colors"
       >
         <Search className="w-4 h-4 text-[var(--text-subtle)] shrink-0" />
-        <span className="text-sm text-[var(--text-subtle)] select-none font-manrope">Поиск по имени, телефону, ИИН...</span>
+        <span className="min-w-0 truncate text-sm text-[var(--text-subtle)] select-none font-manrope whitespace-nowrap">
+          Поиск…
+        </span>
       </button>
 
       {/* Overlay */}
@@ -235,7 +238,7 @@ export function GlobalSearch() {
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Имя, телефон или ИИН..."
+                placeholder="Имя, телефон, ИИН"
                 className="flex-1 text-[15px] bg-transparent outline-none text-[var(--text)] placeholder:text-[var(--text-subtle)] font-manrope"
               />
               {query && (
