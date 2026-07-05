@@ -9,6 +9,7 @@ import {
 } from "@workspace/api-client-react";
 import type { ProcedureTemplate } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import {
@@ -57,6 +58,7 @@ interface EditState {
 
 export default function ServicesPage() {
   const { user } = useAuthStore();
+  const { toast } = useToast();
   const qc = useQueryClient();
   const isOwner = user?.role === "owner";
 
@@ -103,7 +105,11 @@ export default function ServicesPage() {
         setAddState({ name: "", price: "", category: "therapy" });
         setSaving(false);
       },
-      onError: () => setSaving(false),
+      onError: (err) => {
+        const msg = (err as { data?: { error?: string } }).data?.error;
+        toast({ title: "Ошибка", description: msg ?? "Не удалось добавить услугу", variant: "destructive" });
+        setSaving(false);
+      },
     },
   });
 
@@ -114,7 +120,11 @@ export default function ServicesPage() {
         setEditing(null);
         setSaving(false);
       },
-      onError: () => setSaving(false),
+      onError: (err) => {
+        const msg = (err as { data?: { error?: string } }).data?.error;
+        toast({ title: "Ошибка", description: msg ?? "Не удалось сохранить изменения", variant: "destructive" });
+        setSaving(false);
+      },
     },
   });
 
@@ -125,7 +135,11 @@ export default function ServicesPage() {
         setConfirmDeleteId(null);
         setSaving(false);
       },
-      onError: () => setSaving(false),
+      onError: (err) => {
+        const msg = (err as { data?: { error?: string } }).data?.error;
+        toast({ title: "Ошибка", description: msg ?? "Не удалось удалить услугу", variant: "destructive" });
+        setSaving(false);
+      },
     },
   });
 
@@ -440,7 +454,10 @@ export default function ServicesPage() {
 
       <ConfirmDeleteDialog
         open={!!confirmDeleteId}
-        onConfirm={() => { handleDelete(confirmDeleteId!); setConfirmDeleteId(null); }}
+        onConfirm={() => {
+          if (!confirmDeleteId || saving) return;
+          handleDelete(confirmDeleteId);
+        }}
         onCancel={() => setConfirmDeleteId(null)}
       />
     </PageShell>

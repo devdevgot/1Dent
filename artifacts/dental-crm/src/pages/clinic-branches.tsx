@@ -55,12 +55,16 @@ export default function ClinicBranchesPage() {
     try {
       const res = await apiFetch<{ success: boolean; data: { branches: ClinicBranch[] } }>("/api/clinic-branches");
       setBranches(res.data?.branches ?? []);
-    } catch {
-      // ignore
+    } catch (err) {
+      toast({
+        title: "Ошибка загрузки",
+        description: err instanceof Error ? err.message : "Не удалось загрузить филиалы",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => { void fetchBranches(); }, [fetchBranches]);
 

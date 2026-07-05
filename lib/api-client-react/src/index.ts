@@ -31,7 +31,6 @@ import type {
 
 export interface UpdateProfileRequest {
   name?: string;
-  email?: string;
   photoUrl?: string | null;
 }
 
@@ -59,6 +58,64 @@ export const useUpdateProfile = <TError = unknown>(options?: {
 }) =>
   useMutation<UpdateProfileResponse, TError, UpdateProfileRequest>({
     mutationFn: (data) => updateProfile(data),
+    ...options?.mutation,
+  });
+
+export interface RequestEmailChangeRequest {
+  newEmail: string;
+}
+
+export interface ConfirmEmailChangeRequest {
+  newEmail: string;
+  code: string;
+}
+
+export interface ConfirmEmailChangeResponse {
+  success: boolean;
+  data: { user: Record<string, unknown> };
+}
+
+export const requestEmailChange = (
+  data: RequestEmailChangeRequest,
+  options?: RequestInit,
+): Promise<{ success: boolean; message?: string }> =>
+  customFetch<{ success: boolean; message?: string }>("/api/auth/me/request-email-change", {
+    method: "POST",
+    body: JSON.stringify(data),
+    ...options,
+  });
+
+export const confirmEmailChange = (
+  data: ConfirmEmailChangeRequest,
+  options?: RequestInit,
+): Promise<ConfirmEmailChangeResponse> =>
+  customFetch<ConfirmEmailChangeResponse>("/api/auth/me/confirm-email-change", {
+    method: "POST",
+    body: JSON.stringify(data),
+    ...options,
+  });
+
+export const useRequestEmailChange = <TError = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    { success: boolean; message?: string },
+    TError,
+    RequestEmailChangeRequest
+  >;
+}) =>
+  useMutation<{ success: boolean; message?: string }, TError, RequestEmailChangeRequest>({
+    mutationFn: (data) => requestEmailChange(data),
+    ...options?.mutation,
+  });
+
+export const useConfirmEmailChange = <TError = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    ConfirmEmailChangeResponse,
+    TError,
+    ConfirmEmailChangeRequest
+  >;
+}) =>
+  useMutation<ConfirmEmailChangeResponse, TError, ConfirmEmailChangeRequest>({
+    mutationFn: (data) => confirmEmailChange(data),
     ...options?.mutation,
   });
 

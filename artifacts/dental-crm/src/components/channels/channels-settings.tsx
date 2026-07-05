@@ -227,6 +227,10 @@ export function ChannelsSettings() {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListChannelsQueryKey() });
         toast({ title: t("channels.deleteSuccess") });
+        setConfirmDeleteId(null);
+      },
+      onError: () => {
+        toast({ title: t("common.error", { defaultValue: "Ошибка" }), description: t("channels.deleteError", { defaultValue: "Не удалось удалить канал" }), variant: "destructive" });
       },
     },
   });
@@ -584,7 +588,10 @@ export function ChannelsSettings() {
 
       <ConfirmDeleteDialog
         open={!!confirmDeleteId}
-        onConfirm={() => { deleteMutation.mutate({ id: confirmDeleteId! }); setConfirmDeleteId(null); }}
+        onConfirm={() => {
+          if (!confirmDeleteId) return;
+          deleteMutation.mutate({ id: confirmDeleteId });
+        }}
         onCancel={() => setConfirmDeleteId(null)}
       />
 
