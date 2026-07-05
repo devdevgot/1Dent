@@ -15,6 +15,7 @@ export const CHATBOT_FSM_STATES = [
   { value: "collect_branch", label: "Филиал" },
   { value: "handle_objections", label: "5. Работа с сомнениями" },
   { value: "confirm_appointment", label: "4. Подтверждение" },
+  { value: "collect_review", label: "Оценка визита" },
   { value: "dental_qa", label: "Вопросы по лечению" },
   { value: "done", label: "Завершено" },
   { value: "human_takeover", label: "Оператор" },

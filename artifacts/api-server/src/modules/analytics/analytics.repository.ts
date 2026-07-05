@@ -9,6 +9,8 @@ import {
 import { eq, and, gte, lte, count, sum, sql, isNotNull, SQL, ne } from "drizzle-orm";
 import { analyticsCache } from "../../shared/analytics-cache";
 import { findNearestSlotMinutes } from "../chatbot/calendar-slots";
+import { getDoctorNpsMap } from "../../shared/patient-reviews";
+import type { ScoringConfig } from "@workspace/db";
 
 export interface DoctorAnalyticsFilters {
   dateFrom?: Date;
@@ -99,7 +101,19 @@ interface RawDoctorKpi {
   nearestSlotMinutes: number | null;
 }
 
-function computeDoctorScore(kpi: RawDoctorKpi, allKpis: RawDoctorKpi[]): number {
+function computeDoctorScore(
+  kpi: RawDoctorKpi,
+  allKpis: RawDoctorKpi[],
+  scoring?: ScoringConfig,
+): number {
+  const revenueW = scoring?.revenueWeight ?? 35;
+  const proceduresW = scoring?.proceduresWeight ?? 30;
+  const checkW = scoring?.avgCheckWeight ?? 20;
+  const conversionW = scoring?.conversionWeight ?? 15;
+  const npsW = scoring?.npsWeight ?? 15;
+  const operationalTotal = revenueW + proceduresW + checkW + conversionW;
+  const scale = operationalTotal > 0 ? (100 - (kpi.nps > 0 ? npsW : 0)) / operationalTotal : 1;
+
   const maxRevenue = Math.max(...allKpis.map((k) => k.revenueTotal), 1);
   const maxProcedures = Math.max(...allKpis.map((k) => k.proceduresCount), 1);
   const maxCheck = Math.max(...allKpis.map((k) => k.averageCheck), 1);
@@ -121,7 +135,16 @@ function computeDoctorScore(kpi: RawDoctorKpi, allKpis: RawDoctorKpi[]): number 
   const checkNorm = kpi.averageCheck / maxCheck;
   const conversionNorm = conversionRaw / maxConversionRaw;
 
-  const score = revenueNorm * 35 + proceduresNorm * 30 + checkNorm * 20 + conversionNorm * 15;
+  let score =
+    revenueNorm * revenueW * scale +
+    proceduresNorm * proceduresW * scale +
+    checkNorm * checkW * scale +
+    conversionNorm * conversionW * scale;
+
+  if (kpi.nps > 0 && npsW > 0) {
+    score += (kpi.nps / 100) * npsW;
+  }
+
   return Math.round(Math.min(100, Math.max(0, score)));
 }
 
@@ -232,8 +255,10 @@ export function computeAdvancedScore(
     ? 1.0
     : 1.0 + (Math.random() - 0.5) * 0.1;
 
+  const npsFactor = kpi.nps > 0 ? 0.7 + (kpi.nps / 100) * 0.3 : 1.0;
+
   const finalScore =
-    baseScore * quotaFactor * loadFactor * valueFactor * patientFitFactor * timeFactor * explorationNoise;
+    baseScore * quotaFactor * loadFactor * valueFactor * patientFitFactor * timeFactor * explorationNoise * npsFactor;
 
   return Math.max(0, finalScore);
 }
@@ -818,90 +843,7 @@ export class AnalyticsRepository {
     const cached = await analyticsCache.get<DoctorKpi[]>(cacheKey);
     if (cached) return cached;
 
-    const doctors = await db
-      .select()
-      .from(usersTable)
-      .where(
-        and(
-          eq(usersTable.clinicId, clinicId),
-          eq(usersTable.role, "doctor"),
-        ),
-      );
-
-    const capacities = await db
-      .select()
-      .from(doctorCapacityTable)
-      .where(eq(doctorCapacityTable.clinicId, clinicId));
-
-    const capacityMap = new Map(capacities.map((c) => [c.doctorId, c.maxPatientsPerDay]));
-
-    const todayStart = startOfDay();
-    const todayEnd = endOfDay();
-
-    const rawKpis = await Promise.all(
-      doctors.map(async (doc) => {
-        const [patients, procedures, cancelledProcs, todayProcs] = await Promise.all([
-          db
-            .select()
-            .from(patientsTable)
-            .where(
-              and(
-                eq(patientsTable.clinicId, clinicId),
-                eq(patientsTable.doctorId, doc.id),
-              ),
-            ),
-          db
-            .select()
-            .from(proceduresTable)
-            .where(
-              and(
-                eq(proceduresTable.clinicId, clinicId),
-                eq(proceduresTable.doctorId, doc.id),
-                eq(proceduresTable.status, "completed"),
-              ),
-            ),
-          db
-            .select()
-            .from(proceduresTable)
-            .where(
-              and(
-                eq(proceduresTable.clinicId, clinicId),
-                eq(proceduresTable.doctorId, doc.id),
-                eq(proceduresTable.status, "cancelled"),
-              ),
-            ),
-          // Today's load: non-cancelled procedures with scheduledAt today
-          db
-            .select({ id: proceduresTable.id })
-            .from(proceduresTable)
-            .where(
-              and(
-                eq(proceduresTable.clinicId, clinicId),
-                eq(proceduresTable.doctorId, doc.id),
-                ne(proceduresTable.status, "cancelled"),
-                gte(proceduresTable.scheduledAt, todayStart),
-                lte(proceduresTable.scheduledAt, todayEnd),
-              ),
-            ),
-        ]);
-        const revenueTotal = procedures.reduce((acc, p) => acc + (p.price ?? 0), 0);
-        const averageCheck = procedures.length > 0 ? revenueTotal / procedures.length : 0;
-        const maxSlotsPerDay = capacityMap.get(doc.id) ?? 20;
-        return {
-          doctorId: doc.id,
-          doctorName: doc.name,
-          patientsCount: patients.length,
-          proceduresCount: procedures.length,
-          cancelledCount: cancelledProcs.length,
-          revenueTotal,
-          averageCheck,
-          nps: 0, // placeholder — will be populated from patient survey results (Task #28)
-          slotsUsedToday: todayProcs.length,
-          maxSlotsPerDay,
-          nearestSlotMinutes: computeNearestSlotMinutes(todayProcs.length, maxSlotsPerDay),
-        };
-      }),
-    );
+    const rawKpis = await this.getDoctorKpisRaw(clinicId);
 
     const kpis: DoctorKpi[] = rawKpis.map((kpi) => ({
       doctorId: kpi.doctorId,
@@ -939,14 +881,26 @@ export class AnalyticsRepository {
 
     const todayStart = startOfDay();
     const todayEnd = endOfDay();
+    const rollingSince = new Date();
+    rollingSince.setDate(rollingSince.getDate() - 90);
+    const npsMap = await getDoctorNpsMap(clinicId, 90);
 
     const rawKpis = await Promise.all(
       doctors.map(async (doc) => {
         const [patients, procedures, cancelledProcs, todayProcs] = await Promise.all([
           db.select().from(patientsTable).where(and(eq(patientsTable.clinicId, clinicId), eq(patientsTable.doctorId, doc.id))),
-          db.select().from(proceduresTable).where(and(eq(proceduresTable.clinicId, clinicId), eq(proceduresTable.doctorId, doc.id), eq(proceduresTable.status, "completed"))),
-          db.select().from(proceduresTable).where(and(eq(proceduresTable.clinicId, clinicId), eq(proceduresTable.doctorId, doc.id), eq(proceduresTable.status, "cancelled"))),
-          // Today's scheduled load: non-cancelled procedures with scheduledAt today
+          db.select().from(proceduresTable).where(and(
+            eq(proceduresTable.clinicId, clinicId),
+            eq(proceduresTable.doctorId, doc.id),
+            eq(proceduresTable.status, "completed"),
+            gte(proceduresTable.completedAt, rollingSince),
+          )),
+          db.select().from(proceduresTable).where(and(
+            eq(proceduresTable.clinicId, clinicId),
+            eq(proceduresTable.doctorId, doc.id),
+            eq(proceduresTable.status, "cancelled"),
+            gte(proceduresTable.scheduledAt, rollingSince),
+          )),
           db.select({ id: proceduresTable.id }).from(proceduresTable).where(and(eq(proceduresTable.clinicId, clinicId), eq(proceduresTable.doctorId, doc.id), ne(proceduresTable.status, "cancelled"), gte(proceduresTable.scheduledAt, todayStart), lte(proceduresTable.scheduledAt, todayEnd))),
         ]);
         const revenueTotal = procedures.reduce((acc, p) => acc + (p.price ?? 0), 0);
@@ -966,7 +920,7 @@ export class AnalyticsRepository {
           cancelledCount: cancelledProcs.length,
           revenueTotal,
           averageCheck,
-          nps: 0,
+          nps: npsMap.get(doc.id) ?? 0,
           slotsUsedToday,
           maxSlotsPerDay,
           nearestSlotMinutes,
@@ -974,6 +928,19 @@ export class AnalyticsRepository {
       }),
     );
 
-    return rawKpis;
+    const clinicAvgProcedures =
+      rawKpis.length > 0
+        ? rawKpis.reduce((s, k) => s + k.proceduresCount, 0) / rawKpis.length
+        : 0;
+
+    return rawKpis.map((kpi) => {
+      if (kpi.proceduresCount >= 5) return kpi;
+      const blend = (5 - kpi.proceduresCount) / 5;
+      return {
+        ...kpi,
+        proceduresCount: Math.round(kpi.proceduresCount + clinicAvgProcedures * blend),
+        revenueTotal: kpi.revenueTotal + (clinicAvgProcedures * blend * (kpi.averageCheck || 10000)),
+      };
+    });
   }
 }

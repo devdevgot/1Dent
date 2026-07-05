@@ -11,7 +11,7 @@ import {
   treatmentPlansTable,
   treatmentPlanItemsTable,
 } from "@workspace/db";
-import { eq, and, isNotNull, ne, sql, inArray, asc } from "drizzle-orm";
+import { eq, and, isNotNull, ne, sql, inArray, asc, gte } from "drizzle-orm";
 import { sendToPatient } from "../../shared/messaging";
 import { logger } from "../../lib/logger";
 import { generateBroadcastMessageAi } from "./dental-broadcast-ai";
@@ -33,6 +33,32 @@ const CONDITION_LABEL: Record<string, string> = {
 
 const DEDUP_DAYS = 14;
 const MAX_TOOTH_LINES = 4;
+const SEND_DELAY_MS_MIN = 3000;
+const SEND_DELAY_MS_MAX = 10000;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function randomSendDelayMs(): number {
+  return SEND_DELAY_MS_MIN + Math.floor(Math.random() * (SEND_DELAY_MS_MAX - SEND_DELAY_MS_MIN));
+}
+
+export function clinicLocalDateString(timezone: string): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(new Date());
+}
+
+export function isClinicBroadcastDay(timezone: string): boolean {
+  const now = new Date();
+  const day = Number(
+    new Intl.DateTimeFormat("en-US", { timeZone: timezone, day: "numeric" }).format(now),
+  );
+  if (day === 15) return true;
+  const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  const monthNow = new Intl.DateTimeFormat("en-US", { timeZone: timezone, month: "numeric" }).format(now);
+  const monthTomorrow = new Intl.DateTimeFormat("en-US", { timeZone: timezone, month: "numeric" }).format(tomorrow);
+  return monthNow !== monthTomorrow;
+}
 
 const PROCEDURE_ABBREVIATIONS: Array<[RegExp, string]> = [
   [/\bэндо\b/gi, "лечение каналов"],
@@ -64,8 +90,25 @@ type ToothProblem = {
   label: string;
 };
 
-function todayDateString(): string {
-  return new Date().toISOString().slice(0, 10);
+function todayDateString(timezone = "Asia/Almaty"): string {
+  return clinicLocalDateString(timezone);
+}
+
+async function wasRecentlyBroadcast(clinicId: string, patientId: string): Promise<boolean> {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - DEDUP_DAYS);
+  const [row] = await db
+    .select({ id: dentalBroadcastDeliveriesTable.id })
+    .from(dentalBroadcastDeliveriesTable)
+    .where(
+      and(
+        eq(dentalBroadcastDeliveriesTable.clinicId, clinicId),
+        eq(dentalBroadcastDeliveriesTable.patientId, patientId),
+        gte(dentalBroadcastDeliveriesTable.sentAt, cutoff),
+      ),
+    )
+    .limit(1);
+  return !!row;
 }
 
 function sanitizeProcedureLabel(title: string): string {
@@ -80,13 +123,6 @@ function sanitizeProcedureLabel(title: string): string {
   if (label.length === 0) return "Лечение";
 
   return label.charAt(0).toUpperCase() + label.slice(1);
-}
-
-function wasRecentlyBroadcast(patient: PatientForBroadcast): boolean {
-  if (patient.status !== "repeat_sale") return false;
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - DEDUP_DAYS);
-  return patient.updatedAt >= cutoff;
 }
 
 function formatRemainingTeethCount(count: number): string {
@@ -118,6 +154,7 @@ async function fetchPatientsForBroadcast(
         inArray(toothRecordsTable.condition, [...PROBLEM_CONDITIONS]),
         isNotNull(patientsTable.phone),
         ne(patientsTable.phone, ""),
+        eq(patientsTable.marketingOptOut, false),
       ),
     );
 
@@ -135,6 +172,7 @@ async function countPatientsForBroadcast(clinicId: string): Promise<number> {
         inArray(toothRecordsTable.condition, [...PROBLEM_CONDITIONS]),
         isNotNull(patientsTable.phone),
         ne(patientsTable.phone, ""),
+        eq(patientsTable.marketingOptOut, false),
       ),
     );
   return row?.count ?? 0;
@@ -342,12 +380,19 @@ async function insertBroadcastRun(
   clinicId: string,
   totalPatients: number,
 ): Promise<typeof dentalBroadcastRunsTable.$inferSelect> {
+  const [clinicRow] = await db
+    .select({ timezone: clinicsTable.timezone })
+    .from(clinicsTable)
+    .where(eq(clinicsTable.id, clinicId))
+    .limit(1);
+  const timezone = clinicRow?.timezone ?? "Asia/Almaty";
+
   const [run] = await db
     .insert(dentalBroadcastRunsTable)
     .values({
       id: randomUUID(),
       clinicId,
-      runDate: todayDateString(),
+      runDate: todayDateString(timezone),
       status: "running",
       totalPatients,
       processedPatients: 0,
@@ -384,17 +429,19 @@ async function executeBroadcastRun(runId: string, clinicId: string): Promise<voi
   for (let i = 0; i < patients.length; i++) {
     const patient = patients[i]!;
     try {
-      if (wasRecentlyBroadcast(patient)) {
+      if (await wasRecentlyBroadcast(clinicId, patient.id)) {
         logger.info(
           {
             patientId: patient.id,
-            status: patient.status,
-            updatedAt: patient.updatedAt,
             dedupDays: DEDUP_DAYS,
           },
-          "[DentalBroadcast] Skipping patient — broadcast sent within dedup window",
+          "[DentalBroadcast] Skipping patient — delivery within dedup window",
         );
         continue;
+      }
+
+      if (i > 0) {
+        await sleep(randomSendDelayMs());
       }
 
       const problems = await getPatientProblems(clinicId, patient.id);
@@ -519,7 +566,7 @@ export async function runDentalBroadcastForClinic(
 
 export async function runDentalBroadcastForAllClinics(): Promise<void> {
   const clinics = await db
-    .select({ id: clinicsTable.id })
+    .select({ id: clinicsTable.id, timezone: clinicsTable.timezone })
     .from(clinicsTable)
     .where(
       and(
@@ -530,9 +577,12 @@ export async function runDentalBroadcastForAllClinics(): Promise<void> {
       ),
     );
 
-  const runDate = todayDateString();
-
   for (const clinic of clinics) {
+    const timezone = clinic.timezone ?? "Asia/Almaty";
+    if (!isClinicBroadcastDay(timezone)) continue;
+
+    const runDate = todayDateString(timezone);
+
     const [existing] = await db
       .select({ id: dentalBroadcastRunsTable.id })
       .from(dentalBroadcastRunsTable)

@@ -14,6 +14,7 @@ export type ChatbotState =
   | "handle_objections"
   | "confirm_appointment"
   | "dental_qa"
+  | "collect_review"
   | "done"
   | "human_takeover"
   | "reactivation";
@@ -54,6 +55,7 @@ export interface ChatbotSessionData {
     id: string;
     name: string;
     score: number;
+    finalScore?: number;
     reasons?: string[];
     specialty?: string | null;
   }>;
@@ -69,4 +71,6 @@ export interface ChatbotSessionData {
   createdProcedureId?: string;
   abVariantId?: string;
   fromRepeatSaleBroadcast?: boolean;
+  pendingReviewProcedureId?: string;
+  pendingReviewDoctorId?: string;
 }

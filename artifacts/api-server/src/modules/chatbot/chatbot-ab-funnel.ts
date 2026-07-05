@@ -14,6 +14,7 @@ export type FunnelEventType =
 
 const FUNNEL_STAGES: ChatbotState[] = [
   "greeting",
+  "collect_iin",
   "collect_problem",
   "collect_qualification",
   "suggest_doctor",
@@ -22,6 +23,8 @@ const FUNNEL_STAGES: ChatbotState[] = [
   "collect_datetime",
   "collect_branch",
   "confirm_appointment",
+  "manage_appointment",
+  "collect_review",
   "done",
 ];
 
@@ -143,10 +146,9 @@ export async function getChatbotFunnelAnalytics(
     }
   }
 
-  const stages: FunnelStageMetric[] = FUNNEL_STAGES.filter((s) => s !== "done").map((state, idx) => {
+  const stages: FunnelStageMetric[] = FUNNEL_STAGES.filter((s) => s !== "done").map((state) => {
     const entered = stageEntered.get(state) ?? 0;
-    const nextState = FUNNEL_STAGES[idx + 1];
-    const progressed = nextState ? (stageEntered.get(nextState) ?? 0) : bookings;
+    const progressed = bookings;
     const conversionRate = entered > 0 ? Math.round((progressed / entered) * 100) : 0;
     return { state, entered, progressed, conversionRate };
   });

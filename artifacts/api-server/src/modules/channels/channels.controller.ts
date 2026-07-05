@@ -12,6 +12,7 @@ import { ValidationError, NotFoundError } from "../../shared/errors";
 import { db, clinicsTable, channelTypes } from "@workspace/db";
 import { and, eq, isNull } from "drizzle-orm";
 import { getGreenApiQrCode, getGreenApiState, setGreenApiWebhookUrl, getServerBaseUrl, logoutGreenApiInstance, clearGreenApiStateCache, getGreenApiWaSettings, shouldRegisterWebhook, getGreenApiPairingCode, extractPhoneFromWaSettings, createPartnerInstance, deletePartnerInstance, isInstanceDeleted } from "../../shared/green-api";
+import { buildGreenApiWebhookUrl, ensureGreenApiWebhookSecret } from "../../shared/green-api-webhook";
 import { logger } from "../../lib/logger";
 
 const router: IRouter = Router();
@@ -536,8 +537,9 @@ router.get(
       // Throttle to once per 60 seconds to avoid hammering Green API's setSettings.
       const baseUrl = getServerBaseUrl();
       if (baseUrl && shouldRegisterWebhook(clinic.greenApiInstanceId)) {
-        const webhookUrl = `${baseUrl}/api/webhook/greenapi/${req.user!.clinicId}`;
-        logger.info({ webhookUrl, clinicId: req.user!.clinicId }, "Registering Green API webhook URL");
+        const secret = await ensureGreenApiWebhookSecret(req.user!.clinicId);
+        const webhookUrl = buildGreenApiWebhookUrl(baseUrl, req.user!.clinicId, secret);
+        logger.info({ webhookUrl: webhookUrl.replace(secret, "***"), clinicId: req.user!.clinicId }, "Registering Green API webhook URL");
         setGreenApiWebhookUrl(clinic.greenApiInstanceId, clinic.greenApiToken, webhookUrl, clinic.greenApiUrl)
           .then(() => logger.info({ webhookUrl }, "Green API webhook URL registered successfully"))
           .catch((err) => logger.warn({ err }, "Failed to set Green API webhook URL — messages may not be delivered"));
@@ -579,11 +581,12 @@ router.post(
       return res.status(500).json({ success: false, error: "Server base URL not configured. Set WEBHOOK_BASE_URL env var." });
     }
 
-    const webhookUrl = `${baseUrl}/api/webhook/greenapi/${req.user!.clinicId}`;
-    logger.info({ webhookUrl, clinicId: req.user!.clinicId }, "Force-registering Green API webhook URL");
+    const secret = await ensureGreenApiWebhookSecret(req.user!.clinicId);
+    const webhookUrl = buildGreenApiWebhookUrl(baseUrl, req.user!.clinicId, secret);
+    logger.info({ clinicId: req.user!.clinicId }, "Force-registering Green API webhook URL");
     await setGreenApiWebhookUrl(clinic.greenApiInstanceId, clinic.greenApiToken, webhookUrl).catch(next);
-    logger.info({ webhookUrl }, "Green API webhook URL force-registered successfully");
-    return res.json({ success: true, data: { webhookUrl } });
+    logger.info({ webhookUrl: webhookUrl.replace(secret, "***") }, "Green API webhook URL force-registered successfully");
+    return res.json({ success: true, data: { webhookUrl: webhookUrl.replace(secret, "***") } });
   },
 );
 

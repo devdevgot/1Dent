@@ -71,6 +71,7 @@ export default function StaffPage() {
                     <span className="text-xs text-[#64748b]">{t("staff.avgCheck")}</span>
                     <span className="text-sm font-semibold text-[#0f172a]">₸{Math.round(doctor.averageCheck).toLocaleString()}</span>
                   </div>
+                  {doctor.nps > 0 && (
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-[#64748b]">NPS</span>
                     <span className={`text-sm font-semibold px-2 py-1 rounded-full ${
@@ -81,6 +82,7 @@ export default function StaffPage() {
                       {doctor.nps}
                     </span>
                   </div>
+                  )}
                 </div>
               </button>
             ))}

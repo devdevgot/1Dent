@@ -1,5 +1,12 @@
+export function isMarketingOptOutReply(text: string): boolean {
+  const lower = text.toLowerCase().trim();
+  const optOutKeywords = ["стоп", "stop", "отписаться", "отписаться от рассылки", "не пишите", "unsubscribe"];
+  return optOutKeywords.some((kw) => lower === kw || lower.startsWith(kw + " "));
+}
+
 export function isExplicitNegativeRepeatSaleReply(text: string): boolean {
   const lower = text.toLowerCase();
+  if (isMarketingOptOutReply(text)) return true;
   const negativeKeywords = [
     "нет", "не надо", "не хочу", "не интерес", "неактуал", "жоқ", "кет", "отказ", "no", "stop",
   ];

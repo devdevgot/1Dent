@@ -91,6 +91,7 @@ export function serializeDoctorCandidates(
     id: c.id,
     name: c.name,
     score: c.rankPercent,
+    finalScore: c.finalScore,
     reasons: c.reasons,
     specialty: c.specialty,
   }));

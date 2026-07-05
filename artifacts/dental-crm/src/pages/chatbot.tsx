@@ -16,6 +16,8 @@ import {
   FlaskConical,
   BookOpen,
   Sparkles,
+  BarChart3,
+  Users,
 } from "lucide-react";
 import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader } from "@/components/layout/page-header";
@@ -35,6 +37,8 @@ import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { KnowledgeAndScriptModal } from "@/components/chatbot/knowledge-tab";
 import { PlaygroundTab } from "@/components/chatbot/playground-tab";
 import { ChatbotCalendarAbSettings } from "@/components/chatbot/calendar-ab-settings";
+import { ChatbotAnalyticsTab } from "@/components/chatbot/analytics-tab";
+import { ManagerExamplesTab } from "@/components/chatbot/manager-examples-tab";
 import type { ScriptMindMapData } from "@/components/chatbot/script-mindmap";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -594,7 +598,7 @@ function AiBroadcastTab() {
 export default function ChatbotPage() {
   const { t, i18n } = useTranslation();
   const lang = i18n.language || "ru";
-  const [tab, setTab] = useState<"sessions" | "settings" | "playground" | "ai-broadcast">("sessions");
+  const [tab, setTab] = useState<"sessions" | "settings" | "playground" | "ai-broadcast" | "analytics" | "examples">("sessions");
   const [combinedOpen, setCombinedOpen] = useState(false);
   const [mindMapSaveStatus, setMindMapSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [confirmResetPhone, setConfirmResetPhone] = useState<string | null>(null);
@@ -685,6 +689,8 @@ export default function ChatbotPage() {
               { key: "settings", label: t("chatbot.tab.settings"), icon: Settings },
               { key: "playground", label: "Playground", icon: FlaskConical },
               { key: "ai-broadcast", label: "ИИ Рассылка", icon: Megaphone },
+              { key: "analytics", label: "Аналитика", icon: BarChart3 },
+              { key: "examples", label: "Примеры", icon: Users },
             ] as const).map(({ key, label, icon: Icon }) => (
               <button
                 key={key}
@@ -821,6 +827,8 @@ export default function ChatbotPage() {
 
         {tab === "playground" && <PlaygroundTab />}
         {tab === "ai-broadcast" && <AiBroadcastTab />}
+        {tab === "analytics" && <ChatbotAnalyticsTab />}
+        {tab === "examples" && <ManagerExamplesTab />}
       </div>
 
       {/* Combined knowledge + script modal */}
