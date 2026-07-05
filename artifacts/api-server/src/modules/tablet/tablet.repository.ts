@@ -1,4 +1,4 @@
-import { eq, and, desc, gt } from "drizzle-orm";
+import { eq, and, desc, gt, inArray } from "drizzle-orm";
 import { db, tabletCabinetsTable, tabletSessionsTable, usersTable } from "@workspace/db";
 import type { TabletCabinet, TabletSession } from "@workspace/db";
 
@@ -57,8 +57,8 @@ export class TabletRepository {
 
   async createSession(data: {
     id: string;
-    cabinetId: string;
-    clinicId: string;
+    cabinetId?: string | null;
+    clinicId?: string | null;
     linkTokenHash: string;
     expiresAt: Date;
   }): Promise<TabletSession> {
@@ -66,14 +66,74 @@ export class TabletRepository {
       .insert(tabletSessionsTable)
       .values({
         id: data.id,
-        cabinetId: data.cabinetId,
-        clinicId: data.clinicId,
+        cabinetId: data.cabinetId ?? null,
+        clinicId: data.clinicId ?? null,
         linkTokenHash: data.linkTokenHash,
         expiresAt: data.expiresAt,
         status: "pending",
       })
       .returning();
     return row!;
+  }
+
+  async createBootstrapSession(data: {
+    id: string;
+    linkTokenHash: string;
+    expiresAt: Date;
+  }): Promise<TabletSession> {
+    return this.createSession({
+      id: data.id,
+      cabinetId: null,
+      clinicId: null,
+      linkTokenHash: data.linkTokenHash,
+      expiresAt: data.expiresAt,
+    });
+  }
+
+  async assignSessionForPairing(
+    sessionId: string,
+    cabinetId: string,
+    clinicId: string,
+    doctorUserId: string,
+  ): Promise<TabletSession | null> {
+    const now = new Date();
+    const [row] = await db
+      .update(tabletSessionsTable)
+      .set({
+        cabinetId,
+        clinicId,
+        doctorUserId,
+        status: "awaiting_pairing",
+      })
+      .where(
+        and(
+          eq(tabletSessionsTable.id, sessionId),
+          eq(tabletSessionsTable.status, "pending"),
+          gt(tabletSessionsTable.expiresAt, now),
+        ),
+      )
+      .returning();
+    return row ?? null;
+  }
+
+  async confirmPairingSession(sessionId: string, cabinetId: string): Promise<TabletSession | null> {
+    const now = new Date();
+    const [row] = await db
+      .update(tabletSessionsTable)
+      .set({
+        status: "unlocked",
+        unlockedAt: now,
+      })
+      .where(
+        and(
+          eq(tabletSessionsTable.id, sessionId),
+          eq(tabletSessionsTable.cabinetId, cabinetId),
+          eq(tabletSessionsTable.status, "awaiting_pairing"),
+          gt(tabletSessionsTable.expiresAt, now),
+        ),
+      )
+      .returning();
+    return row ?? null;
   }
 
   async findSessionById(id: string): Promise<TabletSession | null> {
@@ -132,7 +192,25 @@ export class TabletRepository {
       .where(
         and(
           eq(tabletSessionsTable.cabinetId, cabinetId),
-          eq(tabletSessionsTable.status, "pending"),
+          inArray(tabletSessionsTable.status, ["pending", "awaiting_pairing"]),
+        ),
+      );
+  }
+
+  async listTabletUsersWithPins(clinicId: string) {
+    return db
+      .select({
+        id: usersTable.id,
+        name: usersTable.name,
+        role: usersTable.role,
+        specialty: usersTable.specialty,
+        tabletPinHash: usersTable.tabletPinHash,
+      })
+      .from(usersTable)
+      .where(
+        and(
+          eq(usersTable.clinicId, clinicId),
+          inArray(usersTable.role, ["doctor", "owner", "admin"]),
         ),
       );
   }

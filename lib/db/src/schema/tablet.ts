@@ -4,6 +4,7 @@ import { usersTable } from "./users";
 
 export const tabletSessionStatusEnum = pgEnum("tablet_session_status", [
   "pending",
+  "awaiting_pairing",
   "unlocked",
   "expired",
 ]);
@@ -22,12 +23,8 @@ export const tabletCabinetsTable = pgTable("tablet_cabinets", {
 
 export const tabletSessionsTable = pgTable("tablet_sessions", {
   id: text("id").primaryKey(),
-  cabinetId: text("cabinet_id")
-    .notNull()
-    .references(() => tabletCabinetsTable.id, { onDelete: "cascade" }),
-  clinicId: text("clinic_id")
-    .notNull()
-    .references(() => clinicsTable.id, { onDelete: "cascade" }),
+  cabinetId: text("cabinet_id").references(() => tabletCabinetsTable.id, { onDelete: "cascade" }),
+  clinicId: text("clinic_id").references(() => clinicsTable.id, { onDelete: "cascade" }),
   linkTokenHash: text("link_token_hash").notNull(),
   status: tabletSessionStatusEnum("status").notNull().default("pending"),
   doctorUserId: text("doctor_user_id").references(() => usersTable.id, { onDelete: "set null" }),

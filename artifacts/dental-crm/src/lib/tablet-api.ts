@@ -18,13 +18,14 @@ export interface TabletSessionCreateResult {
   linkToken: string;
   linkUrl: string;
   expiresAt: string;
-  cabinet: TabletCabinetBrief;
+  cabinet: TabletCabinetBrief | null;
+  bootstrap?: boolean;
 }
 
 export interface TabletSessionStatus {
   sessionId: string;
-  status: "pending" | "unlocked" | "expired";
-  cabinet: TabletCabinetBrief;
+  status: "pending" | "awaiting_pairing" | "unlocked" | "expired";
+  cabinet: TabletCabinetBrief | null;
   doctor?: TabletDoctorBrief | null;
   expiresAt: string;
   unlockedAt?: string | null;
@@ -33,6 +34,16 @@ export interface TabletSessionStatus {
     user: User;
     clinic: Clinic;
   } | null;
+}
+
+export interface TabletUnlockResult {
+  cabinet: TabletCabinetBrief;
+  doctor: TabletDoctorBrief;
+  auth: {
+    token: string;
+    user: User;
+    clinic: Clinic;
+  };
 }
 
 const CABINET_KEY = "1dent:tablet-cabinet-id";
@@ -93,16 +104,41 @@ export function parseTabletLinkToken(raw: string): string | null {
   return null;
 }
 
-export async function createTabletSession(cabinetId: string) {
+export async function createTabletSession(cabinetId?: string) {
   return customFetch<{ success: boolean; data: TabletSessionCreateResult }>(
     "/api/tablet/public/sessions",
-    { method: "POST", body: JSON.stringify({ cabinetId }) },
+    {
+      method: "POST",
+      body: JSON.stringify(cabinetId ? { cabinetId } : {}),
+    },
   );
 }
 
 export async function getTabletSessionStatus(sessionId: string) {
   return customFetch<{ success: boolean; data: TabletSessionStatus }>(
     `/api/tablet/public/sessions/${sessionId}`,
+  );
+}
+
+export async function confirmTabletPairing(sessionId: string, code: string) {
+  return customFetch<{
+    success: boolean;
+    data: {
+      sessionId: string;
+      cabinet: TabletCabinetBrief;
+      doctor: TabletDoctorBrief | null;
+      auth?: TabletUnlockResult["auth"] | null;
+    };
+  }>(`/api/tablet/public/sessions/${sessionId}/confirm-pairing`, {
+    method: "POST",
+    body: JSON.stringify({ code }),
+  });
+}
+
+export async function unlockTabletByUserPin(cabinetId: string, pin: string) {
+  return customFetch<{ success: boolean; data: TabletUnlockResult }>(
+    `/api/tablet/public/cabinets/${cabinetId}/unlock-by-pin`,
+    { method: "POST", body: JSON.stringify({ pin }) },
   );
 }
 
@@ -124,34 +160,22 @@ export async function setTabletPin(pin: string, linkToken?: string) {
   );
 }
 
+export interface TabletRedeemResult {
+  pairingRequired: boolean;
+  pairingCode?: string;
+  sessionId: string;
+  cabinet: TabletCabinetBrief | null;
+  doctor: TabletDoctorBrief | null;
+}
+
 export async function redeemTabletLink(token: string, pin?: string) {
-  try {
-    return await customFetch<{
-      success: boolean;
-      data: {
-        sessionId: string;
-        cabinet: TabletCabinetBrief | null;
-        doctor: TabletDoctorBrief | null;
-      };
-    }>("/api/tablet/link", {
-      method: "POST",
-      body: JSON.stringify({ token, pin }),
-    });
-  } catch (err) {
-    if (err instanceof ApiError && err.status === 428) {
-      const body = err.data as {
-        error?: { code?: string; message?: string; linkToken?: string };
-      } | null;
-      const e = new Error(body?.error?.message ?? "Установите PIN-код") as Error & {
-        code: string;
-        linkToken: string;
-      };
-      e.code = body?.error?.code ?? "TABLET_PIN_SETUP_REQUIRED";
-      e.linkToken = body?.error?.linkToken ?? token;
-      throw e;
-    }
-    throw err;
-  }
+  return customFetch<{
+    success: boolean;
+    data: TabletRedeemResult;
+  }>("/api/tablet/link", {
+    method: "POST",
+    body: JSON.stringify({ token, pin }),
+  });
 }
 
 export async function issueTabletPairingCode(cabinetId?: string) {

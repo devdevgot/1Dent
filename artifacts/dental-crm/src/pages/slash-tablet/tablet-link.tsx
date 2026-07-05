@@ -2,8 +2,7 @@ import { useEffect } from "react";
 import { useSearch, useLocation } from "wouter";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useTabletLinkFlow } from "@/hooks/use-tablet-link-flow";
-import { TabletPinSetupModal } from "@/components/tablet/tablet-pin-setup-modal";
-import { TabletPinEntryModal } from "@/components/tablet/tablet-pin-entry-modal";
+import { TabletPairingCodeModal } from "@/components/tablet/tablet-pairing-code-modal";
 import { parseTabletLinkToken } from "@/lib/tablet-api";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
 import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
@@ -13,14 +12,13 @@ export default function TabletLinkPage() {
   const [, navigate] = useLocation();
   const { isAuthenticated, isLoading, user } = useAuthStore();
   const {
-    pinSetupOpen,
-    pinEntryOpen,
+    pairingCodeOpen,
+    pairingCode,
+    cabinetName,
     submitting,
     status,
     errorMessage,
     processToken,
-    submitPinSetup,
-    submitPinEntry,
     closeModals,
   } = useTabletLinkFlow();
   const token = parseTabletLinkToken(new URLSearchParams(search).get("token") ?? "");
@@ -49,9 +47,9 @@ export default function TabletLinkPage() {
     );
   }
 
-  const showProcessing = pinSetupOpen || pinEntryOpen || submitting || status === "processing";
-  const showSuccess = status === "success" && !pinSetupOpen && !pinEntryOpen && !submitting;
-  const showError = status === "error" && !pinSetupOpen && !pinEntryOpen && !submitting;
+  const showProcessing = submitting || status === "processing";
+  const showSuccess = status === "success" && !pairingCodeOpen && !submitting;
+  const showError = status === "error" && !pairingCodeOpen && !submitting;
 
   return (
     <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-[#faf8f4] px-6 font-manrope">
@@ -59,9 +57,7 @@ export default function TabletLinkPage() {
         {showProcessing && (
           <>
             <Loader2 className="mx-auto mb-4 h-10 w-10 animate-spin text-[#1f75fe]" />
-            <p className="text-base font-bold text-[#0f172a]">
-              {pinSetupOpen ? "Настройка PIN-кода" : "Подключаем планшет…"}
-            </p>
+            <p className="text-base font-bold text-[#0f172a]">Подключаем планшет…</p>
           </>
         )}
 
@@ -104,17 +100,11 @@ export default function TabletLinkPage() {
         )}
       </div>
 
-      <TabletPinSetupModal
-        open={pinSetupOpen}
+      <TabletPairingCodeModal
+        open={pairingCodeOpen}
         onClose={closeModals}
-        onSubmit={submitPinSetup}
-        loading={submitting}
-      />
-      <TabletPinEntryModal
-        open={pinEntryOpen}
-        onClose={closeModals}
-        onSubmit={submitPinEntry}
-        loading={submitting}
+        code={pairingCode}
+        cabinetName={cabinetName}
       />
     </div>
   );

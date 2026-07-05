@@ -76,7 +76,7 @@ export function TabletPinSetupModal({
           {step === "enter" ? "Придумайте PIN-код" : "Повторите PIN-код"}
         </p>
         <p className="mb-6 max-w-xs text-center text-sm text-[#64748b]">
-          Он понадобится при каждом входе в планшетный кабинет через QR. Запомните 4 цифры.
+          Необязательный PIN для входа на планшет без QR-кода. Запомните 4 цифры.
         </p>
 
         <div className={cn("mb-4 flex gap-3", error && "animate-shake")}>

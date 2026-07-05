@@ -1,8 +1,9 @@
 import { useCallback, useState } from "react";
-import { Copy, Check, RefreshCw, TabletSmartphone } from "lucide-react";
+import { Copy, Check, RefreshCw, TabletSmartphone, Smartphone, KeyRound } from "lucide-react";
 import { AppDialog } from "@/components/layout/app-dialog";
 import { Button } from "@/components/ui/button";
-import { issueTabletPairingCode } from "@/lib/tablet-api";
+import { issueTabletPairingCode, setTabletPin } from "@/lib/tablet-api";
+import { TabletPinSetupModal } from "@/components/tablet/tablet-pin-setup-modal";
 import { useToast } from "@/hooks/use-toast";
 
 export function TabletConnectModal({
@@ -89,7 +90,7 @@ export function TabletConnectModal({
               </button>
             </div>
             <p className="mb-6 max-w-xs text-sm leading-relaxed text-[#64748b]">
-              Введите этот код на планшете в кабинете. Код действует ограниченное время.
+              Введите этот код на планшете, если не удалось подключиться через QR.
             </p>
           </>
         ) : null}
@@ -111,6 +112,26 @@ export function TabletConnectModal({
 
 export function TabletDoctorSetup() {
   const [modalOpen, setModalOpen] = useState(false);
+  const [pinModalOpen, setPinModalOpen] = useState(false);
+  const [pinSaving, setPinSaving] = useState(false);
+  const { toast } = useToast();
+
+  const savePin = useCallback(async (pin: string) => {
+    setPinSaving(true);
+    try {
+      await setTabletPin(pin);
+      setPinModalOpen(false);
+      toast({ title: "PIN сохранён", description: "Можно входить на планшет по PIN без QR" });
+    } catch (err) {
+      toast({
+        title: "Ошибка",
+        description: err instanceof Error ? err.message : "Не удалось сохранить PIN",
+        variant: "destructive",
+      });
+    } finally {
+      setPinSaving(false);
+    }
+  }, [toast]);
 
   return (
     <div className="relative flex h-[100dvh] w-full items-center justify-center overflow-hidden bg-[#faf8f4] px-6 font-manrope">
@@ -125,19 +146,44 @@ export function TabletDoctorSetup() {
         </div>
         <h1 className="text-2xl font-extrabold text-[#0f172a]">SlashTablet</h1>
         <p className="mt-3 max-w-sm text-sm leading-relaxed text-[#64748b]">
-          Откройте <strong className="text-[#0f172a]">/tablet?setup=1</strong> в CRM, нажмите кнопку ниже,
-          получите код и введите его на экране планшета в кабинете.
+          Откройте <strong className="text-[#0f172a]">/tablet</strong> на планшете в кабинете.
+          На экране появится QR-код — отсканируйте его с телефона через сканер в CRM.
+          При первом подключении на телефоне появится 6-значный код для ввода на планшете.
         </p>
+
+        <div className="mt-6 flex items-start gap-3 rounded-2xl border border-[#e8e3d9] bg-white p-4 text-left text-sm text-[#64748b]">
+          <Smartphone className="mt-0.5 h-5 w-5 shrink-0 text-[#1f75fe]" />
+          <p>
+            В следующий раз достаточно просто отсканировать QR-код.
+            Если не хотите сканировать — настройте 4-значный PIN в CRM и входите по нему на планшете.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setPinModalOpen(true)}
+          className="mt-6 flex items-center gap-2 rounded-2xl border border-[#e8e3d9] bg-white px-6 py-3 text-sm font-semibold text-[#0f172a] transition-colors hover:bg-[#faf8f4]"
+        >
+          <KeyRound className="h-4 w-4 text-[#1f75fe]" />
+          Настроить PIN для входа без QR
+        </button>
+
         <button
           type="button"
           onClick={() => setModalOpen(true)}
-          className="mt-8 rounded-2xl bg-[#1f75fe] px-8 py-4 text-base font-bold text-white shadow-lg shadow-[#1f75fe]/25 transition-colors hover:bg-[#1a66e0]"
+          className="mt-4 text-sm font-semibold text-[#1f75fe] hover:underline"
         >
-          Подключить планшет
+          Получить код вручную (резервный способ)
         </button>
       </div>
 
       <TabletConnectModal open={modalOpen} onOpenChange={setModalOpen} />
+      <TabletPinSetupModal
+        open={pinModalOpen}
+        onClose={() => setPinModalOpen(false)}
+        onSubmit={(pin) => void savePin(pin)}
+        loading={pinSaving}
+      />
     </div>
   );
 }

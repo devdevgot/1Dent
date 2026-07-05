@@ -7,8 +7,6 @@ import {
   ForbiddenError,
   NotFoundError,
   ValidationError,
-  TabletPinSetupRequiredError,
-  TabletPinRequiredError,
   TabletPinInvalidError,
 } from "../../shared/errors";
 import { getPublicAppBaseUrl } from "../../shared/public-url";
@@ -62,6 +60,37 @@ const TABLET_AUTH_TTL = "12h";
 export class TabletService {
   private repo = new TabletRepository();
   private authRepo = new AuthRepository();
+
+  private buildDoctorPublic(
+    doc: { id: string; name: string; role: UserRole; specialty: string | null },
+    role?: UserRole,
+  ) {
+    return {
+      id: doc.id,
+      name: doc.name,
+      specialty: doc.specialty ?? (role === "owner" ? "Владелец · врач" : "Врач"),
+      avatarColor: ROLE_COLORS[doc.role] ?? "#1f75fe",
+    };
+  }
+
+  private async buildSessionAuth(doctorUserId: string, clinicId: string) {
+    const user = await this.authRepo.findUserById(doctorUserId);
+    const clinic = user ? await this.authRepo.findClinicById(clinicId) : undefined;
+    if (!user || !clinic) return null;
+
+    const { passwordHash: _, tabletPinHash: __, ...safeUser } = user;
+    const token = jwt.sign(
+      {
+        userId: user.id,
+        clinicId,
+        role: user.role,
+        email: user.email,
+      },
+      getJwtSecret(),
+      { expiresIn: TABLET_AUTH_TTL },
+    );
+    return { token, user: safeUser, clinic };
+  }
 
   async seedDefaultCabinet(clinicId: string, clinicName: string) {
     const existing = await this.repo.findDefaultCabinet(clinicId);
@@ -147,6 +176,28 @@ export class TabletService {
     };
   }
 
+  async createBootstrapSession() {
+    const { raw, hash } = generateLinkToken();
+    const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
+    const session = await this.repo.createBootstrapSession({
+      id: randomUUID(),
+      linkTokenHash: hash,
+      expiresAt,
+    });
+
+    const base = getPublicAppBaseUrl();
+    const linkUrl = `${base}/tablet/link?token=${encodeURIComponent(raw)}`;
+
+    return {
+      sessionId: session.id,
+      linkToken: raw,
+      linkUrl,
+      expiresAt: expiresAt.toISOString(),
+      cabinet: null,
+      bootstrap: true as const,
+    };
+  }
+
   async createSession(cabinetId: string) {
     const cabinet = await this.repo.findCabinetById(cabinetId);
     if (!cabinet) throw new NotFoundError("Кабинет не найден");
@@ -175,6 +226,7 @@ export class TabletService {
         id: cabinet.id,
         name: cabinet.name,
       },
+      bootstrap: false as const,
     };
   }
 
@@ -182,27 +234,31 @@ export class TabletService {
     const session = await this.repo.findSessionById(sessionId);
     if (!session) throw new NotFoundError("Сессия не найдена");
 
-    if (session.status === "pending" && session.expiresAt < new Date()) {
+    const isActive =
+      session.status === "pending" || session.status === "awaiting_pairing";
+
+    if (isActive && session.expiresAt < new Date()) {
       await this.repo.expireSession(session.id);
       return {
         sessionId: session.id,
         status: "expired" as const,
-        cabinet: await this.getCabinetPublic(session.cabinetId),
+        cabinet: session.cabinetId
+          ? await this.getCabinetPublic(session.cabinetId)
+          : null,
       };
     }
 
-    const cabinet = await this.repo.findCabinetById(session.cabinetId);
-    let doctor: { id: string; name: string; specialty: string | null; avatarColor: string } | null = null;
+    const cabinet = session.cabinetId
+      ? await this.repo.findCabinetById(session.cabinetId)
+      : null;
+
+    let doctor: { id: string; name: string; specialty: string | null; avatarColor: string } | null =
+      null;
 
     if (session.doctorUserId) {
       const doc = await this.repo.getDoctorPublic(session.doctorUserId);
       if (doc) {
-        doctor = {
-          id: doc.id,
-          name: doc.name,
-          specialty: doc.specialty,
-          avatarColor: ROLE_COLORS[doc.role] ?? "#1f75fe",
-        };
+        doctor = this.buildDoctorPublic(doc);
       }
     }
 
@@ -212,23 +268,8 @@ export class TabletService {
       clinic: Record<string, unknown>;
     } | null = null;
 
-    if (session.status === "unlocked" && session.doctorUserId) {
-      const user = await this.authRepo.findUserById(session.doctorUserId);
-      const clinic = user ? await this.authRepo.findClinicById(session.clinicId) : undefined;
-      if (user && clinic) {
-        const { passwordHash: _, tabletPinHash: __, ...safeUser } = user;
-        const token = jwt.sign(
-          {
-            userId: user.id,
-            clinicId: session.clinicId,
-            role: user.role,
-            email: user.email,
-          },
-          getJwtSecret(),
-          { expiresIn: TABLET_AUTH_TTL },
-        );
-        auth = { token, user: safeUser, clinic };
-      }
+    if (session.status === "unlocked" && session.doctorUserId && session.clinicId) {
+      auth = await this.buildSessionAuth(session.doctorUserId, session.clinicId);
     }
 
     return {
@@ -236,10 +277,51 @@ export class TabletService {
       status: session.status,
       cabinet: cabinet
         ? { id: cabinet.id, name: cabinet.name }
-        : { id: session.cabinetId, name: "Кабинет" },
+        : session.cabinetId
+          ? { id: session.cabinetId, name: "Кабинет" }
+          : null,
       doctor,
       expiresAt: session.expiresAt.toISOString(),
       unlockedAt: session.unlockedAt?.toISOString() ?? null,
+      auth,
+    };
+  }
+
+  async confirmPairing(sessionId: string, code: string) {
+    const normalized = code.replace(/\D/g, "");
+    if (!/^\d{6}$/.test(normalized)) {
+      throw new ValidationError("Код подключения должен состоять из 6 цифр");
+    }
+
+    const session = await this.repo.findSessionById(sessionId);
+    if (!session) throw new NotFoundError("Сессия не найдена");
+    if (session.status !== "awaiting_pairing") {
+      throw new ValidationError("Сессия не ожидает подключения");
+    }
+    if (!session.cabinetId) throw new ValidationError("Кабинет не назначен");
+
+    const cabinet = await this.repo.findCabinetByPairingCode(normalized);
+    if (!cabinet || cabinet.id !== session.cabinetId) {
+      throw new NotFoundError("Код не найден. Проверьте код на телефоне.");
+    }
+
+    const unlocked = await this.repo.confirmPairingSession(session.id, cabinet.id);
+    if (!unlocked) throw new NotFoundError("Не удалось подключить планшет");
+
+    const doctor = session.doctorUserId
+      ? await this.repo.getDoctorPublic(session.doctorUserId)
+      : null;
+
+    let auth = null;
+    if (session.doctorUserId && session.clinicId) {
+      auth = await this.buildSessionAuth(session.doctorUserId, session.clinicId);
+    }
+
+    return {
+      success: true as const,
+      sessionId: session.id,
+      cabinet: { id: cabinet.id, name: cabinet.name },
+      doctor: doctor ? this.buildDoctorPublic(doctor) : null,
       auth,
     };
   }
@@ -256,6 +338,35 @@ export class TabletService {
     return { success: true as const };
   }
 
+  async unlockByUserPin(cabinetId: string, pin: string) {
+    validatePin(pin);
+    const cabinet = await this.repo.findCabinetById(cabinetId);
+    if (!cabinet) throw new NotFoundError("Кабинет не найден");
+
+    const users = await this.repo.listTabletUsersWithPins(cabinet.clinicId);
+    let matched: (typeof users)[number] | null = null;
+    for (const user of users) {
+      if (!user.tabletPinHash) continue;
+      const ok = await bcrypt.compare(pin, user.tabletPinHash);
+      if (ok) {
+        matched = user;
+        break;
+      }
+    }
+
+    if (!matched) throw new TabletPinInvalidError("Неверный PIN. Настройте PIN в CRM, если ещё не сделали.");
+
+    const auth = await this.buildSessionAuth(matched.id, cabinet.clinicId);
+    if (!auth) throw new NotFoundError("Не удалось авторизовать врача");
+
+    return {
+      success: true as const,
+      cabinet: { id: cabinet.id, name: cabinet.name },
+      doctor: this.buildDoctorPublic(matched, matched.role),
+      auth,
+    };
+  }
+
   async getMe(userId: string, role: UserRole) {
     assertTabletRole(role);
     const pinHash = await this.repo.getUserTabletPinHash(userId);
@@ -270,7 +381,7 @@ export class TabletService {
     await this.repo.setUserTabletPinHash(userId, pinHash);
 
     if (linkToken) {
-      return this.redeemLink(userId, role, linkToken, pin);
+      return this.redeemLink(userId, role, linkToken);
     }
 
     return { success: true as const, hasTabletPin: true };
@@ -279,25 +390,55 @@ export class TabletService {
   async redeemLink(userId: string, role: UserRole, linkToken: string, pin?: string) {
     assertTabletRole(role);
 
-    const pinHash = await this.repo.getUserTabletPinHash(userId);
-    if (!pinHash) {
-      throw new TabletPinSetupRequiredError(linkToken);
-    }
-
-    if (!pin) {
-      throw new TabletPinRequiredError();
-    }
-
-    validatePin(pin);
-    const pinOk = await bcrypt.compare(pin, pinHash);
-    if (!pinOk) throw new TabletPinInvalidError();
-
     const session = await this.repo.findPendingSessionByTokenHash(hashToken(linkToken));
     if (!session) throw new NotFoundError("Ссылка устарела или уже использована");
 
     const user = await this.authRepo.findUserById(userId);
-    if (!user || user.clinicId !== session.clinicId) {
+    if (!user) throw new NotFoundError("Пользователь не найден");
+
+    // First-time pairing: tablet has no cabinet yet
+    if (!session.cabinetId) {
+      const clinic = await this.authRepo.findClinicById(user.clinicId);
+      let cabinet = await this.repo.findDefaultCabinet(user.clinicId);
+      if (!cabinet) {
+        cabinet = await this.seedDefaultCabinet(user.clinicId, clinic?.name ?? "Клиника");
+      }
+
+      const pairingCode = generatePairingCode();
+      await this.repo.updatePairingCode(cabinet.id, pairingCode);
+
+      const assigned = await this.repo.assignSessionForPairing(
+        session.id,
+        cabinet.id,
+        user.clinicId,
+        userId,
+      );
+      if (!assigned) throw new NotFoundError("Не удалось начать подключение планшета");
+
+      const doctor = await this.repo.getDoctorPublic(userId);
+
+      return {
+        success: true as const,
+        pairingRequired: true as const,
+        pairingCode,
+        sessionId: session.id,
+        cabinet: { id: cabinet.id, name: cabinet.name },
+        doctor: doctor ? this.buildDoctorPublic(doctor, role) : null,
+      };
+    }
+
+    if (user.clinicId !== session.clinicId) {
       throw new ForbiddenError("Сессия не принадлежит вашей клинике");
+    }
+
+    // Optional PIN verification when user explicitly provides it (tablet PIN path)
+    if (pin) {
+      const pinHash = await this.repo.getUserTabletPinHash(userId);
+      if (!pinHash) {
+        throw new TabletPinInvalidError("PIN не настроен. Отсканируйте QR-код или настройте PIN в CRM.");
+      }
+      const pinOk = await bcrypt.compare(pin, pinHash);
+      if (!pinOk) throw new TabletPinInvalidError();
     }
 
     const unlocked = await this.repo.unlockSession(session.id, userId);
@@ -308,16 +449,10 @@ export class TabletService {
 
     return {
       success: true as const,
+      pairingRequired: false as const,
       sessionId: session.id,
       cabinet: cabinet ? { id: cabinet.id, name: cabinet.name } : null,
-      doctor: doctor
-        ? {
-            id: doctor.id,
-            name: doctor.name,
-            specialty: doctor.specialty ?? (role === "owner" ? "Владелец · врач" : "Врач"),
-            avatarColor: ROLE_COLORS[doctor.role] ?? "#1f75fe",
-          }
-        : null,
+      doctor: doctor ? this.buildDoctorPublic(doctor, role) : null,
     };
   }
 }

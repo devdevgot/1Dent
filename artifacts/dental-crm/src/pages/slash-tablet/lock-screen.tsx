@@ -8,9 +8,10 @@ import type { TabletDoctor } from "./mock-data";
 import {
   createTabletSession,
   getTabletSessionStatus,
-  verifyTabletCabinetPin,
-  resolveCabinetIdFromUrl,
+  unlockTabletByUserPin,
+  confirmTabletPairing,
   resolveCabinetByPairingCode,
+  resolveCabinetIdFromUrl,
   applyCabinetIdToUrl,
   type TabletCabinetBrief,
 } from "@/lib/tablet-api";
@@ -23,7 +24,7 @@ export function LockScreen({
   onPinUnlock,
 }: {
   onQrUnlock: (payload: { doctor: TabletDoctor; cabinet: TabletCabinetBrief }) => void;
-  onPinUnlock: () => void;
+  onPinUnlock: (payload: { doctor: TabletDoctor; cabinet: TabletCabinetBrief }) => void;
 }) {
   const [mode, setMode] = useState<Mode>("qr");
   const [pin, setPin] = useState("");
@@ -31,6 +32,7 @@ export function LockScreen({
   const [error, setError] = useState(false);
   const [pinError, setPinError] = useState("");
   const [pairingError, setPairingError] = useState("");
+  const [awaitingPairing, setAwaitingPairing] = useState(false);
   const [pairingLoading, setPairingLoading] = useState(false);
   const [cabinetId, setCabinetId] = useState<string | null>(() => resolveCabinetIdFromUrl());
   const [cabinetName, setCabinetName] = useState("Кабинет");
@@ -40,6 +42,32 @@ export function LockScreen({
   const [bootError, setBootError] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const unlockedRef = useRef(false);
+  const bootstrappingRef = useRef(false);
+
+  const handleUnlock = useCallback(
+    (
+      doctor: TabletDoctor,
+      cabinet: TabletCabinetBrief,
+      auth?: { token: string; user: Parameters<typeof bootstrapTabletSessionAuth>[1]; clinic: Parameters<typeof bootstrapTabletSessionAuth>[2] } | null,
+      viaPin = false,
+    ) => {
+      if (!auth?.token || !auth.user || !auth.clinic) {
+        setBootError("Не удалось авторизовать планшет. Обновите QR-код.");
+        return;
+      }
+      unlockedRef.current = true;
+      applyCabinetIdToUrl(cabinet.id);
+      setCabinetId(cabinet.id);
+      bootstrapTabletSessionAuth(auth.token, auth.user, auth.clinic);
+      const payload = { doctor, cabinet };
+      if (viaPin) {
+        onPinUnlock(payload);
+      } else {
+        onQrUnlock(payload);
+      }
+    },
+    [onQrUnlock, onPinUnlock],
+  );
 
   const drawQr = useCallback(async (url: string) => {
     if (!canvasRef.current || !url) return false;
@@ -58,30 +86,33 @@ export function LockScreen({
   }, []);
 
   const bootstrapSession = useCallback(async (forcedCabinetId?: string) => {
-    const id = forcedCabinetId ?? resolveCabinetIdFromUrl() ?? cabinetId;
-    if (!id) {
-      setMode("pairing");
-      setBootError(null);
-      setLoading(false);
-      return;
-    }
-    setCabinetId(id);
-    applyCabinetIdToUrl(id);
+    if (bootstrappingRef.current) return;
+    bootstrappingRef.current = true;
+
+    const id = forcedCabinetId ?? resolveCabinetIdFromUrl();
     setMode("qr");
     setLinkUrl("");
     setLoading(true);
     setBootError(null);
+    unlockedRef.current = false;
+
     try {
-      const res = await createTabletSession(id);
+      const res = await createTabletSession(id ?? undefined);
       setSessionId(res.data.sessionId);
-      setCabinetName(res.data.cabinet.name);
+      if (res.data.cabinet) {
+        setCabinetId(res.data.cabinet.id);
+        setCabinetName(res.data.cabinet.name);
+      } else {
+        setCabinetName("Подключение планшета");
+      }
       setLinkUrl(res.data.linkUrl);
     } catch {
       setBootError("Не удалось создать сессию планшета. Проверьте подключение.");
     } finally {
       setLoading(false);
+      bootstrappingRef.current = false;
     }
-  }, [cabinetId]);
+  }, []);
 
   useEffect(() => {
     if (!linkUrl || loading) return;
@@ -93,32 +124,35 @@ export function LockScreen({
   }, [bootstrapSession]);
 
   useEffect(() => {
-    if (!sessionId || mode !== "qr") return;
+    if (!sessionId || mode === "pin") return;
 
     const poll = window.setInterval(async () => {
       if (unlockedRef.current) return;
       try {
         const res = await getTabletSessionStatus(sessionId);
         const { status, doctor, cabinet, auth } = res.data;
-        if (status === "unlocked" && doctor) {
-          if (!auth?.token || !auth.user || !auth.clinic) {
-            setBootError("Не удалось авторизовать планшет. Обновите QR-код.");
-            void bootstrapSession();
-            return;
-          }
-          unlockedRef.current = true;
-          bootstrapTabletSessionAuth(auth.token, auth.user, auth.clinic);
-          onQrUnlock({
-            cabinet,
-            doctor: {
+
+        if (status === "awaiting_pairing" && cabinet) {
+          setAwaitingPairing(true);
+          setMode("pairing");
+          setCabinetName(cabinet.name);
+          setCabinetId(cabinet.id);
+          return;
+        }
+
+        if (status === "unlocked" && doctor && cabinet) {
+          handleUnlock(
+            {
               id: doctor.id,
               name: doctor.name,
               specialty: doctor.specialty ?? "Врач",
               avatarColor: doctor.avatarColor,
             },
-          });
+            cabinet,
+            auth,
+          );
         } else if (status === "expired") {
-          void bootstrapSession();
+          void bootstrapSession(cabinetId ?? undefined);
         }
       } catch {
         /* ignore transient poll errors */
@@ -126,27 +160,54 @@ export function LockScreen({
     }, 2000);
 
     return () => window.clearInterval(poll);
-  }, [sessionId, mode, onQrUnlock, bootstrapSession]);
+  }, [sessionId, mode, handleUnlock, bootstrapSession, cabinetId]);
 
   const submitPairingCode = useCallback(async (code: string) => {
     const digits = code.replace(/\D/g, "");
     if (digits.length !== 6) {
-      setPairingError("Введите 6-значный код из CRM");
+      setPairingError("Введите 6-значный код с телефона");
       return;
     }
+
     setPairingLoading(true);
     setPairingError("");
     try {
+      if (awaitingPairing && sessionId) {
+        const res = await confirmTabletPairing(sessionId, digits);
+        const { cabinet, doctor, auth } = res.data;
+        if (!doctor) {
+          setPairingError("Не удалось определить врача. Отсканируйте QR снова.");
+          return;
+        }
+        handleUnlock(
+          {
+            id: doctor.id,
+            name: doctor.name,
+            specialty: doctor.specialty ?? "Врач",
+            avatarColor: doctor.avatarColor,
+          },
+          cabinet,
+          auth,
+        );
+        return;
+      }
+
       const res = await resolveCabinetByPairingCode(digits);
       const cabinet = res.data.cabinet;
       setCabinetName(cabinet.name);
+      applyCabinetIdToUrl(cabinet.id);
+      setCabinetId(cabinet.id);
+      setAwaitingPairing(false);
+      setPairingCode("");
       await bootstrapSession(cabinet.id);
     } catch {
-      setPairingError("Код не найден. Запросите новый код у врача или владельца.");
+      setPairingError(awaitingPairing
+        ? "Код не найден. Проверьте код на телефоне."
+        : "Код не найден. Запросите новый код у врача или владельца.");
     } finally {
       setPairingLoading(false);
     }
-  }, [bootstrapSession]);
+  }, [sessionId, awaitingPairing, handleUnlock, bootstrapSession]);
 
   const pressPairing = (d: string) => {
     setPairingError("");
@@ -164,16 +225,32 @@ export function LockScreen({
     setPinError("");
     setPin((p) => {
       const next = (p + d).slice(0, 4);
-      if (next.length === 4 && cabinetId) {
+      if (next.length === 4) {
+        const id = cabinetId ?? resolveCabinetIdFromUrl();
+        if (!id) {
+          setPinError("Сначала подключите планшет через QR-код");
+          setPin("");
+          return next;
+        }
         setTimeout(() => {
-          void verifyTabletCabinetPin(cabinetId, next)
-            .then(() => {
-              setPinError("Аварийный PIN подтверждён. Для работы с пациентами отсканируйте QR-код.");
-              setPin("");
+          void unlockTabletByUserPin(id, next)
+            .then((res) => {
+              const { doctor, cabinet, auth } = res.data;
+              handleUnlock(
+                {
+                  id: doctor.id,
+                  name: doctor.name,
+                  specialty: doctor.specialty ?? "Врач",
+                  avatarColor: doctor.avatarColor,
+                },
+                cabinet,
+                auth,
+                true,
+              );
             })
             .catch(() => {
               setError(true);
-              setPinError("Неверный PIN кабинета");
+              setPinError("Неверный PIN. Настройте PIN в CRM, если ещё не сделали.");
               setPin("");
             });
         }, 150);
@@ -181,6 +258,7 @@ export function LockScreen({
       return next;
     });
   };
+
   const back = () => { setError(false); setPinError(""); setPin((p) => p.slice(0, -1)); };
 
   return (
@@ -209,7 +287,7 @@ export function LockScreen({
               <span className="text-base font-bold">Подключение кабинета</span>
             </div>
             <p className="mb-6 text-center text-sm text-[#64748b]">
-              Врач или владелец открывает <strong>/tablet?setup=1</strong> в CRM → «Подключить планшет» → введите 6-значный код здесь.
+              Отсканируйте QR-код с телефона — на экране телефона появится 6-значный код. Введите его здесь.
             </p>
 
             <div className={cn("mb-4 flex gap-2", pairingError && "animate-shake")}>
@@ -238,13 +316,21 @@ export function LockScreen({
                 <Delete className="h-6 w-6" />
               </PinKey>
             </div>
+
+            <button
+              type="button"
+              onClick={() => { setMode("qr"); setPairingCode(""); setPairingError(""); }}
+              className="mt-6 text-sm font-semibold text-[#1f75fe] hover:underline"
+            >
+              ← Вернуться к QR-коду
+            </button>
           </motion.div>
         ) : bootError ? (
           <div className="rounded-3xl border border-[#fecaca] bg-[#fef2f2] p-8 text-center">
             <p className="text-sm text-[#dc2626]">{bootError}</p>
             <button
               type="button"
-              onClick={() => void bootstrapSession()}
+              onClick={() => void bootstrapSession(cabinetId ?? undefined)}
               className="mt-4 rounded-xl bg-[#1f75fe] px-4 py-2 text-sm font-semibold text-white"
             >
               Повторить
@@ -279,8 +365,9 @@ export function LockScreen({
                   </div>
 
                   <p className="mt-5 max-w-md text-center text-sm leading-relaxed text-[#64748b]">
-                    Откройте CRM на телефоне → нажмите сканер рядом с поиском → наведите на код.
-                    При первом входе нужно будет задать PIN.
+                    {cabinetId
+                      ? "Откройте CRM на телефоне → нажмите сканер рядом с поиском → наведите на код."
+                      : "При первом подключении отсканируйте QR с телефона. На телефоне появится код для привязки кабинета."}
                   </p>
 
                   <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
@@ -289,11 +376,18 @@ export function LockScreen({
                       onClick={() => { setMode("pin"); setPin(""); setError(false); }}
                       className="rounded-xl bg-[#0f172a] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#1e293b]"
                     >
-                      Войти по PIN кабинета
+                      Войти по PIN
                     </button>
                     <button
                       type="button"
-                      onClick={() => void bootstrapSession()}
+                      onClick={() => { setMode("pairing"); setPairingCode(""); setPairingError(""); setAwaitingPairing(false); }}
+                      className="rounded-xl border border-[#e8e3d9] bg-white px-4 py-3 text-sm font-semibold text-[#64748b] transition-colors hover:bg-[#faf8f4]"
+                    >
+                      У меня есть код
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void bootstrapSession(cabinetId ?? undefined)}
                       className="flex items-center gap-2 rounded-xl border border-[#e8e3d9] bg-white px-4 py-3 text-sm font-semibold text-[#64748b] transition-colors hover:bg-[#faf8f4]"
                     >
                       <RefreshCw className="h-4 w-4" /> Обновить код
@@ -308,9 +402,9 @@ export function LockScreen({
                 >
                   <div className="mb-2 flex items-center gap-2 text-[#0f172a]">
                     <ShieldCheck className="h-5 w-5 text-[#1f75fe]" />
-                    <span className="text-base font-bold">PIN кабинета</span>
+                    <span className="text-base font-bold">Вход по PIN</span>
                   </div>
-                  <p className="mb-6 text-xs text-[#94a3b8]">4 цифры · для экстренного входа на планшете</p>
+                  <p className="mb-6 text-xs text-[#94a3b8]">4 цифры · альтернатива сканированию QR</p>
 
                   <div className={cn("mb-6 flex gap-4", error && "animate-shake")}>
                     {[0, 1, 2, 3].map((i) => (
