@@ -71,7 +71,9 @@ export default function AccountantDashboard() {
   const [, navigate] = useLocation();
 
   const queryClient = useQueryClient();
-  const today = new Date();
+  const now = new Date();
+  const monthStart = format(startOfMonth(now), "yyyy-MM-dd");
+  const monthEnd = format(endOfMonth(now), "yyyy-MM-dd");
 
   const { data: analyticsData, isLoading, refetch } = useGetOwnerAnalytics({
     query: { queryKey: getGetOwnerAnalyticsQueryKey() },
@@ -79,15 +81,14 @@ export default function AccountantDashboard() {
   const { data: proceduresData } = useListProcedures();
   const { data: payrollData, refetch: refetchPayroll } = useGetPayrollRecords();
   const { data: summaryData } = useGetFinancialSummary({
-    dateFrom: format(today, "yyyy-MM-dd"),
-    dateTo: format(today, "yyyy-MM-dd"),
+    dateFrom: monthStart,
+    dateTo: monthEnd,
   });
 
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showExpenseDialog, setShowExpenseDialog] = useState(false);
 
   const allRecords: PayrollRecord[] = payrollData?.data?.records ?? [];
-  const now = new Date();
   const currentMonth = now.getMonth() + 1;
   const currentYear = now.getFullYear();
 
@@ -103,7 +104,13 @@ export default function AccountantDashboard() {
   const analytics = (analyticsData?.data?.analytics ?? {}) as Record<string, unknown>;
   const procedures = proceduresData?.data?.procedures ?? [];
 
-  const completedProcedures = procedures.filter((p) => p.status === "completed");
+  const monthStartDate = startOfMonth(now);
+  const monthEndDate = endOfMonth(now);
+  const completedProcedures = procedures.filter((p) => {
+    if (p.status !== "completed" || !p.completedAt) return false;
+    const d = new Date(p.completedAt);
+    return d >= monthStartDate && d <= monthEndDate;
+  });
   const completedNoBilling = completedProcedures.filter((p) => !p.price || p.price === 0);
 
   const revenueByDoctor = completedProcedures.reduce<Record<string, { name: string; revenue: number; count: number }>>((acc, p) => {
