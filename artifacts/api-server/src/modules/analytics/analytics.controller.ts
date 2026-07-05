@@ -5,7 +5,7 @@ import {
   type Response,
   type NextFunction,
 } from "express";
-import { AnalyticsRepository, type DoctorAnalyticsFilters } from "./analytics.repository";
+import { AnalyticsRepository, type DoctorAnalyticsFilters, type AnalyticsDateRange } from "./analytics.repository";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ForbiddenError } from "../../shared/errors";
 import {
@@ -87,27 +87,30 @@ router.get(
   allRoles,
   async (req: Request, res: Response, next: NextFunction) => {
     const { clinicId, role, userId } = req.user!;
+    const { dateFrom, dateTo } = parseDateRange(req.query);
+    const range: AnalyticsDateRange | undefined =
+      dateFrom || dateTo ? { dateFrom, dateTo } : undefined;
 
     if (role === "owner" || role === "accountant") {
-      const analytics = await repo.getOwnerAnalytics(clinicId).catch(next);
+      const analytics = await repo.getOwnerAnalytics(clinicId, range).catch(next);
       if (analytics === undefined) return;
       return res.json({ success: true, data: { role: role === "accountant" ? "accountant" : "owner", analytics } });
     }
 
     if (role === "admin") {
-      const analytics = await repo.getAdminAnalytics(clinicId).catch(next);
+      const analytics = await repo.getAdminAnalytics(clinicId, range).catch(next);
       if (analytics === undefined) return;
       return res.json({ success: true, data: { role: "admin", analytics } });
     }
 
     if (role === "doctor") {
-      const analytics = await repo.getDoctorAnalytics(clinicId, userId).catch(next);
+      const analytics = await repo.getDoctorAnalytics(clinicId, userId, range).catch(next);
       if (analytics === undefined) return;
       return res.json({ success: true, data: { role: "doctor", analytics } });
     }
 
     if (role === "warehouse") {
-      const analytics = await repo.getAdminAnalytics(clinicId).catch(next);
+      const analytics = await repo.getAdminAnalytics(clinicId, range).catch(next);
       if (analytics === undefined) return;
       return res.json({ success: true, data: { role: "warehouse", analytics } });
     }

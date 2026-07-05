@@ -15,7 +15,7 @@ import {
   CalendarDays, ChevronDown, ChevronUp,
 } from "lucide-react";
 import {
-  useGetAnalytics, useGetChannelStats, getGetChannelStatsQueryKey,
+  useGetAnalyticsByPeriod, useGetChannelStats, getGetChannelStatsQueryKey,
   useGetPatientMetrics, type ChannelStat,
 } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
@@ -174,8 +174,12 @@ function DoctorCard({ doctor, index, t }: { doctor: any; index: number; t: any }
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const _statusLevelUnused = null;
+function formatPeriodSubtext(period: Period, dateFrom: string, dateTo: string): string {
+  if (period === "custom" && dateFrom && dateTo) {
+    return `${dateFrom} — ${dateTo}`;
+  }
+  return PERIOD_LABELS[period];
+}
 
 const PATIENT_STATUS_LABELS: Record<string, string> = {
   new_request:          "Новый запрос",
@@ -199,13 +203,21 @@ export default function AnalyticsPage() {
   const [showCustom, setShowCustom] = useState(false);
   const [channelOpen, setChannelOpen] = useState(true);
 
-  const { data: analyticsRes, isLoading: analyticsLoading } = useGetAnalytics();
-  const analytics = analyticsRes?.data?.analytics as any;
+  const periodDates = getPeriodDates(period, customFrom, customTo);
+  const periodSubtext = formatPeriodSubtext(period, periodDates.dateFrom, periodDates.dateTo);
 
   const isOwnerOrAdmin = user?.role === "owner" || user?.role === "admin";
   const pmEnabled = isOwnerOrAdmin || user?.role === "doctor" || user?.role === "accountant";
 
-  const periodDates = getPeriodDates(period, customFrom, customTo);
+  const {
+    data: analyticsRes,
+    isLoading: analyticsLoading,
+    isError: analyticsError,
+    refetch: refetchAnalytics,
+  } = useGetAnalyticsByPeriod(
+    { dateFrom: periodDates.dateFrom, dateTo: periodDates.dateTo },
+  );
+  const analytics = analyticsRes?.data?.analytics as any;
 
   const { data: channelStatsRes } = useGetChannelStats(
     { dateFrom: periodDates.dateFrom, dateTo: periodDates.dateTo },
@@ -216,9 +228,10 @@ export default function AnalyticsPage() {
       },
     }
   );
-  const channelStats: ChannelStat[] = channelStatsRes?.data?.stats ?? [];
+  const channelStats: ChannelStat[] = [...(channelStatsRes?.data?.stats ?? [])]
+    .sort((a, b) => b.patientCount - a.patientCount);
 
-  const { data: patientMetricsRes, isLoading: pmLoading, isFetching: pmFetching } =
+  const { data: patientMetricsRes, isLoading: pmLoading, isFetching: pmFetching, isError: pmError } =
     useGetPatientMetrics(
       { dateFrom: periodDates.dateFrom, dateTo: periodDates.dateTo },
       { query: { enabled: pmEnabled, queryKey: ["/api/analytics/patient-metrics", periodDates] } },
@@ -226,13 +239,18 @@ export default function AnalyticsPage() {
   const pm = patientMetricsRes?.data;
 
   const statusData = analytics && "patientsByStatus" in analytics && analytics.patientsByStatus
-    ? Object.entries(analytics.patientsByStatus).map(([status, count]: [string, unknown]) => ({
-        name: PATIENT_STATUS_LABELS[status] || status,
-        value: count as number,
-      }))
+    ? Object.entries(analytics.patientsByStatus)
+        .map(([status, count]: [string, unknown]) => ({
+          name: PATIENT_STATUS_LABELS[status] || status,
+          value: count as number,
+        }))
+        .filter((item) => item.value > 0)
+        .sort((a, b) => b.value - a.value)
     : [];
 
-  const doctorKpis = (analytics && "doctorKpis" in analytics) ? (analytics.doctorKpis as any[]) : [];
+  const doctorKpis = (analytics && "doctorKpis" in analytics)
+    ? [...(analytics.doctorKpis as any[])].sort((a, b) => (b.revenueTotal ?? 0) - (a.revenueTotal ?? 0))
+    : [];
 
   const retentionRate    = pm?.retentionRate ?? 0;
   const treatmentConv    = pm?.treatmentPlanConversion ?? 0;
@@ -311,6 +329,25 @@ export default function AnalyticsPage() {
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         <div className="p-4 space-y-6 pb-10">
 
+          {analyticsError && (
+            <div className="bg-[#fef2f2] border border-[#dc2626]/20 rounded-2xl p-4 flex items-center justify-between gap-3">
+              <p className="text-sm text-[#dc2626]">Не удалось загрузить аналитику. Попробуйте обновить.</p>
+              <button
+                type="button"
+                onClick={() => refetchAnalytics()}
+                className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-white border border-[#dc2626]/20 text-[#dc2626] hover:bg-[#fef2f2]"
+              >
+                Повторить
+              </button>
+            </div>
+          )}
+
+          {pmError && pmEnabled && (
+            <div className="bg-[#fef3c7] border border-[#d97706]/20 rounded-2xl p-4">
+              <p className="text-sm text-[#d97706]">Не удалось загрузить метрики лояльности за выбранный период.</p>
+            </div>
+          )}
+
           {/* ── Section 1: Core KPI cards ── */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {/* Revenue */}
@@ -318,7 +355,7 @@ export default function AnalyticsPage() {
               <QACard
                 question="Сколько мы заработали?"
                 value={`₸${revenue.toLocaleString("ru-KZ")}`}
-                sub={`За выбранный период`}
+                sub={`За период: ${periodSubtext}`}
                 loading={analyticsLoading}
                 icon={<DollarSign className="w-4 h-4" />}
               />
@@ -329,7 +366,7 @@ export default function AnalyticsPage() {
               <QACard
                 question="Сколько новых людей к нам обратились?"
                 value={newPats}
-                sub={newPats === 0 ? "Пока нет новых обращений" : `${newPats === 1 ? "1 новый пациент" : `${newPats} новых пациентов`}`}
+                sub={newPats === 0 ? "Пока нет новых обращений" : `${newPats === 1 ? "1 новый пациент" : `${newPats} новых пациентов`} · ${periodSubtext}`}
                 loading={analyticsLoading}
                 icon={<Users className="w-4 h-4" />}
               />
@@ -351,7 +388,7 @@ export default function AnalyticsPage() {
               <QACard
                 question="Насколько мы были заняты?"
                 value={procedures}
-                sub={`Выполненных процедур за период`}
+                sub={`Выполненных процедур · ${periodSubtext}`}
                 loading={analyticsLoading}
                 icon={<Zap className="w-4 h-4" />}
               />
@@ -395,7 +432,7 @@ export default function AnalyticsPage() {
                 <QACard
                   question="Сколько пациентов вернулись снова?"
                   value={pmLoading || pmFetching ? "…" : `${retentionRate}%`}
-                  sub={`Ретеншн за период`}
+                  sub={`Ретеншн · ${periodSubtext}`}
                   level={pmLoading || pmFetching ? undefined : retentionLevel}
                   hint={pmLoading || pmFetching ? undefined : retentionHint}
                   loading={!!pmLoading}
@@ -523,12 +560,16 @@ export default function AnalyticsPage() {
                         innerRadius={50} outerRadius={80}
                         paddingAngle={2}
                         dataKey="value"
+                        nameKey="name"
                       >
                         {statusData.map((_, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip />
+                      <Tooltip formatter={(value: number, _name: string, item: { payload?: { name?: string } }) => [
+                        value,
+                        item.payload?.name ?? "",
+                      ]} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>

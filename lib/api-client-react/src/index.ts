@@ -27,6 +27,7 @@ import type {
   UpdateUserStatusRequest,
   UsersListResponse,
   Patient,
+  AnalyticsResponse,
 } from "./generated/api.schemas";
 
 export interface UpdateProfileRequest {
@@ -989,6 +990,32 @@ export const useGetPatientMetrics = <TError = unknown>(
   useQuery<GetPatientMetricsResponse, TError>({
     queryKey: ["/api/analytics/patient-metrics", params],
     queryFn: ({ signal }) => getPatientMetrics(params, { signal }),
+    ...options?.query,
+  });
+
+// ─── Period-filtered analytics ────────────────────────────────────────────────
+
+export const getAnalyticsByPeriod = (
+  params?: { dateFrom?: string; dateTo?: string },
+  options?: RequestInit,
+): Promise<AnalyticsResponse> => {
+  const qs = new URLSearchParams();
+  if (params?.dateFrom) qs.set("dateFrom", params.dateFrom);
+  if (params?.dateTo) qs.set("dateTo", params.dateTo);
+  const q = qs.toString();
+  return customFetch<AnalyticsResponse>(`/api/analytics${q ? `?${q}` : ""}`, {
+    method: "GET",
+    ...options,
+  });
+};
+
+export const useGetAnalyticsByPeriod = <TError = unknown>(
+  params?: { dateFrom?: string; dateTo?: string },
+  options?: { query?: UseQueryOptions<AnalyticsResponse, TError> },
+) =>
+  useQuery<AnalyticsResponse, TError>({
+    queryKey: ["/api/analytics", params],
+    queryFn: ({ signal }) => getAnalyticsByPeriod(params, { signal }),
     ...options?.query,
   });
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useGetActionLogs, useListUsers, useListPatients, useListInventory } from "@workspace/api-client-react";
 import { useTranslation } from "react-i18next";
 import { Activity, ChevronLeft, ChevronRight, Filter } from "lucide-react";
@@ -104,7 +104,7 @@ export default function LogsPage() {
 
   const LIMIT = 50;
 
-  const { data, isLoading } = useGetActionLogs({
+  const { data, isLoading, isError, refetch } = useGetActionLogs({
     userId: userId || undefined,
     actionType: actionType || undefined,
     entityType: entityType || undefined,
@@ -123,13 +123,13 @@ export default function LogsPage() {
   const totalPages = Math.max(1, Math.ceil(total / LIMIT));
 
   const users = usersData?.data?.users ?? [];
-  const userMap = new Map(users.map((u) => [u.id, u.name]));
+  const userMap = useMemo(() => new Map(users.map((u) => [u.id, u.name])), [users]);
 
   const patients = patientsData?.data?.patients ?? [];
-  const patientMap = new Map(patients.map((p) => [p.id, p.name]));
+  const patientMap = useMemo(() => new Map(patients.map((p) => [p.id, p.name])), [patients]);
 
   const inventoryItems = inventoryData?.data?.items ?? [];
-  const inventoryMap = new Map(inventoryItems.map((i) => [i.id, i.name]));
+  const inventoryMap = useMemo(() => new Map(inventoryItems.map((i) => [i.id, i.name])), [inventoryItems]);
 
   const actionBadgeColor: Record<string, string> = {
     CREATE: "bg-[#f0fdf4] text-[#16a34a] border-[#16a34a]/20",
@@ -238,6 +238,7 @@ export default function LogsPage() {
               <input
                 type="date"
                 value={dateFrom}
+                max={dateTo || undefined}
                 onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
                 className="w-full text-sm px-3 py-2 rounded-xl border border-[#e8e3d9] bg-white focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe] transition-all text-[#0f172a]"
               />
@@ -251,6 +252,7 @@ export default function LogsPage() {
               <input
                 type="date"
                 value={dateTo}
+                min={dateFrom || undefined}
                 onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
                 className="w-full text-sm px-3 py-2 rounded-xl border border-[#e8e3d9] bg-white focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe] transition-all text-[#0f172a]"
               />
@@ -285,7 +287,18 @@ export default function LogsPage() {
             </div>
           </div>
 
-          {isLoading ? (
+          {isError ? (
+            <div className="p-12 text-center flex flex-col items-center gap-3">
+              <p className="text-sm text-[#dc2626]">{t("common.loadError", "Не удалось загрузить логи")}</p>
+              <button
+                type="button"
+                onClick={() => refetch()}
+                className="text-xs font-semibold px-4 py-2 rounded-xl bg-white border border-[#dc2626]/20 text-[#dc2626] hover:bg-[#fef2f2]"
+              >
+                {t("common.retry", "Повторить")}
+              </button>
+            </div>
+          ) : isLoading ? (
             <div className="p-12 text-center text-[#64748b] text-sm flex flex-col items-center gap-2">
               <div className="w-6 h-6 border-2 border-[#1f75fe] border-t-transparent rounded-full animate-spin"></div>
               <span>{t("common.loading")}</span>
