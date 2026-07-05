@@ -577,7 +577,7 @@
     "more": "ещё",
     "noData": "Данных пока нет",
     "totalRevenue": "Итого выручка",
-    "netProfit": "Чистая прибыль (MTD)"
+    "netProfit": "Чистая прибыль (сегодня)"
   },
   "warehouseDashboard": {
     "subtitle": "Складские остатки клиники {{clinic}}.",

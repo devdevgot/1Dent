@@ -116,18 +116,6 @@ export default function AdminDashboard() {
     return format(d, "d MMM");
   };
 
-  const todayActiveTasks = procedures.filter((p) => {
-    if (p.status !== "in_progress") return false;
-    const d = getRefDate(p);
-    return d >= todayStart && d <= todayEnd;
-  });
-
-  const overdueActiveTasks = procedures
-    .filter((p) => p.status === "in_progress" && getRefDate(p) < todayStart)
-    .sort((a, b) => getRefDate(b).getTime() - getRefDate(a).getTime());
-
-  const activeTasks = [...todayActiveTasks, ...overdueActiveTasks];
-
   const todayPendingPayment = procedures
     .filter((p) => {
       if ((p.status as string) !== "pending_payment") return false;
@@ -236,70 +224,8 @@ export default function AdminDashboard() {
           )}
         </div>
 
-        {/* Right column: Active Tasks + Top Doctors */}
+        {/* Right column: Payments + Top Doctors */}
         <div className="space-y-4">
-          {/* Active Tasks (in_progress procedures) */}
-          <div className="dash-card dash-card-padded-sm dash-card-elevated">
-            <h3 className="dash-section-title mb-4">
-              <Clock className="w-4 h-4 text-[var(--warning)]" />
-              {t("adminDashboard.activeTasks")}
-              {activeTasks.length > 0 && (
-                <span className="dash-badge dash-badge-warning ml-1">
-                  {activeTasks.length}
-                </span>
-              )}
-            </h3>
-            {activeTasks.length === 0 ? (
-              <p className="text-sm text-[var(--text-subtle)] py-2">{t("adminDashboard.noActiveTasks")}</p>
-            ) : (
-              <div className="space-y-3">
-                {todayActiveTasks.length > 0 && (
-                  <div>
-                    <p className="text-[10px] font-bold text-[var(--warning)] uppercase tracking-wide mb-1.5">Сегодня</p>
-                    <div className="space-y-1.5">
-                      {todayActiveTasks.slice(0, 3).map((proc) => {
-                        const patient = patients.find((p) => p.id === proc.patientId);
-                        return (
-                          <div key={proc.id} className="flex items-center gap-2 p-2 rounded-xl bg-[var(--warning-light)]/50 border border-[var(--warning-light)]">
-                            <div className="w-2 h-2 rounded-full bg-[var(--warning)] shrink-0 animate-pulse" />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-semibold text-[var(--text)] truncate">{proc.name}</p>
-                              <p className="text-[10px] text-[var(--text-secondary)] truncate">
-                                {patient?.name ?? "—"}{proc.doctorName && ` · ${proc.doctorName}`}
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-                {overdueActiveTasks.length > 0 && (
-                  <div>
-                    <p className="text-[10px] font-bold text-[var(--danger)] uppercase tracking-wide mb-1.5">Незакрытые</p>
-                    <div className="space-y-1.5">
-                      {overdueActiveTasks.slice(0, 3).map((proc) => {
-                        const patient = patients.find((p) => p.id === proc.patientId);
-                        return (
-                          <div key={proc.id} className="flex items-center gap-2 p-2 rounded-xl bg-[var(--danger-light)]/50 border border-[var(--danger-light)]">
-                            <div className="w-2 h-2 rounded-full bg-[var(--danger)] shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-semibold text-[var(--text)] truncate">{proc.name}</p>
-                              <p className="text-[10px] text-[var(--text-secondary)] truncate">
-                                {patient?.name ?? "—"}{proc.doctorName && ` · ${proc.doctorName}`}
-                              </p>
-                            </div>
-                            <span className="text-[10px] text-[var(--danger)] font-semibold shrink-0">{fmtOverdueDate(proc)}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
           {/* Ожидают оплаты */}
           <div className="dash-card dash-card-padded-sm dash-card-elevated">
             <h3 className="dash-section-title mb-4">

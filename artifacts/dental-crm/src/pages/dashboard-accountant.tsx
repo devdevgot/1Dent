@@ -72,8 +72,7 @@ export default function AccountantDashboard() {
 
   const queryClient = useQueryClient();
   const now = new Date();
-  const monthStart = format(startOfMonth(now), "yyyy-MM-dd");
-  const monthEnd = format(endOfMonth(now), "yyyy-MM-dd");
+  const todayStr = format(now, "yyyy-MM-dd");
 
   const { data: analyticsData, isLoading, refetch } = useGetOwnerAnalytics({
     query: { queryKey: getGetOwnerAnalyticsQueryKey() },
@@ -81,8 +80,8 @@ export default function AccountantDashboard() {
   const { data: proceduresData } = useListProcedures();
   const { data: payrollData, refetch: refetchPayroll } = useGetPayrollRecords();
   const { data: summaryData } = useGetFinancialSummary({
-    dateFrom: monthStart,
-    dateTo: monthEnd,
+    dateFrom: todayStr,
+    dateTo: todayStr,
   });
 
   const [showApproveModal, setShowApproveModal] = useState(false);

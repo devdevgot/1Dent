@@ -571,7 +571,7 @@
     "more": "тағы",
     "noData": "Деректер жоқ",
     "totalRevenue": "Жалпы табыс",
-    "netProfit": "Таза пайда (MTD)"
+    "netProfit": "Таза пайда (бүгін)"
   },
   "warehouseDashboard": {
     "subtitle": "{{clinic}} клиникасының қойма жағдайы.",
