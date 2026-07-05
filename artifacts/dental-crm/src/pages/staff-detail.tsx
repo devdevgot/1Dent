@@ -288,7 +288,7 @@ export default function StaffDetailPage() {
   }
 
   const isDoctor = selectedUser.role === "doctor";
-  const isAssistant = (selectedUser.role as any) === "assistant";
+  const isAssistant = selectedUser.role === "assistant";
   const nps = isDoctor && doctorKpi ? Number(doctorKpi.nps) : 0;
 
   const targetAllProcedures = isDoctor ? doctorProcedures : filteredProcedures;

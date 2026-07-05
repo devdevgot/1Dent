@@ -9,6 +9,8 @@ export const userRoleEnum = pgEnum("user_role", [
   "doctor",
   "accountant",
   "warehouse",
+  "assistant",
+  "nurse",
 ]);
 
 export const usersTable = pgTable("users", {
@@ -38,7 +40,7 @@ export const insertUserSchema = createInsertSchema(usersTable).omit({
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof usersTable.$inferSelect;
 
-export type UserRole = "owner" | "admin" | "doctor" | "accountant" | "warehouse";
+export type UserRole = "owner" | "admin" | "doctor" | "accountant" | "warehouse" | "assistant" | "nurse";
 
 export const doctorCapacityTable = pgTable("doctor_capacity", {
   doctorId: text("doctor_id")

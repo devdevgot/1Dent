@@ -2701,7 +2701,7 @@ components:
 
     UserRole:
       type: string
-      enum: [owner, admin, doctor, accountant, warehouse]
+      enum: [owner, admin, doctor, accountant, warehouse, assistant, nurse]
 
     User:
       type: object
@@ -2716,6 +2716,12 @@ components:
           type: string
         role:
           $ref: "#/components/schemas/UserRole"
+        maxPatientsPerDay:
+          type: integer
+          nullable: true
+          minimum: 1
+          maximum: 50
+          description: Daily patient capacity for doctors
         createdAt:
           type: string
           format: date-time

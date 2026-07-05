@@ -16,7 +16,7 @@ const createUserSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(6),
-  role: z.enum(["owner", "admin", "doctor", "accountant", "warehouse"]),
+  role: z.enum(["owner", "admin", "doctor", "accountant", "warehouse", "assistant", "nurse"]),
   phone: z.string().optional(),
   position: z.string().optional(),
   specialty: z.string().optional(),
@@ -27,7 +27,7 @@ const createUserSchema = z.object({
 const inviteSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
-  role: z.enum(["admin", "doctor", "accountant", "warehouse"]),
+  role: z.enum(["admin", "doctor", "accountant", "warehouse", "assistant", "nurse"]),
   phone: z.string().optional(),
   position: z.string().optional(),
   specialty: z.string().optional(),
@@ -41,7 +41,7 @@ const inviteSchema = z.object({
 
 const updateUserSchema = z.object({
   name: z.string().min(2).optional(),
-  role: z.enum(["owner", "admin", "doctor", "accountant", "warehouse"]).optional(),
+  role: z.enum(["owner", "admin", "doctor", "accountant", "warehouse", "assistant", "nurse"]).optional(),
   phone: z.string().optional().nullable(),
   position: z.string().optional().nullable(),
   specialty: z.string().optional().nullable(),

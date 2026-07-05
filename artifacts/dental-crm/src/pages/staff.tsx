@@ -42,7 +42,7 @@ export default function StaffPage() {
             {doctors.map((doctor) => (
               <button
                 key={doctor.doctorId}
-                onClick={() => setLocation(`/staff/${doctor.doctorId}`)}
+                onClick={() => setLocation(`/users/${doctor.doctorId}`)}
                 className="bg-white rounded-2xl border border-[#e8e3d9] p-6 text-left shadow-md hover:shadow-lg hover:border-[#1f75fe]/30 transition-all"
               >
                 {/* Avatar */}

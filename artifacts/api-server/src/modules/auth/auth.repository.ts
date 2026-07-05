@@ -1,4 +1,4 @@
-import { db, usersTable, clinicsTable, userSalarySettingsTable } from "@workspace/db";
+import { db, usersTable, clinicsTable, userSalarySettingsTable, doctorCapacityTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import type { InsertUser, InsertClinic, User, Clinic } from "@workspace/db";
 
@@ -79,11 +79,21 @@ export class AuthRepository {
       .from(userSalarySettingsTable)
       .where(eq(userSalarySettingsTable.clinicId, clinicId));
 
+    const capacityRows = await db
+      .select()
+      .from(doctorCapacityTable)
+      .where(eq(doctorCapacityTable.clinicId, clinicId));
+
     const salaryMap = new Map(salaryRows.map((s) => [s.userId, s]));
+    const capacityMap = new Map(capacityRows.map((c) => [c.doctorId, c.maxPatientsPerDay]));
 
     return users.map((u) => {
       const { passwordHash: _, ...safe } = u;
-      return { ...safe, salarySettings: salaryMap.get(u.id) ?? null };
+      return {
+        ...safe,
+        salarySettings: salaryMap.get(u.id) ?? null,
+        maxPatientsPerDay: u.role === "doctor" ? (capacityMap.get(u.id) ?? 20) : null,
+      };
     });
   }
 

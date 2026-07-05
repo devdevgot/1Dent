@@ -47,7 +47,7 @@ export const LoginResponse = zod.object({
       clinicId: zod.string(),
       name: zod.string(),
       email: zod.string(),
-      role: zod.enum(["owner", "admin", "doctor", "accountant", "warehouse"]),
+      role: zod.enum(["owner", "admin", "doctor", "accountant", "warehouse", "assistant", "nurse"]),
       createdAt: zod.date(),
     }),
     clinic: zod.object({
@@ -78,7 +78,7 @@ export const GetMeResponse = zod.object({
       clinicId: zod.string(),
       name: zod.string(),
       email: zod.string(),
-      role: zod.enum(["owner", "admin", "doctor", "accountant", "warehouse"]),
+      role: zod.enum(["owner", "admin", "doctor", "accountant", "warehouse", "assistant", "nurse"]),
       createdAt: zod.date(),
     }),
     clinic: zod.object({
@@ -164,7 +164,7 @@ export const ListUsersResponse = zod.object({
         clinicId: zod.string(),
         name: zod.string(),
         email: zod.string(),
-        role: zod.enum(["owner", "admin", "doctor", "accountant", "warehouse"]),
+        role: zod.enum(["owner", "admin", "doctor", "accountant", "warehouse", "assistant", "nurse"]),
         createdAt: zod.date(),
       }),
     ),
@@ -182,7 +182,7 @@ export const CreateUserBody = zod.object({
   name: zod.string().min(createUserBodyNameMin),
   email: zod.string().email(),
   password: zod.string().min(createUserBodyPasswordMin),
-  role: zod.enum(["owner", "admin", "doctor", "accountant", "warehouse"]),
+  role: zod.enum(["owner", "admin", "doctor", "accountant", "warehouse", "assistant", "nurse"]),
 });
 
 /**
@@ -195,7 +195,7 @@ export const UpdateUserParams = zod.object({
 export const UpdateUserBody = zod.object({
   name: zod.string().optional(),
   role: zod
-    .enum(["owner", "admin", "doctor", "accountant", "warehouse"])
+    .enum(["owner", "admin", "doctor", "accountant", "warehouse", "assistant", "nurse"])
     .optional(),
 });
 
@@ -207,7 +207,7 @@ export const UpdateUserResponse = zod.object({
       clinicId: zod.string(),
       name: zod.string(),
       email: zod.string(),
-      role: zod.enum(["owner", "admin", "doctor", "accountant", "warehouse"]),
+      role: zod.enum(["owner", "admin", "doctor", "accountant", "warehouse", "assistant", "nurse"]),
       createdAt: zod.date(),
     }),
   }),

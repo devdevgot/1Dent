@@ -14,4 +14,6 @@ export const UserRole = {
   doctor: "doctor",
   accountant: "accountant",
   warehouse: "warehouse",
+  assistant: "assistant",
+  nurse: "nurse",
 } as const;
