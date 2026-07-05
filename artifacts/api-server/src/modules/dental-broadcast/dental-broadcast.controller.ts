@@ -1,6 +1,6 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
-import { db, dentalBroadcastRunsTable, clinicsTable } from "@workspace/db";
-import { eq, and, desc } from "drizzle-orm";
+import { db, dentalBroadcastRunsTable, clinicsTable, dentalBroadcastDeliveriesTable } from "@workspace/db";
+import { eq, and, desc, ne, inArray } from "drizzle-orm";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { runDentalBroadcastForClinic, clinicLocalDateString } from "./dental-broadcast.service";
 import { computeRates, listPatientBroadcastHistory } from "./dental-broadcast-metrics";
@@ -110,6 +110,32 @@ router.post(
           .limit(1);
         if (existingToday) {
           return next(new ValidationError("Рассылка уже выполнялась сегодня. Используйте force=true для повторного запуска."));
+        }
+      } else {
+        const [clinicRow] = await db
+          .select({ timezone: clinicsTable.timezone })
+          .from(clinicsTable)
+          .where(eq(clinicsTable.id, clinicId))
+          .limit(1);
+        const runDate = clinicLocalDateString(clinicRow?.timezone ?? "Asia/Almaty");
+        const staleRuns = await db
+          .select({ id: dentalBroadcastRunsTable.id })
+          .from(dentalBroadcastRunsTable)
+          .where(
+            and(
+              eq(dentalBroadcastRunsTable.clinicId, clinicId),
+              eq(dentalBroadcastRunsTable.runDate, runDate),
+              ne(dentalBroadcastRunsTable.status, "running"),
+            ),
+          );
+        if (staleRuns.length > 0) {
+          const staleRunIds = staleRuns.map((run) => run.id);
+          await db
+            .delete(dentalBroadcastDeliveriesTable)
+            .where(inArray(dentalBroadcastDeliveriesTable.runId, staleRunIds));
+          await db
+            .delete(dentalBroadcastRunsTable)
+            .where(inArray(dentalBroadcastRunsTable.id, staleRunIds));
         }
       }
 

@@ -31,6 +31,7 @@ import {
   useListDentalBroadcastRuns,
   useTriggerDentalBroadcast,
   listDentalBroadcastRunsQueryKey,
+  getGetChatbotSettingsQueryKey,
 } from "@workspace/api-client-react";
 import type { ChatbotSettingsUpdate, DentalBroadcastRun } from "@workspace/api-client-react";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
@@ -43,6 +44,7 @@ import type { ScriptMindMapData } from "@/components/chatbot/script-mindmap";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { FSM_STATE_LABELS } from "@/lib/chatbot-fsm-states";
+import { useToast } from "@/hooks/use-toast";
 
 
 const STATE_COLORS: Record<string, string> = {
@@ -310,12 +312,41 @@ function AiBroadcastTab() {
   const { i18n } = useTranslation();
   const lang = i18n.language || "ru";
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [showConfirm, setShowConfirm] = useState(false);
+  const [broadcastAiOverride, setBroadcastAiOverride] = useState<boolean | null>(null);
   const { data: settingsRes } = useGetChatbotSettings();
   const updateSettings = useUpdateChatbotSettings();
   const settings = settingsRes?.data?.settings;
   const chatbotEnabled = settings?.enabled ?? true;
-  const broadcastAiEnabled = (settings as { broadcastAiEnabled?: boolean } | undefined)?.broadcastAiEnabled ?? false;
+  const serverBroadcastAiEnabled = settings?.broadcastAiEnabled ?? false;
+  const broadcastAiEnabled = broadcastAiOverride ?? serverBroadcastAiEnabled;
+
+  useEffect(() => {
+    setBroadcastAiOverride(null);
+  }, [serverBroadcastAiEnabled]);
+
+  const handleToggleBroadcastAi = () => {
+    const next = !broadcastAiEnabled;
+    setBroadcastAiOverride(next);
+    updateSettings.mutate(
+      { data: { broadcastAiEnabled: next } },
+      {
+        onSuccess: () => {
+          void queryClient.invalidateQueries({ queryKey: getGetChatbotSettingsQueryKey() });
+          setBroadcastAiOverride(null);
+        },
+        onError: () => {
+          setBroadcastAiOverride(null);
+          toast({
+            title: "Не удалось сохранить настройку",
+            description: "Проверьте подключение и попробуйте снова.",
+            variant: "destructive",
+          });
+        },
+      },
+    );
+  };
   const { data, isLoading } = useListDentalBroadcastRuns(20, {
     query: {
       refetchInterval: (query) => {
@@ -333,6 +364,13 @@ function AiBroadcastTab() {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: listDentalBroadcastRunsQueryKey() });
         setShowConfirm(false);
+      },
+      onError: (err) => {
+        toast({
+          title: "Не удалось запустить рассылку",
+          description: err instanceof Error ? err.message : "Попробуйте позже.",
+          variant: "destructive",
+        });
       },
     },
   });
@@ -364,7 +402,7 @@ function AiBroadcastTab() {
             </p>
           </div>
         </div>
-        <label className="flex items-center justify-between gap-3 pt-1 border-t border-[#e8e3d9]/60">
+        <div className="flex items-center justify-between gap-3 pt-1 border-t border-[#e8e3d9]/60">
           <div className="flex items-center gap-2 min-w-0">
             <Sparkles className="h-4 w-4 text-[#7c3aed] shrink-0" />
             <div>
@@ -376,23 +414,20 @@ function AiBroadcastTab() {
             type="button"
             role="switch"
             aria-checked={broadcastAiEnabled}
-            onClick={() =>
-              updateSettings.mutate({
-                data: { broadcastAiEnabled: !broadcastAiEnabled } as ChatbotSettingsUpdate & { broadcastAiEnabled?: boolean },
-              })
-            }
+            aria-label="ИИ-генерация текста рассылки"
+            onClick={handleToggleBroadcastAi}
             disabled={updateSettings.isPending}
-            className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors ${
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7c3aed]/40 ${
               broadcastAiEnabled ? "bg-[#7c3aed]" : "bg-[#cbd5e1]"
-            }`}
+            } disabled:opacity-60 disabled:cursor-not-allowed`}
           >
             <span
-              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform mt-0.5 ${
+              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform mt-0.5 ${
                 broadcastAiEnabled ? "translate-x-5" : "translate-x-0.5"
               }`}
             />
           </button>
-        </label>
+        </div>
       </div>
 
       {!chatbotEnabled && (

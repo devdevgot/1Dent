@@ -1122,18 +1122,25 @@ export const useListDentalBroadcastRuns = <TError = unknown>(
   });
 
 export const triggerDentalBroadcast = (
+  body: { force?: boolean } = { force: true },
   options?: RequestInit,
 ): Promise<TriggerDentalBroadcastResponse> =>
   customFetch<TriggerDentalBroadcastResponse>("/api/dental-broadcast/trigger", {
     method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(body),
     ...options,
   });
 
 export const useTriggerDentalBroadcast = <TError = unknown>(options?: {
-  mutation?: UseMutationOptions<TriggerDentalBroadcastResponse, TError, void>;
+  mutation?: UseMutationOptions<
+    TriggerDentalBroadcastResponse,
+    TError,
+    { force?: boolean } | void
+  >;
 }) =>
-  useMutation<TriggerDentalBroadcastResponse, TError, void>({
-    mutationFn: () => triggerDentalBroadcast(),
+  useMutation<TriggerDentalBroadcastResponse, TError, { force?: boolean } | void>({
+    mutationFn: (vars) => triggerDentalBroadcast({ force: vars?.force ?? true }),
     ...options?.mutation,
   });
 

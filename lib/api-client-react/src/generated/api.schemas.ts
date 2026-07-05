@@ -802,6 +802,7 @@ export interface ChatbotSettings {
   followup24hTemplate: string;
   followup72hTemplate: string;
   followup168hTemplate: string;
+  broadcastAiEnabled?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -812,6 +813,7 @@ export interface ChatbotSettingsUpdate {
   followup24hTemplate?: string;
   followup72hTemplate?: string;
   followup168hTemplate?: string;
+  broadcastAiEnabled?: boolean;
 }
 
 export type ChatbotSessionData = { [key: string]: unknown };

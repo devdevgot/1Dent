@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import {
   db,
+  pool,
   dentalBroadcastRunsTable,
   dentalBroadcastDeliveriesTable,
   messagesTable,
@@ -346,7 +347,14 @@ function buildMessage(patientName: string, problems: ToothProblem[]): string | n
   );
 }
 
+async function ensureBroadcastAiColumn(): Promise<void> {
+  await pool.query(
+    `ALTER TABLE "chatbot_settings" ADD COLUMN IF NOT EXISTS "broadcast_ai_enabled" boolean DEFAULT false NOT NULL`,
+  );
+}
+
 async function isBroadcastAiEnabled(clinicId: string): Promise<boolean> {
+  await ensureBroadcastAiColumn();
   const [row] = await db
     .select({ broadcastAiEnabled: chatbotSettingsTable.broadcastAiEnabled })
     .from(chatbotSettingsTable)

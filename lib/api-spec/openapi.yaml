@@ -3895,6 +3895,8 @@ components:
           type: string
         followup168hTemplate:
           type: string
+        broadcastAiEnabled:
+          type: boolean
         createdAt:
           type: string
           format: date-time
@@ -3925,6 +3927,8 @@ components:
           type: string
         followup168hTemplate:
           type: string
+        broadcastAiEnabled:
+          type: boolean
 
     ChatbotSession:
       type: object
