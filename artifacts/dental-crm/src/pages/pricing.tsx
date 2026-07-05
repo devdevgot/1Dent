@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useCreatePlanRequest, type Clinic } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
@@ -150,12 +150,23 @@ export default function PricingPage() {
   const subscriptionStatus = getSubscriptionStatus(clinic);
   const activePaidPlan =
     subscriptionStatus.kind === "active_plan" ? subscriptionStatus.plan : null;
-  const [requestPlan, setRequestPlan] = useState<string | null>(null);
+  const [requestPlan, setRequestPlan] = useState<PlanId | null>(null);
   const [formName, setFormName] = useState(user?.name ?? "");
   const [formPhone, setFormPhone] = useState("");
   const [formEmail, setFormEmail] = useState(user?.email ?? "");
   const [formMessage, setFormMessage] = useState("");
   const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    if (user?.name) setFormName(user.name);
+    if (user?.email) setFormEmail(user.email);
+  }, [user?.name, user?.email]);
+
+  const closeRequestModal = () => {
+    setRequestPlan(null);
+    setSubmitted(false);
+    setFormMessage("");
+  };
 
   const createPlanMutation = useCreatePlanRequest({
     mutation: {
@@ -182,11 +193,9 @@ export default function PricingPage() {
     });
   };
 
-  const orderedPlans = [
-    PLANS.find((p) => p.id === "starter")!,
-    PLANS.find((p) => p.id === "professional")!,
-    PLANS.find((p) => p.id === "enterprise")!,
-  ];
+  const orderedPlans = (["starter", "professional", "enterprise"] as const)
+    .map((id) => PLANS.find((p) => p.id === id))
+    .filter((plan): plan is NonNullable<typeof plan> => plan != null);
 
   return (
     <PageShell className="pb-10" animate={false}>
@@ -202,7 +211,7 @@ export default function PricingPage() {
               key={plan.id}
               plan={plan}
               isCurrentPlan={activePaidPlan === plan.id}
-              onSelect={() => setRequestPlan(plan.name)}
+              onSelect={() => setRequestPlan(plan.id)}
             />
           ))}
         </div>
@@ -215,21 +224,31 @@ export default function PricingPage() {
       </div>
 
       {requestPlan && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl border border-[#e8e3d9] shadow-xl overflow-hidden font-manrope">
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+          onClick={closeRequestModal}
+          role="presentation"
+        >
+          <div
+            className="bg-white w-full max-w-md rounded-2xl border border-[#e8e3d9] shadow-xl overflow-hidden font-manrope"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="plan-request-title"
+          >
             <div className="flex items-center justify-between px-5 py-4 border-b border-[#e8e3d9]">
               <div>
-                <h3 className="font-bold text-[#0f172a]">Заявка на тариф {requestPlan}</h3>
+                <h3 id="plan-request-title" className="font-bold text-[#0f172a]">
+                  Заявка на тариф {PLAN_DISPLAY_NAMES[requestPlan]}
+                </h3>
                 <p className="text-caption text-[#64748b] mt-0.5">
                   Внедрение {formatPlanPrice(IMPLEMENTATION_FEE)} ₸ + подписка
                 </p>
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  setRequestPlan(null);
-                  setSubmitted(false);
-                }}
+                onClick={closeRequestModal}
+                aria-label="Закрыть"
                 className="p-1.5 rounded-xl hover:bg-[#f1ede4] transition-colors"
               >
                 <X className="w-5 h-5 text-[#94a3b8]" />
@@ -247,10 +266,7 @@ export default function PricingPage() {
                 </p>
                 <button
                   type="button"
-                  onClick={() => {
-                    setRequestPlan(null);
-                    setSubmitted(false);
-                  }}
+                  onClick={closeRequestModal}
                   className="px-6 py-2.5 bg-[#1f75fe] hover:bg-[#1a65e8] text-white rounded-full text-body font-semibold transition-colors"
                 >
                   Закрыть

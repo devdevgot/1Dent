@@ -134,7 +134,20 @@ function JobCard({ job: initialJob }: { job: MigrationJob }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [job.id, isActive]);
 
-  useEffect(() => { setJob(initialJob); }, [initialJob]);
+  useEffect(() => {
+    setJob((current) => {
+      if (current.id !== initialJob.id) return initialJob;
+      const currentActive = current.status === "pending" || current.status === "processing";
+      if (currentActive) {
+        if (initialJob.status === "done" || initialJob.status === "failed") return initialJob;
+        const currentRows = current.processedRows ?? 0;
+        const incomingRows = initialJob.processedRows ?? 0;
+        if (incomingRows > currentRows) return { ...current, ...initialJob };
+        return current;
+      }
+      return initialJob;
+    });
+  }, [initialJob]);
 
   const pct =
     (job.totalRows ?? 0) > 0
@@ -559,7 +572,36 @@ function ExportSection() {
 
   const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
 
-  const triggerDownload = async (): Promise<boolean> => {
+  const downloadResponseBlob = async (res: Response, fallbackFilename: string) => {
+    const blob = await res.blob();
+    if (blob.size === 0) {
+      throw new Error("Сервер вернул пустой файл — загрузка не удалась");
+    }
+    const contentType = res.headers.get("content-type") ?? "";
+    if (contentType.includes("json")) {
+      const text = await blob.text();
+      let message = text || "Ошибка загрузки файла";
+      try {
+        const payload = JSON.parse(text) as { message?: string };
+        if (payload.message) message = payload.message;
+      } catch {
+        // keep raw response text
+      }
+      throw new Error(message);
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const cd = res.headers.get("content-disposition") ?? "";
+    const match = cd.match(/filename="?([^"]+)"?/);
+    a.download = match?.[1] ?? fallbackFilename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const triggerDownload = async (): Promise<void> => {
     const res = await fetch(`${getBaseUrl()}/api/migration/export`, {
       headers: { Authorization: `Bearer ${token ?? ""}` },
     });
@@ -567,18 +609,10 @@ function ExportSection() {
       const text = await res.text();
       throw new Error(text || `HTTP ${res.status}`);
     }
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    const cd = res.headers.get("content-disposition") ?? "";
-    const match = cd.match(/filename="?([^"]+)"?/);
-    a.download = match?.[1] ?? `1dent_export_${new Date().toISOString().split("T")[0]}.xlsx`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    return true;
+    await downloadResponseBlob(
+      res,
+      `1dent_export_${new Date().toISOString().split("T")[0]}.xlsx`,
+    );
   };
 
   const handleExport = async () => {
@@ -609,18 +643,10 @@ function ExportSection() {
         const j = await res.json().catch(() => ({}));
         throw new Error((j as { message?: string }).message ?? `HTTP ${res.status}`);
       }
-      // Trigger download from the response blob
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      const cd = res.headers.get("content-disposition") ?? "";
-      const match = cd.match(/filename="?([^"]+)"?/);
-      a.download = match?.[1] ?? `1dent_export_${new Date().toISOString().split("T")[0]}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      await downloadResponseBlob(
+        res,
+        `1dent_export_${new Date().toISOString().split("T")[0]}.xlsx`,
+      );
       setDone("wipe");
       setConfirmWipe(false);
     } catch (e) {
@@ -722,11 +748,15 @@ function ExportSection() {
 function JobHistory() {
   const { data, refetch, isLoading } = useListMigrationJobs();
   const jobs = data?.data.jobs ?? [];
+  const hasActiveJobs = jobs.some(
+    (job) => job.status === "pending" || job.status === "processing",
+  );
 
   useEffect(() => {
+    if (!hasActiveJobs) return;
     const timer = setInterval(() => refetch(), 5000);
     return () => clearInterval(timer);
-  }, [refetch]);
+  }, [refetch, hasActiveJobs]);
 
   if (isLoading) return (
     <div className="flex justify-center py-10">

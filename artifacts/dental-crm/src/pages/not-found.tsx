@@ -1,11 +1,15 @@
 import { Link } from "wouter";
 import { AlertCircle, ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useAuthStore } from "@/hooks/use-auth";
+import { getRoleDashboardPath } from "@/lib/role-redirect";
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
 
 export default function NotFound() {
   const { t } = useTranslation();
+  const { isAuthenticated, user } = useAuthStore();
+  const homeHref = isAuthenticated && user ? getRoleDashboardPath(user.role) : "/";
 
   return (
     <PageShell className="min-h-screen flex items-center justify-center p-4" animate={false}>
@@ -17,7 +21,7 @@ export default function NotFound() {
         <h2 className="text-xl font-semibold text-[#0f172a] mb-2">{t("notFound.title")}</h2>
         <p className="text-body text-[#64748b] mb-8">{t("notFound.desc")}</p>
         <Button asChild className="rounded-full px-6 py-3 hover:scale-105 active:scale-95">
-          <Link href="/">
+          <Link href={homeHref}>
             <ArrowLeft className="w-4 h-4" />
             {t("notFound.returnHome")}
           </Link>
