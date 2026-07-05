@@ -281,9 +281,42 @@ export class TabletService {
           ? { id: session.cabinetId, name: "Кабинет" }
           : null,
       doctor,
+      pairingCode:
+        session.status === "awaiting_pairing" && cabinet?.pairingCode
+          ? cabinet.pairingCode
+          : null,
       expiresAt: session.expiresAt.toISOString(),
       unlockedAt: session.unlockedAt?.toISOString() ?? null,
       auth,
+    };
+  }
+
+  async resendPairingCode(userId: string, role: UserRole, sessionId: string) {
+    assertTabletRole(role);
+
+    const session = await this.repo.findSessionById(sessionId);
+    if (!session) throw new NotFoundError("Сессия не найдена");
+    if (session.status !== "awaiting_pairing") {
+      throw new ValidationError("Сессия не ожидает подключения");
+    }
+    if (!session.cabinetId || !session.clinicId) {
+      throw new ValidationError("Кабинет не назначен");
+    }
+
+    const user = await this.authRepo.findUserById(userId);
+    if (!user || user.clinicId !== session.clinicId) {
+      throw new ForbiddenError("Сессия не принадлежит вашей клинике");
+    }
+
+    const pairingCode = generatePairingCode();
+    const updated = await this.repo.updatePairingCode(session.cabinetId, pairingCode);
+    if (!updated) throw new NotFoundError("Кабинет не найден");
+
+    return {
+      success: true as const,
+      sessionId: session.id,
+      pairingCode,
+      cabinet: { id: updated.id, name: updated.name },
     };
   }
 

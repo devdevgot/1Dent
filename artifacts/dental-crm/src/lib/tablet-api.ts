@@ -27,6 +27,7 @@ export interface TabletSessionStatus {
   status: "pending" | "awaiting_pairing" | "unlocked" | "expired";
   cabinet: TabletCabinetBrief | null;
   doctor?: TabletDoctorBrief | null;
+  pairingCode?: string | null;
   expiresAt: string;
   unlockedAt?: string | null;
   auth?: {
@@ -175,6 +176,20 @@ export async function redeemTabletLink(token: string, pin?: string) {
   }>("/api/tablet/link", {
     method: "POST",
     body: JSON.stringify({ token, pin }),
+  });
+}
+
+export async function resendTabletPairingCode(sessionId: string) {
+  return customFetch<{
+    success: boolean;
+    data: {
+      sessionId: string;
+      pairingCode: string;
+      cabinet: TabletCabinetBrief;
+    };
+  }>("/api/tablet/link/resend-pairing", {
+    method: "POST",
+    body: JSON.stringify({ sessionId }),
   });
 }
 

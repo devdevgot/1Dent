@@ -1,4 +1,4 @@
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { AppDialog } from "@/components/layout/app-dialog";
 import { Button } from "@/components/ui/button";
@@ -9,11 +9,15 @@ export function TabletPairingCodeModal({
   onClose,
   code,
   cabinetName,
+  onResend,
+  resending = false,
 }: {
   open: boolean;
   onClose: () => void;
   code: string | null;
   cabinetName?: string | null;
+  onResend?: () => void;
+  resending?: boolean;
 }) {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
@@ -38,8 +42,9 @@ export function TabletPairingCodeModal({
     >
       <div className="flex flex-col items-center font-manrope text-center">
         {cabinetName && (
-          <p className="mb-4 text-sm text-[#64748b]">{cabinetName}</p>
+          <p className="mb-1 text-sm font-semibold text-[#0f172a]">{cabinetName}</p>
         )}
+        <p className="mb-4 text-xs text-[#64748b]">Код отправляется в этот кабинет</p>
 
         {code && (
           <>
@@ -56,10 +61,23 @@ export function TabletPairingCodeModal({
                 {copied ? <Check className="h-5 w-5 text-green-600" /> : <Copy className="h-5 w-5" />}
               </button>
             </div>
-            <p className="mb-6 max-w-xs text-sm leading-relaxed text-[#64748b]">
+            <p className="mb-4 max-w-xs text-sm leading-relaxed text-[#64748b]">
               Введите этот 6-значный код на экране планшета. После этого можно настроить PIN для входа без QR.
             </p>
           </>
+        )}
+
+        {onResend && (
+          <Button
+            type="button"
+            variant="outline"
+            className="mb-3 w-full"
+            disabled={resending}
+            onClick={onResend}
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${resending ? "animate-spin" : ""}`} />
+            Отправить код снова в кабинет
+          </Button>
         )}
 
         <Button type="button" className="w-full" onClick={onClose}>

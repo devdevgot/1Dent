@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { getTabletMe, redeemTabletLink, setTabletPin } from "@/lib/tablet-api";
+import { getTabletMe, redeemTabletLink, resendTabletPairingCode, setTabletPin } from "@/lib/tablet-api";
 
 type LinkFlowStatus = "idle" | "processing" | "success" | "error";
 
@@ -8,7 +8,9 @@ export function useTabletLinkFlow() {
   const { toast } = useToast();
   const [pairingCodeOpen, setPairingCodeOpen] = useState(false);
   const [pairingCode, setPairingCode] = useState<string | null>(null);
+  const [pairingSessionId, setPairingSessionId] = useState<string | null>(null);
   const [cabinetName, setCabinetName] = useState<string | null>(null);
+  const [resendingPairing, setResendingPairing] = useState(false);
   const [pinSetupOpen, setPinSetupOpen] = useState(false);
   const [pinSaving, setPinSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -42,6 +44,7 @@ export function useTabletLinkFlow() {
 
       if (result.data.pairingRequired && result.data.pairingCode) {
         setPairingCode(result.data.pairingCode);
+        setPairingSessionId(result.data.sessionId);
         setCabinetName(result.data.cabinet?.name ?? null);
         setPairingCodeOpen(true);
         setStatus("success");
@@ -74,9 +77,32 @@ export function useTabletLinkFlow() {
     }
   }, [toast]);
 
+  const resendPairingCode = useCallback(async () => {
+    if (!pairingSessionId) return;
+    setResendingPairing(true);
+    try {
+      const result = await resendTabletPairingCode(pairingSessionId);
+      setPairingCode(result.data.pairingCode);
+      setCabinetName(result.data.cabinet.name);
+      toast({
+        title: "Код отправлен",
+        description: `Новый код отправлен в ${result.data.cabinet.name}`,
+      });
+    } catch (err) {
+      toast({
+        title: "Не удалось отправить код",
+        description: err instanceof Error ? err.message : "Попробуйте ещё раз",
+        variant: "destructive",
+      });
+    } finally {
+      setResendingPairing(false);
+    }
+  }, [pairingSessionId, toast]);
+
   const closePairingModal = useCallback(async () => {
     setPairingCodeOpen(false);
     setPairingCode(null);
+    setPairingSessionId(null);
     setCabinetName(null);
 
     try {
@@ -120,10 +146,12 @@ export function useTabletLinkFlow() {
     cabinetName,
     pinSetupOpen,
     pinSaving,
+    resendingPairing,
     submitting,
     status,
     errorMessage,
     processToken,
+    resendPairingCode,
     closePairingModal,
     submitPinSetup,
     closePinSetup,

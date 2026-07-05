@@ -31,6 +31,7 @@ export function LockScreen({
   const [mode, setMode] = useState<Mode>("qr");
   const [pin, setPin] = useState("");
   const [pairingCode, setPairingCode] = useState("");
+  const [cabinetPairingCode, setCabinetPairingCode] = useState<string | null>(null);
   const [error, setError] = useState(false);
   const [pinError, setPinError] = useState("");
   const [pairingError, setPairingError] = useState("");
@@ -173,13 +174,16 @@ export function LockScreen({
       if (unlockedRef.current) return;
       try {
         const res = await getTabletSessionStatus(sessionId);
-        const { status, doctor, cabinet, auth } = res.data;
+        const { status, doctor, cabinet, auth, pairingCode: remotePairingCode } = res.data;
 
         if (status === "awaiting_pairing" && cabinet) {
           setAwaitingPairing(true);
           setMode("pairing");
           setCabinetName(cabinet.name);
           setCabinetId(cabinet.id);
+          if (remotePairingCode) {
+            setCabinetPairingCode(remotePairingCode);
+          }
           return;
         }
 
@@ -330,9 +334,20 @@ export function LockScreen({
               <KeyRound className="h-5 w-5 text-[#1f75fe]" />
               <span className="text-base font-bold">Подключение кабинета</span>
             </div>
-            <p className="mb-6 text-center text-sm text-[#64748b]">
-              Отсканируйте QR-код с телефона — на экране телефона появится 6-значный код. После ввода можно настроить PIN для входа без QR.
+            <p className="mb-4 text-center text-sm text-[#64748b]">
+              {awaitingPairing
+                ? "Код отправлен с телефона. Введите его ниже или дождитесь обновления на экране."
+                : "Введите 6-значный код с телефона или из CRM."}
             </p>
+
+            {cabinetPairingCode && awaitingPairing && (
+              <div className="mb-5 rounded-2xl border border-[#1f75fe]/20 bg-[#eff6ff] px-5 py-4 text-center">
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#1f75fe]">Код в кабинете</p>
+                <p className="font-mono text-3xl font-extrabold tracking-[0.35em] text-[#0f172a]">
+                  {cabinetPairingCode}
+                </p>
+              </div>
+            )}
 
             <div className={cn("mb-4 flex gap-2", pairingError && "animate-shake")}>
               {[0, 1, 2, 3, 4, 5].map((i) => (

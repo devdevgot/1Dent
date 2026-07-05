@@ -22,6 +22,10 @@ const linkSchema = z.object({
   pin: z.string().length(4).optional(),
 });
 
+const resendPairingSchema = z.object({
+  sessionId: z.string().min(1),
+});
+
 router.get("/me", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const data = await service.getMe(req.user!.userId, req.user!.role);
@@ -76,6 +80,22 @@ router.post("/link", async (req: Request, res: Response, next: NextFunction) => 
       req.user!.role,
       parsed.data.token,
       parsed.data.pin,
+    );
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/link/resend-pairing", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const parsed = resendPairingSchema.safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+
+    const data = await service.resendPairingCode(
+      req.user!.userId,
+      req.user!.role,
+      parsed.data.sessionId,
     );
     res.json({ success: true, data });
   } catch (err) {

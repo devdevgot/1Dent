@@ -10,7 +10,9 @@ export function TabletScannerSlot() {
     cabinetName,
     pinSetupOpen,
     pinSaving,
+    resendingPairing,
     processToken,
+    resendPairingCode,
     closePairingModal,
     submitPinSetup,
     closePinSetup,
@@ -27,6 +29,8 @@ export function TabletScannerSlot() {
         onClose={() => void closePairingModal()}
         code={pairingCode}
         cabinetName={cabinetName}
+        onResend={() => void resendPairingCode()}
+        resending={resendingPairing}
       />
       <TabletPinSetupModal
         open={pinSetupOpen}

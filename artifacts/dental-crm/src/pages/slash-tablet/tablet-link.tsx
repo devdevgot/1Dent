@@ -18,10 +18,12 @@ export default function TabletLinkPage() {
     cabinetName,
     pinSetupOpen,
     pinSaving,
+    resendingPairing,
     submitting,
     status,
     errorMessage,
     processToken,
+    resendPairingCode,
     closePairingModal,
     submitPinSetup,
     closePinSetup,
@@ -110,6 +112,8 @@ export default function TabletLinkPage() {
         onClose={() => void closePairingModal()}
         code={pairingCode}
         cabinetName={cabinetName}
+        onResend={() => void resendPairingCode()}
+        resending={resendingPairing}
       />
       <TabletPinSetupModal
         open={pinSetupOpen}
