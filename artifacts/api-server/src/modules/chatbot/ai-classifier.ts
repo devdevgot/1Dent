@@ -177,11 +177,11 @@ export interface ManagerExample {
  * Detects patient language from conversation history (user messages only).
  * Returns null when not enough signal (e.g. empty history or only digits/IIN).
  */
-function detectPatientLanguage(messages: ChatMessage[]): "kz" | "en" | null {
-  const userText = messages
-    .filter((m) => m.role === "user")
-    .map((m) => m.content)
-    .join(" ");
+function detectPatientLanguage(messages: ChatMessage[], currentMessage?: string): "kz" | "en" | null {
+  const userText = [
+    ...messages.filter((m) => m.role === "user").map((m) => m.content),
+    currentMessage ?? "",
+  ].join(" ");
 
   if (!userText.trim() || /^\d+$/.test(userText.trim())) return null;
 
@@ -190,7 +190,7 @@ function detectPatientLanguage(messages: ChatMessage[]): "kz" | "en" | null {
 
   // Common Kazakh Cyrillic words written without special chars
   if (
-    /\b(рахмет|ракмет|жарайды|болады|болат|маған|сізге|менің|бармын|жоқ|жок|иә|ия|қайда|каида|немене|немене|қашан|каша|жазылу|ауырады|ауру|тіс|тис|тазалоу|тазалав|жулу|суыру|салем|сәлем|каирлы|кешіріңіз|кеширинизи)\b/i.test(
+    /\b(рахмет|ракмет|жарайды|болады|болат|маған|сізге|менің|бармын|жоқ|жок|иә|ия|қайда|каида|немене|қашан|каша|жазылу|ауырады|ауру|тіс|тис|тазалоу|тазалав|жулу|суыру|салем|сәлем|қайырлы|каирлы|кешіріңіз|кешіріниз)\b/i.test(
       userText,
     )
   )
@@ -215,13 +215,14 @@ export async function generateChatbotResponse(
   const extraSystemMessages: Array<{ role: "system"; content: string }> = [];
   const fewShot: Array<{ role: "user" | "assistant"; content: string }> = [];
 
-  const detectedLang = detectPatientLanguage(history);
+  const detectedLang = detectPatientLanguage(history, userMessage);
   let finalSystemPrompt = `${systemPrompt}\n\n${HUMAN_MESSAGING_PROMPT}`;
   if (detectedLang === "kz") {
     finalSystemPrompt +=
       "\n\n⚠️ КРИТИЧЕСКИ ВАЖНО: Пациент пишет на КАЗАХСКОМ языке. " +
       "Отвечай ИСКЛЮЧИТЕЛЬНО на казахском языке на протяжении всего диалога. " +
       "Не используй русский язык ни в одном слове. " +
+      "Если пациент смешивает казахский и русский — отвечай на том языке, которого больше в его сообщениях. " +
       "Пиши казахский текст кириллицей (можно без специальных букв: а вместо ә, г вместо ғ, к вместо қ и т.д.).";
   } else if (detectedLang === "en") {
     finalSystemPrompt +=
@@ -233,7 +234,8 @@ export async function generateChatbotResponse(
     extraSystemMessages.push({
       role: "system",
       content:
-        "Ниже — примеры стиля общения менеджера клиники. Точно копируй их тон, длину ответов и использование эмодзи:",
+        "Ниже — примеры стиля общения менеджера клиники. Копируй их ТОН, длину ответов и использование эмодзи. " +
+        "НЕ копируй из примеров цены, адреса, имена врачей и акции — эти факты бери только из материалов клиники.",
     });
     for (const ex of fewShotExamples.slice(0, 8)) {
       fewShot.push({ role: "user", content: ex.userMessage });

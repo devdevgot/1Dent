@@ -4,6 +4,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { parseGreenApiWebhook, clearGreenApiStateCache, getGreenApiWaSettings, extractPhoneFromWaSettings } from "../shared/green-api";
 import { isValidWebhookSecret } from "../shared/green-api-webhook";
 import { isWebhookMessageProcessed, markWebhookMessageProcessed } from "../shared/webhook-idempotency";
+import { sendToPatient } from "../shared/messaging";
 import { MessagesService } from "../modules/messages/messages.service";
 import { BranchesRepository } from "../modules/branches/branches.repository";
 import { logger } from "../lib/logger";
@@ -115,7 +116,23 @@ router.post(
         // Message was received but is not a plain text message (image, audio, sticker, etc.)
         const messageData = (rawBody["messageData"] as Record<string, unknown> | undefined) ?? {};
         const messageType = String(messageData["typeMessage"] ?? "unknown");
-        logger.info({ clinicId, typeWebhook, messageType }, "[GreenAPI Webhook] incomingMessageReceived but not a text message — skipped");
+        logger.info({ clinicId, typeWebhook, messageType }, "[GreenAPI Webhook] incomingMessageReceived but not a text message");
+
+        // Politely ask the patient to send text instead of silently dropping the message
+        const senderData = (rawBody["senderData"] as Record<string, unknown> | undefined) ?? {};
+        const sender = String(senderData["sender"] ?? "");
+        const mediaMsgId = String(rawBody["idMessage"] ?? "");
+        const senderPhone = sender.replace("@c.us", "").replace("@g.us", "");
+        const isMediaType = ["audioMessage", "imageMessage", "videoMessage", "documentMessage", "voiceMessage", "pttMessage"].includes(messageType);
+        if (senderPhone && isMediaType && mediaMsgId && !(await isWebhookMessageProcessed(clinicId, mediaMsgId))) {
+          await markWebhookMessageProcessed(clinicId, mediaMsgId);
+          const mediaReply = messageType === "audioMessage" || messageType === "voiceMessage" || messageType === "pttMessage"
+            ? "Извините, я пока не умею слушать голосовые сообщения 🙏 Напишите, пожалуйста, текстом — сразу помогу!"
+            : "Спасибо! Файл получил, но обработать его пока не могу 🙏 Опишите, пожалуйста, ваш вопрос текстом — сразу помогу.";
+          await sendToPatient(clinicId, senderPhone, mediaReply).catch((err) =>
+            logger.warn({ err, clinicId }, "[GreenAPI Webhook] failed to send media fallback reply"),
+          );
+        }
       } else {
         logger.info({ clinicId, typeWebhook }, "[GreenAPI Webhook] non-message webhook type — skipped");
       }

@@ -1,10 +1,8 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
-import { db, dentalBroadcastRunsTable } from "@workspace/db";
+import { db, dentalBroadcastRunsTable, clinicsTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { runDentalBroadcastForClinic, clinicLocalDateString } from "./dental-broadcast.service";
-import { db, clinicsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
 import { computeRates, listPatientBroadcastHistory } from "./dental-broadcast-metrics";
 import { ValidationError } from "../../shared/errors";
 import { MessagesRepository } from "../messages/messages.repository";

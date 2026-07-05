@@ -17,6 +17,7 @@ import {
   treatmentPlansTable,
   treatmentPlanItemsTable,
   clinicsTable,
+  clinicBranchesTable,
   knowledgeSourcesTable,
   procedureTemplatesTable,
 } from "@workspace/db";
@@ -158,9 +159,11 @@ function isOperatorRequest(text: string): boolean {
 }
 function matchesConfirmWord(text: string, keyword: string): boolean {
   const lower = text.toLowerCase().trim();
-  if (keyword.length <= 2) return lower === keyword;
+  if (lower === keyword) return true;
+  // Symbols like "+" and emoji — exact match only (checked above)
+  if (!/^[a-zа-яёәғқңөұүі]/i.test(keyword)) return false;
   const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return lower === keyword || new RegExp(`(?:^|\\s)${escaped}(?:\\s|$|[.,!?👍])`, "i").test(lower);
+  return new RegExp(`(?:^|[\\s,])${escaped}(?=$|[\\s.,!?)»"']|👍)`, "i").test(lower);
 }
 function isYes(text: string): boolean {
   const lower = text.toLowerCase().trim();
@@ -795,11 +798,13 @@ function buildDentalQaSystemPrompt(
   settings: Awaited<ReturnType<typeof getSettings>>,
   patientName: string,
   dentalContext: string,
+  clinicName?: string,
 ): string {
   const si = (settings.stepInstructions ?? {}) as StepInstructions;
   const generalExtra = si.general ? `\n\nДополнительные инструкции клиники:\n${si.general}` : "";
+  const resolvedName = resolveClinicName(settings, clinicName) ?? "стоматологической клиники";
 
-  return `Ты — вежливый и профессиональный AI-ассистент стоматологической клиники 1Dent (Казахстан).
+  return `Ты — вежливый и профессиональный AI-ассистент клиники «${resolvedName}» (Казахстан).
 Пациент уже идентифицирован: его зовут ${patientName}.
 Ты имеешь доступ к его карте зубов и истории лечения (см. ниже).
 Отвечай коротко и понятно. Не ставь диагнозы. Используй фактическую информацию из карты.
@@ -970,7 +975,7 @@ function buildUnifiedScriptPrompt(
   const now = new Date();
   const todayDate = formatAlmatyDayMonth(now);
   const firstDoctor = doctorsWithSlots?.[0];
-  const exampleDoctorName = firstDoctor?.name ?? "Иван Петров";
+  const exampleDoctorName = firstDoctor?.name ?? "[врач из списка выше]";
   const exampleTime = firstDoctor?.slots?.[0] ? formatAlmatyTime(firstDoctor.slots[0]) : "14:00";
   const exampleDate =
     firstDoctor?.slots?.[0] ? formatAlmatyDayMonth(firstDoctor.slots[0]) : todayDate;
@@ -1047,6 +1052,7 @@ function buildUnifiedScriptPrompt(
     handle_objections: null,
     confirm_appointment: "confirm",
     dental_qa: null,
+    collect_review: null,
     done: null,
     human_takeover: null,
     reactivation: null,
@@ -1075,6 +1081,7 @@ ${nowContext}
 13. Отвечай мгновенно и по делу — как опытный менеджер по продажам: один вопрос за раз, мягко веди к записи, не дави.
 14. Если пациент сомневается — отработай возражение и снова предложи конкретный следующий шаг (время, врач, филиал).
 15. Не завершай диалог, пока пациент явно не отказался («не надо», «не интересно») или не записался — при паузе система отправит follow-up автоматически.
+16. КРИТИЧНО: скидки, акции, «бесплатная консультация/осмотр», рассрочка — упоминай ТОЛЬКО если они явно указаны в материалах клиники или прайсе. НИКОГДА не придумывай проценты скидок и специальные предложения. Если цены нет в прайсе — скажи «точную стоимость назовёт врач после осмотра».
 ${kazakhNote}${instructionsExtra}${doctorsSection}${priceListSection}${mindMapSection}${activeMindMapSection}${effectiveScriptContext}${knowledgeSection}${backendSection}`;
 }
 
@@ -1142,6 +1149,57 @@ function getLeadNurtureTemplates(settings: Awaited<ReturnType<typeof getSettings
     parts[1] ?? defaults[1],
     parts[2] ?? defaults[2],
   ];
+}
+
+// ─── Single-branch clinics: skip the branch question entirely ─────────────────
+
+type CachedSingleBranch = { name: string | null; expiresAt: number };
+const singleBranchCache = new Map<string, CachedSingleBranch>();
+
+async function getSingleBranchName(clinicId: string): Promise<string | null> {
+  const cached = singleBranchCache.get(clinicId);
+  if (cached && cached.expiresAt > Date.now()) return cached.name;
+
+  const rows = await db
+    .select({ name: clinicBranchesTable.name })
+    .from(clinicBranchesTable)
+    .where(eq(clinicBranchesTable.clinicId, clinicId))
+    .limit(2)
+    .catch(() => [] as Array<{ name: string }>);
+
+  const name = rows.length === 1 ? rows[0]!.name : null;
+  singleBranchCache.set(clinicId, { name, expiresAt: Date.now() + 5 * 60 * 1000 });
+  return name;
+}
+
+// ─── Objection handling: type-specific responses (no invented offers) ─────────
+
+function buildObjectionBackendContext(objectionType?: "price" | "fear" | "info"): string {
+  const base =
+    "ВАЖНО: акции, скидки, «бесплатно» и рассрочку упоминай ТОЛЬКО если они явно есть в материалах клиники (база знаний / прайс).";
+  switch (objectionType) {
+    case "price":
+      return `Возражение: цена. Объясни, что точную стоимость врач назовёт после осмотра, предложи записаться на осмотр и составить план с ценами по этапам. ${base}`;
+    case "fear":
+      return `Возражение: страх процедуры. Успокой: первый визит — только осмотр и план, без лечения. Расскажи про современную анестезию, предложи записаться на осмотр. ${base}`;
+    case "info":
+      return `Возражение: не хватает информации. Ответь на вопросы из материалов клиники, предложи осмотр, где врач всё подробно объяснит. ${base}`;
+    default:
+      return `Пациент сомневается — мягко выясни причину (цена / страх / информация) и предложи осмотр. ${base}`;
+  }
+}
+
+function buildObjectionFallback(objectionType?: "price" | "fear" | "info"): string {
+  switch (objectionType) {
+    case "price":
+      return "Понимаю 😊 Точную стоимость врач назовёт после осмотра — вы получите план лечения с ценами по этапам, и решите сами. Записать вас на осмотр?";
+    case "fear":
+      return "Понимаю ваши переживания 😊 Первый визит — только осмотр и план, без лечения. Врач всё объяснит и ответит на вопросы. Записать вас?";
+    case "info":
+      return "Хороший вопрос! На осмотре врач подробно всё расскажет и покажет варианты именно для вашего случая. Подобрать удобное время?";
+    default:
+      return "Понимаю 😊 Могу записать вас на осмотр — врач посмотрит и составит план, а решение останется за вами. Когда вам удобно?";
+  }
 }
 
 function buildHandoffSummary(session: SessionRecord): string {
@@ -1690,6 +1748,12 @@ export class ChatbotService {
       data.leadNurtureAnchorAt = new Date().toISOString();
     }
 
+    // Single-branch clinic — pre-select the branch so the funnel never asks about it
+    if (!data.selectedBranch && !dryRun) {
+      const singleBranch = await getSingleBranchName(clinicId);
+      if (singleBranch) data.selectedBranch = singleBranch;
+    }
+
     const promptChannel = dryRun ? "playground" as const : "whatsapp" as const;
 
     const up = (
@@ -1949,14 +2013,41 @@ export class ChatbotService {
             break;
           }
 
-          // Returning patient, no upcoming → straight to problem collection
+          // Returning patient, no upcoming appointment.
+          // If the first message already contains intent, classify it right away
+          // (same fast-path as new leads) instead of wasting a turn on "чем могу помочь?".
+          if (!isPlainGreeting(messageText)) {
+            const returningClassification = await classifyPatientRequest(messageText, recentMessages);
+            if (returningClassification.serviceType !== "unknown" || returningClassification.confidence === "high") {
+              data.problemDescription = messageText.trim().slice(0, 200);
+              data.serviceType = returningClassification.serviceType;
+              data.urgency = returningClassification.urgency;
+              data.patientType = "returning";
+              data.aiConfidence = returningClassification.confidence;
+
+              const aiReply = await generateChatbotResponse(
+                up("collect_qualification", {
+                  backendContext: `Постоянный пациент ${existingByPhone.name} сразу описал запрос. Не переспрашивай, что беспокоит — уточни детали (симптомы/срочность) и веди к записи.`,
+                }),
+                [{ role: "user" as const, content: messageText }],
+                messageText,
+                managerExamples,
+              );
+              response = mergeReply(aiReply, `Здравствуйте, ${existingByPhone.name}! 😊 Спасибо, что описали запрос — подскажите, есть ли боль или дискомфорт сейчас? Подберу врача и удобное время.`);
+              session.state = "collect_qualification";
+              session.data = data;
+              break;
+            }
+          }
+
+          // Returning patient, plain greeting → warm opener with booking CTA
           const aiReply = await generateChatbotResponse(
-            up("collect_problem", { backendContext: `Пациент ${existingByPhone.name} — постоянный клиент.` }),
+            up("collect_problem", { backendContext: `Пациент ${existingByPhone.name} — постоянный клиент. Поприветствуй тепло и предложи записаться.` }),
             [{ role: "user" as const, content: messageText }],
             messageText,
             managerExamples,
           );
-          response = mergeReply(aiReply, `Здравствуйте, ${existingByPhone.name}! 😊 Чем могу помочь?`);
+          response = mergeReply(aiReply, `Здравствуйте, ${existingByPhone.name}! 😊 Рады снова вас видеть. Что планируете — лечение, чистку или консультацию? Могу сразу подобрать время.`);
           session.state = "collect_problem";
           session.data = data;
           break;
@@ -1994,6 +2085,13 @@ export class ChatbotService {
             data.urgency = firstClassification.urgency;
             data.patientType = firstClassification.patientType;
             data.aiConfidence = firstClassification.confidence;
+
+            // Hot lead: «хочу записаться завтра в 15:00» — remember the requested time
+            // so we don't re-ask at the datetime step.
+            if (isReadyToBook(messageText) || firstClassification.urgency === "urgent") {
+              const earlyDt = await extractDatetimeFromText(messageText).catch(() => null);
+              if (earlyDt) data.preferredDatetime = earlyDt.toISOString();
+            }
 
             const mindMapData = settings.scriptMindMap as ScriptMindMapData | undefined;
             const problemNode = findMindMapNodeByFsmState(mindMapData, "collect_problem");
@@ -2517,19 +2615,14 @@ export class ChatbotService {
               activeNodeId: data.activeMindMapNodeId,
             }) ?? data.activeMindMapNodeId;
 
-          const objectionBackend = data.objectionType
-            ? `Причина сомнения: ${data.objectionType}. Предложи бесплатную консультацию, индивидуальный план, рассрочку 0-0-24, бесплатный осмотр.`
-            : "Пациент сомневается — выясни причину и отработай возражения.";
+          const objectionBackend = buildObjectionBackendContext(data.objectionType);
           const aiObj = await generateChatbotResponse(
             up("handle_objections", { backendContext: objectionBackend }),
             recentMessages,
             messageText,
             managerExamples,
           );
-          response = mergeReply(
-            aiObj,
-            "Понимаю 😊 Могу записать вас на бесплатный осмотр — врач осмотрит и составит план без обязательств. Рассрочка 0-0-24 тоже доступна.",
-          );
+          response = mergeReply(aiObj, buildObjectionFallback(data.objectionType));
           data.objectionsHandled = true;
           session.state = "handle_objections";
         } else if (isRefusing(messageText) || isNo(messageText)) {
@@ -2616,7 +2709,7 @@ export class ChatbotService {
             messageText,
             managerExamples,
           );
-          response = appendToReply(mergeReply(aiDt, `Рада, что смогли помочь! Когда вам удобно прийти?`), slotsText);
+          response = appendToReply(mergeReply(aiDt, `Отлично, что смогли помочь! Когда вам удобно прийти?`), slotsText);
           session.state = "collect_datetime";
           session.data = data;
           break;
@@ -2647,9 +2740,7 @@ export class ChatbotService {
           break;
         }
 
-        const objectionBackend = data.objectionType
-          ? `Возражение: ${data.objectionType}. Бесплатная консультация, индивидуальный план, рассрочка 0-0-24, бесплатный осмотр.`
-          : "Отработай возражения и предложи бесплатный осмотр.";
+        const objectionBackend = buildObjectionBackendContext(data.objectionType);
         const aiObj = await generateChatbotResponse(
           up("handle_objections", { backendContext: objectionBackend }),
           recentMessages,
@@ -2659,7 +2750,7 @@ export class ChatbotService {
 
         if (!data.objectionsHandled) {
           data.objectionsHandled = true;
-          response = mergeReply(aiObj, "Могу записать вас на бесплатный осмотр — когда вам удобно?");
+          response = mergeReply(aiObj, buildObjectionFallback(data.objectionType));
           session.state = "await_decision";
         } else {
           response = mergeReply(aiObj, buildDecisionFallback());
@@ -2926,7 +3017,15 @@ export class ChatbotService {
       }
 
       case "collect_datetime": {
-        const extractedDate = await extractDatetimeFromText(messageText).catch(() => null);
+        // Hot-lead shortcut: patient may have named the time earlier in the funnel
+        // (e.g. «хочу записаться завтра» in the first message) — reuse it instead of re-asking.
+        let extractedDate = await extractDatetimeFromText(messageText).catch(() => null);
+        if (!extractedDate && data.preferredDatetime && (isYes(messageText) || isReadyToBook(messageText))) {
+          const stored = new Date(data.preferredDatetime);
+          if (!Number.isNaN(stored.getTime()) && stored.getTime() > Date.now()) {
+            extractedDate = stored;
+          }
+        }
         if (extractedDate) {
           data.confusedCount = 0;
 
@@ -3190,7 +3289,7 @@ export class ChatbotService {
             : await loadPatientDentalContext(clinicId, qaPatientId).catch(() => "");
 
         const qaReply = await generateChatbotResponse(
-          buildDentalQaSystemPrompt(settings, qaName, dentalContext),
+          buildDentalQaSystemPrompt(settings, qaName, dentalContext, clinicName),
           recentMessages,
           messageText,
           managerExamples,
@@ -3257,7 +3356,7 @@ export class ChatbotService {
             messageText,
             managerExamples,
           );
-          response = mergeReply(aiReply, `Я вас понял. Хотите ли вы выбрать другое время для визита? Мы сохраним для вас скидку 10%.`);
+          response = mergeReply(aiReply, `Я вас понял. Хотите ли вы выбрать другое время для визита? Подберём удобное окно без ожидания.`);
           // Stay in reactivation state
         }
         break;
@@ -3446,7 +3545,7 @@ export class ChatbotService {
       {
         fsmState: "reactivation",
         channel: "whatsapp",
-        backendContext: `Пациент ${patientName} отменил или не пришёл на процедуру «${procedureName}» к врачу ${doctorName}. Начни реактивацию: узнай причину и предложи перезапись со скидкой 10%.`,
+        backendContext: `Пациент ${patientName} отменил или не пришёл на процедуру «${procedureName}» к врачу ${doctorName}. Начни реактивацию: мягко узнай причину и предложи перезапись на удобное время. Скидки и акции упоминай ТОЛЬКО если они есть в материалах клиники.`,
       },
     );
 
@@ -3459,7 +3558,7 @@ export class ChatbotService {
 
     const reply = mergeReply(
       aiReply,
-      `Здравствуйте, ${patientName}! Мы заметили, что ваш прием на процедуру «${procedureName}» был отменен. Всё ли у вас в порядке? Подскажите, пожалуйста, по какой причине не получилось прийти? Мы будем рады предложить вам перезапись на любое удобное время, а также специальную скидку 10% на эту процедуру. 😊`,
+      `Здравствуйте, ${patientName}! Заметили, что ваш приём на «${procedureName}» не состоялся. Всё ли у вас в порядке? Если хотите, подберём новое удобное время к врачу — просто напишите, когда вам удобно. 😊`,
     );
 
     await saveSession(session);
@@ -3828,8 +3927,16 @@ export class ChatbotService {
 
       if (!settings.enabled) continue;
 
-      const stateGuidance = `Пациент начал процесс записи в клинику, но остановился на этапе «${session.state}» и не отвечает более 30 минут. 
-Вежливо обратись к нему, напомни, что вы остановились на записи, и предложи продолжить. Спроси, нужна ли помощь, или предложи свободный слот, если вы дошли до выбора времени/врача.
+      const reminderData = data as ChatbotSessionData;
+      const contextBits = [
+        reminderData.problemDescription ? `Запрос пациента: «${reminderData.problemDescription}».` : null,
+        reminderData.suggestedDoctorName ? `Обсуждали врача: ${reminderData.suggestedDoctorName}.` : null,
+        reminderData.preferredDatetime ? `Пациент упоминал время: ${reminderData.preferredDatetime}.` : null,
+        reminderData.selectedBranch ? `Филиал: ${reminderData.selectedBranch}.` : null,
+      ].filter(Boolean).join(" ");
+
+      const stateGuidance = `Пациент начал процесс записи в клинику, но остановился на этапе «${session.state}» и не отвечает более 30 минут. ${contextBits}
+Вежливо обратись к нему, сошлись на контекст диалога (что обсуждали), и предложи продолжить. Предложи свободный слот, если дошли до выбора времени/врача.
 Отвечай вежливо, ненавязчиво, коротко (1–3 предложения).`;
 
       // Load recent messages
@@ -3845,7 +3952,6 @@ export class ChatbotService {
         content: r.content,
       }));
 
-      const reminderData = data as ChatbotSessionData;
       const mindMapForReminder = settings.scriptMindMap as ScriptMindMapData | undefined;
       const helperPrompt = buildUnifiedScriptPrompt(
         settings,
@@ -3869,7 +3975,7 @@ export class ChatbotService {
         "Отправь вежливое напоминание (reminder)",
         managerExamples,
       );
-      const reminderReply = mergeReply(aiReminder, "Напоминаем — мы остановились на записи. Нужна помощь? Напишите, и мы продолжим.");
+      const reminderReply = mergeReply(aiReminder, "Здравствуйте! 😊 Мы остановились на записи — могу предложить ближайшие свободные окна. Продолжим?");
       if (reminderReply.parts.length > 0) {
         await sendOutboundReply(session.clinicId, session.phone, reminderReply).catch((err) =>
           logger.error({ err }, "[ChatbotService] Failed to send inactivity reminder"),

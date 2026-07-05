@@ -11,12 +11,7 @@ export function buildBranchPromptFallback(hasKnowledge: boolean): string {
 }
 
 export function buildSymptomsPromptFallback(): string {
-  return (
-    "Подскажите, пожалуйста:\n" +
-    "— что именно беспокоит?\n" +
-    "— есть ли боль или дискомфорт?\n" +
-    "— визит плановый или срочный?"
-  );
+  return "Подскажите, есть ли сейчас боль или дискомфорт? Это поможет понять срочность и подобрать врача 😊";
 }
 
 export function buildRefusalFallback(): string {
