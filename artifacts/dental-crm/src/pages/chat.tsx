@@ -33,6 +33,7 @@ import { getRoleDashboardPath } from "@/lib/role-redirect";
 import { WhatsAppConnectModal, WhatsAppIcon, type WaStatus } from "@/components/whatsapp/whatsapp-connect-modal";
 import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader } from "@/components/layout/page-header";
+import { toast } from "sonner";
 
 const BRAND      = "#1f75fe";
 const CHAT_BG    = "#faf8f4";
@@ -408,10 +409,25 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
           if (!old?.data?.messages) return old;
           return { ...old, data: { messages: [...old.data.messages, optimistic] } };
         });
-        return { optimistic };
+        return { optimistic, draftText: vars.data.content ?? "" };
       },
       onSuccess: () => {
         void qc.invalidateQueries({ queryKey: getListMessagesQueryKey(patient.id) });
+      },
+      onError: (_err, vars, context) => {
+        if (context?.optimistic) {
+          qc.setQueryData(getListMessagesQueryKey(patient.id), (old: typeof data) => {
+            if (!old?.data?.messages) return old;
+            return {
+              ...old,
+              data: { messages: old.data.messages.filter((m) => m.id !== context.optimistic.id) },
+            };
+          });
+        }
+        if (!vars.data.attachment && context?.draftText) {
+          setText(context.draftText);
+        }
+        toast.error(t("chat.sendError", { defaultValue: "Не удалось отправить сообщение" }));
       },
     },
   });
@@ -477,7 +493,7 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
         },
       });
     } catch {
-      // ignore upload errors silently
+      toast.error(t("chat.uploadError", { defaultValue: "Не удалось загрузить файл" }));
     } finally {
       setUploadingFile(false);
     }
