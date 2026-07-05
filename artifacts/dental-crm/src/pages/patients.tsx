@@ -151,7 +151,7 @@ function PatientsListView({
         }
         return sortDir === "asc" ? cmp : -cmp;
       });
-  }, [allPatients, search, statusFilter, sourceFilter, sortKey, sortDir, doctorMap]);
+  }, [allPatients, search, statusFilter, sourceFilter, dateFilterFn, sortKey, sortDir, doctorMap]);
 
   const canDelete = user?.role === "owner" || user?.role === "admin";
 
@@ -162,11 +162,15 @@ function PatientsListView({
       : <ChevronDown className="w-3 h-3 text-[#1f75fe]" />;
   };
 
-  const Th = ({ col: _col, label, className = "" }: { col: SortKey; label: string; className?: string }) => (
+  const Th = ({ col, label, className = "" }: { col: SortKey; label: string; className?: string }) => (
     <th
-      className={`px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wide whitespace-nowrap ${className}`}
+      onClick={() => handleSort(col)}
+      className={`px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wide whitespace-nowrap cursor-pointer select-none hover:text-[#0f172a] ${className}`}
     >
-      {label}
+      <span className="inline-flex items-center gap-1">
+        {label}
+        <SortIcon col={col} />
+      </span>
     </th>
   );
 
@@ -309,7 +313,7 @@ function PatientsListView({
       </ErrorBoundary>
       <ConfirmDeleteDialog
         open={!!deleteConfirm}
-        onConfirm={() => { deleteMutation.mutate({ id: deleteConfirm! }); setDeleteConfirm(null); }}
+        onConfirm={() => { if (deleteConfirm) deleteMutation.mutate({ id: deleteConfirm }); }}
         onCancel={() => setDeleteConfirm(null)}
       />
     </div>
@@ -387,12 +391,12 @@ export default function PatientsPage() {
   const urlSearch = useSearch();
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
-  const { isCreateOpen, setIsCreateOpen } = useKanbanStore();
+  const { isCreateOpen, setIsCreateOpen, setSelectedPatientId } = useKanbanStore();
 
   const [filterSearch, setFilterSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<PatientStatus | "all">("all");
   const [sourceFilter, setSourceFilter] = useState<PatientSource | "all">("all");
-  const [dateFilter, setDateFilter] = useState<"today" | "week" | "month" | "all">("today");
+  const [dateFilter, setDateFilter] = useState<"today" | "week" | "month" | "all">("all");
   const [showFilters, setShowFilters] = useState(false);
 
   const { data } = useListPatients({ query: { queryKey: getListPatientsQueryKey() } });
@@ -404,7 +408,7 @@ export default function PatientsPage() {
     return counts;
   }, [allPatients]);
 
-  const hasActiveFilter = statusFilter !== "all" || sourceFilter !== "all" || dateFilter !== "today";
+  const hasActiveFilter = statusFilter !== "all" || sourceFilter !== "all" || dateFilter !== "all";
 
   const canCreate = user?.role === "owner" || user?.role === "admin" || user?.role === "doctor";
 
@@ -577,7 +581,14 @@ export default function PatientsPage() {
         {view === "kanban" && <PatientsKanbanView search={filterSearch} statusFilter={statusFilter} sourceFilter={sourceFilter} dateFilterFn={dateFilterFn} />}
       </div>
 
-      <CreatePatientDialog open={isCreateOpen} onClose={() => setIsCreateOpen(false)} />
+      <CreatePatientDialog
+        open={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onExistingPatient={(patientId) => {
+          setIsCreateOpen(false);
+          setSelectedPatientId(patientId);
+        }}
+      />
     </PageShell>
   );
 }

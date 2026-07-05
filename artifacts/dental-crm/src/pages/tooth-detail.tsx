@@ -1,23 +1,62 @@
 import { useParams, useLocation } from "wouter";
 import { ArrowLeft } from "lucide-react";
 import { ToothDetailPanel } from "@/components/dental-chart/tooth-detail-panel";
-import { useGetPatient, useListTeeth } from "@workspace/api-client-react";
+import {
+  useGetPatient,
+  useListTeeth,
+  getGetPatientQueryKey,
+  getListTeethQueryKey,
+} from "@workspace/api-client-react";
 import { useKanbanStore } from "@/hooks/use-kanban";
+import { useTranslation } from "react-i18next";
+
+function isValidFdi(fdi: number): boolean {
+  if (!Number.isFinite(fdi)) return false;
+  const quadrant = Math.floor(fdi / 10);
+  const tooth = fdi % 10;
+  return quadrant >= 1 && quadrant <= 8 && tooth >= 1 && tooth <= 8;
+}
 
 export default function ToothDetailPage() {
+  const { t } = useTranslation();
   const { patientId, fdi } = useParams<{ patientId: string; fdi: string }>();
   const [, setLocation] = useLocation();
   const setSelectedPatientId = useKanbanStore((s) => s.setSelectedPatientId);
   const setActiveTab = useKanbanStore((s) => s.setActiveTab);
 
-  const { data: patientRes } = useGetPatient(patientId ?? "");
-  const { data: teethRes } = useListTeeth(patientId ?? "");
+  const fdiNum = parseInt(fdi ?? "0", 10);
+  const hasValidParams = !!patientId && !!fdi && isValidFdi(fdiNum);
+
+  const {
+    data: patientRes,
+    isLoading: patientLoading,
+    isError: patientError,
+  } = useGetPatient(patientId ?? "", {
+    query: {
+      queryKey: getGetPatientQueryKey(patientId ?? ""),
+      enabled: hasValidParams,
+      retry: 1,
+    },
+  });
+
+  const {
+    data: teethRes,
+    isLoading: teethLoading,
+    isError: teethError,
+  } = useListTeeth(patientId ?? "", {
+    query: {
+      queryKey: getListTeethQueryKey(patientId ?? ""),
+      enabled: hasValidParams,
+      retry: 1,
+    },
+  });
 
   const patient = patientRes?.data?.patient;
   const teeth = teethRes?.data?.teeth ?? [];
-  const fdiNum = parseInt(fdi ?? "0", 10);
+  const isLoading = patientLoading || teethLoading;
+  const isError = patientError || teethError;
 
-  if (!patientId || !fdi) {
+  if (!hasValidParams) {
     return (
       <div className="flex flex-col items-center justify-center h-screen text-[#0f172a] font-manrope bg-[#faf8f4]">
         <p>Invalid patient or tooth</p>
@@ -27,7 +66,7 @@ export default function ToothDetailPage() {
 
   const handleClose = () => {
     setSelectedPatientId(patientId!);
-    setActiveTab("dental");
+    setActiveTab("treatment");
     setLocation("/patients");
   };
 
@@ -46,7 +85,21 @@ export default function ToothDetailPage() {
 
       {/* Full-page tooth detail content */}
       <div className="flex-1 overflow-hidden">
-        {patient && (
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="w-10 h-10 border-4 border-[#1f75fe]/20 border-t-[#1f75fe] rounded-full animate-spin" />
+          </div>
+        ) : isError || !patient ? (
+          <div className="flex flex-col items-center justify-center h-full text-[#dc2626] text-sm gap-2">
+            <p>{t("kanban.loadError")}</p>
+            <button
+              onClick={handleClose}
+              className="text-[#1f75fe] hover:underline text-sm"
+            >
+              Назад к пациентам
+            </button>
+          </div>
+        ) : (
           <ToothDetailPanel
             patientId={patientId}
             toothFdi={fdiNum}
