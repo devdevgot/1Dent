@@ -179,15 +179,24 @@ async function bootstrapDatabase(): Promise<void> {
   }
 
   try {
+    // Only reset sessions stuck in human_takeover *state* with stale data (>7 days), not active operator sessions
     const resetResult = await pool.query(
       `UPDATE chatbot_sessions SET state = 'greeting', human_takeover = false, data = '{}', updated_at = NOW()
-       WHERE human_takeover = true AND state = 'human_takeover'`,
+       WHERE human_takeover = true AND state = 'human_takeover' AND updated_at < NOW() - INTERVAL '7 days'`,
     );
     if ((resetResult.rowCount ?? 0) > 0) {
-      logger.info({ count: resetResult.rowCount }, "[ChatbotFix] Reset stuck human_takeover sessions");
+      logger.info({ count: resetResult.rowCount }, "[ChatbotFix] Reset stale human_takeover sessions (>7d)");
     }
   } catch (err) {
     logger.warn({ err }, "[ChatbotFix] Could not reset stuck sessions — continuing");
+  }
+
+  try {
+    const { backfillPatientPhoneNormalized } = await import("./shared/patient-phone-resolver");
+    const count = await backfillPatientPhoneNormalized();
+    if (count > 0) logger.info({ count }, "[Startup] Backfilled patient phone_normalized");
+  } catch (err) {
+    logger.warn({ err }, "[Startup] phone_normalized backfill failed");
   }
 }
 

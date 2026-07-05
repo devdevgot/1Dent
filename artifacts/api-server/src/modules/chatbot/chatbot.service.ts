@@ -23,6 +23,9 @@ import {
 import type { StepInstructions } from "@workspace/db";
 import { eq, and, inArray, gte, lte, ne, asc, desc, sql } from "drizzle-orm";
 import { phonesMatch } from "../../shared/phone";
+import { resolvePatientByPhone, setMarketingOptOut } from "../../shared/patient-phone-resolver";
+import { withSessionLock } from "../../shared/session-lock";
+import { parseReviewScoreFromText, savePatientReview } from "../../shared/patient-reviews";
 import { isRedAlert } from "../../shared/whatsapp";
 import { sendTypingToPatient } from "../../shared/messaging";
 import { getAlertQueue } from "../../shared/alert-queue";
@@ -110,6 +113,7 @@ import { scheduleAppointmentReminders } from "../followups/appointment-reminders
 import { scheduleFollowups } from "../followups/followup.queue";
 import {
   isExplicitNegativeRepeatSaleReply,
+  isMarketingOptOutReply,
   isNeutralRepeatSaleQuestion,
   isPositiveRepeatSaleReplyKeywords,
 } from "./repeat-sale-reply";
@@ -152,9 +156,15 @@ function isOperatorRequest(text: string): boolean {
   const lower = text.toLowerCase().trim();
   return OPERATOR_KEYWORDS.some((kw) => lower.includes(kw));
 }
+function matchesConfirmWord(text: string, keyword: string): boolean {
+  const lower = text.toLowerCase().trim();
+  if (keyword.length <= 2) return lower === keyword;
+  const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return lower === keyword || new RegExp(`(?:^|\\s)${escaped}(?:\\s|$|[.,!?👍])`, "i").test(lower);
+}
 function isYes(text: string): boolean {
   const lower = text.toLowerCase().trim();
-  return CONFIRM_YES.some((kw) => lower.includes(kw));
+  return CONFIRM_YES.some((kw) => matchesConfirmWord(lower, kw));
 }
 function isNo(text: string): boolean {
   const lower = text.toLowerCase().trim();
@@ -278,26 +288,15 @@ async function findPatientByPhoneNormalized(
   clinicId: string,
   phone: string,
 ): Promise<PatientPhoneRow | undefined> {
-  const rows = await db
-    .select({
-      id: patientsTable.id,
-      name: patientsTable.name,
-      phone: patientsTable.phone,
-      status: patientsTable.status,
-      doctorId: patientsTable.doctorId,
-    })
-    .from(patientsTable)
-    .where(eq(patientsTable.clinicId, clinicId));
-
-  const matches = rows.filter((p) => phonesMatch(p.phone, phone));
-  if (matches.length === 0) return undefined;
-  if (matches.length > 1) {
-    logger.warn(
-      { clinicId, phone, matchCount: matches.length },
-      "[ChatbotService] Multiple patients matched normalized phone",
-    );
-  }
-  return matches[0];
+  const resolved = await resolvePatientByPhone(clinicId, phone);
+  if (!resolved) return undefined;
+  return {
+    id: resolved.id,
+    name: resolved.name,
+    phone: resolved.phone,
+    status: resolved.status,
+    doctorId: resolved.doctorId,
+  };
 }
 
 async function saveChatbotMessage(
@@ -1485,16 +1484,18 @@ export class ChatbotService {
     text: string,
     options?: ProcessMessageOptions,
   ): Promise<string | null> {
-    const turn = await this.executeTurn(clinicId, phone, text, { ...options, dryRun: false });
-    if (!turn?.outbound) {
-      sendTypingToPatient(clinicId, phone, false).catch(() => {});
-      return null;
-    }
-    await saveSession(turn.session);
-    await deliverChatbotReply(clinicId, phone, turn.outbound, {
-      onPartDelivered: (part) => saveChatbotMessage(clinicId, phone, "outbound", part),
+    return withSessionLock(clinicId, phone, async () => {
+      const turn = await this.executeTurn(clinicId, phone, text, { ...options, dryRun: false });
+      if (!turn?.outbound) {
+        sendTypingToPatient(clinicId, phone, false).catch(() => {});
+        return null;
+      }
+      await saveSession(turn.session);
+      await deliverChatbotReply(clinicId, phone, turn.outbound, {
+        onPartDelivered: (part) => saveChatbotMessage(clinicId, phone, "outbound", part),
+      });
+      return joinChatbotReply(turn.outbound);
     });
-    return joinChatbotReply(turn.outbound);
   }
 
   private async executeTurn(
@@ -1626,9 +1627,20 @@ export class ChatbotService {
       saveChatbotMessage(clinicId, phone, "inbound", messageText).catch(() => {});
     }
 
-    if (!settings.enabled) return null;
+    if (!settings.enabled) {
+      const earlyPatient = !dryRun
+        ? await findPatientByPhoneNormalized(clinicId, phone)
+        : scenarioCtx?.patient
+          ? { status: scenarioCtx.patient.status }
+          : undefined;
+      const allowAutoresponder =
+        earlyPatient?.status === "repeat_sale" || session.state === "collect_review";
+      if (!allowAutoresponder) return null;
+    }
 
-    if (!dryRun) {
+    if (session.humanTakeover) return { outbound: null, session, simulatedActions };
+
+    if (!dryRun && settings.enabled) {
       try {
         await planLimitsService.assertCanStartChatbotDialog(clinicId, phone);
         await aiCreditsService.consumeCredits({ clinicId, feature: "chatbot_reply" });
@@ -1656,9 +1668,7 @@ export class ChatbotService {
       }
     }
 
-    if (session.humanTakeover) return { outbound: null, session, simulatedActions };
-
-    type PatientRow = { id: string; name: string; status: string | null };
+    type PatientRow = { id: string; name: string; status: string | null; doctorId?: string | null };
     let patientDb: PatientRow | undefined;
     if (dryRun && scenarioCtx?.patient) {
       patientDb = {
@@ -1669,12 +1679,16 @@ export class ChatbotService {
     } else if (!dryRun) {
       const row = await findPatientByPhoneNormalized(clinicId, phone);
       patientDb = row
-        ? { id: row.id, name: row.name, status: row.status }
+        ? { id: row.id, name: row.name, status: row.status, doctorId: row.doctorId }
         : undefined;
     }
 
     let state = session.state;
     let data = { ...session.data };
+
+    if (LEAD_NURTURE_STATES.includes(state) && !data.leadNurtureAnchorAt) {
+      data.leadNurtureAnchorAt = new Date().toISOString();
+    }
 
     const promptChannel = dryRun ? "playground" as const : "whatsapp" as const;
 
@@ -1759,10 +1773,19 @@ export class ChatbotService {
         }
 
         if (isExplicitNegativeRepeatSaleReply(messageText)) {
+          if (!dryRun && patientDb) {
+            await setMarketingOptOut(patientDb.id, clinicId, true);
+            await db
+              .update(patientsTable)
+              .set({ status: "rejected", updatedAt: new Date() })
+              .where(eq(patientsTable.id, patientDb.id));
+          }
           session.state = "done";
           session.data = data;
 
-          const replyText = "Хорошо! Если решите записаться на осмотр позже, просто напишите нам. Будем рады помочь вам в любое время!";
+          const replyText = isMarketingOptOutReply(messageText)
+            ? "Вы отписаны от рассылок. Если захотите записаться позже — просто напишите нам."
+            : "Хорошо! Если решите записаться на осмотр позже, просто напишите нам. Будем рады помочь вам в любое время!";
           return finishTurn(session, replyText);
         }
 
@@ -2122,6 +2145,12 @@ export class ChatbotService {
       }
 
       case "collect_name": {
+        if (data.fromRepeatSaleBroadcast && data.patientName) {
+          response = `Здравствуйте, ${data.patientName}! Расскажите, что вас беспокоит, или подтвердите, что хотите продолжить лечение.`;
+          session.state = "collect_problem";
+          session.data = data;
+          break;
+        }
         // Use AI to extract name from potentially complex input
         const classification0 = await classifyPatientRequest(messageText, recentMessages);
         const extractedName = classification0.extractedName ?? messageText.trim().slice(0, 60);
@@ -2713,7 +2742,7 @@ export class ChatbotService {
                   specialty: nextStored.specialty ?? null,
                   rankPercent: nextStored.score,
                   reasons: nextStored.reasons ?? [],
-                  finalScore: nextStored.score,
+                  finalScore: nextStored.finalScore ?? nextStored.score,
                   hasCapacity: true,
                   nearestSlotMinutes: null,
                 }
@@ -2795,6 +2824,15 @@ export class ChatbotService {
           let slotsText = "";
           if (data.suggestedDoctorId) {
             slotsText = await buildSlotsAppendix(clinicId, data.suggestedDoctorId, settings.calendarConfig);
+          } else if (data.existingProcedureId) {
+            const [proc] = await db
+              .select({ doctorId: proceduresTable.doctorId })
+              .from(proceduresTable)
+              .where(and(eq(proceduresTable.id, data.existingProcedureId), eq(proceduresTable.clinicId, clinicId)))
+              .limit(1);
+            if (proc?.doctorId) {
+              slotsText = await buildSlotsAppendix(clinicId, proc.doctorId, settings.calendarConfig);
+            }
           }
           const aiReschedule = await generateChatbotResponse(
             up("collect_datetime", { backendContext: "Пациент хочет перенести запись." }),
@@ -3097,6 +3135,29 @@ export class ChatbotService {
           } else {
             response = mergeReply(aiReply4, `Пожалуйста, ответьте «Да» для подтверждения записи или «Нет» для отмены.`);
           }
+        }
+        break;
+      }
+
+      case "collect_review": {
+        const score = parseReviewScoreFromText(messageText);
+        if (score && patientDb) {
+          if (!dryRun) {
+            await savePatientReview({
+              clinicId,
+              patientId: patientDb.id,
+              doctorId: data.pendingReviewDoctorId ?? patientDb.doctorId,
+              procedureId: data.pendingReviewProcedureId,
+              score,
+              comment: messageText.length > 3 && !/^[1-5]$/.test(messageText.trim()) ? messageText : undefined,
+            });
+          }
+          session.state = "done";
+          session.data = { ...data, pendingReviewProcedureId: undefined, pendingReviewDoctorId: undefined };
+          response = "Спасибо за вашу оценку! 🙏 Мы ценим ваше мнение и постоянно работаем над качеством обслуживания.";
+        } else {
+          response =
+            "Пожалуйста, оцените визит от 1 до 5 (где 5 — отлично). Можно просто отправить цифру.";
         }
         break;
       }

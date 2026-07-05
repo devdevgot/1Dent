@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, varchar, date, pgEnum, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, boolean, timestamp, varchar, date, pgEnum, uniqueIndex } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { clinicsTable } from "./clinics";
 import { usersTable } from "./users";
@@ -53,6 +53,8 @@ export const patientsTable = pgTable(
     }),
     name: text("name").notNull(),
     phone: text("phone").notNull(),
+    phoneNormalized: varchar("phone_normalized", { length: 15 }),
+    marketingOptOut: boolean("marketing_opt_out").default(false).notNull(),
     iin: varchar("iin", { length: 12 }),
     dateOfBirth: date("date_of_birth"),
     gender: patientGenderEnum("gender"),

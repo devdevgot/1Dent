@@ -2,7 +2,9 @@ import { Router, type Request, type Response, type NextFunction } from "express"
 import { db, dentalBroadcastRunsTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
-import { runDentalBroadcastForClinic } from "./dental-broadcast.service";
+import { runDentalBroadcastForClinic, clinicLocalDateString } from "./dental-broadcast.service";
+import { db, clinicsTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 import { computeRates, listPatientBroadcastHistory } from "./dental-broadcast-metrics";
 import { ValidationError } from "../../shared/errors";
 import { MessagesRepository } from "../messages/messages.repository";
@@ -88,6 +90,29 @@ router.post(
 
       if (existingRunning) {
         return next(new ValidationError("Рассылка уже выполняется"));
+      }
+
+      const force = req.body?.force === true;
+      if (!force) {
+        const [clinicRow] = await db
+          .select({ timezone: clinicsTable.timezone })
+          .from(clinicsTable)
+          .where(eq(clinicsTable.id, clinicId))
+          .limit(1);
+        const runDate = clinicLocalDateString(clinicRow?.timezone ?? "Asia/Almaty");
+        const [existingToday] = await db
+          .select({ id: dentalBroadcastRunsTable.id })
+          .from(dentalBroadcastRunsTable)
+          .where(
+            and(
+              eq(dentalBroadcastRunsTable.clinicId, clinicId),
+              eq(dentalBroadcastRunsTable.runDate, runDate),
+            ),
+          )
+          .limit(1);
+        if (existingToday) {
+          return next(new ValidationError("Рассылка уже выполнялась сегодня. Используйте force=true для повторного запуска."));
+        }
       }
 
       const run = await runDentalBroadcastForClinic(clinicId);

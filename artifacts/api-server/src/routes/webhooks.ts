@@ -2,6 +2,8 @@ import { Router, type Request, type Response } from "express";
 import { db, clinicsTable } from "@workspace/db";
 import { and, eq, isNull } from "drizzle-orm";
 import { parseGreenApiWebhook, clearGreenApiStateCache, getGreenApiWaSettings, extractPhoneFromWaSettings } from "../shared/green-api";
+import { isValidWebhookSecret } from "../shared/green-api-webhook";
+import { isWebhookMessageProcessed, markWebhookMessageProcessed } from "../shared/webhook-idempotency";
 import { MessagesService } from "../modules/messages/messages.service";
 import { BranchesRepository } from "../modules/branches/branches.repository";
 import { logger } from "../lib/logger";
@@ -32,6 +34,7 @@ router.post(
         greenApiToken: clinicsTable.greenApiToken,
         greenApiUrl: clinicsTable.greenApiUrl,
         whatsappPhone: clinicsTable.whatsappPhone,
+        greenApiWebhookSecret: clinicsTable.greenApiWebhookSecret,
       })
       .from(clinicsTable)
       .where(eq(clinicsTable.id, clinicId))
@@ -40,6 +43,12 @@ router.post(
 
     if (!clinic?.greenApiInstanceId) {
       logger.warn({ clinicId }, "[GreenAPI Webhook] clinic not found or no Green API credentials");
+      return;
+    }
+
+    const providedSecret = String(req.query["secret"] ?? req.headers["x-webhook-secret"] ?? "");
+    if (!isValidWebhookSecret(clinic.greenApiWebhookSecret, providedSecret || undefined)) {
+      logger.warn({ clinicId }, "[GreenAPI Webhook] invalid or missing webhook secret");
       return;
     }
 
@@ -122,6 +131,16 @@ router.post(
     }
 
     logger.info({ clinicId, from: parsed.senderPhone, msgId: parsed.messageId }, "[GreenAPI Webhook] inbound message");
+
+    if (await isWebhookMessageProcessed(clinicId, parsed.messageId)) {
+      logger.info({ clinicId, msgId: parsed.messageId }, "[GreenAPI Webhook] duplicate message skipped");
+      return;
+    }
+    const marked = await markWebhookMessageProcessed(clinicId, parsed.messageId);
+    if (!marked) {
+      logger.info({ clinicId, msgId: parsed.messageId }, "[GreenAPI Webhook] duplicate message skipped (race)");
+      return;
+    }
 
     await service
       .handleInboundWebhook(clinicId, parsed.senderPhone, parsed.text, parsed.messageId)

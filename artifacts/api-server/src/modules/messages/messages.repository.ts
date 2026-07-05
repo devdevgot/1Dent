@@ -6,8 +6,8 @@ import type {
   InsertNotification,
 } from "@workspace/db";
 import { eq, and, desc, asc, sql } from "drizzle-orm";
-import { normalizePhoneDigits, phonesMatch } from "../../shared/phone";
-import { logger } from "../../lib/logger";
+import { normalizePhoneDigits } from "../../shared/phone";
+import { resolvePatientByPhone } from "../../shared/patient-phone-resolver";
 
 export class MessagesRepository {
   async findPatient(patientId: string, clinicId: string) {
@@ -32,29 +32,14 @@ export class MessagesRepository {
   }
 
   async findPatientByPhone(rawPhone: string, clinicId: string) {
-    const all = await db
+    const resolved = await resolvePatientByPhone(clinicId, rawPhone);
+    if (!resolved) return null;
+    const [patient] = await db
       .select()
       .from(patientsTable)
-      .where(eq(patientsTable.clinicId, clinicId));
-
-    const incomingDigits = normalizePhoneDigits(rawPhone);
-    if (incomingDigits.length < 7) return null;
-
-    const matches = all.filter((p) => phonesMatch(p.phone, rawPhone));
-
-    if (matches.length === 0) return null;
-
-    if (matches.length > 1) {
-      logger.warn(
-        { clinicId, phoneDigits: incomingDigits, matchCount: matches.length },
-        "Multiple patients share the same phone — using most recently updated patient",
-      );
-      return matches.reduce((latest, p) =>
-        p.updatedAt > latest.updatedAt ? p : latest,
-      );
-    }
-
-    return matches[0] ?? null;
+      .where(eq(patientsTable.id, resolved.id))
+      .limit(1);
+    return patient ?? null;
   }
 
   async listByPatient(patientId: string, clinicId: string): Promise<Message[]> {

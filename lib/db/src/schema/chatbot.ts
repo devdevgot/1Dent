@@ -1,6 +1,20 @@
 import { pgTable, text, boolean, timestamp, jsonb, integer, uniqueIndex, pgEnum } from "drizzle-orm/pg-core";
 import { clinicsTable } from "./clinics";
 
+export interface ScoringConfig {
+  /** Weights for display score (must sum to 100) */
+  revenueWeight?: number;
+  proceduresWeight?: number;
+  avgCheckWeight?: number;
+  conversionWeight?: number;
+  /** NPS contribution 0–100 scale blend (0 = ignore NPS) */
+  npsWeight?: number;
+  /** Rolling window days for KPI metrics (default 90) */
+  rollingWindowDays?: number;
+  /** Minimum completed procedures before showing rating to patients */
+  minProceduresForRating?: number;
+}
+
 export interface StepInstructions {
   general?: string;
   greeting?: string;
@@ -102,6 +116,7 @@ export const chatbotSettingsTable = pgTable("chatbot_settings", {
   calendarConfig: jsonb("calendar_config").$type<ClinicCalendarConfig>().default({}),
   abTestEnabled: boolean("ab_test_enabled").default(false).notNull(),
   broadcastAiEnabled: boolean("broadcast_ai_enabled").default(false).notNull(),
+  scoringConfig: jsonb("scoring_config").$type<ScoringConfig>().default({}),
   scriptVariants: jsonb("script_variants").$type<ScriptVariant[]>().default([]),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

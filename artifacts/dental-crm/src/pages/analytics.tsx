@@ -126,12 +126,14 @@ function DoctorCard({ doctor, index, t }: { doctor: any; index: number; t: any }
           </div>
         </div>
         <div className="flex flex-col items-end">
+          {npsVal > 0 && (
           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
             npsVal >= 70 ? "bg-[#f0fdf4] text-[#16a34a] border border-[#16a34a]/20" :
             npsVal >= 50 ? "bg-[#fef3c7] text-[#d97706] border border-[#d97706]/20"    : "bg-[#fef2f2] text-[#dc2626] border border-[#dc2626]/20"
           }`}>
             NPS: {npsVal}%
           </span>
+          )}
         </div>
       </div>
 
