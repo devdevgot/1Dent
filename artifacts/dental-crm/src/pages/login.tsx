@@ -2,10 +2,12 @@ import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useLocation, useSearch } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
 import { createLoginSchema, type LoginFormValues } from "@/lib/schemas";
-import { useLogin } from "@workspace/api-client-react";
+import { useLogin, getGetMeQueryKey } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
-import { saveAuthToken } from "@/lib/auth-token";
+import { persistAuthSession } from "@/lib/auth-session";
+import { getPostLoginRedirectPath } from "@/lib/auth-redirect";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff } from "lucide-react";
@@ -20,6 +22,7 @@ export default function Login() {
   const returnTo = new URLSearchParams(search).get("returnTo");
   const { setAuth } = useAuthStore();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [showPassword, setShowPassword] = useState(false);
 
   const loginSchema = useMemo(() => createLoginSchema(), [t]);
@@ -31,18 +34,28 @@ export default function Login() {
   const loginMutation = useLogin({
     mutation: {
       onSuccess: (response) => {
-        if (response.success) {
-          const token = (response.data as typeof response.data & { token?: string }).token;
-          if (token) saveAuthToken(token);
-          setAuth(response.data.user, response.data.clinic);
+        if (!response.success || !response.data?.user || !response.data?.clinic) {
           toast({
-            title: t("auth.loginSuccessTitle"),
-            description: t("auth.loginSuccessDesc", { clinic: response.data.clinic.name }),
+            title: t("auth.loginErrorTitle"),
+            description: t("auth.loginErrorDesc"),
+            variant: "destructive",
           });
-          setLocation(
-            returnTo && returnTo.startsWith("/") ? returnTo : getRoleDashboardPath(response.data.user.role),
-          );
+          return;
         }
+
+        persistAuthSession(response.data);
+        setAuth(response.data.user, response.data.clinic);
+        queryClient.setQueryData(getGetMeQueryKey(), {
+          success: true,
+          data: { user: response.data.user, clinic: response.data.clinic },
+        });
+        toast({
+          title: t("auth.loginSuccessTitle"),
+          description: t("auth.loginSuccessDesc", { clinic: response.data.clinic.name }),
+        });
+        setLocation(
+          getPostLoginRedirectPath(returnTo, response.data.user.role, getRoleDashboardPath),
+        );
       },
       onError: (error) => {
         toast({

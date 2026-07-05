@@ -155,23 +155,24 @@ export class AuthService {
   }
 
   async requestPasswordReset(email: string): Promise<{ token: string }> {
-    const user = await this.repo.findUserByEmail(email);
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await this.repo.findUserByEmail(normalizedEmail);
     if (!user) {
       return { token: "" };
     }
 
     for (const [t, data] of resetTokens.entries()) {
-      if (data.email === email || data.expiresAt < Date.now()) {
+      if (data.email === normalizedEmail || data.expiresAt < Date.now()) {
         resetTokens.delete(t);
       }
     }
 
     const token = randomUUID();
-    resetTokens.set(token, { email, expiresAt: Date.now() + RESET_TOKEN_TTL_MS });
-    console.log(`[PasswordReset] Token for ${email}: ${token}`);
+    resetTokens.set(token, { email: normalizedEmail, expiresAt: Date.now() + RESET_TOKEN_TTL_MS });
+    console.log(`[PasswordReset] Token for ${normalizedEmail}: ${token}`);
     
-    sendPasswordResetEmail(email, token).catch((err) => {
-      logger.error({ err, email }, "Failed to send password reset email");
+    sendPasswordResetEmail(normalizedEmail, token).catch((err) => {
+      logger.error({ err, email: normalizedEmail }, "Failed to send password reset email");
     });
 
     return { token };

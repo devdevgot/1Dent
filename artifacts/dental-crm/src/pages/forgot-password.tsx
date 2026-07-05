@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Mail, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Mail } from "lucide-react";
 
 import { useForgotPassword } from "@workspace/api-client-react";
+import { createForgotPasswordSchema } from "@/lib/schemas";
+import { getApiErrorMessage } from "@/lib/api-error-message";
 
 type Step = "form" | "sent";
 
@@ -14,26 +16,31 @@ export default function ForgotPassword() {
   const [devToken, setDevToken] = useState<string | null>(null);
   const [error, setError] = useState("");
 
+  const forgotPasswordSchema = useMemo(() => createForgotPasswordSchema(), []);
+
   const forgotMutation = useForgotPassword({
     mutation: {
       onSuccess: (data) => {
         if (data.devToken) setDevToken(data.devToken);
         setStep("sent");
       },
-      onError: () => {
-        setError("Произошла ошибка. Проверьте подключение.");
+      onError: (err) => {
+        setError(getApiErrorMessage(err, "Произошла ошибка. Проверьте подключение."));
       },
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) {
-      setError("Введите email");
+    setError("");
+
+    const parsed = forgotPasswordSchema.safeParse({ email });
+    if (!parsed.success) {
+      setError(parsed.error.errors[0]?.message ?? "Введите корректный email");
       return;
     }
-    setError("");
-    forgotMutation.mutate({ data: { email } });
+
+    forgotMutation.mutate({ data: { email: parsed.data.email } });
   };
 
   return (
@@ -41,7 +48,7 @@ export default function ForgotPassword() {
       {/* Back button */}
       <div className="w-full max-w-sm mb-6">
         <Link href="/login">
-          <button className="flex items-center gap-1.5 text-[#64748b] hover:text-[#0f172a] transition-colors">
+          <button type="button" className="flex items-center gap-1.5 text-[#64748b] hover:text-[#0f172a] transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
         </Link>
@@ -75,10 +82,14 @@ export default function ForgotPassword() {
                   <input
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (error) setError("");
+                    }}
                     placeholder="doctor@clinic.com"
                     autoComplete="email"
-                    className="w-full bg-transparent text-base text-[#0f172a] placeholder:text-[#94a3b8] outline-none"
+                    disabled={forgotMutation.isPending}
+                    className="w-full bg-transparent text-base text-[#0f172a] placeholder:text-[#94a3b8] outline-none disabled:opacity-60"
                   />
                 </div>
                 {error && (
@@ -113,8 +124,9 @@ export default function ForgotPassword() {
                 Ссылка отправлена
               </h2>
               <p className="text-body text-[#64748b] leading-relaxed mb-8">
-                Мы отправили ссылку для сброса пароля на{" "}
-                <span className="font-semibold text-[#0f172a]">{email}</span>.
+                Если аккаунт с адресом{" "}
+                <span className="font-semibold text-[#0f172a]">{email.trim()}</span>{" "}
+                зарегистрирован, мы отправили ссылку для сброса пароля.
                 Проверьте ящик входящих и папку «Спам».
               </p>
 
@@ -128,7 +140,10 @@ export default function ForgotPassword() {
                     Email не настроен — используйте ссылку напрямую:
                   </p>
                   <button
-                    onClick={() => setLocation(`/reset-password?token=${devToken}`)}
+                    type="button"
+                    onClick={() =>
+                      setLocation(`/reset-password?token=${encodeURIComponent(devToken)}`)
+                    }
                     className="w-full py-2.5 rounded-full text-sm font-semibold text-white transition-all hover:scale-105 active:scale-95 bg-[#1f75fe] hover:bg-[#1a65e8]"
                   >
                     Перейти к сбросу пароля →
@@ -137,6 +152,7 @@ export default function ForgotPassword() {
               )}
 
               <button
+                type="button"
                 onClick={() => setLocation("/login")}
                 className="w-full py-4 rounded-full text-base font-semibold text-[#64748b] border border-[#e8e3d9] hover:bg-[#f1ede4] transition-all duration-200 active:scale-95"
               >

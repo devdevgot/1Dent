@@ -381,7 +381,8 @@
     "passwordRequired": "Password is required",
     "clinicNameMin": "Clinic name must be at least 2 characters",
     "nameMin": "Your name must be at least 2 characters",
-    "passwordMin": "Password must be at least 6 characters"
+    "passwordMin": "Password must be at least 6 characters",
+    "passwordsMismatch": "Passwords do not match"
   },
   "lang": {
     "ru": "Рус",
