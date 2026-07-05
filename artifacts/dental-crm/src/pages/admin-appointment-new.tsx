@@ -357,11 +357,16 @@ export default function AdminAppointmentNewPage() {
   const patientOk = patientId || (
     isNewPatient && patientSearch.trim().length >= 2 && newPhone.trim().length >= 5
   );
-  const canSubmit = patientOk && service.trim() && !createMutation.isPending && !createPatientMutation.isPending;
+  const canSubmit =
+    patientOk &&
+    service.trim() &&
+    !hasConflict &&
+    !createMutation.isPending &&
+    !createPatientMutation.isPending;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!canSubmit) return;
+    if (!canSubmit || hasConflict) return;
 
     const scheduledAt = new Date(`${apptDate}T${apptTime}`).toISOString();
     let resolvedPatientId = patientId;

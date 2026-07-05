@@ -51,10 +51,12 @@ export default function DoctorSchedulePage() {
   const { user } = useAuthStore();
   const [, navigate] = useLocation();
 
-  const now = new Date();
-  const [year,  setYear]  = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth());
+  const today = new Date();
+  const [year,  setYear]  = useState(today.getFullYear());
+  const [month, setMonth] = useState(today.getMonth());
   const [modalDate, setModalDate] = useState<Date | null>(null);
+
+  const todayStr = toStr(new Date());
 
   const { data, isLoading } = useListProcedures();
   const { data: patientData }  = useListPatients();
@@ -113,7 +115,7 @@ export default function DoctorSchedulePage() {
     return rows;
   }, [year, month]);
 
-  const todayStr = toStr(now);
+  const todayStr = toStr(new Date());
 
   const prev = () => { if (month === 0) { setMonth(11); setYear(y => y-1); } else setMonth(m => m-1); };
   const next = () => { if (month === 11) { setMonth(0);  setYear(y => y+1); } else setMonth(m => m+1); };
@@ -133,7 +135,7 @@ export default function DoctorSchedulePage() {
             </PageHeaderIconButton>
             <button
               type="button"
-              onClick={() => setModalDate(now)}
+              onClick={() => setModalDate(new Date())}
               className="w-9 h-9 rounded-full flex items-center justify-center bg-[var(--ds-primary)] text-white hover:opacity-90 hover:scale-105 transition-all shadow-sm"
             >
               <Plus className="w-4 h-4" />
