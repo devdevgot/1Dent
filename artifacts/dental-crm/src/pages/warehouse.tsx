@@ -60,7 +60,7 @@ export default function WarehousePage() {
           </div>
           <div className="flex items-center gap-2 mt-0.5">
             <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${categoryColors[item.category ?? "other"] ?? categoryColors.other}`}>
-              {t(`inventory.category.${item.category ?? "other"}`)}
+              {t(`category.${item.category ?? "other"}`)}
             </span>
             <span className="text-xs text-[#64748b]">{item.unit}</span>
           </div>

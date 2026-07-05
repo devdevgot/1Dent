@@ -68,7 +68,14 @@ function StockEditor({
         className="w-20 text-sm px-2 py-1 rounded-xl border border-[#e8e3d9] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
         autoFocus
       />
-      <button onClick={() => onSave(parseFloat(value) || 0)} className="p-1 text-[#1f75fe] hover:text-[#1a65e8]">
+      <button
+        onClick={() => {
+          const parsed = parseFloat(value);
+          if (value.trim() === "" || !Number.isFinite(parsed) || parsed < 0) return;
+          onSave(parsed);
+        }}
+        className="p-1 text-[#1f75fe] hover:text-[#1a65e8]"
+      >
         <Check className="w-3.5 h-3.5" />
       </button>
       <button onClick={onCancel} className="p-1 text-[#64748b] hover:text-[#0f172a]">
@@ -187,7 +194,7 @@ export default function InventoryPage() {
     const matchCat = filterCategory === "all" || item.category === filterCategory;
     return matchSearch && matchCat;
   });
-  const lowStock = items.filter((i) => i.minQuantity > 0 && i.quantity < i.minQuantity);
+  const lowStock = items.filter((i) => i.minQuantity > 0 && i.quantity <= i.minQuantity);
 
   const baseCanWrite = ["owner", "admin", "warehouse"].includes(user?.role ?? "");
   const baseCanDelete = ["owner", "admin"].includes(user?.role ?? "");
@@ -378,7 +385,7 @@ export default function InventoryPage() {
       ) : (
         <div className="space-y-2">
           {filtered.map((item) => {
-            const isLow = item.minQuantity > 0 && item.quantity < item.minQuantity;
+            const isLow = item.minQuantity > 0 && item.quantity <= item.minQuantity;
             return (
               <div
                 key={item.id}

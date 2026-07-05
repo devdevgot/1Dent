@@ -296,7 +296,20 @@ export class PayrollRepository {
       if (saved) upserted.push(saved);
     }
 
-    const totalFot = employees.reduce((sum, e) => sum + e.approvedAmount, 0);
+    const approvedRows = await db
+      .select({ approvedAmount: payrollRecordsTable.approvedAmount })
+      .from(payrollRecordsTable)
+      .where(
+        and(
+          eq(payrollRecordsTable.clinicId, clinicId),
+          eq(payrollRecordsTable.periodYear, year),
+          eq(payrollRecordsTable.periodMonth, month),
+          eq(payrollRecordsTable.status, "approved"),
+        ),
+      );
+
+    const totalFot = approvedRows.reduce((sum, r) => sum + Number(r.approvedAmount), 0);
+    const employeeCount = approvedRows.length;
 
     const periodEndDate = new Date(year, month, 0);
     const payrollRef = `${year}-${String(month).padStart(2, "0")}`;
@@ -308,7 +321,7 @@ export class PayrollRepository {
         clinicId,
         category: "salary",
         amount: String(totalFot),
-        description: `ФОТ ${String(month).padStart(2, "0")}/${year} — ${employees.length} сотр.`,
+        description: `ФОТ ${String(month).padStart(2, "0")}/${year} — ${employeeCount} сотр.`,
         periodMonth: month,
         periodYear: year,
         payrollRef,
@@ -323,7 +336,7 @@ export class PayrollRepository {
         ],
         set: {
           amount: String(totalFot),
-          description: `ФОТ ${String(month).padStart(2, "0")}/${year} — ${employees.length} сотр.`,
+          description: `ФОТ ${String(month).padStart(2, "0")}/${year} — ${employeeCount} сотр.`,
           createdBy: approvedBy,
           expenseDate: periodEndDate,
         },
@@ -375,6 +388,7 @@ export class PayrollRepository {
       fixedAmount,
       commissionPercent,
       revenueThisMonth: revenue,
+      workHours,
       calculatedSalary,
       approvedAmount,
       status,

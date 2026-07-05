@@ -39,8 +39,18 @@ export default function PayrollApproveModal({ onClose, onSuccess, filterUserId }
 
   const totalFot = rows.reduce((sum, r) => sum + getApproved(r), 0);
 
-  const handleOverride = (userId: string, value: number) => {
-    setOverrides((prev) => ({ ...prev, [userId]: value }));
+  const handleOverride = (userId: string, raw: string) => {
+    if (raw === "") {
+      setOverrides((prev) => {
+        const next = { ...prev };
+        delete next[userId];
+        return next;
+      });
+      return;
+    }
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed) || parsed < 0) return;
+    setOverrides((prev) => ({ ...prev, [userId]: parsed }));
   };
 
   const MONTH_NAMES = [
@@ -171,7 +181,7 @@ export default function PayrollApproveModal({ onClose, onSuccess, filterUserId }
                       type="number"
                       min={0}
                       value={getApproved(row)}
-                      onChange={(e) => handleOverride(row.userId, Number(e.target.value))}
+                      onChange={(e) => handleOverride(row.userId, e.target.value)}
                       className="w-28 h-8 px-2 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] text-sm text-right text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)]"
                     />
                   </TableCell>
