@@ -13,9 +13,11 @@ import {
   resolveCabinetByPairingCode,
   resolveCabinetIdFromUrl,
   applyCabinetIdToUrl,
+  setTabletPin,
   type TabletCabinetBrief,
 } from "@/lib/tablet-api";
 import { bootstrapTabletSessionAuth } from "@/lib/tablet-auth";
+import { TabletPinSetupModal } from "@/components/tablet/tablet-pin-setup-modal";
 
 type Mode = "qr" | "pin" | "pairing";
 
@@ -40,6 +42,13 @@ export function LockScreen({
   const [linkUrl, setLinkUrl] = useState("");
   const [loading, setLoading] = useState(true);
   const [bootError, setBootError] = useState<string | null>(null);
+  const [pinSetupOpen, setPinSetupOpen] = useState(false);
+  const [pinSetupLoading, setPinSetupLoading] = useState(false);
+  const [pendingUnlock, setPendingUnlock] = useState<{
+    doctor: TabletDoctor;
+    cabinet: TabletCabinetBrief;
+    auth: { token: string; user: Parameters<typeof bootstrapTabletSessionAuth>[1]; clinic: Parameters<typeof bootstrapTabletSessionAuth>[2] };
+  } | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const unlockedRef = useRef(false);
   const bootstrappingRef = useRef(false);
@@ -68,6 +77,40 @@ export function LockScreen({
     },
     [onQrUnlock, onPinUnlock],
   );
+
+  const completePendingUnlock = useCallback(() => {
+    if (!pendingUnlock) return;
+    handleUnlock(pendingUnlock.doctor, pendingUnlock.cabinet, pendingUnlock.auth);
+    setPendingUnlock(null);
+    setPinSetupOpen(false);
+  }, [pendingUnlock, handleUnlock]);
+
+  const offerPinSetupAfterPairing = useCallback(
+    (
+      doctor: TabletDoctor,
+      cabinet: TabletCabinetBrief,
+      auth: { token: string; user: Parameters<typeof bootstrapTabletSessionAuth>[1]; clinic: Parameters<typeof bootstrapTabletSessionAuth>[2] },
+    ) => {
+      setPendingUnlock({ doctor, cabinet, auth });
+      setPinSetupOpen(true);
+    },
+    [],
+  );
+
+  const submitPinSetup = useCallback(async (pin: string) => {
+    if (!pendingUnlock) return;
+    setPinSetupLoading(true);
+    try {
+      await setTabletPin(pin);
+      completePendingUnlock();
+    } catch {
+      setBootError("Не удалось сохранить PIN. Попробуйте ещё раз или пропустите.");
+      setPinSetupOpen(false);
+      completePendingUnlock();
+    } finally {
+      setPinSetupLoading(false);
+    }
+  }, [pendingUnlock, completePendingUnlock]);
 
   const drawQr = useCallback(async (url: string) => {
     if (!canvasRef.current || !url) return false;
@@ -179,16 +222,17 @@ export function LockScreen({
           setPairingError("Не удалось определить врача. Отсканируйте QR снова.");
           return;
         }
-        handleUnlock(
-          {
-            id: doctor.id,
-            name: doctor.name,
-            specialty: doctor.specialty ?? "Врач",
-            avatarColor: doctor.avatarColor,
-          },
-          cabinet,
-          auth,
-        );
+        if (!auth?.token || !auth.user || !auth.clinic) {
+          setPairingError("Не удалось авторизовать планшет. Отсканируйте QR снова.");
+          return;
+        }
+        const doctorPayload = {
+          id: doctor.id,
+          name: doctor.name,
+          specialty: doctor.specialty ?? "Врач",
+          avatarColor: doctor.avatarColor,
+        };
+        offerPinSetupAfterPairing(doctorPayload, cabinet, auth);
         return;
       }
 
@@ -207,7 +251,7 @@ export function LockScreen({
     } finally {
       setPairingLoading(false);
     }
-  }, [sessionId, awaitingPairing, handleUnlock, bootstrapSession]);
+  }, [sessionId, awaitingPairing, offerPinSetupAfterPairing, bootstrapSession]);
 
   const pressPairing = (d: string) => {
     setPairingError("");
@@ -287,7 +331,7 @@ export function LockScreen({
               <span className="text-base font-bold">Подключение кабинета</span>
             </div>
             <p className="mb-6 text-center text-sm text-[#64748b]">
-              Отсканируйте QR-код с телефона — на экране телефона появится 6-значный код. Введите его здесь.
+              Отсканируйте QR-код с телефона — на экране телефона появится 6-значный код. После ввода можно настроить PIN для входа без QR.
             </p>
 
             <div className={cn("mb-4 flex gap-2", pairingError && "animate-shake")}>
@@ -442,6 +486,14 @@ export function LockScreen({
           </div>
         )}
       </div>
+
+      <TabletPinSetupModal
+        open={pinSetupOpen}
+        onClose={completePendingUnlock}
+        onSubmit={(pin) => void submitPinSetup(pin)}
+        loading={pinSetupLoading}
+        skipLabel="Пропустить"
+      />
     </div>
   );
 }

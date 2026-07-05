@@ -10,11 +10,13 @@ export function TabletPinSetupModal({
   onClose,
   onSubmit,
   loading = false,
+  skipLabel = "Отмена",
 }: {
   open: boolean;
   onClose: () => void;
   onSubmit: (pin: string) => void;
   loading?: boolean;
+  skipLabel?: string;
 }) {
   const [pin, setPin] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -105,7 +107,7 @@ export function TabletPinSetupModal({
         </div>
 
         <Button type="button" variant="ghost" className="mt-5" onClick={onClose} disabled={loading}>
-          Отмена
+          {skipLabel}
         </Button>
       </div>
     </AppDialog>

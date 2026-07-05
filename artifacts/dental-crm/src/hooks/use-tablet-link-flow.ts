@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { redeemTabletLink } from "@/lib/tablet-api";
+import { getTabletMe, redeemTabletLink, setTabletPin } from "@/lib/tablet-api";
 
 type LinkFlowStatus = "idle" | "processing" | "success" | "error";
 
@@ -9,6 +9,8 @@ export function useTabletLinkFlow() {
   const [pairingCodeOpen, setPairingCodeOpen] = useState(false);
   const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [cabinetName, setCabinetName] = useState<string | null>(null);
+  const [pinSetupOpen, setPinSetupOpen] = useState(false);
+  const [pinSaving, setPinSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState<LinkFlowStatus>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -72,23 +74,58 @@ export function useTabletLinkFlow() {
     }
   }, [toast]);
 
-  const closeModals = useCallback(() => {
+  const closePairingModal = useCallback(async () => {
     setPairingCodeOpen(false);
     setPairingCode(null);
     setCabinetName(null);
-    if (status !== "success") {
-      setStatus("idle");
+
+    try {
+      const me = await getTabletMe();
+      if (!me.data?.hasTabletPin) {
+        setPinSetupOpen(true);
+        return;
+      }
+    } catch {
+      /* ignore */
     }
-  }, [status]);
+  }, []);
+
+  const submitPinSetup = useCallback(async (pin: string) => {
+    setPinSaving(true);
+    try {
+      await setTabletPin(pin);
+      setPinSetupOpen(false);
+      toast({
+        title: "PIN сохранён",
+        description: "Теперь можно входить на планшет по PIN без QR",
+      });
+    } catch (err) {
+      toast({
+        title: "Ошибка",
+        description: err instanceof Error ? err.message : "Не удалось сохранить PIN",
+        variant: "destructive",
+      });
+    } finally {
+      setPinSaving(false);
+    }
+  }, [toast]);
+
+  const closePinSetup = useCallback(() => {
+    setPinSetupOpen(false);
+  }, []);
 
   return {
     pairingCodeOpen,
     pairingCode,
     cabinetName,
+    pinSetupOpen,
+    pinSaving,
     submitting,
     status,
     errorMessage,
     processToken,
-    closeModals,
+    closePairingModal,
+    submitPinSetup,
+    closePinSetup,
   };
 }

@@ -1,5 +1,6 @@
 import { TabletQrScannerButton } from "./tablet-qr-scanner";
 import { TabletPairingCodeModal } from "./tablet-pairing-code-modal";
+import { TabletPinSetupModal } from "./tablet-pin-setup-modal";
 import { useTabletLinkFlow } from "@/hooks/use-tablet-link-flow";
 
 export function TabletScannerSlot() {
@@ -7,8 +8,12 @@ export function TabletScannerSlot() {
     pairingCodeOpen,
     pairingCode,
     cabinetName,
+    pinSetupOpen,
+    pinSaving,
     processToken,
-    closeModals,
+    closePairingModal,
+    submitPinSetup,
+    closePinSetup,
   } = useTabletLinkFlow();
 
   return (
@@ -19,9 +24,16 @@ export function TabletScannerSlot() {
       />
       <TabletPairingCodeModal
         open={pairingCodeOpen}
-        onClose={closeModals}
+        onClose={() => void closePairingModal()}
         code={pairingCode}
         cabinetName={cabinetName}
+      />
+      <TabletPinSetupModal
+        open={pinSetupOpen}
+        onClose={closePinSetup}
+        onSubmit={(pin) => void submitPinSetup(pin)}
+        loading={pinSaving}
+        skipLabel="Пропустить"
       />
     </>
   );

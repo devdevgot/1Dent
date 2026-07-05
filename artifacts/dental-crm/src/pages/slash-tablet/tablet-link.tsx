@@ -3,6 +3,7 @@ import { useSearch, useLocation } from "wouter";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useTabletLinkFlow } from "@/hooks/use-tablet-link-flow";
 import { TabletPairingCodeModal } from "@/components/tablet/tablet-pairing-code-modal";
+import { TabletPinSetupModal } from "@/components/tablet/tablet-pin-setup-modal";
 import { parseTabletLinkToken } from "@/lib/tablet-api";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
 import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
@@ -15,11 +16,15 @@ export default function TabletLinkPage() {
     pairingCodeOpen,
     pairingCode,
     cabinetName,
+    pinSetupOpen,
+    pinSaving,
     submitting,
     status,
     errorMessage,
     processToken,
-    closeModals,
+    closePairingModal,
+    submitPinSetup,
+    closePinSetup,
   } = useTabletLinkFlow();
   const token = parseTabletLinkToken(new URLSearchParams(search).get("token") ?? "");
 
@@ -48,8 +53,8 @@ export default function TabletLinkPage() {
   }
 
   const showProcessing = submitting || status === "processing";
-  const showSuccess = status === "success" && !pairingCodeOpen && !submitting;
-  const showError = status === "error" && !pairingCodeOpen && !submitting;
+  const showSuccess = status === "success" && !pairingCodeOpen && !pinSetupOpen && !submitting;
+  const showError = status === "error" && !pairingCodeOpen && !pinSetupOpen && !submitting;
 
   return (
     <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-[#faf8f4] px-6 font-manrope">
@@ -102,9 +107,16 @@ export default function TabletLinkPage() {
 
       <TabletPairingCodeModal
         open={pairingCodeOpen}
-        onClose={closeModals}
+        onClose={() => void closePairingModal()}
         code={pairingCode}
         cabinetName={cabinetName}
+      />
+      <TabletPinSetupModal
+        open={pinSetupOpen}
+        onClose={closePinSetup}
+        onSubmit={(pin) => void submitPinSetup(pin)}
+        loading={pinSaving}
+        skipLabel="Пропустить"
       />
     </div>
   );

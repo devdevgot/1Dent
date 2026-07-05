@@ -57,7 +57,7 @@ export function TabletPairingCodeModal({
               </button>
             </div>
             <p className="mb-6 max-w-xs text-sm leading-relaxed text-[#64748b]">
-              Введите этот 6-значный код на экране планшета, чтобы привязать кабинет к клинике.
+              Введите этот 6-значный код на экране планшета. После этого можно настроить PIN для входа без QR.
             </p>
           </>
         )}
