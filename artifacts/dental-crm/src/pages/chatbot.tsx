@@ -33,8 +33,9 @@ import {
   listDentalBroadcastRunsQueryKey,
   getGetChatbotSettingsQueryKey,
 } from "@workspace/api-client-react";
-import type { ChatbotSettingsUpdate, DentalBroadcastRun } from "@workspace/api-client-react";
+import type { ChatbotSettingsUpdate, DentalBroadcastRun, GetChatbotSettings200 } from "@workspace/api-client-react";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { Switch } from "@/components/ui/switch";
 import { KnowledgeAndScriptModal } from "@/components/chatbot/knowledge-tab";
 import { PlaygroundTab } from "@/components/chatbot/playground-tab";
 import { ChatbotCalendarAbSettings } from "@/components/chatbot/calendar-ab-settings";
@@ -314,30 +315,46 @@ function AiBroadcastTab() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [showConfirm, setShowConfirm] = useState(false);
-  const [broadcastAiOverride, setBroadcastAiOverride] = useState<boolean | null>(null);
+  const settingsQueryKey = getGetChatbotSettingsQueryKey();
   const { data: settingsRes } = useGetChatbotSettings();
   const updateSettings = useUpdateChatbotSettings();
   const settings = settingsRes?.data?.settings;
   const chatbotEnabled = settings?.enabled ?? true;
-  const serverBroadcastAiEnabled = settings?.broadcastAiEnabled ?? false;
-  const broadcastAiEnabled = broadcastAiOverride ?? serverBroadcastAiEnabled;
+  const broadcastAiEnabled = settings?.broadcastAiEnabled ?? false;
 
-  useEffect(() => {
-    setBroadcastAiOverride(null);
-  }, [serverBroadcastAiEnabled]);
+  const handleToggleBroadcastAi = (checked: boolean) => {
+    const previous = queryClient.getQueryData<GetChatbotSettings200>(settingsQueryKey);
 
-  const handleToggleBroadcastAi = () => {
-    const next = !broadcastAiEnabled;
-    setBroadcastAiOverride(next);
+    queryClient.setQueryData<GetChatbotSettings200>(settingsQueryKey, (old) => {
+      if (!old?.data?.settings) return old;
+      return {
+        ...old,
+        data: {
+          ...old.data,
+          settings: { ...old.data.settings, broadcastAiEnabled: checked },
+        },
+      };
+    });
+
     updateSettings.mutate(
-      { data: { broadcastAiEnabled: next } },
+      { data: { broadcastAiEnabled: checked } },
       {
-        onSuccess: () => {
-          void queryClient.invalidateQueries({ queryKey: getGetChatbotSettingsQueryKey() });
-          setBroadcastAiOverride(null);
+        onSuccess: (response) => {
+          const saved = response?.data?.settings?.broadcastAiEnabled;
+          if (saved === undefined) return;
+          queryClient.setQueryData<GetChatbotSettings200>(settingsQueryKey, (old) => {
+            if (!old?.data?.settings) return old;
+            return {
+              ...old,
+              data: {
+                ...old.data,
+                settings: { ...old.data.settings, broadcastAiEnabled: saved },
+              },
+            };
+          });
         },
         onError: () => {
-          setBroadcastAiOverride(null);
+          queryClient.setQueryData(settingsQueryKey, previous);
           toast({
             title: "Не удалось сохранить настройку",
             description: "Проверьте подключение и попробуйте снова.",
@@ -410,23 +427,18 @@ function AiBroadcastTab() {
               <p className="text-[11px] text-[#94a3b8]">2 кредита за сообщение · fallback на шаблон</p>
             </div>
           </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={broadcastAiEnabled}
+          <Switch
+            checked={broadcastAiEnabled}
+            onCheckedChange={handleToggleBroadcastAi}
             aria-label="ИИ-генерация текста рассылки"
-            onClick={handleToggleBroadcastAi}
-            disabled={updateSettings.isPending}
-            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7c3aed]/40 ${
-              broadcastAiEnabled ? "bg-[#7c3aed]" : "bg-[#cbd5e1]"
-            } disabled:opacity-60 disabled:cursor-not-allowed`}
-          >
-            <span
-              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform mt-0.5 ${
-                broadcastAiEnabled ? "translate-x-5" : "translate-x-0.5"
-              }`}
-            />
-          </button>
+            className={cn(
+              "h-6 w-11 shrink-0 border-transparent shadow-none transition-colors duration-200 ease-out",
+              "data-[state=checked]:bg-[#7c3aed] data-[state=unchecked]:bg-[#cbd5e1]",
+              "[&>span]:h-5 [&>span]:w-5 [&>span]:bg-white [&>span]:shadow",
+              "[&>span]:transition-transform [&>span]:duration-200 [&>span]:ease-out",
+              "[&>span]:data-[state=checked]:translate-x-5 [&>span]:data-[state=unchecked]:translate-x-0.5",
+            )}
+          />
         </div>
       </div>
 
