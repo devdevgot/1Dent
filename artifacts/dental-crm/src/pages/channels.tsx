@@ -15,16 +15,20 @@ export default function ChannelsPage() {
 
   const [waStatus, setWaStatus] = useState<WaStatus | null>(null);
   const [waLoading, setWaLoading] = useState(true);
+  const [waStatusError, setWaStatusError] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
 
   const fetchStatus = useCallback(async () => {
+    setWaLoading(true);
     try {
       const res = await customFetch<{ success: boolean; data: WaStatus }>(
         "/api/clinic/green-api/status",
       );
       setWaStatus(res.data);
+      setWaStatusError(false);
     } catch {
       setWaStatus(null);
+      setWaStatusError(true);
     } finally {
       setWaLoading(false);
     }
@@ -35,7 +39,7 @@ export default function ChannelsPage() {
   }, [fetchStatus]);
 
   const isConnected = waStatus?.connected;
-  const isBlocked = !waLoading && !isConnected;
+  const isBlocked = !waLoading && !waStatusError && !isConnected;
 
   return (
     <PageShell className="pb-8">
@@ -87,7 +91,12 @@ export default function ChannelsPage() {
         ) : (
           <ChannelsSettings />
         )}
-        
+
+        {waStatusError && (
+          <div className="mt-4 bg-[#fef3c7] border border-[#d97706]/30 rounded-xl px-4 py-3 text-sm text-[#d97706]">
+            Не удалось проверить статус WhatsApp. Настройки каналов доступны, но подключение может быть недоступно.
+          </div>
+        )}
       </div>
 
       {isOwner && (

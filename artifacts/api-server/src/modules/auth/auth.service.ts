@@ -12,7 +12,7 @@ import {
 } from "../../shared/errors";
 import type { UserRole, User } from "@workspace/db";
 import type { SafeClinic } from "./auth.repository";
-import { sendPasswordResetEmail, sendStaffInvitationEmail } from "../../lib/email";
+import { sendPasswordResetEmail, sendStaffInvitationEmail, sendEmailChangeCode } from "../../lib/email";
 import { logger } from "../../lib/logger";
 import { seedContractTemplatesForClinic } from "../../seeds/contract-templates.seed";
 import { seedProcedureTemplates } from "../../seeds/procedure-templates.seed";
@@ -21,6 +21,9 @@ import { planLimitsService } from "../../shared/plan-limits.service";
 
 const resetTokens = new Map<string, { email: string; expiresAt: number }>();
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
+
+const emailChangeCodes = new Map<string, { newEmail: string; code: string; expiresAt: number }>();
+const EMAIL_CHANGE_TTL_MS = 15 * 60 * 1000;
 
 function getJwtSecret(): string {
   const secret = process.env["JWT_SECRET"];
@@ -370,15 +373,74 @@ export class AuthService {
     await this.repo.updateUserPassword(userId, passwordHash);
   }
 
+  async requestEmailChange(userId: string, newEmail: string): Promise<void> {
+    const normalized = newEmail.trim().toLowerCase();
+    const user = await this.repo.findUserById(userId);
+    if (!user) throw new NotFoundError("User not found");
+
+    if (normalized === user.email.toLowerCase()) {
+      throw new ValidationError("Это уже ваш текущий email");
+    }
+
+    const existing = await this.repo.findUserByEmail(normalized);
+    if (existing && existing.id !== userId) {
+      throw new ConflictError("Этот email уже зарегистрирован");
+    }
+
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    emailChangeCodes.set(userId, {
+      newEmail: normalized,
+      code,
+      expiresAt: Date.now() + EMAIL_CHANGE_TTL_MS,
+    });
+
+    const sent = await sendEmailChangeCode(normalized, code);
+    if (!sent) {
+      emailChangeCodes.delete(userId);
+      throw new ValidationError("Не удалось отправить код подтверждения");
+    }
+
+    if (process.env["NODE_ENV"] !== "production") {
+      console.log(`[EmailChange] Code for ${normalized}: ${code}`);
+    }
+  }
+
+  async confirmEmailChange(
+    userId: string,
+    newEmail: string,
+    code: string,
+  ): Promise<Omit<User, "passwordHash">> {
+    const normalized = newEmail.trim().toLowerCase();
+    const entry = emailChangeCodes.get(userId);
+
+    if (!entry || entry.expiresAt < Date.now()) {
+      emailChangeCodes.delete(userId);
+      throw new UnauthorizedError("Код истёк или не найден. Запросите новый код.");
+    }
+
+    if (entry.newEmail !== normalized || entry.code !== code.trim()) {
+      throw new UnauthorizedError("Неверный код подтверждения");
+    }
+
+    const existing = await this.repo.findUserByEmail(normalized);
+    if (existing && existing.id !== userId) {
+      throw new ConflictError("Этот email уже зарегистрирован");
+    }
+
+    emailChangeCodes.delete(userId);
+    const updated = await this.repo.updateUserProfile(userId, { email: normalized });
+    if (!updated) throw new NotFoundError("User not found");
+
+    const { passwordHash: _, ...safeUser } = updated;
+    return safeUser;
+  }
+
   async updateProfile(
     userId: string,
     data: { name?: string; email?: string; photoUrl?: string | null },
   ): Promise<Omit<User, "passwordHash">> {
     if (data.email) {
-      const existing = await this.repo.findUserByEmail(data.email);
-      if (existing && existing.id !== userId) {
-        throw new ConflictError("Этот email уже зарегистрирован");
-      }
+      throw new ValidationError("Для смены email используйте подтверждение по коду");
     }
 
     const updated = await this.repo.updateUserProfile(userId, data);

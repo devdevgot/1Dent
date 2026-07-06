@@ -43,8 +43,14 @@ export default function AccountSettings() {
         if (res.success && user && clinic) {
           setAuth({ ...user, ...(res.data.user as Record<string, unknown>) }, clinic);
           setPhotoVersion((v) => v + 1);
+          toast({ title: t("settingsPage.photoUpdated") });
+        } else {
+          toast({
+            title: t("common.error"),
+            description: t("settingsPage.photoUpdateError"),
+            variant: "destructive",
+          });
         }
-        toast({ title: t("settingsPage.photoUpdated") });
       },
       onError: (err) => {
         const msg = (err as { data?: { error?: string } }).data?.error;
@@ -70,7 +76,7 @@ export default function AccountSettings() {
   };
 
   const handleCropComplete = async (croppedBase64: string) => {
-    updateMutation.mutate({ photoUrl: croppedBase64 });
+    await updateMutation.mutateAsync({ photoUrl: croppedBase64 });
   };
 
   const photoUrl = (user as typeof user & { photoUrl?: string | null })?.photoUrl;

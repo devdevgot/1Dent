@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuthStore } from "@/hooks/use-auth";
-import { useUpdateProfile } from "@workspace/api-client-react";
+import { useRequestEmailChange, useConfirmEmailChange } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Mail, CheckCircle2 } from "lucide-react";
 import { PageShell } from "@/components/layout/page-shell";
@@ -11,6 +11,11 @@ import { Button } from "@/components/ui/button";
 
 type Step = "enter-email" | "enter-code" | "done";
 
+function getErrorMessage(err: unknown, fallback: string): string {
+  const msg = (err as { data?: { error?: string } }).data?.error;
+  return msg ?? fallback;
+}
+
 export default function AccountChangeEmail() {
   const [, setLocation] = useLocation();
   const { user, clinic, setAuth } = useAuthStore();
@@ -19,9 +24,20 @@ export default function AccountChangeEmail() {
   const [step, setStep] = useState<Step>("enter-email");
   const [newEmail, setNewEmail] = useState("");
   const [code, setCode] = useState("");
-  const [sending, setSending] = useState(false);
 
-  const mutation = useUpdateProfile({
+  const requestMutation = useRequestEmailChange({
+    mutation: {
+      onSuccess: () => {
+        setStep("enter-code");
+        toast({ title: "Код отправлен", description: `Проверьте почту ${newEmail}` });
+      },
+      onError: (err) => {
+        toast({ title: "Ошибка", description: getErrorMessage(err, "Не удалось отправить код"), variant: "destructive" });
+      },
+    },
+  });
+
+  const confirmMutation = useConfirmEmailChange({
     mutation: {
       onSuccess: (res) => {
         if (res.success && user && clinic) {
@@ -30,8 +46,7 @@ export default function AccountChangeEmail() {
         setStep("done");
       },
       onError: (err) => {
-        const msg = (err as { data?: { error?: string } }).data?.error;
-        toast({ title: "Ошибка", description: msg ?? "Не удалось изменить email", variant: "destructive" });
+        toast({ title: "Ошибка", description: getErrorMessage(err, "Не удалось изменить email"), variant: "destructive" });
       },
     },
   });
@@ -45,12 +60,7 @@ export default function AccountChangeEmail() {
       toast({ title: "Это уже ваш текущий email", variant: "destructive" });
       return;
     }
-    setSending(true);
-    setTimeout(() => {
-      setSending(false);
-      setStep("enter-code");
-      toast({ title: "Код отправлен", description: `Проверьте почту ${newEmail}` });
-    }, 1200);
+    requestMutation.mutate({ newEmail: newEmail.trim() });
   }
 
   function handleVerify() {
@@ -58,7 +68,7 @@ export default function AccountChangeEmail() {
       toast({ title: "Введите код подтверждения", variant: "destructive" });
       return;
     }
-    mutation.mutate({ email: newEmail.trim() });
+    confirmMutation.mutate({ newEmail: newEmail.trim(), code });
   }
 
   const handleBack = () => {
@@ -114,9 +124,9 @@ export default function AccountChangeEmail() {
             <Button
               className="w-full py-3.5 rounded-full text-body font-semibold hover:scale-105 active:scale-95"
               onClick={handleSendCode}
-              disabled={sending}
+              disabled={requestMutation.isPending}
             >
-              {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+              {requestMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
               Отправить код подтверждения
             </Button>
           </>
@@ -150,9 +160,9 @@ export default function AccountChangeEmail() {
             <Button
               className="w-full py-3.5 rounded-full text-body font-semibold hover:scale-105 active:scale-95"
               onClick={handleVerify}
-              disabled={mutation.isPending}
+              disabled={confirmMutation.isPending}
             >
-              {mutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+              {confirmMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
               Подтвердить
             </Button>
 

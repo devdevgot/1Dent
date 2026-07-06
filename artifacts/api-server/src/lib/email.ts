@@ -295,3 +295,34 @@ export async function sendStaffInvitationEmail(
 
   return sendEmail({ to: email, subject, html, text });
 }
+
+/**
+ * Sends a 6-digit verification code to confirm email change
+ */
+export async function sendEmailChangeCode(
+  email: string,
+  code: string,
+): Promise<boolean> {
+  const subject = "Подтверждение смены email — 1Dent";
+
+  const html = wrapInTemplate(
+    subject,
+    `
+    <h2>Подтверждение смены email</h2>
+    <p>Здравствуйте!</p>
+    <p>Вы запросили смену email для вашей учётной записи в <strong>1Dent</strong>.</p>
+    <p>Введите этот код в приложении для подтверждения:</p>
+    <div class="card" style="text-align:center;padding:24px;">
+      <div style="font-size:32px;font-weight:700;letter-spacing:0.3em;color:#1f75fe;">${code}</div>
+    </div>
+    <p>Код действителен 15 минут. Если вы не запрашивали смену email, проигнорируйте это письмо.</p>
+    `,
+  );
+
+  const text =
+    `Подтверждение смены email в 1Dent\n\n` +
+    `Ваш код подтверждения: ${code}\n\n` +
+    `Код действителен 15 минут. Если вы не запрашивали смену email, проигнорируйте это письмо.`;
+
+  return sendEmail({ to: email, subject, html, text });
+}

@@ -28,9 +28,11 @@ export default function AccountEditProfile() {
       onSuccess: (res) => {
         if (res.success && user && clinic) {
           setAuth({ ...user, ...(res.data.user as any) }, clinic);
+          toast({ title: "Профиль обновлён" });
+          setLocation("/account-settings");
+        } else {
+          toast({ title: "Ошибка", description: "Не удалось сохранить", variant: "destructive" });
         }
-        toast({ title: "Профиль обновлён" });
-        setLocation("/account-settings");
       },
       onError: (err) => {
         const msg = (err as { data?: { error?: string } }).data?.error;

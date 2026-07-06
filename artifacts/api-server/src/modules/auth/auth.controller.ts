@@ -121,8 +121,48 @@ router.post("/start-trial", authMiddleware, async (req: Request, res: Response, 
 
 const updateProfileSchema = z.object({
   name: z.string().min(2).optional(),
-  email: z.string().email().optional(),
   photoUrl: z.string().nullable().optional(),
+});
+
+const requestEmailChangeSchema = z.object({
+  newEmail: z.string().email(),
+});
+
+const confirmEmailChangeSchema = z.object({
+  newEmail: z.string().email(),
+  code: z.string().min(4).max(6),
+});
+
+router.post("/me/request-email-change", authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
+  const parsed = requestEmailChangeSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+  }
+
+  try {
+    await authService.requestEmailChange(req.user!.userId, parsed.data.newEmail);
+    res.json({ success: true, message: "Код подтверждения отправлен на новый email" });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/me/confirm-email-change", authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
+  const parsed = confirmEmailChangeSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+  }
+
+  try {
+    const user = await authService.confirmEmailChange(
+      req.user!.userId,
+      parsed.data.newEmail,
+      parsed.data.code,
+    );
+    res.json({ success: true, data: { user } });
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.patch("/me", authMiddleware, async (req: Request, res: Response, next: NextFunction) => {

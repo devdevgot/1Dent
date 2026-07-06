@@ -16,9 +16,11 @@ import {
   useAddToothTreatment,
   useListTeeth,
   getListTeethQueryKey,
+  getListProceduresQueryKey,
 } from "@workspace/api-client-react";
 import type { Procedure, ProcedureStatus, ToothCondition } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { AppDialog } from "@/components/layout/app-dialog";
 import { ToothMiniGrid } from "@/components/dental-chart/tooth-mini-grid";
@@ -77,6 +79,7 @@ function NewProcedureModal({
   onSuccess: () => void;
 }) {
   const { t } = useTranslation();
+  const { toast } = useToast();
   const { user } = useAuthStore();
   const qc = useQueryClient();
 
@@ -179,7 +182,7 @@ function NewProcedureModal({
       });
 
       if (selectedFdis.length > 0 && form.patientId) {
-        await Promise.allSettled(
+        const toothResults = await Promise.allSettled(
           selectedFdis.map(async (fdi) => {
             await updateToothMutation.mutateAsync({
               id: form.patientId,
@@ -196,6 +199,16 @@ function NewProcedureModal({
             });
           }),
         );
+        const failed = toothResults.filter((r) => r.status === "rejected").length;
+        if (failed > 0) {
+          toast({
+            title: t("common.error"),
+            description: t("procedure.toothUpdatePartialError", {
+              defaultValue: `Процедура создана, но не удалось обновить ${failed} зуб(ов)`,
+            }),
+            variant: "destructive",
+          });
+        }
         qc.invalidateQueries({ queryKey: getListTeethQueryKey(form.patientId) });
       }
 
@@ -802,11 +815,13 @@ export function ProceduresContent({ onAdd }: { onAdd?: () => void } = {}) {
         )}
       </div>
 
-      <NewProcedureModal
-            open={showNew}
-            onClose={() => setShowNew(false)}
-            onSuccess={() => refetch()}
-          />
+      {!onAdd && (
+        <NewProcedureModal
+          open={showNew}
+          onClose={() => setShowNew(false)}
+          onSuccess={() => refetch()}
+        />
+      )}
       </div>
     </>
   );
@@ -815,6 +830,7 @@ export function ProceduresContent({ onAdd }: { onAdd?: () => void } = {}) {
 export default function ProceduresPage() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
+  const qc = useQueryClient();
   const canCreate = ["owner", "admin", "doctor"].includes(user?.role ?? "");
   const [showNew, setShowNew] = useState(false);
 
@@ -837,11 +853,14 @@ export default function ProceduresPage() {
           ) : undefined
         }
       />
-      <ProceduresContent onAdd={showNew ? undefined : () => setShowNew(true)} />
+      <ProceduresContent onAdd={() => setShowNew(true)} />
       <NewProcedureModal
         open={showNew}
         onClose={() => setShowNew(false)}
-        onSuccess={() => setShowNew(false)}
+        onSuccess={() => {
+          setShowNew(false);
+          qc.invalidateQueries({ queryKey: getListProceduresQueryKey() });
+        }}
       />
     </PageShell>
   );
