@@ -323,6 +323,13 @@
       "when": 1782220200000,
       "tag": "0044_user_roles_assistant_nurse",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1782306600000,
+      "tag": "0045_procedure_templates_category_code",
+      "breakpoints": true
     }
   ]
 }

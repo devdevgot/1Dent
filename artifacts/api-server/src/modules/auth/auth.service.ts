@@ -65,9 +65,15 @@ export class AuthService {
       logger.warn({ err, clinicId: clinic.id }, "[auth] contract template seed failed on register");
     });
 
-    seedProcedureTemplates(clinic.id).catch((err) => {
+    try {
+      const seedResult = await seedProcedureTemplates(clinic.id);
+      logger.info(
+        { clinicId: clinic.id, ...seedResult },
+        "[auth] procedure template seed completed on register",
+      );
+    } catch (err) {
       logger.warn({ err, clinicId: clinic.id }, "[auth] procedure template seed failed on register");
-    });
+    }
 
     new TabletService().seedDefaultCabinet(clinic.id, clinic.name).catch((err) => {
       logger.warn({ err, clinicId: clinic.id }, "[auth] tablet cabinet seed failed on register");
