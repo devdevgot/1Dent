@@ -37,6 +37,7 @@ import FinancialsPage from "@/pages/financials";
 import WarehousePage from "@/pages/warehouse";
 import UsersPage from "@/pages/users";
 import ChatbotPage from "@/pages/chatbot";
+import TreatmentVideosPage from "@/pages/treatment-videos";
 import StaffDetailPage from "@/pages/staff-detail";
 import DoctorAnalyticsPage from "@/pages/doctor-analytics";
 import DoctorSchedulePage from "@/pages/doctor-schedule";
@@ -299,6 +300,9 @@ function Router() {
       {/* Chatbot management */}
       <Route path="/chatbot">
         <ProtectedRoute component={ChatbotPage} allowedRoles={['owner']} />
+      </Route>
+      <Route path="/treatment-videos">
+        <ProtectedRoute component={TreatmentVideosPage} allowedRoles={['owner', 'admin']} />
       </Route>
 
 

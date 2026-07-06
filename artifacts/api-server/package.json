@@ -11,6 +11,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1079.0",
+    "@aws-sdk/s3-request-presigner": "^3.1079.0",
     "@google-cloud/storage": "^7.19.0",
     "@types/multer": "^2.1.0",
     "@workspace/api-zod": "workspace:*",

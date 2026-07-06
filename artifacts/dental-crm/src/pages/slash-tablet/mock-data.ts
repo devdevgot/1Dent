@@ -67,15 +67,6 @@ export interface PlanStage {
   items: PlanItem[];
 }
 
-export interface TreatmentVideo {
-  id: string;
-  title: string;
-  category: string;
-  duration: string;
-  relatedConditions: ToothCondition[];
-}
-
-// ── Кабинет и врач ────────────────────────────────────────────────────────────
 export const CABINET: TabletCabinet = {
   id: "cab-3",
   name: "Кабинет 3",
@@ -214,15 +205,7 @@ export function getPlanForPatient(patientId: string): PlanStage[] {
   return PLAN_STAGES[patientId] ?? [];
 }
 
-// ── Видеотека ────────────────────────────────────────────────────────────────
-export const VIDEOS: TreatmentVideo[] = [
-  { id: "v1", title: "Как проходит лечение корневых каналов", category: "Эндодонтия", duration: "3:10", relatedConditions: ["root_canal"] },
-  { id: "v2", title: "Лечение кариеса и установка пломбы", category: "Терапия", duration: "1:45", relatedConditions: ["cavity"] },
-  { id: "v3", title: "Имплантация зуба: этапы", category: "Хирургия", duration: "4:20", relatedConditions: ["implant", "missing"] },
-  { id: "v4", title: "Установка коронки на зуб", category: "Ортопедия", duration: "2:35", relatedConditions: ["crown"] },
-  { id: "v5", title: "Удаление зуба мудрости", category: "Хирургия", duration: "2:05", relatedConditions: ["extraction_needed"] },
-  { id: "v6", title: "Профессиональная гигиена полости рта", category: "Профилактика", duration: "2:50", relatedConditions: ["healthy", "treated"] },
-];
+// ── Видеотека: данные с API /api/videos (см. treatment-videos-api.ts) ─────────
 
 export const CONDITION_META: Record<ToothCondition, { label: string; color: string; bg: string }> = {
   healthy:           { label: "Здоров",      color: "#94a3b8", bg: "#f8fafc" },

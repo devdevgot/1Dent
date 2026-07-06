@@ -43,7 +43,7 @@ router.post(
     try {
       const { name, size, contentType } = parsed.data;
 
-      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL(contentType);
       const objectPath = objectStorageService.normalizeObjectEntityPath(uploadURL);
 
       res.json(
@@ -126,7 +126,8 @@ router.get(
         return;
       }
 
-      const response = await objectStorageService.downloadObject(objectFile);
+      const rangeHeader = typeof req.headers.range === "string" ? req.headers.range : undefined;
+      const response = await objectStorageService.downloadObject(objectFile, 3600, rangeHeader);
 
       res.status(response.status);
       response.headers.forEach((value, key) => res.setHeader(key, value));
