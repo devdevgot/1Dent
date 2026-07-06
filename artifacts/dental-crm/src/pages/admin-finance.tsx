@@ -19,7 +19,7 @@ import {
   Users, Zap, Plus, Pencil, Trash2, Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { format, startOfDay, startOfWeek, startOfMonth, startOfYear, parseISO, differenceInDays } from "date-fns";
+import { format, startOfDay, startOfWeek, startOfMonth, startOfYear, endOfDay, endOfWeek, endOfMonth, endOfYear, parseISO, differenceInDays } from "date-fns";
 import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { PeriodPills } from "@/components/layout/period-pills";
@@ -94,7 +94,11 @@ export default function AdminFinancePage() {
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["/procedures"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/analytics/financial-summary"] });
         setSelectingPayment(null);
+      },
+      onError: () => {
+        toast({ title: t("adminFinance.paymentError", "Не удалось подтвердить оплату"), variant: "destructive" });
       },
     },
   });
@@ -121,12 +125,16 @@ export default function AdminFinancePage() {
   }, [period, customFrom]);
 
   const periodEnd = useMemo(() => {
+    const now = new Date();
+    if (period === "day")    return endOfDay(now);
+    if (period === "week")   return endOfWeek(now, { weekStartsOn: 1 });
+    if (period === "month")  return endOfMonth(now);
     if (period === "custom") {
       const d = new Date(customTo);
       d.setHours(23, 59, 59, 999);
       return d;
     }
-    return null;
+    return endOfYear(now);
   }, [period, customTo]);
 
   const dateFromStr = useMemo(() => format(periodStart, "yyyy-MM-dd"), [periodStart]);
@@ -167,28 +175,36 @@ export default function AdminFinancePage() {
       if (filterStatus && p.status !== filterStatus) return false;
       if (filterDoctorId && p.doctorId !== filterDoctorId) return false;
       if (filterPatientId && p.patientId !== filterPatientId) return false;
-      if (p.paymentMethod == null) return false;
+      const isPending = (p.status as string) === "pending_payment";
+      if (!isPending && p.status === "completed" && p.paymentMethod == null) return false;
       if (filterPaymentMethod && p.paymentMethod !== filterPaymentMethod) return false;
       const date = p.completedAt ?? p.scheduledAt;
       if (!date) return false;
       try {
         const d = parseISO(date);
         if (d < periodStart) return false;
-        if (periodEnd && d > periodEnd) return false;
+        if (d > periodEnd) return false;
         return true;
       } catch { return false; }
     });
   }, [allProcedures, filterStatus, filterDoctorId, filterPatientId, filterPaymentMethod, periodStart, periodEnd]);
 
   const debtProcedures = useMemo(() =>
-    allProcedures.filter((p) => p.status === "completed" && (!p.price || p.price === 0)),
+    allProcedures.filter((p) =>
+      p.status === "completed" && p.paymentMethod === "debt" && (p.price ?? 0) > 0,
+    ),
   [allProcedures]);
 
   const pendingProcedures = useMemo(() =>
     allProcedures.filter((p) => (p.status as string) === "pending_payment"),
   [allProcedures]);
 
-  const totalRevenue  = filtered.reduce((acc, p) => acc + (p.price ?? 0), 0);
+  const useApiSummary = !filterDoctorId && !filterPatientId && !filterPaymentMethod && filterStatus === "completed";
+
+  const filteredRevenue = filtered.reduce((acc, p) => acc + (p.price ?? 0), 0);
+  const totalRevenue  = useApiSummary
+    ? (summaryData?.data?.totalRevenue ?? filteredRevenue)
+    : filteredRevenue;
   const avgCheck      = filtered.length > 0 ? Math.round(totalRevenue / filtered.length) : 0;
   const paymentsCount = filtered.length;
   const pendingTotal  = pendingProcedures.reduce((a, p) => a + (p.price ?? 0), 0);
@@ -196,8 +212,10 @@ export default function AdminFinancePage() {
 
   const totalMaterialCost        = summaryData?.data?.totalMaterialCost        ?? consumption.reduce((a, r) => a + (r.totalCost ?? 0), 0);
   const totalOperationalExpenses = summaryData?.data?.totalOperationalExpenses ?? expenses.reduce((s, e) => s + Number(e.amount), 0);
-  const netProfit                = summaryData?.data?.netProfit                ?? (totalRevenue - totalMaterialCost - totalOperationalExpenses);
-  const marginPct                = summaryData?.data?.marginPct                ?? (totalRevenue > 0 ? Math.round((netProfit / totalRevenue) * 100) : 0);
+  const netProfit                = useApiSummary
+    ? (summaryData?.data?.netProfit ?? (totalRevenue - totalMaterialCost - totalOperationalExpenses))
+    : (totalRevenue - totalMaterialCost - totalOperationalExpenses);
+  const marginPct                = totalRevenue > 0 ? Math.round((netProfit / totalRevenue) * 100) : 0;
   const totalExpenses            = totalMaterialCost + totalOperationalExpenses;
 
   const expensesByCategory = summaryData?.data?.expensesByCategory ?? {};
@@ -466,6 +484,9 @@ export default function AdminFinancePage() {
                       </p>
                     </div>
                     <div className="text-right shrink-0">
+                      <p className="text-sm font-bold text-[#dc2626]">
+                        {proc.price ? fmt(proc.price) : "—"}
+                      </p>
                       {isOverdue ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#fef2f2] text-[#dc2626] border border-[#fecaca]">
                           {daysAgo} дн.

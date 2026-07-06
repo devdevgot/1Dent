@@ -83,12 +83,19 @@ export default function PayrollMyPage() {
                 <Row label={t("payroll.salaryType", "Тип")} value={
                   salary.salaryType === "fixed"                ? t("payroll.fixed", "Оклад") :
                   salary.salaryType === "commission"           ? t("payroll.commission", "Комиссия") :
+                  salary.salaryType === "hourly"               ? t("payroll.hourly", "Почасовая") :
                                                                  t("payroll.fixedPlusCommission", "Оклад + %")
                 } />
                 {(salary.salaryType === "fixed" || salary.salaryType === "fixed_plus_commission") && (
                   <Row label={t("payroll.fixedAmount", "Оклад")} value={fmt(salary.fixedAmount)} />
                 )}
-                {(salary.salaryType === "commission" || salary.salaryType === "fixed_plus_commission") && (
+                {salary.salaryType === "hourly" && (
+                  <>
+                    <Row label={t("payroll.hourlyRate", "Почасовая ставка")} value={`${fmt(salary.fixedAmount)} / ч`} />
+                    <Row label={t("payroll.workHours", "Часы работы")} value={`${Number(salary.workHours ?? 0).toFixed(1)} ч`} />
+                  </>
+                )}
+                {(salary.salaryType === "commission" || salary.salaryType === "fixed_plus_commission" || salary.salaryType === "hourly") && (
                   <Row label={t("payroll.commissionPercent", "Процент")} value={`${salary.commissionPercent}%`} />
                 )}
                 <Row label={t("payroll.revenue", "Выручка за период")} value={fmt(salary.revenueThisMonth)} />

@@ -93,11 +93,18 @@ export default function FinancialsPage() {
     return true;
   });
 
-  const totalRevenue             = summaryData?.data?.totalRevenue             ?? filtered.reduce((a, p) => a + (p.price ?? 0), 0);
+  const hasProcedureFilters = Boolean(filterDoctor) || filterStatus !== "completed";
+
+  const filteredRevenue = filtered.reduce((a, p) => a + (p.price ?? 0), 0);
   const totalMaterialCost        = summaryData?.data?.totalMaterialCost        ?? consumption.reduce((a, r) => a + (r.totalCost ?? 0), 0);
   const totalOperationalExpenses = summaryData?.data?.totalOperationalExpenses ?? expenses.reduce((s, e) => s + Number(e.amount), 0);
-  const netProfit                = summaryData?.data?.netProfit                ?? (totalRevenue - totalMaterialCost - totalOperationalExpenses);
-  const marginPct                = summaryData?.data?.marginPct                ?? (totalRevenue > 0 ? Math.round((netProfit / totalRevenue) * 100) : 0);
+  const totalRevenue             = hasProcedureFilters
+    ? filteredRevenue
+    : (summaryData?.data?.totalRevenue ?? filteredRevenue);
+  const netProfit                = hasProcedureFilters
+    ? (totalRevenue - totalMaterialCost - totalOperationalExpenses)
+    : (summaryData?.data?.netProfit ?? (totalRevenue - totalMaterialCost - totalOperationalExpenses));
+  const marginPct                = totalRevenue > 0 ? Math.round((netProfit / totalRevenue) * 100) : 0;
   const totalExpenses            = totalMaterialCost + totalOperationalExpenses;
 
   const pendingTotal = allProcedures
