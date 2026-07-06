@@ -1,11 +1,12 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useLocation } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
 import { createRegisterSchema, type RegisterFormValues } from "@/lib/schemas";
-import { useRegister } from "@workspace/api-client-react";
+import { useRegister, getGetMeQueryKey } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
-import { saveAuthToken } from "@/lib/auth-token";
+import { persistAuthSession } from "@/lib/auth-session";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -45,7 +46,7 @@ function InputField({
 }: {
   label: string;
   error?: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <div>
@@ -94,6 +95,7 @@ export default function Register() {
   const [, setLocation] = useLocation();
   const { setAuth } = useAuthStore();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [step, setStep] = useState<Step>(0);
   const [dir, setDir] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
@@ -119,17 +121,27 @@ export default function Register() {
   const registerMutation = useRegister({
     mutation: {
       onSuccess: (response) => {
-        if (response.success) {
-          const token = (response.data as typeof response.data & { token?: string }).token;
-          if (token) saveAuthToken(token);
-          setAuth(response.data.user, response.data.clinic);
+        if (!response.success || !response.data?.user || !response.data?.clinic) {
           toast({
-            title: t("register.successTitle"),
-            description: t("register.successDesc", { name: response.data.user.name }),
+            title: t("register.errorTitle"),
+            description: t("register.errorDesc"),
+            variant: "destructive",
           });
-          localStorage.setItem("show_onboarding_wizard", "true");
-          setLocation(getRoleDashboardPath(response.data.user.role));
+          return;
         }
+
+        persistAuthSession(response.data);
+        setAuth(response.data.user, response.data.clinic);
+        queryClient.setQueryData(getGetMeQueryKey(), {
+          success: true,
+          data: { user: response.data.user, clinic: response.data.clinic },
+        });
+        toast({
+          title: t("register.successTitle"),
+          description: t("register.successDesc", { name: response.data.user.name }),
+        });
+        localStorage.setItem("show_onboarding_wizard", "true");
+        setLocation(getRoleDashboardPath(response.data.user.role));
       },
       onError: (error) => {
         toast({

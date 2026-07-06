@@ -64,7 +64,7 @@ router.post("/logout", (_req: Request, res: Response) => {
 });
 
 const forgotPasswordSchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().email(),
 });
 
 const resetPasswordSchema = z.object({

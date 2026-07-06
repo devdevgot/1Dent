@@ -1,18 +1,18 @@
-import { useState } from "react";
-import { useLocation } from "wouter";
+import { useMemo, useState } from "react";
+import { useLocation, useSearch } from "wouter";
 import { motion } from "framer-motion";
 import { ArrowLeft, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 
 import { useResetPassword } from "@workspace/api-client-react";
 import { PageShell } from "@/components/layout/page-shell";
 import { AppDialog } from "@/components/layout/app-dialog";
+import { createResetPasswordSchema } from "@/lib/schemas";
+import { getApiErrorMessage } from "@/lib/api-error-message";
 
 export default function ResetPassword() {
   const [, setLocation] = useLocation();
-
-  // Extract token from query string
-  const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
-  const token = params.get("token") ?? "";
+  const search = useSearch();
+  const token = useMemo(() => new URLSearchParams(search).get("token")?.trim() ?? "", [search]);
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -21,12 +21,18 @@ export default function ResetPassword() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
+  const resetPasswordSchema = useMemo(() => createResetPasswordSchema(), []);
+
   const resetMutation = useResetPassword({
     mutation: {
       onSuccess: () => setSuccess(true),
       onError: (err) => {
-        const msg = (err as { data?: { error?: string } }).data?.error;
-        setError(msg ?? "Ссылка недействительна или истекла. Запросите сброс повторно.");
+        setError(
+          getApiErrorMessage(
+            err,
+            "Ссылка недействительна или истекла. Запросите сброс повторно.",
+          ),
+        );
       },
     },
   });
@@ -35,20 +41,18 @@ export default function ResetPassword() {
     e.preventDefault();
     setError("");
 
-    if (newPassword.length < 6) {
-      setError("Пароль должен быть не менее 6 символов");
+    const parsed = resetPasswordSchema.safeParse({ newPassword, confirmPassword });
+    if (!parsed.success) {
+      setError(parsed.error.errors[0]?.message ?? "Проверьте введённые данные");
       return;
     }
-    if (newPassword !== confirmPassword) {
-      setError("Пароли не совпадают");
-      return;
-    }
+
     if (!token) {
       setError("Неверная ссылка для сброса пароля");
       return;
     }
 
-    resetMutation.mutate({ data: { token, newPassword } });
+    resetMutation.mutate({ data: { token, newPassword: parsed.data.newPassword } });
   };
 
   if (!token) {
@@ -58,6 +62,7 @@ export default function ResetPassword() {
           <h2 className="text-xl font-bold text-[var(--text)] mb-3">Недействительная ссылка</h2>
           <p className="text-body text-[var(--text-secondary)] mb-6">Эта ссылка для сброса пароля недействительна или устарела.</p>
           <button
+            type="button"
             onClick={() => setLocation("/forgot-password")}
             className="dash-btn dash-btn-primary w-full py-4 rounded-full text-base font-semibold hover:scale-105 active:scale-95"
           >
@@ -74,6 +79,7 @@ export default function ResetPassword() {
       {!success && (
         <div className="w-full max-w-sm mb-6">
           <button
+            type="button"
             onClick={() => setLocation("/login")}
             className="flex items-center gap-1.5 text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors"
           >
@@ -105,10 +111,14 @@ export default function ResetPassword() {
                 <input
                   type={showNew ? "text" : "password"}
                   value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
+                  onChange={(e) => {
+                    setNewPassword(e.target.value);
+                    if (error) setError("");
+                  }}
                   placeholder="••••••••"
                   autoComplete="new-password"
-                  className="flex-1 bg-transparent text-base text-[var(--text)] placeholder:text-[var(--text-subtle)] outline-none"
+                  disabled={resetMutation.isPending || success}
+                  className="flex-1 bg-transparent text-base text-[var(--text)] placeholder:text-[var(--text-subtle)] outline-none disabled:opacity-60"
                 />
                 <button
                   type="button"
@@ -132,10 +142,14 @@ export default function ResetPassword() {
                 <input
                   type={showConfirm ? "text" : "password"}
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    if (error) setError("");
+                  }}
                   placeholder="••••••••"
                   autoComplete="new-password"
-                  className="flex-1 bg-transparent text-base text-[var(--text)] placeholder:text-[var(--text-subtle)] outline-none"
+                  disabled={resetMutation.isPending || success}
+                  className="flex-1 bg-transparent text-base text-[var(--text)] placeholder:text-[var(--text-subtle)] outline-none disabled:opacity-60"
                 />
                 <button
                   type="button"
@@ -153,7 +167,7 @@ export default function ResetPassword() {
 
             <button
               type="submit"
-              disabled={resetMutation.isPending}
+              disabled={resetMutation.isPending || success}
               className="dash-btn dash-btn-primary w-full py-4 rounded-full text-base font-semibold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed hover:scale-105 active:scale-95 mt-2"
             >
               {resetMutation.isPending ? "Сохраняем..." : "Сохранить"}
@@ -171,6 +185,7 @@ export default function ResetPassword() {
         showClose={false}
         footer={
           <button
+            type="button"
             onClick={() => setLocation("/login")}
             className="dash-btn dash-btn-ghost w-full text-base font-semibold text-[var(--ds-primary)]"
           >

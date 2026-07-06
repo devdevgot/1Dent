@@ -35,7 +35,12 @@ export function ProtectedRoute({ component: Component, allowedRoles = [], useAdm
   useEffect(() => {
     if (DEV_BYPASS) return;
     if (!isLoading && !isAuthenticated) {
-      setLocation("/login");
+      const returnTo = `${window.location.pathname}${window.location.search}`;
+      const loginPath =
+        returnTo && returnTo !== "/login"
+          ? `/login?returnTo=${encodeURIComponent(returnTo)}`
+          : "/login";
+      setLocation(loginPath);
     }
   }, [isLoading, isAuthenticated, setLocation]);
 
