@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { useAuthStore } from "@/hooks/use-auth";
@@ -28,12 +28,21 @@ import {
   MapPin,
   Building2,
   CreditCard,
+  LayoutDashboard,
+  Package,
 } from "lucide-react";
 
 const SUPPORTED_LANGS = ["ru", "kz", "en"] as const;
 type Lang = (typeof SUPPORTED_LANGS)[number];
 
+function normalizeLang(value: string | undefined): Lang {
+  const base = value?.split("-")[0]?.toLowerCase();
+  return SUPPORTED_LANGS.includes(base as Lang) ? (base as Lang) : "ru";
+}
+
 const ALL_NAV_ITEMS = [
+  { nameKey: "nav.dashboard",     href: "/dashboard/warehouse", icon: LayoutDashboard, roles: ["warehouse"] },
+  { nameKey: "nav.inventory",     href: "/inventory",           icon: Package,         roles: ["warehouse"] },
   { nameKey: "nav.patients",     href: "/patients",           icon: Users,           roles: ["owner","admin","doctor","accountant"] },
   { nameKey: "nav.schedule",     href: "/schedule",           icon: Calendar,        roles: ["doctor"] },
   { nameKey: "nav.analytics",    href: "/analytics",          icon: BarChart3,       roles: ["owner"] },
@@ -68,7 +77,13 @@ export default function MenuPage() {
   const { user, clearAuth } = useAuthStore();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [currentLang, setCurrentLang] = useState<Lang>((i18n.language as Lang) || "ru");
+  const [currentLang, setCurrentLang] = useState<Lang>(() => normalizeLang(i18n.language));
+
+  useEffect(() => {
+    const handleLanguageChanged = (lang: string) => setCurrentLang(normalizeLang(lang));
+    i18n.on("languageChanged", handleLanguageChanged);
+    return () => i18n.off("languageChanged", handleLanguageChanged);
+  }, []);
 
   const navItems = ALL_NAV_ITEMS.filter((item) =>
     user && item.roles.includes(user.role),
@@ -138,19 +153,25 @@ export default function MenuPage() {
             initial="hidden"
             animate="show"
           >
-            {navItems.map((item) => (
-              <motion.div key={item.href} variants={gridItemVariants}>
-                <Link
-                  href={item.href}
-                  className="flex flex-col items-center gap-1.5 py-3 px-1 rounded-xl hover:bg-[#f1ede4] active:bg-[#f1ede4] transition-colors"
-                >
-                  <item.icon className="w-6 h-6 text-[#1f75fe]" strokeWidth={1.8} />
-                  <span className="text-micro text-[#64748b] text-center leading-tight font-medium line-clamp-2">
-                    {item.name}
-                  </span>
-                </Link>
-              </motion.div>
-            ))}
+            {navItems.length === 0 ? (
+              <p className="col-span-4 py-6 text-center text-caption text-[#94a3b8]">
+                {t("menuPage.noShortcuts")}
+              </p>
+            ) : (
+              navItems.map((item) => (
+                <motion.div key={item.href} variants={gridItemVariants}>
+                  <Link
+                    href={item.href}
+                    className="flex flex-col items-center gap-1.5 py-3 px-1 rounded-xl hover:bg-[#f1ede4] active:bg-[#f1ede4] transition-colors"
+                  >
+                    <item.icon className="w-6 h-6 text-[#1f75fe]" strokeWidth={1.8} />
+                    <span className="text-micro text-[#64748b] text-center leading-tight font-medium line-clamp-2">
+                      {item.name}
+                    </span>
+                  </Link>
+                </motion.div>
+              ))
+            )}
           </motion.div>
         </IosGroup>
       </IosSection>
