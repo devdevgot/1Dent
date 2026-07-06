@@ -69,7 +69,7 @@ export default function KanbanPage() {
           <KanbanBoard
             patients={patients}
             onSelectPatient={onSelectPatient}
-            className="flex gap-3 overflow-x-auto pb-4 flex-1 items-start custom-scrollbar"
+            className="flex gap-3 overflow-x-auto pb-4 flex-1 items-stretch custom-scrollbar"
           />
         )}
 
