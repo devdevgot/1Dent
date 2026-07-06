@@ -573,7 +573,7 @@
     "more": "more",
     "noData": "No data yet",
     "totalRevenue": "Total Revenue",
-    "netProfit": "Net Profit (MTD)"
+    "netProfit": "Net Profit (today)"
   },
   "warehouseDashboard": {
     "subtitle": "Inventory status for {{clinic}}.",

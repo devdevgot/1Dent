@@ -210,9 +210,17 @@ export default function OwnerDashboard() {
 
   const dateRange = useMemo(() => {
     if (filterPreset === "custom") {
-      return { from: new Date(customFrom), to: new Date(customTo) };
+      const [fy, fm, fd] = customFrom.split("-").map(Number);
+      const [ty, tm, td] = customTo.split("-").map(Number);
+      return {
+        from: new Date(fy, fm - 1, fd, 0, 0, 0, 0),
+        to: new Date(ty, tm - 1, td, 23, 59, 59, 999),
+      };
     }
-    return getPresetRange(filterPreset);
+    const range = getPresetRange(filterPreset);
+    const to = new Date(range.to);
+    to.setHours(23, 59, 59, 999);
+    return { from: range.from, to };
   }, [filterPreset, customFrom, customTo]);
 
   const filterLabel = FILTER_PRESETS.find(p => p.key === filterPreset)?.label ?? "Месяц";
@@ -803,7 +811,7 @@ export default function OwnerDashboard() {
             <div>
               <h2 className="text-base font-bold text-[#0f172a]">Детальная аналитика</h2>
               <p className="text-[11px] font-medium text-[#94a3b8] mt-0.5">
-                Период: {dateRangeLabel}
+                {activeTab === "channels" ? `Период: ${dateRangeLabel}` : "За всё время"}
               </p>
             </div>
             <button

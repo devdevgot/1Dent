@@ -9,6 +9,7 @@ import {
   useListProcedureTemplates,
   useGetDoctorKpis,
   getGetDoctorKpisQueryKey,
+  getListProceduresQueryKey,
   useUpdateProcedurePayment,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -54,7 +55,7 @@ export default function AdminDashboard() {
   const updatePayment = useUpdateProcedurePayment({
     mutation: {
       onSuccess: () => {
-        qc.invalidateQueries({ queryKey: ["/procedures"] });
+        qc.invalidateQueries({ queryKey: getListProceduresQueryKey() });
         setSelectingPayment(null);
       },
     },
@@ -114,18 +115,6 @@ export default function AdminDashboard() {
     if (isYesterday(d)) return "вчера";
     return format(d, "d MMM");
   };
-
-  const todayActiveTasks = procedures.filter((p) => {
-    if (p.status !== "in_progress") return false;
-    const d = getRefDate(p);
-    return d >= todayStart && d <= todayEnd;
-  });
-
-  const overdueActiveTasks = procedures
-    .filter((p) => p.status === "in_progress" && getRefDate(p) < todayStart)
-    .sort((a, b) => getRefDate(b).getTime() - getRefDate(a).getTime());
-
-  const activeTasks = [...todayActiveTasks, ...overdueActiveTasks];
 
   const todayPendingPayment = procedures
     .filter((p) => {
@@ -235,7 +224,7 @@ export default function AdminDashboard() {
           )}
         </div>
 
-        {/* Right column: Active Tasks + Top Doctors */}
+        {/* Right column: Payments + Top Doctors */}
         <div className="space-y-4">
           {/* Ожидают оплаты */}
           <div className="dash-card dash-card-padded-sm dash-card-elevated">

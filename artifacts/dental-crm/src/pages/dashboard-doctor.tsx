@@ -108,9 +108,17 @@ export default function DoctorDashboard() {
 
   const dateRange = useMemo(() => {
     if (filterPreset === "custom") {
-      return { from: new Date(customFrom), to: new Date(customTo) };
+      const [fy, fm, fd] = customFrom.split("-").map(Number);
+      const [ty, tm, td] = customTo.split("-").map(Number);
+      return {
+        from: new Date(fy, fm - 1, fd, 0, 0, 0, 0),
+        to: new Date(ty, tm - 1, td, 23, 59, 59, 999),
+      };
     }
-    return getPresetRange(filterPreset);
+    const range = getPresetRange(filterPreset);
+    const to = new Date(range.to);
+    to.setHours(23, 59, 59, 999);
+    return { from: range.from, to };
   }, [filterPreset, customFrom, customTo]);
 
   const filterLabel    = FILTER_PRESETS.find(p => p.key === filterPreset)?.label ?? "Месяц";
@@ -119,6 +127,8 @@ export default function DoctorDashboard() {
   const { data: analyticsData, isLoading } = useGetDoctorAnalytics({
     query: { queryKey: getGetDoctorAnalyticsQueryKey() },
   });
+  const { data: salaryData } = useGetMySalary();
+  const { data: proceduresData } = useListProcedures();
 
   const rawAnalytics = (analyticsData?.data?.analytics ?? {}) as Record<string, unknown>;
 
@@ -139,11 +149,26 @@ export default function DoctorDashboard() {
   const scheduledToday     = analytics.scheduledToday;
   const redAlertCount      = analytics.redAlertCount;
 
-  // ── My salary ──
-  const { data: salaryData } = useGetMySalary();
+  const periodRevenue = useMemo(() => {
+    const allProcs = (proceduresData?.data?.procedures ?? []) as Procedure[];
+    const mine = user?.id ? allProcs.filter((p) => p.doctorId === user.id) : allProcs;
+    return mine
+      .filter((p) => {
+        if (!p.completedAt || p.status !== "completed") return false;
+        const d = new Date(p.completedAt);
+        return d >= dateRange.from && d <= dateRange.to;
+      })
+      .reduce((sum, p) => sum + (p.price ?? 0), 0);
+  }, [proceduresData, user?.id, dateRange]);
 
-  // ── Schedule widget data ──
-  const { data: proceduresData } = useListProcedures();
+  const isCurrentMonthFilter =
+    filterPreset === "month" ||
+    (filterPreset === "custom" &&
+      customFrom === toInputValue(new Date(new Date().getFullYear(), new Date().getMonth(), 1)) &&
+      customTo === toInputValue(new Date()));
+
+  const displayedRevenue = isCurrentMonthFilter ? revenueThisMonth : periodRevenue;
+
   const upcomingAppointments = useMemo(() => {
     const allProcs = (proceduresData?.data?.procedures ?? []) as Procedure[];
     const mine = user?.id ? allProcs.filter(p => p.doctorId === user.id) : allProcs;
@@ -267,7 +292,7 @@ export default function DoctorDashboard() {
                 {t("dashboard.myRevenue", "Выручка")}
               </p>
               <p className="text-base font-semibold text-[#0f172a]">
-                {isLoading ? "—" : fmtRevenue(revenueThisMonth)}
+                {isLoading ? "—" : fmtRevenue(displayedRevenue)}
               </p>
             </div>
             <button
