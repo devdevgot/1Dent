@@ -19,6 +19,7 @@ export function PlaygroundTab() {
   const [humanTakeover, setHumanTakeover] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const cancelPartsRef = useRef<(() => void) | null>(null);
 
   const applyResponse = useCallback((res: TestMessageResponse) => {
     const data = res.data;
@@ -32,7 +33,8 @@ export function PlaygroundTab() {
     });
     setHumanTakeover(!!data.humanTakeover);
     setIsReceivingParts(true);
-    schedulePlaygroundBotParts(
+    cancelPartsRef.current?.();
+    cancelPartsRef.current = schedulePlaygroundBotParts(
       parts,
       data.pausesMs,
       (part) => setMessages((prev) => [...prev, { role: "bot", text: part }]),
@@ -95,6 +97,9 @@ export function PlaygroundTab() {
   }, []);
 
   const resetPlayground = useCallback(() => {
+    cancelPartsRef.current?.();
+    cancelPartsRef.current = null;
+    setIsReceivingParts(false);
     setMessages([]);
     setInput("");
     setSession(null);

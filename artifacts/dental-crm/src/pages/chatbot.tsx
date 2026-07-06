@@ -45,7 +45,8 @@ import type { ScriptMindMapData } from "@/components/chatbot/script-mindmap";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { FSM_STATE_LABELS } from "@/lib/chatbot-fsm-states";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { getApiErrorMessage } from "@/lib/api-error-message";
 
 
 const STATE_COLORS: Record<string, string> = {
@@ -178,7 +179,7 @@ function getSessionSummary(data: any, t: any): string {
 // ─── Session conversation view ────────────────────────────────────────────────
 
 function SessionChat({ phone, onBack }: { phone: string; onBack: () => void }) {
-  const { data, isLoading, refetch } = useGetChatbotSessionMessages(phone);
+  const { data, isLoading, isError, refetch } = useGetChatbotSessionMessages(phone);
   const { data: sessionsData, refetch: refetchSessions } = useListChatbotSessions();
   const takeoverMutation = usePatchChatbotSessionTakeover();
   const messages = data?.data?.messages ?? [];
@@ -237,6 +238,18 @@ function SessionChat({ phone, onBack }: { phone: string; onBack: () => void }) {
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1 bg-[#faf8f4]">
         {isLoading ? (
           <div className="flex items-center justify-center h-full text-sm text-[#64748b]">{t("chatbot.loading", "Загрузка...")}</div>
+        ) : isError ? (
+          <div className="flex flex-col items-center justify-center h-full gap-3 px-6 text-center">
+            <AlertCircle className="h-8 w-8 text-[#dc2626]/60" />
+            <p className="text-sm text-[#64748b]">{t("chatbot.loadError", "Не удалось загрузить сообщения")}</p>
+            <button
+              type="button"
+              onClick={() => void refetch()}
+              className="text-xs font-medium text-[#1f75fe] hover:underline"
+            >
+              {t("common.retry", "Повторить")}
+            </button>
+          </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-2">
             <MessageSquare className="h-8 w-8 text-[#94a3b8]/40" />
@@ -313,7 +326,6 @@ function AiBroadcastTab() {
   const { i18n } = useTranslation();
   const lang = i18n.language || "ru";
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   const [showConfirm, setShowConfirm] = useState(false);
   const settingsQueryKey = getGetChatbotSettingsQueryKey();
   const { data: settingsRes } = useGetChatbotSettings();
@@ -353,13 +365,11 @@ function AiBroadcastTab() {
             };
           });
         },
-        onError: () => {
+        onError: (err) => {
           queryClient.setQueryData(settingsQueryKey, previous);
-          toast({
-            title: "Не удалось сохранить настройку",
-            description: "Проверьте подключение и попробуйте снова.",
-            variant: "destructive",
-          });
+          toast.error(
+            getApiErrorMessage(err as { data?: unknown; message?: string }, "Не удалось сохранить настройку"),
+          );
         },
       },
     );
@@ -383,11 +393,9 @@ function AiBroadcastTab() {
         setShowConfirm(false);
       },
       onError: (err) => {
-        toast({
-          title: "Не удалось запустить рассылку",
-          description: err instanceof Error ? err.message : "Попробуйте позже.",
-          variant: "destructive",
-        });
+        toast.error(
+          getApiErrorMessage(err as { data?: unknown; message?: string }, "Не удалось запустить рассылку"),
+        );
       },
     },
   });
@@ -430,6 +438,7 @@ function AiBroadcastTab() {
           <Switch
             checked={broadcastAiEnabled}
             onCheckedChange={handleToggleBroadcastAi}
+            disabled={updateSettings.isPending}
             aria-label="ИИ-генерация текста рассылки"
             className={cn(
               "h-6 w-11 shrink-0 border-transparent shadow-none transition-colors duration-200 ease-out",
@@ -665,6 +674,29 @@ export default function ChatbotPage() {
 
   const effectiveEnabled = localSettings.enabled ?? settings?.enabled ?? true;
 
+  // Seed local settings from server once loaded
+  useEffect(() => {
+    if (!settings) return;
+    setLocalSettings((prev) => {
+      if (Object.keys(prev).length > 0) return prev;
+      return {
+        enabled: settings.enabled,
+        calendarConfig: settings.calendarConfig,
+        abTestEnabled: settings.abTestEnabled,
+        scriptVariants: settings.scriptVariants,
+      };
+    });
+    setSavedSettings((prev) => {
+      if (Object.keys(prev).length > 0) return prev;
+      return {
+        enabled: settings.enabled,
+        calendarConfig: settings.calendarConfig,
+        abTestEnabled: settings.abTestEnabled,
+        scriptVariants: settings.scriptVariants,
+      };
+    });
+  }, [settings]);
+
   // Autosave for enabled toggle
   useEffect(() => {
     const isDirty = Object.keys(localSettings).some(
@@ -674,6 +706,13 @@ export default function ChatbotPage() {
     if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
     autosaveTimer.current = setTimeout(() => {
       const toSave = { ...localSettings };
+      if (toSave.calendarConfig) {
+        toSave.calendarConfig = {
+          ...(settings?.calendarConfig ?? {}),
+          ...(savedSettings.calendarConfig ?? {}),
+          ...toSave.calendarConfig,
+        };
+      }
       setAutosaveStatus("saving");
       updateSettings.mutate(
         { data: toSave },
@@ -682,6 +721,7 @@ export default function ChatbotPage() {
             setSavedSettings((prev) => ({ ...prev, ...toSave }));
             setAutosaveStatus("saved");
             setTimeout(() => setAutosaveStatus("idle"), 2000);
+            void refetchSettings();
           },
           onError: () => setAutosaveStatus("idle"),
         },
@@ -780,10 +820,18 @@ export default function ChatbotPage() {
             ) : (
               <div className="divide-y divide-[#e8e3d9] rounded-2xl border border-[#e8e3d9] bg-white shadow-md overflow-hidden">
                 {sessions.map((session) => (
-                  <button
+                  <div
                     key={session.id}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => setSelectedPhone(session.phone)}
-                    className="w-full flex items-start gap-3 px-4 py-3 hover:bg-[#faf8f4] active:bg-[#f1ede4] transition-colors text-left"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setSelectedPhone(session.phone);
+                      }
+                    }}
+                    className="w-full flex items-start gap-3 px-4 py-3 hover:bg-[#faf8f4] active:bg-[#f1ede4] transition-colors text-left cursor-pointer"
                   >
                     <div className="h-8 w-8 rounded-full bg-[#f1ede4] flex items-center justify-center shrink-0 mt-0.5">
                       <MessageSquare className="h-3.5 w-3.5 text-[#64748b]" />
@@ -809,12 +857,13 @@ export default function ChatbotPage() {
                     </div>
                     <ChevronRight className="h-4 w-4 text-[#64748b] shrink-0 mt-1" />
                     <button
+                      type="button"
                       onClick={(e) => { e.stopPropagation(); setConfirmResetPhone(session.phone); }}
                       className="shrink-0 p-1.5 rounded-xl text-[#64748b] hover:text-[#dc2626] hover:bg-[#fef2f2] transition-colors"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
-                  </button>
+                  </div>
                 ))}
               </div>
             )}
@@ -866,6 +915,7 @@ export default function ChatbotPage() {
 
             <ChatbotCalendarAbSettings
               localSettings={localSettings}
+              serverCalendarConfig={settings?.calendarConfig}
               onChange={(patch) => setLocalSettings((p) => ({ ...p, ...patch }))}
             />
 

@@ -14,11 +14,12 @@ type ExtendedSettings = ChatbotSettingsUpdate & {
 
 interface Props {
   localSettings: ExtendedSettings;
+  serverCalendarConfig?: ExtendedSettings["calendarConfig"];
   onChange: (patch: ExtendedSettings) => void;
 }
 
-export function ChatbotCalendarAbSettings({ localSettings, onChange }: Props) {
-  const calendar = localSettings.calendarConfig ?? {};
+export function ChatbotCalendarAbSettings({ localSettings, serverCalendarConfig, onChange }: Props) {
+  const calendar = { ...(serverCalendarConfig ?? {}), ...(localSettings.calendarConfig ?? {}) };
   const abEnabled = localSettings.abTestEnabled ?? false;
   const variants = localSettings.scriptVariants ?? [];
 
