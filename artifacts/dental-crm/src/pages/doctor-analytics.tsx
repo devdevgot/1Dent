@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useLocation } from "wouter";
 import {
   SlidersHorizontal, X, ChevronDown, Filter,
   Calendar, Users, TrendingUp, Wallet, CheckCircle2, BarChart3,
@@ -71,9 +70,14 @@ function computeDateRange(preset: Preset, customFrom: string, customTo: string) 
   return { dateFrom: undefined, dateTo: undefined };
 }
 
+function formatKztCompact(amount: number): string {
+  if (amount >= 1_000_000) return `₸${(amount / 1_000_000).toFixed(1)}M`;
+  if (amount >= 1_000) return `₸${Math.floor(amount / 1_000)}K`;
+  return `₸${Math.round(amount).toLocaleString("ru-KZ")}`;
+}
+
 export default function DoctorAnalyticsPage() {
   const { t } = useTranslation();
-  const [, setLocation] = useLocation();
 
   // ── Filter state ──────────────────────────────────────────────────────────
   const [showFiltersModal, setShowFiltersModal] = useState(false);
@@ -114,10 +118,24 @@ export default function DoctorAnalyticsPage() {
   const hasActiveFilters =
     preset !== "all" || !!selectedType || (Number(minRevenueInput) > 0);
 
-  const { data, isLoading, isFetching } = useGetDoctorDetailedAnalyticsMe(
+  const { data, isLoading, isFetching, isError, refetch } = useGetDoctorDetailedAnalyticsMe(
     Object.keys(params).length > 0 ? params : undefined,
   );
   const analytics: DoctorDetailedAnalytics | undefined = data?.data?.analytics;
+
+  const periodSubLabel = useMemo(() => {
+    if (preset === "custom" && customFrom && customTo) return `${customFrom} — ${customTo}`;
+    const labels: Record<Preset, string> = {
+      all: t("doctorAnalytics.periodAll"),
+      "7d": t("doctorAnalytics.period7d"),
+      "30d": t("doctorAnalytics.period30d"),
+      "3m": t("doctorAnalytics.period3m"),
+      "6m": t("doctorAnalytics.period6m"),
+      "1y": t("doctorAnalytics.period1y"),
+      custom: t("doctorAnalytics.customPeriod"),
+    };
+    return labels[preset];
+  }, [preset, customFrom, customTo, t]);
 
   // Accumulate procedure names for dropdown
   useEffect(() => {
@@ -146,7 +164,10 @@ export default function DoctorAnalyticsPage() {
   const scheduledToday  = Number(analytics?.scheduledToday  ?? 0);
 
   const revenueByMonth: DoctorDetailedAnalyticsRevenueByMonthItem[] = analytics?.revenueByMonth ?? [];
-  const proceduresByName: DoctorDetailedAnalyticsProceduresByNameItem[] = analytics?.proceduresByName ?? [];
+  const proceduresByName: DoctorDetailedAnalyticsProceduresByNameItem[] = useMemo(
+    () => [...(analytics?.proceduresByName ?? [])].sort((a, b) => b.count - a.count),
+    [analytics?.proceduresByName],
+  );
   const patientsByStatus    = analytics?.patientsByStatus  ?? {};
   const rawProceduresByStatus = analytics?.proceduresByStatus ?? {};
 
@@ -165,7 +186,7 @@ export default function DoctorAnalyticsPage() {
     {
       label: t("doctorAnalytics.patientsScheduled"),
       value: scheduledToday,
-      sub: t("doctorAnalytics.thisMonth"),
+      sub: t("doctorAnalytics.today", "На сегодня"),
       icon: Calendar,
       bg: "bg-[var(--ds-primary)]",
       light: "bg-[var(--info-light)]",
@@ -174,7 +195,7 @@ export default function DoctorAnalyticsPage() {
     {
       label: t("doctorAnalytics.patientsRemaining"),
       value: totalPatients,
-      sub: t("doctorAnalytics.thisMonth"),
+      sub: periodSubLabel,
       icon: Users,
       bg: "bg-[var(--ds-primary)]",
       light: "bg-[var(--primary-light)]",
@@ -182,10 +203,8 @@ export default function DoctorAnalyticsPage() {
     },
     {
       label: t("doctorAnalytics.revenue"),
-      value: totalRevenue >= 1_000_000
-        ? `₸${(totalRevenue / 1_000_000).toFixed(1)}M`
-        : `₸${Math.floor(totalRevenue / 1000)}K`,
-      sub: t("doctorAnalytics.thisMonth"),
+      value: formatKztCompact(totalRevenue),
+      sub: periodSubLabel,
       icon: TrendingUp,
       bg: "bg-[var(--success)]",
       light: "bg-[var(--success-light)]",
@@ -193,10 +212,8 @@ export default function DoctorAnalyticsPage() {
     },
     {
       label: t("doctorAnalytics.averageCheck"),
-      value: averageCheck >= 1_000_000
-        ? `₸${(averageCheck / 1_000_000).toFixed(1)}M`
-        : `₸${Math.floor(averageCheck / 1000)}K`,
-      sub: t("doctorAnalytics.thisMonth"),
+      value: formatKztCompact(averageCheck),
+      sub: periodSubLabel,
       icon: Wallet,
       bg: "bg-[var(--warning)]",
       light: "bg-[var(--warning-light)]",
@@ -205,7 +222,7 @@ export default function DoctorAnalyticsPage() {
     {
       label: t("doctorAnalytics.completedProcedures"),
       value: totalProcedures,
-      sub: t("doctorAnalytics.thisMonth"),
+      sub: periodSubLabel,
       icon: CheckCircle2,
       bg: "bg-[var(--danger)]",
       light: "bg-[var(--danger-light)]",
@@ -264,7 +281,24 @@ export default function DoctorAnalyticsPage() {
             <div className="w-10 h-10 border-4 border-[var(--ds-primary)]/20 border-t-[var(--ds-primary)] rounded-full animate-spin" />
           </div>
         ) : (
-          <div className="p-6 space-y-6">
+          <div className={`p-6 space-y-6 relative ${isFetching ? "opacity-60 pointer-events-none" : ""}`}>
+            {isError && (
+              <div className="bg-[var(--danger-light)] border border-[var(--danger)]/20 rounded-2xl p-4 flex items-center justify-between gap-3">
+                <p className="text-sm text-[var(--danger)]">{t("common.loadError", "Не удалось загрузить данные")}</p>
+                <button
+                  type="button"
+                  onClick={() => refetch()}
+                  className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-white border border-[var(--danger)]/20 text-[var(--danger)]"
+                >
+                  {t("common.retry", "Повторить")}
+                </button>
+              </div>
+            )}
+            {isFetching && !isLoading && (
+              <div className="absolute top-2 right-6 text-xs text-[var(--text-secondary)]">
+                {t("common.updating", "Обновление…")}
+              </div>
+            )}
             {/* KPI Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
               {kpiCards.map((card) => {
@@ -317,7 +351,7 @@ export default function DoctorAnalyticsPage() {
                       <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                       <YAxis tick={{ fontSize: 11 }} />
                       <Tooltip />
-                      <Bar dataKey="count" fill="#8b5cf6" radius={[8, 8, 0, 0]} name={t("doctorAnalytics.patients")} />
+                      <Bar dataKey="count" fill="#8b5cf6" radius={[8, 8, 0, 0]} name={t("doctorAnalytics.procedureTypes")} />
                     </BarChart>
                   </ResponsiveContainer>
                 )}

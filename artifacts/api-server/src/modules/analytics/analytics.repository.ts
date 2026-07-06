@@ -19,6 +19,11 @@ export interface DoctorAnalyticsFilters {
   minRevenue?: number;
 }
 
+export interface AnalyticsDateRange {
+  dateFrom?: Date;
+  dateTo?: Date;
+}
+
 export interface PaymentMethodStat {
   method: string;
   label: string;
@@ -476,13 +481,40 @@ function endOfDay(): Date {
   return d;
 }
 
-export class AnalyticsRepository {
-  async getOwnerAnalytics(clinicId: string): Promise<OwnerAnalytics> {
-    const cacheKey = analyticsCache.key("owner", clinicId);
-    const cached = await analyticsCache.get<OwnerAnalytics>(cacheKey);
-    if (cached) return cached;
+function hasDateRange(range?: AnalyticsDateRange): boolean {
+  return range?.dateFrom != null || range?.dateTo != null;
+}
 
-    const monthStart = startOfMonth();
+function buildCreatedAtRange(clinicId: string, range: AnalyticsDateRange, fallbackFrom: Date): SQL[] {
+  const conds: SQL[] = [eq(patientsTable.clinicId, clinicId)];
+  const from = range.dateFrom ?? fallbackFrom;
+  conds.push(gte(patientsTable.createdAt, from));
+  if (range.dateTo) conds.push(lte(patientsTable.createdAt, range.dateTo));
+  return conds;
+}
+
+function buildCompletedProcRange(clinicId: string, range: AnalyticsDateRange, fallbackFrom: Date): SQL[] {
+  const conds: SQL[] = [
+    eq(proceduresTable.clinicId, clinicId),
+    eq(proceduresTable.status, "completed"),
+  ];
+  const from = range.dateFrom ?? fallbackFrom;
+  conds.push(gte(proceduresTable.completedAt, from));
+  if (range.dateTo) conds.push(lte(proceduresTable.completedAt, range.dateTo));
+  return conds;
+}
+
+export class AnalyticsRepository {
+  async getOwnerAnalytics(clinicId: string, range?: AnalyticsDateRange): Promise<OwnerAnalytics> {
+    const filtered = hasDateRange(range);
+    if (!filtered) {
+      const cacheKey = analyticsCache.key("owner", clinicId);
+      const cached = await analyticsCache.get<OwnerAnalytics>(cacheKey);
+      if (cached) return cached;
+    }
+
+    const periodStart = range?.dateFrom ?? startOfMonth();
+    const effectiveRange: AnalyticsDateRange = { dateFrom: periodStart, dateTo: range?.dateTo };
 
     const [[allPatients, newPatients, monthlyProcedures, redAlerts], doctorKpis] =
       await Promise.all([
@@ -491,22 +523,11 @@ export class AnalyticsRepository {
           db
             .select()
             .from(patientsTable)
-            .where(
-              and(
-                eq(patientsTable.clinicId, clinicId),
-                gte(patientsTable.createdAt, monthStart),
-              ),
-            ),
+            .where(and(...buildCreatedAtRange(clinicId, effectiveRange, periodStart))),
           db
             .select()
             .from(proceduresTable)
-            .where(
-              and(
-                eq(proceduresTable.clinicId, clinicId),
-                eq(proceduresTable.status, "completed"),
-                gte(proceduresTable.completedAt, monthStart),
-              ),
-            ),
+            .where(and(...buildCompletedProcRange(clinicId, effectiveRange, periodStart))),
           db
             .select()
             .from(notificationsTable)
@@ -565,17 +586,27 @@ export class AnalyticsRepository {
       doctorKpis,
       revenueByPaymentMethod,
     };
-    await analyticsCache.set(cacheKey, result);
+    if (!filtered) {
+      const cacheKey = analyticsCache.key("owner", clinicId);
+      await analyticsCache.set(cacheKey, result);
+    }
     return result;
   }
 
-  async getDoctorAnalytics(clinicId: string, doctorId: string): Promise<DoctorAnalytics> {
-    const cacheKey = analyticsCache.key("doctor", clinicId, doctorId);
-    const cached = await analyticsCache.get<DoctorAnalytics>(cacheKey);
-    if (cached) return cached;
+  async getDoctorAnalytics(clinicId: string, doctorId: string, range?: AnalyticsDateRange): Promise<DoctorAnalytics> {
+    const filtered = hasDateRange(range);
+    if (!filtered) {
+      const cacheKey = analyticsCache.key("doctor", clinicId, doctorId);
+      const cached = await analyticsCache.get<DoctorAnalytics>(cacheKey);
+      if (cached) return cached;
+    }
 
-    const monthStart = startOfMonth();
+    const periodStart = range?.dateFrom ?? startOfMonth();
+    const effectiveRange: AnalyticsDateRange = { dateFrom: periodStart, dateTo: range?.dateTo };
     const dayStart = startOfDay();
+
+    const procConds = buildCompletedProcRange(clinicId, effectiveRange, periodStart);
+    procConds.push(eq(proceduresTable.doctorId, doctorId));
 
     const [myPatients, monthlyProcedures, todayScheduled] = await Promise.all([
       db
@@ -590,14 +621,7 @@ export class AnalyticsRepository {
       db
         .select()
         .from(proceduresTable)
-        .where(
-          and(
-            eq(proceduresTable.clinicId, clinicId),
-            eq(proceduresTable.doctorId, doctorId),
-            eq(proceduresTable.status, "completed"),
-            gte(proceduresTable.completedAt, monthStart),
-          ),
-        ),
+        .where(and(...procConds)),
       db
         .select()
         .from(proceduresTable)
@@ -620,15 +644,23 @@ export class AnalyticsRepository {
       myRevenueThisMonth,
       scheduledToday: todayScheduled.length,
     };
-    await analyticsCache.set(cacheKey, result);
+    if (!filtered) {
+      const cacheKey = analyticsCache.key("doctor", clinicId, doctorId);
+      await analyticsCache.set(cacheKey, result);
+    }
     return result;
   }
 
-  async getAdminAnalytics(clinicId: string): Promise<AdminAnalytics> {
-    const cacheKey = analyticsCache.key("admin", clinicId);
-    const cached = await analyticsCache.get<AdminAnalytics>(cacheKey);
-    if (cached) return cached;
+  async getAdminAnalytics(clinicId: string, range?: AnalyticsDateRange): Promise<AdminAnalytics> {
+    const filtered = hasDateRange(range);
+    if (!filtered) {
+      const cacheKey = analyticsCache.key("admin", clinicId);
+      const cached = await analyticsCache.get<AdminAnalytics>(cacheKey);
+      if (cached) return cached;
+    }
 
+    const periodStart = range?.dateFrom ?? startOfDay();
+    const effectiveRange: AnalyticsDateRange = { dateFrom: periodStart, dateTo: range?.dateTo };
     const dayStart = startOfDay();
 
     const [allPatients, newToday, scheduledToday, redAlerts] = await Promise.all([
@@ -636,12 +668,7 @@ export class AnalyticsRepository {
       db
         .select()
         .from(patientsTable)
-        .where(
-          and(
-            eq(patientsTable.clinicId, clinicId),
-            gte(patientsTable.createdAt, dayStart),
-          ),
-        ),
+        .where(and(...buildCreatedAtRange(clinicId, effectiveRange, periodStart))),
       db
         .select()
         .from(proceduresTable)
@@ -677,7 +704,10 @@ export class AnalyticsRepository {
       scheduledToday: scheduledToday.length,
       redAlertCount: redAlerts.length,
     };
-    await analyticsCache.set(cacheKey, result);
+    if (!filtered) {
+      const cacheKey = analyticsCache.key("admin", clinicId);
+      await analyticsCache.set(cacheKey, result);
+    }
     return result;
   }
 

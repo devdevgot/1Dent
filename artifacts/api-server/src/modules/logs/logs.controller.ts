@@ -26,7 +26,7 @@ router.get(
         actionType: actionType || undefined,
         entityType: entityType || undefined,
         dateFrom: dateFrom ? new Date(dateFrom) : undefined,
-        dateTo: dateTo ? new Date(dateTo) : undefined,
+        dateTo: dateTo ? new Date(`${dateTo}T23:59:59.999`) : undefined,
         page: page ? parseInt(page, 10) : 1,
         limit: limit ? parseInt(limit, 10) : 50,
       })
