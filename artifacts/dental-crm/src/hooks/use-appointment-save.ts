@@ -114,6 +114,13 @@ export function useAppointmentSave({ onDone }: { onDone: () => void }) {
     onDone();
   }
 
+  async function removeMany(procIds: string[]) {
+    for (const id of procIds) {
+      await deleteMutation.mutateAsync({ id });
+    }
+    onDone();
+  }
+
   const isSaving =
     createPatientMutation.isPending ||
     createMutation.isPending ||
@@ -121,5 +128,5 @@ export function useAppointmentSave({ onDone }: { onDone: () => void }) {
     updateStatusMutation.isPending ||
     deleteMutation.isPending;
 
-  return { save, remove, isSaving };
+  return { save, remove, removeMany, isSaving };
 }

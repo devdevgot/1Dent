@@ -5,6 +5,7 @@ import {
   useListUsers,
   useListProcedureTemplates,
   useUpdateProcedure,
+  getListProceduresQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -46,6 +47,7 @@ import { useAppointmentSave } from "@/hooks/use-appointment-save";
 import { isCalendarProcedure } from "@/lib/calendar-procedures";
 import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-header";
+import { useToast } from "@/hooks/use-toast";
 
 /* ─── Appointment Group ─────────────────────────────────────────────────────
    Multiple procedures belonging to the same patient at the same time slot
@@ -73,7 +75,7 @@ function buildGroups(
     const timeLabel = proc.scheduledAt
       ? format(parseISO(proc.scheduledAt), "HH:mm")
       : null;
-    const key = `${proc.patientId ?? "unknown"}-${timeLabel ?? "notime"}`;
+    const key = `${proc.patientId ?? "unknown"}-${proc.doctorId ?? "nodoc"}-${timeLabel ?? "notime"}`;
 
     if (!map.has(key)) {
       const patient = patients.find((p) => p.id === proc.patientId);
@@ -200,6 +202,7 @@ function DayAppointmentsModal({
 /* ─── Main Page ─── */
 export default function AdminCalendar() {
   const qc = useQueryClient();
+  const { toast } = useToast();
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [filterDoctorId, setFilterDoctorId] = useState("");
@@ -207,6 +210,7 @@ export default function AdminCalendar() {
   const [dayViewDate, setDayViewDate] = useState<Date | null>(null);
   const [modalDate, setModalDate] = useState<Date | null>(null);
   const [editingProcedure, setEditingProcedure] = useState<ProcedureItem | null>(null);
+  const [editingGroupIds, setEditingGroupIds] = useState<string[]>([]);
   const [draggingKey, setDraggingKey] = useState<string | null>(null);
 
   const { data: procedureData } = useListProcedures();
@@ -247,7 +251,7 @@ export default function AdminCalendar() {
 
   const apptSave = useAppointmentSave({ onDone: closeModal });
   const dropMutation = useUpdateProcedure({
-    mutation: { onSuccess: () => qc.invalidateQueries({ queryKey: ["/procedures"] }) },
+    mutation: { onSuccess: () => qc.invalidateQueries({ queryKey: getListProceduresQueryKey() }) },
   });
 
   /* Month grid */
@@ -279,32 +283,41 @@ export default function AdminCalendar() {
     const d = new Date(day);
     d.setHours(9, 0, 0, 0);
     setEditingProcedure(null);
+    setEditingGroupIds([]);
     setModalDate(d);
     setDayViewDate(null);
   }
 
   function openEditModal(proc: ProcedureItem) {
+    const day = proc.scheduledAt ? parseISO(proc.scheduledAt) : new Date();
+    const group = getGroupsForDay(day).find((g) => g.procedures.some((p) => p.id === proc.id));
+    setEditingGroupIds(group?.procedures.map((p) => p.id) ?? [proc.id]);
     setEditingProcedure(proc);
-    setModalDate(proc.scheduledAt ? parseISO(proc.scheduledAt) : new Date());
+    setModalDate(day);
     setDayViewDate(null);
   }
 
   function closeModal() {
     setModalDate(null);
     setEditingProcedure(null);
+    setEditingGroupIds([]);
   }
 
   async function handleDrop(procIds: string[], day: Date) {
-    for (const procId of procIds) {
-      const proc = allProcedures.find((p) => p.id === procId);
-      if (!proc) continue;
-      const old = proc.scheduledAt ? parseISO(proc.scheduledAt) : new Date();
-      const newDate = new Date(day);
-      newDate.setHours(old.getHours(), old.getMinutes(), 0, 0);
-      await dropMutation.mutateAsync({
-        id: procId,
-        data: { scheduledAt: newDate.toISOString() },
-      });
+    try {
+      for (const procId of procIds) {
+        const proc = allProcedures.find((p) => p.id === procId);
+        if (!proc) continue;
+        const old = proc.scheduledAt ? parseISO(proc.scheduledAt) : new Date();
+        const newDate = new Date(day);
+        newDate.setHours(old.getHours(), old.getMinutes(), 0, 0);
+        await dropMutation.mutateAsync({
+          id: procId,
+          data: { scheduledAt: newDate.toISOString() },
+        });
+      }
+    } catch {
+      toast({ title: "Не удалось перенести запись", variant: "destructive" });
     }
   }
 
@@ -413,14 +426,15 @@ export default function AdminCalendar() {
                   key={day.toISOString()}
                   onClick={() => openDayView(day)}
                   onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
+                  onDrop={async (e) => {
                     e.preventDefault();
                     const raw = e.dataTransfer.getData("groupProcIds");
-                    if (raw) {
-                      try {
-                        const ids = JSON.parse(raw) as string[];
-                        handleDrop(ids, day);
-                      } catch {}
+                    if (!raw) return;
+                    try {
+                      const ids = JSON.parse(raw) as string[];
+                      await handleDrop(ids, day);
+                    } catch (err) {
+                      if (!(err instanceof SyntaxError)) return;
                     }
                   }}
                   className={cn(
@@ -525,7 +539,7 @@ export default function AdminCalendar() {
           doctors={doctors}
           templates={templates}
           onSave={(data) => apptSave.save(data, editingProcedure)}
-          onDelete={editingProcedure ? () => apptSave.remove(editingProcedure.id) : undefined}
+          onDelete={editingProcedure ? () => apptSave.removeMany(editingGroupIds) : undefined}
           onClose={closeModal}
           isSaving={isSaving}
         />

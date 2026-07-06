@@ -55,6 +55,18 @@ function toStr(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
 
+function parseDateParam(dateStr: string): Date | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return null;
+  const d = new Date(`${dateStr}T00:00:00`);
+  if (Number.isNaN(d.getTime()) || toStr(d) !== dateStr) return null;
+  return d;
+}
+
+function isVisibleOnTimeline(scheduledAt: string) {
+  const startMin = timeMins(scheduledAt);
+  return startMin >= START_H * 60 && startMin < END_H * 60;
+}
+
 function getWeek(date: Date): Date[] {
   // Mon-first week
   const dow  = (date.getDay() + 6) % 7; // 0=Mon
@@ -82,12 +94,27 @@ export default function DoctorScheduleDayPage() {
   const params = useParams<{ date: string }>();
 
   const dateStr  = params.date ?? toStr(new Date());
-  const selDate  = new Date(dateStr + "T00:00:00");
+  const selDate  = parseDateParam(dateStr);
+
+  useEffect(() => {
+    if (!selDate) navigate("/schedule", { replace: true });
+  }, [selDate, navigate]);
+
+  if (!selDate) return null;
+
+  return <DoctorScheduleDayContent dateStr={dateStr} selDate={selDate} />;
+}
+
+function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDate: Date }) {
+  const { t } = useTranslation();
+  const { user } = useAuthStore();
+  const [, navigate] = useLocation();
+
   const weekDays = getWeek(selDate);
   const todayStr = toStr(new Date());
 
-  /* Modal state */
-  const [showModal, setShowModal] = useState(false);
+  /* Modal state: undefined = closed, null = create, Procedure = edit */
+  const [editingProcedure, setEditingProcedure] = useState<Procedure | null | undefined>(undefined);
 
   /* Live clock */
   const [nowDate, setNowDate] = useState(new Date());
@@ -129,6 +156,11 @@ export default function DoctorScheduleDayPage() {
       .sort((a, b) => new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime());
   }, [pData, user?.id, dateStr]);
 
+  const visibleProcs = useMemo(
+    () => dayProcs.filter((p) => p.scheduledAt && isVisibleOnTimeline(p.scheduledAt)),
+    [dayProcs],
+  );
+
   /* Modal data */
   const patientsForModal = useMemo(
     () => (ptData?.data?.patients ?? []).map((p) => ({
@@ -149,7 +181,7 @@ export default function DoctorScheduleDayPage() {
     () => (templateData?.data?.templates ?? []) as ProcedureTemplate[],
     [templateData],
   );
-  const apptSave = useAppointmentSave({ onDone: () => setShowModal(false) });
+  const apptSave = useAppointmentSave({ onDone: () => setEditingProcedure(undefined) });
 
   const hours = Array.from({ length: END_H - START_H + 1 }, (_, i) => START_H + i);
   const totalH = (END_H - START_H) * HOUR_H;
@@ -167,9 +199,11 @@ export default function DoctorScheduleDayPage() {
   };
 
   const appointmentSubtitle =
-    dayProcs.length > 0
-      ? `${dayProcs.length} ${dayProcs.length === 1 ? "приём" : dayProcs.length < 5 ? "приёма" : "приёмов"}`
-      : "Нет приёмов";
+    visibleProcs.length > 0
+      ? `${visibleProcs.length} ${visibleProcs.length === 1 ? "приём" : visibleProcs.length < 5 ? "приёма" : "приёмов"}`
+      : dayProcs.length > 0
+        ? `${dayProcs.length} вне рабочих часов`
+        : "Нет приёмов";
 
   return (
     <PageShell className="flex flex-col h-full overflow-hidden" animate={false}>
@@ -181,7 +215,7 @@ export default function DoctorScheduleDayPage() {
         right={
           <button
             type="button"
-            onClick={() => setShowModal(true)}
+            onClick={() => setEditingProcedure(null)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--ds-primary)] text-white text-xs font-semibold hover:bg-[var(--primary-hover)] hover:scale-105 transition-all shadow-sm"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -264,10 +298,9 @@ export default function DoctorScheduleDayPage() {
           )}
 
           {/* Events — only scheduled / in-progress appointments */}
-          {dayProcs.map(proc => {
+          {visibleProcs.map(proc => {
             if (!proc.scheduledAt) return null;
             const startMin = timeMins(proc.scheduledAt);
-            if (startMin < START_H * 60 || startMin >= END_H * 60) return null;
             const top    = minToPx(startMin - START_H * 60);
             const height = Math.max(minToPx(60), 44);
             const sc     = STATUS_COLORS[proc.status as ProcedureStatus];
@@ -275,9 +308,11 @@ export default function DoctorScheduleDayPage() {
             const patient = patients.get(proc.patientId);
 
             return (
-              <div
+              <button
                 key={proc.id}
-                className={`absolute left-14 right-3 rounded-xl overflow-hidden flex ${sc.bg}`}
+                type="button"
+                onClick={() => setEditingProcedure(proc)}
+                className={`absolute left-14 right-3 rounded-xl overflow-hidden flex text-left cursor-pointer hover:ring-2 hover:ring-[var(--ds-primary)]/30 transition-shadow ${sc.bg}`}
                 style={{ top: top + 2, height: height - 4 }}
               >
                 {/* Left accent bar */}
@@ -312,7 +347,7 @@ export default function DoctorScheduleDayPage() {
                     </p>
                   )}
                 </div>
-              </div>
+              </button>
             );
           })}
 
@@ -329,16 +364,17 @@ export default function DoctorScheduleDayPage() {
       </div>
 
       {/* ── Appointment modal ── */}
-      {showModal && (
+      {editingProcedure !== undefined && (
         <AppointmentModal
           date={selDate}
-          procedure={null}
+          procedure={editingProcedure}
           patients={patientsForModal}
           doctors={doctorsForModal}
           templates={templatesForModal}
           defaultDoctorId={user?.id}
-          onSave={(data) => apptSave.save(data, null)}
-          onClose={() => setShowModal(false)}
+          onSave={(data) => apptSave.save(data, editingProcedure)}
+          onDelete={editingProcedure ? () => apptSave.remove(editingProcedure.id) : undefined}
+          onClose={() => setEditingProcedure(undefined)}
           isSaving={apptSave.isSaving}
         />
       )}
