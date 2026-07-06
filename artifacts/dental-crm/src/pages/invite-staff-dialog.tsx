@@ -351,7 +351,12 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
           hireDate: data.hireDate || undefined,
           salaryType: data.salaryType,
           fixedAmount: data.salaryType === "fixed" || data.salaryType === "fixed_plus_commission" ? data.fixedAmount : undefined,
-          commissionPercent: data.salaryType === "commission" || data.salaryType === "fixed_plus_commission" ? data.commissionPercent : undefined,
+          commissionPercent:
+            data.salaryType === "commission"
+            || data.salaryType === "fixed_plus_commission"
+            || data.salaryType === "hourly"
+              ? data.commissionPercent
+              : undefined,
           hourlyRate: data.salaryType === "hourly" ? data.hourlyRate : undefined,
         }),
       });

@@ -143,6 +143,8 @@ export const UserRole = {
   doctor: "doctor",
   accountant: "accountant",
   warehouse: "warehouse",
+  assistant: "assistant",
+  nurse: "nurse",
 } as const;
 
 export interface User {
@@ -151,6 +153,7 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
+  maxPatientsPerDay?: number | null;
   createdAt: string;
 }
 

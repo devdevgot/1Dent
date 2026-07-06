@@ -220,12 +220,7 @@ export default function StaffPage() {
 
   const updateMutation = useUpdateUser({
     mutation: {
-      onSuccess: () => {
-        invalidate();
-        setEditDialogOpen(false);
-        setEditingUser(null);
-        toast.success(t("employees.updated", "Данные обновлены"));
-      },
+      onSuccess: () => invalidate(),
       onError: () => toast.error(t("employees.updateError", "Ошибка обновления")),
     },
   });
@@ -266,44 +261,55 @@ export default function StaffPage() {
 
   const handleEditSave = async (formData: EmployeeFormData) => {
     if (!editingUser) return;
-    await updateMutation.mutateAsync({
-      id: editingUser.id,
-      data: {
-        name: formData.name,
-        role: formData.role as any,
-        phone: formData.phone || null,
-        position: (formData.role === "doctor" || formData.role === "assistant" || formData.role === "nurse")
-          ? (formData.specialties[0] || null)
-          : (formData.position || null),
-        specialty: (formData.role === "doctor" || formData.role === "assistant" || formData.role === "nurse")
-          ? (formData.specialties.join(", ") || null)
-          : null,
-        hireDate: formData.hireDate || null,
-        password: formData.password || undefined,
-      },
-    });
-    if (isOwnerOrAdmin) {
-      await updateSalaryMutation.mutateAsync({
-        userId: editingUser.id,
+    try {
+      await updateMutation.mutateAsync({
+        id: editingUser.id,
         data: {
-          salaryType: formData.salaryType as SalaryType,
-          fixedAmount: formData.salaryType === "hourly" ? formData.hourlyRate : formData.fixedAmount,
-          commissionPercent: formData.commissionPercent,
+          name: formData.name,
+          ...(editingUser.role !== "owner" ? { role: formData.role as any } : {}),
+          phone: formData.phone || null,
+          position: (formData.role === "doctor" || formData.role === "assistant" || formData.role === "nurse")
+            ? (formData.specialties[0] || null)
+            : (formData.position || null),
+          specialty: (formData.role === "doctor" || formData.role === "assistant" || formData.role === "nurse")
+            ? (formData.specialties.join(", ") || null)
+            : null,
+          hireDate: formData.hireDate || null,
+          password: formData.password || undefined,
         },
       });
-    }
-    if (formData.role === "doctor" && formData.maxPatientsChanged) {
-      await capacityMutation.mutateAsync({
-        id: editingUser.id,
-        data: { maxPatientsPerDay: formData.maxPatientsPerDay },
-      });
-    }
-    if (formData.isActive !== (editingUser.isActive !== false)) {
-      await statusMutation.mutateAsync({ id: editingUser.id, isActive: formData.isActive });
+      if (isOwnerOrAdmin) {
+        await updateSalaryMutation.mutateAsync({
+          userId: editingUser.id,
+          data: {
+            salaryType: formData.salaryType as SalaryType,
+            fixedAmount: formData.salaryType === "hourly" ? formData.hourlyRate : formData.fixedAmount,
+            commissionPercent: formData.commissionPercent,
+          },
+        });
+      }
+      if (formData.role === "doctor" && formData.maxPatientsChanged) {
+        await capacityMutation.mutateAsync({
+          id: editingUser.id,
+          data: { maxPatientsPerDay: formData.maxPatientsPerDay },
+        });
+      }
+      if (formData.isActive !== (editingUser.isActive !== false) && editingUser.role !== "owner") {
+        await statusMutation.mutateAsync({ id: editingUser.id, isActive: formData.isActive });
+      }
+      setEditDialogOpen(false);
+      setEditingUser(null);
+      toast.success(t("employees.updated", "Данные обновлены"));
+    } catch {
+      // Individual mutation onError handlers surface API failures.
     }
   };
 
-  const isSaving = updateMutation.isPending;
+  const isSaving =
+    updateMutation.isPending
+    || updateSalaryMutation.isPending
+    || capacityMutation.isPending
+    || statusMutation.isPending;
 
   return (
     <PageShell animate={false}>

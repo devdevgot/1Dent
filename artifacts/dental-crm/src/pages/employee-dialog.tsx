@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type FormEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, User2, Briefcase, Wallet, Eye, EyeOff, ToggleLeft, ToggleRight, ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -197,6 +197,8 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabKey>("personal");
   const [showPassword, setShowPassword] = useState(false);
+  const [formError, setFormError] = useState("");
+  const formRef = useRef<HTMLFormElement>(null);
 
   const defaultForm: EmployeeFormData = {
     name: "", email: "", password: "", role: "doctor",
@@ -211,13 +213,15 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
     if (!open) {
       setActiveTab("personal");
       setShowPassword(false);
+      setFormError("");
     }
     if (editUser) {
+      const capacity = editUser.maxPatientsPerDay ?? 15;
       setForm({
         name: editUser.name ?? "",
         email: editUser.email ?? "",
         password: "",
-        role: (editUser.role as Role) ?? "doctor",
+        role: (ROLES.includes(editUser.role as Role) ? editUser.role : "doctor") as Role,
         isActive: editUser.isActive !== false,
         phone: editUser.phone ?? "",
         position: editUser.position ?? "",
@@ -228,7 +232,7 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
           ? [editUser.position]
           : [],
         hireDate: editUser.hireDate ?? "",
-        maxPatientsPerDay: 15,
+        maxPatientsPerDay: capacity,
         maxPatientsChanged: false,
         salaryType: (editUser.salarySettings?.salaryType as EmployeeFormData["salaryType"]) ?? "fixed",
         fixedAmount: (editUser.salarySettings?.salaryType as string) === "hourly" ? 0 : Number(editUser.salarySettings?.fixedAmount ?? 0),
@@ -251,7 +255,39 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
     if (e.key === "Enter") e.preventDefault();
   };
 
+  const validateForm = (): boolean => {
+    if (!form.name.trim()) {
+      setFormError(t("employees.nameRequired", "Укажите ФИО сотрудника"));
+      setActiveTab("personal");
+      return false;
+    }
+    if (!isEdit && !form.email.trim()) {
+      setFormError(t("employees.emailRequired", "Укажите email"));
+      setActiveTab("personal");
+      return false;
+    }
+    if (!isEdit && form.password.length < 6) {
+      setFormError(t("employees.passwordMin", "Пароль должен быть не короче 6 символов"));
+      setActiveTab("personal");
+      return false;
+    }
+    if (isEdit && form.password && form.password.length < 6) {
+      setFormError(t("employees.passwordMin", "Пароль должен быть не короче 6 символов"));
+      setActiveTab("personal");
+      return false;
+    }
+    setFormError("");
+    return true;
+  };
+
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+    onSave(form);
+  };
+
   const isEdit = !!editUser;
+  const isOwnerAccount = editUser?.role === "owner";
 
   return (
     <AppDialog
@@ -282,15 +318,18 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
               </button>
             ) : (
               <button
-                type="button"
+                type="submit"
+                form="employee-dialog-form"
                 disabled={isSaving}
-                onClick={() => onSave(form)}
                 className="dash-btn dash-btn-primary flex-1"
               >
                 {isSaving ? t("common.saving", "Сохранение...") : (isEdit ? t("employees.save", "Сохранить") : t("employees.create", "Создать"))}
               </button>
             )}
           </div>
+          {formError && (
+            <p className="text-xs text-[#dc2626] text-center">{formError}</p>
+          )}
           {activeTab === "salary" && !isEdit && (
             <p className="text-xs text-[var(--text-secondary)] text-center">
               {t("employees.passwordNote", "После создания пароль будет показан — скопируйте его.")}
@@ -317,7 +356,12 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
         })}
       </div>
 
-      <form onSubmit={(e) => e.preventDefault()} onKeyDown={handleKeyDown}>
+      <form
+        id="employee-dialog-form"
+        ref={formRef}
+        onSubmit={handleSubmit}
+        onKeyDown={handleKeyDown}
+      >
         <div className="space-y-4 pb-2">
                 <AnimatePresence mode="wait">
                   {/* ─── Tab: Personal ───────────────────────────────── */}
@@ -404,7 +448,7 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                         />
                       </div>
 
-                      {isEdit && (
+                      {isEdit && !isOwnerAccount && (
                         <div>
                           <label className="block text-xs font-semibold text-[#64748b] mb-2">
                             {t("employees.status", "Статус")}
@@ -449,6 +493,11 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                         <label className="block text-xs font-semibold text-[#64748b] mb-2">
                           {t("employees.role", "Роль")} *
                         </label>
+                        {isOwnerAccount ? (
+                          <div className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 text-sm font-semibold text-[#64748b] bg-[#faf8f4]">
+                            {t("role.owner", "Владелец")}
+                          </div>
+                        ) : (
                         <div className="grid grid-cols-2 gap-2">
                           {ROLES.map((r) => (
                             <button
@@ -465,6 +514,7 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                             </button>
                           ))}
                         </div>
+                        )}
                       </div>
 
                       {(form.role === "doctor" || form.role === "assistant" || form.role === "nurse") ? (
@@ -501,7 +551,7 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                             type="text"
                             inputMode="numeric"
                             placeholder="15"
-                            value={form.maxPatientsPerDay === 15 && !form.maxPatientsChanged ? "" : form.maxPatientsPerDay || ""}
+                            value={form.maxPatientsPerDay === 15 && !form.maxPatientsChanged ? "" : String(form.maxPatientsPerDay || "")}
                             onChange={(e) => {
                               const v = e.target.value.replace(/\D/g, "");
                               const n = v === "" ? 15 : Math.min(50, Math.max(1, Number(v)));
