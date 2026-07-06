@@ -723,8 +723,7 @@ async function extractImageText(id: string, buffer: Buffer, mimeType: string, na
 
 async function extractFileText(id: string, objectPath: string, mimeType: string, name?: string): Promise<void> {
   try {
-    const file = await storage.getObjectEntityFile(objectPath);
-    const [buffer] = await file.download();
+    const { buffer } = await storage.readObjectEntityBuffer(objectPath);
 
     // Handle images via vision model
     if (IMAGE_MIME_TYPES.has(mimeType) || mimeType.startsWith("image/")) {

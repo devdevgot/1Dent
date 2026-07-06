@@ -11,9 +11,14 @@ import { cn } from "@/lib/utils";
 import { TabletChartSection } from "./tablet-chart-section";
 import { TabletPresentationMode } from "./tablet-presentation-mode";
 import {
-  VIDEOS, CONDITION_META, STATUS_META, fmtTenge, initials,
-  type PlanStage, type TreatmentVideo, type ToothCondition,
+  CONDITION_META, STATUS_META, fmtTenge, initials,
+  type PlanStage, type ToothCondition,
 } from "./mock-data";
+import {
+  useTreatmentVideos,
+  fetchVideoPlayUrl,
+  type TreatmentVideo,
+} from "@/lib/treatment-videos-api";
 import { apiPatientToTablet, apiPlanToStages, apiTeethToMap } from "./tablet-patient-adapter";
 import { KANBAN_COLUMNS } from "@/lib/patient-utils";
 
@@ -68,8 +73,10 @@ export function PatientCard({ patientId, onBack }: { patientId: string; onBack: 
   const progress = allItems.length ? Math.round((doneCount / allItems.length) * 100) : 0;
 
   const selectedCond = selectedFdi ? (teeth[selectedFdi] ?? "healthy") : null;
+  const { data: allVideos = [] } = useTreatmentVideos();
+
   const relatedVideos = selectedCond
-    ? VIDEOS.filter((v) => v.relatedConditions.includes(selectedCond))
+    ? allVideos.filter((v) => v.relatedConditions.includes(selectedCond))
     : [];
 
   if (isLoading || !patient) {
@@ -380,9 +387,27 @@ function StatusIcon({ status }: { status: "completed" | "in_progress" | "pending
 
 // ── Видеотека ─────────────────────────────────────────────────────────────────
 function VideoLibrary({ onPlay }: { onPlay: (v: TreatmentVideo) => void }) {
-  const cats = Array.from(new Set(VIDEOS.map((v) => v.category)));
+  const { data: videos = [], isLoading, isError } = useTreatmentVideos();
+  const cats = Array.from(new Set(videos.map((v) => v.category)));
   const [cat, setCat] = useState<string>("all");
-  const list = cat === "all" ? VIDEOS : VIDEOS.filter((v) => v.category === cat);
+  const list = cat === "all" ? videos : videos.filter((v) => v.category === cat);
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-16">
+        <Loader2 className="h-10 w-10 animate-spin text-[#1f75fe]" />
+      </div>
+    );
+  }
+
+  if (isError || list.length === 0) {
+    return (
+      <div className="mx-auto max-w-lg p-8 text-center text-sm text-[#94a3b8]">
+        {isError ? "Не удалось загрузить видеотеку" : "Видеотека пока пуста"}
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-5xl p-4">
       <div className="mb-4 flex flex-wrap gap-2">
@@ -428,6 +453,25 @@ function CatChip({ active, onClick, children }: { active: boolean; onClick: () =
 }
 
 function VideoPlayer({ video, onClose }: { video: TreatmentVideo; onClose: () => void }) {
+  const [src, setSrc] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let revoked: string | null = null;
+    setSrc(null);
+    setError(false);
+
+    void fetchVideoPlayUrl(video.id)
+      .then((url) => {
+        setSrc(url);
+      })
+      .catch(() => setError(true));
+
+    return () => {
+      if (revoked) URL.revokeObjectURL(revoked);
+    };
+  }, [video.id]);
+
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -444,12 +488,19 @@ function VideoPlayer({ video, onClose }: { video: TreatmentVideo; onClose: () =>
         </button>
       </div>
       <div className="flex flex-1 items-center justify-center" onClick={(e) => e.stopPropagation()}>
-        <div className="flex aspect-video w-full max-w-4xl items-center justify-center rounded-2xl bg-gradient-to-br from-[#1f75fe]/20 to-[#7c3aed]/20">
-          <div className="flex flex-col items-center gap-3 text-white/80">
-            <PlayCircle className="h-20 w-20" />
-            <p className="text-sm">Демо-плеер · видео подключим с бэкендом</p>
-          </div>
-        </div>
+        {error ? (
+          <p className="text-sm text-white/70">Не удалось загрузить видео</p>
+        ) : !src ? (
+          <Loader2 className="h-12 w-12 animate-spin text-white/80" />
+        ) : (
+          <video
+            src={src}
+            controls
+            autoPlay
+            playsInline
+            className="aspect-video w-full max-w-4xl rounded-2xl bg-black"
+          />
+        )}
       </div>
     </motion.div>
   );

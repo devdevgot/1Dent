@@ -107,6 +107,27 @@ bash scripts/railway-deploy.sh
 | `FRONTEND_URL` | `https://1dent.kz` |
 | `PUBLIC_URL` | `https://1dent.kz` |
 
+### Cloudflare R2 (видео планшета + файлы)
+
+| Переменная | Значение |
+|---|---|
+| `R2_ACCOUNT_ID` | `81fb0846943c98f6dabf2881deccb7f4` |
+| `R2_BUCKET_NAME` | `onedent` |
+| `R2_ENDPOINT` | `https://81fb0846943c98f6dabf2881deccb7f4.r2.cloudflarestorage.com` |
+| `R2_ACCESS_KEY_ID` | из Cloudflare R2 API Token |
+| `R2_SECRET_ACCESS_KEY` | из Cloudflare R2 API Token |
+| `PRIVATE_OBJECT_DIR` | `private` |
+| `PUBLIC_OBJECT_SEARCH_PATHS` | `public` |
+| `R2_PUBLIC_URL` | опционально: custom domain bucket (CDN) |
+
+Быстрая настройка (после создания R2 API token):
+
+```bash
+export R2_ACCESS_KEY_ID="..."
+export R2_SECRET_ACCESS_KEY="..."
+bash scripts/railway-r2-setup.sh
+```
+
 Build: `bash ./scripts/deploy-build.sh` (из `railway.toml`)  
 Start: `pnpm --filter @workspace/api-server run start`
 
