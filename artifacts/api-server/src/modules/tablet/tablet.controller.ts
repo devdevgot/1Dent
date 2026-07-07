@@ -7,7 +7,8 @@ import { TabletService } from "./tablet.service";
 const router: IRouter = Router();
 const service = new TabletService();
 
-const tabletRoles = roleGuard("owner", "doctor", "admin");
+const tabletRoles = roleGuard("owner", "doctor", "admin", "assistant", "nurse");
+const tabletOwnerRoles = roleGuard("owner");
 
 router.use(authMiddleware);
 router.use(tabletRoles);
@@ -26,6 +27,11 @@ const resendPairingSchema = z.object({
   sessionId: z.string().min(1),
 });
 
+const confirmPairingSchema = z.object({
+  sessionId: z.string().min(1),
+  code: z.string().min(6).max(6),
+});
+
 router.get("/me", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const data = await service.getMe(req.user!.userId, req.user!.role);
@@ -38,7 +44,20 @@ router.get("/me", async (req: Request, res: Response, next: NextFunction) => {
 router.post("/cabinets/pairing-code", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const cabinetId = typeof req.body?.cabinetId === "string" ? req.body.cabinetId : undefined;
-    const data = await service.issuePairingCode(req.user!.clinicId, cabinetId);
+    const data = await service.issuePairingCode(req.user!.clinicId, req.user!.role, cabinetId);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/pending-pairing", tabletOwnerRoles, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const data = await service.getPendingPairing(
+      req.user!.userId,
+      req.user!.role,
+      req.user!.clinicId,
+    );
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -87,7 +106,7 @@ router.post("/link", async (req: Request, res: Response, next: NextFunction) => 
   }
 });
 
-router.post("/link/resend-pairing", async (req: Request, res: Response, next: NextFunction) => {
+router.post("/link/resend-pairing", tabletOwnerRoles, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const parsed = resendPairingSchema.safeParse(req.body);
     if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
@@ -97,6 +116,22 @@ router.post("/link/resend-pairing", async (req: Request, res: Response, next: Ne
       req.user!.role,
       parsed.data.sessionId,
     );
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/link/confirm-pairing", tabletOwnerRoles, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const parsed = confirmPairingSchema.safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+
+    const data = await service.confirmPairing(parsed.data.sessionId, parsed.data.code, {
+      userId: req.user!.userId,
+      role: req.user!.role,
+      clinicId: req.user!.clinicId,
+    });
     res.json({ success: true, data });
   } catch (err) {
     next(err);

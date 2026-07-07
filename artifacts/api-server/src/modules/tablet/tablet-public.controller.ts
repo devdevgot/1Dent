@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { z } from "zod";
 import { TabletService } from "./tablet.service";
-import { ValidationError } from "../../shared/errors";
+import { ValidationError, ForbiddenError } from "../../shared/errors";
 import { registerTabletVideosPublicRoutes } from "../tablet-videos/tablet-videos.routes";
 
 const router: IRouter = Router();
@@ -13,10 +13,6 @@ const createSessionSchema = z.object({
 
 const verifyCabinetPinSchema = z.object({
   pin: z.string().length(4),
-});
-
-const confirmPairingSchema = z.object({
-  code: z.string().min(6).max(6),
 });
 
 const unlockByUserPinSchema = z.object({
@@ -47,12 +43,9 @@ router.get("/sessions/:sessionId", async (req: Request, res: Response, next: Nex
   }
 });
 
-router.post("/sessions/:sessionId/confirm-pairing", async (req: Request, res: Response, next: NextFunction) => {
+router.post("/sessions/:sessionId/confirm-pairing", async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const parsed = confirmPairingSchema.safeParse(req.body);
-    if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
-    const data = await service.confirmPairing(String(req.params.sessionId), parsed.data.code);
-    res.json({ success: true, data });
+    next(new ForbiddenError("Подтверждение подключения доступно только владельцу клиники через мобильное приложение"));
   } catch (err) {
     next(err);
   }

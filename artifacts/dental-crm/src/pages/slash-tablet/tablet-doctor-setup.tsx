@@ -90,7 +90,7 @@ export function TabletConnectModal({
               </button>
             </div>
             <p className="mb-6 max-w-xs text-sm leading-relaxed text-[#64748b]">
-              Введите этот код на планшете, если не удалось подключиться через QR.
+              Подтвердите подключение на телефоне. Код не отображается на планшете.
             </p>
           </>
         ) : null}

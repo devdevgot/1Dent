@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { randomUUID, randomBytes, createHash } from "crypto";
+import { db, notificationsTable } from "@workspace/db";
 import { TabletRepository } from "./tablet.repository";
 import { AuthRepository } from "../auth/auth.repository";
 import {
@@ -20,7 +21,11 @@ const ROLE_COLORS: Record<string, string> = {
   doctor: "#1f75fe",
   owner: "#7c3aed",
   admin: "#0ea5e9",
+  assistant: "#10b981",
+  nurse: "#f59e0b",
 };
+
+const TABLET_UNLOCK_ROLES: UserRole[] = ["doctor", "owner", "admin", "assistant", "nurse"];
 
 function hashToken(raw: string): string {
   return createHash("sha256").update(raw).digest("hex");
@@ -32,8 +37,14 @@ function generateLinkToken(): { raw: string; hash: string } {
 }
 
 function assertTabletRole(role: UserRole) {
-  if (role !== "doctor" && role !== "owner" && role !== "admin") {
-    throw new ForbiddenError("Только врач или владелец может войти в планшетный кабинет");
+  if (!TABLET_UNLOCK_ROLES.includes(role)) {
+    throw new ForbiddenError("Только сотрудник клиники может войти в планшетный кабинет");
+  }
+}
+
+function assertTabletOwner(role: UserRole) {
+  if (role !== "owner") {
+    throw new ForbiddenError("Только владелец клиники может подтвердить подключение планшета");
   }
 }
 
@@ -60,6 +71,46 @@ const TABLET_AUTH_TTL = "12h";
 export class TabletService {
   private repo = new TabletRepository();
   private authRepo = new AuthRepository();
+
+  private async notifyOwnerPairing(
+    owner: { id: string; clinicId: string },
+    scannerName: string,
+    cabinet: { id: string; name: string },
+    pairingCode: string,
+    sessionId: string,
+  ) {
+    await db.insert(notificationsTable).values({
+      id: randomUUID(),
+      clinicId: owner.clinicId,
+      userId: owner.id,
+      type: "system",
+      message: `${scannerName} запросил подключение планшета «${cabinet.name}». Откройте уведомление, чтобы подтвердить.`,
+      read: false,
+      payload: {
+        kind: "tablet_pairing",
+        sessionId,
+        pairingCode,
+        cabinetId: cabinet.id,
+        cabinetName: cabinet.name,
+      },
+    });
+  }
+
+  async getPendingPairing(_userId: string, role: UserRole, clinicId: string) {
+    assertTabletOwner(role);
+
+    const session = await this.repo.findAwaitingPairingForClinic(clinicId);
+    if (!session?.cabinetId) return null;
+
+    const cabinet = await this.repo.findCabinetById(session.cabinetId);
+    if (!cabinet?.pairingCode) return null;
+
+    return {
+      sessionId: session.id,
+      pairingCode: cabinet.pairingCode,
+      cabinet: { id: cabinet.id, name: cabinet.name },
+    };
+  }
 
   private buildDoctorPublic(
     doc: { id: string; name: string; role: UserRole; specialty: string | null },
@@ -139,7 +190,8 @@ export class TabletService {
     };
   }
 
-  async issuePairingCode(clinicId: string, cabinetId?: string) {
+  async issuePairingCode(clinicId: string, role: UserRole, cabinetId?: string) {
+    assertTabletOwner(role);
     let cabinet = cabinetId
       ? await this.repo.findCabinetById(cabinetId)
       : await this.repo.findDefaultCabinet(clinicId);
@@ -281,10 +333,6 @@ export class TabletService {
           ? { id: session.cabinetId, name: "Кабинет" }
           : null,
       doctor,
-      pairingCode:
-        session.status === "awaiting_pairing" && cabinet?.pairingCode
-          ? cabinet.pairingCode
-          : null,
       expiresAt: session.expiresAt.toISOString(),
       unlockedAt: session.unlockedAt?.toISOString() ?? null,
       auth,
@@ -292,7 +340,7 @@ export class TabletService {
   }
 
   async resendPairingCode(userId: string, role: UserRole, sessionId: string) {
-    assertTabletRole(role);
+    assertTabletOwner(role);
 
     const session = await this.repo.findSessionById(sessionId);
     if (!session) throw new NotFoundError("Сессия не найдена");
@@ -320,7 +368,15 @@ export class TabletService {
     };
   }
 
-  async confirmPairing(sessionId: string, code: string) {
+  async confirmPairing(
+    sessionId: string,
+    code: string,
+    options?: { userId?: string; role?: UserRole; clinicId?: string },
+  ) {
+    if (options?.role) {
+      assertTabletOwner(options.role);
+    }
+
     const normalized = code.replace(/\D/g, "");
     if (!/^\d{6}$/.test(normalized)) {
       throw new ValidationError("Код подключения должен состоять из 6 цифр");
@@ -332,6 +388,9 @@ export class TabletService {
       throw new ValidationError("Сессия не ожидает подключения");
     }
     if (!session.cabinetId) throw new ValidationError("Кабинет не назначен");
+    if (options?.clinicId && session.clinicId !== options.clinicId) {
+      throw new ForbiddenError("Сессия не принадлежит вашей клинике");
+    }
 
     const cabinet = await this.repo.findCabinetByPairingCode(normalized);
     if (!cabinet || cabinet.id !== session.cabinetId) {
@@ -449,11 +508,24 @@ export class TabletService {
       if (!assigned) throw new NotFoundError("Не удалось начать подключение планшета");
 
       const doctor = await this.repo.getDoctorPublic(userId);
+      const isOwner = role === "owner";
+      const owner = isOwner ? null : await this.repo.findClinicOwner(user.clinicId);
+
+      if (owner) {
+        await this.notifyOwnerPairing(
+          owner,
+          user.name,
+          { id: cabinet.id, name: cabinet.name },
+          pairingCode,
+          session.id,
+        );
+      }
 
       return {
         success: true as const,
         pairingRequired: true as const,
-        pairingCode,
+        pairingCode: isOwner ? pairingCode : undefined,
+        codeSentToOwner: !isOwner,
         sessionId: session.id,
         cabinet: { id: cabinet.id, name: cabinet.name },
         doctor: doctor ? this.buildDoctorPublic(doctor, role) : null,

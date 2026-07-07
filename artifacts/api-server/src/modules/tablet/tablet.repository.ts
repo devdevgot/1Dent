@@ -1,6 +1,8 @@
 import { eq, and, desc, gt, inArray } from "drizzle-orm";
-import { db, tabletCabinetsTable, tabletSessionsTable, usersTable } from "@workspace/db";
+import { db, tabletCabinetsTable, tabletSessionsTable, usersTable, type UserRole } from "@workspace/db";
 import type { TabletCabinet, TabletSession } from "@workspace/db";
+
+const TABLET_UNLOCK_ROLES: UserRole[] = ["doctor", "owner", "admin", "assistant", "nurse"];
 
 export class TabletRepository {
   async findCabinetById(id: string): Promise<TabletCabinet | null> {
@@ -210,9 +212,45 @@ export class TabletRepository {
       .where(
         and(
           eq(usersTable.clinicId, clinicId),
-          inArray(usersTable.role, ["doctor", "owner", "admin"]),
+          inArray(usersTable.role, TABLET_UNLOCK_ROLES),
         ),
       );
+  }
+
+  async findClinicOwner(clinicId: string) {
+    const [row] = await db
+      .select({
+        id: usersTable.id,
+        name: usersTable.name,
+        clinicId: usersTable.clinicId,
+      })
+      .from(usersTable)
+      .where(
+        and(
+          eq(usersTable.clinicId, clinicId),
+          eq(usersTable.role, "owner"),
+          eq(usersTable.isActive, true),
+        ),
+      )
+      .limit(1);
+    return row ?? null;
+  }
+
+  async findAwaitingPairingForClinic(clinicId: string) {
+    const now = new Date();
+    const [row] = await db
+      .select()
+      .from(tabletSessionsTable)
+      .where(
+        and(
+          eq(tabletSessionsTable.clinicId, clinicId),
+          eq(tabletSessionsTable.status, "awaiting_pairing"),
+          gt(tabletSessionsTable.expiresAt, now),
+        ),
+      )
+      .orderBy(desc(tabletSessionsTable.createdAt))
+      .limit(1);
+    return row ?? null;
   }
 
   async getDoctorPublic(userId: string) {

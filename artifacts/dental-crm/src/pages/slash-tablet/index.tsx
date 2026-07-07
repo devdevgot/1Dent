@@ -54,11 +54,6 @@ export default function SlashTabletPage() {
                 setCabinetName(cabinet.name);
                 setStep("patients");
               }}
-              onPinUnlock={({ doctor: doc, cabinet }) => {
-                setDoctor(doc);
-                setCabinetName(cabinet.name);
-                setStep("patients");
-              }}
             />
           </motion.div>
         )}

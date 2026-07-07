@@ -176,7 +176,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
           <div className="flex items-center gap-3 px-4 py-2.5">
             <GlobalSearch />
-            {(user?.role === "doctor" || user?.role === "owner") && (
+            {(user?.role === "doctor" ||
+              user?.role === "owner" ||
+              user?.role === "admin" ||
+              user?.role === "assistant" ||
+              user?.role === "nurse") && (
               <TabletScannerSlot />
             )}
             <div className="shrink-0">

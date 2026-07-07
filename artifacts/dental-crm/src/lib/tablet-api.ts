@@ -130,10 +130,21 @@ export async function confirmTabletPairing(sessionId: string, code: string) {
       doctor: TabletDoctorBrief | null;
       auth?: TabletUnlockResult["auth"] | null;
     };
-  }>(`/api/tablet/public/sessions/${sessionId}/confirm-pairing`, {
+  }>("/api/tablet/link/confirm-pairing", {
     method: "POST",
-    body: JSON.stringify({ code }),
+    body: JSON.stringify({ sessionId, code }),
   });
+}
+
+export async function getPendingTabletPairing() {
+  return customFetch<{
+    success: boolean;
+    data: {
+      sessionId: string;
+      pairingCode: string;
+      cabinet: TabletCabinetBrief;
+    } | null;
+  }>("/api/tablet/pending-pairing");
 }
 
 export async function unlockTabletByUserPin(cabinetId: string, pin: string) {
@@ -164,6 +175,7 @@ export async function setTabletPin(pin: string, linkToken?: string) {
 export interface TabletRedeemResult {
   pairingRequired: boolean;
   pairingCode?: string;
+  codeSentToOwner?: boolean;
   sessionId: string;
   cabinet: TabletCabinetBrief | null;
   doctor: TabletDoctorBrief | null;

@@ -10,14 +10,18 @@ export function TabletPairingCodeModal({
   code,
   cabinetName,
   onResend,
+  onConfirm,
   resending = false,
+  confirming = false,
 }: {
   open: boolean;
   onClose: () => void;
   code: string | null;
   cabinetName?: string | null;
   onResend?: () => void;
+  onConfirm?: () => void;
   resending?: boolean;
+  confirming?: boolean;
 }) {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
@@ -37,14 +41,16 @@ export function TabletPairingCodeModal({
     <AppDialog
       open={open}
       onOpenChange={(next) => { if (!next) onClose(); }}
-      title="Код подключения планшета"
+      title="Подключение планшета"
       size="sm"
     >
       <div className="flex flex-col items-center font-manrope text-center">
         {cabinetName && (
           <p className="mb-1 text-sm font-semibold text-[#0f172a]">{cabinetName}</p>
         )}
-        <p className="mb-4 text-xs text-[#64748b]">Код отправляется в этот кабинет</p>
+        <p className="mb-4 text-xs text-[#64748b]">
+          Код виден только на вашем телефоне. Подтвердите подключение планшета к клинике.
+        </p>
 
         {code && (
           <>
@@ -62,9 +68,20 @@ export function TabletPairingCodeModal({
               </button>
             </div>
             <p className="mb-4 max-w-xs text-sm leading-relaxed text-[#64748b]">
-              Введите этот 6-значный код на экране планшета. После этого можно настроить PIN для входа без QR.
+              Этот код не отображается на планшете. Нажмите «Подтвердить», чтобы привязать кабинет.
             </p>
           </>
+        )}
+
+        {onConfirm && (
+          <Button
+            type="button"
+            className="mb-3 w-full"
+            disabled={!code || confirming}
+            onClick={onConfirm}
+          >
+            {confirming ? "Подтверждаем…" : "Подтвердить подключение"}
+          </Button>
         )}
 
         {onResend && (
@@ -76,12 +93,12 @@ export function TabletPairingCodeModal({
             onClick={onResend}
           >
             <RefreshCw className={`mr-2 h-4 w-4 ${resending ? "animate-spin" : ""}`} />
-            Отправить код снова в кабинет
+            Получить новый код
           </Button>
         )}
 
-        <Button type="button" className="w-full" onClick={onClose}>
-          Готово
+        <Button type="button" variant="outline" className="w-full" onClick={onClose}>
+          Закрыть
         </Button>
       </div>
     </AppDialog>

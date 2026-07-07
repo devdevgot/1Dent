@@ -1,21 +1,35 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { getTabletMe, redeemTabletLink, resendTabletPairingCode, setTabletPin } from "@/lib/tablet-api";
+import { useAuthStore } from "@/hooks/use-auth";
+import {
+  confirmTabletPairing,
+  getPendingTabletPairing,
+  redeemTabletLink,
+  resendTabletPairingCode,
+} from "@/lib/tablet-api";
 
-type LinkFlowStatus = "idle" | "processing" | "success" | "error";
+type LinkFlowStatus = "idle" | "processing" | "success" | "pairing_pending" | "error";
 
 export function useTabletLinkFlow() {
   const { toast } = useToast();
+  const { user } = useAuthStore();
   const [pairingCodeOpen, setPairingCodeOpen] = useState(false);
   const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [pairingSessionId, setPairingSessionId] = useState<string | null>(null);
   const [cabinetName, setCabinetName] = useState<string | null>(null);
   const [resendingPairing, setResendingPairing] = useState(false);
-  const [pinSetupOpen, setPinSetupOpen] = useState(false);
-  const [pinSaving, setPinSaving] = useState(false);
+  const [confirmingPairing, setConfirmingPairing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState<LinkFlowStatus>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const shownPendingRef = useRef<string | null>(null);
+
+  const openPairingModal = useCallback((sessionId: string, code: string, name: string | null) => {
+    setPairingSessionId(sessionId);
+    setPairingCode(code);
+    setCabinetName(name);
+    setPairingCodeOpen(true);
+  }, []);
 
   const processToken = useCallback(async (raw: string) => {
     const token = raw.includes("token=")
@@ -42,15 +56,25 @@ export function useTabletLinkFlow() {
     try {
       const result = await redeemTabletLink(token);
 
-      if (result.data.pairingRequired && result.data.pairingCode) {
-        setPairingCode(result.data.pairingCode);
-        setPairingSessionId(result.data.sessionId);
-        setCabinetName(result.data.cabinet?.name ?? null);
-        setPairingCodeOpen(true);
-        setStatus("success");
+      if (result.data.pairingRequired) {
+        if (result.data.pairingCode) {
+          openPairingModal(
+            result.data.sessionId,
+            result.data.pairingCode,
+            result.data.cabinet?.name ?? null,
+          );
+          setStatus("success");
+          toast({
+            title: "Подключение планшета",
+            description: "Подтвердите подключение кодом ниже",
+          });
+          return true;
+        }
+
+        setStatus("pairing_pending");
         toast({
-          title: "Подключение планшета",
-          description: "Введите 6-значный код на экране планшета",
+          title: "Запрос отправлен",
+          description: "Код подключения отправлен владельцу клиники",
         });
         return true;
       }
@@ -75,7 +99,7 @@ export function useTabletLinkFlow() {
     } finally {
       setSubmitting(false);
     }
-  }, [toast]);
+  }, [toast, openPairingModal]);
 
   const resendPairingCode = useCallback(async () => {
     if (!pairingSessionId) return;
@@ -85,8 +109,8 @@ export function useTabletLinkFlow() {
       setPairingCode(result.data.pairingCode);
       setCabinetName(result.data.cabinet.name);
       toast({
-        title: "Код отправлен",
-        description: `Новый код отправлен в ${result.data.cabinet.name}`,
+        title: "Новый код отправлен",
+        description: `Код обновлён для ${result.data.cabinet.name}`,
       });
     } catch (err) {
       toast({
@@ -99,61 +123,72 @@ export function useTabletLinkFlow() {
     }
   }, [pairingSessionId, toast]);
 
-  const closePairingModal = useCallback(async () => {
+  const confirmPairing = useCallback(async () => {
+    if (!pairingSessionId || !pairingCode) return false;
+    setConfirmingPairing(true);
+    try {
+      await confirmTabletPairing(pairingSessionId, pairingCode);
+      setPairingCodeOpen(false);
+      setPairingCode(null);
+      setPairingSessionId(null);
+      setCabinetName(null);
+      shownPendingRef.current = null;
+      setStatus("success");
+      toast({
+        title: "Планшет подключён",
+        description: "Кабинет привязан к клинике",
+      });
+      return true;
+    } catch (err) {
+      toast({
+        title: "Не удалось подтвердить",
+        description: err instanceof Error ? err.message : "Проверьте код и попробуйте снова",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setConfirmingPairing(false);
+    }
+  }, [pairingSessionId, pairingCode, toast]);
+
+  const closePairingModal = useCallback(() => {
     setPairingCodeOpen(false);
     setPairingCode(null);
     setPairingSessionId(null);
     setCabinetName(null);
-
-    try {
-      const me = await getTabletMe();
-      if (!me.data?.hasTabletPin) {
-        setPinSetupOpen(true);
-        return;
-      }
-    } catch {
-      /* ignore */
-    }
   }, []);
 
-  const submitPinSetup = useCallback(async (pin: string) => {
-    setPinSaving(true);
-    try {
-      await setTabletPin(pin);
-      setPinSetupOpen(false);
-      toast({
-        title: "PIN сохранён",
-        description: "Теперь можно входить на планшет по PIN без QR",
-      });
-    } catch (err) {
-      toast({
-        title: "Ошибка",
-        description: err instanceof Error ? err.message : "Не удалось сохранить PIN",
-        variant: "destructive",
-      });
-    } finally {
-      setPinSaving(false);
-    }
-  }, [toast]);
+  useEffect(() => {
+    if (user?.role !== "owner" || pairingCodeOpen) return;
 
-  const closePinSetup = useCallback(() => {
-    setPinSetupOpen(false);
-  }, []);
+    const poll = window.setInterval(() => {
+      void getPendingTabletPairing()
+        .then((res) => {
+          const pending = res.data;
+          if (!pending || shownPendingRef.current === pending.sessionId) return;
+          shownPendingRef.current = pending.sessionId;
+          openPairingModal(pending.sessionId, pending.pairingCode, pending.cabinet.name);
+        })
+        .catch(() => {
+          /* ignore */
+        });
+    }, 5000);
+
+    return () => window.clearInterval(poll);
+  }, [user?.role, pairingCodeOpen, openPairingModal]);
 
   return {
     pairingCodeOpen,
     pairingCode,
     cabinetName,
-    pinSetupOpen,
-    pinSaving,
     resendingPairing,
+    confirmingPairing,
     submitting,
     status,
     errorMessage,
     processToken,
     resendPairingCode,
+    confirmPairing,
     closePairingModal,
-    submitPinSetup,
-    closePinSetup,
   };
 }

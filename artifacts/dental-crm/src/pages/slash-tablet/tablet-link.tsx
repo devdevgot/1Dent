@@ -3,7 +3,6 @@ import { useSearch, useLocation } from "wouter";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useTabletLinkFlow } from "@/hooks/use-tablet-link-flow";
 import { TabletPairingCodeModal } from "@/components/tablet/tablet-pairing-code-modal";
-import { TabletPinSetupModal } from "@/components/tablet/tablet-pin-setup-modal";
 import { parseTabletLinkToken } from "@/lib/tablet-api";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
 import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
@@ -16,17 +15,15 @@ export default function TabletLinkPage() {
     pairingCodeOpen,
     pairingCode,
     cabinetName,
-    pinSetupOpen,
-    pinSaving,
     resendingPairing,
+    confirmingPairing,
     submitting,
     status,
     errorMessage,
     processToken,
     resendPairingCode,
+    confirmPairing,
     closePairingModal,
-    submitPinSetup,
-    closePinSetup,
   } = useTabletLinkFlow();
   const token = parseTabletLinkToken(new URLSearchParams(search).get("token") ?? "");
 
@@ -55,8 +52,9 @@ export default function TabletLinkPage() {
   }
 
   const showProcessing = submitting || status === "processing";
-  const showSuccess = status === "success" && !pairingCodeOpen && !pinSetupOpen && !submitting;
-  const showError = status === "error" && !pairingCodeOpen && !pinSetupOpen && !submitting;
+  const showSuccess = status === "success" && !pairingCodeOpen && !submitting;
+  const showPairingPending = status === "pairing_pending" && !pairingCodeOpen && !submitting;
+  const showError = status === "error" && !pairingCodeOpen && !submitting;
 
   return (
     <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-[#faf8f4] px-6 font-manrope">
@@ -65,6 +63,23 @@ export default function TabletLinkPage() {
           <>
             <Loader2 className="mx-auto mb-4 h-10 w-10 animate-spin text-[#1f75fe]" />
             <p className="text-base font-bold text-[#0f172a]">Подключаем планшет…</p>
+          </>
+        )}
+
+        {showPairingPending && (
+          <>
+            <CheckCircle2 className="mx-auto mb-4 h-12 w-12 text-[#1f75fe]" />
+            <p className="text-base font-bold text-[#0f172a]">Запрос отправлен</p>
+            <p className="mt-2 text-sm text-[#64748b]">
+              Владелец клиники получит код для подтверждения подключения планшета
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate(dashboardPath)}
+              className="mt-6 rounded-xl bg-[#1f75fe] px-5 py-3 text-sm font-semibold text-white"
+            >
+              На главную
+            </button>
           </>
         )}
 
@@ -98,7 +113,7 @@ export default function TabletLinkPage() {
           </>
         )}
 
-        {!showProcessing && !showSuccess && !showError && !token && (
+        {!showProcessing && !showSuccess && !showPairingPending && !showError && !token && (
           <>
             <AlertCircle className="mx-auto mb-4 h-12 w-12 text-[#dc2626]" />
             <p className="text-base font-bold text-[#0f172a]">Ссылка недействительна</p>
@@ -109,18 +124,13 @@ export default function TabletLinkPage() {
 
       <TabletPairingCodeModal
         open={pairingCodeOpen}
-        onClose={() => void closePairingModal()}
+        onClose={closePairingModal}
         code={pairingCode}
         cabinetName={cabinetName}
         onResend={() => void resendPairingCode()}
+        onConfirm={() => void confirmPairing()}
         resending={resendingPairing}
-      />
-      <TabletPinSetupModal
-        open={pinSetupOpen}
-        onClose={closePinSetup}
-        onSubmit={(pin) => void submitPinSetup(pin)}
-        loading={pinSaving}
-        skipLabel="Пропустить"
+        confirming={confirmingPairing}
       />
     </div>
   );
