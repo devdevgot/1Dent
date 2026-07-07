@@ -1,5 +1,5 @@
 
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { queryClient, persistOptions, clearPersistedQueryCache } from "@/lib/query-persist";
@@ -36,9 +36,9 @@ import ServicesPage from "@/pages/services";
 import LogsPage from "@/pages/logs";
 import FinancialsPage from "@/pages/financials";
 import WarehousePage from "@/pages/warehouse";
-import UsersPage from "@/pages/users";
+const UsersPage = lazy(() => import("@/pages/users"));
 import ChatbotPage from "@/pages/chatbot";
-import StaffDetailPage from "@/pages/staff-detail";
+const StaffDetailPage = lazy(() => import("@/pages/staff-detail"));
 import DoctorAnalyticsPage from "@/pages/doctor-analytics";
 import DoctorSchedulePage from "@/pages/doctor-schedule";
 import DoctorScheduleDayPage from "@/pages/doctor-schedule-day";
@@ -59,6 +59,30 @@ import LandingPage from "@/pages/landing";
 import SlashTabletPage from "@/pages/slash-tablet";
 import TabletLinkPage from "@/pages/slash-tablet/tablet-link";
 import NotFound from "@/pages/not-found";
+
+function LazyPageFallback() {
+  return (
+    <div className="flex items-center justify-center py-20">
+      <div className="w-10 h-10 border-4 border-[#1f75fe]/20 border-t-[#1f75fe] rounded-full animate-spin" />
+    </div>
+  );
+}
+
+function UsersPageLazy() {
+  return (
+    <Suspense fallback={<LazyPageFallback />}>
+      <UsersPage />
+    </Suspense>
+  );
+}
+
+function StaffDetailPageLazy() {
+  return (
+    <Suspense fallback={<LazyPageFallback />}>
+      <StaffDetailPage />
+    </Suspense>
+  );
+}
 
 // Admin-specific pages
 import AdminCalendarPage from "@/pages/admin-calendar";
@@ -292,7 +316,7 @@ function Router() {
 
       {/* Users management */}
       <Route path="/users">
-        <ProtectedRoute component={UsersPage} allowedRoles={['owner', 'admin']} />
+        <ProtectedRoute component={UsersPageLazy} allowedRoles={['owner', 'admin']} />
       </Route>
 
       {/* Chatbot management */}
@@ -302,7 +326,7 @@ function Router() {
 
 
       <Route path="/users/:doctorId">
-        <ProtectedRoute component={StaffDetailPage} allowedRoles={['owner', 'admin']} />
+        <ProtectedRoute component={StaffDetailPageLazy} allowedRoles={['owner', 'admin']} />
       </Route>
 
       {/* Doctor analytics */}

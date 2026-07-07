@@ -29,6 +29,7 @@ import { FaWhatsapp } from "react-icons/fa";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { useGeoRestriction } from "@/hooks/use-geo-restriction";
+import { prefetchStaffList } from "@workspace/api-client-react";
 import { TabletScannerSlot } from "@/components/tablet/tablet-scanner-slot";
 
 const ROLE_DASHBOARD_HREF: Record<string, string> = {
@@ -90,6 +91,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
       void fetchBranches();
     }
   }, [isOwner, hasFetched, fetchBranches]);
+
+  // Warm staff list cache so /users opens instantly from any nav entry point.
+  useEffect(() => {
+    if (user?.role !== "owner" && user?.role !== "admin") return;
+    prefetchStaffList(queryClient);
+  }, [user?.role, queryClient]);
 
   const roleDashboardHref = user
     ? (ROLE_DASHBOARD_HREF[user.role] ?? getRoleDashboardPath(user.role))

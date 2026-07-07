@@ -28,6 +28,7 @@ import type {
   UsersListResponse,
   Patient,
   AnalyticsResponse,
+  ProcedureListResponse,
 } from "./generated/api.schemas";
 
 export interface UpdateProfileRequest {
@@ -748,6 +749,67 @@ export const useListUsersAll = <TError = unknown>(
     ...options?.query,
   });
 
+export const STAFF_LIST_STALE_MS = 5 * 60_000;
+
+/** Warm the staff list cache so /users opens without a spinner. */
+export const prefetchStaffList = (
+  queryClient: ReturnType<typeof useQueryClient>,
+) => {
+  void queryClient.prefetchQuery({
+    queryKey: getListUsersAllQueryKey(false),
+    queryFn: ({ signal }) => listUsersAll(undefined, { signal }),
+    staleTime: STAFF_LIST_STALE_MS,
+  });
+};
+
+/** Resolve a user from any warmed staff-list cache entry. */
+export const findCachedStaffUser = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  userId: string,
+) => {
+  for (const includeInactive of [false, true] as const) {
+    const data = queryClient.getQueryData<UsersListResponse>(
+      getListUsersAllQueryKey(includeInactive),
+    );
+    const user = data?.data?.users?.find((u) => u.id === userId);
+    if (user) return user;
+  }
+  return undefined;
+};
+
+// ─── Custom: list procedures with optional scope filters ─────────────────────
+
+export const listProceduresScoped = (
+  params?: { doctorId?: string; dateFrom?: string; dateTo?: string },
+  options?: RequestInit,
+): Promise<ProcedureListResponse> => {
+  const qs = new URLSearchParams();
+  if (params?.doctorId) qs.set("doctorId", params.doctorId);
+  if (params?.dateFrom) qs.set("dateFrom", params.dateFrom);
+  if (params?.dateTo) qs.set("dateTo", params.dateTo);
+  const q = qs.toString();
+  return customFetch<ProcedureListResponse>(`/api/procedures${q ? `?${q}` : ""}`, {
+    method: "GET",
+    ...options,
+  });
+};
+
+export const getListProceduresScopedQueryKey = (params?: {
+  doctorId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}) => ["/api/procedures", params ?? {}] as const;
+
+export const useListProceduresScoped = <TError = unknown>(
+  params?: { doctorId?: string; dateFrom?: string; dateTo?: string },
+  options?: { query?: UseQueryOptions<ProcedureListResponse, TError> },
+) =>
+  useQuery<ProcedureListResponse, TError>({
+    queryKey: getListProceduresScopedQueryKey(params),
+    queryFn: ({ signal }) => listProceduresScoped(params, { signal }),
+    ...options?.query,
+  });
+
 // ─── Custom: update user status ───────────────────────────────────────────────
 export interface UpdateUserStatusResponse {
   success: boolean;
@@ -850,6 +912,7 @@ export const listExpenses = (
     dateFrom?: string;
     dateTo?: string;
     category?: string;
+    subcategory?: string;
     periodMonth?: number;
     periodYear?: number;
   },
@@ -859,6 +922,7 @@ export const listExpenses = (
   if (params?.dateFrom) qs.set("dateFrom", params.dateFrom);
   if (params?.dateTo) qs.set("dateTo", params.dateTo);
   if (params?.category) qs.set("category", params.category);
+  if (params?.subcategory) qs.set("subcategory", params.subcategory);
   if (params?.periodMonth) qs.set("periodMonth", String(params.periodMonth));
   if (params?.periodYear) qs.set("periodYear", String(params.periodYear));
   const q = qs.toString();
@@ -903,6 +967,7 @@ export const useListExpenses = <TError = unknown>(
     dateFrom?: string;
     dateTo?: string;
     category?: string;
+    subcategory?: string;
     periodMonth?: number;
     periodYear?: number;
   },

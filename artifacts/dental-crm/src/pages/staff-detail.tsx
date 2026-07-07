@@ -1,20 +1,24 @@
 import { useParams, useLocation } from "wouter";
 import { useState, useEffect, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Users, TrendingUp, DollarSign, Activity,
   Banknote, CheckCircle, Clock, Wallet, SlidersHorizontal,
 } from "lucide-react";
 import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-header";
+import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import {
   useGetDoctorKpis,
   useGetPayrollRecords,
   useGetSalarySettings,
   useUpdateSalarySettings,
-  useListProcedures,
   useListUsersAll,
   useListExpenses,
+  useListProceduresScoped,
+  findCachedStaffUser,
+  STAFF_LIST_STALE_MS,
   type DoctorKpi,
   type PayrollRecord,
 } from "@workspace/api-client-react";
@@ -46,15 +50,36 @@ export default function StaffDetailPage() {
   const { doctorId } = useParams<{ doctorId: string }>();
   const [, setLocation] = useLocation();
   const { user } = useAuthStore();
+  const queryClient = useQueryClient();
 
-  const { data: kpiData, isLoading: kpiLoading } = useGetDoctorKpis();
-  const { data: usersData, isLoading: usersLoading } = useListUsersAll({ includeInactive: true });
+  const cachedUser = useMemo(
+    () => (doctorId ? findCachedStaffUser(queryClient, doctorId) : undefined),
+    [queryClient, doctorId],
+  );
 
+  const { data: usersData, isLoading: usersLoading } = useListUsersAll(
+    { includeInactive: true },
+    {
+      query: {
+        enabled: !cachedUser,
+        staleTime: STAFF_LIST_STALE_MS,
+        placeholderData: () =>
+          queryClient.getQueryData(["/api/users", { includeInactive: true }]) ??
+          queryClient.getQueryData(["/api/users", { includeInactive: false }]),
+      },
+    },
+  );
+
+  const selectedUser =
+    cachedUser ?? usersData?.data?.users?.find((u) => u && u.id === doctorId);
+  const isDoctor = selectedUser?.role === "doctor";
+  const isAssistant = selectedUser?.role === "assistant";
+
+  const { data: kpiData } = useGetDoctorKpis({
+    query: { enabled: !!isDoctor, staleTime: 5 * 60_000 },
+  });
   const doctors: DoctorKpi[] = kpiData?.data?.kpis ?? [];
   const doctorKpi = doctors.find((d) => d && d.doctorId === doctorId);
-
-  const allUsers = usersData?.data?.users ?? [];
-  const selectedUser = allUsers.find((u) => u && u.id === doctorId);
 
   const canManagePayroll = user?.role === "owner" || user?.role === "accountant" || user?.role === "admin";
 
@@ -65,8 +90,6 @@ export default function StaffDetailPage() {
   const payrollRecords: PayrollRecord[] = payrollData?.data?.records ?? [];
   const salarySettings = salaryData?.data?.settings;
   const settings = salarySettings as any;
-
-  const { data: proceduresData, isLoading: proceduresLoading } = useListProcedures();
 
   const [showPayrollModal, setShowPayrollModal] = useState(false);
   const [editingSalary, setEditingSalary] = useState(false);
@@ -138,17 +161,36 @@ export default function StaffDetailPage() {
     };
   }, [dateFilter]);
 
-  const { data: expensesData, isLoading: expensesLoading } = useListExpenses({
-    dateFrom: dates.dateFromShort,
-    dateTo: dates.dateToShort,
-  });
+  const { data: proceduresData, isFetching: proceduresLoading } = useListProceduresScoped(
+    {
+      doctorId: isDoctor ? doctorId : undefined,
+      dateFrom: dates.dateFromShort,
+      dateTo: dates.dateToShort,
+    },
+    {
+      query: {
+        enabled: !!doctorId && !!selectedUser,
+        staleTime: 60_000,
+      },
+    },
+  );
 
-  const expenses = expensesData?.data?.expenses ?? [];
+  const { data: expensesData, isFetching: expensesLoading } = useListExpenses(
+    {
+      dateFrom: dates.dateFromShort,
+      dateTo: dates.dateToShort,
+      category: "salary",
+      subcategory: doctorId ? `аванс:${doctorId}` : undefined,
+    },
+    { query: { enabled: !!doctorId } },
+  );
+
   const advance = useMemo(() => {
-    return expenses
-      .filter((e) => e && e.category === "salary" && e.subcategory === `аванс:${doctorId}`)
-      .reduce((sum, e) => sum + (e ? Number(e.amount) || 0 : 0), 0);
-  }, [expenses, doctorId]);
+    return (expensesData?.data?.expenses ?? []).reduce(
+      (sum, e) => sum + (e ? Number(e.amount) || 0 : 0),
+      0,
+    );
+  }, [expensesData]);
 
   const [geoEvents, setGeoEvents] = useState<GeoEvent[]>([]);
   const [geoLoading, setGeoLoading] = useState(false);
@@ -168,7 +210,9 @@ export default function StaffDetailPage() {
       setGeoLoading(true);
       try {
         const token = localStorage.getItem("auth_token");
-        const res = await fetch(`${getBaseUrl()}/api/geo/tracking?dateFrom=${dates.dateFromStrGeo}&dateTo=${dates.dateToStrGeo}`, {
+        const res = await fetch(
+          `${getBaseUrl()}/api/geo/tracking?userId=${doctorId}&dateFrom=${dates.dateFromStrGeo}&dateTo=${dates.dateToStrGeo}`,
+          {
           headers: {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
@@ -211,13 +255,11 @@ export default function StaffDetailPage() {
   };
 
   const workHours = useMemo(() => {
-    if (!doctorId || geoEvents.length === 0) return 0;
-    const userEvents = geoEvents
-      .filter((e) => e && e.userId === doctorId)
-      .sort((a, b) => {
-        if (!a || !b) return 0;
-        return new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime();
-      });
+    if (geoEvents.length === 0) return 0;
+    const userEvents = [...geoEvents].sort((a, b) => {
+      if (!a || !b) return 0;
+      return new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime();
+    });
 
     let totalMs = 0;
     let activeCheckinTime: Date | null = null;
@@ -243,38 +285,37 @@ export default function StaffDetailPage() {
     }
 
     return totalMs / (1000 * 60 * 60);
-  }, [geoEvents, doctorId]);
+  }, [geoEvents]);
 
-  const allProcedures = proceduresData?.data?.procedures ?? [];
-  
-  const filteredProcedures = useMemo(() => {
-    const fromTime = dates.fromDate.getTime();
-    const toTime = dates.toDate.getTime();
-    return allProcedures.filter((p) => {
-      if (!p) return false;
-      const timeStr = p.completedAt || p.scheduledAt || p.createdAt;
-      if (!timeStr) return false;
-      const time = new Date(timeStr).getTime();
-      return time >= fromTime && time <= toTime;
-    });
-  }, [allProcedures, dates.fromDate, dates.toDate]);
+  const filteredProcedures = proceduresData?.data?.procedures ?? [];
+  const doctorProcedures = isDoctor
+    ? filteredProcedures
+    : filteredProcedures.filter((p) => p && p.doctorId === doctorId);
 
-  const doctorProcedures = useMemo(() => {
-    return filteredProcedures.filter((p) => p && p.doctorId === doctorId);
-  }, [filteredProcedures, doctorId]);
+  const completedDoctorProcedures = useMemo(
+    () => doctorProcedures.filter((p) => p && p.status === "completed"),
+    [doctorProcedures],
+  );
 
-  const completedDoctorProcedures = useMemo(() => {
-    return doctorProcedures.filter((p) => p && p.status === "completed");
-  }, [doctorProcedures]);
+  const completedClinicProcedures = useMemo(
+    () => filteredProcedures.filter((p) => p && p.status === "completed"),
+    [filteredProcedures],
+  );
 
-  const completedClinicProcedures = useMemo(() => {
-    return filteredProcedures.filter((p) => p && p.status === "completed");
-  }, [filteredProcedures]);
+  const metricsLoading = proceduresLoading || geoLoading || expensesLoading;
 
-  if (kpiLoading || proceduresLoading || usersLoading || geoLoading || expensesLoading) {
+  if (!selectedUser && usersLoading) {
     return (
-      <PageShell className="h-full flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-[var(--ds-primary)]/20 border-t-[var(--ds-primary)] rounded-full animate-spin" />
+      <PageShell className="h-full flex flex-col overflow-hidden" animate={false}>
+        <div className="px-5 pt-4">
+          <Skeleton className="h-10 w-48 rounded-xl" />
+          <Skeleton className="h-4 w-32 rounded-lg mt-2" />
+        </div>
+        <div className="p-6 grid grid-cols-2 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-[130px] rounded-2xl" />
+          ))}
+        </div>
       </PageShell>
     );
   }
@@ -287,8 +328,6 @@ export default function StaffDetailPage() {
     );
   }
 
-  const isDoctor = selectedUser.role === "doctor";
-  const isAssistant = selectedUser.role === "assistant";
   const nps = isDoctor && doctorKpi ? Number(doctorKpi.nps) : 0;
 
   const targetAllProcedures = isDoctor ? doctorProcedures : filteredProcedures;
@@ -455,6 +494,13 @@ export default function StaffDetailPage() {
 
           {/* Metrics Cards */}
           {(isDoctor || isAssistant) ? (
+            metricsLoading ? (
+              <div className="grid grid-cols-2 gap-4 sm:gap-6">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Skeleton key={i} className="h-[130px] rounded-2xl bg-[#f1ede4]" />
+                ))}
+              </div>
+            ) : (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4 sm:gap-6">
                 
@@ -592,6 +638,7 @@ export default function StaffDetailPage() {
                 Показатели рассчитаны автоматически на основании гео-событий трекера и завершенных процедур.
               </div>
             </div>
+            )
           ) : (
             <div className="grid grid-cols-2 gap-4 sm:gap-6">
               {/* Card 6: Выданный аванс for other employees */}

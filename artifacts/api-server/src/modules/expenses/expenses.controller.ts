@@ -42,6 +42,7 @@ router.get(
       const dateFrom = typeof req.query["dateFrom"] === "string" ? new Date(req.query["dateFrom"]) : undefined;
       const dateTo = typeof req.query["dateTo"] === "string" ? new Date(req.query["dateTo"] + "T23:59:59Z") : undefined;
       const category = typeof req.query["category"] === "string" ? req.query["category"] : undefined;
+      const subcategory = typeof req.query["subcategory"] === "string" ? req.query["subcategory"] : undefined;
       const periodMonth = typeof req.query["periodMonth"] === "string" ? Number(req.query["periodMonth"]) : undefined;
       const periodYear = typeof req.query["periodYear"] === "string" ? Number(req.query["periodYear"]) : undefined;
 
@@ -49,6 +50,7 @@ router.get(
         dateFrom: dateFrom && !isNaN(dateFrom.getTime()) ? dateFrom : undefined,
         dateTo: dateTo && !isNaN(dateTo.getTime()) ? dateTo : undefined,
         category,
+        subcategory,
         periodMonth,
         periodYear,
       });

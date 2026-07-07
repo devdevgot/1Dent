@@ -64,12 +64,29 @@ export class AuthRepository {
   }
 
   async listUsersByClinic(clinicId: string, includeInactive = false): Promise<User[]> {
-    const rows = await db
-      .select()
+    const conditions = [eq(usersTable.clinicId, clinicId)];
+    if (!includeInactive) {
+      conditions.push(eq(usersTable.isActive, true));
+    }
+
+    return db
+      .select({
+        id: usersTable.id,
+        clinicId: usersTable.clinicId,
+        name: usersTable.name,
+        email: usersTable.email,
+        role: usersTable.role,
+        photoUrl: usersTable.photoUrl,
+        phone: usersTable.phone,
+        position: usersTable.position,
+        specialty: usersTable.specialty,
+        hireDate: usersTable.hireDate,
+        isActive: usersTable.isActive,
+        createdAt: usersTable.createdAt,
+        updatedAt: usersTable.updatedAt,
+      })
       .from(usersTable)
-      .where(eq(usersTable.clinicId, clinicId));
-    if (includeInactive) return rows;
-    return rows.filter((u) => u.isActive !== false);
+      .where(and(...conditions)) as Promise<User[]>;
   }
 
   async listUsersWithSalary(clinicId: string, includeInactive = false) {
@@ -89,14 +106,11 @@ export class AuthRepository {
     const salaryMap = new Map(salaryRows.map((s) => [s.userId, s]));
     const capacityMap = new Map(capacityRows.map((c) => [c.doctorId, c.maxPatientsPerDay]));
 
-    return users.map((u) => {
-      const { passwordHash: _, ...safe } = u;
-      return {
-        ...safe,
-        salarySettings: salaryMap.get(u.id) ?? null,
-        maxPatientsPerDay: u.role === "doctor" ? (capacityMap.get(u.id) ?? 20) : null,
-      };
-    });
+    return users.map((u) => ({
+      ...u,
+      salarySettings: salaryMap.get(u.id) ?? null,
+      maxPatientsPerDay: u.role === "doctor" ? (capacityMap.get(u.id) ?? 20) : null,
+    }));
   }
 
   async updateUser(

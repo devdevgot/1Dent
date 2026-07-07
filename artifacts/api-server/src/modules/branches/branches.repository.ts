@@ -127,6 +127,7 @@ export class BranchesRepository {
 
   async getGeoTracking(clinicId: string, opts: {
     branchId?: string;
+    userId?: string;
     dateFrom: Date;
     dateTo: Date;
   }) {
@@ -135,6 +136,7 @@ export class BranchesRepository {
       gte(geoEventsTable.occurredAt, opts.dateFrom),
       lte(geoEventsTable.occurredAt, opts.dateTo),
       ...(opts.branchId ? [eq(geoEventsTable.branchId, opts.branchId)] : []),
+      ...(opts.userId ? [eq(geoEventsTable.userId, opts.userId)] : []),
     ];
 
     const rows = await db
