@@ -27,6 +27,7 @@ import {
   exportFilename,
   parseExportFilters,
 } from "./financial-export";
+import { logger } from "../../shared/logger";
 
 const router: IRouter = Router();
 const repo = new AnalyticsRepository();
@@ -304,6 +305,7 @@ router.get(
       res.setHeader("Content-Length", buffer.length);
       res.send(buffer);
     } catch (err) {
+      logger.error({ err, clinicId: req.user?.clinicId }, "Financial Excel export failed");
       next(err);
     }
   },
@@ -327,6 +329,7 @@ router.get(
       res.setHeader("Content-Length", buffer.length);
       res.send(buffer);
     } catch (err) {
+      logger.error({ err, clinicId: req.user?.clinicId }, "Financial PDF export failed");
       next(err);
     }
   },

@@ -1,9 +1,19 @@
 import { setBranchIdGetter } from "@workspace/api-client-react";
+import { useAuthStore } from "@/hooks/use-auth";
 
 const BRANCH_STORAGE_KEY = "selected_branch_id";
 
+function resolveBranchIdForRequest(): string | null {
+  const branchId = localStorage.getItem(BRANCH_STORAGE_KEY);
+  if (!branchId) return null;
+  // Only owners may scope API calls to a branch cabinet.
+  const role = useAuthStore.getState().user?.role;
+  if (role && role !== "owner") return null;
+  return branchId;
+}
+
 export function restoreBranchContext() {
-  setBranchIdGetter(() => localStorage.getItem(BRANCH_STORAGE_KEY));
+  setBranchIdGetter(() => resolveBranchIdForRequest());
 }
 
 export function syncBranchContext(branchId: string | null) {
@@ -12,10 +22,15 @@ export function syncBranchContext(branchId: string | null) {
   } else {
     localStorage.removeItem(BRANCH_STORAGE_KEY);
   }
-  setBranchIdGetter(() => localStorage.getItem(BRANCH_STORAGE_KEY));
+  setBranchIdGetter(() => resolveBranchIdForRequest());
+}
+
+export function clearBranchContext() {
+  localStorage.removeItem(BRANCH_STORAGE_KEY);
+  setBranchIdGetter(() => null);
 }
 
 export function getBranchRequestHeaders(): Record<string, string> {
-  const branchId = localStorage.getItem(BRANCH_STORAGE_KEY);
-  return branchId ? { "X-Clinic-Branch-Id": branchId } : {};
+  const branchId = resolveBranchIdForRequest();
+  return branchId ? { "x-clinic-branch-id": branchId } : {};
 }

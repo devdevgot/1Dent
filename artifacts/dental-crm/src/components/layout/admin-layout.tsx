@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { clearAuthToken } from "@/lib/auth-token";
 import { clearPersistedQueryCache } from "@/lib/query-persist";
+import { clearBranchContext } from "@/lib/branch-context";
 
 const ADMIN_NAV_ITEMS = [
   { nameKey: "nav.dashboard",            href: "/dashboard/admin",         icon: LayoutDashboard, badge: null },
@@ -66,6 +67,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
   function handleLogout() {
     clearPersistedQueryCache();
+    clearBranchContext();
     clearAuthToken();
     clearAuth();
   }

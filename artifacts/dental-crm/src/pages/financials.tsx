@@ -16,8 +16,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recha
 import ExpenseDialog from "@/components/expense-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { getBaseUrl } from "@/lib/base-url";
-import { getBranchRequestHeaders } from "@/lib/branch-context";
+import { downloadFile, downloadErrorMessage } from "@/lib/download-file";
 import { cn } from "@/lib/utils";
 import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-header";
@@ -160,33 +159,17 @@ export default function FinancialsPage() {
     return qs.toString();
   }
 
-  async function downloadBlob(path: string, filename: string) {
-    const base = getBaseUrl();
-    const token = localStorage.getItem("auth_token");
-    const headers: Record<string, string> = {
-      ...getBranchRequestHeaders(),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
-    try {
-      const res = await fetch(`${base}${path}`, { headers, credentials: "include" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      toast({ title: t("financials.exportError"), variant: "destructive" });
-    }
-  }
-
   async function handleExportExcel() {
     setExporting("excel");
     try {
       const qs = buildExportQuery();
-      await downloadBlob(`/api/analytics/export/excel?${qs}`, `finance-${dateFrom}-${dateTo}.xlsx`);
+      await downloadFile(`/api/analytics/export/excel?${qs}`, `finance-${dateFrom}-${dateTo}.xlsx`);
+    } catch (err) {
+      toast({
+        title: t("financials.exportError"),
+        description: downloadErrorMessage(err),
+        variant: "destructive",
+      });
     } finally {
       setExporting(null);
     }
@@ -196,7 +179,13 @@ export default function FinancialsPage() {
     setExporting("pdf");
     try {
       const qs = buildExportQuery();
-      await downloadBlob(`/api/analytics/export/pdf?${qs}`, `finance-${dateFrom}-${dateTo}.pdf`);
+      await downloadFile(`/api/analytics/export/pdf?${qs}`, `finance-${dateFrom}-${dateTo}.pdf`);
+    } catch (err) {
+      toast({
+        title: t("financials.exportError"),
+        description: downloadErrorMessage(err),
+        variant: "destructive",
+      });
     } finally {
       setExporting(null);
     }

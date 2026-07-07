@@ -9,7 +9,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 
 import { useGetMe, getGetMeQueryKey, setUnauthorizedHandler, setBaseUrl } from "@workspace/api-client-react";
 import { clearAuthToken, restoreAuthToken } from "@/lib/auth-token";
-import { restoreBranchContext } from "@/lib/branch-context";
+import { restoreBranchContext, clearBranchContext } from "@/lib/branch-context";
 import type { User, Clinic } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/components/auth/protected-route";
@@ -134,6 +134,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       if (path.startsWith("/tablet")) return;
 
       clearPersistedQueryCache();
+      clearBranchContext();
       clearAuth();
       clearAuthToken();
       setLocation("/login");

@@ -8,6 +8,7 @@ import { useLogin, getGetMeQueryKey } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { persistAuthSession } from "@/lib/auth-session";
 import { clearPersistedQueryCache } from "@/lib/query-persist";
+import { clearBranchContext } from "@/lib/branch-context";
 import { getPostLoginRedirectPath } from "@/lib/auth-redirect";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -51,6 +52,7 @@ export default function Login() {
         );
         if (cachedMe?.data?.user?.id && cachedMe.data.user.id !== response.data.user.id) {
           clearPersistedQueryCache();
+          clearBranchContext();
         }
 
         persistAuthSession(response.data);

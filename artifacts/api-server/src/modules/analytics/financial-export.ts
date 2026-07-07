@@ -108,15 +108,23 @@ function buildProcConditions(clinicId: string, filters: FinancialExportFilters):
   if (filters.doctorId) {
     conds.push(eq(proceduresTable.doctorId, filters.doctorId));
   }
+
+  const useCompletedDates = !filters.status || filters.status === "completed";
+  const dateCol = useCompletedDates ? proceduresTable.completedAt : proceduresTable.scheduledAt;
+
   if (filters.dateFrom) {
-    conds.push(
-      sql`COALESCE(${proceduresTable.completedAt}, ${proceduresTable.scheduledAt}) >= ${filters.dateFrom}`,
-    );
+    if (useCompletedDates) {
+      conds.push(gte(proceduresTable.completedAt, filters.dateFrom));
+    } else {
+      conds.push(gte(dateCol, filters.dateFrom));
+    }
   }
   if (filters.dateTo) {
-    conds.push(
-      sql`COALESCE(${proceduresTable.completedAt}, ${proceduresTable.scheduledAt}) <= ${filters.dateTo}`,
-    );
+    if (useCompletedDates) {
+      conds.push(lte(proceduresTable.completedAt, filters.dateTo));
+    } else {
+      conds.push(lte(dateCol, filters.dateTo));
+    }
   }
   return conds;
 }
@@ -195,7 +203,7 @@ export async function loadFinancialExportData(
       })
       .from(proceduresTable)
       .where(and(...procConds))
-      .orderBy(sql`COALESCE(${proceduresTable.completedAt}, ${proceduresTable.scheduledAt}) DESC`),
+      .orderBy(sql`${proceduresTable.completedAt} DESC NULLS LAST`, sql`${proceduresTable.scheduledAt} DESC NULLS LAST`),
     db
       .select({
         id: clinicExpensesTable.id,
@@ -210,17 +218,23 @@ export async function loadFinancialExportData(
       .orderBy(clinicExpensesTable.expenseDate),
     db
       .select({
+        itemId: procedureMaterialsTable.inventoryItemId,
         itemName: inventoryItemsTable.name,
         unit: inventoryItemsTable.unit,
         unitPrice: inventoryItemsTable.unitPrice,
-        totalQuantity: sql<number>`SUM(${procedureMaterialsTable.quantity})`.as("total_quantity"),
+        totalQuantity: sql<number>`COALESCE(SUM(${procedureMaterialsTable.quantity}), 0)`.as("total_quantity"),
         procedureCount: sql<number>`COUNT(DISTINCT ${procedureMaterialsTable.procedureId})`.as("procedure_count"),
       })
       .from(procedureMaterialsTable)
       .innerJoin(proceduresTable, eq(procedureMaterialsTable.procedureId, proceduresTable.id))
       .innerJoin(inventoryItemsTable, eq(procedureMaterialsTable.inventoryItemId, inventoryItemsTable.id))
       .where(and(...procConds))
-      .groupBy(inventoryItemsTable.name, inventoryItemsTable.unit, inventoryItemsTable.unitPrice)
+      .groupBy(
+        procedureMaterialsTable.inventoryItemId,
+        inventoryItemsTable.name,
+        inventoryItemsTable.unit,
+        inventoryItemsTable.unitPrice,
+      )
       .orderBy(sql`SUM(${procedureMaterialsTable.quantity}) DESC`),
     db
       .select({
