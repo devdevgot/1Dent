@@ -44,7 +44,7 @@ export function getServerBaseUrl(): string | null {
   if (process.env["REPLIT_DEV_DOMAIN"]) return `https://${process.env["REPLIT_DEV_DOMAIN"]}`;
 
   // 7. Production default for 1Dent
-  if (process.env["NODE_ENV"] === "production") return "https://1dent.kz";
+  if (process.env["NODE_ENV"] === "production") return "https://www.1dent.kz";
 
   return null;
 }

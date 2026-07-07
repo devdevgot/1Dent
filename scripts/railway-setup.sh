@@ -61,8 +61,8 @@ railway variable set \
   NODE_VERSION=22 \
   NODE_OPTIONS=--enable-source-maps \
   CI=true \
-  FRONTEND_URL=https://1dent.kz \
-  PUBLIC_URL=https://1dent.kz \
+  FRONTEND_URL=https://www.1dent.kz \
+  PUBLIC_URL=https://www.1dent.kz \
   --service "$SERVICE_NAME"
 
 link_postgres_url() {
@@ -91,7 +91,7 @@ if [[ "$LINKED" -eq 0 ]]; then
 fi
 
 echo ""
-echo "→ Generating Railway public domain (for webhooks until 1dent.kz is attached)"
+echo "→ Generating Railway public domain (for webhooks until www.1dent.kz is attached)"
 railway domain --service "$SERVICE_NAME" || true
 echo "   Then set: railway variable set WEBHOOK_BASE_URL=https://<your-domain>.up.railway.app --service ${SERVICE_NAME}"
 
@@ -119,11 +119,11 @@ Next steps:
 3. Deploy:
    bash scripts/railway-deploy.sh
 
-4. After custom domain 1dent.kz is attached:
-   railway domain 1dent.kz --service ${SERVICE_NAME}
-   railway variable set WEBHOOK_BASE_URL=https://1dent.kz --service ${SERVICE_NAME}
-   railway variable set FRONTEND_URL=https://1dent.kz --service ${SERVICE_NAME}
-   railway variable set PUBLIC_URL=https://1dent.kz --service ${SERVICE_NAME}
+4. After custom domain www.1dent.kz is attached:
+   railway domain www.1dent.kz --service ${SERVICE_NAME}
+   railway variable set WEBHOOK_BASE_URL=https://www.1dent.kz --service ${SERVICE_NAME}
+   railway variable set FRONTEND_URL=https://www.1dent.kz --service ${SERVICE_NAME}
+   railway variable set PUBLIC_URL=https://www.1dent.kz --service ${SERVICE_NAME}
 
 Useful commands:
   railway status

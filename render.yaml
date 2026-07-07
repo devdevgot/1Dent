@@ -29,9 +29,9 @@ services:
       - key: NODE_OPTIONS
         value: --enable-source-maps
       - key: FRONTEND_URL
-        value: https://1dent.kz
+        value: https://www.1dent.kz
       - key: PUBLIC_URL
-        value: https://1dent.kz
+        value: https://www.1dent.kz
       # REQUIRED — without Postgres the app exits on startup:
       - key: DATABASE_URL
         fromDatabase:

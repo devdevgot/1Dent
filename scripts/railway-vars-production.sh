@@ -46,9 +46,9 @@ set_var NODE_ENV production
 set_var NODE_VERSION 22
 set_var NODE_OPTIONS --enable-source-maps
 set_var CI true
-set_var FRONTEND_URL "${FRONTEND_URL:-https://1dent.kz}"
-set_var PUBLIC_URL "${PUBLIC_URL:-https://1dent.kz}"
-set_var WEBHOOK_BASE_URL "${WEBHOOK_BASE_URL:-https://1dent.kz}"
+set_var FRONTEND_URL "${FRONTEND_URL:-https://www.1dent.kz}"
+set_var PUBLIC_URL "${PUBLIC_URL:-https://www.1dent.kz}"
+set_var WEBHOOK_BASE_URL "${WEBHOOK_BASE_URL:-https://www.1dent.kz}"
 echo "  ✓ NODE_ENV, FRONTEND_URL, PUBLIC_URL, WEBHOOK_BASE_URL"
 
 echo ""
@@ -110,4 +110,4 @@ echo ""
 echo "→ Redeploy to apply changes"
 railway redeploy --service "$SERVICE_NAME" --environment "$ENVIRONMENT" -y
 echo ""
-echo "✓ Done. Health check: https://1dent.kz/api/healthz"
+echo "✓ Done. Health check: https://www.1dent.kz/api/healthz"

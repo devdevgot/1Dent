@@ -2,9 +2,9 @@ import express, { type Express } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
-import path from "path";
 import fs from "fs";
-import { fileURLToPath } from "url";
+import fs from "fs";
+import path from "path";
 import router from "./routes";
 import refRouter from "./routes/ref";
 import contractPublicRouter from "./routes/contract-public";
@@ -13,8 +13,7 @@ import tmaRouter from "./modules/tma/tma.controller";
 import { logger } from "./lib/logger";
 import { dbReadyMiddleware } from "./middlewares/db-ready.middleware";
 import { errorHandler } from "./middlewares/error.middleware";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import { resolveCrmDistDir, resolveTmaDistDir } from "./shared/static-dirs";
 
 const app: Express = express();
 
@@ -67,10 +66,7 @@ app.use(refRouter);
 app.use(contractPublicRouter);
 
 // Serve TMA (Telegram Mini App) admin panel static files
-// The built assets live in artifacts/tg-admin-app/dist/public relative to the workspace root
-// __dirname = .../artifacts/api-server/dist — go up 3 levels to workspace root
-const workspaceRoot = path.resolve(__dirname, "../../..");
-const tmaDistDir = path.resolve(workspaceRoot, "artifacts/tg-admin-app/dist/public");
+const tmaDistDir = resolveTmaDistDir();
 const tmaIndexPath = path.join(tmaDistDir, "index.html");
 const tmaStaticReady = fs.existsSync(tmaIndexPath);
 
@@ -84,7 +80,7 @@ app.get("/tg-admin", (_req, res) => {
   res.redirect(301, "/tg-admin/");
 });
 
-app.use("/tg-admin", express.static(tmaDistDir));
+app.use("/tg-admin", express.static(tmaDistDir, { redirect: false }));
 // SPA fallback — any /tg-admin/* path not matched by static files gets index.html
 app.use("/tg-admin", (_req, res) => {
   if (!tmaStaticReady) {
@@ -95,7 +91,7 @@ app.use("/tg-admin", (_req, res) => {
 });
 
 // Serve Dental CRM SPA (production build from Railway / Render / Replit deploy)
-const crmDistDir = path.resolve(workspaceRoot, "artifacts/dental-crm/dist/public");
+const crmDistDir = resolveCrmDistDir();
 const crmIndexPath = path.join(crmDistDir, "index.html");
 const crmReservedPrefixes = ["/api", "/p", "/tg-admin", "/r", "/ref", "/wa"];
 

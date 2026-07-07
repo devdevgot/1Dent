@@ -12,7 +12,7 @@ function getReferer(): string {
     process.env["PUBLIC_URL"] ??
     process.env["FRONTEND_URL"] ??
     process.env["WEBHOOK_BASE_URL"] ??
-    "https://1dent.kz"
+    "https://www.1dent.kz"
   );
 }
 

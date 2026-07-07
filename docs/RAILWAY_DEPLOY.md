@@ -95,7 +95,7 @@ bash scripts/deploy-build.sh
 bash scripts/railway-deploy.sh
 ```
 
-После деплоя: `https://1dent.kz/api/healthz` должен отвечать `200`.
+После деплоя: `https://www.1dent.kz/api/healthz` должен отвечать `200`.
 
 ## Переменные окружения на Railway
 
@@ -120,15 +120,15 @@ bash scripts/railway-deploy.sh            # деплой текущего код
 | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` |
 | `NODE_ENV` | `production` |
 | `JWT_SECRET` | случайная строка 64+ символов |
-| `FRONTEND_URL` | `https://1dent.kz` |
-| `PUBLIC_URL` | `https://1dent.kz` |
-| `WEBHOOK_BASE_URL` | `https://1dent.kz` (опционально; если не задан — берётся `PUBLIC_URL` / `FRONTEND_URL`, не `*.up.railway.app`) |
+| `FRONTEND_URL` | `https://www.1dent.kz` |
+| `PUBLIC_URL` | `https://www.1dent.kz` (должен совпадать с `FRONTEND_URL`, включая `www`) |
+| `WEBHOOK_BASE_URL` | `https://www.1dent.kz` (опционально; если не задан — берётся `PUBLIC_URL` / `FRONTEND_URL`, не `*.up.railway.app`) |
 | `PLATFORM_TG_BOT_TOKEN` | токен **платформенного** бота из [@BotFather](https://t.me/BotFather) |
 | `PLATFORM_SUPERADMIN_TG_ID` | ваш числовой Telegram ID (первый суперадмин) |
 
 ### Telegram Mini App (TMA) — если не открывается в Telegram
 
-TMA — это веб-приложение по адресу `https://1dent.kz/tg-admin/`, которое открывается из **платформенного** бота (не из клинического WhatsApp-бота).
+TMA — это веб-приложение по адресу `https://www.1dent.kz/tg-admin/`, которое открывается из **платформенного** бота (не из клинического WhatsApp-бота).
 
 **Да, токен бота нужно добавить в Railway** — без него сервер не регистрирует webhook и кнопку меню, а API отвечает `503 Platform bot not configured`.
 
@@ -138,8 +138,8 @@ TMA — это веб-приложение по адресу `https://1dent.kz/t
 |---|---|
 | `PLATFORM_TG_BOT_TOKEN` | Токен бота от BotFather; проверка подписи `initData` и регистрация webhook |
 | `PLATFORM_SUPERADMIN_TG_ID` | Ваш Telegram user ID — без него после открытия будет «Доступ запрещён» |
-| `WEBHOOK_BASE_URL` | `https://1dent.kz` — от него строятся URL webhook и кнопки «Панель управления» |
-| `FRONTEND_URL`, `PUBLIC_URL` | `https://1dent.kz` |
+| `WEBHOOK_BASE_URL` | `https://www.1dent.kz` — от него строятся URL webhook и кнопки «Панель управления» |
+| `FRONTEND_URL`, `PUBLIC_URL` | `https://www.1dent.kz` |
 
 После добавления переменных — **Redeploy** сервиса.
 
@@ -154,9 +154,9 @@ bash scripts/railway-vars-production.sh
 
 #### 2. Проверка после деплоя
 
-1. В браузере открывается: `https://1dent.kz/tg-admin/` (должен быть HTML, не 502/timeout).
-2. Диагностика: `https://1dent.kz/api/healthz/tma` → `tma.staticReady: true`, `tma.url: https://1dent.kz/tg-admin/`.
-3. Health: `https://1dent.kz/api/healthz` → `200`.
+1. В браузере открывается: `https://www.1dent.kz/tg-admin/` (должен быть HTML, не 502/timeout).
+2. Диагностика: `https://www.1dent.kz/api/healthz/tma` → `tma.staticReady: true`, `tma.url: https://www.1dent.kz/tg-admin/`.
+3. Health: `https://www.1dent.kz/api/healthz` → `200`.
 4. В логах Railway при старте:
    - `[PlatformBot] Webhook registered`
    - `[PlatformBot] Menu button set`
@@ -165,8 +165,8 @@ bash scripts/railway-vars-production.sh
 #### 3. BotFather (если кнопка меню не появляется)
 
 1. Откройте [@BotFather](https://t.me/BotFather) → ваш платформенный бот.
-2. **Bot Settings → Menu Button → Configure menu button** → URL: `https://1dent.kz/tg-admin/`
-3. Опционально: **Bot Settings → Domain** → добавьте `1dent.kz` (для некоторых сценариев Web App).
+2. **Bot Settings → Menu Button → Configure menu button** → URL: `https://www.1dent.kz/tg-admin/`
+3. **Bot Settings → Domain** → укажите `www.1dent.kz` (должен совпадать с хостом в URL Web App).
 
 Сервер при старте сам вызывает `setChatMenuButton` и `setWebhook`, но ручная настройка в BotFather не мешает.
 
@@ -179,7 +179,7 @@ bash scripts/railway-vars-production.sh
 
 | Симптом | Причина |
 |---|---|
-| Белый экран / «не удалось открыть» | Сайт недоступен (`1dent.kz` не отвечает), неверный URL в BotFather, или нет HTTPS |
+| Белый экран / «не удалось открыть» | Сайт недоступен, URL в BotFather без `www` (или наоборот), или нет HTTPS |
 | Бесконечная «Загрузка...» | API не отвечает или `DATABASE_URL` не настроен |
 | «Доступ запрещён» | TMA открылась, но ваш Telegram ID не в `PLATFORM_SUPERADMIN_TG_ID` и не в таблице `platform_admins` |
 | `Platform bot not configured` | Нет `PLATFORM_TG_BOT_TOKEN` на Railway |
