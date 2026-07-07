@@ -1,7 +1,5 @@
 import { createRequire } from "module";
 import path from "path";
-import { db, clinicsTable, usersTable, patientsTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
 import type { TreatmentPlan, TreatmentPlanItem } from "@workspace/db";
 
 // ── pdfmake singleton setup (mirrors contract-public.ts) ───────────────────
@@ -59,7 +57,6 @@ function fmtDate(d: Date): string {
   return d.toLocaleDateString("ru-RU", { day: "2-digit", month: "long", year: "numeric" });
 }
 
-// ── Context loader ─────────────────────────────────────────────────────────
 export interface PlanPdfContext {
   patientId: string;
   patientName: string;
@@ -67,51 +64,6 @@ export interface PlanPdfContext {
   clinicName: string;
   clinicWhatsappPhone: string | null;
   doctorName: string;
-}
-
-export async function loadPlanPdfContext(
-  patientId: string,
-  clinicId: string,
-  doctorId: string | null,
-): Promise<PlanPdfContext | null> {
-  const [patient] = await db
-    .select({
-      id: patientsTable.id,
-      name: patientsTable.name,
-      phone: patientsTable.phone,
-    })
-    .from(patientsTable)
-    .where(and(eq(patientsTable.id, patientId), eq(patientsTable.clinicId, clinicId)))
-    .limit(1);
-  if (!patient) return null;
-
-  const [clinic] = await db
-    .select({
-      name: clinicsTable.name,
-      whatsappPhone: clinicsTable.whatsappPhone,
-    })
-    .from(clinicsTable)
-    .where(eq(clinicsTable.id, clinicId))
-    .limit(1);
-
-  let doctorName = "";
-  if (doctorId) {
-    const [doctor] = await db
-      .select({ name: usersTable.name })
-      .from(usersTable)
-      .where(eq(usersTable.id, doctorId))
-      .limit(1);
-    doctorName = doctor?.name ?? "";
-  }
-
-  return {
-    patientId: patient.id,
-    patientName: patient.name,
-    patientPhone: patient.phone,
-    clinicName: clinic?.name ?? "Стоматология",
-    clinicWhatsappPhone: clinic?.whatsappPhone ?? null,
-    doctorName,
-  };
 }
 
 // ── PDF builder ────────────────────────────────────────────────────────────

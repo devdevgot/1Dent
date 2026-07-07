@@ -7,10 +7,12 @@ import { TreatmentPlansRepository, PlanLockedError, ItemAlreadyCompletedError } 
 import { PatientsRepository } from "../patients/patients.repository";
 import { ClinicPricesRepository } from "../clinic/clinic-prices.repository";
 import { DentalRepository } from "../dental/dental.repository";
-import { generatePlanPdfBuffer, loadPlanPdfContext } from "./treatment-plan-pdf";
+import { generatePlanPdfBuffer, type PlanPdfContext } from "./treatment-plan-pdf";
 import { sendFileToPatient } from "../../shared/messaging";
 import { MessagesRepository } from "../messages/messages.repository";
 import { logger } from "../../lib/logger";
+import { db, clinicsTable, usersTable, patientsTable } from "@workspace/db";
+import { eq, and } from "drizzle-orm";
 
 const router = Router({ mergeParams: true });
 const repo = new TreatmentPlansRepository();
@@ -61,6 +63,51 @@ const AddItemSchema = z.object({
   title: z.string().min(1),
   price: z.number().min(0),
 });
+
+async function loadPlanPdfContext(
+  patientId: string,
+  clinicId: string,
+  doctorId: string | null,
+): Promise<PlanPdfContext | null> {
+  const [patient] = await db
+    .select({
+      id: patientsTable.id,
+      name: patientsTable.name,
+      phone: patientsTable.phone,
+    })
+    .from(patientsTable)
+    .where(and(eq(patientsTable.id, patientId), eq(patientsTable.clinicId, clinicId)))
+    .limit(1);
+  if (!patient) return null;
+
+  const [clinic] = await db
+    .select({
+      name: clinicsTable.name,
+      whatsappPhone: clinicsTable.whatsappPhone,
+    })
+    .from(clinicsTable)
+    .where(eq(clinicsTable.id, clinicId))
+    .limit(1);
+
+  let doctorName = "";
+  if (doctorId) {
+    const [doctor] = await db
+      .select({ name: usersTable.name })
+      .from(usersTable)
+      .where(eq(usersTable.id, doctorId))
+      .limit(1);
+    doctorName = doctor?.name ?? "";
+  }
+
+  return {
+    patientId: patient.id,
+    patientName: patient.name,
+    patientPhone: patient.phone,
+    clinicName: clinic?.name ?? "Стоматология",
+    clinicWhatsappPhone: clinic?.whatsappPhone ?? null,
+    doctorName,
+  };
+}
 
 async function checkPatient(req: Request, res: Response, next: NextFunction): Promise<boolean> {
   const patientId = String(req.params["id"] ?? req.params["patientId"] ?? "");
