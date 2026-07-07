@@ -7,6 +7,7 @@ import { createLoginSchema, type LoginFormValues } from "@/lib/schemas";
 import { useLogin, getGetMeQueryKey } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { persistAuthSession } from "@/lib/auth-session";
+import { clearPersistedQueryCache } from "@/lib/query-persist";
 import { getPostLoginRedirectPath } from "@/lib/auth-redirect";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -41,6 +42,15 @@ export default function Login() {
             variant: "destructive",
           });
           return;
+        }
+
+        // If a different user was cached from a previous session, drop the
+        // persisted cache so their clinic's data can't leak into this session.
+        const cachedMe = queryClient.getQueryData<{ data?: { user?: { id?: string } } }>(
+          getGetMeQueryKey(),
+        );
+        if (cachedMe?.data?.user?.id && cachedMe.data.user.id !== response.data.user.id) {
+          clearPersistedQueryCache();
         }
 
         persistAuthSession(response.data);

@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useLogout, listUsersAll, getListUsersAllQueryKey } from "@workspace/api-client-react";
 import { clearAuthToken } from "@/lib/auth-token";
+import { clearPersistedQueryCache } from "@/lib/query-persist";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import i18n from "@/lib/i18n";
@@ -94,6 +95,7 @@ export default function MenuPage() {
   const logoutMutation = useLogout({
     mutation: {
       onSuccess: () => {
+        clearPersistedQueryCache();
         clearAuthToken();
         clearAuth();
         setLocation("/login");

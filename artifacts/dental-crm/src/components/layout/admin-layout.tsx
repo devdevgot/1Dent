@@ -21,6 +21,7 @@ import { FaWhatsapp } from "react-icons/fa";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { clearAuthToken } from "@/lib/auth-token";
+import { clearPersistedQueryCache } from "@/lib/query-persist";
 
 const ADMIN_NAV_ITEMS = [
   { nameKey: "nav.dashboard",            href: "/dashboard/admin",         icon: LayoutDashboard, badge: null },
@@ -64,6 +65,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   }));
 
   function handleLogout() {
+    clearPersistedQueryCache();
     clearAuthToken();
     clearAuth();
   }
