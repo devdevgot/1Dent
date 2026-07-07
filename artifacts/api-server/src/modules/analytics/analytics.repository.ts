@@ -505,6 +505,102 @@ function buildCompletedProcRange(clinicId: string, range: AnalyticsDateRange, fa
 }
 
 export class AnalyticsRepository {
+  async getOwnerDashboardSummary(clinicId: string, range?: AnalyticsDateRange): Promise<OwnerAnalytics> {
+    const periodStart = range?.dateFrom ?? startOfMonth();
+    const effectiveRange: AnalyticsDateRange = { dateFrom: periodStart, dateTo: range?.dateTo };
+
+    const [
+      totalPatientsRows,
+      newPatientsRows,
+      patientStatusRows,
+      procedureRows,
+      redAlertRows,
+    ] = await Promise.all([
+      db
+        .select({ value: count() })
+        .from(patientsTable)
+        .where(eq(patientsTable.clinicId, clinicId)),
+      db
+        .select({ value: count() })
+        .from(patientsTable)
+        .where(and(...buildCreatedAtRange(clinicId, effectiveRange, periodStart))),
+      db
+        .select({ status: patientsTable.status, value: count() })
+        .from(patientsTable)
+        .where(eq(patientsTable.clinicId, clinicId))
+        .groupBy(patientsTable.status),
+      db
+        .select({
+          method: proceduresTable.paymentMethod,
+          amount: sql<number>`COALESCE(SUM(${proceduresTable.price}), 0)`,
+          value: count(),
+        })
+        .from(proceduresTable)
+        .where(and(...buildCompletedProcRange(clinicId, effectiveRange, periodStart)))
+        .groupBy(proceduresTable.paymentMethod),
+      db
+        .select({ value: count() })
+        .from(notificationsTable)
+        .where(
+          and(
+            eq(notificationsTable.clinicId, clinicId),
+            eq(notificationsTable.type, "red_alert"),
+            eq(notificationsTable.read, false),
+          ),
+        ),
+    ]);
+
+    const patientsByStatus: Record<string, number> = {};
+    for (const row of patientStatusRows) {
+      patientsByStatus[row.status] = Number(row.value) || 0;
+    }
+
+    const PAYMENT_META: Record<string, { label: string; color: string }> = {
+      kaspi_transfer: { label: "Kaspi перевод", color: "#4B7BEC" },
+      cash:           { label: "Наличка",       color: "#26de81" },
+      kaspi_qr:       { label: "Kaspi QR",      color: "#fd9644" },
+      terminal:       { label: "Терминал",      color: "#2d3436" },
+      kaspi_red:      { label: "Kaspi RED",     color: "#fc5c65" },
+      debt:           { label: "В долг",        color: "#a29bfe" },
+    };
+
+    const totals = new Map<string, number>();
+    let revenueThisMonth = 0;
+    let completedProceduresThisMonth = 0;
+
+    for (const row of procedureRows) {
+      const method = row.method ?? "cash";
+      const amount = Number(row.amount) || 0;
+      revenueThisMonth += amount;
+      completedProceduresThisMonth += Number(row.value) || 0;
+      totals.set(method, (totals.get(method) ?? 0) + amount);
+    }
+
+    const revenueByPaymentMethod: PaymentMethodStat[] = Object.entries(PAYMENT_META)
+      .map(([method, meta]) => {
+        const amount = totals.get(method) ?? 0;
+        return {
+          method,
+          label: meta.label,
+          color: meta.color,
+          amount,
+          percent: revenueThisMonth > 0 ? Math.round((amount / revenueThisMonth) * 100) : 0,
+        };
+      })
+      .filter((s) => s.amount > 0);
+
+    return {
+      totalPatients: Number(totalPatientsRows[0]?.value) || 0,
+      newPatientsThisMonth: Number(newPatientsRows[0]?.value) || 0,
+      patientsByStatus,
+      revenueThisMonth,
+      completedProceduresThisMonth,
+      redAlertCount: Number(redAlertRows[0]?.value) || 0,
+      doctorKpis: [],
+      revenueByPaymentMethod,
+    };
+  }
+
   async getOwnerAnalytics(clinicId: string, range?: AnalyticsDateRange): Promise<OwnerAnalytics> {
     const filtered = hasDateRange(range);
     if (!filtered) {

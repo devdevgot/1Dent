@@ -1056,6 +1056,36 @@ export const useGetFinancialSummary = <TError = unknown>(
     ...options?.query,
   });
 
+// ─── Custom: fast owner dashboard summary ────────────────────────────────────
+export const getOwnerDashboardSummary = (
+  params?: { dateFrom?: string; dateTo?: string },
+  options?: RequestInit,
+): Promise<AnalyticsResponse> => {
+  const qs = new URLSearchParams();
+  if (params?.dateFrom) qs.set("dateFrom", params.dateFrom);
+  if (params?.dateTo) qs.set("dateTo", params.dateTo);
+  const q = qs.toString();
+  return customFetch<AnalyticsResponse>(
+    `/api/analytics/owner/summary${q ? `?${q}` : ""}`,
+    { method: "GET", ...options },
+  );
+};
+
+export const getOwnerDashboardSummaryQueryKey = (params?: {
+  dateFrom?: string;
+  dateTo?: string;
+}) => ["/api/analytics/owner/summary", params ?? {}] as const;
+
+export const useGetOwnerDashboardSummary = <TError = unknown>(
+  params?: { dateFrom?: string; dateTo?: string },
+  options?: { query?: UseQueryOptions<AnalyticsResponse, TError> },
+) =>
+  useQuery<AnalyticsResponse, TError>({
+    queryKey: getOwnerDashboardSummaryQueryKey(params),
+    queryFn: ({ signal }) => getOwnerDashboardSummary(params, { signal }),
+    ...options?.query,
+  });
+
 // ─── Custom: patient metrics (retention, LTV, treatment plan conversion) ───────
 
 export interface RetentionCohort {

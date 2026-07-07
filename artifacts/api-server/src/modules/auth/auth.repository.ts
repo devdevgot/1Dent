@@ -86,7 +86,7 @@ export class AuthRepository {
         updatedAt: usersTable.updatedAt,
       })
       .from(usersTable)
-      .where(and(...conditions)) as Promise<User[]>;
+      .where(and(...conditions)) as unknown as Promise<User[]>;
   }
 
   async listUsersWithSalary(clinicId: string, includeInactive = false) {

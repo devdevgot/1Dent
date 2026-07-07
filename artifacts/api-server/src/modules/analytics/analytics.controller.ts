@@ -121,6 +121,20 @@ router.get(
 
 // GET /analytics/owner — owner/accountant analytics
 router.get(
+  "/analytics/owner/summary",
+  roleGuard("owner", "accountant"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { clinicId } = req.user!;
+    const { dateFrom, dateTo } = parseDateRange(req.query);
+    const range: AnalyticsDateRange | undefined =
+      dateFrom || dateTo ? { dateFrom, dateTo } : undefined;
+    const analytics = await repo.getOwnerDashboardSummary(clinicId, range).catch(next);
+    if (analytics === undefined) return;
+    res.json({ success: true, data: { role: "owner", analytics } });
+  },
+);
+
+router.get(
   "/analytics/owner",
   roleGuard("owner", "accountant"),
   async (req: Request, res: Response, next: NextFunction) => {
