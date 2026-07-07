@@ -2,17 +2,18 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Eye, Activity, ClipboardList, PlayCircle, Info,
-  ChevronDown, CheckCircle2, Circle, Loader2, Plus, Phone, AlertTriangle,
+  Plus, Phone, AlertTriangle,
   Sparkles, X,
 } from "lucide-react";
 import { useGetPatient, useListTeeth, useGetActiveTreatmentPlan } from "@workspace/api-client-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { TabletChartSection } from "./tablet-chart-section";
+import { TabletPlanPanel } from "./tablet-plan-panel";
 import { TabletPresentationMode } from "./tablet-presentation-mode";
 import {
-  CONDITION_META, STATUS_META, fmtTenge, initials,
-  type PlanStage, type ToothCondition,
+  CONDITION_META, STATUS_META, initials,
+  type ToothCondition,
 } from "./mock-data";
 import { apiPatientToTablet, apiPlanToStages, apiTeethToMap } from "./tablet-patient-adapter";
 import { KANBAN_COLUMNS } from "@/lib/patient-utils";
@@ -31,7 +32,7 @@ export function PatientCard({ patientId, onBack }: { patientId: string; onBack: 
   const { t } = useTranslation();
   const { data: patientRes, isLoading, isError } = useGetPatient(patientId);
   const { data: teethData, refetch: refetchTeeth } = useListTeeth(patientId);
-  const { data: planData } = useGetActiveTreatmentPlan(patientId);
+  const { data: planData, refetch: refetchPlan } = useGetActiveTreatmentPlan(patientId);
 
   const apiPatient = patientRes?.data?.patient;
   const teethFromApi = useMemo(
@@ -62,6 +63,11 @@ export function PatientCard({ patientId, onBack }: { patientId: string; onBack: 
     void refetchTeeth();
   }, [refetchTeeth]);
 
+  const handlePlanUpdated = useCallback(() => {
+    void refetchPlan();
+    void refetchTeeth();
+  }, [refetchPlan, refetchTeeth]);
+
   const planFdis = useMemo(() => {
     const s = new Set<number>();
     plan.forEach((st) => st.items.forEach((it) => it.tooth && s.add(it.tooth)));
@@ -72,6 +78,18 @@ export function PatientCard({ patientId, onBack }: { patientId: string; onBack: 
   const doneCount = allItems.filter((i) => i.status === "completed").length;
   const planTotal = allItems.reduce((s, i) => s + i.price, 0);
   const progress = allItems.length ? Math.round((doneCount / allItems.length) * 100) : 0;
+
+  const planPanelProps = {
+    patientId,
+    planId: planData?.data?.plan?.id,
+    plan,
+    progress,
+    doneCount,
+    total: allItems.length,
+    planTotal,
+    planNumber: planData?.data?.plan?.planNumber,
+    onPlanUpdated: handlePlanUpdated,
+  };
 
   const selectedCond = selectedFdi ? (teeth[selectedFdi] ?? "healthy") : null;
   const relatedVideos = selectedCond
@@ -183,9 +201,7 @@ export function PatientCard({ patientId, onBack }: { patientId: string; onBack: 
             </div>
             {/* Правая: план */}
             <div className="overflow-auto rounded-2xl border border-[#e8e3d9] bg-white">
-              <PlanPanel plan={plan} progress={progress} doneCount={doneCount}
-                total={allItems.length} planTotal={planTotal} filterFdi={selectedFdi}
-                planNumber={planData?.data?.plan?.planNumber} />
+              <TabletPlanPanel {...planPanelProps} filterFdi={selectedFdi} />
             </div>
           </div>
         )}
@@ -193,9 +209,7 @@ export function PatientCard({ patientId, onBack }: { patientId: string; onBack: 
         {tab === "plan" && (
           <div className="mx-auto max-w-3xl p-4">
             <div className="rounded-2xl border border-[#e8e3d9] bg-white">
-              <PlanPanel plan={plan} progress={progress} doneCount={doneCount}
-                total={allItems.length} planTotal={planTotal} filterFdi={null}
-                planNumber={planData?.data?.plan?.planNumber} />
+              <TabletPlanPanel {...planPanelProps} filterFdi={null} />
             </div>
           </div>
         )}
@@ -262,129 +276,6 @@ function ToothDetail({
       </div>
     </motion.div>
   );
-}
-
-// ── Панель плана ──────────────────────────────────────────────────────────────
-function PlanPanel({
-  plan, progress, doneCount, total, planTotal, filterFdi, planNumber,
-}: {
-  plan: PlanStage[];
-  progress: number;
-  doneCount: number;
-  total: number;
-  planTotal: number;
-  filterFdi: number | null;
-  planNumber?: number;
-}) {
-  const [expanded, setExpanded] = useState<Set<string>>(new Set(plan.map((s) => s.id)));
-  const toggle = (id: string) =>
-    setExpanded((prev) => {
-      const n = new Set(prev);
-      n.has(id) ? n.delete(id) : n.add(id);
-      return n;
-    });
-
-  const stages = filterFdi
-    ? plan.map((s) => ({ ...s, items: s.items.filter((i) => i.tooth === filterFdi) })).filter((s) => s.items.length)
-    : plan;
-
-  if (plan.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-2 p-10 text-center text-[#94a3b8]">
-        <ClipboardList className="h-10 w-10 opacity-40" />
-        <p className="text-sm">План лечения ещё не создан</p>
-        <button className="mt-2 flex items-center gap-1.5 rounded-xl bg-[#1f75fe] px-4 py-2 text-sm font-semibold text-white">
-          <Plus className="h-4 w-4" /> Создать план
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex h-full flex-col">
-      {/* Шапка плана */}
-      <div className="border-b border-[#f1ede4] p-4">
-        <div className="mb-2 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <ClipboardList className="h-4 w-4 text-[#1f75fe]" />
-            <span className="text-sm font-bold text-[#0f172a]">План лечения №{planNumber ?? "—"}</span>
-          </div>
-          <span className="rounded-full bg-[#f0fdf4] px-2.5 py-0.5 text-xs font-bold text-[#16a34a]">Активен</span>
-        </div>
-        <div className="mb-1.5 flex items-center justify-between text-xs">
-          <span className="text-[#94a3b8]">Выполнено {doneCount} из {total}</span>
-          <span className="font-bold text-[#64748b]">{progress}%</span>
-        </div>
-        <div className="h-2 overflow-hidden rounded-full bg-[#f1ede4]">
-          <div className="h-full rounded-full bg-[#1f75fe] transition-all" style={{ width: `${progress}%` }} />
-        </div>
-        {filterFdi && (
-          <p className="mt-2 text-xs font-medium text-[#1f75fe]">Показаны позиции по зубу {filterFdi}</p>
-        )}
-      </div>
-
-      {/* Этапы */}
-      <div className="flex-1 overflow-auto p-3">
-        {stages.length === 0 ? (
-          <p className="p-6 text-center text-sm text-[#94a3b8]">Нет позиций по выбранному зубу</p>
-        ) : (
-          <div className="space-y-2">
-            {stages.map((stage) => {
-              const open = expanded.has(stage.id);
-              const stageTotal = stage.items.reduce((s, i) => s + i.price, 0);
-              return (
-                <div key={stage.id} className="overflow-hidden rounded-xl border border-[#f1ede4]">
-                  <button
-                    onClick={() => toggle(stage.id)}
-                    className="flex w-full items-center justify-between px-3 py-2.5 transition-colors hover:bg-[#faf8f4]"
-                    style={{ backgroundColor: open ? stage.bg : undefined }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: stage.color }} />
-                      <span className="text-sm font-bold text-[#0f172a]">{stage.label}</span>
-                      <span className="text-xs text-[#94a3b8]">({stage.items.length})</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-[#64748b]">{fmtTenge(stageTotal)}</span>
-                      <ChevronDown className={cn("h-4 w-4 text-[#94a3b8] transition-transform", open && "rotate-180")} />
-                    </div>
-                  </button>
-                  {open && (
-                    <div className="divide-y divide-[#f1ede4]">
-                      {stage.items.map((item) => (
-                        <div key={item.id} className="flex items-center gap-3 px-3 py-2.5">
-                          <StatusIcon status={item.status} />
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium text-[#0f172a]">{item.title}</p>
-                            {item.tooth && <p className="text-xs text-[#94a3b8]">Зуб {item.tooth}</p>}
-                          </div>
-                          <span className="text-sm font-semibold text-[#0f172a]">{fmtTenge(item.price)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Итог */}
-      <div className="border-t border-[#f1ede4] bg-[#faf8f4] p-4">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-[#64748b]">Итого по плану</span>
-          <span className="text-xl font-extrabold text-[#0f172a]">{fmtTenge(planTotal)}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function StatusIcon({ status }: { status: "completed" | "in_progress" | "pending" }) {
-  if (status === "completed") return <CheckCircle2 className="h-5 w-5 shrink-0 text-[#16a34a]" />;
-  if (status === "in_progress") return <Loader2 className="h-5 w-5 shrink-0 animate-spin text-[#1f75fe]" />;
-  return <Circle className="h-5 w-5 shrink-0 text-[#cbd5e1]" />;
 }
 
 // ── Видеотека ─────────────────────────────────────────────────────────────────

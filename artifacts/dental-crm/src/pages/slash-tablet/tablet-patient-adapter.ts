@@ -42,6 +42,7 @@ export function apiPlanToStages(plan: TreatmentPlan | null | undefined): PlanSta
 
   const groups = new Map<string, PlanItem[]>();
   for (const item of [...plan.items].sort((a, b) => a.sortOrder - b.sortOrder)) {
+    if (item.status === "cancelled") continue;
     const stageKey = item.stage?.trim() || "Лечение";
     const list = groups.get(stageKey) ?? [];
     list.push({
