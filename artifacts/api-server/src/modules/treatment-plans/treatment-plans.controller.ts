@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { Router, type Request, type Response, type NextFunction } from "express";
 import { z } from "zod";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
@@ -6,12 +7,17 @@ import { TreatmentPlansRepository, PlanLockedError, ItemAlreadyCompletedError } 
 import { PatientsRepository } from "../patients/patients.repository";
 import { ClinicPricesRepository } from "../clinic/clinic-prices.repository";
 import { DentalRepository } from "../dental/dental.repository";
+import { generatePlanPdfBuffer, loadPlanPdfContext } from "./treatment-plan-pdf";
+import { sendFileToPatient } from "../../shared/messaging";
+import { MessagesRepository } from "../messages/messages.repository";
+import { logger } from "../../lib/logger";
 
 const router = Router({ mergeParams: true });
 const repo = new TreatmentPlansRepository();
 const patientsRepo = new PatientsRepository();
 const pricesRepo = new ClinicPricesRepository();
 const dentalRepo = new DentalRepository();
+const messagesRepo = new MessagesRepository();
 
 const docRoles = roleGuard("owner", "admin", "doctor");
 
@@ -267,6 +273,148 @@ router.post(
     }
 
     res.json({ success: true, data: { item: result.item, procedureId: result.procedureId } });
+  },
+);
+
+// ── Send active plan as PDF via WhatsApp ───────────────────────────────────
+
+const PaymentSchema = z
+  .object({
+    months: z.union([z.literal(3), z.literal(6), z.literal(12)]).optional(),
+  })
+  .optional();
+
+const SendPlanPdfSchema = z.object({
+  payment: PaymentSchema,
+});
+
+// GET /patients/:id/treatment-plan/pdf — download active plan as PDF (for preview / debugging)
+router.get(
+  "/patients/:id/treatment-plan/pdf",
+  authMiddleware,
+  docRoles,
+  async (req: Request, res: Response, next: NextFunction) => {
+    if (!(await checkPatient(req, res, next))) return;
+    const patientId = req.params["id"] as string;
+    const clinicId = req.user!.clinicId;
+
+    const plan = await repo.getActivePlan(patientId, clinicId).catch(next);
+    if (plan === undefined) return;
+    if (!plan) return next(new NotFoundError("Активный план лечения не найден"));
+
+    const ctx = await loadPlanPdfContext(patientId, clinicId, plan.doctorId).catch(next);
+    if (!ctx) return next(new NotFoundError("Не удалось собрать данные плана"));
+
+    try {
+      const buffer = await generatePlanPdfBuffer({ ctx, plan, planNumber: plan.planNumber });
+      const filename = encodeURIComponent(`plan-lecheniya-${plan.planNumber}.pdf`);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `inline; filename*=UTF-8''${filename}`);
+      res.setHeader("Content-Length", buffer.length);
+      res.setHeader("Cache-Control", "no-store");
+      return res.send(buffer);
+    } catch (err) {
+      logger.error({ err, patientId, clinicId }, "[treatment-plan] PDF generation failed");
+      return next(err);
+    }
+  },
+);
+
+// POST /patients/:id/treatment-plan/send-whatsapp-pdf — generate PDF & send via WhatsApp
+router.post(
+  "/patients/:id/treatment-plan/send-whatsapp-pdf",
+  authMiddleware,
+  docRoles,
+  async (req: Request, res: Response, next: NextFunction) => {
+    const parsed = SendPlanPdfSchema.safeParse(req.body ?? {});
+    if (!parsed.success) return next(new ValidationError(parsed.error.message));
+
+    if (!(await checkPatient(req, res, next))) return;
+    const patientId = req.params["id"] as string;
+    const clinicId = req.user!.clinicId;
+
+    const plan = await repo.getActivePlan(patientId, clinicId).catch(next);
+    if (plan === undefined) return;
+    if (!plan) return next(new NotFoundError("Активный план лечения не найден"));
+
+    const ctx = await loadPlanPdfContext(patientId, clinicId, plan.doctorId).catch(next);
+    if (!ctx) return next(new NotFoundError("Не удалось собрать данные плана"));
+
+    if (!ctx.patientPhone?.trim()) {
+      return next(new ValidationError("У пациента не указан телефон для WhatsApp"));
+    }
+
+    let pdfBuffer: Buffer;
+    try {
+      pdfBuffer = await generatePlanPdfBuffer({
+        ctx,
+        plan,
+        planNumber: plan.planNumber,
+        payment: parsed.data.payment,
+      });
+    } catch (err) {
+      logger.error({ err, patientId, clinicId }, "[treatment-plan] PDF generation failed");
+      return next(err);
+    }
+
+    const fileName = `plan-lecheniya-${plan.planNumber}.pdf`;
+    const caption = `План лечения №${plan.planNumber} — ${ctx.clinicName}`;
+
+    let whatsappMessageId = "";
+    try {
+      whatsappMessageId = await sendFileToPatient(clinicId, ctx.patientPhone, {
+        buffer: pdfBuffer,
+        fileName,
+        contentType: "application/pdf",
+        caption,
+      });
+    } catch (err) {
+      logger.error({ err, patientId, clinicId }, "[treatment-plan] sendFileToPatient failed");
+      return res.status(502).json({
+        success: false,
+        code: "WHATSAPP_SEND_FAILED",
+        error: err instanceof Error ? err.message : "Не удалось отправить WhatsApp",
+      });
+    }
+
+    if (!whatsappMessageId) {
+      return res.status(502).json({
+        success: false,
+        code: "WHATSAPP_NOT_CONFIGURED",
+        error: "WhatsApp не подключён в клинике",
+      });
+    }
+
+    const message = await messagesRepo
+      .create({
+        id: randomUUID(),
+        clinicId,
+        patientId,
+        direction: "outbound",
+        senderId: req.user!.userId,
+        content: `📎 ${caption}\n${fileName}`,
+        whatsappMessageId,
+        isRedAlert: false,
+      })
+      .catch((err) => {
+        logger.warn({ err }, "[treatment-plan] Failed to persist outbound message record");
+        return null;
+      });
+
+    logger.info(
+      { patientId, clinicId, planId: plan.id, whatsappMessageId, fileName },
+      "[treatment-plan] Plan PDF sent via WhatsApp",
+    );
+
+    res.json({
+      success: true,
+      data: {
+        planId: plan.id,
+        fileName,
+        whatsappMessageId,
+        messageId: message?.id ?? null,
+      },
+    });
   },
 );
 

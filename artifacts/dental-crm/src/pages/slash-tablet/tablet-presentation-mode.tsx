@@ -6,7 +6,7 @@ import {
   Activity, ClipboardList, ArrowRight, HeartPulse,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
-import { useSendMessage } from "@workspace/api-client-react";
+import { customFetch } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -54,7 +54,6 @@ export function TabletPresentationMode({
 }) {
   const { user, clinic } = useAuthStore();
   const { toast } = useToast();
-  const sendMessage = useSendMessage();
   const [sendState, setSendState] = useState<SendState>("idle");
   const [payment, setPayment] = useState<PaymentOption>("full");
 
@@ -102,47 +101,23 @@ export function TabletPresentationMode({
     ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const buildPlanMessage = () => {
-    const lines: string[] = [];
-    lines.push(`🦷 *${clinicName}*`);
-    lines.push(`План лечения для ${patient.name}${planNumber ? ` (№${planNumber})` : ""}`);
-    lines.push("");
-
-    if (problemTeeth.length > 0) {
-      lines.push(`*Требуют внимания:* ${problemTeeth.length} ${plural(problemTeeth.length, "зуб", "зуба", "зубов")}`);
-    }
-    lines.push("");
-    lines.push("*Этапы лечения:*");
-    plan.forEach((stage, idx) => {
-      const stageTotal = stage.items.reduce((s, i) => s + i.price, 0);
-      lines.push(`${idx + 1}. ${stage.label} — ${fmtTenge(stageTotal)}`);
-      stage.items.forEach((item) => {
-        const mark = item.status === "completed" ? "✓" : "•";
-        const tooth = item.tooth ? ` (зуб ${item.tooth})` : "";
-        lines.push(`   ${mark} ${item.title}${tooth} — ${fmtTenge(item.price)}`);
-      });
-    });
-    lines.push("");
-    lines.push(`*Итого к оплате:* ${fmtTenge(remainingTotal)}`);
-    if (payment !== "full") {
-      lines.push(`Рассрочка на ${PAYMENT_MONTHS[payment]} мес — ${fmtTenge(monthlyAmount)}/мес`);
-    }
-    lines.push("");
-    if (doctorName) lines.push(`Лечащий врач: ${doctorName}`);
-    lines.push(`${clinicName}`);
-    return lines.join("\n");
-  };
-
   const handleSendWhatsapp = async () => {
     if (sendState !== "idle") return;
     setSendState("sending");
     try {
-      await sendMessage.mutateAsync({
-        patientId: patient.id,
-        data: { content: buildPlanMessage() },
-      });
+      const paymentPayload =
+        payment === "full"
+          ? {}
+          : { payment: { months: PAYMENT_MONTHS[payment] as 3 | 6 | 12 } };
+      await customFetch<{ success: boolean; data: { fileName: string; whatsappMessageId: string } }>(
+        `/api/patients/${patient.id}/treatment-plan/send-whatsapp-pdf`,
+        {
+          method: "POST",
+          body: JSON.stringify(paymentPayload),
+        },
+      );
       setSendState("sent");
-      toast({ title: "План отправлен пациенту в WhatsApp" });
+      toast({ title: "PDF с планом отправлен пациенту в WhatsApp" });
     } catch (err) {
       setSendState("idle");
       toast({
@@ -434,7 +409,7 @@ export function TabletPresentationMode({
               )}
             </p>
             <p className="truncate text-xs text-[#64748b]">
-              Отправим план и стоимость пациенту в WhatsApp
+              План будет отправлен как PDF-файл в WhatsApp
             </p>
           </div>
           <button
