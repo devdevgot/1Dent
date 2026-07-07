@@ -13,20 +13,15 @@ if [[ -x "$HOME/.railway/bin/railway" ]]; then
   export PATH="$HOME/.railway/bin:$PATH"
 fi
 
-if ! command -v railway >/dev/null; then
-  echo "Railway CLI not found. Run: bash scripts/railway-setup.sh"
+# shellcheck source=scripts/railway-auth.sh
+source "$ROOT/scripts/railway-auth.sh"
+
+if ! railway_auth_preflight; then
+  echo "Not authenticated. Set RAILWAY_TOKEN or run: railway login"
   exit 1
 fi
 
-if ! railway whoami >/dev/null 2>&1; then
-  echo "Not logged in. Run: railway login"
-  exit 1
-fi
-
-if [[ ! -f .railway/config.json ]]; then
-  echo "Project not linked. Run: bash scripts/railway-setup.sh"
-  exit 1
-fi
+railway_require_service "$SERVICE_NAME"
 
 railway service "$SERVICE_NAME" 2>/dev/null || true
 

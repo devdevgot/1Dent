@@ -99,6 +99,22 @@ bash scripts/railway-deploy.sh
 
 ## Переменные окружения на Railway
 
+### Project token (для CLI / Cloud Agent)
+
+1. Railway → проект **1Dent** → **Settings** → **Tokens**
+2. Создать токен для окружения **production**
+3. Сохранить как секрет `RAILWAY_TOKEN` (именно project token, не account token)
+
+Проверка:
+
+```bash
+export RAILWAY_TOKEN="<token>"
+bash scripts/railway-vars-production.sh   # все переменные + redeploy
+bash scripts/railway-deploy.sh            # деплой текущего кода
+```
+
+Скрипт `railway-vars-production.sh` читает секреты из env (`JWT_SECRET`, `OPENROUTER_API_KEY`, R2-ключи и т.д.) и пропускает незаданные.
+
 | Переменная | Значение |
 |---|---|
 | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` |

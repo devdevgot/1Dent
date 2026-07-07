@@ -23,26 +23,11 @@ if [[ -z "${R2_ACCESS_KEY_ID:-}" || -z "${R2_SECRET_ACCESS_KEY:-}" ]]; then
   exit 1
 fi
 
-if ! command -v railway >/dev/null 2>&1; then
-  if [[ -x "$HOME/.railway/bin/railway" ]]; then
-    export PATH="$HOME/.railway/bin:$PATH"
-  else
-    echo "→ Installing Railway CLI..."
-    bash <(curl -fsSL railway.com/install.sh)
-    export PATH="$HOME/.railway/bin:$PATH"
-  fi
-fi
+# shellcheck source=scripts/railway-auth.sh
+source "$ROOT/scripts/railway-auth.sh"
 
-if [[ -n "${RAILWAY_API_TOKEN_1DENT:-}" ]]; then
-  export RAILWAY_TOKEN="$RAILWAY_API_TOKEN_1DENT"
-elif [[ -n "${RAILWAY_TOKEN:-}" ]]; then
-  :
-elif railway_token="$(printenv 'Railway Token' 2>/dev/null || true)" && [[ -n "$railway_token" ]]; then
-  export RAILWAY_TOKEN="$railway_token"
-else
-  echo "ERROR: Set RAILWAY_TOKEN, RAILWAY_API_TOKEN_1DENT, or Railway Token secret for API access."
-  exit 1
-fi
+railway_auth_preflight
+railway_require_service "$SERVICE_NAME"
 
 echo "=== Railway R2 setup → service: ${SERVICE_NAME} ==="
 
