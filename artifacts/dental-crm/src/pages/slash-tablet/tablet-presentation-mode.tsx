@@ -1,30 +1,39 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
-  EyeOff, CheckCircle2, Shield, Clock, Sparkles,
-  Loader2, Send, CalendarDays, HeartPulse, ChevronRight,
+  EyeOff, CheckCircle2, ShieldCheck, Clock, Sparkles,
+  Loader2, CalendarDays, Stethoscope, CreditCard, Wallet,
+  Activity, ClipboardList, ArrowRight, HeartPulse,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
+import { useSendMessage } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
+import { OneDentLogo } from "./onedent-logo";
 import { TabletDentalChart } from "./tablet-dental-chart";
 import {
   CONDITION_META, fmtTenge, initials,
   type TabletPatient, type PlanStage, type ToothCondition,
 } from "./mock-data";
 
-type PackageId = "basic" | "optimal" | "premium";
-
-interface PackageOption {
-  id: PackageId;
-  name: string;
-  price: number;
-  desc: string;
-  best?: boolean;
-  features: string[];
-  duration: string;
-}
-
 type SendState = "idle" | "sending" | "sent";
+type PaymentOption = "full" | "3" | "6" | "12";
+
+const PROBLEM_CONDITIONS: ToothCondition[] = ["cavity", "root_canal", "extraction_needed"];
+const RESOLVED_CONDITIONS: ToothCondition[] = ["healthy", "treated", "crown", "implant"];
+
+// Patient-facing description of what each condition means and the recommended action.
+const CONDITION_STORY: Partial<Record<ToothCondition, { title: string; action: string }>> = {
+  cavity: { title: "Кариес", action: "Вылечим и поставим эстетичную пломбу" },
+  root_canal: { title: "Требуется лечение каналов", action: "Пролечим каналы и восстановим зуб" },
+  extraction_needed: { title: "Зуб требует удаления", action: "Аккуратно удалим и предложим замещение" },
+  missing: { title: "Отсутствует зуб", action: "Восстановим имплантом или протезом" },
+};
+
+const PAYMENT_MONTHS: Record<Exclude<PaymentOption, "full">, number> = {
+  "3": 3, "6": 6, "12": 12,
+};
 
 export function TabletPresentationMode({
   patient,
@@ -32,6 +41,7 @@ export function TabletPresentationMode({
   plan,
   planFdis,
   planTotal,
+  planNumber,
   onExit,
 }: {
   patient: TabletPatient;
@@ -39,144 +49,211 @@ export function TabletPresentationMode({
   plan: PlanStage[];
   planFdis: Set<number>;
   planTotal: number;
+  planNumber?: number;
   onExit: () => void;
 }) {
-  const [selectedPkg, setSelectedPkg] = useState<PackageId>("optimal");
+  const { user, clinic } = useAuthStore();
+  const { toast } = useToast();
+  const sendMessage = useSendMessage();
   const [sendState, setSendState] = useState<SendState>("idle");
+  const [payment, setPayment] = useState<PaymentOption>("full");
+
+  const examineRef = useRef<HTMLDivElement>(null);
+  const planRef = useRef<HTMLDivElement>(null);
+  const costRef = useRef<HTMLDivElement>(null);
+
+  const clinicName = clinic?.name ?? "Стоматология";
+  const doctorName = user?.name ?? "";
+  const firstName = patient.name.split(" ")[0] ?? patient.name;
 
   const problemTeeth = useMemo(
     () => Object.entries(teeth)
-      .filter(([, c]) => c !== "healthy" && c !== "treated" && c !== "crown" && c !== "implant")
-      .map(([fdi, cond]) => ({ fdi: Number(fdi), cond: cond as ToothCondition })),
+      .filter(([, c]) => PROBLEM_CONDITIONS.includes(c as ToothCondition) || c === "missing")
+      .map(([fdi, cond]) => ({ fdi: Number(fdi), cond: cond as ToothCondition }))
+      .sort((a, b) => a.fdi - b.fdi),
     [teeth],
   );
 
-  const healthyCount = useMemo(
-    () => Object.values(teeth).filter((c) => c === "healthy" || c === "treated" || c === "crown" || c === "implant").length,
+  const resolvedCount = useMemo(
+    () => Object.values(teeth).filter((c) => RESOLVED_CONDITIONS.includes(c as ToothCondition)).length,
     [teeth],
   );
 
   const allItems = plan.flatMap((s) => s.items);
   const doneCount = allItems.filter((i) => i.status === "completed").length;
   const progress = allItems.length ? Math.round((doneCount / allItems.length) * 100) : 0;
+  const showProgress = doneCount > 0;
+  const remainingTotal = plan
+    .flatMap((s) => s.items)
+    .filter((i) => i.status !== "completed")
+    .reduce((s, i) => s + i.price, 0);
 
-  const packages: PackageOption[] = useMemo(() => [
-    {
-      id: "basic",
-      name: "Базовый",
-      price: Math.round(planTotal * 0.7),
-      desc: "Срочное лечение и устранение боли",
-      duration: "2–4 недели",
-      features: [
-        "Лечение острых состояний",
-        "Удаление проблемных зубов",
-        "Базовые пломбы",
-        "Контрольный осмотр",
-      ],
-    },
-    {
-      id: "optimal",
-      name: "Оптимальный",
-      price: planTotal,
-      desc: "Полный план с эстетикой и долгосрочным результатом",
-      best: true,
-      duration: "2–4 месяца",
-      features: [
-        "Всё из базового плана",
-        "Лечение каналов и коронки",
-        "Профессиональная гигиена",
-        "Поэтапная оплата",
-        "Гарантия на работы 1 год",
-      ],
-    },
-    {
-      id: "premium",
-      name: "Премиум",
-      price: Math.round(planTotal * 1.3),
-      desc: "Премиум-материалы и максимальный комфорт",
-      duration: "3–6 месяцев",
-      features: [
-        "Всё из оптимального плана",
-        "Керамические реставрации",
-        "Имплантация премиум-класса",
-        "Расширенная гарантия 3 года",
-        "Приоритетная запись",
-      ],
-    },
-  ], [planTotal]);
-
-  const activePkg = packages.find((p) => p.id === selectedPkg) ?? packages[1]!;
-
-  const handleSendWhatsapp = () => {
-    if (sendState !== "idle") return;
-    setSendState("sending");
-  // Демо: после подключения бэкенда — POST /api/patients/:id/send-plan-whatsapp
-    setTimeout(() => setSendState("sent"), 1800);
-  };
+  const monthlyAmount = useMemo(() => {
+    if (payment === "full") return 0;
+    const months = PAYMENT_MONTHS[payment];
+    return Math.ceil(remainingTotal / months / 100) * 100;
+  }, [payment, remainingTotal]);
 
   const today = new Date().toLocaleDateString("ru", {
     day: "numeric", month: "long", year: "numeric",
   });
 
+  const scrollTo = (ref: React.RefObject<HTMLDivElement | null>) => {
+    ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const buildPlanMessage = () => {
+    const lines: string[] = [];
+    lines.push(`🦷 *${clinicName}*`);
+    lines.push(`План лечения для ${patient.name}${planNumber ? ` (№${planNumber})` : ""}`);
+    lines.push("");
+
+    if (problemTeeth.length > 0) {
+      lines.push(`*Требуют внимания:* ${problemTeeth.length} ${plural(problemTeeth.length, "зуб", "зуба", "зубов")}`);
+    }
+    lines.push("");
+    lines.push("*Этапы лечения:*");
+    plan.forEach((stage, idx) => {
+      const stageTotal = stage.items.reduce((s, i) => s + i.price, 0);
+      lines.push(`${idx + 1}. ${stage.label} — ${fmtTenge(stageTotal)}`);
+      stage.items.forEach((item) => {
+        const mark = item.status === "completed" ? "✓" : "•";
+        const tooth = item.tooth ? ` (зуб ${item.tooth})` : "";
+        lines.push(`   ${mark} ${item.title}${tooth} — ${fmtTenge(item.price)}`);
+      });
+    });
+    lines.push("");
+    lines.push(`*Итого к оплате:* ${fmtTenge(remainingTotal)}`);
+    if (payment !== "full") {
+      lines.push(`Рассрочка на ${PAYMENT_MONTHS[payment]} мес — ${fmtTenge(monthlyAmount)}/мес`);
+    }
+    lines.push("");
+    if (doctorName) lines.push(`Лечащий врач: ${doctorName}`);
+    lines.push(`${clinicName}`);
+    return lines.join("\n");
+  };
+
+  const handleSendWhatsapp = async () => {
+    if (sendState !== "idle") return;
+    setSendState("sending");
+    try {
+      await sendMessage.mutateAsync({
+        patientId: patient.id,
+        data: { content: buildPlanMessage() },
+      });
+      setSendState("sent");
+      toast({ title: "План отправлен пациенту в WhatsApp" });
+    } catch (err) {
+      setSendState("idle");
+      toast({
+        title: "Не удалось отправить",
+        description: err instanceof Error ? err.message : "Проверьте подключение WhatsApp в настройках",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
-    <div className="flex h-[100dvh] w-full flex-col bg-[#faf8f4] font-manrope">
+    <div className="flex h-[100dvh] w-full flex-col bg-[#f6f8fb] font-manrope">
       {/* Верхняя полоса — только для врача */}
-      <header className="flex shrink-0 items-center justify-between border-b border-[#e8e3d9] bg-white/90 px-5 py-3 backdrop-blur-sm">
+      <header className="flex shrink-0 items-center justify-between border-b border-[#e6ebf2] bg-white/90 px-5 py-3 backdrop-blur-sm">
         <button
           type="button"
           onClick={onExit}
-          className="flex items-center gap-2 rounded-xl border border-[#e8e3d9] bg-white px-4 py-2 text-sm font-semibold text-[#64748b] transition-colors hover:bg-[#faf8f4]"
+          className="flex items-center gap-2 rounded-xl border border-[#e6ebf2] bg-white px-4 py-2 text-sm font-semibold text-[#64748b] transition-colors hover:bg-[#f6f8fb]"
         >
           <EyeOff className="h-4 w-4" /> Вернуться врачу
         </button>
+        <div className="hidden items-center gap-2 sm:flex">
+          <StepChip icon={Activity} label="Осмотр" onClick={() => scrollTo(examineRef)} />
+          <StepChip icon={ClipboardList} label="План" onClick={() => scrollTo(planRef)} />
+          <StepChip icon={CreditCard} label="Стоимость" onClick={() => scrollTo(costRef)} />
+        </div>
         <p className="text-xs font-medium text-[#94a3b8]">Режим для пациента</p>
       </header>
 
-      <div className="flex-1 overflow-y-auto pb-36">
-        <div className="mx-auto w-full max-w-5xl px-5 py-6">
+      <div className="flex-1 overflow-y-auto pb-40">
+        <div className="mx-auto w-full max-w-4xl px-5 py-6">
 
-          {/* Приветствие */}
+          {/* Hero — фирменный */}
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 overflow-hidden rounded-3xl bg-gradient-to-br from-[#1f75fe] to-[#1555cc] p-6 text-white shadow-lg sm:p-8"
+            className="mb-6 overflow-hidden rounded-[28px] bg-gradient-to-br from-[#1f75fe] via-[#2d6fe0] to-[#1b4fb0] p-7 text-white shadow-[0_20px_50px_-20px_rgba(31,117,254,0.6)] sm:p-9"
           >
+            <div className="mb-6 flex items-center justify-between">
+              <div className="flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 backdrop-blur-sm">
+                <OneDentLogo className="h-5 brightness-0 invert" />
+                <span className="text-xs font-semibold text-white/90">{clinicName}</span>
+              </div>
+              <span className="flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-xs font-medium backdrop-blur-sm">
+                <CalendarDays className="h-3.5 w-3.5" /> {today}
+              </span>
+            </div>
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-sm font-medium text-white/70">Персональный план лечения</p>
-                <h1 className="mt-1 text-2xl font-extrabold tracking-tight sm:text-3xl">
-                  {patient.name.split(" ")[0]}, добро пожаловать!
+                <h1 className="mt-1 text-3xl font-extrabold tracking-tight sm:text-4xl">
+                  {firstName}, рады вас видеть
                 </h1>
-                <p className="mt-2 max-w-lg text-sm leading-relaxed text-white/85">
-                  Ниже — состояние ваших зубов, рекомендуемый план и варианты лечения.
-                  Выберите подходящий пакет и мы отправим всё вам в WhatsApp.
+                <p className="mt-3 max-w-lg text-sm leading-relaxed text-white/85">
+                  Мы подготовили для вас понятный план: состояние зубов, что рекомендуем сделать
+                  и во сколько это обойдётся. Всё можно получить в WhatsApp.
                 </p>
               </div>
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-xl font-bold backdrop-blur-sm">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-xl font-bold backdrop-blur-sm">
                 {initials(patient.name)}
               </div>
             </div>
-            <div className="mt-5 flex flex-wrap gap-3 text-xs font-medium">
-              <span className="flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5">
-                <CalendarDays className="h-3.5 w-3.5" /> {today}
-              </span>
-              <span className="flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5">
-                <HeartPulse className="h-3.5 w-3.5" /> {patient.visitType}
-              </span>
-            </div>
+            {doctorName && (
+              <div className="mt-6 flex items-center gap-2.5 border-t border-white/15 pt-4">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15">
+                  <Stethoscope className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-xs text-white/60">Лечащий врач</p>
+                  <p className="text-sm font-semibold">{doctorName}</p>
+                </div>
+              </div>
+            )}
           </motion.div>
 
-          {/* Сводка */}
-          <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <StatCard value={problemTeeth.length} label="требуют внимания" color="red" />
-            <StatCard value={healthyCount} label="в хорошем состоянии" color="blue" />
-            <StatCard value={planFdis.size} label="в плане лечения" color="green" />
-            <StatCard value={`${progress}%`} label="уже выполнено" color="purple" />
+          {/* Сводка — спокойная палитра */}
+          <div className="mb-8 grid grid-cols-3 gap-3">
+            <StatCard icon={Sparkles} value={problemTeeth.length} label="требуют внимания" accent />
+            <StatCard icon={CheckCircle2} value={resolvedCount} label="здоровы и пролечены" />
+            <StatCard icon={ClipboardList} value={planFdis.size} label="в плане лечения" />
           </div>
 
+          {showProgress && (
+            <div className="mb-8 rounded-2xl border border-[#e6ebf2] bg-white p-5">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-sm font-bold text-[#0f172a]">Прогресс лечения</p>
+                <span className="text-sm font-extrabold text-[#1f75fe]">{progress}%</span>
+              </div>
+              <div className="h-2.5 overflow-hidden rounded-full bg-[#eef2f7]">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                  className="h-full rounded-full bg-gradient-to-r from-[#1f75fe] to-[#16a34a]"
+                />
+              </div>
+              <p className="mt-2 text-xs text-[#64748b]">
+                Выполнено {doneCount} из {allItems.length} процедур — отличный результат!
+              </p>
+            </div>
+          )}
+
           {/* Карта зубов */}
-          <section className="mb-6 rounded-3xl border border-[#e8e3d9] bg-white p-5 shadow-sm">
-            <h2 className="mb-4 text-lg font-extrabold text-[#0f172a]">Состояние зубов</h2>
+          <section ref={examineRef} className="mb-8 scroll-mt-20 rounded-[24px] border border-[#e6ebf2] bg-white p-6 shadow-sm">
+            <div className="mb-1 flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#1f75fe]/10 text-[#1f75fe]">
+                <Activity className="h-4 w-4" />
+              </span>
+              <h2 className="text-lg font-extrabold text-[#0f172a]">Состояние ваших зубов</h2>
+            </div>
+            <p className="mb-4 text-sm text-[#64748b]">Наглядная карта — цветом отмечены зубы, которым нужно внимание.</p>
             <TabletDentalChart
               teeth={teeth}
               selectedFdi={null}
@@ -184,50 +261,74 @@ export function TabletPresentationMode({
               big
               presentation
             />
+            {/* Дружелюбная легенда */}
+            <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t border-[#f1f5f9] pt-4">
+              <LegendDot color="#94a3b8" label="Здоровые" />
+              <LegendDot color="#4A90E2" label="Пролеченные" />
+              <LegendDot color="#F5A623" label="Требуют лечения" />
+              <LegendDot color="#84cc16" label="В плане лечения" ring />
+            </div>
           </section>
 
-          {/* Что обнаружили */}
+          {/* Зоны внимания — мягкая подача */}
           {problemTeeth.length > 0 && (
-            <section className="mb-6 rounded-3xl border border-[#fecaca] bg-[#fef2f2] p-5">
-              <h2 className="mb-3 flex items-center gap-2 text-lg font-extrabold text-[#991b1b]">
-                <Sparkles className="h-5 w-5" /> Что нужно пролечить
-              </h2>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {problemTeeth.map(({ fdi, cond }) => (
-                  <div
-                    key={fdi}
-                    className="flex items-center gap-3 rounded-xl bg-white px-4 py-3 shadow-sm"
-                  >
-                    <span
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-black"
-                      style={{ color: CONDITION_META[cond].color, backgroundColor: CONDITION_META[cond].bg }}
+            <section className="mb-8 rounded-[24px] border border-[#e6ebf2] bg-white p-6 shadow-sm">
+              <div className="mb-1 flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#f59e0b]/10 text-[#d97706]">
+                  <Sparkles className="h-4 w-4" />
+                </span>
+                <h2 className="text-lg font-extrabold text-[#0f172a]">Зоны внимания</h2>
+              </div>
+              <p className="mb-4 text-sm text-[#64748b]">Что мы обнаружили и как это решим.</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {problemTeeth.map(({ fdi, cond }) => {
+                  const story = CONDITION_STORY[cond];
+                  const meta = CONDITION_META[cond];
+                  return (
+                    <div
+                      key={fdi}
+                      className="flex items-start gap-3 rounded-2xl border border-[#f1f5f9] bg-[#fafbfc] p-4"
                     >
-                      {fdi}
-                    </span>
-                    <div>
-                      <p className="text-sm font-bold text-[#0f172a]">Зуб {fdi}</p>
-                      <p className="text-xs text-[#64748b]">{CONDITION_META[cond].label}</p>
+                      <span
+                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-black"
+                        style={{ color: meta.color, backgroundColor: meta.bg }}
+                      >
+                        {fdi}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-[#0f172a]">
+                          {story?.title ?? meta.label}
+                          <span className="ml-1.5 text-xs font-medium text-[#94a3b8]">зуб {fdi}</span>
+                        </p>
+                        <p className="mt-1 flex items-start gap-1.5 text-xs leading-relaxed text-[#16a34a]">
+                          <ArrowRight className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                          {story?.action ?? "Врач подберёт оптимальное решение"}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
           )}
 
           {/* Этапы плана */}
           {plan.length > 0 && (
-            <section className="mb-6 rounded-3xl border border-[#e8e3d9] bg-white p-5 shadow-sm">
-              <h2 className="mb-4 text-lg font-extrabold text-[#0f172a]">Этапы лечения</h2>
+            <section ref={planRef} className="mb-8 scroll-mt-20 rounded-[24px] border border-[#e6ebf2] bg-white p-6 shadow-sm">
+              <div className="mb-1 flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#1f75fe]/10 text-[#1f75fe]">
+                  <ClipboardList className="h-4 w-4" />
+                </span>
+                <h2 className="text-lg font-extrabold text-[#0f172a]">Ваш план лечения</h2>
+              </div>
+              <p className="mb-4 text-sm text-[#64748b]">Пошагово и прозрачно — вы всегда знаете, что дальше.</p>
               <div className="space-y-3">
                 {plan.map((stage, idx) => {
                   const stageTotal = stage.items.reduce((s, i) => s + i.price, 0);
                   const pending = stage.items.filter((i) => i.status !== "completed").length;
                   return (
-                    <div key={stage.id} className="overflow-hidden rounded-2xl border border-[#f1ede4]">
-                      <div
-                        className="flex items-center justify-between px-4 py-3"
-                        style={{ backgroundColor: stage.bg }}
-                      >
+                    <div key={stage.id} className="overflow-hidden rounded-2xl border border-[#eef2f7]">
+                      <div className="flex items-center justify-between px-4 py-3" style={{ backgroundColor: stage.bg }}>
                         <div className="flex items-center gap-3">
                           <span
                             className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-black text-white"
@@ -238,13 +339,14 @@ export function TabletPresentationMode({
                           <div>
                             <p className="text-sm font-bold text-[#0f172a]">{stage.label}</p>
                             <p className="text-xs text-[#64748b]">
-                              {stage.items.length} процедур · {pending} предстоит
+                              {stage.items.length} {plural(stage.items.length, "процедура", "процедуры", "процедур")}
+                              {pending > 0 ? ` · ${pending} предстоит` : " · выполнено"}
                             </p>
                           </div>
                         </div>
                         <p className="text-sm font-extrabold text-[#0f172a]">{fmtTenge(stageTotal)}</p>
                       </div>
-                      <div className="divide-y divide-[#f1ede4] bg-white">
+                      <div className="divide-y divide-[#f1f5f9] bg-white">
                         {stage.items.map((item) => (
                           <div key={item.id} className="flex items-center gap-3 px-4 py-2.5">
                             {item.status === "completed" ? (
@@ -252,7 +354,10 @@ export function TabletPresentationMode({
                             ) : (
                               <div className="h-4 w-4 shrink-0 rounded-full border-2 border-[#cbd5e1]" />
                             )}
-                            <p className="min-w-0 flex-1 text-sm text-[#0f172a]">
+                            <p className={cn(
+                              "min-w-0 flex-1 text-sm",
+                              item.status === "completed" ? "text-[#94a3b8] line-through" : "text-[#0f172a]",
+                            )}>
                               {item.title}
                               {item.tooth && <span className="ml-1 text-[#94a3b8]">· зуб {item.tooth}</span>}
                             </p>
@@ -267,63 +372,43 @@ export function TabletPresentationMode({
             </section>
           )}
 
-          {/* Пакеты */}
-          <section className="mb-6">
-            <h2 className="mb-1 text-lg font-extrabold text-[#0f172a]">Выберите вариант лечения</h2>
-            <p className="mb-4 text-sm text-[#64748b]">
-              Сравните пакеты и выберите подходящий — отправим детали в WhatsApp
-            </p>
-            <div className="grid gap-4 lg:grid-cols-3">
-              {packages.map((pkg) => {
-                const selected = selectedPkg === pkg.id;
-                return (
-                  <button
-                    key={pkg.id}
-                    type="button"
-                    onClick={() => setSelectedPkg(pkg.id)}
-                    className={cn(
-                      "flex flex-col rounded-3xl border-2 bg-white p-5 text-left transition-all active:scale-[0.99]",
-                      selected ? "border-[#1f75fe] shadow-lg ring-4 ring-[#1f75fe]/10" : "border-[#e8e3d9] hover:border-[#1f75fe]/40",
-                    )}
-                  >
-                    {pkg.best && (
-                      <span className="mb-2 w-fit rounded-full bg-[#1f75fe] px-3 py-0.5 text-xs font-bold text-white">
-                        Рекомендуем
-                      </span>
-                    )}
-                    <p className="text-xl font-extrabold text-[#0f172a]">{pkg.name}</p>
-                    <p className="mt-1 text-2xl font-black text-[#1f75fe]">{fmtTenge(pkg.price)}</p>
-                    <p className="mt-2 text-sm text-[#64748b]">{pkg.desc}</p>
-                    <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-[#94a3b8]">
-                      <Clock className="h-3.5 w-3.5" /> Срок: {pkg.duration}
-                    </p>
-                    <ul className="mt-4 flex-1 space-y-2 border-t border-[#f1ede4] pt-4">
-                      {pkg.features.map((f) => (
-                        <li key={f} className="flex items-start gap-2 text-sm text-[#0f172a]">
-                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#16a34a]" />
-                          {f}
-                        </li>
-                      ))}
-                    </ul>
-                    {selected && (
-                      <p className="mt-4 flex items-center gap-1 text-xs font-bold text-[#1f75fe]">
-                        Выбрано <ChevronRight className="h-3.5 w-3.5" />
-                      </p>
-                    )}
-                  </button>
-                );
-              })}
+          {/* Стоимость и оплата */}
+          <section ref={costRef} className="mb-8 scroll-mt-20 rounded-[24px] border border-[#e6ebf2] bg-white p-6 shadow-sm">
+            <div className="mb-1 flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#16a34a]/10 text-[#16a34a]">
+                <CreditCard className="h-4 w-4" />
+              </span>
+              <h2 className="text-lg font-extrabold text-[#0f172a]">Стоимость и оплата</h2>
+            </div>
+            <p className="mb-5 text-sm text-[#64748b]">Выберите удобный способ — полная оплата или рассрочка без переплат.</p>
+
+            <div className="mb-5 rounded-2xl bg-gradient-to-br from-[#f6f8fb] to-[#eef2f7] p-5">
+              <p className="text-sm font-medium text-[#64748b]">Итого к оплате</p>
+              <p className="mt-1 text-4xl font-black tracking-tight text-[#0f172a]">{fmtTenge(remainingTotal)}</p>
+              {payment !== "full" && (
+                <p className="mt-2 flex items-center gap-1.5 text-sm font-semibold text-[#1f75fe]">
+                  <Wallet className="h-4 w-4" />
+                  ≈ {fmtTenge(monthlyAmount)} в месяц на {PAYMENT_MONTHS[payment]} мес
+                </p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+              <PayOption label="Полностью" sub="одним платежом" active={payment === "full"} onClick={() => setPayment("full")} />
+              <PayOption label="3 месяца" sub={`${fmtTenge(Math.ceil(remainingTotal / 3 / 100) * 100)}/мес`} active={payment === "3"} onClick={() => setPayment("3")} />
+              <PayOption label="6 месяцев" sub={`${fmtTenge(Math.ceil(remainingTotal / 6 / 100) * 100)}/мес`} active={payment === "6"} onClick={() => setPayment("6")} />
+              <PayOption label="12 месяцев" sub={`${fmtTenge(Math.ceil(remainingTotal / 12 / 100) * 100)}/мес`} active={payment === "12"} onClick={() => setPayment("12")} />
             </div>
           </section>
 
-          {/* Преимущества */}
-          <section className="mb-6 grid gap-3 sm:grid-cols-3">
+          {/* Почему нам доверяют — нейтрально */}
+          <section className="grid gap-3 sm:grid-cols-3">
             {[
-              { icon: Shield, title: "Гарантия на работы", desc: "Официальная гарантия клиники на все процедуры" },
-              { icon: Clock, title: "Удобный график", desc: "Запись в удобное время, напоминания в WhatsApp" },
-              { icon: HeartPulse, title: "Без боли", desc: "Современная анестезия и щадящие методы лечения" },
+              { icon: ShieldCheck, title: "Современные материалы", desc: "Работаем на проверенных материалах и оборудовании" },
+              { icon: Clock, title: "Удобный график", desc: "Запись в комфортное время и напоминания в WhatsApp" },
+              { icon: HeartPulse, title: "Комфортное лечение", desc: "Бережный подход и современная анестезия" },
             ].map(({ icon: Icon, title, desc }) => (
-              <div key={title} className="rounded-2xl border border-[#e8e3d9] bg-white p-4">
+              <div key={title} className="rounded-2xl border border-[#e6ebf2] bg-white p-4">
                 <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-[#1f75fe]/10">
                   <Icon className="h-5 w-5 text-[#1f75fe]" />
                 </div>
@@ -337,20 +422,25 @@ export function TabletPresentationMode({
       </div>
 
       {/* Нижняя панель — WhatsApp */}
-      <div className="fixed inset-x-0 bottom-0 border-t border-[#e8e3d9] bg-white/95 px-5 py-4 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] backdrop-blur-md safe-area-bottom">
-        <div className="mx-auto flex max-w-5xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="fixed inset-x-0 bottom-0 border-t border-[#e6ebf2] bg-white/95 px-5 py-4 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] backdrop-blur-md safe-area-bottom">
+        <div className="mx-auto flex max-w-4xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <p className="text-sm font-bold text-[#0f172a]">
-              Пакет «{activePkg.name}» · {fmtTenge(activePkg.price)}
+              {fmtTenge(remainingTotal)}
+              {payment !== "full" && (
+                <span className="ml-2 text-xs font-medium text-[#1f75fe]">
+                  · {fmtTenge(monthlyAmount)}/мес
+                </span>
+              )}
             </p>
             <p className="truncate text-xs text-[#64748b]">
-              Отправим план, карту зубов и стоимость на {patient.phone}
+              Отправим план и стоимость пациенту в WhatsApp
             </p>
           </div>
           <button
             type="button"
-            onClick={handleSendWhatsapp}
-            disabled={sendState === "sending"}
+            onClick={() => void handleSendWhatsapp()}
+            disabled={sendState !== "idle"}
             className={cn(
               "flex shrink-0 items-center justify-center gap-2.5 rounded-2xl px-6 py-4 text-base font-bold text-white transition-all active:scale-[0.99] disabled:opacity-80",
               sendState === "sent" ? "bg-[#16a34a]" : "bg-[#25D366] hover:bg-[#20bd5a] shadow-lg shadow-[#25D366]/25",
@@ -374,39 +464,88 @@ export function TabletPresentationMode({
             )}
           </button>
         </div>
-        {sendState === "sent" && (
-          <motion.p
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mx-auto mt-2 max-w-5xl text-center text-xs text-[#16a34a]"
-          >
-            <Send className="mr-1 inline h-3.5 w-3.5" />
-            Демо: после подключения бэкенда сообщение уйдёт на номер пациента автоматически
-          </motion.p>
-        )}
       </div>
     </div>
   );
 }
 
+function plural(n: number, one: string, few: string, many: string) {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 19) return many;
+  if (mod10 === 1) return one;
+  if (mod10 >= 2 && mod10 <= 4) return few;
+  return many;
+}
+
+function StepChip({ icon: Icon, label, onClick }: { icon: React.ElementType; label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center gap-1.5 rounded-full border border-[#e6ebf2] bg-white px-3 py-1.5 text-xs font-semibold text-[#64748b] transition-colors hover:border-[#1f75fe]/40 hover:text-[#1f75fe]"
+    >
+      <Icon className="h-3.5 w-3.5" /> {label}
+    </button>
+  );
+}
+
 function StatCard({
-  value, label, color,
+  icon: Icon, value, label, accent,
 }: {
+  icon: React.ElementType;
   value: number | string;
   label: string;
-  color: "red" | "blue" | "green" | "purple";
+  accent?: boolean;
 }) {
-  const styles = {
-    red:    { bg: "bg-[#fef2f2]", border: "border-[#fecaca]", text: "text-[#dc2626]" },
-    blue:   { bg: "bg-[#eff6ff]", border: "border-[#bfdbfe]", text: "text-[#2563eb]" },
-    green:  { bg: "bg-[#f0fdf4]", border: "border-[#bbf7d0]", text: "text-[#16a34a]" },
-    purple: { bg: "bg-[#f5f3ff]", border: "border-[#ddd6fe]", text: "text-[#7c3aed]" },
-  }[color];
-
   return (
-    <div className={cn("rounded-2xl border p-4 text-center", styles.bg, styles.border)}>
-      <p className={cn("text-3xl font-extrabold", styles.text)}>{value}</p>
-      <p className="mt-1 text-xs font-medium text-[#64748b]">{label}</p>
+    <div className={cn(
+      "rounded-2xl border p-4 text-center",
+      accent ? "border-[#fde9c8] bg-[#fffaf1]" : "border-[#e6ebf2] bg-white",
+    )}>
+      <span className={cn(
+        "mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-xl",
+        accent ? "bg-[#f59e0b]/15 text-[#d97706]" : "bg-[#1f75fe]/10 text-[#1f75fe]",
+      )}>
+        <Icon className="h-4 w-4" />
+      </span>
+      <p className="text-2xl font-extrabold text-[#0f172a]">{value}</p>
+      <p className="mt-0.5 text-xs font-medium text-[#64748b]">{label}</p>
     </div>
+  );
+}
+
+function LegendDot({ color, label, ring }: { color: string; label: string; ring?: boolean }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span
+        className={cn("h-3.5 w-3.5 rounded-full", ring && "ring-2 ring-offset-1")}
+        style={ring ? { backgroundColor: "transparent", boxShadow: `inset 0 0 0 3px ${color}` } : { backgroundColor: color }}
+      />
+      <span className="text-xs font-medium text-[#64748b]">{label}</span>
+    </div>
+  );
+}
+
+function PayOption({
+  label, sub, active, onClick,
+}: {
+  label: string;
+  sub: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex flex-col items-center rounded-2xl border-2 px-3 py-3 text-center transition-all active:scale-[0.98]",
+        active ? "border-[#1f75fe] bg-[#1f75fe]/5 shadow-sm" : "border-[#e6ebf2] bg-white hover:border-[#1f75fe]/40",
+      )}
+    >
+      <span className={cn("text-sm font-bold", active ? "text-[#1f75fe]" : "text-[#0f172a]")}>{label}</span>
+      <span className="mt-0.5 text-[11px] font-medium text-[#94a3b8]">{sub}</span>
+    </button>
   );
 }

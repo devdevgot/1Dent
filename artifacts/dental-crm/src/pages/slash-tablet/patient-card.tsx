@@ -116,6 +116,7 @@ export function PatientCard({ patientId, onBack }: { patientId: string; onBack: 
         plan={plan}
         planFdis={planFdis}
         planTotal={planTotal}
+        planNumber={planData?.data?.plan?.planNumber}
         onExit={() => setPresentation(false)}
       />
     );
