@@ -9,7 +9,7 @@ import {
   useUpdateSalarySettings,
   usePatchUserCapacity,
 } from "@workspace/api-client-react";
-import type { User, SalaryType } from "@workspace/api-client-react";
+import type { User, SalaryType, UsersListResponse } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Search, Phone, Calendar, Briefcase,
@@ -192,7 +192,13 @@ export default function StaffPage() {
     {
       query: {
         queryKey: getListUsersAllQueryKey(showInactive),
-        staleTime: 30_000,
+        staleTime: 5 * 60_000,
+        // Show cached rows immediately (from a previous visit, from the
+        // opposite includeInactive variant, or from the generated
+        // useListUsers cache used across the app) instead of a spinner.
+        placeholderData: () =>
+          (queryClient.getQueryData(getListUsersAllQueryKey(!showInactive)) ??
+            queryClient.getQueryData(["/api/users"])) as UsersListResponse | undefined,
       },
     },
   );

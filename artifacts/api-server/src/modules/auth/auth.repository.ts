@@ -73,16 +73,18 @@ export class AuthRepository {
   }
 
   async listUsersWithSalary(clinicId: string, includeInactive = false) {
-    const users = await this.listUsersByClinic(clinicId, includeInactive);
-    const salaryRows = await db
-      .select()
-      .from(userSalarySettingsTable)
-      .where(eq(userSalarySettingsTable.clinicId, clinicId));
-
-    const capacityRows = await db
-      .select()
-      .from(doctorCapacityTable)
-      .where(eq(doctorCapacityTable.clinicId, clinicId));
+    // Run all three queries in parallel — they are independent.
+    const [users, salaryRows, capacityRows] = await Promise.all([
+      this.listUsersByClinic(clinicId, includeInactive),
+      db
+        .select()
+        .from(userSalarySettingsTable)
+        .where(eq(userSalarySettingsTable.clinicId, clinicId)),
+      db
+        .select()
+        .from(doctorCapacityTable)
+        .where(eq(doctorCapacityTable.clinicId, clinicId)),
+    ]);
 
     const salaryMap = new Map(salaryRows.map((s) => [s.userId, s]));
     const capacityMap = new Map(capacityRows.map((c) => [c.doctorId, c.maxPatientsPerDay]));

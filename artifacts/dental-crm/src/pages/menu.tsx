@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/hooks/use-auth";
-import { useLogout } from "@workspace/api-client-react";
+import { useLogout, listUsersAll, getListUsersAllQueryKey } from "@workspace/api-client-react";
 import { clearAuthToken } from "@/lib/auth-token";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
@@ -70,6 +71,18 @@ export default function MenuPage() {
     i18n.on("languageChanged", handleLanguageChanged);
     return () => i18n.off("languageChanged", handleLanguageChanged);
   }, []);
+
+  // Prefetch the staff list while the user is on the menu, so /users opens
+  // instantly instead of showing a loading spinner.
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (user?.role !== "owner" && user?.role !== "admin") return;
+    void queryClient.prefetchQuery({
+      queryKey: getListUsersAllQueryKey(false),
+      queryFn: ({ signal }) => listUsersAll(undefined, { signal }),
+      staleTime: 5 * 60_000,
+    });
+  }, [user?.role, queryClient]);
 
   const navItems = ALL_NAV_ITEMS.filter((item) =>
     user && item.roles.includes(user.role),

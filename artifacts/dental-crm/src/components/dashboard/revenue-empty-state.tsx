@@ -3,6 +3,15 @@ import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
 import { useKanbanStore } from "@/hooks/use-kanban";
 
+const ILLUSTRATION_SRC = "/images/revenue-empty-illustration.png";
+
+// Prefetch the illustration as soon as this chunk loads, so it is already
+// in the browser cache by the time the empty state renders (no pop-in).
+if (typeof window !== "undefined") {
+  const img = new Image();
+  img.src = ILLUSTRATION_SRC;
+}
+
 export function RevenueEmptyState() {
   const { t } = useTranslation();
   const [, navigate] = useLocation();
@@ -16,14 +25,16 @@ export function RevenueEmptyState() {
   return (
     <div className="flex flex-col items-center px-6 pt-6 pb-7 text-center">
       <img
-        src="/images/revenue-empty-illustration.png"
+        src={ILLUSTRATION_SRC}
         alt=""
         aria-hidden
         draggable={false}
+        loading="eager"
+        fetchPriority="high"
         decoding="async"
-        width={320}
-        height={240}
-        className="w-full max-w-[320px] h-auto object-contain mb-5"
+        width={200}
+        height={200}
+        className="w-full max-w-[200px] h-auto object-contain mb-4"
       />
 
       <h3 className="text-lg font-bold text-[var(--text)] tracking-tight">
