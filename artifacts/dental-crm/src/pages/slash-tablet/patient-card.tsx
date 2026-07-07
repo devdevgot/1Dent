@@ -20,6 +20,7 @@ import { useAuthStore } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { TabletChartSection } from "./tablet-chart-section";
 import { TabletPlanPanel } from "./tablet-plan-panel";
+import { TabletPlanBoard } from "./tablet-plan-board";
 import { TabletPresentationMode } from "./tablet-presentation-mode";
 import {
   CONDITION_META, STATUS_META, initials,
@@ -221,10 +222,8 @@ export function PatientCard({ patientId, onBack }: { patientId: string; onBack: 
         )}
 
         {tab === "plan" && (
-          <div className="mx-auto max-w-3xl p-4">
-            <div className="rounded-2xl border border-[#e8e3d9] bg-white">
-              <TabletPlanPanel {...planPanelProps} filterFdi={null} />
-            </div>
+          <div className="mx-auto max-w-4xl">
+            <TabletPlanBoard patientId={patientId} onGoToChart={() => setTab("chart")} />
           </div>
         )}
 
