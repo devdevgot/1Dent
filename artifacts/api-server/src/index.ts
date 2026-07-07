@@ -215,7 +215,7 @@ function onServerReady(): void {
   const platformTgToken = process.env["PLATFORM_TG_BOT_TOKEN"];
   if (platformTgToken && webhookBase) {
     const webhookUrl = `${webhookBase}/api/webhook/telegram/platform`;
-    const tmaUrl = `${webhookBase}/tg-admin`;
+    const tmaUrl = `${webhookBase}/tg-admin/`;
 
     // Register webhook
     fetch(`https://api.telegram.org/bot${platformTgToken}/setWebhook`, {
