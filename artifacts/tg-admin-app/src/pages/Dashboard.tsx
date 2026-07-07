@@ -78,13 +78,13 @@ export default function Dashboard() {
 
           <button
             type="button"
-            onClick={() => { haptic("light"); navigate("/tablet"); }}
+            onClick={() => { haptic("light"); navigate("/content"); }}
             className="w-full flex items-center gap-3 rounded-xl border border-border bg-card p-4 text-left shadow-sm"
           >
             <span className="text-2xl">📱</span>
             <div>
-              <p className="text-sm font-semibold text-foreground">Видео планшета</p>
-              <p className="text-xs text-muted-foreground">Загрузка роликов: кариес, пульпит, гигиена…</p>
+              <p className="text-sm font-semibold text-foreground">Контент платформы</p>
+              <p className="text-xs text-muted-foreground">Тарифы, договоры, чатбот, видео планшета</p>
             </div>
           </button>
 

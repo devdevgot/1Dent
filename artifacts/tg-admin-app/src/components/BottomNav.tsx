@@ -4,7 +4,7 @@ import { haptic } from "../hooks/useTgBackButton";
 const tabs = [
   { path: "/", label: "Обзор", icon: "📊" },
   { path: "/clinics", label: "Клиники", icon: "🏥" },
-  { path: "/tablet", label: "Планшет", icon: "📱" },
+  { path: "/content", label: "Контент", icon: "📦" },
   { path: "/plan-requests", label: "Заявки", icon: "📋" },
   { path: "/more", label: "Ещё", icon: "☰" },
 ];

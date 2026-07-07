@@ -39,6 +39,7 @@ import { seedContractTemplatesForClinic } from "../../seeds/contract-templates.s
 import { errorEventsService } from "../error-events/error-events.service";
 import type { ErrorEventSeverity, ErrorEventSource } from "@workspace/db";
 import { createTabletVideosTmaRouter } from "../tablet-videos/tablet-videos.routes";
+import { createPlatformConfigTmaRouter } from "../platform-config/platform-config.routes";
 
 const router = Router();
 router.use(requireTmaAdmin);
@@ -1888,5 +1889,6 @@ router.patch("/errors/:id/resolve", async (req: Request, res: Response, next: Ne
 });
 
 router.use(createTabletVideosTmaRouter());
+router.use(createPlatformConfigTmaRouter());
 
 export default router;

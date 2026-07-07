@@ -1,4 +1,6 @@
 import type { ClinicPlan } from "@workspace/db";
+import { planLimitsFromConfig } from "../modules/platform-config/platform-config.defaults";
+import { getCachedPlansConfig } from "../modules/platform-config/platform-config.service";
 
 export type PlanLimitKey = "staff" | "branches" | "aiCredits" | "chatbotDialogs" | "documentTemplates";
 
@@ -92,9 +94,7 @@ export function resolvePlanLimits(
   const trialActive = isTrialActive(context.trialEndsAt, now);
   const planActive = isPaidPlanActive(plan, context.planExpiresAt, now);
 
-  if (planActive) return PLAN_LIMITS[plan];
-  if (trialActive) return TRIAL_LIMITS;
-  return FREE_LIMITS;
+  return planLimitsFromConfig(getCachedPlansConfig(), plan, trialActive, planActive);
 }
 
 export function resolveMonthlyAiCreditLimit(

@@ -28,6 +28,7 @@ import { resolvePatientByPhone, setMarketingOptOut } from "../../shared/patient-
 import { withSessionLock } from "../../shared/session-lock";
 import { parseReviewScoreFromText, savePatientReview } from "../../shared/patient-reviews";
 import { isRedAlert } from "../../shared/whatsapp";
+import { chatbotDefaultsForNewClinic } from "../platform-config/platform-config.service";
 import { sendTypingToPatient } from "../../shared/messaging";
 import { getAlertQueue } from "../../shared/alert-queue";
 import { logger } from "../../lib/logger";
@@ -584,9 +585,10 @@ async function getSettings(clinicId: string): Promise<ChatbotSettings> {
   }
 
   const id = randomUUID();
+  const defaults = chatbotDefaultsForNewClinic();
   const [created] = await db
     .insert(chatbotSettingsTable)
-    .values({ id, clinicId })
+    .values({ id, clinicId, ...defaults })
     .onConflictDoNothing()
     .returning();
 

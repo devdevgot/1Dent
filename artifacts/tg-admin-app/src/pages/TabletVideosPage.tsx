@@ -107,7 +107,7 @@ function VideoCard({
 
 export default function TabletVideosPage() {
   const navigate = useNavigate();
-  useTgBackButton(() => navigate(-1));
+  useTgBackButton(() => navigate("/content"));
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [section, setSection] = useState<string>("all");

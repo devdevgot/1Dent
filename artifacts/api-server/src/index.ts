@@ -13,6 +13,7 @@ import { getServerBaseUrl } from "./shared/green-api";
 import { setDatabaseReady } from "./shared/db-ready";
 import { seedAllClinics } from "./seeds/procedure-templates.seed";
 import { seedAllClinicsContractTemplates } from "./seeds/contract-templates.seed";
+import { platformConfigService } from "./modules/platform-config/platform-config.service";
 
 const isProd = process.env["NODE_ENV"] === "production";
 
@@ -162,6 +163,13 @@ async function bootstrapDatabase(): Promise<void> {
       setDatabaseReady(false);
       return;
     }
+  }
+
+  try {
+    await platformConfigService.warmCache();
+    logger.info("Platform config cache warmed");
+  } catch (err) {
+    logger.warn({ err }, "Platform config cache warm failed — using defaults");
   }
 
   try {
