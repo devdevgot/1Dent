@@ -137,6 +137,27 @@ export function matchServiceToSubcategory(title: string): string[] {
     matched.push("Пулпит");
   }
 
+  // Корневые каналы / эндодонтия (название без слова «пульпит»)
+  if (
+    !matched.includes("Пулпит") &&
+    !matched.includes("Депульпирование зуба") &&
+    !matched.includes("Периодонтит") &&
+    (lower.includes("канал") || lower.includes("корнев") || lower.includes("эндодонт") || lower.includes("штифт"))
+  ) {
+    matched.push("Пулпит");
+  }
+
+  // Общее терапевтическое лечение (заголовки плана и услуги без уточнения)
+  if (
+    lower.includes("лечение зуба") ||
+    lower.includes("терапевт") ||
+    (lower.includes("терапи") && !lower.includes("ортодонт"))
+  ) {
+    if (!matched.some((m) => m.includes("карис") || m === "Пулпит" || m === "Периодонтит" || m === "Депульпирование зуба")) {
+      matched.push("Средний карис");
+    }
+  }
+
   // Резекция верхушки корня
   if (lower.includes("резекц")) {
     matched.push("Резекция верхушки корня");

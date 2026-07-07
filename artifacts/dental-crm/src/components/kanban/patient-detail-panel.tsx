@@ -179,7 +179,7 @@ function getMatchedCategories(title: string): string[] {
   if (lower.includes("коронка") || lower.includes("винир") || lower.includes("протез") || lower.includes("металлокерам") || lower.includes("циркон") || lower.includes("несъемн") || lower.includes("съемн") || lower.includes("бюгел")) {
     cats.push("Ортопедия");
   }
-  if (lower.includes("кариес") || lower.includes("пульпит") || lower.includes("периодонтит") || lower.includes("депульп") || lower.includes("клиновид") || lower.includes("десен") || lower.includes("пародонт") || lower.includes("лечение зуба") || lower.includes("пломб")) {
+  if (lower.includes("кариес") || lower.includes("пульпит") || lower.includes("периодонтит") || lower.includes("депульп") || lower.includes("клиновид") || lower.includes("десен") || lower.includes("пародонт") || lower.includes("лечение зуба") || lower.includes("пломб") || lower.includes("канал") || lower.includes("корнев") || lower.includes("эндодонт") || lower.includes("терапевт") || (lower.includes("терапи") && !lower.includes("ортодонт"))) {
     cats.push("Терапия");
   }
   if (lower.includes("удален") || lower.includes("резекц") || lower.includes("операц") || lower.includes("хирург")) {
@@ -848,6 +848,8 @@ export function PatientDetailPanel() {
   const [bundleSent, setBundleSent] = useState(false);
   const [bundlePreviewOpen, setBundlePreviewOpen] = useState(false);
   const [bundleRequiredModalOpen, setBundleRequiredModalOpen] = useState(false);
+  const [bundlePrepareError, setBundlePrepareError] = useState<string | null>(null);
+  const [bundleServiceNames, setBundleServiceNames] = useState<string[]>([]);
   const [whatsappNotConnectedOpen, setWhatsappNotConnectedOpen] = useState(false);
   const [matchedCatsState, setMatchedCatsState] = useState<string[]>([]);
 
@@ -1326,6 +1328,7 @@ export function PatientDetailPanel() {
   // Returns the bundleToken on success so the caller can chain a WhatsApp send.
   const handlePrepareBundle = useCallback(async (pid: string, services?: string[]): Promise<string | null> => {
     setBundlePreparing(true);
+    setBundlePrepareError(null);
     try {
       const tok = localStorage.getItem("auth_token");
       const res = await fetch(`${getBaseUrl()}/api/contracts/patient/${pid}/prepare-extraction-bundle`, {
@@ -1345,17 +1348,21 @@ export function PatientDetailPanel() {
         data?: { bundleUrl: string; bundleToken: string; contracts?: unknown[] };
       };
       if (!res.ok || !responseData.success) {
+        const message = responseData.error ?? `HTTP ${res.status}`;
+        setBundlePrepareError(message);
         toast({
           title: "Не удалось сформировать документы",
-          description: responseData.error ?? `HTTP ${res.status}`,
+          description: message,
           variant: "destructive",
         });
         return null;
       }
       if (responseData.data && (!responseData.data.contracts || responseData.data.contracts.length === 0)) {
+        const message = "Проверьте шаблоны договоров в настройках клиники";
+        setBundlePrepareError(message);
         toast({
           title: "Нет документов для выбранных услуг",
-          description: "Проверьте шаблоны договоров в настройках клиники",
+          description: message,
           variant: "destructive",
         });
         return null;
@@ -1363,11 +1370,14 @@ export function PatientDetailPanel() {
       if (responseData.data) {
         setBundleToken(responseData.data.bundleToken);
         setBundleUrl(responseData.data.bundleUrl);
+        setBundlePrepareError(null);
         queryClient.invalidateQueries({ queryKey: ["patient-contracts", pid] }).catch(() => {});
         return responseData.data.bundleToken;
       }
     } catch {
-      toast({ title: "Ошибка сети при формировании документов", variant: "destructive" });
+      const message = "Ошибка сети при формировании документов";
+      setBundlePrepareError(message);
+      toast({ title: message, variant: "destructive" });
     } finally {
       setBundlePreparing(false);
     }
@@ -1494,6 +1504,8 @@ export function PatientDetailPanel() {
       setBundleToken(null);
       setBundleUrl(null);
       setBundleSent(false);
+      setBundlePrepareError(null);
+      setBundleServiceNames(selectedServices.map((s) => s.name));
       setBundleRequiredModalOpen(true);
       void handlePrepareBundle(selectedPatientId, selectedServices.map(s => s.name));
     } else if (diagnosisComplete) {
@@ -1579,6 +1591,8 @@ export function PatientDetailPanel() {
       setBundleToken(null);
       setBundleUrl(null);
       setBundleSent(false);
+      setBundlePrepareError(null);
+      setBundleServiceNames(selectedServices.map((s) => s.name));
       setBundleRequiredModalOpen(true);
       void handlePrepareBundle(selectedPatientId, selectedServices.map((s) => s.name));
     } else if (diagnosisComplete) {
@@ -2949,7 +2963,27 @@ export function PatientDetailPanel() {
             )}
 
             {!bundlePreparing && !bundleToken && !bundleSent && (
-              <p className="text-[12px] text-red-500">Не удалось сформировать документы. Попробуйте позже.</p>
+              <div className="space-y-2">
+                <p className="text-[12px] text-red-500">
+                  {bundlePrepareError ?? "Не удалось сформировать документы. Попробуйте позже."}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!selectedPatientId) return;
+                    const names = bundleServiceNames.length > 0
+                      ? bundleServiceNames
+                      : (activePlan?.items?.map((i) => i.title) ?? []);
+                    void handlePrepareBundle(
+                      selectedPatientId,
+                      names.length > 0 ? names : undefined,
+                    );
+                  }}
+                  className="w-full h-8 text-[12px] font-semibold text-white bg-primary hover:bg-primary/90 rounded-lg transition-colors"
+                >
+                  Повторить подготовку
+                </button>
+              </div>
             )}
 
             {bundleSent && (

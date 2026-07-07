@@ -498,8 +498,13 @@ router.post(
 
     const { serviceNames } = req.body;
     const names = serviceNames && Array.isArray(serviceNames) ? serviceNames as string[] : undefined;
-    const { bundleToken, contracts, matchedSubcategories } = await repo
-      .createExtractionBundle({
+
+    let bundleToken: string;
+    let contracts: Awaited<ReturnType<typeof repo.createExtractionBundle>>["contracts"];
+    let matchedSubcategories: string[];
+
+    try {
+      const result = await repo.createExtractionBundle({
         clinicId,
         patientId,
         sentById,
@@ -513,9 +518,13 @@ router.post(
         date: dateStr,
         year: String(today.getFullYear()),
         serviceNames: names,
-      })
-      .catch(next as (e: unknown) => never);
-    if (!contracts) return;
+      });
+      bundleToken = result.bundleToken;
+      contracts = result.contracts;
+      matchedSubcategories = result.matchedSubcategories;
+    } catch (err) {
+      return next(err);
+    }
 
     if (!bundleToken || contracts.length === 0) {
       const subcats = matchedSubcategories?.length
@@ -623,8 +632,13 @@ router.post(
 
     const { serviceNames } = req.body;
     const names = serviceNames && Array.isArray(serviceNames) ? serviceNames as string[] : undefined;
-    const { bundleToken, contracts, matchedSubcategories } = await repo
-      .createExtractionBundle({
+
+    let bundleToken: string;
+    let contracts: Awaited<ReturnType<typeof repo.createExtractionBundle>>["contracts"];
+    let matchedSubcategories: string[];
+
+    try {
+      const result = await repo.createExtractionBundle({
         clinicId,
         patientId,
         sentById,
@@ -638,9 +652,13 @@ router.post(
         date: dateStr,
         year: String(today.getFullYear()),
         serviceNames: names,
-      })
-      .catch(next as (e: unknown) => never);
-    if (!contracts) return;
+      });
+      bundleToken = result.bundleToken;
+      contracts = result.contracts;
+      matchedSubcategories = result.matchedSubcategories;
+    } catch (err) {
+      return next(err);
+    }
 
     if (!bundleToken || contracts.length === 0) {
       const subcats = matchedSubcategories?.length
