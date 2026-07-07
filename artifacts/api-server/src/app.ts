@@ -3,7 +3,6 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
 import fs from "fs";
-import fs from "fs";
 import path from "path";
 import router from "./routes";
 import refRouter from "./routes/ref";
@@ -76,8 +75,13 @@ if (!tmaStaticReady) {
   logger.info({ tmaDistDir }, "[TMA] Serving admin panel");
 }
 
-app.get("/tg-admin", (_req, res) => {
-  res.redirect(301, "/tg-admin/");
+// Express 5 matches app.get("/tg-admin") for both /tg-admin and /tg-admin/ — use path check to avoid redirect loop.
+app.use((req, res, next) => {
+  if ((req.method === "GET" || req.method === "HEAD") && req.path === "/tg-admin") {
+    res.redirect(301, "/tg-admin/");
+    return;
+  }
+  next();
 });
 
 app.use("/tg-admin", express.static(tmaDistDir, { redirect: false }));
