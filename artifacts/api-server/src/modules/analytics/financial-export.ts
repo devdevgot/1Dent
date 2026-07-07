@@ -11,7 +11,8 @@ import {
   usersTable,
   clinicsTable,
 } from "@workspace/db";
-import { eq, and, gte, lte, sql, type SQL } from "drizzle-orm";
+import { eq, and, gte, lte, sql, desc, type SQL } from "drizzle-orm";
+import { logger } from "../../shared/logger";
 
 const _require = createRequire(import.meta.url);
 const _pdfmakeDir = path.dirname(_require.resolve("pdfmake/package.json"));
@@ -100,32 +101,34 @@ function fmtMoney(n: number): string {
   return `${n.toLocaleString("ru-KZ")} ₸`;
 }
 
+/** Same filters as GET /analytics/financial-summary (proven in production). */
+function buildSummaryProcConditions(clinicId: string, dateFrom?: Date, dateTo?: Date): SQL[] {
+  const conds: SQL[] = [
+    eq(proceduresTable.clinicId, clinicId),
+    eq(proceduresTable.status, "completed"),
+  ];
+  if (dateFrom) conds.push(gte(proceduresTable.completedAt, dateFrom));
+  if (dateTo) conds.push(lte(proceduresTable.completedAt, dateTo));
+  return conds;
+}
+
 function buildProcConditions(clinicId: string, filters: FinancialExportFilters): SQL[] {
-  const conds: SQL[] = [eq(proceduresTable.clinicId, clinicId)];
-  if (filters.status) {
-    conds.push(eq(proceduresTable.status, filters.status as "completed"));
+  const status = filters.status ?? "completed";
+
+  // Default export = same query as financial-summary
+  if (status === "completed" && !filters.doctorId) {
+    return buildSummaryProcConditions(clinicId, filters.dateFrom, filters.dateTo);
   }
+
+  const conds: SQL[] = [eq(proceduresTable.clinicId, clinicId)];
+  conds.push(eq(proceduresTable.status, status as "completed"));
   if (filters.doctorId) {
     conds.push(eq(proceduresTable.doctorId, filters.doctorId));
   }
 
-  const useCompletedDates = !filters.status || filters.status === "completed";
-  const dateCol = useCompletedDates ? proceduresTable.completedAt : proceduresTable.scheduledAt;
-
-  if (filters.dateFrom) {
-    if (useCompletedDates) {
-      conds.push(gte(proceduresTable.completedAt, filters.dateFrom));
-    } else {
-      conds.push(gte(dateCol, filters.dateFrom));
-    }
-  }
-  if (filters.dateTo) {
-    if (useCompletedDates) {
-      conds.push(lte(proceduresTable.completedAt, filters.dateTo));
-    } else {
-      conds.push(lte(dateCol, filters.dateTo));
-    }
-  }
+  const dateCol = status === "completed" ? proceduresTable.completedAt : proceduresTable.scheduledAt;
+  if (filters.dateFrom) conds.push(gte(dateCol, filters.dateFrom));
+  if (filters.dateTo) conds.push(lte(dateCol, filters.dateTo));
   return conds;
 }
 
@@ -186,7 +189,7 @@ export async function loadFinancialExportData(
   const procConds = buildProcConditions(clinicId, filters);
   const expConds = buildExpConditions(clinicId, filters.dateFrom, filters.dateTo);
 
-  const [clinicRow, procedures, expenses, consumptionRows, materialRows] = await Promise.all([
+  const [clinicRow, procedures, expenses] = await Promise.all([
     db.select({ name: clinicsTable.name }).from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1),
     db
       .select({
@@ -203,7 +206,7 @@ export async function loadFinancialExportData(
       })
       .from(proceduresTable)
       .where(and(...procConds))
-      .orderBy(sql`${proceduresTable.completedAt} DESC NULLS LAST`, sql`${proceduresTable.scheduledAt} DESC NULLS LAST`),
+      .orderBy(desc(proceduresTable.completedAt)),
     db
       .select({
         id: clinicExpensesTable.id,
@@ -215,36 +218,53 @@ export async function loadFinancialExportData(
       })
       .from(clinicExpensesTable)
       .where(and(...expConds))
-      .orderBy(clinicExpensesTable.expenseDate),
-    db
-      .select({
-        itemId: procedureMaterialsTable.inventoryItemId,
-        itemName: inventoryItemsTable.name,
-        unit: inventoryItemsTable.unit,
-        unitPrice: inventoryItemsTable.unitPrice,
-        totalQuantity: sql<number>`COALESCE(SUM(${procedureMaterialsTable.quantity}), 0)`.as("total_quantity"),
-        procedureCount: sql<number>`COUNT(DISTINCT ${procedureMaterialsTable.procedureId})`.as("procedure_count"),
-      })
-      .from(procedureMaterialsTable)
-      .innerJoin(proceduresTable, eq(procedureMaterialsTable.procedureId, proceduresTable.id))
-      .innerJoin(inventoryItemsTable, eq(procedureMaterialsTable.inventoryItemId, inventoryItemsTable.id))
-      .where(and(...procConds))
-      .groupBy(
-        procedureMaterialsTable.inventoryItemId,
-        inventoryItemsTable.name,
-        inventoryItemsTable.unit,
-        inventoryItemsTable.unitPrice,
-      )
-      .orderBy(sql`SUM(${procedureMaterialsTable.quantity}) DESC`),
-    db
-      .select({
-        totalCost: sql<number>`COALESCE(SUM(${procedureMaterialsTable.quantity} * ${inventoryItemsTable.unitPrice}), 0)`,
-      })
-      .from(procedureMaterialsTable)
-      .innerJoin(proceduresTable, eq(procedureMaterialsTable.procedureId, proceduresTable.id))
-      .innerJoin(inventoryItemsTable, eq(procedureMaterialsTable.inventoryItemId, inventoryItemsTable.id))
-      .where(and(...procConds)),
+      .orderBy(desc(clinicExpensesTable.expenseDate)),
   ]);
+
+  let totalMaterialCost = 0;
+  let consumption: FinancialExportData["consumption"] = [];
+  try {
+    const [materialRows, consumptionRows] = await Promise.all([
+      db
+        .select({
+          totalCost: sql<number>`COALESCE(SUM(${procedureMaterialsTable.quantity} * ${inventoryItemsTable.unitPrice}), 0)`,
+        })
+        .from(procedureMaterialsTable)
+        .innerJoin(proceduresTable, eq(procedureMaterialsTable.procedureId, proceduresTable.id))
+        .innerJoin(inventoryItemsTable, eq(procedureMaterialsTable.inventoryItemId, inventoryItemsTable.id))
+        .where(and(...procConds)),
+      db
+        .select({
+          itemName: inventoryItemsTable.name,
+          unit: inventoryItemsTable.unit,
+          unitPrice: inventoryItemsTable.unitPrice,
+          totalQuantity: sql<number>`COALESCE(SUM(${procedureMaterialsTable.quantity}), 0)`.as("total_quantity"),
+          procedureCount: sql<number>`COUNT(DISTINCT ${procedureMaterialsTable.procedureId})`.as("procedure_count"),
+        })
+        .from(procedureMaterialsTable)
+        .innerJoin(proceduresTable, eq(procedureMaterialsTable.procedureId, proceduresTable.id))
+        .innerJoin(inventoryItemsTable, eq(procedureMaterialsTable.inventoryItemId, inventoryItemsTable.id))
+        .where(and(...procConds))
+        .groupBy(
+          procedureMaterialsTable.inventoryItemId,
+          inventoryItemsTable.name,
+          inventoryItemsTable.unit,
+          inventoryItemsTable.unitPrice,
+        )
+        .orderBy(desc(sql`SUM(${procedureMaterialsTable.quantity})`)),
+    ]);
+    totalMaterialCost = Number(materialRows[0]?.totalCost ?? 0);
+    consumption = consumptionRows.map((r) => ({
+      itemName: r.itemName,
+      unit: r.unit,
+      totalQuantity: Number(r.totalQuantity ?? 0),
+      unitPrice: r.unitPrice,
+      procedureCount: Number(r.procedureCount ?? 0),
+      totalCost: Number(r.totalQuantity ?? 0) * Number(r.unitPrice ?? 0),
+    }));
+  } catch (err) {
+    logger.warn({ err, clinicId }, "Financial export: materials query failed, continuing without materials sheet");
+  }
 
   const [patientRows, doctorRows] = await Promise.all([
     db.select({ id: patientsTable.id, name: patientsTable.name }).from(patientsTable).where(eq(patientsTable.clinicId, clinicId)),
@@ -254,23 +274,7 @@ export async function loadFinancialExportData(
   const patientMap = new Map(patientRows.map((p) => [p.id, p.name]));
   const doctorMap = new Map(doctorRows.map((d) => [d.id, d.name]));
 
-  const consumption = consumptionRows.map((r) => ({
-    itemName: r.itemName,
-    unit: r.unit,
-    totalQuantity: Number(r.totalQuantity ?? 0),
-    unitPrice: r.unitPrice,
-    procedureCount: Number(r.procedureCount ?? 0),
-    totalCost: Number(r.totalQuantity ?? 0) * Number(r.unitPrice ?? 0),
-  }));
-
-  const completedRevenue = procedures
-    .filter((p) => p.status === "completed")
-    .reduce((s, p) => s + (p.price ?? 0), 0);
-  const totalRevenue = filters.status === "completed" || !filters.status
-    ? completedRevenue
-    : procedures.reduce((s, p) => s + (p.price ?? 0), 0);
-
-  const totalMaterialCost = Number(materialRows[0]?.totalCost ?? 0);
+  const totalRevenue = procedures.reduce((s, p) => s + (p.price ?? 0), 0);
 
   const expensesByCategory: Record<string, number> = {};
   let totalOperationalExpenses = 0;
@@ -493,6 +497,15 @@ function pdfTableHeader(cells: string[]) {
   return cells.map((text) => ({ text, bold: true, fillColor: "#E8F0FE" }));
 }
 
+/** pdfmake: colSpan N needs N-1 empty placeholders, then remaining cells in the row. */
+function pdfTotalRow(labelColSpan: number, totalText: string) {
+  return [
+    { text: "ИТОГО", bold: true, colSpan: labelColSpan },
+    ...Array.from({ length: labelColSpan - 1 }, () => ({})),
+    { text: totalText, bold: true, alignment: "right" as const },
+  ];
+}
+
 export async function buildFinancialPdf(data: FinancialExportData): Promise<Buffer> {
   const pdfmake = getPdfInstance();
 
@@ -574,16 +587,10 @@ export async function buildFinancialPdf(data: FinancialExportData): Promise<Buff
           body: [
             pdfTableHeader(["№", "Дата", "Пациент", "Врач", "Услуга", "Статус", "Оплата", "Сумма"]),
             ...procedureRows,
-            [
-              { text: "ИТОГО", bold: true, colSpan: 7 },
-              {},
-              {},
-              {},
-              {},
-              {},
-              {},
-              { text: fmtMoney(data.procedures.reduce((s, p) => s + (p.price ?? 0), 0)), bold: true, alignment: "right" },
-            ],
+            pdfTotalRow(
+              7,
+              fmtMoney(data.procedures.reduce((s, p) => s + (p.price ?? 0), 0)),
+            ),
           ],
         },
         layout: "lightHorizontalLines",
@@ -599,14 +606,7 @@ export async function buildFinancialPdf(data: FinancialExportData): Promise<Buff
           body: [
             pdfTableHeader(["№", "Дата", "Категория", "Подкатегория", "Описание", "Сумма"]),
             ...expenseRows,
-            [
-              { text: "ИТОГО", bold: true, colSpan: 5 },
-              {},
-              {},
-              {},
-              {},
-              { text: fmtMoney(data.totalOperationalExpenses), bold: true, alignment: "right" },
-            ],
+            pdfTotalRow(5, fmtMoney(data.totalOperationalExpenses)),
           ],
         },
         layout: "lightHorizontalLines",
@@ -624,13 +624,7 @@ export async function buildFinancialPdf(data: FinancialExportData): Promise<Buff
                 body: [
                   pdfTableHeader(["№", "Материал", "Количество", "Процедур", "Сумма"]),
                   ...materialRows,
-                  [
-                    { text: "ИТОГО", bold: true, colSpan: 4 },
-                    {},
-                    {},
-                    {},
-                    { text: fmtMoney(data.totalMaterialCost), bold: true, alignment: "right" },
-                  ],
+                  pdfTotalRow(4, fmtMoney(data.totalMaterialCost)),
                 ],
               },
               layout: "lightHorizontalLines",

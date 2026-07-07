@@ -6,9 +6,9 @@ const BRANCH_STORAGE_KEY = "selected_branch_id";
 function resolveBranchIdForRequest(): string | null {
   const branchId = localStorage.getItem(BRANCH_STORAGE_KEY);
   if (!branchId) return null;
-  // Only owners may scope API calls to a branch cabinet.
   const role = useAuthStore.getState().user?.role;
-  if (role && role !== "owner") return null;
+  // Never attach branch scope until we know the user is the clinic owner.
+  if (role !== "owner") return null;
   return branchId;
 }
 

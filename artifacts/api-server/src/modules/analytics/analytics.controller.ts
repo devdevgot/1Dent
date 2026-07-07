@@ -302,8 +302,7 @@ router.get(
 
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-      res.setHeader("Content-Length", buffer.length);
-      res.send(buffer);
+      res.send(Buffer.from(buffer));
     } catch (err) {
       logger.error({ err, clinicId: req.user?.clinicId }, "Financial Excel export failed");
       next(err);
@@ -326,8 +325,7 @@ router.get(
 
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-      res.setHeader("Content-Length", buffer.length);
-      res.send(buffer);
+      res.send(Buffer.from(buffer));
     } catch (err) {
       logger.error({ err, clinicId: req.user?.clinicId }, "Financial PDF export failed");
       next(err);
