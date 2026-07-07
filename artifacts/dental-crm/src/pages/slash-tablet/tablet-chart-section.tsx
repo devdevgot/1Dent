@@ -1,11 +1,21 @@
 import { useMemo, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Mic, Stethoscope, CheckCircle2, X, RotateCcw,
+  Mic, Stethoscope, CheckCircle2, X, RotateCcw, Loader2,
 } from "lucide-react";
+import {
+  useUpdateTooth,
+  useTriggerDentalAiAnalysis,
+  getListTeethQueryKey,
+} from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 import { TabletDentalChart } from "./tablet-dental-chart";
-import { TabletVoiceDiagnosisModal } from "./tablet-voice-diagnosis-modal";
+import {
+  VoiceDiagnosisModal,
+  type VoiceDiagnosisApplyResult,
+} from "@/components/dental-chart/voice-diagnosis-modal";
 import {
   CONDITION_META, type TabletPatient, type ToothCondition,
 } from "./mock-data";
@@ -16,23 +26,34 @@ type DiagnosisMap = Map<number, ToothCondition>;
 
 export function TabletChartSection({
   patient,
+  patientId,
+  activePlanId,
   teeth,
   onTeethChange,
+  onDiagnosisSaved,
   planFdis,
   selectedFdi,
   onSelectFdi,
 }: {
   patient: TabletPatient;
+  patientId: string;
+  activePlanId?: string;
   teeth: Record<number, ToothCondition>;
   onTeethChange: (teeth: Record<number, ToothCondition>) => void;
+  onDiagnosisSaved?: () => void;
   planFdis: Set<number>;
   selectedFdi: number | null;
   onSelectFdi: (fdi: number | null) => void;
 }) {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const updateToothMutation = useUpdateTooth();
+  const triggerAnalysisMutation = useTriggerDentalAiAnalysis();
   const [isDiagnosisMode, setIsDiagnosisMode] = useState(false);
   const [diagnosisMap, setDiagnosisMap] = useState<DiagnosisMap>(new Map());
   const [diagnosisToothFdi, setDiagnosisToothFdi] = useState<number | null>(null);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const hasDiagnosis = useMemo(
     () => Object.values(teeth).some((c) => c !== "healthy"),
@@ -58,15 +79,67 @@ export function TabletChartSection({
     setDiagnosisToothFdi(null);
   }, []);
 
-  const finishDiagnosis = useCallback(() => {
-    if (diagnosisMap.size === 0) return;
+  const finishDiagnosis = useCallback(async () => {
+    if (diagnosisMap.size === 0 || saving) return;
+    setSaving(true);
+    try {
+      await Promise.all(
+        Array.from(diagnosisMap.entries()).map(([fdi, condition]) =>
+          updateToothMutation.mutateAsync({
+            id: patientId,
+            toothFdi: fdi,
+            data: { condition },
+          }),
+        ),
+      );
+
+      await qc.invalidateQueries({ queryKey: getListTeethQueryKey(patientId) });
+      void triggerAnalysisMutation.mutateAsync(patientId);
+
+      const next = { ...teeth };
+      diagnosisMap.forEach((cond, fdi) => { next[fdi] = cond; });
+      onTeethChange(next);
+      setIsDiagnosisMode(false);
+      setDiagnosisMap(new Map());
+      setDiagnosisToothFdi(null);
+      toast({ title: "Диагностика сохранена" });
+      onDiagnosisSaved?.();
+    } catch {
+      toast({
+        title: "Не удалось сохранить диагностику",
+        description: "Проверьте подключение и попробуйте снова",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  }, [
+    diagnosisMap,
+    saving,
+    patientId,
+    teeth,
+    onTeethChange,
+    onDiagnosisSaved,
+    updateToothMutation,
+    qc,
+    triggerAnalysisMutation,
+    toast,
+  ]);
+
+  const handleVoiceApplied = useCallback((result: VoiceDiagnosisApplyResult) => {
     const next = { ...teeth };
-    diagnosisMap.forEach((cond, fdi) => { next[fdi] = cond; });
+    for (const entry of result.entries) {
+      if (result.appliedFdis.includes(entry.fdi)) {
+        next[entry.fdi] = entry.condition as ToothCondition;
+      }
+    }
     onTeethChange(next);
+    setShowVoiceModal(false);
     setIsDiagnosisMode(false);
     setDiagnosisMap(new Map());
     setDiagnosisToothFdi(null);
-  }, [diagnosisMap, teeth, onTeethChange]);
+    onDiagnosisSaved?.();
+  }, [teeth, onTeethChange, onDiagnosisSaved]);
 
   const handleChartSelect = useCallback((fdi: number) => {
     if (isDiagnosisMode) {
@@ -83,16 +156,6 @@ export function TabletChartSection({
       return next;
     });
   }, []);
-
-  const applyVoiceDiagnosis = useCallback((updates: Record<number, ToothCondition>) => {
-    setDiagnosisMap((prev) => {
-      const next = new Map(prev);
-      Object.entries(updates).forEach(([fdi, cond]) => next.set(Number(fdi), cond));
-      return next;
-    });
-    if (!isDiagnosisMode) setIsDiagnosisMode(true);
-    setShowVoiceModal(false);
-  }, [isDiagnosisMode]);
 
   const chartSelectedFdi = isDiagnosisMode ? diagnosisToothFdi : selectedFdi;
 
@@ -111,7 +174,7 @@ export function TabletChartSection({
           </button>
           <button
             type="button"
-            onClick={() => { startDiagnosis(); setShowVoiceModal(true); }}
+            onClick={() => setShowVoiceModal(true)}
             className="flex items-center gap-2 rounded-2xl border-2 border-[#1f75fe]/40 bg-[#1f75fe]/5 px-5 py-3 text-sm font-bold text-[#1f75fe] transition-colors hover:bg-[#1f75fe]/10 active:scale-[0.99]"
           >
             <Mic className="h-5 w-5" />
@@ -195,11 +258,11 @@ export function TabletChartSection({
               </ActionCircle>
               <ActionCircle
                 label="Завершить"
-                onClick={finishDiagnosis}
+                onClick={() => void finishDiagnosis()}
                 variant="primary"
-                disabled={diagnosisMap.size === 0}
+                disabled={diagnosisMap.size === 0 || saving}
               >
-                <CheckCircle2 className="h-6 w-6" />
+                {saving ? <Loader2 className="h-6 w-6 animate-spin" /> : <CheckCircle2 className="h-6 w-6" />}
               </ActionCircle>
             </div>
           </motion.div>
@@ -207,10 +270,11 @@ export function TabletChartSection({
       </AnimatePresence>
 
       {showVoiceModal && (
-        <TabletVoiceDiagnosisModal
-          patientName={patient.name}
+        <VoiceDiagnosisModal
+          patientId={patientId}
+          activePlanId={activePlanId}
           onClose={() => setShowVoiceModal(false)}
-          onApply={applyVoiceDiagnosis}
+          onApplied={handleVoiceApplied}
         />
       )}
     </div>

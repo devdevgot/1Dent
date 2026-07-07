@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Eye, Activity, ClipboardList, PlayCircle, Info,
@@ -30,7 +30,7 @@ const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
 export function PatientCard({ patientId, onBack }: { patientId: string; onBack: () => void }) {
   const { t } = useTranslation();
   const { data: patientRes, isLoading, isError } = useGetPatient(patientId);
-  const { data: teethData } = useListTeeth(patientId);
+  const { data: teethData, refetch: refetchTeeth } = useListTeeth(patientId);
   const { data: planData } = useGetActiveTreatmentPlan(patientId);
 
   const apiPatient = patientRes?.data?.patient;
@@ -56,7 +56,11 @@ export function PatientCard({ patientId, onBack }: { patientId: string; onBack: 
 
   useEffect(() => {
     setTeeth(teethFromApi);
-  }, [teethFromApi]);
+  }, [patientId, teethFromApi]);
+
+  const handleDiagnosisSaved = useCallback(() => {
+    void refetchTeeth();
+  }, [refetchTeeth]);
 
   const planFdis = useMemo(() => {
     const s = new Set<number>();
@@ -158,8 +162,11 @@ export function PatientCard({ patientId, onBack }: { patientId: string; onBack: 
             <div className="flex flex-col gap-4 overflow-auto">
               <TabletChartSection
                 patient={patient}
+                patientId={patientId}
+                activePlanId={planData?.data?.plan?.id}
                 teeth={teeth}
                 onTeethChange={setTeeth}
+                onDiagnosisSaved={handleDiagnosisSaved}
                 planFdis={planFdis}
                 selectedFdi={selectedFdi}
                 onSelectFdi={setSelectedFdi}
