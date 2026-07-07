@@ -3,6 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 import router from "./routes";
 import refRouter from "./routes/ref";
@@ -70,10 +71,27 @@ app.use(contractPublicRouter);
 // __dirname = .../artifacts/api-server/dist — go up 3 levels to workspace root
 const workspaceRoot = path.resolve(__dirname, "../../..");
 const tmaDistDir = path.resolve(workspaceRoot, "artifacts/tg-admin-app/dist/public");
+const tmaIndexPath = path.join(tmaDistDir, "index.html");
+const tmaStaticReady = fs.existsSync(tmaIndexPath);
+
+if (!tmaStaticReady) {
+  logger.warn({ tmaDistDir }, "[TMA] Static build not found — run deploy-build.sh (tg-admin-app)");
+} else {
+  logger.info({ tmaDistDir }, "[TMA] Serving admin panel");
+}
+
+app.get("/tg-admin", (_req, res) => {
+  res.redirect(301, "/tg-admin/");
+});
+
 app.use("/tg-admin", express.static(tmaDistDir));
 // SPA fallback — any /tg-admin/* path not matched by static files gets index.html
 app.use("/tg-admin", (_req, res) => {
-  res.sendFile(path.join(tmaDistDir, "index.html"));
+  if (!tmaStaticReady) {
+    res.status(503).type("text/plain").send("TMA build missing on server");
+    return;
+  }
+  res.sendFile(tmaIndexPath);
 });
 
 // Serve Dental CRM SPA (production build from Railway / Render / Replit deploy)

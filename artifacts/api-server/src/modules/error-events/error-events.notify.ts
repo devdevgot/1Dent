@@ -2,7 +2,7 @@ import { db, errorEventsTable, platformAdminsTable } from "@workspace/db";
 import type { ErrorEvent } from "@workspace/db";
 import { and, count, eq, gte } from "drizzle-orm";
 import { logger } from "../../lib/logger";
-import { getServerBaseUrl } from "../../shared/green-api";
+import { getTmaUrl } from "../../shared/platform-bot";
 import type { CaptureErrorInput } from "./error-events.service";
 
 const DEDUP_MINUTES = 15;
@@ -59,8 +59,7 @@ async function sendTelegramMessage(token: string, chatId: string, text: string):
 }
 
 function formatAlert(event: ErrorEvent): string {
-  const tmaBase = getServerBaseUrl();
-  const errorsUrl = tmaBase ? `${tmaBase}/tg-admin#/errors` : null;
+  const errorsUrl = `${getTmaUrl().replace(/\/$/, "")}#/errors`;
 
   const lines = [
     "🚨 <b>Критическая ошибка 1Dent</b>",

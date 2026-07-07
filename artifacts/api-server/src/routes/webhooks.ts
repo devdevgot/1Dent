@@ -8,6 +8,7 @@ import { sendToPatient } from "../shared/messaging";
 import { MessagesService } from "../modules/messages/messages.service";
 import { BranchesRepository } from "../modules/branches/branches.repository";
 import { logger } from "../lib/logger";
+import { sendTmaOpenButton } from "../shared/platform-bot";
 
 const router = Router();
 const service = new MessagesService();
@@ -166,10 +167,28 @@ router.post(
 );
 
 // ─── POST /api/webhook/telegram/platform ─────────────────────────────────────
-// Platform admin bot webhook — only used for TMA superadmin (no tracking here)
+// Platform admin bot — /start opens TMA via inline Web App button
 router.post("/api/webhook/telegram/platform", async (req: Request, res: Response) => {
   res.status(200).json({ ok: true });
-  // Platform bot is for admin TMA only — tracking connect is handled by the tracking bot
+
+  const token = process.env["PLATFORM_TG_BOT_TOKEN"];
+  if (!token) return;
+
+  try {
+    const body = req.body as Record<string, unknown>;
+    const message = body["message"] as Record<string, unknown> | undefined;
+    if (!message) return;
+
+    const chatId = String((message["chat"] as Record<string, unknown>)?.["id"] ?? "");
+    const text = String(message["text"] ?? "").trim();
+    if (!chatId) return;
+
+    if (text === "/start" || text === "/admin" || text.startsWith("/start ")) {
+      await sendTmaOpenButton(token, chatId);
+    }
+  } catch (err) {
+    logger.error({ err }, "[PlatformBot] webhook error");
+  }
 });
 
 // ─── POST /api/webhook/telegram/tracking ─────────────────────────────────────
