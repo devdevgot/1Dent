@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response, type NextFunction } 
 import { z } from "zod";
 import { TabletService } from "./tablet.service";
 import { ValidationError } from "../../shared/errors";
+import { registerTabletVideosPublicRoutes } from "../tablet-videos/tablet-videos.routes";
 
 const router: IRouter = Router();
 const service = new TabletService();
@@ -96,6 +97,8 @@ router.post("/cabinets/:cabinetId/unlock-by-pin", async (req: Request, res: Resp
     next(err);
   }
 });
+
+registerTabletVideosPublicRoutes(router);
 
 export default router;
 

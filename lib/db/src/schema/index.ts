@@ -17,4 +17,5 @@ export * from "./platform";
 export * from "./ai-credits";
 export * from "./error-events";
 export * from "./tablet";
+export * from "./tablet-videos";
 export * from "./reviews";

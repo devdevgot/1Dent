@@ -31,9 +31,9 @@ function StatCard({ label, value, icon, sub }: { label: string; value: string | 
 
 const planColors: Record<string, string> = {
   free: "bg-muted text-muted-foreground",
-  starter: "bg-blue-500/20 text-blue-400",
-  professional: "bg-purple-500/20 text-purple-400",
-  enterprise: "bg-amber-500/20 text-amber-400",
+  starter: "bg-blue-100 text-blue-700",
+  professional: "bg-purple-100 text-purple-700",
+  enterprise: "bg-amber-100 text-amber-800",
 };
 
 export default function Dashboard() {
@@ -75,6 +75,18 @@ export default function Dashboard() {
             <StatCard label="Активных ботов" value={d?.activeBots ?? 0} icon="🤖" />
             <StatCard label="Сессий всего" value={d?.totalChatbotSessions ?? 0} icon="📊" />
           </div>
+
+          <button
+            type="button"
+            onClick={() => { haptic("light"); navigate("/tablet"); }}
+            className="w-full flex items-center gap-3 rounded-xl border border-border bg-card p-4 text-left shadow-sm"
+          >
+            <span className="text-2xl">📱</span>
+            <div>
+              <p className="text-sm font-semibold text-foreground">Видео планшета</p>
+              <p className="text-xs text-muted-foreground">Загрузка роликов: кариес, пульпит, гигиена…</p>
+            </div>
+          </button>
 
           <div>
             <div className="flex items-center justify-between mb-2">

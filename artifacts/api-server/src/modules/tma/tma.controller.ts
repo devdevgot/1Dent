@@ -38,6 +38,7 @@ import { seedProcedureTemplates } from "../../seeds/procedure-templates.seed";
 import { seedContractTemplatesForClinic } from "../../seeds/contract-templates.seed";
 import { errorEventsService } from "../error-events/error-events.service";
 import type { ErrorEventSeverity, ErrorEventSource } from "@workspace/db";
+import { createTabletVideosTmaRouter } from "../tablet-videos/tablet-videos.routes";
 
 const router = Router();
 router.use(requireTmaAdmin);
@@ -1885,5 +1886,7 @@ router.patch("/errors/:id/resolve", async (req: Request, res: Response, next: Ne
     res.json({ success: true, data: { event } });
   } catch (err) { next(err); }
 });
+
+router.use(createTabletVideosTmaRouter());
 
 export default router;

@@ -11,11 +11,12 @@ import { cn } from "@/lib/utils";
 import { TabletChartSection } from "./tablet-chart-section";
 import { TabletPresentationMode } from "./tablet-presentation-mode";
 import {
-  VIDEOS, CONDITION_META, STATUS_META, fmtTenge, initials,
-  type PlanStage, type TreatmentVideo, type ToothCondition,
+  CONDITION_META, STATUS_META, fmtTenge, initials,
+  type PlanStage, type ToothCondition,
 } from "./mock-data";
 import { apiPatientToTablet, apiPlanToStages, apiTeethToMap } from "./tablet-patient-adapter";
 import { KANBAN_COLUMNS } from "@/lib/patient-utils";
+import { useTabletVideos, filterVideosByCondition, type TabletVideoItem } from "@/hooks/use-tablet-videos";
 
 type Tab = "chart" | "plan" | "video" | "info";
 
@@ -46,11 +47,12 @@ export function PatientCard({ patientId, onBack }: { patientId: string; onBack: 
     [apiPatient, teethFromApi],
   );
 
+  const { data: videos = [] } = useTabletVideos();
   const [tab, setTab] = useState<Tab>("chart");
   const [teeth, setTeeth] = useState<Record<number, ToothCondition>>({});
   const [selectedFdi, setSelectedFdi] = useState<number | null>(null);
   const [presentation, setPresentation] = useState(false);
-  const [activeVideo, setActiveVideo] = useState<TreatmentVideo | null>(null);
+  const [activeVideo, setActiveVideo] = useState<TabletVideoItem | null>(null);
 
   useEffect(() => {
     setTeeth(teethFromApi);
@@ -69,7 +71,7 @@ export function PatientCard({ patientId, onBack }: { patientId: string; onBack: 
 
   const selectedCond = selectedFdi ? (teeth[selectedFdi] ?? "healthy") : null;
   const relatedVideos = selectedCond
-    ? VIDEOS.filter((v) => v.relatedConditions.includes(selectedCond))
+    ? filterVideosByCondition(videos, selectedCond)
     : [];
 
   if (isLoading || !patient) {
@@ -192,7 +194,7 @@ export function PatientCard({ patientId, onBack }: { patientId: string; onBack: 
         )}
 
         {tab === "video" && (
-          <VideoLibrary onPlay={(v) => setActiveVideo(v)} />
+          <VideoLibrary videos={videos} onPlay={(v) => setActiveVideo(v)} />
         )}
 
         {tab === "info" && <PatientInfo patient={patient} />}
@@ -212,8 +214,8 @@ function ToothDetail({
 }: {
   fdi: number;
   cond: keyof typeof CONDITION_META;
-  relatedVideos: TreatmentVideo[];
-  onPlayVideo: (v: TreatmentVideo) => void;
+  relatedVideos: TabletVideoItem[];
+  onPlayVideo: (v: TabletVideoItem) => void;
   onClose: () => void;
 }) {
   const meta = CONDITION_META[cond];
@@ -379,10 +381,10 @@ function StatusIcon({ status }: { status: "completed" | "in_progress" | "pending
 }
 
 // ── Видеотека ─────────────────────────────────────────────────────────────────
-function VideoLibrary({ onPlay }: { onPlay: (v: TreatmentVideo) => void }) {
-  const cats = Array.from(new Set(VIDEOS.map((v) => v.category)));
+function VideoLibrary({ videos, onPlay }: { videos: TabletVideoItem[]; onPlay: (v: TabletVideoItem) => void }) {
+  const cats = Array.from(new Set(videos.map((v) => v.category)));
   const [cat, setCat] = useState<string>("all");
-  const list = cat === "all" ? VIDEOS : VIDEOS.filter((v) => v.category === cat);
+  const list = cat === "all" ? videos : videos.filter((v) => v.category === cat);
   return (
     <div className="mx-auto max-w-5xl p-4">
       <div className="mb-4 flex flex-wrap gap-2">
@@ -427,29 +429,39 @@ function CatChip({ active, onClick, children }: { active: boolean; onClick: () =
   );
 }
 
-function VideoPlayer({ video, onClose }: { video: TreatmentVideo; onClose: () => void }) {
+function VideoPlayer({ video, onClose }: { video: TabletVideoItem; onClose: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex flex-col bg-black/90 p-6"
+      className="fixed inset-0 z-50 flex flex-col bg-black/95 p-4 md:p-6"
       onClick={onClose}
     >
-      <div className="flex items-center justify-between text-white">
-        <div>
-          <p className="text-lg font-bold">{video.title}</p>
+      <div className="flex items-center justify-between text-white mb-3">
+        <div className="min-w-0 pr-4">
+          <p className="text-lg font-bold truncate">{video.title}</p>
           <p className="text-sm text-white/60">{video.category} · {video.duration}</p>
         </div>
-        <button onClick={onClose} className="rounded-xl bg-white/10 p-2 hover:bg-white/20">
+        <button type="button" onClick={onClose} className="rounded-xl bg-white/10 p-2 hover:bg-white/20 shrink-0">
           <X className="h-6 w-6" />
         </button>
       </div>
-      <div className="flex flex-1 items-center justify-center" onClick={(e) => e.stopPropagation()}>
-        <div className="flex aspect-video w-full max-w-4xl items-center justify-center rounded-2xl bg-gradient-to-br from-[#1f75fe]/20 to-[#7c3aed]/20">
-          <div className="flex flex-col items-center gap-3 text-white/80">
-            <PlayCircle className="h-20 w-20" />
-            <p className="text-sm">Демо-плеер · видео подключим с бэкендом</p>
+      <div className="flex flex-1 items-center justify-center min-h-0" onClick={(e) => e.stopPropagation()}>
+        {video.videoUrl ? (
+          <video
+            src={video.videoUrl}
+            controls
+            autoPlay
+            playsInline
+            className="w-full max-h-full max-w-4xl rounded-2xl bg-black"
+          />
+        ) : (
+          <div className="flex aspect-video w-full max-w-4xl items-center justify-center rounded-2xl bg-gradient-to-br from-[#1f75fe]/20 to-[#7c3aed]/20">
+            <div className="flex flex-col items-center gap-3 text-white/80">
+              <PlayCircle className="h-20 w-20" />
+              <p className="text-sm">Видео скоро будет доступно</p>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </motion.div>
   );

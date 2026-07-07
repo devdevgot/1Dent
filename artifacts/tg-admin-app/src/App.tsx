@@ -13,6 +13,8 @@ import PlanRequestsPage from "./pages/PlanRequestsPage";
 import LogsPage from "./pages/LogsPage";
 import ErrorsPage from "./pages/ErrorsPage";
 import SettingsPage from "./pages/SettingsPage";
+import TabletVideosPage from "./pages/TabletVideosPage";
+import MorePage from "./pages/MorePage";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -28,7 +30,8 @@ function BottomNavWrapper() {
   const location = useLocation();
   const hideNav =
     (location.pathname.startsWith("/clinics/") && location.pathname.length > "/clinics/".length) ||
-    location.pathname.startsWith("/picker/");
+    location.pathname.startsWith("/picker/") ||
+    ["/activity", "/settings", "/errors", "/logs"].some((p) => location.pathname.startsWith(p));
   if (hideNav) return null;
   return <BottomNav />;
 }
@@ -114,6 +117,8 @@ function Inner() {
             <Route path="/picker/files" element={<ClinicPickerPage title="Файлы" icon="📁" tab="files" />} />
 
             <Route path="/plan-requests" element={<PlanRequestsPage />} />
+            <Route path="/tablet" element={<TabletVideosPage />} />
+            <Route path="/more" element={<MorePage />} />
             <Route path="/activity" element={<ActivityPage />} />
             <Route path="/logs" element={<LogsPage />} />
             <Route path="/errors" element={<ErrorsPage />} />

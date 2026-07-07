@@ -66,6 +66,46 @@ export const api = {
   delete: <T>(path: string) => request<T>("DELETE", path),
 };
 
+export async function apiUpload<T>(path: string, formData: FormData): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    headers: {
+      "X-Telegram-Init-Data": _initData || "dev",
+    },
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error((err as { error?: string }).error ?? `HTTP ${res.status}`);
+  }
+
+  return res.json() as Promise<T>;
+}
+
+export interface TabletVideoSection {
+  id: string;
+  label: string;
+  icon: string;
+  relatedConditions: string[];
+}
+
+export interface TabletVideo {
+  id: string;
+  section: string;
+  sectionLabel: string;
+  title: string;
+  description: string | null;
+  mimeType: string;
+  durationSec: number | null;
+  fileSize: number | null;
+  sortOrder: number;
+  isActive: boolean;
+  videoUrl: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface TmaUser {
   telegramUserId: string;
   name: string;

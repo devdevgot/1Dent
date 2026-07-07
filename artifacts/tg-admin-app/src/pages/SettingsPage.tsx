@@ -123,7 +123,7 @@ export default function SettingsPage() {
         type="button"
         onClick={() => { haptic("light"); navigate("/errors"); }}
         className={`w-full flex items-center justify-between gap-3 rounded-xl border p-4 text-left transition-colors ${
-          unresolvedErrors > 0 ? "border-red-500/30 bg-red-500/5" : "border-border bg-card"
+          unresolvedErrors > 0 ? "border-red-200 bg-red-50" : "border-border bg-card"
         }`}
       >
         <div>
@@ -133,7 +133,7 @@ export default function SettingsPage() {
           </p>
         </div>
         {unresolvedErrors > 0 && (
-          <span className="text-xs font-bold px-2 py-1 rounded-full bg-red-500/20 text-red-400">{unresolvedErrors}</span>
+          <span className="text-xs font-bold px-2 py-1 rounded-full bg-red-100 text-red-700">{unresolvedErrors}</span>
         )}
       </button>
 
