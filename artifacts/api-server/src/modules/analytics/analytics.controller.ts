@@ -16,38 +16,17 @@ import {
   clinicExpensesTable,
   patientsTable,
   usersTable,
-  clinicsTable,
   treatmentPlansTable,
   treatmentPlanItemsTable,
 } from "@workspace/db";
 import { eq, and, gte, lte, sql, inArray, type SQL } from "drizzle-orm";
-import ExcelJS from "exceljs";
-import { createRequire } from "module";
-import path from "path";
-
-const _require = createRequire(import.meta.url);
-const _pdfmakeDir = path.dirname(_require.resolve("pdfmake/package.json"));
-const _fontsDir = path.join(_pdfmakeDir, "fonts", "Roboto");
-
-interface PdfmakeInstance {
-  fonts: Record<string, Record<string, string>>;
-  setUrlAccessPolicy(fn: ((url: string) => boolean) | undefined): void;
-  createPdf(docDef: unknown): { getBuffer(): Promise<Buffer> };
-}
-
-function getPdfInstance(): PdfmakeInstance {
-  const instance = _require("pdfmake") as PdfmakeInstance;
-  instance.fonts = {
-    Roboto: {
-      normal:      path.join(_fontsDir, "Roboto-Regular.ttf"),
-      bold:        path.join(_fontsDir, "Roboto-Medium.ttf"),
-      italics:     path.join(_fontsDir, "Roboto-Italic.ttf"),
-      bolditalics: path.join(_fontsDir, "Roboto-MediumItalic.ttf"),
-    },
-  };
-  instance.setUrlAccessPolicy(() => false);
-  return instance;
-}
+import {
+  loadFinancialExportData,
+  buildFinancialExcel,
+  buildFinancialPdf,
+  exportFilename,
+  parseExportFilters,
+} from "./financial-export";
 
 const router: IRouter = Router();
 const repo = new AnalyticsRepository();
@@ -309,117 +288,21 @@ router.get(
 
 // ─── Excel Export ─────────────────────────────────────────────────────────────
 
-const PAYMENT_LABELS: Record<string, string> = {
-  cash: "Наличные",
-  card: "Карта",
-  insurance: "Страховка",
-  transfer: "Перевод",
-};
-
-const CATEGORY_LABELS: Record<string, string> = {
-  salary: "Зарплата",
-  materials: "Материалы",
-  rent: "Аренда",
-  utilities: "Коммунальные",
-  equipment: "Оборудование",
-  marketing: "Маркетинг",
-  other: "Прочее",
-};
-
 router.get(
   "/analytics/export/excel",
   roleGuard("owner", "admin", "accountant"),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { clinicId } = req.user!;
-      const { dateFrom, dateTo } = parseDateRange(req.query);
-      const data = await loadFinancialData(clinicId, dateFrom, dateTo);
-
-      // Fetch patient and doctor names for the income sheet
-      const patientIds = [...new Set(data.procedures.map((p) => p.patientId).filter(Boolean))];
-      const doctorIds = [...new Set(data.procedures.map((p) => p.doctorId).filter(Boolean))];
-
-      const [patientRows, doctorRows] = await Promise.all([
-        patientIds.length > 0
-          ? db.select({ id: patientsTable.id, name: patientsTable.name }).from(patientsTable).where(eq(patientsTable.clinicId, clinicId))
-          : Promise.resolve([]),
-        doctorIds.length > 0
-          ? db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable).where(eq(usersTable.clinicId, clinicId))
-          : Promise.resolve([]),
-      ]);
-
-      const patientMap = new Map(patientRows.map((p) => [p.id, p.name]));
-      const doctorMap = new Map(doctorRows.map((d) => [d.id, d.name]));
-
-      const workbook = new ExcelJS.Workbook();
-      workbook.creator = "Dental CRM";
-      workbook.created = new Date();
-
-      // ── Sheet 1: Сводка ──────────────────────────────────────────────────────
-      const summarySheet = workbook.addWorksheet("Сводка");
-      summarySheet.columns = [
-        { header: "Показатель", key: "label", width: 32 },
-        { header: "Сумма (₸)", key: "value", width: 20 },
-        { header: "%", key: "pct", width: 12 },
-      ];
-      summarySheet.addRow({ label: "Выручка", value: data.totalRevenue, pct: "100%" });
-      summarySheet.addRow({ label: "Затраты на материалы", value: data.totalMaterialCost, pct: data.totalRevenue > 0 ? `${Math.round((data.totalMaterialCost / data.totalRevenue) * 100)}%` : "—" });
-      summarySheet.addRow({ label: "Операционные расходы", value: data.totalOperationalExpenses, pct: data.totalRevenue > 0 ? `${Math.round((data.totalOperationalExpenses / data.totalRevenue) * 100)}%` : "—" });
-      summarySheet.addRow({ label: "Чистая прибыль", value: data.netProfit, pct: `${data.marginPct}%` });
-      const hdr = summarySheet.getRow(1);
-      hdr.font = { bold: true };
-      hdr.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF98CC1C" } };
-
-      // ── Sheet 2: Доходы (detailed procedures) ────────────────────────────────
-      const incomeSheet = workbook.addWorksheet("Доходы");
-      incomeSheet.columns = [
-        { header: "Дата", key: "date", width: 14 },
-        { header: "Пациент", key: "patient", width: 28 },
-        { header: "Врач", key: "doctor", width: 24 },
-        { header: "Услуга", key: "service", width: 35 },
-        { header: "Способ оплаты", key: "payment", width: 18 },
-        { header: "Сумма (₸)", key: "amount", width: 15 },
-      ];
-      incomeSheet.getRow(1).font = { bold: true };
-      for (const p of data.procedures) {
-        incomeSheet.addRow({
-          date: p.completedAt ? new Date(p.completedAt).toLocaleDateString("ru-KZ") : "",
-          patient: patientMap.get(p.patientId) ?? "—",
-          doctor: p.doctorId ? (doctorMap.get(p.doctorId) ?? "—") : "—",
-          service: p.name,
-          payment: PAYMENT_LABELS[p.paymentMethod ?? "cash"] ?? p.paymentMethod ?? "",
-          amount: p.price ?? 0,
-        });
-      }
-
-      // ── Sheet 3: Расходы ─────────────────────────────────────────────────────
-      const expensesSheet = workbook.addWorksheet("Расходы");
-      expensesSheet.columns = [
-        { header: "Дата", key: "date", width: 14 },
-        { header: "Категория", key: "category", width: 20 },
-        { header: "Подкатегория", key: "subcategory", width: 22 },
-        { header: "Описание", key: "description", width: 35 },
-        { header: "Сумма (₸)", key: "amount", width: 15 },
-      ];
-      expensesSheet.getRow(1).font = { bold: true };
-      for (const e of data.expenses) {
-        expensesSheet.addRow({
-          date: e.expenseDate ? new Date(e.expenseDate).toLocaleDateString("ru-KZ") : "",
-          category: CATEGORY_LABELS[e.category] ?? e.category,
-          subcategory: e.subcategory ?? "",
-          description: e.description ?? "",
-          amount: Number(e.amount),
-        });
-      }
-
-      const fromStr = dateFrom ? dateFrom.toISOString().slice(0, 10) : "all";
-      const toStr = dateTo ? dateTo.toISOString().slice(0, 10) : "all";
-      const filename = `financial-report-${fromStr}-${toStr}.xlsx`;
+      const filters = parseExportFilters(req.query as Record<string, unknown>);
+      const data = await loadFinancialExportData(clinicId, filters);
+      const buffer = await buildFinancialExcel(data);
+      const filename = exportFilename(filters, "xlsx");
 
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-      await workbook.xlsx.write(res);
-      res.end();
+      res.setHeader("Content-Length", buffer.length);
+      res.send(buffer);
     } catch (err) {
       next(err);
     }
@@ -434,146 +317,15 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { clinicId } = req.user!;
-      const { dateFrom, dateTo } = parseDateRange(req.query);
-      const data = await loadFinancialData(clinicId, dateFrom, dateTo);
-
-      // Fetch clinic name
-      const [clinic] = await db.select({ name: clinicsTable.name }).from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1);
-      const clinicName = clinic?.name ?? "Dental CRM";
-
-      // Aggregate income by doctor
-      const doctorIds = [...new Set(data.procedures.map((p) => p.doctorId).filter((id): id is string => Boolean(id)))];
-      const doctorRows = doctorIds.length > 0
-        ? await db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable).where(eq(usersTable.clinicId, clinicId))
-        : [];
-      const doctorMap = new Map(doctorRows.map((d) => [d.id, d.name]));
-
-      const revenueByDoctor: Map<string, number> = new Map();
-      for (const p of data.procedures) {
-        const key = p.doctorId ? (doctorMap.get(p.doctorId) ?? "Неизвестно") : "Не назначен";
-        revenueByDoctor.set(key, (revenueByDoctor.get(key) ?? 0) + (p.price ?? 0));
-      }
-
-      const fmtMoney = (n: number) => `${n.toLocaleString("ru-KZ")} KZT`;
-      const fmtDate = (d: Date | null | undefined) => d ? new Date(d).toLocaleDateString("ru-KZ") : "—";
-      const periodLabel = dateFrom && dateTo
-        ? `${fmtDate(dateFrom)} — ${fmtDate(dateTo)}`
-        : dateFrom ? `с ${fmtDate(dateFrom)}`
-        : dateTo ? `по ${fmtDate(dateTo)}`
-        : "За всё время";
-
-      const pdfmake = getPdfInstance();
-
-      const docDefinition = {
-        content: [
-          // Clinic header
-          { text: clinicName, style: "title" },
-          { text: `Finansovyi otchet: ${periodLabel}`, style: "subtitle", margin: [0, 0, 0, 16] },
-
-          // KPI table: 3 columns — metric | value | %
-          { text: "Svodnye pokazateli", style: "sectionHeader" },
-          {
-            table: {
-              widths: ["*", "auto", "auto"],
-              body: [
-                [
-                  { text: "Pokazatel", bold: true },
-                  { text: "Summa, KZT", bold: true, alignment: "right" as const },
-                  { text: "%", bold: true, alignment: "right" as const },
-                ],
-                [
-                  "Vyruchka",
-                  { text: fmtMoney(data.totalRevenue), alignment: "right" as const },
-                  { text: "100%", alignment: "right" as const },
-                ],
-                [
-                  "Sebestoimost materialov",
-                  { text: fmtMoney(data.totalMaterialCost), alignment: "right" as const },
-                  { text: data.totalRevenue > 0 ? `${Math.round((data.totalMaterialCost / data.totalRevenue) * 100)}%` : "-", alignment: "right" as const },
-                ],
-                [
-                  "Operatsionnye raskhody",
-                  { text: fmtMoney(data.totalOperationalExpenses), alignment: "right" as const },
-                  { text: data.totalRevenue > 0 ? `${Math.round((data.totalOperationalExpenses / data.totalRevenue) * 100)}%` : "-", alignment: "right" as const },
-                ],
-                [
-                  { text: "Chistaya pribyl", bold: true },
-                  { text: fmtMoney(data.netProfit), bold: true, alignment: "right" as const },
-                  { text: `${data.marginPct}%`, bold: true, alignment: "right" as const },
-                ],
-              ],
-            },
-            margin: [0, 8, 0, 20],
-          },
-
-          // Income by doctor
-          ...(revenueByDoctor.size > 0
-            ? [
-                { text: "Dokhody po vracham", style: "sectionHeader" },
-                {
-                  table: {
-                    widths: ["*", "auto", "auto"],
-                    body: [
-                      [
-                        { text: "Vrach", bold: true },
-                        { text: "Summa, KZT", bold: true, alignment: "right" as const },
-                        { text: "%", bold: true, alignment: "right" as const },
-                      ],
-                      ...[...revenueByDoctor.entries()].map(([name, amount]) => [
-                        name,
-                        { text: fmtMoney(amount), alignment: "right" as const },
-                        { text: data.totalRevenue > 0 ? `${Math.round((amount / data.totalRevenue) * 100)}%` : "0%", alignment: "right" as const },
-                      ]),
-                    ],
-                  },
-                  margin: [0, 8, 0, 20],
-                },
-              ]
-            : []),
-
-          // Expenses by category (aggregated)
-          ...(Object.keys(data.expensesByCategory).length > 0
-            ? [
-                { text: "Raskhody po kategoriyam", style: "sectionHeader" },
-                {
-                  table: {
-                    widths: ["*", "auto", "auto"],
-                    body: [
-                      [
-                        { text: "Kategoriya", bold: true },
-                        { text: "Summa, KZT", bold: true, alignment: "right" as const },
-                        { text: "%", bold: true, alignment: "right" as const },
-                      ],
-                      ...Object.entries(data.expensesByCategory).map(([cat, amount]) => [
-                        CATEGORY_LABELS[cat] ?? cat,
-                        { text: fmtMoney(amount), alignment: "right" as const },
-                        { text: data.totalOperationalExpenses > 0 ? `${Math.round((amount / data.totalOperationalExpenses) * 100)}%` : "0%", alignment: "right" as const },
-                      ]),
-                    ],
-                  },
-                  margin: [0, 8, 0, 16],
-                },
-              ]
-            : []),
-        ],
-        styles: {
-          title: { fontSize: 20, bold: true, margin: [0, 0, 0, 4] },
-          subtitle: { fontSize: 12, color: "#666666" },
-          sectionHeader: { fontSize: 14, bold: true, margin: [0, 8, 0, 4] },
-        },
-        defaultStyle: { font: "Roboto", fontSize: 10 },
-      };
-
-      const fromStr = dateFrom ? dateFrom.toISOString().slice(0, 10) : "all";
-      const toStr = dateTo ? dateTo.toISOString().slice(0, 10) : "all";
-      const filename = `financial-report-${fromStr}-${toStr}.pdf`;
-
-      const pdfBuffer = await pdfmake.createPdf(docDefinition).getBuffer();
+      const filters = parseExportFilters(req.query as Record<string, unknown>);
+      const data = await loadFinancialExportData(clinicId, filters);
+      const buffer = await buildFinancialPdf(data);
+      const filename = exportFilename(filters, "pdf");
 
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-      res.setHeader("Content-Length", pdfBuffer.length);
-      res.send(pdfBuffer);
+      res.setHeader("Content-Length", buffer.length);
+      res.send(buffer);
     } catch (err) {
       next(err);
     }

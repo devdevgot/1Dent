@@ -771,7 +771,8 @@
     "empty": "Процедура табылмады",
     "unassigned": "Тағайындалмаған",
     "exportExcel": "Excel экспорт",
-    "exportPdf": "PDF экспорт"
+    "exportPdf": "PDF экспорт",
+    "exportError": "Файлды жүктеу сәтсіз аяқталды. Қайталап көріңіз."
   },
   "expenses": {
     "addTitle": "Шығын қосу",

@@ -771,7 +771,8 @@
     "empty": "No procedures found",
     "unassigned": "Unassigned",
     "exportExcel": "Export Excel",
-    "exportPdf": "Export PDF"
+    "exportPdf": "Export PDF",
+    "exportError": "Failed to download file. Please try again."
   },
   "expenses": {
     "addTitle": "Add Expense",

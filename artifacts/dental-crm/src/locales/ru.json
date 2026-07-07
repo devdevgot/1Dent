@@ -779,7 +779,8 @@
     "empty": "Процедур не найдено",
     "unassigned": "Не назначен",
     "exportExcel": "Экспорт Excel",
-    "exportPdf": "Экспорт PDF"
+    "exportPdf": "Экспорт PDF",
+    "exportError": "Не удалось скачать файл. Попробуйте ещё раз."
   },
   "expenses": {
     "addTitle": "Добавить расход",

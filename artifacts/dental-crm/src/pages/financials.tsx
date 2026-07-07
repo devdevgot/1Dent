@@ -17,6 +17,7 @@ import ExpenseDialog from "@/components/expense-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { getBaseUrl } from "@/lib/base-url";
+import { getBranchRequestHeaders } from "@/lib/branch-context";
 import { cn } from "@/lib/utils";
 import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-header";
@@ -68,6 +69,7 @@ export default function FinancialsPage() {
   const [filterStatus, setFilterStatus] = useState("completed");
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<ClinicExpense | null>(null);
+  const [exporting, setExporting] = useState<"excel" | "pdf" | null>(null);
 
   const { dateFrom, dateTo } = getPeriodDates(period, customFrom, customTo);
 
@@ -149,33 +151,55 @@ export default function FinancialsPage() {
     queryClient.invalidateQueries({ queryKey: ["/api/analytics/financial-summary"] });
   }
 
+  function buildExportQuery() {
+    const qs = new URLSearchParams();
+    if (dateFrom) qs.set("dateFrom", dateFrom);
+    if (dateTo) qs.set("dateTo", dateTo);
+    if (filterDoctor) qs.set("doctorId", filterDoctor);
+    if (filterStatus) qs.set("status", filterStatus);
+    return qs.toString();
+  }
+
   async function downloadBlob(path: string, filename: string) {
-    const base  = getBaseUrl();
+    const base = getBaseUrl();
     const token = localStorage.getItem("auth_token");
+    const headers: Record<string, string> = {
+      ...getBranchRequestHeaders(),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
     try {
-      const res = await fetch(`${base}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
-      if (!res.ok) throw new Error("Export failed");
+      const res = await fetch(`${base}${path}`, { headers, credentials: "include" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const blob = await res.blob();
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement("a");
-      a.href = url; a.download = filename; a.click();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
       URL.revokeObjectURL(url);
     } catch {
-      toast({ title: t("expenses.error"), variant: "destructive" });
+      toast({ title: t("financials.exportError"), variant: "destructive" });
     }
   }
 
-  function handleExportExcel() {
-    const qs = new URLSearchParams();
-    if (dateFrom) qs.set("dateFrom", dateFrom);
-    if (dateTo)   qs.set("dateTo", dateTo);
-    downloadBlob(`/api/analytics/export/excel?${qs}`, `finance-${dateFrom}-${dateTo}.xlsx`);
+  async function handleExportExcel() {
+    setExporting("excel");
+    try {
+      const qs = buildExportQuery();
+      await downloadBlob(`/api/analytics/export/excel?${qs}`, `finance-${dateFrom}-${dateTo}.xlsx`);
+    } finally {
+      setExporting(null);
+    }
   }
-  function handleExportPdf() {
-    const qs = new URLSearchParams();
-    if (dateFrom) qs.set("dateFrom", dateFrom);
-    if (dateTo)   qs.set("dateTo", dateTo);
-    downloadBlob(`/api/analytics/export/pdf?${qs}`, `finance-${dateFrom}-${dateTo}.pdf`);
+
+  async function handleExportPdf() {
+    setExporting("pdf");
+    try {
+      const qs = buildExportQuery();
+      await downloadBlob(`/api/analytics/export/pdf?${qs}`, `finance-${dateFrom}-${dateTo}.pdf`);
+    } finally {
+      setExporting(null);
+    }
   }
 
   const goalMonthly   = 0; // can be configured; 0 means no goal set
@@ -191,10 +215,10 @@ export default function FinancialsPage() {
         sticky
         right={
           <>
-            <PageHeaderIconButton onClick={handleExportExcel} title={t("financials.exportExcel")}>
+            <PageHeaderIconButton onClick={handleExportExcel} title={t("financials.exportExcel")} disabled={exporting !== null}>
               <FileSpreadsheet className="w-4 h-4" />
             </PageHeaderIconButton>
-            <PageHeaderIconButton onClick={handleExportPdf} title={t("financials.exportPdf")}>
+            <PageHeaderIconButton onClick={handleExportPdf} title={t("financials.exportPdf")} disabled={exporting !== null}>
               <FileText className="w-4 h-4" />
             </PageHeaderIconButton>
           </>
