@@ -42,41 +42,48 @@ export interface PlatformContractTemplatesConfig {
   templates: PlatformContractTemplateEntry[];
 }
 
-export const DEFAULT_PLATFORM_PLANS: PlatformPlansConfig = {
-  implementationFee: 1_000_000,
-  trialDays: 3,
-  plans: [
-    {
-      id: "starter",
-      name: "START",
-      price: 99_000,
-      subtitle: "Для небольших стоматологий",
-      audience: "До 5 сотрудников · 1 филиал",
-      highlights: ["Полный набор инструментов клиники", "До 5 сотрудников · 1 филиал"],
-      limits: PLAN_LIMITS.starter,
-    },
-    {
-      id: "professional",
-      name: "PRO",
-      price: 159_000,
-      subtitle: "Оптимален для большинства клиник",
-      audience: "До 15 сотрудников · до 3 филиалов",
-      badge: "Рекомендуемый",
-      recommended: true,
-      highlights: ["Всё из START · до 15 сотрудников", "3 филиала · 6× больше AI и чат-бот"],
-      limits: PLAN_LIMITS.professional,
-    },
-    {
-      id: "enterprise",
-      name: "ENTERPRISE",
-      price: 199_000,
-      subtitle: "Для крупных клиник и сетей",
-      audience: "До 30 сотрудников · до 10 филиалов",
-      highlights: ["Всё из PRO · до 10 филиалов", "До 30 сотрудников · персональный менеджер"],
-      limits: PLAN_LIMITS.enterprise,
-    },
-  ],
-};
+let _defaultPlansCache: PlatformPlansConfig | null = null;
+
+export function getDefaultPlatformPlans(): PlatformPlansConfig {
+  if (!_defaultPlansCache) {
+    _defaultPlansCache = {
+      implementationFee: 1_000_000,
+      trialDays: 3,
+      plans: [
+        {
+          id: "starter",
+          name: "START",
+          price: 99_000,
+          subtitle: "Для небольших стоматологий",
+          audience: "До 5 сотрудников · 1 филиал",
+          highlights: ["Полный набор инструментов клиники", "До 5 сотрудников · 1 филиал"],
+          limits: PLAN_LIMITS.starter,
+        },
+        {
+          id: "professional",
+          name: "PRO",
+          price: 159_000,
+          subtitle: "Оптимален для большинства клиник",
+          audience: "До 15 сотрудников · до 3 филиалов",
+          badge: "Рекомендуемый",
+          recommended: true,
+          highlights: ["Всё из START · до 15 сотрудников", "3 филиала · 6× больше AI и чат-бот"],
+          limits: PLAN_LIMITS.professional,
+        },
+        {
+          id: "enterprise",
+          name: "ENTERPRISE",
+          price: 199_000,
+          subtitle: "Для крупных клиник и сетей",
+          audience: "До 30 сотрудников · до 10 филиалов",
+          highlights: ["Всё из PRO · до 10 филиалов", "До 30 сотрудников · персональный менеджер"],
+          limits: PLAN_LIMITS.enterprise,
+        },
+      ],
+    };
+  }
+  return _defaultPlansCache;
+}
 
 export const DEFAULT_CHATBOT_DEFAULTS: PlatformChatbotDefaults = {
   defaultEnabled: true,
