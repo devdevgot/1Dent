@@ -122,7 +122,7 @@ bash scripts/railway-deploy.sh            # деплой текущего код
 | `JWT_SECRET` | случайная строка 64+ символов |
 | `FRONTEND_URL` | `https://1dent.kz` |
 | `PUBLIC_URL` | `https://1dent.kz` |
-| `WEBHOOK_BASE_URL` | `https://1dent.kz` (публичный URL API; нужен для Telegram webhook и кнопки TMA) |
+| `WEBHOOK_BASE_URL` | `https://1dent.kz` (опционально; если не задан — берётся `PUBLIC_URL` / `FRONTEND_URL`, не `*.up.railway.app`) |
 | `PLATFORM_TG_BOT_TOKEN` | токен **платформенного** бота из [@BotFather](https://t.me/BotFather) |
 | `PLATFORM_SUPERADMIN_TG_ID` | ваш числовой Telegram ID (первый суперадмин) |
 
@@ -155,11 +155,12 @@ bash scripts/railway-vars-production.sh
 #### 2. Проверка после деплоя
 
 1. В браузере открывается: `https://1dent.kz/tg-admin/` (должен быть HTML, не 502/timeout).
-2. Health: `https://1dent.kz/api/healthz` → `200`.
-3. В логах Railway при старте:
+2. Диагностика: `https://1dent.kz/api/healthz/tma` → `tma.staticReady: true`, `tma.url: https://1dent.kz/tg-admin/`.
+3. Health: `https://1dent.kz/api/healthz` → `200`.
+4. В логах Railway при старте:
    - `[PlatformBot] Webhook registered`
    - `[PlatformBot] Menu button set`
-4. Если вместо этого `[PlatformBot] PLATFORM_TG_BOT_TOKEN not set` — токен не задан или деплой старый.
+5. Если вместо этого `[PlatformBot] PLATFORM_TG_BOT_TOKEN not set` — токен не задан или деплой старый.
 
 #### 3. BotFather (если кнопка меню не появляется)
 

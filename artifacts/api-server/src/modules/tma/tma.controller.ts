@@ -40,6 +40,7 @@ import { errorEventsService } from "../error-events/error-events.service";
 import type { ErrorEventSeverity, ErrorEventSource } from "@workspace/db";
 import { createTabletVideosTmaRouter } from "../tablet-videos/tablet-videos.routes";
 import { createPlatformConfigTmaRouter } from "../platform-config/platform-config.routes";
+import { getPlatformWebhookUrl, getTmaUrl } from "../../shared/platform-bot";
 
 const router = Router();
 router.use(requireTmaAdmin);
@@ -349,9 +350,7 @@ router.get("/settings", async (_req: Request, res: Response, next: NextFunction)
       db.select({ count: count() }).from(patientsTable),
     ]);
     const botConfigured = !!process.env["PLATFORM_TG_BOT_TOKEN"];
-    const webhookBase = process.env["REPLIT_DEV_DOMAIN"]
-      ? `https://${process.env["REPLIT_DEV_DOMAIN"]}`
-      : null;
+    const superadminConfigured = !!process.env["PLATFORM_SUPERADMIN_TG_ID"];
     res.json({
       success: true,
       data: {
@@ -359,8 +358,9 @@ router.get("/settings", async (_req: Request, res: Response, next: NextFunction)
         stats: { clinics: clinicsRow?.count ?? 0, users: usersRow?.count ?? 0, patients: patientsRow?.count ?? 0 },
         bot: {
           configured: botConfigured,
-          webhookUrl: webhookBase ? `${webhookBase}/api/webhook/telegram/platform` : null,
-          tmaUrl: webhookBase ? `${webhookBase}/tg-admin` : null,
+          superadminConfigured,
+          webhookUrl: getPlatformWebhookUrl(),
+          tmaUrl: getTmaUrl(),
         },
       },
     });

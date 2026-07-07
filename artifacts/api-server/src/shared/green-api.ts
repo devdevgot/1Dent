@@ -7,19 +7,30 @@ function greenApiSignal(timeoutMs = 15_000): AbortSignal {
   return AbortSignal.timeout(timeoutMs);
 }
 
+function trimBaseUrl(url: string): string {
+  return url.replace(/\/$/, "");
+}
+
 export function getServerBaseUrl(): string | null {
   // 1. Explicit override — highest priority
-  if (process.env["WEBHOOK_BASE_URL"]) return process.env["WEBHOOK_BASE_URL"];
+  if (process.env["WEBHOOK_BASE_URL"]) return trimBaseUrl(process.env["WEBHOOK_BASE_URL"]);
 
-  // 2. Railway — public domain without scheme (e.g. example.up.railway.app)
+  // 2. Public app domain (custom domain on Railway/Render — must match BotFather Web App domain)
+  const publicUrl = process.env["PUBLIC_URL"]?.trim();
+  if (publicUrl) return trimBaseUrl(publicUrl);
+
+  const frontendUrl = process.env["FRONTEND_URL"]?.trim();
+  if (frontendUrl) return trimBaseUrl(frontendUrl);
+
+  // 3. Railway — *.up.railway.app (fallback when no custom domain env is set)
   const railwayDomain = process.env["RAILWAY_PUBLIC_DOMAIN"];
-  if (railwayDomain) return `https://${railwayDomain.replace(/\/$/, "")}`;
+  if (railwayDomain) return `https://${trimBaseUrl(railwayDomain)}`;
 
-  // 3. Render — set automatically on web services
+  // 4. Render — set automatically on web services
   const renderUrl = process.env["RENDER_EXTERNAL_URL"];
-  if (renderUrl) return renderUrl.replace(/\/$/, "");
+  if (renderUrl) return trimBaseUrl(renderUrl);
 
-  // 4. REPLIT_DOMAINS — available in BOTH dev and production deployments.
+  // 5. REPLIT_DOMAINS — available in BOTH dev and production deployments.
   //    In production it contains the *.replit.app domain; in dev the *.replit.dev domain.
   //    Prefer the *.replit.app domain (production) when both are present.
   const replitDomains = process.env["REPLIT_DOMAINS"];
@@ -29,8 +40,12 @@ export function getServerBaseUrl(): string | null {
     if (prodDomain) return `https://${prodDomain}`;
   }
 
-  // 5. Legacy dev-only fallback
+  // 6. Legacy dev-only fallback
   if (process.env["REPLIT_DEV_DOMAIN"]) return `https://${process.env["REPLIT_DEV_DOMAIN"]}`;
+
+  // 7. Production default for 1Dent
+  if (process.env["NODE_ENV"] === "production") return "https://1dent.kz";
+
   return null;
 }
 
