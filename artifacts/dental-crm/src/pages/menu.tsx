@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { motion } from "framer-motion";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useLogout } from "@workspace/api-client-react";
 import { clearAuthToken } from "@/lib/auth-token";
@@ -58,19 +57,6 @@ const ALL_NAV_ITEMS = [
   { nameKey: "nav.pricing",           href: "/pricing",            icon: CreditCard,   roles: ["owner"] },
   { nameKey: "nav.branches",          href: "/branches",           icon: MapPin,       roles: ["owner"] },
 ];
-
-const gridVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.04, delayChildren: 0.06 },
-  },
-};
-
-const gridItemVariants = {
-  hidden: { opacity: 0, y: 10 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] } },
-};
 
 export default function MenuPage() {
   const { t } = useTranslation();
@@ -147,19 +133,14 @@ export default function MenuPage() {
 
       <IosSection title={t("menuPage.title")} className="mb-5">
         <IosGroup className="py-2 px-1">
-          <motion.div
-            className="grid grid-cols-4"
-            variants={gridVariants}
-            initial="hidden"
-            animate="show"
-          >
+          <div className="grid grid-cols-4">
             {navItems.length === 0 ? (
               <p className="col-span-4 py-6 text-center text-caption text-[#94a3b8]">
                 {t("menuPage.noShortcuts")}
               </p>
             ) : (
               navItems.map((item) => (
-                <motion.div key={item.href} variants={gridItemVariants}>
+                <div key={item.href}>
                   <Link
                     href={item.href}
                     className="flex flex-col items-center gap-1.5 py-3 px-1 rounded-xl hover:bg-[#f1ede4] active:bg-[#f1ede4] transition-colors"
@@ -169,10 +150,10 @@ export default function MenuPage() {
                       {item.name}
                     </span>
                   </Link>
-                </motion.div>
+                </div>
               ))
             )}
-          </motion.div>
+          </div>
         </IosGroup>
       </IosSection>
 
