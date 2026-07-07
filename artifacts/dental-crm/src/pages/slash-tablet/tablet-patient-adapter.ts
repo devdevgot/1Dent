@@ -9,6 +9,26 @@ const STAGE_PALETTE = [
   { color: "#d97706", bg: "#fffbeb" },
 ];
 
+/** Технические id этапов (из CRM/AI) → понятные названия для пациента */
+const STAGE_LABELS: Record<string, string> = {
+  prevention_treatment: "Профилактика и лечение зубов",
+  surgery: "Хирургия",
+  orthopedics: "Ортопедическое лечение",
+  other: "Дополнительные процедуры",
+};
+
+function normalizeStageKey(stage: string): string {
+  return stage.trim().toLowerCase().replace(/[\s-]+/g, "_");
+}
+
+export function resolveStageLabel(stage: string | null | undefined): string {
+  if (!stage?.trim()) return "Лечение";
+  const trimmed = stage.trim();
+  if (/[а-яё]/i.test(trimmed)) return trimmed;
+  const key = normalizeStageKey(trimmed);
+  return STAGE_LABELS[key] ?? "Лечение";
+}
+
 export function apiPatientToTablet(
   patient: Patient,
   teeth: Record<number, ToothCondition>,
@@ -43,7 +63,8 @@ export function apiPlanToStages(plan: TreatmentPlan | null | undefined): PlanSta
   const groups = new Map<string, PlanItem[]>();
   for (const item of [...plan.items].sort((a, b) => a.sortOrder - b.sortOrder)) {
     if (item.status === "cancelled") continue;
-    const stageKey = item.stage?.trim() || "Лечение";
+    const rawStage = item.stage?.trim();
+    const stageKey = rawStage ? normalizeStageKey(rawStage) : "__default__";
     const list = groups.get(stageKey) ?? [];
     list.push({
       id: item.id,
@@ -55,11 +76,11 @@ export function apiPlanToStages(plan: TreatmentPlan | null | undefined): PlanSta
     groups.set(stageKey, list);
   }
 
-  return Array.from(groups.entries()).map(([label, items], i) => {
+  return Array.from(groups.entries()).map(([stageKey, items], i) => {
     const palette = STAGE_PALETTE[i % STAGE_PALETTE.length]!;
     return {
       id: `stage-${i}`,
-      label,
+      label: stageKey === "__default__" ? "Лечение" : resolveStageLabel(stageKey),
       color: palette.color,
       bg: palette.bg,
       items,
