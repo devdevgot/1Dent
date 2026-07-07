@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { db, platformSettingsTable, chatbotSettingsTable, clinicsTable } from "@workspace/db";
 import {
   DEFAULT_CHATBOT_DEFAULTS,
-  DEFAULT_PLATFORM_PLANS,
+  getDefaultPlatformPlans,
   buildDefaultContractTemplatesConfig,
   type PlatformChatbotDefaults,
   type PlatformContractTemplatesConfig,
@@ -16,11 +16,16 @@ const KEYS = {
   contractTemplates: "contract_templates",
 } as const;
 
-let plansCache: PlatformPlansConfig = DEFAULT_PLATFORM_PLANS;
+let plansCache: PlatformPlansConfig | null = null;
 let chatbotDefaultsCache: PlatformChatbotDefaults = DEFAULT_CHATBOT_DEFAULTS;
 
-export function getCachedPlansConfig(): PlatformPlansConfig {
+function getPlansCache(): PlatformPlansConfig {
+  if (!plansCache) plansCache = getDefaultPlatformPlans();
   return plansCache;
+}
+
+export function getCachedPlansConfig(): PlatformPlansConfig {
+  return getPlansCache();
 }
 
 export function getCachedChatbotDefaults(): PlatformChatbotDefaults {
@@ -56,11 +61,12 @@ export class PlatformConfigService {
   }
 
   async getPlansConfig(): Promise<PlatformPlansConfig> {
-    const stored = await readSetting(KEYS.plans, DEFAULT_PLATFORM_PLANS);
+    const defaults = getDefaultPlatformPlans();
+    const stored = await readSetting(KEYS.plans, defaults);
     plansCache = {
-      ...DEFAULT_PLATFORM_PLANS,
+      ...defaults,
       ...stored,
-      plans: stored.plans?.length ? stored.plans : DEFAULT_PLATFORM_PLANS.plans,
+      plans: stored.plans?.length ? stored.plans : defaults.plans,
     };
     return plansCache;
   }
