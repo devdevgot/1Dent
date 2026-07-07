@@ -1,12 +1,8 @@
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, Suspense, lazy, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { useAuthStore } from "@/hooks/use-auth";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
-import { NotificationBell } from "./notification-bell";
-import { GlobalSearch } from "./global-search";
-import { AppointmentReminderModal } from "./appointment-reminder-modal";
-import { AttendanceCheckModal } from "./attendance-check-modal";
 import { useBranchStore } from "@/hooks/use-branch-store";
 import {
   LayoutDashboard,
@@ -30,7 +26,22 @@ import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { useGeoRestriction } from "@/hooks/use-geo-restriction";
 import { prefetchStaffList } from "@workspace/api-client-react";
-import { TabletScannerSlot } from "@/components/tablet/tablet-scanner-slot";
+
+const GlobalSearch = lazy(() =>
+  import("./global-search").then((m) => ({ default: m.GlobalSearch })),
+);
+const NotificationBell = lazy(() =>
+  import("./notification-bell").then((m) => ({ default: m.NotificationBell })),
+);
+const AppointmentReminderModal = lazy(() =>
+  import("./appointment-reminder-modal").then((m) => ({ default: m.AppointmentReminderModal })),
+);
+const AttendanceCheckModal = lazy(() =>
+  import("./attendance-check-modal").then((m) => ({ default: m.AttendanceCheckModal })),
+);
+const TabletScannerSlot = lazy(() =>
+  import("@/components/tablet/tablet-scanner-slot").then((m) => ({ default: m.TabletScannerSlot })),
+);
 
 const ROLE_DASHBOARD_HREF: Record<string, string> = {
   owner:      "/dashboard",
@@ -69,6 +80,27 @@ function isGeoRestrictedPath(path: string) {
   return GEO_RESTRICTED_PREFIXES.some((p) => path === p || path.startsWith(p + "/"));
 }
 
+function useAfterFirstPaint() {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const scheduleIdle = window.requestIdleCallback ?? ((cb: IdleRequestCallback) => {
+      const id = window.setTimeout(
+        () => cb({ didTimeout: false, timeRemaining: () => 0 } as IdleDeadline),
+        1,
+      );
+      return id as unknown as number;
+    });
+    const cancelIdle = window.cancelIdleCallback ?? window.clearTimeout;
+    const id = scheduleIdle(() => setReady(true), { timeout: 1_500 });
+    return () => cancelIdle(id);
+  }, []);
+
+  return ready;
+}
+
 export function AppLayout({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   const { user } = useAuthStore();
@@ -77,6 +109,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const { branches, selectedBranchId, setSelectedBranchId, fetchBranches, hasFetched } = useBranchStore();
   const [branchPickerOpen, setBranchPickerOpen] = useState(false);
+  const afterFirstPaint = useAfterFirstPaint();
 
   const handleBranchSelect = (branchId: string | null) => {
     setSelectedBranchId(branchId);
@@ -124,8 +157,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex flex-col h-[100dvh] bg-[var(--bg)] overflow-hidden font-manrope">
-      <AppointmentReminderModal />
-      <AttendanceCheckModal />
+      {afterFirstPaint && (
+        <Suspense fallback={null}>
+          <AppointmentReminderModal />
+          <AttendanceCheckModal />
+        </Suspense>
+      )}
 
       {/* Home page header */}
       {isHomePage && (
@@ -182,16 +219,22 @@ export function AppLayout({ children }: { children: ReactNode }) {
           )}
 
           <div className="flex items-center gap-3 px-4 py-2.5">
-            <GlobalSearch />
+            <Suspense fallback={<div className="h-10 flex-1" />}>
+              <GlobalSearch />
+            </Suspense>
             {(user?.role === "doctor" ||
               user?.role === "owner" ||
               user?.role === "admin" ||
               user?.role === "assistant" ||
               user?.role === "nurse") && (
-              <TabletScannerSlot />
+              <Suspense fallback={<div className="h-10 w-10 shrink-0" />}>
+                <TabletScannerSlot />
+              </Suspense>
             )}
             <div className="shrink-0">
-              <NotificationBell />
+              <Suspense fallback={<div className="h-10 w-10" />}>
+                <NotificationBell />
+              </Suspense>
             </div>
           </div>
         </header>
