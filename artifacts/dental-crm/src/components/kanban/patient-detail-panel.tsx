@@ -20,6 +20,7 @@ import {
   useCompleteTreatmentPlanItem,
   useListProcedureTemplates,
   useTriggerDentalAiAnalysis,
+  useStartDiagnosis,
   getListPatientsQueryKey,
   getGetPatientQueryKey,
   getListTeethQueryKey,
@@ -849,6 +850,7 @@ export function PatientDetailPanel() {
   const [matchedCatsState, setMatchedCatsState] = useState<string[]>([]);
 
   const [isDiagnosisMode, setIsDiagnosisMode] = useState(false);
+  const initialDiagnosisStartRef = useRef(false);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [voiceDraftExists, setVoiceDraftExists] = useState(false);
   const [voiceDraftTime, setVoiceDraftTime] = useState<number | null>(null);
@@ -1062,6 +1064,7 @@ export function PatientDetailPanel() {
     setExpandedPlanId(null);
     setPlanViewToothFdi(null);
     setIsDiagnosisMode(false);
+    initialDiagnosisStartRef.current = false;
     setShowVoiceModal(false);
     setRestoreVoiceDraft(false);
     setShowSummaryModal(false);
@@ -1201,6 +1204,7 @@ export function PatientDetailPanel() {
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getGetActiveTreatmentPlanQueryKey(selectedPatientId ?? "") });
+        queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() });
         toast({ title: "План согласован с пациентом" });
       },
       onError: (err: any) => {
@@ -1279,6 +1283,31 @@ export function PatientDetailPanel() {
   });
 
   const triggerAnalysisMutation = useTriggerDentalAiAnalysis();
+
+  const startDiagnosisMutation = useStartDiagnosis({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() });
+      },
+    },
+  });
+
+  const handleEnterDiagnosisMode = useCallback(() => {
+    if (selectedPatientId) {
+      void startDiagnosisMutation.mutateAsync(selectedPatientId);
+    }
+    setIsDiagnosisMode(true);
+  }, [selectedPatientId, startDiagnosisMutation]);
+
+  useEffect(() => {
+    if (!selectedPatientId || isAdmin || !chartReady || hasDiagnosis || activeTab !== "treatment" || treatmentStep !== 1) {
+      return;
+    }
+    if (!initialDiagnosisStartRef.current) {
+      initialDiagnosisStartRef.current = true;
+      void startDiagnosisMutation.mutateAsync(selectedPatientId);
+    }
+  }, [selectedPatientId, isAdmin, chartReady, hasDiagnosis, activeTab, treatmentStep, startDiagnosisMutation]);
 
   const statusMutation = useUpdatePatientStatus({
     mutation: {
@@ -2351,7 +2380,7 @@ export function PatientDetailPanel() {
                           </p>
                           {!isAdmin && (
                             <button
-                              onClick={() => setIsDiagnosisMode(true)}
+                              onClick={handleEnterDiagnosisMode}
                               className="flex items-center gap-1.5 text-[11px] font-medium text-primary hover:bg-primary/10 px-2.5 py-1 rounded-lg border border-primary/30 transition-colors whitespace-nowrap"
                             >
                               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -2588,6 +2617,25 @@ export function PatientDetailPanel() {
                             {pastPlans.length > 0 ? `Создать план ${allPlans.length + 1}` : "Составить план из диагностики"}
                           </button>
                         )}
+                        {activePlan?.status === "draft" && activePlan.items.length > 0 && (
+                          <Button
+                            className="w-full gap-2 bg-[#1f75fe] rounded-full font-semibold text-white hover:bg-[#1a65e8]"
+                            disabled={approvePlanMutation.isPending}
+                            onClick={() => {
+                              void approvePlanMutation.mutateAsync({
+                                id: selectedPatientId,
+                                planId: activePlan.id,
+                              });
+                            }}
+                          >
+                            {approvePlanMutation.isPending ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <BadgeCheck className="w-4 h-4" />
+                            )}
+                            Согласовать с пациентом
+                          </Button>
+                        )}
                         {activePlan && (activePlan.status === "completed" || activePlan.status === "in_progress") && !needsRediagnosis && (
                           <button className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-dashed border-[#e8e3d9] text-sm font-medium text-[#94a3b8] hover:bg-[#faf8f4] transition-colors mt-2"
                             onClick={() => createPlanMutation.mutate({ id: selectedPatientId, data: {} })} disabled={createPlanMutation.isPending}
@@ -2676,9 +2724,28 @@ export function PatientDetailPanel() {
                               </div>
                             </div>
                           </div>
+                          {isActive && activePlan?.status === "draft" && activePlan.items.length > 0 && (
+                            <Button
+                              className="w-full gap-2 bg-[#1f75fe] rounded-full font-semibold text-white hover:bg-[#1a65e8]"
+                              disabled={approvePlanMutation.isPending}
+                              onClick={() => {
+                                void approvePlanMutation.mutateAsync({
+                                  id: selectedPatientId,
+                                  planId: activePlan.id,
+                                });
+                              }}
+                            >
+                              {approvePlanMutation.isPending ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <BadgeCheck className="w-4 h-4" />
+                              )}
+                              Согласовать с пациентом
+                            </Button>
+                          )}
                           {isActive && activePlan && (activePlan.status === "completed" || activePlan.status === "in_progress") && (
                             needsRediagnosis ? (
-                              <Button variant="outline" className="w-full gap-2 border-amber-200 text-amber-700 hover:bg-amber-50" onClick={() => { setPlanDetailId(null); setTreatmentStep(1); setIsDiagnosisMode(true); }}>
+                              <Button variant="outline" className="w-full gap-2 border-amber-200 text-amber-700 hover:bg-amber-50" onClick={() => { setPlanDetailId(null); setTreatmentStep(1); handleEnterDiagnosisMode(); }}>
                                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                                 Повторная диагностика
                               </Button>

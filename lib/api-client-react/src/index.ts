@@ -1229,6 +1229,24 @@ export const useTriggerDentalAiAnalysis = <TError = unknown>(options?: {
     ...options?.mutation,
   });
 
+export const startDiagnosis = (
+  patientId: string,
+): Promise<{ success: boolean }> =>
+  customFetch<{ success: boolean }>(
+    `/api/patients/${patientId}/diagnosis/start`,
+    {
+      method: "POST",
+    },
+  );
+
+export const useStartDiagnosis = <TError = unknown>(options?: {
+  mutation?: UseMutationOptions<{ success: boolean }, TError, string>;
+}) =>
+  useMutation<{ success: boolean }, TError, string>({
+    mutationFn: (patientId) => startDiagnosis(patientId),
+    ...options?.mutation,
+  });
+
 // ─── Dental Broadcast ────────────────────────────────────────────────────────
 
 export interface DentalBroadcastRun {

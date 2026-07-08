@@ -6,7 +6,6 @@ import {
   useCreateProcedure,
   useCreatePatient,
   useUpdateProcedure,
-  useUpdatePatientStatus,
   useListProcedureTemplates,
   getListProceduresQueryKey,
   getListPatientsQueryKey,
@@ -348,9 +347,6 @@ export default function AdminAppointmentNewPage() {
   const updateMutation = useUpdateProcedure({
     mutation: { onSuccess: () => qc.invalidateQueries({ queryKey: getListProceduresQueryKey() }) },
   });
-  const updatePatientStatusMutation = useUpdatePatientStatus({
-    mutation: { onSuccess: () => qc.invalidateQueries({ queryKey: getListPatientsQueryKey() }) },
-  });
   const createMutation = useCreateProcedure({
     mutation: { onSuccess: () => qc.invalidateQueries({ queryKey: getListProceduresQueryKey() }) },
   });
@@ -413,17 +409,6 @@ export default function AdminAppointmentNewPage() {
           id: createdProcId,
           data: { paymentMethod: paymentMethod as PaymentMethod },
         });
-      }
-
-      /* Step 4: advance existing patient status from new_request */
-      if (!isNewPatient) {
-        const selectedPatient = allPatients.find((p) => p.id === resolvedPatientId);
-        if (selectedPatient?.status === "new_request") {
-          await updatePatientStatusMutation.mutateAsync({
-            id: resolvedPatientId,
-            data: { status: "initial_consultation" },
-          });
-        }
       }
 
       toast({ title: t("adminAppointment.success") });
