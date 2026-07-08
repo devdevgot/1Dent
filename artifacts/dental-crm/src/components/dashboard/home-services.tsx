@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Link } from "wouter";
 
 /*
@@ -5,6 +6,31 @@ import { Link } from "wouter";
  *  1. Horizontal scroll row of service tiles — 3D icon on pastel squircle + label
  *  2. Wide promo banner cards — gradient / light, with a 3D icon on the right
  */
+
+const SCROLL_OUTER = "overflow-x-auto px-4 scroll-px-4 pt-1 pb-1";
+const SCROLL_INNER = "flex items-start gap-3 w-max";
+const SCROLL_STYLE = { scrollbarWidth: "none", msOverflowStyle: "none" } as const;
+
+function HomeScrollRow({
+  children,
+  snap = false,
+}: {
+  children: ReactNode;
+  snap?: boolean;
+}) {
+  return (
+    <div
+      className={`${SCROLL_OUTER}${snap ? " snap-x snap-mandatory" : ""}`}
+      style={SCROLL_STYLE}
+    >
+      <div className={SCROLL_INNER}>
+        {children}
+        {/* mirrors px-4 so the last item clears the right edge when scrolled */}
+        <div className="shrink-0 w-4" aria-hidden />
+      </div>
+    </div>
+  );
+}
 
 type ServiceTile = {
   label: string;
@@ -44,10 +70,7 @@ function AllServicesTile() {
 
 export function HomeServiceTiles() {
   return (
-    <div
-      className="flex items-start gap-3 overflow-x-auto px-4 pt-1 pb-1"
-      style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-    >
+    <HomeScrollRow>
       <AllServicesTile />
       {SERVICE_TILES.map((tile) => (
         <Link
@@ -67,22 +90,18 @@ export function HomeServiceTiles() {
           </span>
         </Link>
       ))}
-    </div>
+    </HomeScrollRow>
   );
 }
 
 export function HomePromoBanners() {
   return (
-    <div
-      className="flex gap-3 overflow-x-auto px-4 snap-x snap-mandatory"
-      style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-    >
+    <HomeScrollRow snap>
       {/* Gradient banner — AI chatbot */}
       <Link
         href="/chatbot"
-        className="relative shrink-0 w-[280px] h-[108px] rounded-3xl overflow-hidden snap-start bg-gradient-to-br from-[#1f75fe] via-[#3b6ef7] to-[#4f46e5] flex items-center justify-between pl-5 pr-3 active:scale-[0.98] transition-transform"
+        className="relative shrink-0 w-[280px] h-[108px] rounded-3xl overflow-hidden snap-start scroll-ml-0 bg-gradient-to-br from-[#1f75fe] via-[#3b6ef7] to-[#4f46e5] flex items-center justify-between pl-5 pr-3 active:scale-[0.98] transition-transform"
       >
-        {/* decorative glow */}
         <div className="absolute -top-8 -right-6 w-32 h-32 rounded-full bg-white/10 blur-2xl pointer-events-none" />
         <div className="relative z-10 min-w-0">
           <p className="text-white font-extrabold text-[17px] leading-[1.2]">
@@ -144,6 +163,6 @@ export function HomePromoBanners() {
           draggable={false}
         />
       </Link>
-    </div>
+    </HomeScrollRow>
   );
 }
