@@ -7,12 +7,14 @@ export {
   setBranchIdGetter,
   setUnauthorizedHandler,
   customFetch,
+  fetchWithAuth,
   ApiError,
 } from "./custom-fetch";
 export type {
   AuthTokenGetter,
   BranchIdGetter,
   UnauthorizedHandler,
+  FetchWithAuthOptions,
 } from "./custom-fetch";
 
 // ─── Custom hooks (manually maintained) ───────────────────────────────────────

@@ -1,6 +1,8 @@
 import ExcelJS from "exceljs";
 import { createRequire } from "module";
+import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 import {
   db,
   proceduresTable,
@@ -16,7 +18,19 @@ import { logger } from "../../shared/logger";
 
 const _require = createRequire(import.meta.url);
 const _pdfmakeDir = path.dirname(_require.resolve("pdfmake/package.json"));
-const _fontsDir = path.join(_pdfmakeDir, "fonts", "Roboto");
+
+function resolveRobotoFontsDir(): string {
+  const bundledDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "fonts", "Roboto");
+  const packageDir = path.join(_pdfmakeDir, "fonts", "Roboto");
+  for (const dir of [bundledDir, packageDir]) {
+    if (fs.existsSync(path.join(dir, "Roboto-Regular.ttf"))) {
+      return dir;
+    }
+  }
+  return packageDir;
+}
+
+const _fontsDir = resolveRobotoFontsDir();
 
 interface PdfmakeInstance {
   fonts: Record<string, Record<string, string>>;
@@ -251,7 +265,7 @@ export async function loadFinancialExportData(
           inventoryItemsTable.unit,
           inventoryItemsTable.unitPrice,
         )
-        .orderBy(desc(sql`SUM(${procedureMaterialsTable.quantity})`)),
+        .orderBy(sql`SUM(${procedureMaterialsTable.quantity}) DESC`),
     ]);
     totalMaterialCost = Number(materialRows[0]?.totalCost ?? 0);
     consumption = consumptionRows.map((r) => ({

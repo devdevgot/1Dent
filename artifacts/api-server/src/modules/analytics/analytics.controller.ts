@@ -313,10 +313,13 @@ router.get(
       const data = await loadFinancialExportData(clinicId, filters);
       const buffer = await buildFinancialExcel(data);
       const filename = exportFilename(filters, "xlsx");
+      const body = Buffer.from(buffer);
 
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-      res.send(Buffer.from(buffer));
+      res.setHeader("Cache-Control", "no-store");
+      res.setHeader("Content-Length", body.length);
+      res.end(body);
     } catch (err) {
       logger.error({ err, clinicId: req.user?.clinicId }, "Financial Excel export failed");
       next(err);
@@ -336,10 +339,13 @@ router.get(
       const data = await loadFinancialExportData(clinicId, filters);
       const buffer = await buildFinancialPdf(data);
       const filename = exportFilename(filters, "pdf");
+      const body = Buffer.from(buffer);
 
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-      res.send(Buffer.from(buffer));
+      res.setHeader("Cache-Control", "no-store");
+      res.setHeader("Content-Length", body.length);
+      res.end(body);
     } catch (err) {
       logger.error({ err, clinicId: req.user?.clinicId }, "Financial PDF export failed");
       next(err);
