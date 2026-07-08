@@ -4,9 +4,26 @@ import { errorEventsService } from "../modules/error-events/error-events.service
 
 const GENERIC_ERROR_MESSAGE = "Произошла ошибка на сервере. Попробуйте позже.";
 
+function extractPgCode(err: unknown): string | null {
+  let current: unknown = err;
+  for (let depth = 0; depth < 6 && current; depth++) {
+    if (current && typeof current === "object" && "code" in current) {
+      const code = (current as { code: unknown }).code;
+      if (typeof code === "string" && code.length > 0) {
+        return code;
+      }
+    }
+    current =
+      current && typeof current === "object" && "cause" in current
+        ? (current as { cause: unknown }).cause
+        : null;
+  }
+  return null;
+}
+
 function mapDatabaseError(err: unknown): AppError | null {
-  if (!err || typeof err !== "object" || !("code" in err)) return null;
-  const code = String((err as { code: unknown }).code);
+  const code = extractPgCode(err);
+  if (!code) return null;
 
   switch (code) {
     case "23505":

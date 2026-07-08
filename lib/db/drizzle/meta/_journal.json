@@ -358,6 +358,13 @@
       "when": 1782652200000,
       "tag": "0049_procedure_pending_payment",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1782738600000,
+      "tag": "0050_finance_payroll_tables",
+      "breakpoints": true
     }
   ]
 }
