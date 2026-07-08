@@ -56,6 +56,7 @@ export interface PlanItem {
   tooth: number | null;
   title: string;
   price: number;
+  discount?: number;
   status: "completed" | "in_progress" | "pending";
 }
 
@@ -64,6 +65,7 @@ export interface PlanStage {
   label: string;
   color: string;
   bg: string;
+  indexNumber?: number;
   items: PlanItem[];
 }
 

@@ -18,7 +18,9 @@ import type { ProcedureTemplate } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/hooks/use-auth";
+import { useIsSlashTablet } from "@/hooks/use-slash-tablet";
 import { getBaseUrl } from "@/lib/base-url";
+import { cn } from "@/lib/utils";
 import { CONDITION_CONFIG } from "./fdi-chart";
 import type { ToothCondition } from "@workspace/api-client-react";
 import { matchVoiceServices } from "@/lib/voice-service-matching";
@@ -497,9 +499,20 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
+  const isTablet = useIsSlashTablet();
+
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-sm sm:p-4 overflow-hidden">
-      <div className="bg-[var(--ds-surface)] rounded-t-2xl sm:rounded-2xl border border-[var(--ds-border)] shadow-xl w-full min-w-0 max-w-[100vw] sm:max-w-3xl flex flex-col overflow-hidden"
+    <div className={cn(
+      "fixed inset-0 z-50 flex justify-center bg-black/30 backdrop-blur-sm overflow-hidden",
+      isTablet ? "items-center p-6" : "items-end sm:items-center sm:p-4",
+    )}>
+      <div
+        className={cn(
+          "bg-[var(--ds-surface)] border border-[var(--ds-border)] shadow-xl w-full min-w-0 flex flex-col overflow-hidden",
+          isTablet
+            ? "max-w-4xl rounded-2xl"
+            : "rounded-t-2xl sm:rounded-2xl max-w-[100vw] sm:max-w-3xl",
+        )}
         style={{ maxHeight: "min(92dvh, 100dvh - env(safe-area-inset-bottom, 0px))" }}
       >
 

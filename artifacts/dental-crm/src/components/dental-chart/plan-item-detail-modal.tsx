@@ -22,6 +22,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/hooks/use-auth";
 import { getBaseUrl } from "@/lib/base-url";
+import { useIsSlashTablet } from "@/hooks/use-slash-tablet";
+import { overlayPanelClass, overlayShellClass } from "@/lib/tablet-overlay-classes";
 
 type User = { id: string; name: string; role?: string };
 
@@ -232,6 +234,7 @@ interface TreatmentSchedulePickerProps {
 }
 
 function TreatmentSchedulePicker({ scheduledAt, onConfirm, onClear, onClose }: TreatmentSchedulePickerProps) {
+  const isTablet = useIsSlashTablet();
   const now = new Date();
   const initDate = scheduledAt ? new Date(scheduledAt) : now;
 
@@ -274,7 +277,10 @@ function TreatmentSchedulePicker({ scheduledAt, onConfirm, onClear, onClose }: T
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] shadow-xl w-full max-w-sm mx-4 overflow-hidden">
+      <div className={cn(
+        "relative z-10 bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] shadow-xl w-full mx-4 overflow-hidden",
+        isTablet ? "max-w-lg" : "max-w-sm",
+      )}>
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--ds-border)]">
           <p className="font-semibold text-[var(--text)] text-[15px]">Назначить дату лечения</p>
@@ -415,6 +421,7 @@ export function PlanItemDetailModal({
   onClose,
 }: PlanItemDetailModalProps) {
   const { user } = useAuthStore();
+  const isTablet = useIsSlashTablet();
   const isAdmin = user?.role === "admin";
   const qc = useQueryClient();
   const { toast } = useToast();
@@ -839,22 +846,26 @@ export function PlanItemDetailModal({
   const fileName = (path: string) => path.split("/").pop() ?? path;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center animate-in-fade">
+    <div className={overlayShellClass(isTablet)}>
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/30 backdrop-blur-sm"
         onClick={onClose}
       />
-      {/* Panel — takes ~75% of screen height, anchored near bottom */}
       <div
-        className="relative bg-[var(--ds-surface)] w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl border border-[var(--ds-border)] shadow-xl flex flex-col overflow-hidden animate-in-slide"
-        style={{ height: "75dvh" }}
+        className={overlayPanelClass(isTablet, {
+          tablet: "max-w-3xl",
+          phone: "max-h-[75dvh] sm:max-h-[min(75dvh,720px)]",
+        })}
+        style={isTablet ? { maxHeight: "min(88dvh, 900px)" } : { height: "75dvh" }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Drag handle */}
-        <div className="flex justify-center pt-3 pb-1 shrink-0">
-          <div className="w-10 h-1 rounded-full bg-[var(--ds-border)]" />
-        </div>
+        {/* Drag handle — только на телефоне */}
+        {!isTablet && (
+          <div className="flex justify-center pt-3 pb-1 shrink-0">
+            <div className="w-10 h-1 rounded-full bg-[var(--ds-border)]" />
+          </div>
+        )}
 
         {/* ── Header ── */}
         <div className="px-4 pt-3 pb-3 border-b border-[var(--ds-border)] shrink-0">
@@ -1512,7 +1523,10 @@ export function PlanItemDetailModal({
                 />
               </div>
             ) : (
-              <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center space-y-4 shadow-2xl animate-in zoom-in-95 duration-200">
+              <div className={cn(
+                "bg-white rounded-3xl p-8 w-full text-center space-y-4 shadow-2xl animate-in zoom-in-95 duration-200",
+                isTablet ? "max-w-md" : "max-w-sm",
+              )}>
                 <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
                   <File className="w-8 h-8 text-primary" />
                 </div>
@@ -1537,7 +1551,10 @@ export function PlanItemDetailModal({
         const targetDoctor = allUsers.find((u) => u.id === doctorToTransfer);
         return (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-            <div className="bg-[var(--ds-surface)] w-full max-w-[340px] rounded-2xl p-5 shadow-xl border border-[var(--ds-border)] flex flex-col text-center space-y-4 animate-in zoom-in-95 duration-150">
+            <div className={cn(
+              "bg-[var(--ds-surface)] w-full rounded-2xl p-5 shadow-xl border border-[var(--ds-border)] flex flex-col text-center space-y-4 animate-in zoom-in-95 duration-150",
+              isTablet ? "max-w-lg" : "max-w-[340px]",
+            )}>
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto text-primary">
                 <UserRound className="w-6 h-6" />
               </div>

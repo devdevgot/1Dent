@@ -19,7 +19,6 @@ import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { TabletChartSection } from "./tablet-chart-section";
-import { TabletPlanPanel } from "./tablet-plan-panel";
 import { TabletPlanBoard } from "./tablet-plan-board";
 import { TabletPresentationMode } from "./tablet-presentation-mode";
 import {
@@ -46,7 +45,7 @@ export function PatientCard({ patientId, onBack }: { patientId: string; onBack: 
   const { t } = useTranslation();
   const { data: patientRes, isLoading, isError } = useGetPatient(patientId);
   const { data: teethData, refetch: refetchTeeth } = useListTeeth(patientId);
-  const { data: planData, refetch: refetchPlan } = useGetActiveTreatmentPlan(patientId);
+  const { data: planData } = useGetActiveTreatmentPlan(patientId);
 
   const apiPatient = patientRes?.data?.patient;
   const teethFromApi = useMemo(
@@ -77,33 +76,16 @@ export function PatientCard({ patientId, onBack }: { patientId: string; onBack: 
     void refetchTeeth();
   }, [refetchTeeth]);
 
-  const handlePlanUpdated = useCallback(() => {
-    void refetchPlan();
-    void refetchTeeth();
-  }, [refetchPlan, refetchTeeth]);
-
   const planFdis = useMemo(() => {
     const s = new Set<number>();
     plan.forEach((st) => st.items.forEach((it) => it.tooth && s.add(it.tooth)));
     return s;
   }, [plan]);
 
-  const allItems = plan.flatMap((s) => s.items);
-  const doneCount = allItems.filter((i) => i.status === "completed").length;
-  const planTotal = allItems.reduce((s, i) => s + i.price, 0);
-  const progress = allItems.length ? Math.round((doneCount / allItems.length) * 100) : 0;
-
-  const planPanelProps = {
-    patientId,
-    planId: planData?.data?.plan?.id,
-    plan,
-    progress,
-    doneCount,
-    total: allItems.length,
-    planTotal,
-    planNumber: planData?.data?.plan?.planNumber,
-    onPlanUpdated: handlePlanUpdated,
-  };
+  const planTotal = useMemo(
+    () => plan.flatMap((s) => s.items).reduce((s, i) => s + itemDisplayPrice(i), 0),
+    [plan],
+  );
 
   const selectedCond = selectedFdi ? (teeth[selectedFdi] ?? "healthy") : null;
   const relatedVideos = selectedCond
@@ -190,7 +172,7 @@ export function PatientCard({ patientId, onBack }: { patientId: string; onBack: 
       {/* Контент */}
       <div className="flex-1 overflow-auto">
         {tab === "chart" && (
-          <div className="grid h-full gap-4 p-4 lg:grid-cols-[1.15fr_0.85fr]">
+          <div className="grid h-full gap-4 p-4 md:grid-cols-[1.15fr_0.85fr]">
             {/* Левая: карта */}
             <div className="flex flex-col gap-4 overflow-auto">
               <TabletChartSection
@@ -215,20 +197,25 @@ export function PatientCard({ patientId, onBack }: { patientId: string; onBack: 
               )}
             </div>
             {/* Правая: план */}
-            <div className="overflow-auto rounded-2xl border border-[#e8e3d9] bg-white">
-              <TabletPlanPanel {...planPanelProps} filterFdi={selectedFdi} />
+            <div className="h-full overflow-hidden rounded-2xl border border-[#e8e3d9] bg-white">
+              <TabletPlanBoard
+                patientId={patientId}
+                onGoToChart={() => setTab("chart")}
+                embedded
+                filterFdi={selectedFdi}
+              />
             </div>
           </div>
         )}
 
         {tab === "plan" && (
-          <div className="mx-auto max-w-4xl">
+          <div className="mx-auto w-full max-w-6xl px-4">
             <TabletPlanBoard patientId={patientId} onGoToChart={() => setTab("chart")} />
           </div>
         )}
 
         {tab === "contracts" && (
-          <div className="mx-auto max-w-3xl h-full">
+          <div className="mx-auto w-full max-w-5xl h-full px-4">
             <ContractsTab patientId={patientId} />
           </div>
         )}
@@ -312,7 +299,7 @@ function VideoLibrary({ videos, onPlay }: { videos: TabletVideoItem[]; onPlay: (
           <CatChip key={c} active={cat === c} onClick={() => setCat(c)}>{c}</CatChip>
         ))}
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {list.map((v) => (
           <button
             key={v.id}
@@ -498,7 +485,7 @@ function PatientInfo({
     : null;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4 p-4 pb-24">
+    <div className="mx-auto max-w-3xl space-y-4 p-4 pb-6">
       {/* Заголовок карточки */}
       <div className="rounded-2xl border border-[#e8e3d9] bg-white p-5">
         <div className="flex items-center gap-4">
