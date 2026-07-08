@@ -1,8 +1,22 @@
 import { useState, useRef, useEffect } from "react";
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { useAuthStore } from "@/hooks/use-auth";
-import { ChevronRight, User, Mail, Lock, Camera, Banknote, CheckCircle, Clock, LogOut, Bell } from "lucide-react";
+import {
+  ChevronRight,
+  User,
+  Mail,
+  Lock,
+  Camera,
+  Banknote,
+  CheckCircle,
+  Clock,
+  LogOut,
+  Bell,
+  Globe,
+  Sparkles,
+  ScrollText,
+} from "lucide-react";
 import {
   useGetMyPayrollRecords,
   useUpdateProfile,
@@ -18,9 +32,8 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import PhotoCropModal from "@/components/account/photo-crop-modal";
 import { PageShell } from "@/components/layout/page-shell";
-import { PageHeader } from "@/components/layout/page-header";
+import { RootTabHeader } from "@/components/layout/root-tab-header";
 import { IosGroup, IosGroupRow, IosSection } from "@/components/layout/ios-group";
-import { Button } from "@/components/ui/button";
 
 const SUPPORTED_LANGS = ["ru", "kz", "en"] as const;
 type Lang = (typeof SUPPORTED_LANGS)[number];
@@ -30,14 +43,24 @@ function normalizeLang(value: string | undefined): Lang {
   return SUPPORTED_LANGS.includes(base as Lang) ? (base as Lang) : "ru";
 }
 
-const rowMotion = {
-  hidden: { opacity: 0, y: 8 },
-  show: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { delay: i * 0.05, duration: 0.24, ease: [0.16, 1, 0.3, 1] },
-  }),
-};
+function SettingsRowIcon({
+  icon: Icon,
+  className,
+}: {
+  icon: typeof User;
+  className: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "w-[30px] h-[30px] rounded-[9px] flex items-center justify-center shrink-0",
+        className,
+      )}
+    >
+      <Icon className="w-[17px] h-[17px]" strokeWidth={2.2} />
+    </div>
+  );
+}
 
 export default function AccountSettings() {
   const { t } = useTranslation();
@@ -130,7 +153,7 @@ export default function AccountSettings() {
   const photoUrl = (user as typeof user & { photoUrl?: string | null })?.photoUrl;
   const initials = (user?.name ?? "?").charAt(0).toUpperCase();
 
-  const items = [
+  const profileItems = [
     {
       icon: User,
       iconClass: "bg-[#1f75fe] text-white",
@@ -155,109 +178,114 @@ export default function AccountSettings() {
   ];
 
   return (
-    <PageShell animate={false} className="pb-6">
-      <PageHeader title={t("nav.more")} sticky />
+    <PageShell animate={false} className="pb-8">
+      <RootTabHeader title={t("nav.more")} />
 
-      <div className="px-4 py-6 space-y-5">
-        <motion.div
-          className="flex flex-col items-center gap-2 pb-1"
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="relative group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1f75fe]/20 rounded-full"
+      <div className="pt-2 space-y-5">
+        {/* Profile card */}
+        <IosSection>
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
           >
-            <div className="w-20 h-20 rounded-full overflow-hidden bg-[#1f75fe]/10 flex items-center justify-center text-[#1f75fe] font-bold text-2xl border-2 border-[#e8e3d9] transition-transform active:scale-95 duration-150">
-              {photoUrl ? (
-                <img key={photoVersion} src={photoUrl} alt="avatar" className="w-full h-full object-cover" />
-              ) : (
-                initials
-              )}
-            </div>
-            <div className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-[#1f75fe] flex items-center justify-center shadow-md border-2 border-white">
-              <Camera className="w-3.5 h-3.5 text-white" />
-            </div>
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handlePhotoSelect}
-          />
-          <p className="font-semibold text-[#0f172a] text-body leading-tight">{user?.name}</p>
-          <p className="text-caption text-[#64748b]">{user?.email}</p>
-          <Button
-            variant="link"
-            size="sm"
-            className="text-caption h-auto p-0 text-[#1f75fe]"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            {t("settingsPage.changePhoto")}
-          </Button>
-        </motion.div>
-
-        <IosSection title={t("settingsPage.profile")}>
-          <IosGroup>
-            {items.map((item, index) => (
-              <motion.div
-                key={item.href}
-                custom={index}
-                variants={rowMotion}
-                initial="hidden"
-                animate="show"
-              >
+            <IosGroup className="px-4 py-4">
+              <div className="flex items-center gap-3.5">
                 <button
                   type="button"
-                  onClick={() => setLocation(item.href)}
-                  className="w-full"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="relative shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1f75fe]/25 rounded-full"
                 >
-                  <IosGroupRow as="div" className="cursor-pointer hover:bg-[#faf8f4]">
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", item.iconClass)}>
-                        <item.icon className="w-[18px] h-[18px]" />
-                      </div>
-                      <p className="text-body text-[#0f172a]">{item.label}</p>
-                    </div>
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-caption text-[#64748b] truncate max-w-[140px]">{item.value}</span>
-                      <ChevronRight className="w-4 h-4 text-[#94a3b8] shrink-0" />
-                    </div>
-                  </IosGroupRow>
+                  <div className="w-[64px] h-[64px] rounded-full overflow-hidden bg-[#1f75fe]/10 flex items-center justify-center text-[#1f75fe] font-bold text-[22px] ring-2 ring-[#1f75fe]/10 transition-transform active:scale-95 duration-150">
+                    {photoUrl ? (
+                      <img key={photoVersion} src={photoUrl} alt="avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      initials
+                    )}
+                  </div>
+                  <div className="absolute -bottom-0.5 -right-0.5 w-[22px] h-[22px] rounded-full bg-[#1f75fe] flex items-center justify-center shadow-sm border-2 border-white">
+                    <Camera className="w-3 h-3 text-white" />
+                  </div>
                 </button>
-              </motion.div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handlePhotoSelect}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-[16px] text-[var(--text)] leading-tight truncate">
+                    {user?.name}
+                  </p>
+                  <p className="text-[13px] text-[var(--text-secondary)] truncate mt-0.5">
+                    {user?.email}
+                  </p>
+                  {user?.role && (
+                    <span className="inline-block mt-1.5 text-[10px] font-bold text-[#1f75fe] uppercase tracking-wider bg-[#1f75fe]/10 px-2 py-0.5 rounded-full">
+                      {t(`role.${user.role}`)}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </IosGroup>
+          </motion.div>
+        </IosSection>
+
+        {/* Profile fields */}
+        <IosSection title={t("settingsPage.profile")}>
+          <IosGroup>
+            {profileItems.map((item) => (
+              <button
+                key={item.href}
+                type="button"
+                onClick={() => setLocation(item.href)}
+                className="w-full"
+              >
+                <IosGroupRow as="div" className="cursor-pointer hover:bg-[var(--bg)]">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <SettingsRowIcon icon={item.icon} className={item.iconClass} />
+                    <p className="text-body text-[var(--text)]">{item.label}</p>
+                  </div>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-caption text-[var(--text-secondary)] truncate max-w-[150px]">
+                      {item.value}
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-[var(--text-subtle)] shrink-0" />
+                  </div>
+                </IosGroupRow>
+              </button>
             ))}
           </IosGroup>
         </IosSection>
 
+        {/* Payroll for staff roles */}
         {(user?.role === "admin" || user?.role === "accountant" || user?.role === "warehouse") && (
           <IosSection title={t("payroll.mySalary")}>
             <IosGroup>
-              <div className="flex items-center gap-3 px-4 py-4 border-b border-[#e8e3d9]">
-                <div className="w-8 h-8 rounded-lg bg-[#1f75fe]/10 flex items-center justify-center shrink-0">
-                  <Banknote className="w-[18px] h-[18px] text-[#1f75fe]" />
-                </div>
-                <div>
-                  <p className="text-body font-semibold text-[#0f172a]">{t("payroll.mySalary")}</p>
-                  <p className="text-caption text-[#64748b]">{t("payroll.mySalaryDesc")}</p>
+              <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[var(--ds-border)]/60">
+                <SettingsRowIcon icon={Banknote} className="bg-[#0ea5e9] text-white" />
+                <div className="min-w-0">
+                  <p className="text-body font-semibold text-[var(--text)]">{t("payroll.mySalary")}</p>
+                  <p className="text-caption text-[var(--text-secondary)]">{t("payroll.mySalaryDesc")}</p>
                 </div>
               </div>
               {myRecords.length === 0 ? (
-                <div className="px-4 py-6 text-center text-caption text-[#64748b]">
+                <div className="px-4 py-6 text-center text-caption text-[var(--text-secondary)]">
                   {t("payroll.noMySalary")}
                 </div>
               ) : (
                 <div>
                   {myRecords.slice(0, 6).map((r) => (
-                    <div key={r.id} className="flex items-center justify-between px-4 py-3 border-b border-[#e8e3d9] last:border-b-0">
+                    <div
+                      key={r.id}
+                      className="flex items-center justify-between px-4 py-3 border-b border-[var(--ds-border)]/60 last:border-b-0"
+                    >
                       <div>
-                        <p className="text-body font-semibold text-[#0f172a]">
+                        <p className="text-body font-semibold text-[var(--text)]">
                           {r.periodMonth.toString().padStart(2, "0")}/{r.periodYear}
                         </p>
-                        <p className="text-caption text-[#64748b]">
+                        <p className="text-caption text-[var(--text-secondary)]">
                           {t("payroll.myCalculated")}: ₸{Number(r.calculatedAmount).toLocaleString("ru-KZ")}
                         </p>
                       </div>
@@ -287,12 +315,16 @@ export default function AccountSettings() {
           </IosSection>
         )}
 
+        {/* App settings */}
         {user?.role !== "admin" && (
           <IosSection title={t("menuPage.settings")}>
             <IosGroup>
               <IosGroupRow className="gap-2">
-                <span className="text-body shrink-0">{t("menuPage.language")}</span>
-                <div className="flex bg-[#f1ede4] rounded-lg p-0.5 shrink-0 ml-auto font-lang">
+                <div className="flex items-center gap-3 min-w-0">
+                  <SettingsRowIcon icon={Globe} className="bg-[#8b5cf6] text-white" />
+                  <span className="text-body shrink-0">{t("menuPage.language")}</span>
+                </div>
+                <div className="flex bg-[var(--surface-2)] rounded-lg p-0.5 shrink-0 ml-auto font-lang">
                   {SUPPORTED_LANGS.map((lang) => (
                     <button
                       key={lang}
@@ -302,7 +334,7 @@ export default function AccountSettings() {
                         "min-w-[2.5rem] text-center text-caption font-semibold px-2 py-1 rounded-md transition-all",
                         currentLang === lang
                           ? "bg-white text-[#1f75fe] shadow-sm"
-                          : "text-[#64748b] hover:text-[#0f172a]",
+                          : "text-[var(--text-secondary)] hover:text-[var(--text)]",
                       )}
                     >
                       {t(`lang.${lang}`)}
@@ -311,48 +343,52 @@ export default function AccountSettings() {
                 </div>
               </IosGroupRow>
 
-              <Link href="/ai-credits" className="block">
-                <IosGroupRow className="border-b-0">
+              <IosGroupRow onClick={() => setLocation("/ai-credits")}>
+                <div className="flex items-center gap-3 min-w-0">
+                  <SettingsRowIcon icon={Sparkles} className="bg-[#f59e0b] text-white" />
                   <span className="text-body">{t("nav.aiCredits")}</span>
-                  <ChevronRight className="w-4 h-4 text-[#94a3b8] shrink-0" />
-                </IosGroupRow>
-              </Link>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[var(--text-subtle)] shrink-0" />
+              </IosGroupRow>
 
               {user?.role === "owner" && (
-                <Link href="/logs" className="block">
-                  <IosGroupRow>
+                <IosGroupRow onClick={() => setLocation("/logs")}>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <SettingsRowIcon icon={ScrollText} className="bg-[#64748b] text-white" />
                     <span className="text-body">{t("nav.logs")}</span>
-                    <ChevronRight className="w-4 h-4 text-[#94a3b8] shrink-0" />
-                  </IosGroupRow>
-                </Link>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-[var(--text-subtle)] shrink-0" />
+                </IosGroupRow>
               )}
 
               <IosGroupRow>
-                <span className="text-body">{t("menuPage.notifications")}</span>
-                <div className="flex items-center gap-1 text-[#94a3b8]">
-                  <Bell className="w-4 h-4" />
-                  <ChevronRight className="w-4 h-4" />
+                <div className="flex items-center gap-3 min-w-0">
+                  <SettingsRowIcon icon={Bell} className="bg-[#ec4899] text-white" />
+                  <span className="text-body">{t("menuPage.notifications")}</span>
                 </div>
+                <ChevronRight className="w-4 h-4 text-[var(--text-subtle)] shrink-0" />
               </IosGroupRow>
             </IosGroup>
           </IosSection>
         )}
 
+        {/* Sign out */}
         <IosSection>
-          <Button
-            variant="outline"
-            className="w-full justify-start gap-3 h-auto py-3.5 text-[#dc2626] border-[#e8e3d9] hover:text-[#dc2626] hover:bg-[#fef2f2]"
-            onClick={() => logoutMutation.mutate()}
-            disabled={logoutMutation.isPending}
-          >
-            <LogOut className="w-[18px] h-[18px] shrink-0" />
-            <span className="text-body font-medium">
-              {logoutMutation.isPending ? t("account.signingOut") : t("account.signOut")}
-            </span>
-          </Button>
+          <IosGroup>
+            <IosGroupRow
+              as="button"
+              onClick={() => logoutMutation.mutate()}
+              className={cn("justify-center", logoutMutation.isPending && "opacity-60 pointer-events-none")}
+            >
+              <span className="flex items-center gap-2 text-body font-semibold text-[#dc2626]">
+                <LogOut className="w-[18px] h-[18px] shrink-0" />
+                {logoutMutation.isPending ? t("account.signingOut") : t("account.signOut")}
+              </span>
+            </IosGroupRow>
+          </IosGroup>
         </IosSection>
 
-        <p className="text-center text-caption text-[#94a3b8]">
+        <p className="text-center text-caption text-[var(--text-subtle)]">
           {t("menuPage.copyright")}
         </p>
       </div>
