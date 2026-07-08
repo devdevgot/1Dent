@@ -21,6 +21,8 @@ import { useLocation } from "wouter";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { PeriodPills } from "@/components/layout/period-pills";
+import { Bone } from "@/components/skeletons";
+import { isDoctorRole, seesClinicSchedule } from "@/lib/role-groups";
 
 const PAYMENT_ICONS: Record<string, React.ElementType> = {
   kaspi_transfer: Send,
@@ -124,10 +126,14 @@ export default function DoctorDashboard() {
   const filterLabel    = FILTER_PRESETS.find(p => p.key === filterPreset)?.label ?? "Месяц";
   const dateRangeLabel = fmtDateRange(dateRange.from, dateRange.to);
 
+  const role = user?.role;
+  const isDoctor = isDoctorRole(role);
+  const clinicWideSchedule = seesClinicSchedule(role);
+
   const { data: analyticsData, isLoading } = useGetDoctorAnalytics({
-    query: { queryKey: getGetDoctorAnalyticsQueryKey() },
+    query: { queryKey: getGetDoctorAnalyticsQueryKey(), enabled: isDoctor },
   });
-  const { data: salaryData } = useGetMySalary();
+  const { data: salaryData } = useGetMySalary({ query: { enabled: isDoctor } });
   const { data: proceduresData, isLoading: proceduresLoading } = useListProcedures();
 
   const rawAnalytics = (analyticsData?.data?.analytics ?? {}) as Record<string, unknown>;
@@ -151,7 +157,9 @@ export default function DoctorDashboard() {
 
   const periodRevenue = useMemo(() => {
     const allProcs = (proceduresData?.data?.procedures ?? []) as Procedure[];
-    const mine = user?.id ? allProcs.filter((p) => p.doctorId === user.id) : allProcs;
+    const mine = clinicWideSchedule || !user?.id
+      ? allProcs
+      : allProcs.filter((p) => p.doctorId === user.id);
     return mine
       .filter((p) => {
         if (!p.completedAt || p.status !== "completed") return false;
@@ -159,7 +167,7 @@ export default function DoctorDashboard() {
         return d >= dateRange.from && d <= dateRange.to;
       })
       .reduce((sum, p) => sum + (p.price ?? 0), 0);
-  }, [proceduresData, user?.id, dateRange]);
+  }, [proceduresData, user?.id, dateRange, clinicWideSchedule]);
 
   const isCurrentMonthFilter =
     filterPreset === "month" ||
@@ -171,12 +179,14 @@ export default function DoctorDashboard() {
 
   const upcomingAppointments = useMemo(() => {
     const allProcs = (proceduresData?.data?.procedures ?? []) as Procedure[];
-    const mine = user?.id ? allProcs.filter(p => p.doctorId === user.id) : allProcs;
+    const mine = clinicWideSchedule || !user?.id
+      ? allProcs
+      : allProcs.filter(p => p.doctorId === user.id);
     const todayStart = new Date(); todayStart.setHours(0,0,0,0);
     return mine
       .filter(p => p.scheduledAt && p.status === "scheduled" && new Date(p.scheduledAt) >= todayStart)
       .sort((a, b) => new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime());
-  }, [proceduresData, user?.id]);
+  }, [proceduresData, user?.id, clinicWideSchedule]);
 
   // Group by date key, max 3 days
   const scheduleByDay = useMemo(() => {
@@ -228,7 +238,8 @@ export default function DoctorDashboard() {
         </div>
       </div>
 
-      {/* ─── My Revenue + Salary Card ─── */}
+      {/* ─── My Revenue + Salary Card (doctors) / Today overview (assistant, nurse) ─── */}
+      {isDoctor ? (
       <div className="mx-4 mt-3 dash-card overflow-hidden">
         <div className="px-5 pt-4 pb-4">
           {/* PRIMARY: Salary */}
@@ -258,7 +269,7 @@ export default function DoctorDashboard() {
               </div>
 
               {isLoading ? (
-                <div className="h-9 w-40 bg-[#f1ede4] rounded-xl animate-pulse" />
+                <Bone className="h-9 w-40 rounded-xl" />
               ) : !mySalary ? (
                 <p className="text-xs text-[#94a3b8] italic">{t("payroll.noSettings", "Настройки зарплаты не заданы")}</p>
               ) : (
@@ -292,7 +303,7 @@ export default function DoctorDashboard() {
                 {t("dashboard.myRevenue", "Выручка")}
               </p>
               {isLoading ? (
-                <div className="h-5 w-24 bg-[#f1ede4] rounded animate-pulse" />
+                <Bone className="h-5 w-24 rounded" />
               ) : (
                 <p className="text-base font-semibold text-[#0f172a]">{fmtRevenue(displayedRevenue)}</p>
               )}
@@ -306,6 +317,27 @@ export default function DoctorDashboard() {
           </div>
         </div>
       </div>
+      ) : (
+        <div className="mx-4 mt-3 dash-card overflow-hidden px-5 py-4">
+          <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide mb-1">
+            {t("dashboard.scheduledToday", "Записей сегодня")}
+          </p>
+          {proceduresLoading ? (
+            <Bone className="h-9 w-16 rounded-xl" />
+          ) : (
+            <p className="text-[24px] font-bold text-[#0f172a] tracking-tight leading-none">
+              {upcomingAppointments.filter((p) => {
+                if (!p.scheduledAt) return false;
+                const d = new Date(p.scheduledAt);
+                const now = new Date();
+                return d.getFullYear() === now.getFullYear()
+                  && d.getMonth() === now.getMonth()
+                  && d.getDate() === now.getDate();
+              }).length}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* ─── Schedule Widget ─── */}
       <div className="mx-4 mt-4 dash-card overflow-hidden">
@@ -372,7 +404,7 @@ export default function DoctorDashboard() {
               {proceduresLoading ? (
                 <>
                   {Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="h-14 rounded-2xl bg-[#f1ede4] animate-pulse" />
+                    <Bone key={i} className="h-14 w-full rounded-xl" />
                   ))}
                 </>
               ) : activeDayProcs.length === 0 ? (
@@ -421,10 +453,14 @@ export default function DoctorDashboard() {
         </p>
         <div className="grid grid-cols-2 gap-2">
           {[
-            { label: t("nav.patients"),    icon: Users,     path: "/patients",         bg: "#e0e7ff", accent: "#4f46e5" },
-            { label: t("nav.schedule"),    icon: Calendar,  path: "/schedule",         bg: "#f5f3ff", accent: "#7c3aed" },
-            { label: t("nav.myAnalytics"), icon: BarChart3, path: "/doctor-analytics", bg: "#f0fdf4", accent: "#16a34a" },
-            { label: t("nav.chat"),        icon: UserPlus,  path: "/chat",             bg: "#fef3c7", accent: "#d97706" },
+            { label: t("nav.patients"), icon: Users, path: "/patients", bg: "#e0e7ff", accent: "#4f46e5" },
+            { label: t("nav.schedule"), icon: Calendar, path: "/schedule", bg: "#f5f3ff", accent: "#7c3aed" },
+            ...(isDoctor
+              ? [
+                  { label: t("nav.myAnalytics"), icon: BarChart3, path: "/doctor-analytics", bg: "#f0fdf4", accent: "#16a34a" },
+                  { label: t("nav.chat"), icon: UserPlus, path: "/chat", bg: "#fef3c7", accent: "#d97706" },
+                ]
+              : []),
           ].map((item) => (
             <button
               key={item.path}

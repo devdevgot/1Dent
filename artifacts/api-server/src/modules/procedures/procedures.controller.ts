@@ -116,7 +116,7 @@ const updateTemplateSchema = z.object({
 
 router.use(authMiddleware);
 
-const allRoles = roleGuard("owner", "admin", "doctor", "accountant", "warehouse");
+const allRoles = roleGuard("owner", "admin", "doctor", "accountant", "warehouse", "assistant", "nurse");
 const writeRoles = roleGuard("owner", "admin", "doctor");
 const deleteRoles = roleGuard("owner", "admin");
 const ownerAdminRoles = roleGuard("owner", "admin");

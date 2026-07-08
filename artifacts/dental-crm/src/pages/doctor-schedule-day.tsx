@@ -18,6 +18,7 @@ import { isCalendarProcedure } from "@/lib/calendar-procedures";
 import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-header";
 import { PageShell } from "@/components/layout/page-shell";
 import { Bone } from "@/components/skeletons";
+import { seesClinicSchedule } from "@/lib/role-groups";
 
 /* ─── Constants ─────────────────────────────────────────────────────────────── */
 const HOUR_H  = 64;   // px per hour
@@ -109,6 +110,7 @@ export default function DoctorScheduleDayPage() {
 function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDate: Date }) {
   const { t } = useTranslation();
   const { user } = useAuthStore();
+  const clinicWideSchedule = seesClinicSchedule(user?.role);
   const [, navigate] = useLocation();
 
   const weekDays = getWeek(selDate);
@@ -151,11 +153,11 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
 
   const dayProcs = useMemo(() => {
     const all = (pData?.data?.procedures ?? []) as Procedure[];
-    const mine = user?.id ? all.filter(p => p.doctorId === user.id) : all;
+    const mine = clinicWideSchedule || !user?.id ? all : all.filter(p => p.doctorId === user.id);
     return mine
       .filter(p => isCalendarProcedure(p) && toStr(new Date(p.scheduledAt!)) === dateStr)
       .sort((a, b) => new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime());
-  }, [pData, user?.id, dateStr]);
+  }, [pData, user?.id, dateStr, clinicWideSchedule]);
 
   const visibleProcs = useMemo(
     () => dayProcs.filter((p) => p.scheduledAt && isVisibleOnTimeline(p.scheduledAt)),

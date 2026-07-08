@@ -17,6 +17,10 @@ const MENU_CATEGORIES: { key: MenuCategory; titleKey: string }[] = [
   { key: "warehouse", titleKey: "menuPage.categoryWarehouse" },
 ];
 
+import { CLINICAL_STAFF_ROLES } from "@/lib/role-groups";
+
+const CLINICAL = [...CLINICAL_STAFF_ROLES] as string[];
+
 const ALL_NAV_ITEMS: {
   nameKey: string;
   href: string;
@@ -26,9 +30,9 @@ const ALL_NAV_ITEMS: {
 }[] = [
   { nameKey: "nav.dashboard", href: "/dashboard/warehouse", img: "/icons/menu/dashboard.png", roles: ["warehouse"], category: "warehouse" },
   { nameKey: "nav.inventory", href: "/inventory", img: "/icons/menu/inventory.png", roles: ["warehouse"], category: "warehouse" },
-  { nameKey: "nav.patients", href: "/patients", img: "/icons/menu/patients.png", roles: ["owner", "admin", "doctor", "accountant"], category: "clinic" },
-  { nameKey: "nav.schedule", href: "/schedule", img: "/icons/menu/schedule.png", roles: ["doctor"], category: "clinic" },
-  { nameKey: "nav.services", href: "/services", img: "/icons/menu/services.png", roles: ["owner", "admin", "doctor", "accountant"], category: "clinic" },
+  { nameKey: "nav.patients", href: "/patients", img: "/icons/menu/patients.png", roles: ["owner", "admin", ...CLINICAL, "accountant"], category: "clinic" },
+  { nameKey: "nav.schedule", href: "/schedule", img: "/icons/menu/schedule.png", roles: CLINICAL, category: "clinic" },
+  { nameKey: "nav.services", href: "/services", img: "/icons/menu/services.png", roles: ["owner", "admin", ...CLINICAL, "accountant"], category: "clinic" },
   { nameKey: "nav.users", href: "/users", img: "/icons/menu/users.png", roles: ["owner"], category: "clinic" },
   { nameKey: "nav.clinicBranches", href: "/clinic-branches", img: "/icons/menu/clinic-branches.png", roles: ["owner"], category: "clinic" },
   { nameKey: "nav.contractTemplates", href: "/contract-templates", img: "/icons/menu/contracts.png", roles: ["owner", "admin", "doctor"], category: "clinic" },
