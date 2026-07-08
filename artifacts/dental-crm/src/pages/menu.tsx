@@ -10,30 +10,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import i18n from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { PatientsMenuTile } from "@/components/icons/patients-menu-icon";
 import { PageShell } from "@/components/layout/page-shell";
 import { IosGroup, IosGroupRow, IosSection } from "@/components/layout/ios-group";
 import { Button } from "@/components/ui/button";
-import {
-  Users,
-  BarChart3,
-  Contact,
-  LogOut,
-  Calendar,
-  Wallet,
-  Bot,
-  ChevronRight,
-  Bell,
-  Radio,
-  ClipboardList,
-  DatabaseZap,
-  FileText,
-  MapPin,
-  Building2,
-  CreditCard,
-  LayoutDashboard,
-  Package,
-} from "lucide-react";
+import { LogOut, ChevronRight, Bell } from "lucide-react";
 
 const SUPPORTED_LANGS = ["ru", "kz", "en"] as const;
 type Lang = (typeof SUPPORTED_LANGS)[number];
@@ -44,22 +24,22 @@ function normalizeLang(value: string | undefined): Lang {
 }
 
 const ALL_NAV_ITEMS = [
-  { nameKey: "nav.dashboard",     href: "/dashboard/warehouse", icon: LayoutDashboard, roles: ["warehouse"] },
-  { nameKey: "nav.inventory",     href: "/inventory",           icon: Package,         roles: ["warehouse"] },
-  { nameKey: "nav.patients",     href: "/patients",           icon: Users,           roles: ["owner","admin","doctor","accountant"] },
-  { nameKey: "nav.schedule",     href: "/schedule",           icon: Calendar,        roles: ["doctor"] },
-  { nameKey: "nav.analytics",    href: "/analytics",          icon: BarChart3,       roles: ["owner"] },
-  { nameKey: "nav.myAnalytics",  href: "/doctor-analytics",   icon: BarChart3,       roles: ["doctor"] },
-  { nameKey: "nav.financials",   href: "/financials",         icon: Wallet,          roles: ["owner","accountant"] },
-  { nameKey: "nav.services",     href: "/services",           icon: ClipboardList,   roles: ["owner","admin","doctor","accountant"] },
-  { nameKey: "nav.users",        href: "/users",              icon: Contact,         roles: ["owner"] },
-  { nameKey: "nav.chatbot",      href: "/chatbot",            icon: Bot,             roles: ["owner"] },
-  { nameKey: "nav.channels",     href: "/channels",           icon: Radio,           roles: ["owner","admin"] },
-  { nameKey: "nav.migration",    href: "/migration",          icon: DatabaseZap,     roles: ["owner"] },
-  { nameKey: "nav.contractTemplates", href: "/contract-templates", icon: FileText,    roles: ["owner","admin","doctor"] },
-  { nameKey: "nav.clinicBranches",    href: "/clinic-branches",    icon: Building2,    roles: ["owner"] },
-  { nameKey: "nav.pricing",           href: "/pricing",            icon: CreditCard,   roles: ["owner"] },
-  { nameKey: "nav.branches",          href: "/branches",           icon: MapPin,       roles: ["owner"] },
+  { nameKey: "nav.dashboard",     href: "/dashboard/warehouse", img: "/icons/menu/dashboard.png",       roles: ["warehouse"] },
+  { nameKey: "nav.inventory",     href: "/inventory",           img: "/icons/menu/inventory.png",       roles: ["warehouse"] },
+  { nameKey: "nav.patients",     href: "/patients",           img: "/icons/menu/patients.png",        roles: ["owner","admin","doctor","accountant"] },
+  { nameKey: "nav.schedule",     href: "/schedule",           img: "/icons/menu/schedule.png",        roles: ["doctor"] },
+  { nameKey: "nav.analytics",    href: "/analytics",          img: "/icons/menu/analytics.png",       roles: ["owner"] },
+  { nameKey: "nav.myAnalytics",  href: "/doctor-analytics",   img: "/icons/menu/analytics.png",       roles: ["doctor"] },
+  { nameKey: "nav.financials",   href: "/financials",         img: "/icons/menu/financials.png",      roles: ["owner","accountant"] },
+  { nameKey: "nav.services",     href: "/services",           img: "/icons/menu/services.png",        roles: ["owner","admin","doctor","accountant"] },
+  { nameKey: "nav.users",        href: "/users",              img: "/icons/menu/users.png",           roles: ["owner"] },
+  { nameKey: "nav.chatbot",      href: "/chatbot",            img: "/icons/menu/chatbot.png",         roles: ["owner"] },
+  { nameKey: "nav.channels",     href: "/channels",           img: "/icons/menu/channels.png",        roles: ["owner","admin"] },
+  { nameKey: "nav.migration",    href: "/migration",          img: "/icons/menu/migration.png",       roles: ["owner"] },
+  { nameKey: "nav.contractTemplates", href: "/contract-templates", img: "/icons/menu/contracts.png",       roles: ["owner","admin","doctor"] },
+  { nameKey: "nav.clinicBranches",    href: "/clinic-branches",    img: "/icons/menu/clinic-branches.png", roles: ["owner"] },
+  { nameKey: "nav.pricing",           href: "/pricing",            img: "/icons/menu/pricing.png",         roles: ["owner"] },
+  { nameKey: "nav.branches",          href: "/branches",           img: "/icons/menu/branches.png",        roles: ["owner"] },
 ];
 
 export default function MenuPage() {
@@ -157,21 +137,18 @@ export default function MenuPage() {
                 <div key={item.href}>
                   <Link
                     href={item.href}
-                    className={cn(
-                      "flex flex-col items-center rounded-xl hover:bg-[#f1ede4] active:bg-[#f1ede4] transition-colors",
-                      item.href === "/patients" ? "gap-0 py-3 px-1" : "gap-1.5 py-3 px-1",
-                    )}
+                    className="flex flex-col items-center gap-1.5 py-3 px-0.5 rounded-xl hover:bg-[#f1ede4] active:bg-[#f1ede4] transition-colors"
                   >
-                    {item.href === "/patients" ? (
-                      <PatientsMenuTile label={item.name} />
-                    ) : (
-                      <>
-                        <item.icon className="w-6 h-6 text-[#1f75fe]" strokeWidth={1.8} />
-                        <span className="text-micro text-[#64748b] text-center leading-tight font-medium line-clamp-2">
-                          {item.name}
-                        </span>
-                      </>
-                    )}
+                    <img
+                      src={item.img}
+                      alt=""
+                      aria-hidden
+                      className="w-[52px] h-[52px] shrink-0 object-contain drop-shadow-sm"
+                      draggable={false}
+                    />
+                    <span className="w-full text-[10px] font-bold text-[#0f172a] text-center leading-[1.2] line-clamp-2 break-words">
+                      {item.name}
+                    </span>
                   </Link>
                 </div>
               ))
