@@ -1621,9 +1621,10 @@ interface TreatmentStagesBoardProps {
   patientId: string;
   teeth: ToothRecord[];
   activePlan: TreatmentPlan | null;
+  filterFdi?: number | null;
 }
 
-export function TreatmentStagesBoard({ patientId, teeth, activePlan }: TreatmentStagesBoardProps) {
+export function TreatmentStagesBoard({ patientId, teeth, activePlan, filterFdi = null }: TreatmentStagesBoardProps) {
   const STORAGE_KEY = `1dent:stages-order:${patientId}`;
   const qc = useQueryClient();
   const [discountModalStageId, setDiscountModalStageId] = useState<string | null>(null);
@@ -2030,7 +2031,18 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
 
   // ── Stage filtering + DnD ─────────────────────────────────────────────────
 
-  const stageItems = useMemo(() => buildStageItems(teeth, activePlan), [teeth, activePlan]);
+  const stageItems = useMemo(() => {
+    const items = buildStageItems(teeth, activePlan);
+    if (filterFdi == null) return items;
+    const filtered = new Map<string, StageData>();
+    for (const [stageId, data] of items) {
+      filtered.set(stageId, {
+        teeth: data.teeth.filter((t) => t.toothFdi === filterFdi),
+        planItems: data.planItems.filter((p) => p.toothFdi === filterFdi),
+      });
+    }
+    return filtered;
+  }, [teeth, activePlan, filterFdi]);
 
   // ── Historical completed items from all plans, grouped by stage ──────────
 
