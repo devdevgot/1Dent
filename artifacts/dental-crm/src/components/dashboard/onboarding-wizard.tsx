@@ -146,12 +146,12 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
     if (!botUrl.trim()) return;
     setLoading(true);
     try {
-      const res = await customFetch<{ success: boolean; data: { id: string } }>("/api/knowledge/url", {
+      const res = await customFetch<{ success: boolean; data: { source: { id: string } } }>("/api/knowledge/url", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: botUrl.trim() }),
       });
-      setKnowledgeSources(prev => [...prev, { id: res.data.id, type: "url", title: botUrl.trim() }]);
+      setKnowledgeSources(prev => [...prev, { id: res.data.source.id, type: "url", title: botUrl.trim() }]);
       setBotUrl("");
       toast.success("Ссылка добавлена в базу знаний");
     } catch {
@@ -165,12 +165,12 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
     if (!botTextTitle.trim() || !botTextContent.trim()) return;
     setLoading(true);
     try {
-      const res = await customFetch<{ success: boolean; data: { id: string } }>("/api/knowledge/text", {
+      const res = await customFetch<{ success: boolean; data: { source: { id: string } } }>("/api/knowledge/text", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: botTextTitle.trim(), content: botTextContent.trim() }),
+        body: JSON.stringify({ name: botTextTitle.trim(), text: botTextContent.trim() }),
       });
-      setKnowledgeSources(prev => [...prev, { id: res.data.id, type: "text", title: botTextTitle.trim() }]);
+      setKnowledgeSources(prev => [...prev, { id: res.data.source.id, type: "text", title: botTextTitle.trim() }]);
       setBotTextTitle("");
       setBotTextContent("");
       toast.success("Документ добавлен в базу знаний");
