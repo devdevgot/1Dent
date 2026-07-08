@@ -39,6 +39,7 @@ import {
   generateChatbotResponse,
   extractDatetimeFromText,
   extractBranchFromText,
+  detectServiceTypeFromKeywords,
   joinChatbotReply,
   mergeReply,
   appendToReply,
@@ -131,6 +132,7 @@ import {
   buildSymptomsPromptFallback,
   wantsAlternativeDoctor,
 } from "./booking-fsm";
+import { logChatbotTurnMeta } from "./chatbot-prompt-log";
 
 type CachedSettings = { settings: ChatbotSettings; expiresAt: number };
 type CachedExamples = { examples: ManagerExample[]; expiresAt: number };
@@ -153,6 +155,7 @@ const CONFIRM_NO = [
 ];
 const RESCHEDULE_KEYWORDS = ["перенести", "другую дату", "другое время", "изменить дату", "өзгерту", "жылжыту", "ауыстыру", "басқа уақыт"];
 const CANCEL_KEYWORDS = ["отменить", "отмена", "удалить запись", "болдырмау", "жою", "өшіру"];
+const BRANCH_DEFER_FALLBACK = "Напишите, когда будет удобно — продолжим 😊";
 
 function isOperatorRequest(text: string): boolean {
   const lower = text.toLowerCase().trim();
@@ -173,6 +176,15 @@ function isYes(text: string): boolean {
 function isNo(text: string): boolean {
   const lower = text.toLowerCase().trim();
   return CONFIRM_NO.some((kw) => lower === kw || lower.startsWith(kw + " "));
+}
+
+function symptomsAnswered(data: ChatbotSessionData, messageText: string): boolean {
+  const desc = data.problemDescription?.trim() ?? "";
+  if (desc.length > 12) return true;
+  if (data.serviceType && data.serviceType !== "unknown") return true;
+  if (data.qualificationAsked) return true;
+  if (messageText.trim().length > 12 && !isPlainGreeting(messageText)) return true;
+  return false;
 }
 
 interface SessionRecord {
@@ -1601,6 +1613,12 @@ export class ChatbotService {
       if (!dryRun) await saveSession(session);
     };
     const finishTurn = async (session: SessionRecord, response: OutboundResponse): Promise<TurnResult> => {
+      logChatbotTurnMeta({
+        clinicId,
+        phone,
+        state: session.state,
+        usedFallback: false,
+      });
       if (!dryRun) {
         if (stateAtTurnStart !== session.state) {
           logFunnelEvent({
@@ -1701,7 +1719,7 @@ export class ChatbotService {
         loadPriceListContext(clinicId),
         getClinicDoctorsWithSlots(clinicId, calendarConfig).catch(() => [] as DoctorWithSlots[]),
         db.select({ name: clinicsTable.name }).from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1).catch(() => []).then((rows) => rows[0]?.name),
-        dryRun ? Promise.resolve([] as string[]) : loadClinicBranchNames(clinicId),
+        loadClinicBranchNames(clinicId),
       ]);
     } catch (err) {
       logger.error({ err }, "ChatbotService: failed to load context");
@@ -1779,9 +1797,13 @@ export class ChatbotService {
     }
 
     // Single-branch clinic — pre-select the branch so the funnel never asks about it
-    if (!data.selectedBranch && !dryRun) {
-      const singleBranch = await getSingleBranchName(clinicId);
-      if (singleBranch) data.selectedBranch = singleBranch;
+    if (!data.selectedBranch) {
+      if (clinicBranchNames.length === 1) {
+        data.selectedBranch = clinicBranchNames[0];
+      } else if (!dryRun) {
+        const singleBranch = await getSingleBranchName(clinicId);
+        if (singleBranch) data.selectedBranch = singleBranch;
+      }
     }
 
     const promptChannel = dryRun ? "playground" as const : "whatsapp" as const;
@@ -2049,7 +2071,16 @@ export class ChatbotService {
           // If the first message already contains intent, classify it right away
           // (same fast-path as new leads) instead of wasting a turn on "чем могу помочь?".
           if (!isPlainGreeting(messageText)) {
-            const returningClassification = await classifyPatientRequest(messageText, recentMessages);
+            const keywordService = detectServiceTypeFromKeywords(messageText);
+            const returningClassification = keywordService
+              ? {
+                  serviceType: keywordService,
+                  urgency: /болит|ауыра|срочн/i.test(messageText) ? ("urgent" as const) : ("planned" as const),
+                  confidence: "high" as const,
+                  patientType: "returning" as const,
+                  summary: messageText.slice(0, 100),
+                }
+              : await classifyPatientRequest(messageText, recentMessages);
             if (returningClassification.serviceType !== "unknown" || returningClassification.confidence === "high") {
               data.problemDescription = messageText.trim().slice(0, 200);
               data.serviceType = returningClassification.serviceType;
@@ -2110,7 +2141,16 @@ export class ChatbotService {
         }
 
         if (!isPlainGreeting(messageText)) {
-          const firstClassification = await classifyPatientRequest(messageText, recentMessages);
+          const keywordService = detectServiceTypeFromKeywords(messageText);
+          const firstClassification = keywordService
+            ? {
+                serviceType: keywordService,
+                urgency: /болит|ауыра|срочн/i.test(messageText) ? ("urgent" as const) : ("planned" as const),
+                confidence: "high" as const,
+                patientType: "new" as const,
+                summary: messageText.slice(0, 100),
+              }
+            : await classifyPatientRequest(messageText, recentMessages);
           if (firstClassification.serviceType !== "unknown" || firstClassification.confidence === "high") {
             data.problemDescription = messageText.trim().slice(0, 200);
             data.serviceType = firstClassification.serviceType;
@@ -2480,6 +2520,9 @@ export class ChatbotService {
         const mindMapData = settings.scriptMindMap as ScriptMindMapData | undefined;
         const qualClassification = await classifyPatientRequest(messageText, recentMessages);
         if (qualClassification.urgency) data.urgency = qualClassification.urgency;
+        if (qualClassification.serviceType && qualClassification.serviceType !== "unknown") {
+          data.serviceType = qualClassification.serviceType;
+        }
         if (messageText.trim().length > 3) {
           const snippet = messageText.trim().slice(0, 200);
           data.problemDescription = data.problemDescription
@@ -2504,8 +2547,6 @@ export class ChatbotService {
           data.branchAskCount = 0;
         }
 
-        data.qualificationAsked = true;
-
         const branchBackendContext = (): string => {
           if (clinicBranchNames.length > 1) {
             return `Спроси филиал одним коротким вопросом — только из списка: ${clinicBranchNames.join(", ")}. Не придумывай адреса.`;
@@ -2519,12 +2560,12 @@ export class ChatbotService {
         };
 
         const tryProceedWithoutBranch = (): boolean => {
-          const askCount = data.branchAskCount ?? 0;
-          if (askCount < 1) return false;
           if (clinicBranchNames.length === 1) {
             data.selectedBranch = clinicBranchNames[0];
             return true;
           }
+          const askCount = data.branchAskCount ?? 0;
+          if (askCount < 1) return false;
           if (messageText.trim().length > 3) {
             data.selectedBranch = messageText.trim().slice(0, 200);
             return true;
@@ -2532,46 +2573,61 @@ export class ChatbotService {
           return false;
         };
 
+        if (phase === "symptoms" && !symptomsAnswered(data, messageText)) {
+          data.qualificationAsked = true;
+          data.activeMindMapNodeId =
+            resolveMindMapNodeIdForState(mindMapData, "collect_qualification", {
+              activeNodeId: data.activeMindMapNodeId,
+            }) ?? data.activeMindMapNodeId;
+
+          const aiSymptoms = await generateChatbotResponse(
+            up("collect_qualification", {
+              backendContext: `Услуга: ${data.serviceType ?? qualClassification.serviceType}. Срочность: ${data.urgency ?? "planned"}. Уточни симптомы (боль, дискомфорт).`,
+            }),
+            recentMessages,
+            messageText,
+            managerExamples,
+          );
+          response = mergeReply(aiSymptoms, buildSymptomsPromptFallback());
+          session.state = "collect_qualification";
+          session.data = data;
+          break;
+        }
+
         if (phase === "symptoms") {
           data.qualificationPhase = "branch";
           data.activeMindMapNodeId =
             resolveMindMapNodeIdForState(mindMapData, "collect_qualification", {
               activeNodeId: data.activeMindMapNodeId,
             }) ?? data.activeMindMapNodeId;
-
-          if (!data.selectedBranch) {
-            if (tryProceedWithoutBranch()) {
-              // proceed to doctor ranking below
-            } else {
-              data.branchAskCount = (data.branchAskCount ?? 0) + 1;
-              const aiBranch = await generateChatbotResponse(
-                up("collect_qualification", {
-                  backendContext: `Симптомы приняты. Срочность: ${data.urgency ?? "planned"}. ${branchBackendContext()}`,
-                }),
-                recentMessages,
-                messageText,
-                managerExamples,
-              );
-              response = mergeReply(aiBranch, buildBranchPromptFallback(hasKnowledge, clinicBranchNames));
-              session.state = "collect_qualification";
-              session.data = data;
-              break;
-            }
-          }
         }
 
         if (!data.selectedBranch) {
           if (tryProceedWithoutBranch()) {
-            // proceed
-          } else if ((data.branchAskCount ?? 0) >= 1) {
-            session.state = "collect_qualification";
-            session.data = data;
-            response = null;
-            break;
+            // proceed to doctor ranking below
           } else {
-            data.branchAskCount = (data.branchAskCount ?? 0) + 1;
+            const askCount = data.branchAskCount ?? 0;
+            if (askCount >= 2) {
+              response = BRANCH_DEFER_FALLBACK;
+              logChatbotTurnMeta({
+                clinicId,
+                phone,
+                state: "collect_qualification",
+                usedFallback: true,
+              });
+              session.state = "collect_qualification";
+              session.data = data;
+              break;
+            }
+            data.branchAskCount = askCount + 1;
+            const symptomsNote =
+              phase === "symptoms" || data.qualificationPhase === "branch"
+                ? `Симптомы приняты. Срочность: ${data.urgency ?? "planned"}. `
+                : "";
             const aiBranch = await generateChatbotResponse(
-              up("collect_qualification", { backendContext: branchBackendContext() }),
+              up("collect_qualification", {
+                backendContext: `${symptomsNote}${branchBackendContext()}`,
+              }),
               recentMessages,
               messageText,
               managerExamples,
@@ -2678,7 +2734,7 @@ export class ChatbotService {
           response = mergeReply(aiObj, buildObjectionFallback(data.objectionType));
           data.objectionsHandled = true;
           session.state = "handle_objections";
-        } else if (isRefusing(messageText) || isNo(messageText)) {
+        } else if (isRefusing(messageText)) {
           data.decisionOutcome = "refused";
           if (!dryRun) {
             logFunnelEvent({
@@ -2703,6 +2759,39 @@ export class ChatbotService {
           );
           response = mergeReply(aiGoodbye, buildRefusalFallback());
           session.state = "done";
+        } else if (isNo(messageText)) {
+          data.confusedCount = 0;
+          if (bookingFlow && data.suggestedDoctorId) {
+            const excluded = [
+              ...(data.excludedDoctorIds ?? []),
+              data.suggestedDoctorId,
+            ];
+            data.excludedDoctorIds = excluded;
+
+            const reranked = await assignRankedDoctor(clinicId, { ...data, excludedDoctorIds: excluded }, dryRun);
+            data = reranked.data;
+
+            if (reranked.top) {
+              const aiAlt = await generateChatbotResponse(
+                up("suggest_doctor", {
+                  backendContext: `Альтернатива: ${reranked.top.name}, рейтинг ${reranked.top.rankPercent}/100.`,
+                }),
+                recentMessages,
+                messageText,
+                managerExamples,
+              );
+              response = mergeReply(aiAlt, buildDoctorPresentationFallback(reranked.top, data.urgency));
+              session.state = "suggest_doctor";
+            } else {
+              const aiClarify = await generateChatbotResponse(up("await_decision"), recentMessages, messageText, managerExamples);
+              response = mergeReply(aiClarify, buildDecisionFallback());
+              session.state = "await_decision";
+            }
+          } else {
+            const aiClarify = await generateChatbotResponse(up("await_decision"), recentMessages, messageText, managerExamples);
+            response = mergeReply(aiClarify, buildDecisionFallback());
+            session.state = "await_decision";
+          }
         } else if (bookingFlow) {
           const aiClarify = await generateChatbotResponse(up("await_decision"), recentMessages, messageText, managerExamples);
           const count = (Number(data.confusedCount) || 0) + 1;
@@ -2768,7 +2857,7 @@ export class ChatbotService {
           break;
         }
 
-        if (isRefusing(messageText) || isNo(messageText)) {
+        if (isRefusing(messageText)) {
           data.decisionOutcome = "refused";
           if (!dryRun) {
             logFunnelEvent({
@@ -2789,6 +2878,19 @@ export class ChatbotService {
           );
           response = mergeReply(aiGoodbye, buildRefusalFallback());
           session.state = "done";
+          session.data = data;
+          break;
+        }
+
+        if (isNo(messageText)) {
+          const aiClarify = await generateChatbotResponse(
+            up("await_decision", { backendContext: "Пациент ответил «нет» без явного отказа — уточни, готовы ли записаться позже или нужен другой врач." }),
+            recentMessages,
+            messageText,
+            managerExamples,
+          );
+          response = mergeReply(aiClarify, buildDecisionFallback());
+          session.state = "await_decision";
           session.data = data;
           break;
         }
