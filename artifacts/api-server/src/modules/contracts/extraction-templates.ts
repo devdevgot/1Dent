@@ -10219,6 +10219,7 @@ function postProcessRenderedTemplate(
   const clinicCity = vars.clinic_city ?? "";
   const clinicLicense = vars.clinic_license ?? "";
   const clinicAddress = vars.clinic_address ?? "";
+  const clinicDirector = vars.clinic_director ?? "";
 
   if (clinic) {
     t = t.replace(/ТОО\s*«\s*[^»|\n]+\s*»/g, clinic);
@@ -10264,6 +10265,10 @@ function postProcessRenderedTemplate(
   }
   if (clinicAddress) {
     t = t.replace(/Адрес:\s*г\.\s*Алматы[^\n]*/gi, `Адрес: ${clinicAddress}`);
+  }
+  if (clinicDirector) {
+    t = t.replace(/Мендекеев\s+А\.А\./gi, clinicDirector);
+    t = t.replace(/Мендекеев\s+А\.Ә\./gi, clinicDirector);
   }
   const date = vars.date ?? "";
   const year = vars.year ?? "";

@@ -365,6 +365,13 @@
       "when": 1782738600000,
       "tag": "0050_finance_payroll_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1782825000000,
+      "tag": "0051_clinic_contract_settings",
+      "breakpoints": true
     }
   ]
 }

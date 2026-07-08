@@ -40,6 +40,7 @@ const PatientBroadcastHistory = lazy(() =>
   import("./patient-broadcast-history").then((m) => ({ default: m.PatientBroadcastHistory })),
 );
 import { VoiceDiagnosisModal, type VoiceDiagnosisApplyResult } from "@/components/dental-chart/voice-diagnosis-modal";
+import { matchServiceToSubcategory, matchSubcategoriesFromTitles } from "@/lib/contract-service-matching";
 import type { ToothRecord, ToothTreatment, ProcedureTemplate } from "@workspace/api-client-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import {
@@ -184,33 +185,6 @@ function isExtractionItem(title: string) {
   );
 }
 
-function getMatchedCategories(title: string): string[] {
-  const lower = title.toLowerCase();
-  const cats: string[] = [];
-  
-  if (lower.includes("детск") || lower.includes("ребен") || lower.includes("молочн") || lower.includes("дет.")) {
-    cats.push("Детская стоматология");
-  }
-  if (lower.includes("имплант") || lower.includes("implant") || lower.includes("синус") || lower.includes("sinus")) {
-    cats.push("Имплантация");
-  }
-  if (lower.includes("ортодонт") || lower.includes("брекет") || lower.includes("элайнер") || lower.includes("капп") || lower.includes("пластинк")) {
-    cats.push("Ортодонтия");
-  }
-  if (lower.includes("коронка") || lower.includes("винир") || lower.includes("протез") || lower.includes("металлокерам") || lower.includes("циркон") || lower.includes("несъемн") || lower.includes("съемн") || lower.includes("бюгел")) {
-    cats.push("Ортопедия");
-  }
-  if (lower.includes("кариес") || lower.includes("пульпит") || lower.includes("периодонтит") || lower.includes("депульп") || lower.includes("клиновид") || lower.includes("десен") || lower.includes("пародонт") || lower.includes("лечение зуба") || lower.includes("пломб") || lower.includes("канал") || lower.includes("корнев") || lower.includes("эндодонт") || lower.includes("терапевт") || (lower.includes("терапи") && !lower.includes("ортодонт"))) {
-    cats.push("Терапия");
-  }
-  if (lower.includes("удален") || lower.includes("резекц") || lower.includes("операц") || lower.includes("хирург")) {
-    if (!(lower.includes("детск") || lower.includes("ребен") || lower.includes("молочн") || lower.includes("дет."))) {
-      cats.push("Хирургия");
-    }
-  }
-  
-  return cats;
-}
 
 type PlanItemData = { id: string; title: string; price: number; status: string };
 
@@ -1441,7 +1415,7 @@ export function PatientDetailPanel() {
 
     // Capture matched categories BEFORE clearing the service maps
     const selectedServices = Array.from(diagnosisServicesMap.values()).flat();
-    const matchedCats = Array.from(new Set(selectedServices.flatMap(s => getMatchedCategories(s.name))));
+    const matchedCats = matchSubcategoriesFromTitles(selectedServices.map((s) => s.name));
     const hasExtractionSelected = matchedCats.length > 0;
     setMatchedCatsState(matchedCats);
 
@@ -1562,7 +1536,7 @@ export function PatientDetailPanel() {
     }
 
     const selectedServices = Array.from(result.servicesByTooth.values()).flat();
-    const matchedCats = Array.from(new Set(selectedServices.flatMap((s) => getMatchedCategories(s.name))));
+    const matchedCats = matchSubcategoriesFromTitles(selectedServices.map((s) => s.name));
     const hasExtractionSelected = matchedCats.length > 0;
     setMatchedCatsState(matchedCats);
 
@@ -1686,7 +1660,7 @@ export function PatientDetailPanel() {
 
   const hasExtractionInPlan = useMemo(() => {
     if (!activePlan) return false;
-    return activePlan.items.some((item) => getMatchedCategories(item.title).length > 0);
+    return activePlan.items.some((item) => matchServiceToSubcategory(item.title).length > 0);
   }, [activePlan]);
 
   const patient = data?.data?.patient;
@@ -2780,6 +2754,7 @@ export function PatientDetailPanel() {
                     <Suspense fallback={<div className="px-4 py-6"><ListRowsSkeleton rows={4} avatar={false} card /></div>}>
                       <ContractsTab
                         patientId={selectedPatientId}
+                        planServiceTitles={activePlan?.items?.map((i) => i.title) ?? []}
                         bundle={{
                           hasExtractionInPlan,
                           bundleToken,

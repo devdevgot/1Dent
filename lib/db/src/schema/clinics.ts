@@ -24,6 +24,11 @@ export const clinicsTable = pgTable("clinics", {
   telegramOwnerChatId: text("telegram_owner_chat_id"),
   telegramConnectToken: text("telegram_connect_token"),
   telegramPlatformChatId: text("telegram_platform_chat_id"),
+  contractLegalName: text("contract_legal_name"),
+  contractCity: text("contract_city"),
+  contractAddress: text("contract_address"),
+  contractLicense: text("contract_license"),
+  contractDirector: text("contract_director"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

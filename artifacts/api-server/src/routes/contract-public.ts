@@ -75,8 +75,11 @@ async function generatePdfBuffer(opts: {
       header:         { fontSize: 18, bold: true, alignment: "center", margin: [0, 0, 0, 6] },
       subtitle:       { fontSize: 12, color: "#555555", alignment: "center", margin: [0, 0, 0, 4] },
       meta:           { fontSize: 12, color: "#333333" },
-      body:           { fontSize: 12, lineHeight: 1.5, color: "#222222" },
-      bodyTable:      { fontSize: 11, color: "#222222" },
+      body:           { fontSize: 11.5, lineHeight: 1.45, color: "#222222", alignment: "justify" },
+      bodyCenter:     { fontSize: 12, lineHeight: 1.4, color: "#222222", alignment: "center", bold: true, margin: [0, 4, 0, 8] },
+      bodyClause:     { fontSize: 11.5, lineHeight: 1.45, color: "#222222", alignment: "justify", margin: [0, 2, 0, 6] },
+      bodyTable:      { fontSize: 10.5, color: "#222222" },
+      bodyTableHeader:{ fontSize: 10.5, color: "#222222", bold: true, fillColor: "#f0f0f2" },
       signatureBlock: { fontSize: 11, color: "#555555", italics: true },
     },
   };

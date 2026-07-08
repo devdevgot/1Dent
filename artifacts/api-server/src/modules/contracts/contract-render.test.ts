@@ -5,7 +5,10 @@ import {
   textToHtml,
   htmlToPdfmakeContent,
   isPipeTableLine,
+  fillTreatmentPlanTable,
+  fillActTable,
 } from "./contract-render";
+import { getExtractionTemplateText } from "./extraction-templates";
 
 describe("normalizeContractText", () => {
   it("joins antiword line wraps and collapses double spaces", () => {
@@ -64,11 +67,13 @@ describe("textToHtml", () => {
 
 describe("htmlToPdfmakeContent", () => {
   it("merges paragraph HTML into single pdfmake text blocks", () => {
-    const html = '<p class="contract-para">Первый абзац с нормальным текстом.</p><p class="contract-para">Второй абзац.</p>';
+    const html = '<p class="contract-para">Первый абзац с нормальным текстом.</p><p class="contract-center">Заголовок</p>';
     const blocks = htmlToPdfmakeContent(html);
     const textBlocks = blocks.filter((b) => typeof b.text === "string");
     assert.equal(textBlocks.length, 2);
     assert.equal(textBlocks[0]!.text, "Первый абзац с нормальным текстом.");
+    assert.equal(textBlocks[0]!.style, "body");
+    assert.equal(textBlocks[1]!.style, "bodyCenter");
   });
 
   it("parses tables into pdfmake table blocks", () => {
@@ -82,5 +87,32 @@ describe("isPipeTableLine", () => {
   it("detects pipe-delimited rows", () => {
     assert.equal(isPipeTableLine("|a|b|"), true);
     assert.equal(isPipeTableLine("not a table"), false);
+  });
+});
+
+describe("fillTreatmentPlanTable", () => {
+  it("fills service rows and total in the treatment plan table", () => {
+    const template = getExtractionTemplateText("sys_имплантаци_имплантация_комплексный_план_лечения");
+    const filled = fillTreatmentPlanTable(template, [
+      { title: "Имплантация", quantity: 1, price: 150000 },
+      { title: "Коронка", quantity: 2, price: 80000 },
+    ]);
+
+    assert.match(filled, /\|1\s*\|Имплантация\|/);
+    assert.match(filled, /\|2\s*\|Коронка\|/);
+    assert.match(filled, /Итого:\s*\|\s*310\s*000/);
+    assert.match(filled, /Всего предполагается оказать услуг на сумму:\s*310\s*000/);
+  });
+});
+
+describe("fillActTable", () => {
+  it("fills service rows and total in the act table", () => {
+    const template = getExtractionTemplateText("sys_имплантаци_имплантация_акт_сдачиприемки_оказанных_услуг");
+    const filled = fillActTable(template, [
+      { title: "Имплантация", quantity: 1, price: 150000 },
+    ]);
+
+    assert.match(filled, /\|1\s*\|Имплантация\|/);
+    assert.match(filled, /оказано услуг на сумму:\s+150\s*000/);
   });
 });

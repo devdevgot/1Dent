@@ -18,6 +18,13 @@ import {
   renderExtractionTemplate,
   textToHtml,
 } from "./extraction-templates";
+import {
+  fillActTable,
+  fillTreatmentPlanTable,
+  type ContractTableItem,
+} from "./contract-render";
+import { platformConfigService } from "../platform-config/platform-config.service";
+import { ValidationError } from "../../shared/errors";
 import { logger } from "../../lib/logger";
 
 const SYSTEM_TEMPLATE_BATCH_SIZE = 20;
@@ -453,6 +460,55 @@ export class ContractsRepository {
    * Creates all 4 extraction contracts sharing the same bundleToken.
    * Fills each template with patient/clinic data and renders HTML.
    */
+  private async loadPendingTreatmentPlanItems(
+    patientId: string,
+    clinicId: string,
+    serviceNames?: string[],
+  ): Promise<ContractTableItem[]> {
+    const [activePlan] = await db
+      .select({ id: treatmentPlansTable.id })
+      .from(treatmentPlansTable)
+      .where(
+        and(
+          eq(treatmentPlansTable.patientId, patientId),
+          eq(treatmentPlansTable.clinicId, clinicId),
+          ne(treatmentPlansTable.status, "completed"),
+          ne(treatmentPlansTable.status, "cancelled"),
+        ),
+      )
+      .orderBy(desc(treatmentPlansTable.createdAt))
+      .limit(1);
+
+    if (!activePlan) return [];
+
+    const rows = await db
+      .select({
+        title: treatmentPlanItemsTable.title,
+        price: treatmentPlanItemsTable.price,
+        sortOrder: treatmentPlanItemsTable.sortOrder,
+      })
+      .from(treatmentPlanItemsTable)
+      .where(
+        and(
+          eq(treatmentPlanItemsTable.planId, activePlan.id),
+          eq(treatmentPlanItemsTable.status, "pending"),
+        ),
+      )
+      .orderBy(treatmentPlanItemsTable.sortOrder);
+
+    const explicitNames = (serviceNames ?? []).map((n) => n.trim().toLowerCase()).filter(Boolean);
+    const filtered =
+      explicitNames.length > 0
+        ? rows.filter((row) => explicitNames.includes(row.title.trim().toLowerCase()))
+        : rows;
+
+    return filtered.map((row) => ({
+      title: row.title,
+      quantity: 1,
+      price: row.price,
+    }));
+  }
+
   async createExtractionBundle(data: {
     clinicId: string;
     patientId: string;
@@ -463,12 +519,26 @@ export class ContractsRepository {
     patientDob: string;
     clinicName: string;
     clinicPhone: string;
+    clinicCity?: string;
+    clinicAddress?: string;
+    clinicLicense?: string;
+    clinicDirector?: string;
     doctorName: string;
     date: string;
     year: string;
     serviceNames?: string[];
   }): Promise<{ bundleToken: string; contracts: PatientContract[]; matchedSubcategories: string[] }> {
     const allTemplates = await this.ensureSystemExtractionTemplates(data.clinicId);
+    const platformTemplates = await platformConfigService.getContractTemplatesConfig();
+    const enabledList = platformTemplates.templates.filter((t) => t.enabled).map((t) => t.id);
+    const enabledSystemTypes = new Set(enabledList);
+    const filterByEnabled = enabledSystemTypes.size > 0;
+
+    const planItems = await this.loadPendingTreatmentPlanItems(
+      data.patientId,
+      data.clinicId,
+      data.serviceNames,
+    );
 
     // 1. Identify relevant subcategories
     const matchedSubcategories = new Set<string>();
@@ -480,45 +550,22 @@ export class ContractsRepository {
         matchServiceToSubcategory(name).forEach((sc) => matchedSubcategories.add(sc));
       }
     } else {
-      // Plan-wide: no explicit list — derive subcategories from pending items on the active plan.
-      const activePlan = await db
-        .select({ id: treatmentPlansTable.id })
-        .from(treatmentPlansTable)
-        .where(
-          and(
-            eq(treatmentPlansTable.patientId, data.patientId),
-            eq(treatmentPlansTable.clinicId, data.clinicId),
-            ne(treatmentPlansTable.status, "completed"),
-            ne(treatmentPlansTable.status, "cancelled"),
-          ),
-        )
-        .orderBy(desc(treatmentPlansTable.createdAt))
-        .limit(1);
-
-      if (activePlan.length > 0) {
-        const items = await db
-          .select({ title: treatmentPlanItemsTable.title })
-          .from(treatmentPlanItemsTable)
-          .where(
-            and(
-              eq(treatmentPlanItemsTable.planId, activePlan[0]!.id),
-              eq(treatmentPlanItemsTable.status, "pending"),
-            ),
-          );
-
-        items.forEach((it) => {
-          matchServiceToSubcategory(it.title).forEach((sc) => matchedSubcategories.add(sc));
-        });
+      for (const item of planItems) {
+        matchServiceToSubcategory(item.title).forEach((sc) => matchedSubcategories.add(sc));
       }
     }
 
-    // Default fallback: if no subcategories matched, default to "Удаление зуба" templates
     if (matchedSubcategories.size === 0) {
-      matchedSubcategories.add("Удаление зуба");
+      throw new ValidationError(
+        "Не удалось определить категорию услуг для пакета документов. Добавьте позиции в план лечения или укажите услуги вручную.",
+      );
     }
 
-    // 2. Filter templates matching the matched subcategories
+    // 2. Filter enabled templates matching the matched subcategories
     const templates = allTemplates.filter((tmpl) => {
+      if (filterByEnabled && (!tmpl.systemType || !enabledSystemTypes.has(tmpl.systemType))) {
+        return false;
+      }
       const def = EXTRACTION_TEMPLATES.find((d) => d.id === tmpl.systemType);
       return def && def.subcategory && matchedSubcategories.has(def.subcategory);
     });
@@ -527,6 +574,10 @@ export class ContractsRepository {
       patient_name: data.patientName,
       clinic_name: data.clinicName,
       clinic_phone: data.clinicPhone,
+      clinic_city: data.clinicCity ?? "",
+      clinic_address: data.clinicAddress ?? "",
+      clinic_license: data.clinicLicense ?? "",
+      clinic_director: data.clinicDirector ?? "",
       doctor_name: data.doctorName,
       date: data.date,
       year: data.year,
@@ -545,7 +596,14 @@ export class ContractsRepository {
       .insert(patientContractsTable)
       .values(
         templates.map((tmpl) => {
-          const rendered = textToHtml(renderExtractionTemplate(systemTemplateText(tmpl), vars));
+          let templateText = renderExtractionTemplate(systemTemplateText(tmpl), vars);
+          const systemType = tmpl.systemType ?? "";
+          if (systemType.includes("комплексный_план_лечения")) {
+            templateText = fillTreatmentPlanTable(templateText, planItems);
+          } else if (systemType.includes("акт_сдачиприемки")) {
+            templateText = fillActTable(templateText, planItems);
+          }
+          const rendered = textToHtml(templateText);
           return {
             id: randomUUID(),
             clinicId: data.clinicId,
