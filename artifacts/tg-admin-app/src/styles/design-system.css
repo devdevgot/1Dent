@@ -1,0 +1,41 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&family=Noto+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg: #faf8f4;
+  --ds-surface: #ffffff;
+  --surface-2: #f1ede4;
+  --ds-border: #e8e3d9;
+  --border-strong: #d4cfc6;
+  --text: #0f172a;
+  --text-secondary: #64748b;
+  --text-subtle: #94a3b8;
+
+  --ds-primary: #1f75fe;
+  --primary-hover: #1a65e8;
+  --primary-active: #1555cc;
+  --primary-light: rgba(31, 117, 254, 0.10);
+  --primary-fg: #ffffff;
+
+  --success: #16a34a;
+  --success-light: #f0fdf4;
+  --warning: #d97706;
+  --warning-light: #fef3c7;
+  --danger: #dc2626;
+  --danger-light: #fef2f2;
+  --info: #0284c7;
+  --info-light: #e0f2fe;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+}
+
+.font-manrope {
+  font-family: 'Manrope', sans-serif;
+}
+
+.font-lang {
+  font-family: 'Noto Sans', sans-serif;
+}

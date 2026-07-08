@@ -2,6 +2,7 @@ import { useEffect, useState, createContext, useContext } from "react";
 import { HashRouter, Routes, Route, useLocation } from "react-router-dom";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import WebApp from "@twa-dev/sdk";
+import { AlertTriangle, Lock } from "lucide-react";
 import { api, setInitData, type TmaUser } from "./lib/api";
 import BottomNav from "./components/BottomNav";
 import Dashboard from "./pages/Dashboard";
@@ -81,8 +82,8 @@ function Inner() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background px-6">
         <div className="text-center space-y-4 max-w-xs">
-          <div className="w-16 h-16 rounded-full bg-destructive/20 flex items-center justify-center mx-auto text-3xl">
-            {isAccess ? "🔒" : "⚠️"}
+          <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
+            {isAccess ? <Lock className="w-8 h-8 text-destructive" /> : <AlertTriangle className="w-8 h-8 text-destructive" />}
           </div>
           <h2 className="text-lg font-semibold text-foreground">
             {isAccess ? "Доступ запрещён" : "Ошибка"}
@@ -107,21 +108,21 @@ function Inner() {
             <Route path="/clinics/:clinicId" element={<ClinicDetailPage />} />
 
             {/* Section-first clinic pickers */}
-            <Route path="/picker/sessions" element={<ClinicPickerPage title="Сессии" icon="💬" tab="sessions" />} />
-            <Route path="/picker/messages" element={<ClinicPickerPage title="Сообщения" icon="📨" tab="messages" />} />
-            <Route path="/picker/patients" element={<ClinicPickerPage title="Пациенты" icon="🦷" tab="patients" />} />
-            <Route path="/picker/analytics" element={<ClinicPickerPage title="Аналитика" icon="📊" tab="analytics" />} />
-            <Route path="/picker/broadcasts" element={<ClinicPickerPage title="Рассылки" icon="📢" tab="broadcasts" />} />
-            <Route path="/picker/contracts" element={<ClinicPickerPage title="Договоры" icon="📝" tab="contracts" />} />
-            <Route path="/picker/inventory" element={<ClinicPickerPage title="Инвентарь" icon="📦" tab="inventory" />} />
-            <Route path="/picker/finances" element={<ClinicPickerPage title="Финансы" icon="💰" tab="finances" />} />
-            <Route path="/picker/users" element={<ClinicPickerPage title="Сотрудники" icon="👥" tab="users" />} />
-            <Route path="/picker/chatbot" element={<ClinicPickerPage title="Чатбот" icon="🤖" tab="chatbot" />} />
-            <Route path="/picker/channels" element={<ClinicPickerPage title="Каналы" icon="📡" tab="channels" />} />
-            <Route path="/picker/procedures" element={<ClinicPickerPage title="Прайс-лист" icon="💊" tab="procedures" />} />
-            <Route path="/picker/knowledge" element={<ClinicPickerPage title="База знаний" icon="📚" tab="knowledge" />} />
-            <Route path="/picker/notifications" element={<ClinicPickerPage title="Уведомления" icon="🔔" tab="notifications" />} />
-            <Route path="/picker/files" element={<ClinicPickerPage title="Файлы" icon="📁" tab="files" />} />
+            <Route path="/picker/sessions" element={<ClinicPickerPage title="Сессии" icon="sessions" tab="sessions" />} />
+            <Route path="/picker/messages" element={<ClinicPickerPage title="Сообщения" icon="messages" tab="messages" />} />
+            <Route path="/picker/patients" element={<ClinicPickerPage title="Пациенты" icon="patients" tab="patients" />} />
+            <Route path="/picker/analytics" element={<ClinicPickerPage title="Аналитика" icon="analytics" tab="analytics" />} />
+            <Route path="/picker/broadcasts" element={<ClinicPickerPage title="Рассылки" icon="broadcasts" tab="broadcasts" />} />
+            <Route path="/picker/contracts" element={<ClinicPickerPage title="Договоры" icon="contracts" tab="contracts" />} />
+            <Route path="/picker/inventory" element={<ClinicPickerPage title="Инвентарь" icon="inventory" tab="inventory" />} />
+            <Route path="/picker/finances" element={<ClinicPickerPage title="Финансы" icon="finances" tab="finances" />} />
+            <Route path="/picker/users" element={<ClinicPickerPage title="Сотрудники" icon="users" tab="users" />} />
+            <Route path="/picker/chatbot" element={<ClinicPickerPage title="Чатбот" icon="chatbot" tab="chatbot" />} />
+            <Route path="/picker/channels" element={<ClinicPickerPage title="Каналы" icon="channels" tab="channels" />} />
+            <Route path="/picker/procedures" element={<ClinicPickerPage title="Прайс-лист" icon="procedures" tab="procedures" />} />
+            <Route path="/picker/knowledge" element={<ClinicPickerPage title="База знаний" icon="knowledge" tab="knowledge" />} />
+            <Route path="/picker/notifications" element={<ClinicPickerPage title="Уведомления" icon="notifications" tab="notifications" />} />
+            <Route path="/picker/files" element={<ClinicPickerPage title="Файлы" icon="files" tab="files" />} />
 
             <Route path="/plan-requests" element={<PlanRequestsPage />} />
             <Route path="/content" element={<ContentHubPage />} />

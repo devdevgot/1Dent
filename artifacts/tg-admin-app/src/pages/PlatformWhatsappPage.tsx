@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
-import { haptic, hapticNotify, tgAlert, tgConfirm, useTgBackButton } from "../hooks/useTgBackButton";
+import { haptic, hapticNotify, tgAlert, tgConfirm } from "../hooks/useTgBackButton";
+import { TmaPage } from "@/components/layout/tma-page";
 
 interface PlatformWhatsappInstance {
   id: string;
@@ -26,7 +27,6 @@ function formatPhone(digits: string | null): string {
 
 export default function PlatformWhatsappPage() {
   const navigate = useNavigate();
-  useTgBackButton(() => navigate("/content"));
   const qc = useQueryClient();
 
   const [showAdd, setShowAdd] = useState(false);
@@ -127,13 +127,11 @@ export default function PlatformWhatsappPage() {
   }
 
   return (
-    <div className="px-4 pt-5 pb-4 space-y-4">
-      <div>
-        <h1 className="text-xl font-bold text-foreground">WhatsApp 1Dent</h1>
-        <p className="text-sm text-muted-foreground">
-          Системные инстансы для OTP, входа и приглашений сотрудников
-        </p>
-      </div>
+    <TmaPage
+      title="WhatsApp 1Dent"
+      subtitle="Системные инстансы для OTP, входа и приглашений"
+      onBack={() => navigate("/content")}
+    >
 
       <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900 leading-relaxed">
         Коды и пароли отправляются с номера 1Dent, а не с WhatsApp клиники. Отметьте один инстанс как основной.
@@ -290,6 +288,6 @@ export default function PlatformWhatsappPage() {
           ))}
         </div>
       )}
-    </div>
+    </TmaPage>
   );
 }

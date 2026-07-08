@@ -1,7 +1,11 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { ArrowDown, ArrowUp, User } from "lucide-react";
 import { api, type ChatbotSession, type ChatbotMessage, type Clinic } from "../lib/api";
 import { haptic } from "../hooks/useTgBackButton";
+import { TmaPage } from "@/components/layout/tma-page";
+import { EmptyState } from "@/components/empty-state";
 
 type View = "sessions" | "messages";
 
@@ -20,7 +24,7 @@ function SessionRow({ s }: { s: ChatbotSession }) {
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-sm font-mono text-foreground">{s.phone}</span>
         <span className={`text-xs px-2 py-0.5 rounded-full ${color}`}>{s.state}</span>
-        {s.humanTakeover && <span className="text-xs px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400">👤 оператор</span>}
+        {s.humanTakeover && <span className="text-xs px-2 py-0.5 rounded-full bg-orange-50 text-orange-700 flex items-center gap-1"><User className="w-3 h-3" /> оператор</span>}
       </div>
       <p className="text-xs text-muted-foreground">{new Date(s.updatedAt).toLocaleString("ru")}</p>
     </div>
@@ -31,7 +35,9 @@ function MessageRow({ m }: { m: ChatbotMessage }) {
   return (
     <div className={`rounded-lg border p-3 space-y-1 ${m.direction === "inbound" ? "bg-card border-border" : "bg-primary/5 border-primary/20"}`}>
       <div className="flex items-center gap-2">
-        <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{m.direction === "inbound" ? "⬇️ входящее" : "⬆️ исходящее"}</span>
+        <span className="text-xs px-2 py-0.5 rounded-full bg-[#f1ede4] text-[#64748b] flex items-center gap-1">
+          {m.direction === "inbound" ? <><ArrowDown className="w-3 h-3" /> входящее</> : <><ArrowUp className="w-3 h-3" /> исходящее</>}
+        </span>
         <span className="text-xs font-mono text-muted-foreground">{m.phone}</span>
       </div>
       <p className="text-sm text-foreground line-clamp-2">{m.content}</p>
@@ -41,6 +47,7 @@ function MessageRow({ m }: { m: ChatbotMessage }) {
 }
 
 export default function ActivityPage() {
+  const navigate = useNavigate();
   const [view, setView] = useState<View>("sessions");
   const [clinicId, setClinicId] = useState<string>("");
   // sessions filters
@@ -104,31 +111,28 @@ export default function ActivityPage() {
   };
 
   return (
-    <div className="px-4 pt-6 pb-4 space-y-4">
-      <div>
-        <h1 className="text-xl font-bold text-foreground">Активность</h1>
-        <p className="text-sm text-muted-foreground">Платформенные сессии и сообщения</p>
-      </div>
-
-      {/* Clinic filter */}
+    <TmaPage
+      title="Активность"
+      subtitle="Платформенные сессии и сообщения"
+      onBack={() => navigate("/more")}
+    >
       <select
         value={clinicId}
         onChange={(e) => { setClinicId(e.target.value); setPage(1); }}
-        className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary"
+        className="w-full bg-white border border-[#e8e3d9] rounded-xl px-3 py-2.5 text-sm text-[#0f172a] focus:outline-none focus:border-[#1f75fe]"
       >
-        <option value="">🏥 Все клиники</option>
+        <option value="">Все клиники</option>
         {clinics.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
       </select>
 
-      {/* Tabs */}
       <div className="flex gap-2">
         {(["sessions", "messages"] as View[]).map((v) => (
           <button
             key={v}
             onClick={() => handleViewChange(v)}
-            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${view === v ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground"}`}
+            className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${view === v ? "bg-[#1f75fe] text-white" : "bg-white border border-[#e8e3d9] text-[#64748b]"}`}
           >
-            {v === "sessions" ? `💬 Сессии${view === "sessions" && sessTotal ? ` (${sessTotal})` : ""}` : `📨 Сообщения${view === "messages" && msgTotal ? ` (${msgTotal})` : ""}`}
+            {v === "sessions" ? `Сессии${view === "sessions" && sessTotal ? ` (${sessTotal})` : ""}` : `Сообщения${view === "messages" && msgTotal ? ` (${msgTotal})` : ""}`}
           </button>
         ))}
       </div>
@@ -139,8 +143,8 @@ export default function ActivityPage() {
           <select value={humanTakeover} onChange={(e) => { setHumanTakeover(e.target.value); setPage(1); }}
             className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary">
             <option value="">Все сессии</option>
-            <option value="true">👤 Только с оператором</option>
-            <option value="false">🤖 Только бот</option>
+            <option value="true">Только с оператором</option>
+            <option value="false">Только бот</option>
           </select>
           <div className="flex gap-2">
             <div className="flex-1">
@@ -164,8 +168,8 @@ export default function ActivityPage() {
             <select value={direction} onChange={(e) => { setDirection(e.target.value); setPage(1); }}
               className="flex-1 bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary">
               <option value="">Все направления</option>
-              <option value="inbound">⬇️ Входящие</option>
-              <option value="outbound">⬆️ Исходящие</option>
+              <option value="inbound">Входящие</option>
+              <option value="outbound">Исходящие</option>
             </select>
             <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               placeholder="Поиск..."
@@ -192,10 +196,10 @@ export default function ActivityPage() {
           ? Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-16 bg-card rounded-lg border border-border animate-pulse" />)
           : view === "sessions"
             ? sessions.length === 0
-              ? <p className="text-center text-muted-foreground text-sm py-8">Сессий нет</p>
+              ? <EmptyState text="Сессий нет" />
               : sessions.map((s) => <SessionRow key={s.id} s={s} />)
             : messages.length === 0
-              ? <p className="text-center text-muted-foreground text-sm py-8">Сообщений нет</p>
+              ? <EmptyState text="Сообщений нет" />
               : messages.map((m) => <MessageRow key={m.id} m={m} />)
         }
       </div>
@@ -211,6 +215,6 @@ export default function ActivityPage() {
             className="px-4 py-2 bg-card border border-border rounded-lg text-sm disabled:opacity-40">Вперёд →</button>
         </div>
       )}
-    </div>
+    </TmaPage>
   );
 }
