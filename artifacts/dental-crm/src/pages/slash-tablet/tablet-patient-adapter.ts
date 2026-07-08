@@ -1,33 +1,11 @@
 import type { Patient, TreatmentPlan } from "@workspace/api-client-react";
 import { calculateAge } from "@workspace/api-zod";
+import {
+  DEFAULT_STAGE_ORDER,
+  getTreatmentStageConfig,
+  groupTreatmentPlanItemsByStage,
+} from "@/components/dental-chart/treatment-stage-config";
 import type { PlanItem, PlanStage, TabletPatient, ToothCondition } from "./mock-data";
-
-const STAGE_PALETTE = [
-  { color: "#1f75fe", bg: "#eff6ff" },
-  { color: "#7c3aed", bg: "#f5f3ff" },
-  { color: "#16a34a", bg: "#f0fdf4" },
-  { color: "#d97706", bg: "#fffbeb" },
-];
-
-/** Технические id этапов (из CRM/AI) → понятные названия для пациента */
-const STAGE_LABELS: Record<string, string> = {
-  prevention_treatment: "Профилактика и лечение зубов",
-  surgery: "Хирургия",
-  orthopedics: "Ортопедическое лечение",
-  other: "Дополнительные процедуры",
-};
-
-function normalizeStageKey(stage: string): string {
-  return stage.trim().toLowerCase().replace(/[\s-]+/g, "_");
-}
-
-export function resolveStageLabel(stage: string | null | undefined): string {
-  if (!stage?.trim()) return "Лечение";
-  const trimmed = stage.trim();
-  if (/[а-яё]/i.test(trimmed)) return trimmed;
-  const key = normalizeStageKey(trimmed);
-  return STAGE_LABELS[key] ?? "Лечение";
-}
 
 export function apiPatientToTablet(
   patient: Patient,
@@ -60,30 +38,27 @@ export function apiTeethToMap(
 export function apiPlanToStages(plan: TreatmentPlan | null | undefined): PlanStage[] {
   if (!plan?.items?.length) return [];
 
-  const groups = new Map<string, PlanItem[]>();
-  for (const item of [...plan.items].sort((a, b) => a.sortOrder - b.sortOrder)) {
-    if (item.status === "cancelled") continue;
-    const rawStage = item.stage?.trim();
-    const stageKey = rawStage ? normalizeStageKey(rawStage) : "__default__";
-    const list = groups.get(stageKey) ?? [];
-    list.push({
-      id: item.id,
-      tooth: item.toothFdi ?? null,
-      title: item.title,
-      price: item.price,
-      status: item.status === "completed" ? "completed" : "pending",
-    });
-    groups.set(stageKey, list);
-  }
+  const groups = groupTreatmentPlanItemsByStage(plan.items);
 
-  return Array.from(groups.entries()).map(([stageKey, items], i) => {
-    const palette = STAGE_PALETTE[i % STAGE_PALETTE.length]!;
-    return {
-      id: `stage-${i}`,
-      label: stageKey === "__default__" ? "Лечение" : resolveStageLabel(stageKey),
-      color: palette.color,
-      bg: palette.bg,
-      items,
-    };
-  });
+  return DEFAULT_STAGE_ORDER
+    .filter((stageId) => (groups.get(stageId)?.length ?? 0) > 0)
+    .map((stageId) => {
+      const cfg = getTreatmentStageConfig(stageId)!;
+      const items: PlanItem[] = (groups.get(stageId) ?? []).map((item) => ({
+        id: item.id,
+        tooth: item.toothFdi ?? null,
+        title: item.title,
+        price: item.price,
+        discount: item.discount ?? 0,
+        status: item.status === "completed" ? "completed" : "pending",
+      }));
+      return {
+        id: stageId,
+        label: cfg.label,
+        color: cfg.color,
+        bg: cfg.bgColor,
+        indexNumber: cfg.indexNumber,
+        items,
+      };
+    });
 }

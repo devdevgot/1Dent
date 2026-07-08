@@ -82,7 +82,10 @@ export function PatientCard({ patientId, onBack }: { patientId: string; onBack: 
     return s;
   }, [plan]);
 
-  const planTotal = plan.flatMap((s) => s.items).reduce((s, i) => s + i.price, 0);
+  const planTotal = useMemo(
+    () => plan.flatMap((s) => s.items).reduce((s, i) => s + itemDisplayPrice(i), 0),
+    [plan],
+  );
 
   const selectedCond = selectedFdi ? (teeth[selectedFdi] ?? "healthy") : null;
   const relatedVideos = selectedCond
