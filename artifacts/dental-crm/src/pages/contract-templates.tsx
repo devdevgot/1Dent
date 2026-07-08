@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/hooks/use-auth";
 import {
   useListContractTemplates,
-  useGetContractTemplate,
+  usePreviewContractTemplate,
   useUploadContractTemplate,
   useDeleteContractTemplate,
   useUpdateTemplateMappings,
@@ -155,8 +155,8 @@ function isSystemTemplate(t: ContractTemplate): boolean {
   return Boolean(t.isSystem ?? (t as ContractTemplate & { is_system?: boolean }).is_system);
 }
 
-function SystemTemplatePreview({ templateId, open }: { templateId: string; open: boolean }) {
-  const { data, isLoading } = useGetContractTemplate(open ? templateId : null);
+function TemplatePreviewPanel({ templateId, open }: { templateId: string; open: boolean }) {
+  const { data, isLoading, isError } = usePreviewContractTemplate(open ? templateId : null);
 
   if (!open) return null;
   if (isLoading) {
@@ -167,18 +167,28 @@ function SystemTemplatePreview({ templateId, open }: { templateId: string; open:
     );
   }
 
-  const text = data?.data?.template?.extractedText;
-  if (!text) return null;
+  const html = data?.data?.html;
+  if (isError || !html) {
+    return (
+      <div className="px-3 pb-3 border-t border-[#e8e3d9] pt-2 bg-[#faf8f4]">
+        <p className="text-xs text-[#94a3b8] italic text-center py-2">Не удалось загрузить предпросмотр</p>
+      </div>
+    );
+  }
 
   return (
     <div className="px-3 pb-3 border-t border-[#e8e3d9] pt-2 bg-[#faf8f4]">
-      <div className="bg-white rounded-xl border border-[#e8e3d9] p-2.5 max-h-48 overflow-y-auto">
-        <pre className="text-[11px] text-[#64748b] whitespace-pre-wrap font-sans leading-relaxed">
-          {text}
-        </pre>
-      </div>
+      <p className="text-[10px] text-[#94a3b8] mb-2">Пример с тестовыми данными пациента</p>
+      <div
+        className="bg-white rounded-xl border border-[#e8e3d9] p-2.5 max-h-48 overflow-y-auto text-[11px] text-[#64748b] leading-relaxed prose prose-sm max-w-none"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
     </div>
   );
+}
+
+function SystemTemplatePreview({ templateId, open }: { templateId: string; open: boolean }) {
+  return <TemplatePreviewPanel templateId={templateId} open={open} />;
 }
 
 export default function ContractTemplatesPage() {
@@ -486,7 +496,7 @@ export default function ContractTemplatesPage() {
                                           <button
                                             onClick={() => setExpandedId(isExpanded ? null : tmpl.id)}
                                             className="p-1.5 rounded-xl text-[#94a3b8] hover:text-[#64748b] hover:bg-[#f1ede4] transition-colors shrink-0"
-                                            title="Посмотреть содержимое"
+                                            title="Предпросмотр с тестовыми данными"
                                           >
                                             {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                                           </button>
@@ -583,9 +593,9 @@ export default function ContractTemplatesPage() {
                         <button
                           onClick={() => setExpandedId(isExpanded && !isEditing ? null : tmpl.id)}
                           className="p-2 rounded-xl text-[#94a3b8] hover:text-[#64748b] hover:bg-[#faf8f4] transition-colors"
-                          title="Показать поля"
+                          title={isExpanded && !isEditing ? "Скрыть" : "Предпросмотр с тестовыми данными"}
                         >
-                          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          {isExpanded && !isEditing ? <ChevronUp className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                         {canEdit && (
                           <button
@@ -609,19 +619,7 @@ export default function ContractTemplatesPage() {
                             onClose={() => { setEditingId(null); setExpandedId(null); }}
                           />
                         ) : (
-                          <div className="space-y-1.5">
-                            {rawMappings.length === 0 ? (
-                              <p className="text-xs text-[#94a3b8] italic py-2">Нет полей</p>
-                            ) : rawMappings.map((m, i) => (
-                              <div key={i} className="flex items-center gap-2 text-xs text-[#64748b]">
-                                <span className="font-mono bg-[#f1ede4] px-1.5 py-0.5 rounded text-[#64748b] max-w-[160px] truncate">
-                                  {m.placeholder}
-                                </span>
-                                <span className="text-[#e8e3d9]">→</span>
-                                <span className="font-medium text-[#0f172a]">{m.label}</span>
-                              </div>
-                            ))}
-                          </div>
+                          <TemplatePreviewPanel templateId={tmpl.id} open />
                         )}
                       </div>
                     )}
