@@ -23,6 +23,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
+import { usePageBack } from "@/hooks/use-page-back";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import {
   DropdownMenu,
@@ -177,6 +178,7 @@ export default function StaffPage() {
   const { t } = useTranslation();
   const { user: currentUser } = useAuthStore();
   const [, navigate] = useLocation();
+  const goBack = usePageBack({ menuFallback: true });
   const queryClient = useQueryClient();
 
   const [search, setSearch] = useState("");
@@ -322,7 +324,7 @@ export default function StaffPage() {
       <PageHeader
         title="Сотрудники"
         subtitle={rawUsers.length > 0 ? `${rawUsers.length} сотрудников в системе` : undefined}
-        onBack={() => navigate("/menu")}
+        onBack={goBack}
         right={
           <>
             <PageHeaderIconButton

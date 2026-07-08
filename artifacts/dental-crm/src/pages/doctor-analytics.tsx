@@ -26,6 +26,7 @@ import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { DoctorAnalyticsContentSkeleton } from "@/components/skeletons";
 import { cn } from "@/lib/utils";
+import { usePageBack } from "@/hooks/use-page-back";
 
 const COLORS = ["#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#ef4444", "#06b6d4"];
 
@@ -78,6 +79,7 @@ function formatKztCompact(amount: number): string {
 }
 
 export default function DoctorAnalyticsPage() {
+  const goBack = usePageBack();
   const { t } = useTranslation();
 
   // ── Filter state ──────────────────────────────────────────────────────────
@@ -248,7 +250,7 @@ export default function DoctorAnalyticsPage() {
       <PageHeader
         title={t("doctorAnalytics.title")}
         subtitle={t("doctorAnalytics.subtitle")}
-        onBack={() => window.history.back()}
+        onBack={goBack}
         icon={<BarChart3 className="w-5 h-5" strokeWidth={1.8} />}
         badge={
           hasActiveFilters ? (

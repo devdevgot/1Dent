@@ -23,6 +23,8 @@ import { useTranslation } from "react-i18next";
 import { clearAuthToken } from "@/lib/auth-token";
 import { clearPersistedQueryCache } from "@/lib/query-persist";
 import { clearBranchContext } from "@/lib/branch-context";
+import { OverlayNavigationProvider } from "@/hooks/use-overlay-navigation";
+import { MenuServiceOverlay } from "./menu-service-overlay";
 
 const ADMIN_NAV_ITEMS = [
   { nameKey: "nav.dashboard",            href: "/dashboard/admin",         icon: LayoutDashboard, badge: null },
@@ -172,6 +174,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   );
 
   return (
+    <OverlayNavigationProvider>
     <div className="flex h-[100dvh] bg-[#faf8f4] overflow-hidden font-manrope">
       {/* Desktop/Tablet sidebar — shown at ≥768px */}
       {!isMobile && (
@@ -232,6 +235,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           {children}
         </main>
       </div>
+
+      <MenuServiceOverlay />
     </div>
+    </OverlayNavigationProvider>
   );
 }

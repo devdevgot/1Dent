@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { ChevronLeft, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useOverlayNavigation } from "@/hooks/use-overlay-navigation";
 
 type PageHeaderProps = {
   title: string;
@@ -29,6 +30,29 @@ export function PageHeader({
   sticky = true,
   shadow = true,
 }: PageHeaderProps) {
+  const { isOverlay } = useOverlayNavigation();
+
+  if (isOverlay) {
+    if (!right && !bottom) return null;
+    return (
+      <header
+        className={cn(
+          "bg-white border-b border-[#e8e3d9] safe-area-top font-manrope shrink-0",
+          sticky && "sticky top-0 z-20",
+          shadow && "shadow-sm",
+          className,
+        )}
+      >
+        {right ? (
+          <div className="flex items-center justify-end gap-1.5 px-4 pt-2 pb-2 min-h-[44px]">
+            {right}
+          </div>
+        ) : null}
+        {bottom ? <div className="px-4 pb-3">{bottom}</div> : null}
+      </header>
+    );
+  }
+
   return (
     <header
       className={cn(

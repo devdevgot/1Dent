@@ -48,6 +48,7 @@ import { cn } from "@/lib/utils";
 import { FSM_STATE_LABELS } from "@/lib/chatbot-fsm-states";
 import { toast } from "sonner";
 import { getApiErrorMessage } from "@/lib/api-error-message";
+import { usePageBack } from "@/hooks/use-page-back";
 
 
 const STATE_COLORS: Record<string, string> = {
@@ -653,6 +654,7 @@ function AiBroadcastTab() {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function ChatbotPage() {
+  const goBack = usePageBack();
   const { t, i18n } = useTranslation();
   const lang = i18n.language || "ru";
   const [tab, setTab] = useState<"sessions" | "settings" | "playground" | "ai-broadcast" | "analytics" | "examples">("sessions");
@@ -760,7 +762,7 @@ export default function ChatbotPage() {
       <PageHeader
         title={t("chatbot.title")}
         subtitle={t("chatbot.subtitle")}
-        onBack={() => window.history.back()}
+        onBack={goBack}
         right={
           <div className={cn(
             "flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border font-medium",

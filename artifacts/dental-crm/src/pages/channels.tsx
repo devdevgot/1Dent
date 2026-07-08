@@ -8,8 +8,10 @@ import { ChannelsSettings } from "@/components/channels/channels-settings";
 import { WhatsAppConnectModal, WhatsAppIcon, type WaStatus } from "@/components/whatsapp/whatsapp-connect-modal";
 import { customFetch } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
+import { usePageBack } from "@/hooks/use-page-back";
 
 export default function ChannelsPage() {
+  const goBack = usePageBack();
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const isOwner = user?.role === "owner";
@@ -46,7 +48,7 @@ export default function ChannelsPage() {
     <PageShell className="pb-8">
       <PageHeader
         title={t("channels.sectionTitle", { defaultValue: "Каналы привлечения" })}
-        onBack={() => window.history.back()}
+        onBack={goBack}
       />
 
       <div className="px-4 pt-4 relative">

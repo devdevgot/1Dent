@@ -22,6 +22,7 @@ import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-header";
 import { PeriodPills } from "@/components/layout/period-pills";
 import { FinancialsContentSkeleton, ListRowsSkeleton } from "@/components/skeletons";
+import { usePageBack } from "@/hooks/use-page-back";
 
 const CATEGORY_COLORS: Record<string, string> = {
   salary:    "#4B7BEC",
@@ -54,6 +55,7 @@ function getPeriodDates(period: Period, customFrom: string, customTo: string) {
 }
 
 export default function FinancialsPage() {
+  const goBack = usePageBack();
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const { toast } = useToast();
@@ -201,7 +203,7 @@ export default function FinancialsPage() {
 
       <PageHeader
         title={t("financials.title")}
-        onBack={() => window.history.back()}
+        onBack={goBack}
         sticky
         right={
           <>

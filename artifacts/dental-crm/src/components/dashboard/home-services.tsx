@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "wouter";
+import { MENU_SERVICES, HOME_SERVICE_SLUGS } from "@/lib/menu-services";
+import { useOpenMenuService } from "@/components/layout/menu-service-overlay";
 
 /*
  * Reference-style home blocks (superapp marketplace):
@@ -32,22 +34,6 @@ function HomeScrollRow({
   );
 }
 
-type ServiceTile = {
-  label: string;
-  href: string;
-  img: string;
-};
-
-const SERVICE_TILES: ServiceTile[] = [
-  { label: "Пациенты",   href: "/patients",   img: "/icons/menu/patients.png" },
-  { label: "Сотрудники", href: "/users",      img: "/icons/menu/users.png" },
-  { label: "Услуги",     href: "/services",   img: "/icons/menu/services.png" },
-  { label: "Аналитика",  href: "/analytics",  img: "/icons/menu/analytics.png" },
-  { label: "Финансы",    href: "/financials", img: "/icons/menu/financials.png" },
-  { label: "ИИ-бот",     href: "/chatbot",    img: "/icons/menu/chatbot.png" },
-  { label: "Договоры",   href: "/contract-templates", img: "/icons/menu/contracts.png" },
-];
-
 function AllServicesTile() {
   return (
     <Link
@@ -68,14 +54,36 @@ function AllServicesTile() {
   );
 }
 
+const homeTiles = HOME_SERVICE_SLUGS.map((slug) => {
+  const service = MENU_SERVICES.find((s) => s.slug === slug);
+  if (!service) return null;
+  const labels: Record<string, string> = {
+    patients: "Пациенты",
+    users: "Сотрудники",
+    services: "Услуги",
+    analytics: "Аналитика",
+    financials: "Финансы",
+    chatbot: "ИИ-бот",
+    "contract-templates": "Договоры",
+  };
+  return {
+    slug,
+    label: labels[slug] ?? slug,
+    img: service.img,
+  };
+}).filter(Boolean) as { slug: string; label: string; img: string }[];
+
 export function HomeServiceTiles() {
+  const openService = useOpenMenuService();
+
   return (
     <HomeScrollRow>
       <AllServicesTile />
-      {SERVICE_TILES.map((tile) => (
-        <Link
-          key={tile.href}
-          href={tile.href}
+      {homeTiles.map((tile) => (
+        <button
+          key={tile.slug}
+          type="button"
+          onClick={() => openService(tile.slug)}
           className="flex flex-col items-center gap-1.5 shrink-0 w-[68px]"
         >
           <img
@@ -88,19 +96,22 @@ export function HomeServiceTiles() {
           <span className="w-full text-xs font-semibold text-[#0f172a] text-center leading-[1.2] line-clamp-2">
             {tile.label}
           </span>
-        </Link>
+        </button>
       ))}
     </HomeScrollRow>
   );
 }
 
 export function HomePromoBanners() {
+  const openService = useOpenMenuService();
+
   return (
     <HomeScrollRow snap>
       {/* Gradient banner — AI chatbot */}
-      <Link
-        href="/chatbot"
-        className="relative shrink-0 w-[280px] h-[108px] rounded-3xl overflow-hidden snap-start scroll-ml-0 bg-gradient-to-br from-[#1f75fe] via-[#3b6ef7] to-[#4f46e5] flex items-center justify-between pl-5 pr-3 active:scale-[0.98] transition-transform"
+      <button
+        type="button"
+        onClick={() => openService("chatbot")}
+        className="relative shrink-0 w-[280px] h-[108px] rounded-3xl overflow-hidden snap-start scroll-ml-0 bg-gradient-to-br from-[#1f75fe] via-[#3b6ef7] to-[#4f46e5] flex items-center justify-between pl-5 pr-3 active:scale-[0.98] transition-transform text-left"
       >
         <div className="absolute -top-8 -right-6 w-32 h-32 rounded-full bg-white/10 blur-2xl pointer-events-none" />
         <div className="relative z-10 min-w-0">
@@ -118,12 +129,13 @@ export function HomePromoBanners() {
           className="relative z-10 w-[76px] h-[76px] object-contain drop-shadow-xl shrink-0"
           draggable={false}
         />
-      </Link>
+      </button>
 
       {/* Light banner — analytics */}
-      <Link
-        href="/analytics"
-        className="relative shrink-0 w-[280px] h-[108px] rounded-3xl overflow-hidden snap-start bg-white border border-[#e8e3d9] flex items-center justify-between pl-5 pr-3 active:scale-[0.98] transition-transform"
+      <button
+        type="button"
+        onClick={() => openService("analytics")}
+        className="relative shrink-0 w-[280px] h-[108px] rounded-3xl overflow-hidden snap-start bg-white border border-[#e8e3d9] flex items-center justify-between pl-5 pr-3 active:scale-[0.98] transition-transform text-left"
       >
         <div className="relative z-10 min-w-0">
           <p className="text-[#0f172a] font-extrabold text-[17px] leading-[1.2]">
@@ -140,12 +152,13 @@ export function HomePromoBanners() {
           className="relative z-10 w-[76px] h-[76px] object-contain drop-shadow-lg shrink-0"
           draggable={false}
         />
-      </Link>
+      </button>
 
       {/* Light banner — patients */}
-      <Link
-        href="/patients"
-        className="relative shrink-0 w-[280px] h-[108px] rounded-3xl overflow-hidden snap-start bg-white border border-[#e8e3d9] flex items-center justify-between pl-5 pr-3 active:scale-[0.98] transition-transform"
+      <button
+        type="button"
+        onClick={() => openService("patients")}
+        className="relative shrink-0 w-[280px] h-[108px] rounded-3xl overflow-hidden snap-start bg-white border border-[#e8e3d9] flex items-center justify-between pl-5 pr-3 active:scale-[0.98] transition-transform text-left"
       >
         <div className="relative z-10 min-w-0">
           <p className="text-[#0f172a] font-extrabold text-[17px] leading-[1.2]">
@@ -162,7 +175,7 @@ export function HomePromoBanners() {
           className="relative z-10 w-[76px] h-[76px] object-contain drop-shadow-lg shrink-0"
           draggable={false}
         />
-      </Link>
+      </button>
     </HomeScrollRow>
   );
 }
