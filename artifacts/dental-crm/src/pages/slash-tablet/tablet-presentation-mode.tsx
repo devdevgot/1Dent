@@ -161,7 +161,7 @@ export function TabletPresentationMode({
       </header>
 
       <div className="flex-1 overflow-y-auto pb-40">
-        <div className="mx-auto w-full max-w-4xl px-5 py-6">
+        <div className="mx-auto w-full max-w-6xl px-5 py-6">
 
           {/* Hero — фирменный */}
           <motion.div
@@ -464,7 +464,7 @@ export function TabletPresentationMode({
 
       {/* Нижняя панель — WhatsApp */}
       <div className="fixed inset-x-0 bottom-0 border-t border-[#e6ebf2] bg-white/95 px-5 py-4 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] backdrop-blur-md safe-area-bottom">
-        <div className="mx-auto flex max-w-4xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <p className="text-sm font-bold text-[#0f172a]">
               {fmtTenge(remainingTotal)}

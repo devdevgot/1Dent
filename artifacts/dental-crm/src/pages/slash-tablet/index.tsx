@@ -44,7 +44,7 @@ export default function SlashTabletPage() {
   }
 
   return (
-    <div className="h-[100dvh] w-full overflow-hidden bg-[#faf8f4] font-manrope">
+    <div className="h-[100dvh] w-full overflow-hidden bg-[#faf8f4] font-manrope" data-slash-tablet>
       <AnimatePresence mode="wait">
         {step === "lock" && (
           <motion.div key="lock" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>

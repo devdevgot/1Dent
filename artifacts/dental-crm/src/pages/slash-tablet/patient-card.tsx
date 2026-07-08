@@ -172,7 +172,7 @@ export function PatientCard({ patientId, onBack }: { patientId: string; onBack: 
       {/* Контент */}
       <div className="flex-1 overflow-auto">
         {tab === "chart" && (
-          <div className="grid h-full gap-4 p-4 lg:grid-cols-[1.15fr_0.85fr]">
+          <div className="grid h-full gap-4 p-4 md:grid-cols-[1.15fr_0.85fr]">
             {/* Левая: карта */}
             <div className="flex flex-col gap-4 overflow-auto">
               <TabletChartSection
@@ -209,13 +209,13 @@ export function PatientCard({ patientId, onBack }: { patientId: string; onBack: 
         )}
 
         {tab === "plan" && (
-          <div className="mx-auto max-w-4xl">
+          <div className="mx-auto w-full max-w-6xl px-4">
             <TabletPlanBoard patientId={patientId} onGoToChart={() => setTab("chart")} />
           </div>
         )}
 
         {tab === "contracts" && (
-          <div className="mx-auto max-w-3xl h-full">
+          <div className="mx-auto w-full max-w-5xl h-full px-4">
             <ContractsTab patientId={patientId} />
           </div>
         )}
@@ -485,7 +485,7 @@ function PatientInfo({
     : null;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4 p-4 pb-24">
+    <div className="mx-auto max-w-3xl space-y-4 p-4 pb-24">
       {/* Заголовок карточки */}
       <div className="rounded-2xl border border-[#e8e3d9] bg-white p-5">
         <div className="flex items-center gap-4">
