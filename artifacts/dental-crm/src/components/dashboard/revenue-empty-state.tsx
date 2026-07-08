@@ -32,9 +32,9 @@ export function RevenueEmptyState() {
         loading="eager"
         fetchPriority="high"
         decoding="async"
-        width={200}
-        height={200}
-        className="w-full max-w-[200px] h-auto object-contain mb-4"
+        width={176}
+        height={176}
+        className="w-full max-w-[176px] h-auto object-contain mb-5 rounded-[40px] shadow-[0_10px_30px_-12px_rgba(31,117,254,0.25)]"
       />
 
       <h3 className="text-lg font-bold text-[var(--text)] tracking-tight">
