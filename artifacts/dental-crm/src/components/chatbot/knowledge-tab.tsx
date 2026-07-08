@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { guessFsmStateFromLabel } from "@/lib/chatbot-fsm-states";
 import { useToast } from "@/hooks/use-toast";
 import { getBaseUrl } from "@/lib/base-url";
+import { getApiErrorMessage } from "@/lib/api-error-message";
 
 // ── Error message helper ──────────────────────────────────────────────────────
 function friendlyError(msg: string | null | undefined): string {
@@ -42,7 +43,7 @@ async function apiFetch(path: string, opts?: RequestInit) {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error((body as { message?: string }).message ?? res.statusText);
+    throw new Error(getApiErrorMessage({ data: body }, res.statusText));
   }
   return res.json();
 }
@@ -263,7 +264,7 @@ export function KnowledgeTab({
     }
     setGenerating(true);
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 95000);
+    const timer = setTimeout(() => controller.abort(), 130_000);
     try {
       const token = getToken();
       const res = await fetch(`${getBaseUrl()}/api/knowledge/generate`, {
@@ -276,8 +277,7 @@ export function KnowledgeTab({
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        const msg = (body as { message?: string }).message;
-        throw new Error(msg ?? "Ошибка сервера");
+        throw new Error(getApiErrorMessage({ data: body }, "Ошибка сервера"));
       }
       const json = await res.json();
       const { primaryScript, repeatScript } = json.data as {
