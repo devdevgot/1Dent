@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { db, knowledgeSourcesTable } from "@workspace/db";
 import { openrouter, FAST_MODEL, withTimeout } from "../../lib/openrouter-client";
 import { ObjectStorageService } from "../../lib/objectStorage";
-import { invalidateKnowledgeCache } from "../chatbot/chatbot.service";
+import { invalidateKnowledgeCache } from "./knowledge-cache";
 
 const storage = new ObjectStorageService();
 
