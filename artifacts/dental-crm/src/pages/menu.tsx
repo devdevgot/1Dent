@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import i18n from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { PatientsMenuIcon } from "@/components/icons/patients-menu-icon";
 import { PageShell } from "@/components/layout/page-shell";
 import { IosGroup, IosGroupRow, IosSection } from "@/components/layout/ios-group";
 import { Button } from "@/components/ui/button";
@@ -158,7 +159,11 @@ export default function MenuPage() {
                     href={item.href}
                     className="flex flex-col items-center gap-1.5 py-3 px-1 rounded-xl hover:bg-[#f1ede4] active:bg-[#f1ede4] transition-colors"
                   >
-                    <item.icon className="w-6 h-6 text-[#1f75fe]" strokeWidth={1.8} />
+                    {item.href === "/patients" ? (
+                      <PatientsMenuIcon />
+                    ) : (
+                      <item.icon className="w-6 h-6 text-[#1f75fe]" strokeWidth={1.8} />
+                    )}
                     <span className="text-micro text-[#64748b] text-center leading-tight font-medium line-clamp-2">
                       {item.name}
                     </span>
