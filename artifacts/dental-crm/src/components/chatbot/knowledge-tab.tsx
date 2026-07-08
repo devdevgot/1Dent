@@ -89,7 +89,12 @@ function convertGeneratedScriptsToMindMap(
       content: node.detail ?? "",
       fsmState: guessFsmStateFromLabel(node.label),
     });
-    edges.push({ id: `e_${parentId}_${id}`, source: parentId, target: id });
+    edges.push({
+      id: `e_${parentId}_${id}`,
+      source: parentId,
+      target: id,
+      label: node.label,
+    });
     for (const child of node.children ?? []) {
       flattenTree(child, id, prefix);
     }
