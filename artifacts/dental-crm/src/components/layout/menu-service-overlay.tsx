@@ -7,6 +7,7 @@ import { useOverlayNavigation } from "@/hooks/use-overlay-navigation";
 import { getMenuServiceBySlug } from "@/lib/menu-services";
 import { isGeoRestrictedPath } from "@/lib/geo-restriction";
 import { MenuServiceSheet } from "@/components/layout/menu-service-sheet";
+import { MenuServiceContentSkeleton } from "@/components/skeletons/menu-service-content-skeleton";
 
 export function MenuServiceOverlay() {
   const { t } = useTranslation();
@@ -30,37 +31,41 @@ export function MenuServiceOverlay() {
     if (!next) dismiss();
   };
 
-  if (!service || !roleAllowed) return null;
-
-  const Page = service.component;
-  const Skeleton = service.Skeleton;
+  const title = service ? t(service.nameKey) : "";
 
   return (
     <MenuServiceSheet
       open={open}
       onOpenChange={handleOpenChange}
-      title={t(service.nameKey)}
+      title={title}
     >
-      {geoBlocked ? (
-        <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4 px-6 text-center">
-          <div className="w-16 h-16 rounded-full bg-[var(--warning-light)] flex items-center justify-center">
-            <MapPin className="w-8 h-8 text-[#d97706]" />
+      {service && roleAllowed ? (
+        geoBlocked ? (
+          <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4 px-6 text-center">
+            <div className="w-16 h-16 rounded-full bg-[var(--warning-light)] flex items-center justify-center">
+              <MapPin className="w-8 h-8 text-[#d97706]" />
+            </div>
+            <div>
+              <h2 className="text-[17px] font-semibold text-[#0f172a] mb-1">
+                Вы вне клиники
+              </h2>
+              <p className="text-xs text-[#64748b] leading-relaxed">
+                Этот раздел доступен только когда вы находитесь в клинике.
+                {activeBranch ? ` Ближайший филиал: ${activeBranch.name}` : null}
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-[17px] font-semibold text-[#0f172a] mb-1">
-              Вы вне клиники
-            </h2>
-            <p className="text-xs text-[#64748b] leading-relaxed">
-              Этот раздел доступен только когда вы находитесь в клинике.
-              {activeBranch ? ` Ближайший филиал: ${activeBranch.name}` : null}
-            </p>
-          </div>
-        </div>
-      ) : (
-        <Suspense fallback={<Skeleton />}>
-          <Page />
-        </Suspense>
-      )}
+        ) : (
+          <Suspense
+            key={service.slug}
+            fallback={
+              <MenuServiceContentSkeleton variant={service.skeletonVariant} />
+            }
+          >
+            <service.component />
+          </Suspense>
+        )
+      ) : null}
     </MenuServiceSheet>
   );
 }

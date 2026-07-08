@@ -1,22 +1,6 @@
 import { lazy, type ComponentType } from "react";
 import { CLINICAL_STAFF_ROLES } from "@/lib/role-groups";
-import {
-  AnalyticsPageSkeleton,
-  BranchesPageSkeleton,
-  ChannelsPageSkeleton,
-  ChatbotPageSkeleton,
-  ClinicBranchesPageSkeleton,
-  ContractTemplatesPageSkeleton,
-  DoctorAnalyticsPageSkeleton,
-  DoctorSchedulePageSkeleton,
-  FinancialsPageSkeleton,
-  InventoryPageSkeleton,
-  MigrationPageSkeleton,
-  ServicesPageSkeleton,
-  UsersPageSkeleton,
-  WarehouseDashboardSkeleton,
-  AppShellSkeleton,
-} from "@/components/skeletons";
+import type { MenuServiceSkeletonVariant } from "@/components/skeletons/menu-service-content-skeleton";
 
 export type MenuCategory = "clinic" | "finance" | "automation" | "admin" | "warehouse";
 
@@ -28,7 +12,7 @@ export type MenuServiceDefinition = {
   roles: string[];
   category: MenuCategory;
   component: React.LazyExoticComponent<ComponentType<Record<string, never>>>;
-  Skeleton: ComponentType;
+  skeletonVariant: MenuServiceSkeletonVariant;
 };
 
 const MENU_CATEGORIES: { key: MenuCategory; titleKey: string }[] = [
@@ -52,7 +36,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     roles: ["warehouse"],
     category: "warehouse",
     component: lazy(() => import("@/pages/dashboard-warehouse")),
-    Skeleton: WarehouseDashboardSkeleton,
+    skeletonVariant: "dashboard",
   },
   {
     slug: "inventory",
@@ -62,7 +46,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     roles: ["warehouse"],
     category: "warehouse",
     component: lazy(() => import("@/pages/inventory")),
-    Skeleton: InventoryPageSkeleton,
+    skeletonVariant: "inventory",
   },
   {
     slug: "patients",
@@ -72,7 +56,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     roles: ["owner", "admin", ...CLINICAL, "accountant"],
     category: "clinic",
     component: lazy(() => import("@/pages/patients")),
-    Skeleton: AppShellSkeleton,
+    skeletonVariant: "patients",
   },
   {
     slug: "schedule",
@@ -82,7 +66,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     roles: CLINICAL,
     category: "clinic",
     component: lazy(() => import("@/pages/doctor-schedule")),
-    Skeleton: DoctorSchedulePageSkeleton,
+    skeletonVariant: "schedule",
   },
   {
     slug: "services",
@@ -92,7 +76,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     roles: ["owner", "admin", ...CLINICAL, "accountant"],
     category: "clinic",
     component: lazy(() => import("@/pages/services")),
-    Skeleton: ServicesPageSkeleton,
+    skeletonVariant: "services",
   },
   {
     slug: "users",
@@ -102,7 +86,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     roles: ["owner"],
     category: "clinic",
     component: lazy(() => import("@/pages/users")),
-    Skeleton: UsersPageSkeleton,
+    skeletonVariant: "users",
   },
   {
     slug: "clinic-branches",
@@ -112,7 +96,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     roles: ["owner"],
     category: "clinic",
     component: lazy(() => import("@/pages/clinic-branches")),
-    Skeleton: ClinicBranchesPageSkeleton,
+    skeletonVariant: "form",
   },
   {
     slug: "contract-templates",
@@ -122,7 +106,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     roles: ["owner", "admin", "doctor"],
     category: "clinic",
     component: lazy(() => import("@/pages/contract-templates")),
-    Skeleton: ContractTemplatesPageSkeleton,
+    skeletonVariant: "default",
   },
   {
     slug: "analytics",
@@ -132,7 +116,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     roles: ["owner"],
     category: "finance",
     component: lazy(() => import("@/pages/analytics")),
-    Skeleton: AnalyticsPageSkeleton,
+    skeletonVariant: "analytics",
   },
   {
     slug: "doctor-analytics",
@@ -142,7 +126,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     roles: ["doctor"],
     category: "finance",
     component: lazy(() => import("@/pages/doctor-analytics")),
-    Skeleton: DoctorAnalyticsPageSkeleton,
+    skeletonVariant: "analytics",
   },
   {
     slug: "financials",
@@ -152,7 +136,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     roles: ["owner", "accountant"],
     category: "finance",
     component: lazy(() => import("@/pages/financials")),
-    Skeleton: FinancialsPageSkeleton,
+    skeletonVariant: "financials",
   },
   {
     slug: "pricing",
@@ -162,7 +146,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     roles: ["owner"],
     category: "finance",
     component: lazy(() => import("@/pages/pricing")),
-    Skeleton: AppShellSkeleton,
+    skeletonVariant: "form",
   },
   {
     slug: "chatbot",
@@ -172,7 +156,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     roles: ["owner"],
     category: "automation",
     component: lazy(() => import("@/pages/chatbot")),
-    Skeleton: ChatbotPageSkeleton,
+    skeletonVariant: "chatbot",
   },
   {
     slug: "channels",
@@ -182,7 +166,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     roles: ["owner", "admin"],
     category: "automation",
     component: lazy(() => import("@/pages/channels")),
-    Skeleton: ChannelsPageSkeleton,
+    skeletonVariant: "default",
   },
   {
     slug: "branches",
@@ -192,7 +176,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     roles: ["owner"],
     category: "automation",
     component: lazy(() => import("@/pages/branches")),
-    Skeleton: BranchesPageSkeleton,
+    skeletonVariant: "form",
   },
   {
     slug: "migration",
@@ -202,7 +186,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     roles: ["owner"],
     category: "admin",
     component: lazy(() => import("@/pages/migration")),
-    Skeleton: MigrationPageSkeleton,
+    skeletonVariant: "form",
   },
 ];
 
