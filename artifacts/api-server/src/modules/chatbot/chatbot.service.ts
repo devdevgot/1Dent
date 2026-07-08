@@ -378,6 +378,10 @@ const examplesCache = new Map<string, CachedExamples>();
 // Knowledge base cache (5min TTL) — refreshed lazily on each processMessage call
 const knowledgeCache = new Map<string, CachedKnowledge>();
 
+export function invalidateKnowledgeCache(clinicId: string): void {
+  knowledgeCache.delete(clinicId);
+}
+
 // Doctors cache (5min TTL)
 const doctorsCache = new Map<string, CachedDoctors>();
 

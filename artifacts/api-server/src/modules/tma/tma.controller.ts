@@ -41,6 +41,7 @@ import type { ErrorEventSeverity, ErrorEventSource } from "@workspace/db";
 import { createTabletVideosTmaRouter } from "../tablet-videos/tablet-videos.routes";
 import { createPlatformConfigTmaRouter } from "../platform-config/platform-config.routes";
 import { getPlatformWebhookUrl, getTmaUrl } from "../../shared/platform-bot";
+import { processKnowledgeSource, scrapeUrl } from "../knowledge/knowledge.service";
 
 const router = Router();
 router.use(requireTmaAdmin);
@@ -1079,26 +1080,53 @@ router.post("/clinics/:clinicId/knowledge", async (req: Request, res: Response, 
     });
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+
+    const clinicId = req.params["clinicId"] as string;
+    const hasTextContent = Boolean(parsed.data.content?.trim());
+    if ((parsed.data.type === "text" || parsed.data.type === "faq") && !hasTextContent) {
+      return next(new ValidationError("Для текстового источника нужно указать content"));
+    }
+    if (parsed.data.type === "url" && !parsed.data.url) {
+      return next(new ValidationError("Для URL-источника нужно указать url"));
+    }
+
     const [source] = await db.insert(knowledgeSourcesTable).values({
       id: randomUUID(),
-      clinicId: req.params["clinicId"] as string,
+      clinicId,
       name: parsed.data.name,
       type: parsed.data.type,
-      status: "pending",
-      extractedText: parsed.data.content ?? null,
+      status: parsed.data.type === "url" ? "pending" : "ready",
+      extractedText: hasTextContent ? parsed.data.content!.trim() : null,
       url: parsed.data.url ?? null,
     }).returning();
+
+    processKnowledgeSource({
+      id: source.id,
+      clinicId: source.clinicId,
+      type: source.type,
+      url: source.url,
+      storageKey: source.storageKey,
+      extractedText: source.extractedText,
+    });
+
     res.status(201).json({ success: true, data: { source } });
   } catch (err) { next(err); }
 });
 
 router.post("/clinics/:clinicId/knowledge/:sourceId/rescan", async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const clinicId = req.params["clinicId"] as string;
     const [updated] = await db.update(knowledgeSourcesTable)
-      .set({ status: "pending" })
-      .where(and(eq(knowledgeSourcesTable.id, req.params["sourceId"] as string), eq(knowledgeSourcesTable.clinicId, req.params["clinicId"] as string)))
+      .set({ status: "pending", errorMessage: null, extractedText: null })
+      .where(and(eq(knowledgeSourcesTable.id, req.params["sourceId"] as string), eq(knowledgeSourcesTable.clinicId, clinicId)))
       .returning();
     if (!updated) return next(new NotFoundError("Knowledge source not found"));
+    if (updated.type !== "url" || !updated.url) {
+      return next(new ValidationError("Переиндексация доступна только для URL-источников"));
+    }
+
+    void scrapeUrl(updated.id, updated.url, clinicId);
+
     res.json({ success: true, data: { source: updated } });
   } catch (err) { next(err); }
 });
@@ -1679,15 +1707,35 @@ router.post("/clinics/:clinicId/knowledge/sources", async (req: Request, res: Re
     });
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+
+    const clinicId = req.params["clinicId"] as string;
+    const hasTextContent = Boolean(parsed.data.content?.trim());
+    if ((parsed.data.type === "text" || parsed.data.type === "faq") && !hasTextContent) {
+      return next(new ValidationError("Для текстового источника нужно указать content"));
+    }
+    if (parsed.data.type === "url" && !parsed.data.url) {
+      return next(new ValidationError("Для URL-источника нужно указать url"));
+    }
+
     const [source] = await db.insert(knowledgeSourcesTable).values({
       id: randomUUID(),
-      clinicId: req.params["clinicId"] as string,
+      clinicId,
       name: parsed.data.name,
       type: parsed.data.type,
-      status: "pending",
-      extractedText: parsed.data.content ?? null,
+      status: parsed.data.type === "url" ? "pending" : "ready",
+      extractedText: hasTextContent ? parsed.data.content!.trim() : null,
       url: parsed.data.url ?? null,
     }).returning();
+
+    processKnowledgeSource({
+      id: source.id,
+      clinicId: source.clinicId,
+      type: source.type,
+      url: source.url,
+      storageKey: source.storageKey,
+      extractedText: source.extractedText,
+    });
+
     res.status(201).json({ success: true, data: { source } });
   } catch (err) { next(err); }
 });
