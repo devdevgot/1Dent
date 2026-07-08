@@ -10,6 +10,47 @@ export function getInitData(): string {
 
 const BASE = "/api/tma";
 
+type ErrorSeverity = "error" | "warning" | "fatal";
+
+function reportTmaError(payload: {
+  message: string;
+  severity?: ErrorSeverity;
+  stack?: string | null;
+  code?: string | null;
+  url?: string | null;
+  metadata?: Record<string, unknown> | null;
+}) {
+  void fetch("/api/errors/report", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      source: "tg-admin",
+      severity: payload.severity ?? "error",
+      message: payload.message,
+      stack: payload.stack ?? null,
+      code: payload.code ?? null,
+      url: payload.url ?? (typeof window !== "undefined" ? window.location.href : null),
+      metadata: payload.metadata ?? null,
+    }),
+  }).catch(() => {});
+}
+
+function reportHttpError(
+  status: number,
+  message: string,
+  path: string,
+  method: string,
+  extra?: Record<string, unknown>,
+) {
+  reportTmaError({
+    severity: status >= 500 ? "error" : "warning",
+    message,
+    code: `HTTP_${status}`,
+    url: path.startsWith("/api") ? path : `${BASE}${path}`,
+    metadata: { method, status, ...extra },
+  });
+}
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -24,36 +65,32 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error((err as { error?: string }).error ?? `HTTP ${res.status}`);
+    const message = (err as { error?: string }).error ?? `HTTP ${res.status}`;
+    reportHttpError(res.status, message, `${BASE}${path}`, method, { body: err });
+    throw new Error(message);
   }
 
   return res.json() as Promise<T>;
 }
 
-function reportTmaError(message: string, metadata?: Record<string, unknown>) {
-  void fetch("/api/errors/report", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      source: "tg-admin",
-      message,
-      url: typeof window !== "undefined" ? window.location.href : null,
-      metadata,
-    }),
-  }).catch(() => {});
-}
-
 if (typeof window !== "undefined") {
   window.addEventListener("error", (event) => {
-    reportTmaError(event.message || "window.onerror", {
-      stack: event.error instanceof Error ? event.error.stack : undefined,
-      filename: event.filename,
+    reportTmaError({
+      message: event.message || "window.onerror",
+      stack: event.error instanceof Error ? event.error.stack ?? null : null,
+      url: event.filename || window.location.href,
+      metadata: {
+        lineno: event.lineno,
+        colno: event.colno,
+      },
     });
   });
   window.addEventListener("unhandledrejection", (event) => {
     const reason = event.reason;
-    reportTmaError(reason instanceof Error ? reason.message : String(reason), {
-      stack: reason instanceof Error ? reason.stack : undefined,
+    reportTmaError({
+      severity: "error",
+      message: reason instanceof Error ? reason.message : String(reason),
+      stack: reason instanceof Error ? reason.stack ?? null : null,
       code: "UNHANDLED_REJECTION",
     });
   });
@@ -77,7 +114,9 @@ export async function apiUpload<T>(path: string, formData: FormData): Promise<T>
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error((err as { error?: string }).error ?? `HTTP ${res.status}`);
+    const message = (err as { error?: string }).error ?? `HTTP ${res.status}`;
+    reportHttpError(res.status, message, `${BASE}${path}`, "POST", { body: err, upload: true });
+    throw new Error(message);
   }
 
   return res.json() as Promise<T>;

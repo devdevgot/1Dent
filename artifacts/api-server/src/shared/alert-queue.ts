@@ -4,6 +4,7 @@ import { notificationsTable, usersTable } from "@workspace/db";
 import { randomUUID } from "crypto";
 import { eq, and, inArray } from "drizzle-orm";
 import { logger } from "../lib/logger";
+import { attachWorkerFailedHandler } from "../modules/error-events/error-events.worker-capture";
 
 export interface AlertJobData {
   clinicId: string;
@@ -104,9 +105,7 @@ export function startAlertWorker(): Worker | null {
     },
   );
 
-  _worker.on("failed", (job, err) => {
-    logger.error({ jobId: job?.id, err }, "Red alert BullMQ job failed");
-  });
+  attachWorkerFailedHandler(_worker, QUEUE_NAME);
 
   return _worker;
 }

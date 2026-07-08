@@ -1,5 +1,6 @@
 import { Queue, Worker } from "bullmq";
 import { logger } from "../../lib/logger";
+import { attachWorkerFailedHandler } from "../error-events/error-events.worker-capture";
 import type { ExcelJobPayload, TrelloJobPayload, AiImportJobPayload } from "./migration.types";
 
 const QUEUE_NAME = "migration";
@@ -19,7 +20,7 @@ if (process.env["REDIS_URL"]) {
     defaultJobOptions: { attempts: 2, backoff: { type: "exponential", delay: 3000 } },
   });
 
-  new Worker<MigrationJobData>(
+  const migrationWorker = new Worker<MigrationJobData>(
     QUEUE_NAME,
     async (job) => {
       const { MigrationService } = await import("./migration.service");
@@ -35,6 +36,8 @@ if (process.env["REDIS_URL"]) {
     },
     { connection, concurrency: 2 },
   );
+
+  attachWorkerFailedHandler(migrationWorker, QUEUE_NAME);
 
   logger.info("[MigrationQueue] BullMQ worker started (excel + trello + ai-smart-import processing)");
 } else {
