@@ -91,8 +91,6 @@ import { InsufficientAiCreditsError, OpenRouterAiFailedError, PlanLimitExceededE
 import {
   renderMindMapScript,
   buildActiveMindMapContext,
-  findMindMapNodeByFsmState,
-  matchMindMapBranch,
   resolveMindMapNodeIdForState,
   type ScriptMindMapData,
 } from "./mindmap-utils";
@@ -2097,16 +2095,10 @@ export class ChatbotService {
             }
 
             const mindMapData = settings.scriptMindMap as ScriptMindMapData | undefined;
-            const problemNode = findMindMapNodeByFsmState(mindMapData, "collect_problem");
-            data.activeMindMapNodeId = problemNode
-              ? (matchMindMapBranch(mindMapData, problemNode.id, {
-                  serviceType: firstClassification.serviceType,
-                  userText: messageText,
-                })?.node.id ?? problemNode.id)
-              : resolveMindMapNodeIdForState(mindMapData, "collect_qualification", {
-                  serviceType: firstClassification.serviceType,
-                  userText: messageText,
-                });
+            data.activeMindMapNodeId = resolveMindMapNodeIdForState(mindMapData, "collect_problem", {
+              serviceType: firstClassification.serviceType,
+              userText: messageText,
+            });
 
             const hasKnowledge = hasClinicKnowledge(knowledgeContext);
             const earlyBranch = hasKnowledge
@@ -2324,19 +2316,10 @@ export class ChatbotService {
 
         const mindMapData = settings.scriptMindMap as ScriptMindMapData | undefined;
         const hasMindMap = !!(mindMapData?.nodes?.length);
-        const problemNode = findMindMapNodeByFsmState(mindMapData, "collect_problem");
-        if (problemNode) {
-          const branch = matchMindMapBranch(mindMapData, problemNode.id, {
-            serviceType: classification.serviceType,
-            userText: messageText,
-          });
-          data.activeMindMapNodeId = branch?.node.id ?? problemNode.id;
-        } else {
-          data.activeMindMapNodeId = resolveMindMapNodeIdForState(mindMapData, "collect_problem", {
-            serviceType: classification.serviceType,
-            userText: messageText,
-          });
-        }
+        data.activeMindMapNodeId = resolveMindMapNodeIdForState(mindMapData, "collect_problem", {
+          serviceType: classification.serviceType,
+          userText: messageText,
+        });
 
         logger.info(
           { clinicId, phone, classification },

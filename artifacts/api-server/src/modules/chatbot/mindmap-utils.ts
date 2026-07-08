@@ -66,19 +66,79 @@ function edgeMatches(
   return score;
 }
 
+/** Find parent node whose children include the target FSM state (for service-type branches). */
+export function findMindMapBranchParent(
+  mindMap: ScriptMindMapData | null | undefined,
+  childFsmState: ChatbotState | string,
+): ScriptMindMapNode | null {
+  if (!mindMap?.nodes?.length) return null;
+
+  const nodeById = new Map(mindMap.nodes.map((n) => [n.id, n]));
+  let best: ScriptMindMapNode | null = null;
+  let bestCount = 0;
+
+  for (const node of mindMap.nodes) {
+    const childCount = mindMap.edges.filter((edge) => {
+      if (edge.source !== node.id) return false;
+      return nodeById.get(edge.target)?.fsmState === childFsmState;
+    }).length;
+    if (childCount > bestCount) {
+      bestCount = childCount;
+      best = node;
+    }
+  }
+
+  return bestCount > 0 ? best : null;
+}
+
+function followMindMapPathToState(
+  mindMap: ScriptMindMapData,
+  fromNodeId: string,
+  targetState: ChatbotState | string,
+  maxDepth = 3,
+): ScriptMindMapNode | null {
+  const nodeById = new Map(mindMap.nodes.map((n) => [n.id, n]));
+  const visited = new Set<string>();
+  const queue: Array<{ id: string; depth: number }> = [{ id: fromNodeId, depth: 0 }];
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    if (visited.has(current.id)) continue;
+    visited.add(current.id);
+
+    const node = nodeById.get(current.id);
+    if (!node) continue;
+    if (node.fsmState === targetState) return node;
+
+    if (current.depth >= maxDepth) continue;
+    for (const edge of mindMap.edges) {
+      if (edge.source === current.id) {
+        queue.push({ id: edge.target, depth: current.depth + 1 });
+      }
+    }
+  }
+
+  return null;
+}
+
 /** Sync active mind-map node id when FSM state changes. */
 export function resolveMindMapNodeIdForState(
   mindMap: ScriptMindMapData | null | undefined,
   state: ChatbotState | string,
   opts: { serviceType?: string; userText?: string; activeNodeId?: string } = {},
 ): string | undefined {
-  if (opts.activeNodeId && mindMap?.nodes?.some((n) => n.id === opts.activeNodeId)) {
-    return opts.activeNodeId;
+  if (opts.activeNodeId && mindMap?.nodes?.length) {
+    const active = mindMap.nodes.find((n) => n.id === opts.activeNodeId);
+    if (active?.fsmState === state) return opts.activeNodeId;
+
+    const nextOnPath = followMindMapPathToState(mindMap, opts.activeNodeId, state);
+    if (nextOnPath) return nextOnPath.id;
   }
+
   const node = resolveActiveMindMapNode(mindMap, state, {
     serviceType: opts.serviceType,
     userText: opts.userText,
-    parentFsmState: state === "collect_problem" ? "collect_problem" : state,
+    parentFsmState: state,
   });
   return node?.id;
 }
@@ -124,11 +184,20 @@ export function resolveActiveMindMapNode(
 ): ScriptMindMapNode | null {
   if (!mindMap?.nodes?.length) return null;
 
-  const parentState = opts.parentFsmState ?? state;
-  const parent = findMindMapNodeByFsmState(mindMap, parentState);
-  if (parent && (opts.serviceType || opts.userText)) {
-    const branch = matchMindMapBranch(mindMap, parent.id, opts);
-    if (branch) return branch.node;
+  const branchState = opts.parentFsmState ?? state;
+
+  if (opts.serviceType || opts.userText) {
+    const branchParent = findMindMapBranchParent(mindMap, branchState);
+    if (branchParent) {
+      const branch = matchMindMapBranch(mindMap, branchParent.id, opts);
+      if (branch) return branch.node;
+    }
+
+    const parent = findMindMapNodeByFsmState(mindMap, branchState);
+    if (parent) {
+      const branch = matchMindMapBranch(mindMap, parent.id, opts);
+      if (branch) return branch.node;
+    }
   }
 
   return findMindMapNodeByFsmState(mindMap, state);
@@ -195,7 +264,7 @@ export function buildActiveMindMapContext(
     node = resolveActiveMindMapNode(mindMap, state, {
       serviceType: opts.serviceType,
       userText: opts.userText,
-      parentFsmState: state === "collect_problem" ? "collect_problem" : state,
+      parentFsmState: state,
     });
   }
   if (!node) return "";
