@@ -6,9 +6,10 @@ import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 import { db } from "@workspace/db";
 import { knowledgeSourcesTable, knowledgeScriptsTable, clinicsTable } from "@workspace/db";
-import { openrouter, FAST_MODEL, parseLlmJson, withTimeout } from "../../lib/openrouter-client";
+import { createChatCompletion, FAST_MODEL, parseLlmJson, assertOpenRouterConfigured } from "../../lib/openrouter-client";
 import { aiCreditsService } from "../../shared/ai-credits";
 import { scrapeUrl, extractFileText } from "./knowledge.service";
+import type { GeneratedScript } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -189,41 +190,22 @@ router.patch("/knowledge/scripts", ownerAdmin, async (req: Request, res: Respons
   } catch (err) { next(err); }
 });
 
-// ── POST /api/knowledge/generate ─────────────────────────────────────────────
-router.post("/knowledge/generate", ownerAdmin, async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const clinicId = req.user!.clinicId;
+function isValidGeneratedScript(value: unknown): value is GeneratedScript {
+  if (!value || typeof value !== "object") return false;
+  const script = value as GeneratedScript;
+  return typeof script.title === "string" && Array.isArray(script.nodes);
+}
 
-    await aiCreditsService.consumeCredits({
-      clinicId,
-      userId: req.user!.id,
-      feature: "knowledge_parse",
-      description: "Генерация скрипта из базы знаний",
-    });
+function buildKnowledgeGeneratePrompt(
+  clinicNameNote: string,
+  knowledgeText: string,
+  compact = false,
+): string {
+  const depthNote = compact
+    ? "Сделай по 5-6 главных ветвей с 2-3 дочерними узлами — компактно, но информативно."
+    : "8-10 главных ветвей, каждая с 3-5 дочерними узлами";
 
-    const [clinicRow, sources] = await Promise.all([
-      db.select({ name: clinicsTable.name }).from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1),
-      db.select().from(knowledgeSourcesTable).where(and(
-        eq(knowledgeSourcesTable.clinicId, clinicId),
-        eq(knowledgeSourcesTable.status, "ready"),
-      )),
-    ]);
-
-    const realClinicName = clinicRow[0]?.name ?? null;
-
-    if (sources.length === 0) {
-      return next(new ValidationError("Нет готовых источников знаний. Дождитесь обработки добавленных материалов."));
-    }
-
-    const knowledgeText = sources
-      .map((s) => `=== ИСТОЧНИК: ${s.name} ===\n${(s.extractedText ?? "").slice(0, 10000)}`)
-      .join("\n\n---\n\n");
-
-    const clinicNameNote = realClinicName
-      ? `ВАЖНО: Настоящее название клиники — «${realClinicName}». Используй именно это название везде, где нужно упомянуть клинику (в приветствиях, прощаниях, ссылках). НЕ используй названия платформ (2ГИС, Яндекс, Google, Instagram и т.п.) как название клиники.`
-      : `ВАЖНО: В текстах приветствий и прощаний вместо конкретного названия клиники используй плейсхолдер {{clinic_name}} — он будет автоматически заменён на реальное название.`;
-
-    const prompt = `Ты — ведущий эксперт по продажам и коммуникациям в стоматологии. Тебе предоставлены все материалы реальной стоматологической клиники. Твоя задача — создать два исчерпывающих, детальных скрипта продаж, которые администратор или чат-бот использует для ведения пациентов от первого касания до записи на приём.
+  return `Ты — ведущий эксперт по продажам и коммуникациям в стоматологии. Тебе предоставлены все материалы реальной стоматологической клиники. Твоя задача — создать два исчерпывающих, детальных скрипта продаж, которые администратор или чат-бот использует для ведения пациентов от первого касания до записи на приём.
 
 ${clinicNameNote}
 
@@ -242,7 +224,7 @@ ${knowledgeText}
 6. Обязательно отобрази в ветви «Презентация решения / Подбор врача» реальную логику системы: врач подбирается по KPI (выручка, загрузка, конверсия), дневной ёмкости и срочности; при срочных случаях — у кого ближайший свободный слот; при повторных пациентах — преимущественно к их врачу; при низкой уверенности в запросе — к терапевту или наименее загруженному. Не обещай фиксированное распределение 50/30/20 — система использует взвешенный выбор среди лучших кандидатов.
 
 Структура primaryScript (первичный пациент — звонит или пишет впервые):
-- 8-10 главных ветвей, каждая с 3-5 дочерними узлами
+- ${depthNote}
 - Обязательные ветви: Приветствие → Выявление запроса → Презентация решения → Работа с возражениями → Ценовой разговор → Запись на приём (сбор имени, ИИН) → Выбор даты и времени → Выбор филиала/адреса клиники (предложи варианты адресов из материалов клиники и попроси пациента выбрать) → Подтверждение и напоминание (короткое саммари деталей записи: дата, время, врач, адрес филиала) → Напоминание при зависании диалога (30 минут без ответа пациента — мягко и вежливо напомнить, что вы остановились на записи, и предложить продолжить) → FAQ по клинике
 - В ветви "Выявление запроса" — разные сценарии: боль/острая проблема, эстетика, профилактика, ребёнок, протезирование
 - В ветви "Работа с возражениями" — конкретные ответы: "дорого", "подумаю", "был плохой опыт", "боюсь боли", "нет времени"
@@ -286,23 +268,84 @@ ${knowledgeText}
     "nodes": []
   }
 }`;
+}
 
-    const completion = await withTimeout(
-      openrouter.chat.completions.create({
+async function generateKnowledgeScripts(
+  clinicNameNote: string,
+  knowledgeText: string,
+): Promise<{ primaryScript: GeneratedScript; repeatScript: GeneratedScript } | null> {
+  for (const compact of [false, true]) {
+    const completion = await createChatCompletion(
+      {
         model: FAST_MODEL,
-        messages: [{ role: "user", content: prompt }],
+        messages: [{ role: "user", content: buildKnowledgeGeneratePrompt(clinicNameNote, knowledgeText, compact) }],
         response_format: { type: "json_object" },
         temperature: 0.4,
-        max_tokens: 16000,
-      }),
-      90000,
-      "knowledge-generate",
+        max_tokens: compact ? 12000 : 16000,
+      },
+      { timeoutMs: 120_000, label: "knowledge-generate" },
     );
 
     const raw = completion.choices[0]?.message?.content ?? null;
     const parsed = parseLlmJson<{ primaryScript: unknown; repeatScript: unknown }>(raw);
+    if (
+      parsed &&
+      isValidGeneratedScript(parsed.primaryScript) &&
+      isValidGeneratedScript(parsed.repeatScript)
+    ) {
+      return {
+        primaryScript: parsed.primaryScript,
+        repeatScript: parsed.repeatScript,
+      };
+    }
+  }
+  return null;
+}
 
-    if (!parsed) {
+// ── POST /api/knowledge/generate ─────────────────────────────────────────────
+router.post("/knowledge/generate", ownerAdmin, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    assertOpenRouterConfigured();
+    const clinicId = req.user!.clinicId;
+
+    const [clinicRow, sources] = await Promise.all([
+      db.select({ name: clinicsTable.name }).from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1),
+      db.select().from(knowledgeSourcesTable).where(and(
+        eq(knowledgeSourcesTable.clinicId, clinicId),
+        eq(knowledgeSourcesTable.status, "ready"),
+      )),
+    ]);
+
+    if (sources.length === 0) {
+      return next(new ValidationError("Нет готовых источников знаний. Дождитесь обработки добавленных материалов."));
+    }
+
+    const usableSources = sources.filter((s) => (s.extractedText ?? "").trim().length >= 20);
+    if (usableSources.length === 0) {
+      return next(new ValidationError(
+        "Источники не содержат достаточно текста для генерации. Добавьте материалы с описанием клиники или исправьте ошибочные ссылки.",
+      ));
+    }
+
+    await aiCreditsService.consumeCredits({
+      clinicId,
+      userId: req.user!.id,
+      feature: "knowledge_parse",
+      description: "Генерация скрипта из базы знаний",
+    });
+
+    const realClinicName = clinicRow[0]?.name ?? null;
+
+    const knowledgeText = usableSources
+      .map((s) => `=== ИСТОЧНИК: ${s.name} ===\n${(s.extractedText ?? "").slice(0, 8000)}`)
+      .join("\n\n---\n\n");
+
+    const clinicNameNote = realClinicName
+      ? `ВАЖНО: Настоящее название клиники — «${realClinicName}». Используй именно это название везде, где нужно упомянуть клинику (в приветствиях, прощаниях, ссылках). НЕ используй названия платформ (2ГИС, Яндекс, Google, Instagram и т.п.) как название клиники.`
+      : `ВАЖНО: В текстах приветствий и прощаний вместо конкретного названия клиники используй плейсхолдер {{clinic_name}} — он будет автоматически заменён на реальное название.`;
+
+    const generated = await generateKnowledgeScripts(clinicNameNote, knowledgeText);
+    if (!generated) {
       return next(new ValidationError("ИИ не смог сгенерировать скрипт. Попробуйте ещё раз."));
     }
 
@@ -311,19 +354,19 @@ ${knowledgeText}
       .values({
         id: randomUUID(),
         clinicId,
-        primaryScript: parsed.primaryScript as never,
-        repeatScript: parsed.repeatScript as never,
+        primaryScript: generated.primaryScript as never,
+        repeatScript: generated.repeatScript as never,
       })
       .onConflictDoUpdate({
         target: knowledgeScriptsTable.clinicId,
         set: {
-          primaryScript: parsed.primaryScript as never,
-          repeatScript: parsed.repeatScript as never,
+          primaryScript: generated.primaryScript as never,
+          repeatScript: generated.repeatScript as never,
           generatedAt: new Date(),
         },
       });
 
-    res.json({ success: true, data: { primaryScript: parsed.primaryScript, repeatScript: parsed.repeatScript } });
+    res.json({ success: true, data: { primaryScript: generated.primaryScript, repeatScript: generated.repeatScript } });
   } catch (err) { next(err); }
 });
 
