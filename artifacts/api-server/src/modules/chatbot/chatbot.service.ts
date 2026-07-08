@@ -90,6 +90,7 @@ import { planLimitsService } from "../../shared/plan-limits.service";
 import { InsufficientAiCreditsError, OpenRouterAiFailedError, PlanLimitExceededError } from "../../shared/errors/index";
 import {
   renderMindMapScript,
+  renderMindMapCompactPath,
   buildActiveMindMapContext,
   resolveMindMapNodeIdForState,
   type ScriptMindMapData,
@@ -106,6 +107,8 @@ import {
 import { retrieveRelevantKnowledge } from "./knowledge-retrieval";
 import {
   hasClinicKnowledge,
+  isUsableClinicKnowledge,
+  formatOfficialBranchesForPrompt,
   buildRefusalFallback,
   resolveBranchFromMessage,
 } from "./clinic-knowledge";
@@ -950,6 +953,7 @@ type UnifiedScriptPromptOpts = {
   activeMindMapNodeId?: string;
   channel?: "playground" | "whatsapp";
   backendContext?: string;
+  officialBranches?: string[];
 };
 
 /** Shared prompt for Playground preview and WhatsApp — same script, mind map, doctors, and rules. */
@@ -1022,13 +1026,17 @@ function buildUnifiedScriptPrompt(
     settings.scriptMindMap as ScriptMindMapData | undefined,
     resolvePlaceholders,
   );
-  const mindMapSection = renderMindMapScript(mindMap);
   const activeMindMapSection = buildActiveMindMapContext(mindMap, fsmState, {
     serviceType: opts?.serviceType,
     userText: opts?.userText,
     activeNodeId: opts?.activeMindMapNodeId,
   });
-  const effectiveScriptContext = mindMapSection ? "" : scriptContext;
+  const mindMapSection = opts?.activeMindMapNodeId
+    ? renderMindMapCompactPath(mindMap, opts.activeMindMapNodeId)
+    : renderMindMapScript(mindMap);
+  const effectiveScriptContext = mindMapSection || activeMindMapSection ? "" : scriptContext;
+
+  const branchesSection = formatOfficialBranchesForPrompt(opts?.officialBranches ?? []);
 
   const channelNote =
     channel === "playground"
@@ -1083,15 +1091,15 @@ ${nowContext}
 6. На этапе подбора врача озвучь имя, рейтинг (из контекста) и 1–2 причины выбора (специализация, загрузка, ближайший слот). Если пациент просит «другого врача» — предложи альтернативу из топ-3
 7. После подтверждения врача спроси готовность записаться. Если готов — дата и время. Если сомневается — отработай возражения и снова предложи запись. Если отказ — поблагодари и оставь контакт
 8. Если филиал уже выбран — не спрашивай его повторно при выборе времени
-9. Отвечай коротко: 1–3 предложения максимум
-10. Используй только информацию из материалов клиники и списка врачей — не придумывай
+9. Отвечай КОРОТКО: одно предложение, максимум два. Без вступлений, повторов и «воды»
+10. Используй только информацию из материалов клиники, официального списка филиалов и списка врачей — не придумывай
 11. Все даты и время — только в часовом поясе Казахстана (${KZ_UTC_OFFSET_LABEL}, Алматы/Астана). Сегодняшняя дата: ${todayYmdPlayground}. НИКОГДА не предлагай и не подтверждай время которое уже прошло (сейчас ${nowTimeStr}). Если пациент называет время из списка свободных слотов — подтверждай его вместе с полной датой из списка. Если пациент называет прошедшее время сегодня — объясни что оно уже прошло и предложи ближайший доступный слот. Все слоты в списке врачей уже являются будущими.
-12. Адреса филиалов, телефоны, часы работы и акции — ТОЛЬКО из материалов клиники (сайт и ссылки в настройках чатбота). Не используй вымышленные адреса. Если материалов нет — не перечисляй филиалы, попроси уточнить адрес или предложи оператора.
-13. Отвечай мгновенно и по делу — как опытный менеджер по продажам: один вопрос за раз, мягко веди к записи, не дави.
-14. Если пациент сомневается — отработай возражение и снова предложи конкретный следующий шаг (время, врач, филиал).
-15. Не завершай диалог, пока пациент явно не отказался («не надо», «не интересно») или не записался — при паузе система отправит follow-up автоматически.
+12. Адреса и филиалы — ТОЛЬКО из блока «ОФИЦИАЛЬНЫЕ ФИЛИАЛЫ» и материалов клиники. ЗАПРЕЩЕНО придумывать адреса, улицы и названия. Если официального списка нет — один короткий вопрос об адресе, без выдуманных вариантов.
+13. Отвечай мгновенно и по делу — один вопрос за раз, мягко веди к записи, не дави.
+14. Если пациент сомневается — отработай возражение и предложи один конкретный следующий шаг.
+15. НЕ повторяй вопрос, если пациент его проигнорировал или ответил на другую тему. Спроси один раз и жди — не «дожимай» в каждом сообщении. Если пациент молчит — система напомнит позже.
 16. КРИТИЧНО: скидки, акции, «бесплатная консультация/осмотр», рассрочка — упоминай ТОЛЬКО если они явно указаны в материалах клиники или прайсе. НИКОГДА не придумывай проценты скидок и специальные предложения. Если цены нет в прайсе — скажи «точную стоимость назовёт врач после осмотра».
-${kazakhNote}${instructionsExtra}${doctorsSection}${priceListSection}${mindMapSection}${activeMindMapSection}${effectiveScriptContext}${knowledgeSection}${backendSection}`;
+${kazakhNote}${instructionsExtra}${branchesSection}${doctorsSection}${priceListSection}${mindMapSection}${activeMindMapSection}${effectiveScriptContext}${knowledgeSection}${backendSection}`;
 }
 
 /** Renders the clinic's script blocks for injection into prompts. */
@@ -1164,19 +1172,30 @@ function getLeadNurtureTemplates(settings: Awaited<ReturnType<typeof getSettings
 
 type CachedSingleBranch = { name: string | null; expiresAt: number };
 const singleBranchCache = new Map<string, CachedSingleBranch>();
+type CachedBranchList = { names: string[]; expiresAt: number };
+const branchListCache = new Map<string, CachedBranchList>();
 
-async function getSingleBranchName(clinicId: string): Promise<string | null> {
-  const cached = singleBranchCache.get(clinicId);
-  if (cached && cached.expiresAt > Date.now()) return cached.name;
+async function loadClinicBranchNames(clinicId: string): Promise<string[]> {
+  const cached = branchListCache.get(clinicId);
+  if (cached && cached.expiresAt > Date.now()) return cached.names;
 
   const rows = await db
     .select({ name: clinicBranchesTable.name })
     .from(clinicBranchesTable)
     .where(eq(clinicBranchesTable.clinicId, clinicId))
-    .limit(2)
     .catch(() => [] as Array<{ name: string }>);
 
-  const name = rows.length === 1 ? rows[0]!.name : null;
+  const names = rows.map((r) => r.name).filter(Boolean);
+  branchListCache.set(clinicId, { names, expiresAt: Date.now() + 5 * 60 * 1000 });
+  return names;
+}
+
+async function getSingleBranchName(clinicId: string): Promise<string | null> {
+  const cached = singleBranchCache.get(clinicId);
+  if (cached && cached.expiresAt > Date.now()) return cached.name;
+
+  const names = await loadClinicBranchNames(clinicId);
+  const name = names.length === 1 ? names[0]! : null;
   singleBranchCache.set(clinicId, { name, expiresAt: Date.now() + 5 * 60 * 1000 });
   return name;
 }
@@ -1608,7 +1627,7 @@ export class ChatbotService {
       await persistSession(session);
       return makeTurnResult(session, response, simulatedActions, {
         clinicName: resolvedClinicNameForReply,
-        maxParts: session.state === "greeting" ? 2 : 3,
+        maxParts: 2,
         recentMessages: recentMessagesForReply,
       });
     };
@@ -1674,13 +1693,15 @@ export class ChatbotService {
     let priceListContext: string;
     let doctorsWithSlots: DoctorWithSlots[];
     let clinicName: string | undefined;
+    let clinicBranchNames: string[] = [];
     try {
-      [managerExamples, knowledgeContext, priceListContext, doctorsWithSlots, clinicName] = await Promise.all([
+      [managerExamples, knowledgeContext, priceListContext, doctorsWithSlots, clinicName, clinicBranchNames] = await Promise.all([
         getManagerExamples(clinicId),
         loadKnowledgeContext(clinicId, messageText),
         loadPriceListContext(clinicId),
         getClinicDoctorsWithSlots(clinicId, calendarConfig).catch(() => [] as DoctorWithSlots[]),
         db.select({ name: clinicsTable.name }).from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1).catch(() => []).then((rows) => rows[0]?.name),
+        dryRun ? Promise.resolve([] as string[]) : loadClinicBranchNames(clinicId),
       ]);
     } catch (err) {
       logger.error({ err }, "ChatbotService: failed to load context");
@@ -1779,9 +1800,11 @@ export class ChatbotService {
           fsmState: promptState,
           serviceType: data.serviceType,
           userText: upOpts?.userText ?? messageText,
-          activeMindMapNodeId: data.activeMindMapNodeId,
+          activeMindMapNodeId: data.activeMindMapNodeId
+            ?? resolveMindMapNodeIdForState(settings.scriptMindMap as ScriptMindMapData | undefined, promptState),
           channel: promptChannel,
           backendContext: upOpts?.backendContext,
+          officialBranches: clinicBranchNames,
         },
       );
 
@@ -2372,7 +2395,7 @@ export class ChatbotService {
           );
           const fallback =
             data.qualificationPhase === "branch"
-              ? buildBranchPromptFallback(hasKnowledge)
+              ? buildBranchPromptFallback(hasKnowledge, clinicBranchNames)
               : buildSymptomsPromptFallback();
           response = mergeReply(aiReply, fallback);
           session.state = "collect_qualification";
@@ -2464,7 +2487,7 @@ export class ChatbotService {
             : snippet;
         }
 
-        const hasKnowledge = hasClinicKnowledge(knowledgeContext);
+        const hasKnowledge = isUsableClinicKnowledge(knowledgeContext);
         const phase = data.qualificationPhase ?? (data.selectedBranch ? "branch" : "symptoms");
         const inBranchPhase = phase === "branch" || !!data.selectedBranch;
 
@@ -2472,15 +2495,42 @@ export class ChatbotService {
           messageText,
           knowledgeContext,
           extractBranchFromText,
-          { allowFreeText: inBranchPhase },
+          { allowFreeText: inBranchPhase, officialBranches: clinicBranchNames },
         );
 
         if (extractedBranch) {
           data.selectedBranch = extractedBranch;
           data.confusedCount = 0;
+          data.branchAskCount = 0;
         }
 
         data.qualificationAsked = true;
+
+        const branchBackendContext = (): string => {
+          if (clinicBranchNames.length > 1) {
+            return `Спроси филиал одним коротким вопросом — только из списка: ${clinicBranchNames.join(", ")}. Не придумывай адреса.`;
+          }
+          if (clinicBranchNames.length === 1) {
+            return `Единственный филиал: «${clinicBranchNames[0]}». Подтверди коротко и иди дальше.`;
+          }
+          return hasKnowledge
+            ? "Спроси адрес одним коротким вопросом. Не перечисляй выдуманные филиалы."
+            : "Спроси адрес одним коротким вопросом.";
+        };
+
+        const tryProceedWithoutBranch = (): boolean => {
+          const askCount = data.branchAskCount ?? 0;
+          if (askCount < 1) return false;
+          if (clinicBranchNames.length === 1) {
+            data.selectedBranch = clinicBranchNames[0];
+            return true;
+          }
+          if (messageText.trim().length > 3) {
+            data.selectedBranch = messageText.trim().slice(0, 200);
+            return true;
+          }
+          return false;
+        };
 
         if (phase === "symptoms") {
           data.qualificationPhase = "branch";
@@ -2489,39 +2539,48 @@ export class ChatbotService {
               activeNodeId: data.activeMindMapNodeId,
             }) ?? data.activeMindMapNodeId;
 
-          if (data.selectedBranch) {
-            // Branch already mentioned — proceed to doctor ranking
-          } else {
-            const aiBranch = await generateChatbotResponse(
-              up("collect_qualification", {
-                backendContext: `Симптомы приняты. Срочность: ${data.urgency ?? "planned"}. ${hasKnowledge ? "Перечисли филиалы из материалов клиники." : "Попроси указать адрес или филиал."}`,
-              }),
-              recentMessages,
-              messageText,
-              managerExamples,
-            );
-            response = mergeReply(aiBranch, buildBranchPromptFallback(hasKnowledge));
-            session.state = "collect_qualification";
-            session.data = data;
-            break;
+          if (!data.selectedBranch) {
+            if (tryProceedWithoutBranch()) {
+              // proceed to doctor ranking below
+            } else {
+              data.branchAskCount = (data.branchAskCount ?? 0) + 1;
+              const aiBranch = await generateChatbotResponse(
+                up("collect_qualification", {
+                  backendContext: `Симптомы приняты. Срочность: ${data.urgency ?? "planned"}. ${branchBackendContext()}`,
+                }),
+                recentMessages,
+                messageText,
+                managerExamples,
+              );
+              response = mergeReply(aiBranch, buildBranchPromptFallback(hasKnowledge, clinicBranchNames));
+              session.state = "collect_qualification";
+              session.data = data;
+              break;
+            }
           }
         }
 
         if (!data.selectedBranch) {
-          const aiBranch = await generateChatbotResponse(
-            up("collect_qualification", {
-              backendContext: hasKnowledge
-                ? "Филиал не выбран — предложи адреса из материалов клиники."
-                : "Филиал не выбран — попроси пациента написать удобный адрес.",
-            }),
-            recentMessages,
-            messageText,
-            managerExamples,
-          );
-          response = mergeReply(aiBranch, buildBranchPromptFallback(hasKnowledge));
-          session.state = "collect_qualification";
-          session.data = data;
-          break;
+          if (tryProceedWithoutBranch()) {
+            // proceed
+          } else if ((data.branchAskCount ?? 0) >= 1) {
+            session.state = "collect_qualification";
+            session.data = data;
+            response = null;
+            break;
+          } else {
+            data.branchAskCount = (data.branchAskCount ?? 0) + 1;
+            const aiBranch = await generateChatbotResponse(
+              up("collect_qualification", { backendContext: branchBackendContext() }),
+              recentMessages,
+              messageText,
+              managerExamples,
+            );
+            response = mergeReply(aiBranch, buildBranchPromptFallback(hasKnowledge, clinicBranchNames));
+            session.state = "collect_qualification";
+            session.data = data;
+            break;
+          }
         }
 
         const ranked = await assignRankedDoctor(clinicId, data, dryRun);
@@ -3861,7 +3920,7 @@ export class ChatbotService {
   }
 
   async checkInactivityReminders() {
-    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+    const sixtyMinutesAgo = new Date(Date.now() - 60 * 60 * 1000);
     const inactiveSessions = await db
       .select()
       .from(chatbotSessionsTable)
@@ -3869,7 +3928,7 @@ export class ChatbotService {
         and(
           ne(chatbotSessionsTable.state, "done"),
           ne(chatbotSessionsTable.state, "human_takeover"),
-          lte(chatbotSessionsTable.updatedAt, thirtyMinutesAgo)
+          lte(chatbotSessionsTable.updatedAt, sixtyMinutesAgo)
         )
       );
 
@@ -3899,14 +3958,17 @@ export class ChatbotService {
       let doctorsWithSlots: DoctorWithSlots[];
       let clinicName: string | undefined;
 
+      let clinicBranchNames: string[] = [];
+
       try {
-        const [settingsRow, managerExamplesRow, knowledgeContextRow, priceListContextRow, doctorsWithSlotsRow, clinicRow] = await Promise.all([
+        const [settingsRow, managerExamplesRow, knowledgeContextRow, priceListContextRow, doctorsWithSlotsRow, clinicRow, branchNamesRow] = await Promise.all([
           getSettings(session.clinicId),
           getManagerExamples(session.clinicId),
           loadKnowledgeContext(session.clinicId),
           loadPriceListContext(session.clinicId),
           getClinicDoctorsWithSlots(session.clinicId).catch(() => [] as DoctorWithSlots[]),
           db.select({ name: clinicsTable.name }).from(clinicsTable).where(eq(clinicsTable.id, session.clinicId)).limit(1).catch(() => []),
+          loadClinicBranchNames(session.clinicId),
         ]);
         settings = settingsRow;
         managerExamples = managerExamplesRow;
@@ -3914,6 +3976,7 @@ export class ChatbotService {
         priceListContext = priceListContextRow;
         doctorsWithSlots = doctorsWithSlotsRow;
         clinicName = clinicRow[0]?.name ?? undefined;
+        clinicBranchNames = branchNamesRow;
       } catch (err) {
         logger.error({ err }, "[ChatbotService] Failed to load context for inactivity reminder");
         continue;
@@ -3929,9 +3992,8 @@ export class ChatbotService {
         reminderData.selectedBranch ? `Филиал: ${reminderData.selectedBranch}.` : null,
       ].filter(Boolean).join(" ");
 
-      const stateGuidance = `Пациент начал процесс записи в клинику, но остановился на этапе «${session.state}» и не отвечает более 30 минут. ${contextBits}
-Вежливо обратись к нему, сошлись на контекст диалога (что обсуждали), и предложи продолжить. Предложи свободный слот, если дошли до выбора времени/врача.
-Отвечай вежливо, ненавязчиво, коротко (1–3 предложения).`;
+      const stateGuidance = `Пациент не отвечает более часа (этап «${session.state}»). ${contextBits}
+Отправь ОДНО короткое напоминание (1 предложение). Не повторяй вопрос, который уже задавали — предложи продолжить или напиши что будете на связи. Без давления.`;
 
       // Load recent messages
       const recentRows = await db
@@ -3960,6 +4022,7 @@ export class ChatbotService {
             ?? resolveMindMapNodeIdForState(mindMapForReminder, session.state as ChatbotState),
           channel: "whatsapp",
           backendContext: stateGuidance,
+          officialBranches: clinicBranchNames,
         },
       );
 
@@ -3969,7 +4032,7 @@ export class ChatbotService {
         "Отправь вежливое напоминание (reminder)",
         managerExamples,
       );
-      const reminderReply = mergeReply(aiReminder, "Здравствуйте! 😊 Мы остановились на записи — могу предложить ближайшие свободные окна. Продолжим?");
+      const reminderReply = mergeReply(aiReminder, "Если актуально — напишите, продолжим запись 😊");
       if (reminderReply.parts.length > 0) {
         await sendOutboundReply(session.clinicId, session.phone, reminderReply).catch((err) =>
           logger.error({ err }, "[ChatbotService] Failed to send inactivity reminder"),
@@ -4059,14 +4122,16 @@ export class ChatbotService {
       let priceListContext = "";
       let doctorsWithSlots: DoctorWithSlots[] = [];
       let clinicName: string | undefined;
+      let clinicBranchNames: string[] = [];
 
       try {
-        [managerExamples, knowledgeContext, priceListContext, doctorsWithSlots, clinicName] = await Promise.all([
+        [managerExamples, knowledgeContext, priceListContext, doctorsWithSlots, clinicName, clinicBranchNames] = await Promise.all([
           getManagerExamples(row.clinicId),
           loadKnowledgeContext(row.clinicId, data.problemDescription ?? ""),
           loadPriceListContext(row.clinicId),
           getClinicDoctorsWithSlots(row.clinicId).catch(() => [] as DoctorWithSlots[]),
           db.select({ name: clinicsTable.name }).from(clinicsTable).where(eq(clinicsTable.id, row.clinicId)).limit(1).then((rows) => rows[0]?.name),
+          loadClinicBranchNames(row.clinicId),
         ]);
       } catch (err) {
         logger.error({ err }, "[ChatbotService] Failed to load context for lead nurture");
@@ -4074,7 +4139,7 @@ export class ChatbotService {
         continue;
       }
 
-      const nurtureGuidance = `Пациент не завершил запись (этап «${state}»). Отправь мягкое follow-up сообщение — дожим без давления. Это этап ${stage + 1} из 3 серии напоминаний.`;
+      const nurtureGuidance = `Пациент не завершил запись (этап «${state}»). Одно короткое follow-up — без повторения уже заданных вопросов и без давления. Этап ${stage + 1} из 3.`;
 
       const helperPrompt = buildUnifiedScriptPrompt(
         settings,
@@ -4088,6 +4153,7 @@ export class ChatbotService {
           activeMindMapNodeId: data.activeMindMapNodeId,
           channel: "whatsapp",
           backendContext: `${nurtureGuidance}\n\nБазовый шаблон:\n${fallbackText}`,
+          officialBranches: clinicBranchNames,
         },
       );
 

@@ -6,6 +6,7 @@ import {
   findMindMapBranchParent,
   matchMindMapBranch,
   resolveMindMapNodeIdForState,
+  renderMindMapCompactPath,
 } from "./mindmap-utils.ts";
 
 const mindMap = buildDefaultBookingMindMap();
@@ -42,5 +43,9 @@ assert.doesNotThrow(() => {
     userText: "болит зуб",
   });
 });
+
+const compact = renderMindMapCompactPath(mindMap, "step2-qualification");
+assert.match(compact, /step2-qualification|квалиф/i);
+assert.doesNotMatch(compact, /step1-hygiene/);
 
 console.log("mindmap-utils tests passed");
