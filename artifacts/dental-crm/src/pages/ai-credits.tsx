@@ -48,7 +48,7 @@ export default function AiCreditsPage() {
     <PageShell className="pb-8">
       <PageHeader
         title={t("aiCredits.title")}
-        onBack={() => setLocation("/menu")}
+        onBack={() => setLocation("/account-settings")}
         sticky
         right={
           <button

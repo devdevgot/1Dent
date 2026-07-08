@@ -111,12 +111,17 @@
     "errorDesc": "Failed to log out. Please try again."
   },
   "menuPage": {
-    "title": "Menu",
+    "title": "Services",
     "settings": "Settings",
     "language": "App language",
     "notifications": "Notifications",
     "noShortcuts": "No sections available",
-    "copyright": "© 2025 1Dent"
+    "copyright": "© 2025 1Dent",
+    "categoryClinic": "Clinic",
+    "categoryFinance": "Finance",
+    "categoryAutomation": "Automation",
+    "categoryAdmin": "Administration",
+    "categoryWarehouse": "Warehouse"
   },
   "role": {
     "owner": "Owner",

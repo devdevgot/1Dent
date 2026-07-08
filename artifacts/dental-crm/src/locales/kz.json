@@ -111,12 +111,17 @@
     "errorDesc": "Жүйеден шығу мүмкін болмады. Қайталап көріңіз."
   },
   "menuPage": {
-    "title": "Мәзір",
+    "title": "Сервистер",
     "settings": "Баптаулар",
     "language": "Қолданба тілі",
     "notifications": "Хабарландырулар",
     "noShortcuts": "Қолжетімді бөлімдер жоқ",
-    "copyright": "© 2025 1Dent"
+    "copyright": "© 2025 1Dent",
+    "categoryClinic": "Клиника",
+    "categoryFinance": "Қаржы",
+    "categoryAutomation": "Автоматтандыру",
+    "categoryAdmin": "Әкімшілік",
+    "categoryWarehouse": "Қойма"
   },
   "role": {
     "owner": "Иесі",
