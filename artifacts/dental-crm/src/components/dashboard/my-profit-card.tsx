@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
-import { ChevronRight, Loader2 } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useBranchStore, type ClinicBranch } from "@/hooks/use-branch-store";
@@ -161,7 +161,7 @@ export function MyProfitCard({ listPreset, onListPresetChange, onSelectBranch }:
             </div>
             <div className="shrink-0 text-right">
               {loadingRevenues || row.revenue === null ? (
-                <Loader2 className="w-4 h-4 text-[var(--text-subtle)] animate-spin ml-auto" />
+                <div className="h-4 w-16 rounded bg-[var(--surface-2)] animate-pulse ml-auto" />
               ) : (
                 <p className="font-bold text-body text-[var(--text)] tabular-nums">
                   {fmtRevenue(row.revenue)}

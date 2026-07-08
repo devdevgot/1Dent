@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { useLocation } from "wouter";
 import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader } from "@/components/layout/page-header";
+import { ListRowsSkeleton } from "@/components/skeletons";
 
 const ACTION_TYPES = ["CREATE", "UPDATE", "DELETE"];
 const ENTITY_TYPES = ["patients", "procedures", "inventory", "users", "followups"];
@@ -299,10 +300,7 @@ export default function LogsPage() {
               </button>
             </div>
           ) : isLoading ? (
-            <div className="p-12 text-center text-[var(--text-secondary)] text-body flex flex-col items-center gap-2">
-              <div className="w-6 h-6 border-2 border-[#1f75fe] border-t-transparent rounded-full animate-spin"></div>
-              <span>{t("common.loading")}</span>
-            </div>
+            <ListRowsSkeleton rows={6} avatar={false} card={false} className="p-2" />
           ) : logs.length === 0 ? (
             <div className="p-12 text-center text-[var(--text-secondary)] text-sm">
               {t("logs.empty")}

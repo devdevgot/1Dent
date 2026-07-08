@@ -20,7 +20,7 @@ export default function WarehouseDashboard() {
   }, []);
 
   const { data: inventoryData, isLoading, refetch } = useListInventory();
-  const { data: proceduresData } = useListProcedures();
+  const { data: proceduresData, isLoading: proceduresLoading } = useListProcedures();
 
   const items = inventoryData?.data?.items ?? [];
   const lowStockItems = items.filter((item) => item.quantity <= item.minQuantity);
@@ -95,9 +95,9 @@ export default function WarehouseDashboard() {
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { icon: Package, label: t("warehouseDashboard.totalItems"), value: isLoading ? "—" : items.length, delay: 0, iconBg: "bg-[var(--surface-2)] text-[var(--ds-primary)]" },
-            { icon: TrendingDown, label: t("warehouseDashboard.lowStock"), value: isLoading ? "—" : lowStockItems.length, delay: 0.05, iconBg: "bg-[var(--warning-light)] text-[var(--warning)]" },
-            { icon: Activity, label: t("warehouseDashboard.totalValue"), value: isLoading ? "—" : `₸ ${totalValue.toLocaleString("ru-KZ")}`, delay: 0.1, iconBg: "bg-[var(--success-light)] text-[var(--success)]", small: true },
+            { icon: Package, label: t("warehouseDashboard.totalItems"), value: isLoading ? <span className="dash-skeleton inline-block h-8 w-16 rounded" /> : items.length, delay: 0, iconBg: "bg-[var(--surface-2)] text-[var(--ds-primary)]" },
+            { icon: TrendingDown, label: t("warehouseDashboard.lowStock"), value: isLoading ? <span className="dash-skeleton inline-block h-8 w-16 rounded" /> : lowStockItems.length, delay: 0.05, iconBg: "bg-[var(--warning-light)] text-[var(--warning)]" },
+            { icon: Activity, label: t("warehouseDashboard.totalValue"), value: isLoading ? <span className="dash-skeleton inline-block h-8 w-24 rounded" /> : `₸ ${totalValue.toLocaleString("ru-KZ")}`, delay: 0.1, iconBg: "bg-[var(--success-light)] text-[var(--success)]", small: true },
           ].map((stat) => (
             <motion.div
               key={stat.label}
@@ -199,7 +199,13 @@ export default function WarehouseDashboard() {
               <Activity className="w-5 h-5 text-[var(--ds-primary)]" />
               {t("warehouseDashboard.recentWriteoffs")}
             </h3>
-            {recentCompleted.length === 0 ? (
+            {proceduresLoading ? (
+              <div className="space-y-3">
+                {[0, 1, 2, 3].map((i) => (
+                  <div key={i} className="dash-skeleton h-10 rounded-xl" />
+                ))}
+              </div>
+            ) : recentCompleted.length === 0 ? (
               <div className="text-center py-8">
                 <Activity className="w-10 h-10 text-[var(--text-subtle)]/30 mx-auto mb-3" />
                 <p className="text-[var(--text-secondary)] text-body font-medium">{t("warehouseDashboard.noWriteoffs")}</p>

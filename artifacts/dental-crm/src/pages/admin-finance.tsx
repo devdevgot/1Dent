@@ -23,6 +23,7 @@ import { format, startOfDay, startOfWeek, startOfMonth, startOfYear, endOfDay, e
 import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { PeriodPills } from "@/components/layout/period-pills";
+import { Bone, SkeletonCard, TableSkeleton } from "@/components/skeletons";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -401,6 +402,16 @@ export default function AdminFinancePage() {
         )}
 
         {/* ── Чистая прибыль + Маржа ── */}
+        {anyLoading && (
+          <div className="grid grid-cols-2 gap-3">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <SkeletonCard key={i} className="p-4">
+                <Bone className="h-3 w-28 rounded mb-2" />
+                <Bone className="h-6 w-24 rounded" />
+              </SkeletonCard>
+            ))}
+          </div>
+        )}
         {!anyLoading && (
           <div className="grid grid-cols-2 gap-3">
             <div className={cn("rounded-2xl border p-4 shadow-md", netProfit >= 0 ? "bg-[#f0fdf4] border-[#bbf7d0]" : "bg-[#fef2f2] border-[#fecaca]")}>
@@ -427,6 +438,19 @@ export default function AdminFinancePage() {
         )}
 
         {/* ── Дополнительные метрики ── */}
+        {anyLoading && (
+          <div className="grid grid-cols-2 gap-3">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <SkeletonCard key={i} className="p-4 flex items-center gap-3">
+                <Bone className="w-9 h-9 rounded-xl shrink-0" />
+                <div className="flex-1 space-y-1.5">
+                  <Bone className="h-3 w-28 rounded" />
+                  <Bone className="h-4 w-20 rounded" />
+                </div>
+              </SkeletonCard>
+            ))}
+          </div>
+        )}
         {!anyLoading && (
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] shadow-md p-4 flex items-center gap-3">
@@ -902,9 +926,7 @@ export default function AdminFinancePage() {
           </div>
 
           {isLoading ? (
-            <div className="p-8 flex justify-center">
-              <div className="w-8 h-8 border-4 border-[#1f75fe]/20 border-t-[#1f75fe] rounded-full animate-spin" />
-            </div>
+            <TableSkeleton rows={6} columns={7} avatar={false} className="border-0 shadow-none rounded-none" />
           ) : filtered.length === 0 ? (
             <div className="p-8 text-center text-[var(--text-subtle)] text-sm">{t("adminFinance.noData")}</div>
           ) : (

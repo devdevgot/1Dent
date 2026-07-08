@@ -31,6 +31,7 @@ import { getBaseUrl } from "@/lib/base-url";
 import { PageHeader } from "@/components/layout/page-header";
 import { PageShell } from "@/components/layout/page-shell";
 import { AppDialog } from "@/components/layout/app-dialog";
+import { ListRowsSkeleton } from "@/components/skeletons";
 
 const AI_FIELD_LABELS: Record<string, string> = {
   "": "— не указано —",
@@ -758,11 +759,7 @@ function JobHistory() {
     return () => clearInterval(timer);
   }, [refetch, hasActiveJobs]);
 
-  if (isLoading) return (
-    <div className="flex justify-center py-10">
-      <Loader2 className="w-6 h-6 text-[var(--ds-primary)] animate-spin" />
-    </div>
-  );
+  if (isLoading) return <ListRowsSkeleton rows={3} avatar={false} card />;
 
   return (
     <div className="mt-8">

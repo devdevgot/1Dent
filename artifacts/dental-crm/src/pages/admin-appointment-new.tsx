@@ -39,6 +39,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { ProcedureTemplate, PaymentMethod, PatientSource } from "@workspace/api-client-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { PageShell } from "@/components/layout/page-shell";
+import { AppointmentFormSkeleton } from "@/components/skeletons";
 
 const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
   { value: "cash",           label: "Наличные" },
@@ -285,10 +286,11 @@ export default function AdminAppointmentNewPage() {
   const [notes, setNotes]                 = useState("");
 
   /* Data */
-  const { data: patientsData }  = useListPatients();
-  const { data: usersData }     = useListUsers();
+  const { data: patientsData, isLoading: patientsLoading } = useListPatients();
+  const { data: usersData, isLoading: usersLoading }       = useListUsers();
   const { data: proceduresData } = useListProcedures();
   const { data: templateData }  = useListProcedureTemplates();
+  const formDataLoading = patientsLoading || usersLoading;
 
   const allPatients = useMemo(
     () => patientsData?.data?.patients ?? [],
@@ -440,6 +442,9 @@ export default function AdminAppointmentNewPage() {
         backLabel={t("adminAppointment.cancel")}
       />
 
+      {formDataLoading ? (
+        <AppointmentFormSkeleton />
+      ) : (
       <form onSubmit={handleSubmit} className="max-w-2xl mx-auto px-4 pb-12 space-y-5">
 
         {/* ── Patient card ── */}
@@ -746,6 +751,7 @@ export default function AdminAppointmentNewPage() {
           </Button>
         </div>
       </form>
+      )}
     </PageShell>
   );
 }

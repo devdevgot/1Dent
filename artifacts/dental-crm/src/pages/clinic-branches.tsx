@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { Pencil, Trash2, Loader2, Building2, X } from "lucide-react";
 import { PageHeader, PageHeaderAddButton } from "@/components/layout/page-header";
 import { PageShell } from "@/components/layout/page-shell";
+import { ListRowsSkeleton } from "@/components/skeletons";
 import { useToast } from "@/hooks/use-toast";
 import { getBaseUrl } from "@/lib/base-url";
 import { useBranchStore } from "@/hooks/use-branch-store";
@@ -184,9 +185,7 @@ export default function ClinicBranchesPage() {
 
         {/* Branch list */}
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-6 h-6 animate-spin text-[var(--ds-primary)]" />
-          </div>
+          <ListRowsSkeleton rows={4} avatar={false} card />
         ) : branches.length === 0 ? (
           <div className="text-center py-12">
             <Building2 className="w-12 h-12 text-[var(--ds-border)] mx-auto mb-3" />

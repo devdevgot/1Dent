@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { EmployeeFormData } from "./employee-dialog";
 import { cn } from "@/lib/utils";
-import { Skeleton } from "@/components/ui/skeleton";
+import { TableSkeleton } from "@/components/skeletons";
 
 const EmployeeDialog = lazy(() => import("./employee-dialog"));
 const InviteStaffDialog = lazy(() => import("./invite-staff-dialog"));
@@ -171,31 +171,6 @@ function UserActionMenu({
   );
 }
 
-function StaffTableSkeleton() {
-  return (
-    <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] shadow-md overflow-hidden">
-      <div className="min-w-[720px]">
-        <div className="bg-[var(--bg)] border-b border-[var(--ds-border)] px-4 py-3 flex gap-4">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-3 flex-1 rounded bg-[var(--surface-2)]" />
-          ))}
-        </div>
-        <div className="divide-y divide-[#e8e3d9]">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="px-4 py-3.5 flex items-center gap-3">
-              <Skeleton className="w-9 h-9 rounded-xl shrink-0 bg-[var(--surface-2)]" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-40 rounded bg-[var(--surface-2)]" />
-                <Skeleton className="h-3 w-24 rounded bg-[var(--surface-2)]" />
-              </div>
-              <Skeleton className="h-6 w-16 rounded-lg bg-[var(--surface-2)]" />
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /* ── Main page ────────────────────────────────────────────── */
 export default function StaffPage() {
@@ -448,7 +423,7 @@ export default function StaffPage() {
 
           {/* Staff table */}
           {showTableSkeleton ? (
-            <StaffTableSkeleton />
+            <TableSkeleton rows={8} columns={5} minWidth="min-w-[720px]" />
           ) : filtered.length === 0 ? (
             <motion.div
               initial={{ opacity: 0, y: 16 }}

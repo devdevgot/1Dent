@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-header";
 import { PeriodPills } from "@/components/layout/period-pills";
+import { FinancialsContentSkeleton, ListRowsSkeleton } from "@/components/skeletons";
 
 const CATEGORY_COLORS: Record<string, string> = {
   salary:    "#4B7BEC",
@@ -248,6 +249,9 @@ export default function FinancialsPage() {
         }
       />
 
+      {isLoading ? (
+        <FinancialsContentSkeleton />
+      ) : (
       <div className="p-4 space-y-4 max-w-full">
 
         {/* ── HERO: три главные цифры ── */}
@@ -495,7 +499,7 @@ export default function FinancialsPage() {
             <span className="text-body font-bold text-[var(--text)]">{t("financials.proceduresList")}</span>
           </div>
           {isLoading ? (
-            <div className="p-8 text-center text-[var(--text-secondary)] text-sm">{t("common.loading")}</div>
+            <ListRowsSkeleton rows={4} avatar={false} card={false} />
           ) : filtered.length === 0 ? (
             <div className="p-8 text-center text-[var(--text-secondary)] text-sm">{t("financials.empty")}</div>
           ) : (
@@ -530,6 +534,7 @@ export default function FinancialsPage() {
         </div>
 
       </div>
+      )}
 
       {expenseDialogOpen && (
         <ExpenseDialog

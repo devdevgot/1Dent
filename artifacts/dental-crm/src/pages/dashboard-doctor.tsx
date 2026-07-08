@@ -128,7 +128,7 @@ export default function DoctorDashboard() {
     query: { queryKey: getGetDoctorAnalyticsQueryKey() },
   });
   const { data: salaryData } = useGetMySalary();
-  const { data: proceduresData } = useListProcedures();
+  const { data: proceduresData, isLoading: proceduresLoading } = useListProcedures();
 
   const rawAnalytics = (analyticsData?.data?.analytics ?? {}) as Record<string, unknown>;
 
@@ -291,9 +291,11 @@ export default function DoctorDashboard() {
               <p className="text-micro font-semibold text-[var(--text-subtle)] uppercase tracking-wide mb-0.5">
                 {t("dashboard.myRevenue", "Выручка")}
               </p>
-              <p className="text-base font-semibold text-[var(--text)]">
-                {isLoading ? "—" : fmtRevenue(displayedRevenue)}
-              </p>
+              {isLoading ? (
+                <div className="h-5 w-24 bg-[var(--surface-2)] rounded animate-pulse" />
+              ) : (
+                <p className="text-base font-semibold text-[var(--text)]">{fmtRevenue(displayedRevenue)}</p>
+              )}
             </div>
             <button
               onClick={() => navigate("/doctor-analytics")}
@@ -367,7 +369,13 @@ export default function DoctorDashboard() {
               transition={{ duration: 0.15 }}
               className="space-y-2"
             >
-              {activeDayProcs.length === 0 ? (
+              {proceduresLoading ? (
+                <>
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="h-14 rounded-2xl bg-[var(--surface-2)] animate-pulse" />
+                  ))}
+                </>
+              ) : activeDayProcs.length === 0 ? (
                 <p className="py-4 text-center text-caption text-[var(--text-subtle)]">Нет записей на этот день</p>
               ) : (
                 activeDayProcs.map((proc, i) => {

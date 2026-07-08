@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader, PageHeaderAddButton } from "@/components/layout/page-header";
+import { ServicesTableSkeleton } from "@/components/skeletons";
 
 const CATEGORIES = [
   { key: "all",            label: "Все" },
@@ -336,7 +337,7 @@ export default function ServicesPage() {
                 </div>
 
                 {isLoading ? (
-                  <div className="px-4 py-12 text-center text-caption text-[var(--text-subtle)]">Загрузка...</div>
+                  <ServicesTableSkeleton rows={7} />
                 ) : filtered.length === 0 ? (
                   <div className="px-4 py-12 text-center">
                     <ClipboardList className="w-10 h-10 text-[#e8e3d9] mx-auto mb-3" />

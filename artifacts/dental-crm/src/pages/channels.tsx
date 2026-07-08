@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Lock, Loader2 } from "lucide-react";
 import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader } from "@/components/layout/page-header";
+import { ListRowsSkeleton } from "@/components/skeletons";
 import { ChannelsSettings } from "@/components/channels/channels-settings";
 import { WhatsAppConnectModal, WhatsAppIcon, type WaStatus } from "@/components/whatsapp/whatsapp-connect-modal";
 import { customFetch } from "@workspace/api-client-react";
@@ -50,9 +51,7 @@ export default function ChannelsPage() {
 
       <div className="px-4 pt-4 relative">
         {waLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-[var(--ds-primary)]" />
-          </div>
+          <ListRowsSkeleton rows={3} avatar card />
         ) : isBlocked ? (
           <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
             <div

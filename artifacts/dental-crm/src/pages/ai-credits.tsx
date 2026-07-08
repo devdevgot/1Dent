@@ -14,6 +14,7 @@ import { useAiCreditsSummary, useAiCreditsUsage } from "@/hooks/use-ai-credits";
 import { useAuthStore } from "@/hooks/use-auth";
 import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader } from "@/components/layout/page-header";
+import { Bone, SkeletonCard, ListRowsSkeleton } from "@/components/skeletons";
 
 function formatNumber(n: number) {
   return n.toLocaleString("ru-RU");
@@ -65,7 +66,17 @@ export default function AiCreditsPage() {
       <div className="px-4 pt-4 space-y-4 max-w-2xl mx-auto">
         <p className="text-caption text-[var(--text-subtle)] -mt-2">{t("aiCredits.subtitle")}</p>
         {isLoading && (
-          <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] shadow-md p-6 animate-pulse h-40" />
+          <SkeletonCard className="p-5 space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-2 flex-1">
+                <Bone className="h-3 w-28 rounded" />
+                <Bone className="h-9 w-32 rounded-xl" />
+                <Bone className="h-3 w-40 rounded" />
+              </div>
+              <Bone className="w-12 h-12 rounded-2xl shrink-0" />
+            </div>
+            <Bone className="h-2 w-full rounded-full" />
+          </SkeletonCard>
         )}
 
         {isError && (
@@ -177,7 +188,7 @@ export default function AiCreditsPage() {
           </div>
 
           {usageLoading && (
-            <div className="p-6 text-body text-[var(--text-subtle)] text-center">{t("aiCredits.loading")}</div>
+            <ListRowsSkeleton rows={4} avatar={false} card={false} />
           )}
 
           {usageError && (

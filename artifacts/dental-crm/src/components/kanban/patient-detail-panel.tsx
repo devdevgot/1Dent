@@ -84,6 +84,27 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { Bone, SkeletonCard, ListRowsSkeleton } from "@/components/skeletons";
+
+function PatientPanelContentSkeleton() {
+  return (
+    <div className="flex-1 p-4 space-y-4 overflow-hidden">
+      <SkeletonCard className="p-4 space-y-3">
+        <Bone className="h-4 w-32 rounded" />
+        <Bone className="h-10 w-full rounded-xl" />
+        <Bone className="h-10 w-full rounded-xl" />
+      </SkeletonCard>
+      <SkeletonCard className="p-4">
+        <Bone className="h-4 w-28 rounded mb-3" />
+        <div className="space-y-2">
+          <Bone className="h-3 w-full rounded-full" />
+          <Bone className="h-3 w-4/5 rounded-full" />
+          <Bone className="h-3 w-3/5 rounded-full" />
+        </div>
+      </SkeletonCard>
+    </div>
+  );
+}
 
 
 const INTERACTION_TYPE_KEYS = [
@@ -1800,9 +1821,7 @@ export function PatientDetailPanel() {
         </div>
 
         {!contentReady || isLoading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-          </div>
+          <PatientPanelContentSkeleton />
         ) : patient ? (
           <>
             {/* Info Tab (includes interactions history) */}
@@ -2481,9 +2500,7 @@ export function PatientDetailPanel() {
               <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                 {/* State: loading */}
                 {(planLoading || plansLoading) && (
-                  <div className="flex-1 flex items-center justify-center">
-                    <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-                  </div>
+                  <PatientPanelContentSkeleton />
                 )}
 
                 {/* State: no diagnosis yet */}
@@ -2760,7 +2777,7 @@ export function PatientDetailPanel() {
                 {treatmentStep === 3 && (
                   <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
 
-                    <Suspense fallback={<div className="py-6 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-primary/60" /></div>}>
+                    <Suspense fallback={<div className="px-4 py-6"><ListRowsSkeleton rows={4} avatar={false} card /></div>}>
                       <ContractsTab
                         patientId={selectedPatientId}
                         bundle={{

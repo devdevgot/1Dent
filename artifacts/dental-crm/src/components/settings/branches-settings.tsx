@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getBaseUrl } from "@/lib/base-url";
+import { ListRowsSkeleton } from "@/components/skeletons";
 
 interface Branch {
   id: string;
@@ -716,11 +717,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
           )}
 
           {/* Branch list */}
-          {loading && (
-            <div className="flex justify-center py-6">
-              <Loader2 className="w-5 h-5 text-[var(--ds-primary)] animate-spin" />
-            </div>
-          )}
+          {loading && <ListRowsSkeleton rows={4} avatar={false} card />}
           {!loading && branches.length === 0 && (
             <div className="flex flex-col items-center gap-3 py-8 text-center">
               <div className="w-12 h-12 rounded-2xl bg-[var(--surface-2)] flex items-center justify-center">

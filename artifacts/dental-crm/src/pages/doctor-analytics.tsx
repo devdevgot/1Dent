@@ -24,6 +24,7 @@ import {
 } from "@workspace/api-client-react";
 import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader } from "@/components/layout/page-header";
+import { DoctorAnalyticsContentSkeleton } from "@/components/skeletons";
 import { cn } from "@/lib/utils";
 
 const COLORS = ["#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#ef4444", "#06b6d4"];
@@ -277,9 +278,7 @@ export default function DoctorAnalyticsPage() {
       {/* ── Content ────────────────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         {isLoading ? (
-          <div className="h-full flex items-center justify-center">
-            <div className="w-10 h-10 border-4 border-[var(--ds-primary)]/20 border-t-[var(--ds-primary)] rounded-full animate-spin" />
-          </div>
+          <DoctorAnalyticsContentSkeleton />
         ) : (
           <div className={`p-6 space-y-6 relative ${isFetching ? "opacity-60 pointer-events-none" : ""}`}>
             {isError && (
