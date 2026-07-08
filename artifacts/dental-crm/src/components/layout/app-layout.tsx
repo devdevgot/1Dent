@@ -1,31 +1,20 @@
 import { ReactNode, Suspense, lazy, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import { useAuthStore } from "@/hooks/use-auth";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
 import { useBranchStore } from "@/hooks/use-branch-store";
 import {
-  LayoutDashboard,
-  Users,
-  Stethoscope,
-  BarChart3,
-  Contact,
-  Activity,
-  Calendar,
-  Wallet,
-  Bot,
-  MoreHorizontal,
   MapPin,
   AlertTriangle,
   Building2,
   ChevronDown,
   Check,
 } from "lucide-react";
-import { FaWhatsapp } from "react-icons/fa";
 import { cn } from "@/lib/utils";
-import { useTranslation } from "react-i18next";
 import { useGeoRestriction } from "@/hooks/use-geo-restriction";
 import { prefetchStaffList } from "@workspace/api-client-react";
+import { BottomTabBar } from "./bottom-tab-bar";
 
 const GlobalSearch = lazy(() =>
   import("./global-search").then((m) => ({ default: m.GlobalSearch })),
@@ -50,23 +39,6 @@ const ROLE_DASHBOARD_HREF: Record<string, string> = {
   accountant: "/dashboard/accountant",
   warehouse:  "/dashboard/warehouse",
 };
-
-const MAX_BOTTOM_TABS = 3;
-
-const ALL_NAV_ITEMS = [
-  { nameKey: "nav.dashboard",   href: "__role_dashboard__",  icon: LayoutDashboard, roles: ["owner","admin","doctor","accountant","warehouse"], geoRestricted: false },
-  { nameKey: "nav.calendar",    href: "/calendar",           icon: Calendar,        roles: ["owner"],                                           geoRestricted: false },
-  { nameKey: "nav.chat",        href: "/chat",               icon: FaWhatsapp,      roles: ["owner","admin","doctor"],                          geoRestricted: true  },
-  { nameKey: "nav.patients",    href: "/patients",           icon: Users,           roles: ["owner","admin","doctor","accountant"],             geoRestricted: true  },
-  { nameKey: "nav.schedule",    href: "/schedule",           icon: Calendar,        roles: ["doctor"],                                          geoRestricted: false },
-  { nameKey: "nav.services",    href: "/services",           icon: Stethoscope,     roles: ["owner","admin"],                                   geoRestricted: true  },
-  { nameKey: "nav.analytics",   href: "/analytics",          icon: BarChart3,       roles: ["owner"],                                           geoRestricted: true  },
-  { nameKey: "nav.myAnalytics", href: "/doctor-analytics",   icon: BarChart3,       roles: ["doctor"],                                          geoRestricted: true  },
-  { nameKey: "nav.financials",  href: "/financials",         icon: Wallet,          roles: ["owner","accountant"],                              geoRestricted: true  },
-  { nameKey: "nav.users",       href: "/users",              icon: Contact,         roles: ["owner", "admin"],                                  geoRestricted: true  },
-  { nameKey: "nav.chatbot",     href: "/chatbot",            icon: Bot,             roles: ["owner"],                                           geoRestricted: true  },
-  { nameKey: "nav.logs",        href: "/logs",               icon: Activity,        roles: ["owner"],                                           geoRestricted: false },
-];
 
 // Routes that are off-limits outside geo-zone (for non-owners)
 const GEO_RESTRICTED_PREFIXES = [
@@ -102,7 +74,6 @@ function useAfterFirstPaint() {
 }
 
 export function AppLayout({ children }: { children: ReactNode }) {
-  const { t } = useTranslation();
   const { user } = useAuthStore();
   const [location] = useLocation();
   const { status, activeBranch, isRestricted, hasBranches } = useGeoRestriction();
@@ -135,17 +106,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     ? (ROLE_DASHBOARD_HREF[user.role] ?? getRoleDashboardPath(user.role))
     : "/dashboard";
 
-  const navItems = ALL_NAV_ITEMS.filter((item) =>
-    user && item.roles.includes(user.role),
-  ).map((item) => ({
-    ...item,
-    name: t(item.nameKey),
-    href: item.href === "__role_dashboard__" ? roleDashboardHref : item.href,
-  }));
-
   const isHomePage = location === roleDashboardHref;
-
-  const bottomItems = navItems.slice(0, MAX_BOTTOM_TABS);
 
   // A page is geo-blocked if outside zone and route is restricted
   const pageBlocked = isRestricted && hasBranches && isGeoRestrictedPath(location);
@@ -280,60 +241,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
         )}
       </main>
 
-      {/* Bottom navigation */}
-      <nav className="flex-none h-16 bg-[var(--ds-surface)] border-t border-[var(--ds-border)] flex items-stretch z-20 safe-area-bottom">
-        {bottomItems.map((item) => {
-          const isActive = location === item.href || location.startsWith(`${item.href}/`);
-          const blocked = isRestricted && hasBranches && item.geoRestricted;
-          if (blocked) {
-            return (
-              <div
-                key={item.href}
-                className="flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium select-none relative opacity-35"
-              >
-                <item.icon className="w-5 h-5 text-[var(--text-subtle)]" strokeWidth={1.8} />
-                <span className="text-[var(--text-subtle)]">{item.name}</span>
-              </div>
-            );
-          }
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors select-none relative",
-                isActive ? "text-[var(--ds-primary)]" : "text-[var(--text-secondary)]",
-              )}
-            >
-              <item.icon
-                className={cn("w-5 h-5", isActive ? "text-[var(--ds-primary)]" : "text-[var(--text-secondary)]")}
-                strokeWidth={isActive ? 2.5 : 1.8}
-              />
-              <span>{item.name}</span>
-              {isActive && (
-                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-[var(--ds-primary)]" />
-              )}
-            </Link>
-          );
-        })}
-        {/* More / Menu tab */}
-        <Link
-          href="/menu"
-          className={cn(
-            "flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors select-none relative",
-            location === "/menu" ? "text-[var(--ds-primary)]" : "text-[var(--text-secondary)]",
-          )}
-        >
-          <MoreHorizontal
-            className={cn("w-5 h-5", location === "/menu" ? "text-[var(--ds-primary)]" : "text-[var(--text-secondary)]")}
-            strokeWidth={location === "/menu" ? 2.5 : 1.8}
-          />
-          <span>{t("nav.more")}</span>
-          {location === "/menu" && (
-            <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-[var(--ds-primary)]" />
-          )}
-        </Link>
-      </nav>
+      {user && (
+        <BottomTabBar
+          roleDashboardHref={roleDashboardHref}
+          role={user.role}
+          isRestricted={isRestricted}
+          hasBranches={hasBranches}
+        />
+      )}
     </div>
   );
 }

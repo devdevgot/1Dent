@@ -63,6 +63,9 @@
     "branches": "Tracking",
     "logs": "Audit Log",
     "more": "More",
+    "operations": "Operations",
+    "servicesHub": "Services",
+    "messages": "Messages",
     "settings": "Settings"
   },
   "page": {
