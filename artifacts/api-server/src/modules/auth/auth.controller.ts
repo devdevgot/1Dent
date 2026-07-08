@@ -3,6 +3,7 @@ import { z } from "zod";
 import { AuthService } from "./auth.service";
 import { authMiddleware } from "../../middlewares/auth.middleware";
 import { ValidationError } from "../../shared/errors";
+import { whatsappOtpService } from "./whatsapp-otp.service";
 
 const router: IRouter = Router();
 const authService = new AuthService();
@@ -19,6 +20,8 @@ const registerSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(6),
+  phone: z.string().min(10).optional(),
+  phoneVerificationToken: z.string().min(16).optional(),
 });
 
 const loginSchema = z.object({
@@ -56,6 +59,72 @@ router.post("/login", async (req: Request, res: Response, next: NextFunction) =>
     success: true,
     data: { user: result.user, clinic: result.clinic, token: result.token },
   });
+});
+
+const whatsappRequestOtpSchema = z.object({
+  phone: z.string().min(10),
+  purpose: z.enum(["login", "register"]),
+});
+
+router.post("/whatsapp/request-otp", async (req: Request, res: Response, next: NextFunction) => {
+  const parsed = whatsappRequestOtpSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+  }
+
+  try {
+    const result = await whatsappOtpService.requestOtp(parsed.data.phone, parsed.data.purpose);
+    const response: Record<string, unknown> = {
+      success: true,
+      data: { phone: result.phone },
+    };
+    if (result.devCode) response["devCode"] = result.devCode;
+    res.json(response);
+  } catch (err) {
+    next(err);
+  }
+});
+
+const whatsappVerifyOtpSchema = z.object({
+  phone: z.string().min(10),
+  code: z.string().min(4).max(6),
+  purpose: z.enum(["login", "register"]),
+});
+
+router.post("/whatsapp/verify-otp", async (req: Request, res: Response, next: NextFunction) => {
+  const parsed = whatsappVerifyOtpSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+  }
+
+  try {
+    if (parsed.data.purpose === "login") {
+      const result = await authService.loginViaWhatsapp({
+        phone: parsed.data.phone,
+        code: parsed.data.code,
+      });
+      res.cookie("auth_token", result.token, COOKIE_OPTIONS);
+      return res.json({
+        success: true,
+        data: { user: result.user, clinic: result.clinic, token: result.token },
+      });
+    }
+
+    const verified = whatsappOtpService.verifyOtp(
+      parsed.data.phone,
+      parsed.data.code,
+      parsed.data.purpose,
+    );
+    res.json({
+      success: true,
+      data: {
+        phone: verified.phone,
+        verificationToken: verified.verificationToken,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.post("/logout", (_req: Request, res: Response) => {
