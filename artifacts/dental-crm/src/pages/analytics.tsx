@@ -20,6 +20,7 @@ import {
   useGetPatientMetrics, type ChannelStat,
 } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
+import { usePageBack } from "@/hooks/use-page-back";
 
 const COLORS = ["#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#06b6d4", "#6366f1"];
 
@@ -197,6 +198,7 @@ const PATIENT_STATUS_LABELS: Record<string, string> = {
 };
 
 export default function AnalyticsPage() {
+  const goBack = usePageBack();
   const { t } = useTranslation();
   const { user } = useAuthStore();
 
@@ -291,7 +293,7 @@ export default function AnalyticsPage() {
       <PageHeader
         title={t("analytics.title")}
         subtitle={t("analytics.subtitle")}
-        onBack={() => window.history.back()}
+        onBack={goBack}
         bottom={
           <div className="space-y-2">
             <div className="flex items-center gap-1.5">

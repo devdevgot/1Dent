@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useLocation } from "wouter";
+import { usePageBack } from "@/hooks/use-page-back";
 import { Pencil, Trash2, Loader2, Building2, X } from "lucide-react";
 import { PageHeader, PageHeaderAddButton } from "@/components/layout/page-header";
 import { PageShell } from "@/components/layout/page-shell";
@@ -38,7 +38,7 @@ async function apiFetch<T = any>(path: string, opts?: RequestInit): Promise<T> {
 }
 
 export default function ClinicBranchesPage() {
-  const [, setLocation] = useLocation();
+  const goBack = usePageBack({ menuFallback: true });
   const { toast } = useToast();
   const { fetchBranches: refreshBranchStore } = useBranchStore();
 
@@ -127,7 +127,7 @@ export default function ClinicBranchesPage() {
     <PageShell className="pb-10">
       <PageHeader
         title="Филиалы"
-        onBack={() => setLocation("/menu")}
+        onBack={goBack}
         right={
           <PageHeaderAddButton
             title="Добавить филиал"

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
+import { usePageBack } from "@/hooks/use-page-back";
 import { useCreatePlanRequest, type Clinic } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -146,7 +146,7 @@ function CurrentSubscriptionBanner({ clinic }: { clinic: Clinic | null }) {
 export default function PricingPage() {
   const { clinic, user } = useAuthStore();
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
+  const goBack = usePageBack({ menuFallback: true });
   const subscriptionStatus = getSubscriptionStatus(clinic);
   const activePaidPlan =
     subscriptionStatus.kind === "active_plan" ? subscriptionStatus.plan : null;
@@ -199,7 +199,7 @@ export default function PricingPage() {
 
   return (
     <PageShell className="pb-10" animate={false}>
-      <PageHeader title="Тарифы" onBack={() => setLocation("/menu")} sticky />
+      <PageHeader title="Тарифы" onBack={goBack} sticky />
 
       <div className="px-4 pt-4 space-y-4 max-w-lg mx-auto">
         <CurrentSubscriptionBanner clinic={clinic} />

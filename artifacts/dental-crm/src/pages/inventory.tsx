@@ -31,6 +31,7 @@ import { useTranslation } from "react-i18next";
 import { InventoryListSkeleton } from "@/components/skeletons";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { PageShell } from "@/components/layout/page-shell";
+import { usePageBack } from "@/hooks/use-page-back";
 
 const CATEGORY_KEYS = [
   "materials", "instruments", "medications",
@@ -169,6 +170,7 @@ function OwnerAccessManager() {
 
 /* ─── Main Page ─── */
 export default function InventoryPage() {
+  const goBack = usePageBack();
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const qc = useQueryClient();
@@ -261,7 +263,7 @@ export default function InventoryPage() {
         ].filter(Boolean).join(" · ")}
         icon={<Package className="w-5 h-5" strokeWidth={1.8} />}
         badge={!isOwner ? <AccessBadge level={myAccess} /> : undefined}
-        onBack={() => window.history.back()}
+        onBack={goBack}
         right={
           canWrite ? (
             <Button onClick={() => setShowCreate((v) => !v)} size="sm" className="gap-1.5 shrink-0 rounded-full bg-[#1f75fe] hover:bg-[#1a65e8] hover:scale-105 font-semibold">

@@ -18,6 +18,7 @@ import {
 import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader, PageHeaderAddButton } from "@/components/layout/page-header";
 import { ServicesTableSkeleton } from "@/components/skeletons";
+import { usePageBack } from "@/hooks/use-page-back";
 
 const CATEGORIES = [
   { key: "all",            label: "Все" },
@@ -58,6 +59,7 @@ interface EditState {
 }
 
 export default function ServicesPage() {
+  const goBack = usePageBack();
   const { user } = useAuthStore();
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -184,7 +186,7 @@ export default function ServicesPage() {
       <PageHeader
         title="Прейскурант"
         subtitle={`${templates.length} услуг в каталоге`}
-        onBack={() => window.history.back()}
+        onBack={goBack}
         right={
           isOwner ? (
             <PageHeaderAddButton

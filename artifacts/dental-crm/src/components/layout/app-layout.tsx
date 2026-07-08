@@ -15,6 +15,9 @@ import { cn } from "@/lib/utils";
 import { useGeoRestriction } from "@/hooks/use-geo-restriction";
 import { prefetchStaffList } from "@workspace/api-client-react";
 import { BottomTabBar } from "./bottom-tab-bar";
+import { OverlayNavigationProvider } from "@/hooks/use-overlay-navigation";
+import { MenuServiceOverlay } from "./menu-service-overlay";
+import { isGeoRestrictedPath } from "@/lib/geo-restriction";
 
 const GlobalSearch = lazy(() =>
   import("./global-search").then((m) => ({ default: m.GlobalSearch })),
@@ -43,16 +46,6 @@ const ROLE_DASHBOARD_HREF: Record<string, string> = {
 };
 
 // Routes that are off-limits outside geo-zone (for non-owners)
-const GEO_RESTRICTED_PREFIXES = [
-  "/patients", "/chat", "/analytics", "/doctor-analytics",
-  "/financials", "/services", "/inventory", "/warehouse",
-  "/users", "/chatbot", "/staff", "/channels",
-  "/migration", "/contract-templates",
-];
-
-function isGeoRestrictedPath(path: string) {
-  return GEO_RESTRICTED_PREFIXES.some((p) => path === p || path.startsWith(p + "/"));
-}
 
 function useAfterFirstPaint() {
   const [ready, setReady] = useState(false);
@@ -119,7 +112,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const mainClinicName = clinic?.name ?? "Основная клиника";
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-[#faf8f4] overflow-hidden font-manrope">
+    <OverlayNavigationProvider>
+      <div className="flex flex-col h-[100dvh] bg-[#faf8f4] overflow-hidden font-manrope">
       {afterFirstPaint && (
         <Suspense fallback={null}>
           <AppointmentReminderModal />
@@ -251,6 +245,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
           hasBranches={hasBranches}
         />
       )}
+
+      <MenuServiceOverlay />
     </div>
+    </OverlayNavigationProvider>
   );
 }

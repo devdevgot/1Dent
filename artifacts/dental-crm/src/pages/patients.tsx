@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils";
 import { usePatientTreatmentProgress } from "@/hooks/use-patient-treatment-progress";
 import { PatientTreatmentProgressBar } from "@/components/kanban/patient-treatment-progress-bar";
 import { PatientsTableSkeleton, KanbanSkeleton } from "@/components/skeletons";
+import { usePageBack } from "@/hooks/use-page-back";
 
 type PatientView = "list" | "kanban";
 type SortKey = "name" | "phone" | "dateOfBirth" | "status" | "source" | "createdAt" | "doctor";
@@ -387,6 +388,7 @@ export default function PatientsPage() {
   const { user } = useAuthStore();
   const urlSearch = useSearch();
   const [, navigate] = useLocation();
+  const goBack = usePageBack();
   const queryClient = useQueryClient();
   const { isCreateOpen, setIsCreateOpen, setSelectedPatientId } = useKanbanStore();
 
@@ -443,7 +445,7 @@ export default function PatientsPage() {
     <PageShell className="flex flex-col h-full overflow-hidden" animate={false}>
       <PageHeader
         title={t("nav.patients")}
-        onBack={() => window.history.back()}
+        onBack={goBack}
         badge={
           <span className="bg-[var(--primary-light)] text-[#1f75fe] text-xs font-semibold px-2 py-0.5 rounded-full">
             {allPatients.length}

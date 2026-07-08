@@ -16,7 +16,7 @@ import {
   FileText, Upload, Trash2, Loader2, AlertCircle, CheckCircle2, Plus,
   ChevronDown, ChevronUp, Pencil, Save, X, Lock, Eye, Folder, FolderOpen, ChevronRight,
 } from "lucide-react";
-import { useLocation } from "wouter";
+import { usePageBack } from "@/hooks/use-page-back";
 import { PageHeader } from "@/components/layout/page-header";
 import { PageShell } from "@/components/layout/page-shell";
 import { ListRowsSkeleton } from "@/components/skeletons";
@@ -196,7 +196,7 @@ export default function ContractTemplatesPage() {
   const canEdit = user?.role === "owner" || user?.role === "admin";
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [, setLocation] = useLocation();
+  const goBack = usePageBack({ menuFallback: true });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [customName, setCustomName] = useState("");
   const [dragOver, setDragOver] = useState(false);
@@ -317,7 +317,7 @@ export default function ContractTemplatesPage() {
       <PageHeader
         title="Шаблоны договоров"
         subtitle="Загрузите DOCX или PDF — AI автоматически найдёт поля для заполнения"
-        onBack={() => setLocation("/menu")}
+        onBack={goBack}
       />
 
       <div className="max-w-2xl mx-auto px-4 py-6">

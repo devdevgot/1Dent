@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { useLocation } from "wouter";
+import { usePageBack } from "@/hooks/use-page-back";
 import {
   FileSpreadsheet,
   Check,
@@ -792,14 +792,14 @@ function JobHistory() {
 }
 
 export default function MigrationPage() {
-  const [, setLocation] = useLocation();
+  const goBack = usePageBack({ menuFallback: true });
 
   return (
     <PageShell>
       <PageHeader
         title="Миграция данных"
         subtitle="Excel, CSV или PDF — до 5 000 строк"
-        onBack={() => setLocation("/menu")}
+        onBack={goBack}
       />
 
       <div className="max-w-2xl mx-auto px-4 py-6">
