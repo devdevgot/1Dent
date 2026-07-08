@@ -606,9 +606,17 @@ async function getSettings(clinicId: string): Promise<ChatbotSettings> {
 }
 
 function getEffectiveSettings(settings: ChatbotSettings): ChatbotSettings {
-  const mm = settings.scriptMindMap as ScriptMindMapData | undefined;
-  if (mm?.nodes?.length) return settings;
-  return { ...settings, scriptMindMap: DEFAULT_BOOKING_MIND_MAP };
+  const raw = settings.scriptMindMap as ScriptMindMapData | undefined;
+  if (!raw?.nodes?.length) {
+    return { ...settings, scriptMindMap: DEFAULT_BOOKING_MIND_MAP };
+  }
+  return {
+    ...settings,
+    scriptMindMap: {
+      nodes: raw.nodes,
+      edges: Array.isArray(raw.edges) ? raw.edges : [],
+    },
+  };
 }
 
 // ─── Red alert escalation ────────────────────────────────────────────────────
