@@ -5,7 +5,7 @@ import {
   parseChatbotReplyJson,
   replyFromText,
   joinChatbotReply,
-} from "./chatbot-reply-format";
+} from "./chatbot-reply-format.ts";
 
 describe("chatbot-reply", () => {
   it("parses valid multi-part JSON replies", () => {

@@ -170,7 +170,7 @@ export const DEEPSEEK_MODEL = "deepseek/deepseek-chat-v3-0324";
 export const FAST_MODEL =
   process.env["CHATBOT_FAST_MODEL"] ?? "google/gemini-2.5-flash";
 export const CHAT_MODEL =
-  process.env["CHATBOT_CHAT_MODEL"] ?? "google/gemini-2.5-flash";
+  process.env["CHATBOT_CHAT_MODEL"] ?? "google/gemini-2.5-pro";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
