@@ -170,7 +170,7 @@ export default function AdminDashboard() {
         <div className="lg:col-span-2 dash-card dash-card-padded dash-card-elevated">
           <div className="flex items-center justify-between mb-5">
             <h3 className="dash-section-title">
-              <Clock className="w-4 h-4 text-[var(--ds-primary)]" />
+              <Clock className="w-4 h-4 text-[#1f75fe]" />
               {t("adminDashboard.todaySchedule")}
               <span className="dash-badge dash-badge-primary ml-1">
                 {todayProcedures.length}
@@ -189,8 +189,8 @@ export default function AdminDashboard() {
             <AdminScheduleListSkeleton rows={6} />
           ) : todayProcedures.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
-              <Calendar className="w-10 h-10 text-[var(--text-subtle)] mb-3" />
-              <p className="text-[var(--text-secondary)] font-medium">{t("adminDashboard.noSchedule")}</p>
+              <Calendar className="w-10 h-10 text-[#94a3b8] mb-3" />
+              <p className="text-[#64748b] font-medium">{t("adminDashboard.noSchedule")}</p>
             </div>
           ) : (
             <div className="divide-y divide-[var(--ds-border)]">
@@ -208,16 +208,16 @@ export default function AdminDashboard() {
                     className="flex items-center gap-4 py-3"
                   >
                     <div className="w-12 text-center flex-none">
-                      <span className="text-body font-bold text-[var(--ds-primary)]">{timeStr}</span>
+                      <span className="text-sm font-bold text-[#1f75fe]">{timeStr}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-body font-semibold text-[var(--text)] truncate">{proc.name}</p>
-                      <p className="text-caption text-[var(--text-secondary)]">
+                      <p className="text-sm font-semibold text-[#0f172a] truncate">{proc.name}</p>
+                      <p className="text-xs text-[#64748b]">
                         {patient?.name ?? "—"}
                         {proc.doctorName && ` · ${proc.doctorName}`}
                       </p>
                     </div>
-                    <span className="text-caption font-bold px-2 py-0.5 rounded-full bg-[var(--info-light)] text-[var(--info)] flex-none">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[var(--info-light)] text-[var(--info)] flex-none">
                       {t("adminDashboard.scheduled")}
                     </span>
                   </motion.div>
@@ -232,7 +232,7 @@ export default function AdminDashboard() {
           {/* Ожидают оплаты */}
           <div className="dash-card dash-card-padded-sm dash-card-elevated">
             <h3 className="dash-section-title mb-4">
-              <Wallet className="w-4 h-4 text-[var(--success)]" />
+              <Wallet className="w-4 h-4 text-[#16a34a]" />
               Оплата
               {pendingPaymentQueue.length > 0 && (
                 <span className="dash-badge dash-badge-success ml-1">
@@ -247,12 +247,12 @@ export default function AdminDashboard() {
                 ))}
               </div>
             ) : pendingPaymentQueue.length === 0 ? (
-              <p className="text-caption text-[var(--text-subtle)] py-2">Нет ожидающих оплат</p>
+              <p className="text-xs text-[#94a3b8] py-2">Нет ожидающих оплат</p>
             ) : (
               <div className="space-y-4">
                 {todayPendingPayment.length > 0 && (
                   <div>
-                    <p className="text-micro font-bold text-[var(--success)] uppercase tracking-wide mb-1.5">Сегодня</p>
+                    <p className="text-xs font-bold text-[#16a34a] uppercase tracking-wide mb-1.5">Сегодня</p>
                     <div className="space-y-2">
                       {todayPendingPayment.map((proc) => {
                         const patient = patients.find((p) => p.id === proc.patientId);
@@ -262,20 +262,20 @@ export default function AdminDashboard() {
                           <div key={proc.id} className="flex flex-col gap-2 p-3 rounded-xl bg-[var(--success-light)]/50 border border-[var(--success-light)]">
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1 min-w-0">
-                                <p className="text-caption font-semibold text-[var(--text)] truncate">{proc.name}</p>
-                                <p className="text-micro text-[var(--text-secondary)] truncate">
+                                <p className="text-xs font-semibold text-[#0f172a] truncate">{proc.name}</p>
+                                <p className="text-xs text-[#64748b] truncate">
                                   {patient?.name ?? "—"}{proc.doctorName && ` · ${proc.doctorName}`}
                                 </p>
-                                <p className="text-micro font-bold text-[var(--success)] mt-0.5">
+                                <p className="text-xs font-bold text-[#16a34a] mt-0.5">
                                   {proc.price ? formatMoney(proc.price) : "—"}
                                 </p>
                               </div>
                               {!isSelecting && (
                                 <button
                                   onClick={() => setSelectingPayment(proc.id)}
-                                  className="shrink-0 flex items-center gap-1 px-2.5 py-1 text-micro font-semibold rounded-lg bg-[var(--success-light)] text-[var(--success)] hover:bg-[var(--success-light)]/80 transition-colors"
+                                  className="shrink-0 flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-[var(--success-light)] text-[#16a34a] hover:bg-[var(--success-light)]/80 transition-colors"
                                 >
-                                  <CheckCircle2 className="w-3 h-3 text-[var(--success)]" />
+                                  <CheckCircle2 className="w-3 h-3 text-[#16a34a]" />
                                   Оплата
                                 </button>
                               )}
@@ -287,14 +287,14 @@ export default function AdminDashboard() {
                                     key={method}
                                     disabled={isSaving}
                                     onClick={() => updatePayment.mutate({ id: proc.id, data: { paymentMethod: method } })}
-                                    className="px-1.5 py-0.5 text-micro font-medium rounded-md border border-[var(--ds-border)] bg-[var(--ds-surface)] hover:border-[var(--ds-primary)] hover:bg-[var(--primary-light)] hover:text-[var(--ds-primary)] transition-colors disabled:opacity-50"
+                                    className="px-1.5 py-0.5 text-xs font-medium rounded-md border border-[#e8e3d9] bg-white hover:border-[var(--ds-primary)] hover:bg-[var(--primary-light)] hover:text-[#1f75fe] transition-colors disabled:opacity-50"
                                   >
                                     {PAYMENT_METHOD_LABELS[method]}
                                   </button>
                                 ))}
                                 <button
                                   onClick={() => setSelectingPayment(null)}
-                                  className="px-1.5 py-0.5 text-micro font-medium rounded-md border border-[var(--ds-border)] text-[var(--text-subtle)] bg-[var(--ds-surface)] hover:bg-[var(--surface-2)] transition-colors"
+                                  className="px-1.5 py-0.5 text-xs font-medium rounded-md border border-[#e8e3d9] text-[#94a3b8] bg-white hover:bg-[#f1ede4] transition-colors"
                                 >
                                   Отмена
                                 </button>
@@ -308,7 +308,7 @@ export default function AdminDashboard() {
                 )}
                 {overduePendingPayment.length > 0 && (
                   <div>
-                    <p className="text-micro font-bold text-[var(--danger)] uppercase tracking-wide mb-1.5">Незакрытые</p>
+                    <p className="text-xs font-bold text-[#dc2626] uppercase tracking-wide mb-1.5">Незакрытые</p>
                     <div className="space-y-2">
                       {overduePendingPayment.map((proc) => {
                         const patient = patients.find((p) => p.id === proc.patientId);
@@ -318,20 +318,20 @@ export default function AdminDashboard() {
                           <div key={proc.id} className="flex flex-col gap-2 p-3 rounded-xl bg-[var(--danger-light)]/50 border border-[var(--danger-light)]">
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1 min-w-0">
-                                <p className="text-caption font-semibold text-[var(--text)] truncate">{proc.name}</p>
-                                <p className="text-micro text-[var(--text-secondary)] truncate">
+                                <p className="text-xs font-semibold text-[#0f172a] truncate">{proc.name}</p>
+                                <p className="text-xs text-[#64748b] truncate">
                                   {patient?.name ?? "—"}{proc.doctorName && ` · ${proc.doctorName}`}
                                 </p>
-                                <p className="text-micro font-bold text-[var(--danger)] mt-0.5">
-                                  {proc.price ? formatMoney(proc.price) : "—"} · <span className="text-micro text-[var(--danger)] font-semibold">{fmtOverdueDate(proc)}</span>
+                                <p className="text-xs font-bold text-[#dc2626] mt-0.5">
+                                  {proc.price ? formatMoney(proc.price) : "—"} · <span className="text-xs text-[#dc2626] font-semibold">{fmtOverdueDate(proc)}</span>
                                 </p>
                               </div>
                               {!isSelecting && (
                                 <button
                                   onClick={() => setSelectingPayment(proc.id)}
-                                  className="shrink-0 flex items-center gap-1 px-2.5 py-1 text-micro font-semibold rounded-lg bg-[var(--danger-light)] text-[var(--danger)] hover:bg-[var(--danger-light)]/80 transition-colors"
+                                  className="shrink-0 flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-[var(--danger-light)] text-[#dc2626] hover:bg-[var(--danger-light)]/80 transition-colors"
                                 >
-                                  <CheckCircle2 className="w-3 h-3 text-[var(--danger)]" />
+                                  <CheckCircle2 className="w-3 h-3 text-[#dc2626]" />
                                   Оплата
                                 </button>
                               )}
@@ -343,14 +343,14 @@ export default function AdminDashboard() {
                                     key={method}
                                     disabled={isSaving}
                                     onClick={() => updatePayment.mutate({ id: proc.id, data: { paymentMethod: method } })}
-                                    className="px-1.5 py-0.5 text-micro font-medium rounded-md border border-[var(--ds-border)] bg-[var(--ds-surface)] hover:border-[var(--ds-primary)] hover:bg-[var(--primary-light)] hover:text-[var(--ds-primary)] transition-colors disabled:opacity-50"
+                                    className="px-1.5 py-0.5 text-xs font-medium rounded-md border border-[#e8e3d9] bg-white hover:border-[var(--ds-primary)] hover:bg-[var(--primary-light)] hover:text-[#1f75fe] transition-colors disabled:opacity-50"
                                   >
                                     {PAYMENT_METHOD_LABELS[method]}
                                   </button>
                                 ))}
                                 <button
                                   onClick={() => setSelectingPayment(null)}
-                                  className="px-1.5 py-0.5 text-micro font-medium rounded-md border border-[var(--ds-border)] text-[var(--text-subtle)] bg-[var(--ds-surface)] hover:bg-[var(--surface-2)] transition-colors"
+                                  className="px-1.5 py-0.5 text-xs font-medium rounded-md border border-[#e8e3d9] text-[#94a3b8] bg-white hover:bg-[#f1ede4] transition-colors"
                                 >
                                   Отмена
                                 </button>
@@ -370,7 +370,7 @@ export default function AdminDashboard() {
           <div className="dash-card dash-card-padded-sm dash-card-elevated">
             <div className="flex items-center justify-between mb-4">
               <h3 className="dash-section-title">
-                <Stethoscope className="w-4 h-4 text-[var(--ds-primary)]" />
+                <Stethoscope className="w-4 h-4 text-[#1f75fe]" />
                 {t("adminDashboard.topDoctors")}
               </h3>
             </div>
@@ -388,8 +388,8 @@ export default function AdminDashboard() {
               </div>
             ) : topDoctors.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-4 text-center">
-                <Stethoscope className="w-8 h-8 text-[var(--text-subtle)] mb-2" />
-                <p className="text-[var(--text-secondary)] text-sm">{t("adminDashboard.noDoctor")}</p>
+                <Stethoscope className="w-8 h-8 text-[#94a3b8] mb-2" />
+                <p className="text-[#64748b] text-sm">{t("adminDashboard.noDoctor")}</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -399,20 +399,20 @@ export default function AdminDashboard() {
                     <div key={doc.doctorId}>
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-caption font-bold text-[var(--text-subtle)] w-4 shrink-0">{i + 1}</span>
-                          <span className="text-body font-medium text-[var(--text)] truncate">{doc.doctorName}</span>
+                          <span className="text-xs font-bold text-[#94a3b8] w-4 shrink-0">{i + 1}</span>
+                          <span className="text-sm font-medium text-[#0f172a] truncate">{doc.doctorName}</span>
                         </div>
-                        <span className="text-caption font-bold text-[var(--success)] shrink-0 ml-2">
+                        <span className="text-xs font-bold text-[#16a34a] shrink-0 ml-2">
                           {formatMoney(doc.revenueTotal)}
                         </span>
                       </div>
-                      <div className="w-full bg-[var(--surface-2)] rounded-full h-1.5">
+                      <div className="w-full bg-[#f1ede4] rounded-full h-1.5">
                         <div
                           className="h-1.5 rounded-full transition-all"
                           style={{ width: `${pct}%`, backgroundColor: BRAND_BLUE }}
                         />
                       </div>
-                      <p className="text-micro text-[var(--text-subtle)] mt-0.5">
+                      <p className="text-xs text-[#94a3b8] mt-0.5">
                         {doc.proceduresCount} {t("adminDashboard.procedures")} · {doc.patientsCount} {t("adminDashboard.patients")}
                       </p>
                     </div>
@@ -442,12 +442,12 @@ export default function AdminDashboard() {
               key={item.path}
               type="button"
               onClick={() => navigate(item.path)}
-              className="flex flex-col items-center gap-2 p-4 rounded-xl hover:bg-[var(--surface-2)] border border-[var(--ds-border)] hover:border-[var(--ds-primary)]/25 transition-all group text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-primary)]"
+              className="flex flex-col items-center gap-2 p-4 rounded-xl hover:bg-[#f1ede4] border border-[#e8e3d9] hover:border-[var(--ds-primary)]/25 transition-all group text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-primary)]"
             >
               <div className="dash-quick-action-icon w-10 h-10">
                 <item.icon className="w-5 h-5" />
               </div>
-              <span className="text-caption font-medium text-[var(--text-secondary)] group-hover:text-[var(--ds-primary)] transition-colors leading-tight">{item.label}</span>
+              <span className="text-xs font-medium text-[#64748b] group-hover:text-[#1f75fe] transition-colors leading-tight">{item.label}</span>
             </button>
           ))}
         </div>

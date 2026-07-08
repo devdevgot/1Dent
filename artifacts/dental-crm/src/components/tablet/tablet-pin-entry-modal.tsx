@@ -39,8 +39,8 @@ export function TabletPinEntryModal({
   return (
     <AppDialog open={open} onOpenChange={(next) => { if (!next) onClose(); }} title="PIN планшета" size="sm">
       <div className="flex flex-col items-center px-2 pb-2 font-manrope">
-        <ShieldCheck className="mb-3 h-8 w-8 text-[var(--ds-primary)]" />
-        <p className="mb-6 text-center text-body text-[var(--text-secondary)]">Введите ваш PIN для входа в кабинет</p>
+        <ShieldCheck className="mb-3 h-8 w-8 text-[#1f75fe]" />
+        <p className="mb-6 text-center text-sm text-[#64748b]">Введите ваш PIN для входа в кабинет</p>
         <div className={cn("mb-6 flex gap-3", error && "animate-shake")}>
           {[0, 1, 2, 3].map((i) => (
             <span
@@ -60,14 +60,14 @@ export function TabletPinEntryModal({
               type="button"
               disabled={loading}
               onClick={() => press(d)}
-              className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--bg)] text-xl font-semibold"
+              className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#faf8f4] text-xl font-semibold"
             >
               {d}
             </button>
           ))}
           <div />
-          <button type="button" disabled={loading} onClick={() => press("0")} className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--bg)] text-xl font-semibold">0</button>
-          <button type="button" disabled={loading} onClick={() => setPin((p) => p.slice(0, -1))} className="flex h-14 w-14 items-center justify-center rounded-2xl text-[var(--text-secondary)]">
+          <button type="button" disabled={loading} onClick={() => press("0")} className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#faf8f4] text-xl font-semibold">0</button>
+          <button type="button" disabled={loading} onClick={() => setPin((p) => p.slice(0, -1))} className="flex h-14 w-14 items-center justify-center rounded-2xl text-[#64748b]">
             <Delete className="h-5 w-5" />
           </button>
         </div>

@@ -72,12 +72,12 @@ export function TabletPinSetupModal({
     <AppDialog open={open} onOpenChange={(next) => { if (!next) onClose(); }} title="PIN для планшета" size="sm">
       <div className="flex flex-col items-center px-2 pb-2 font-manrope">
         <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1f75fe]/10">
-          <ShieldCheck className="h-6 w-6 text-[var(--ds-primary)]" />
+          <ShieldCheck className="h-6 w-6 text-[#1f75fe]" />
         </div>
-        <p className="mb-1 text-center text-base font-bold text-[var(--text)]">
+        <p className="mb-1 text-center text-base font-bold text-[#0f172a]">
           {step === "enter" ? "Придумайте PIN-код" : "Повторите PIN-код"}
         </p>
-        <p className="mb-6 max-w-xs text-center text-body text-[var(--text-secondary)]">
+        <p className="mb-6 max-w-xs text-center text-sm text-[#64748b]">
           Необязательный PIN для входа на планшет без QR-кода. Запомните 4 цифры.
         </p>
 
@@ -93,7 +93,7 @@ export function TabletPinSetupModal({
             />
           ))}
         </div>
-        {error && <p className="mb-3 text-body font-medium text-[var(--danger)]">{error}</p>}
+        {error && <p className="mb-3 text-sm font-medium text-[#dc2626]">{error}</p>}
 
         <div className="grid grid-cols-3 gap-2.5">
           {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => (
@@ -130,8 +130,8 @@ function PinKey({
       className={cn(
         "flex h-14 w-14 items-center justify-center rounded-2xl text-xl font-semibold transition-all active:scale-90 disabled:opacity-50",
         muted
-          ? "text-[var(--text-secondary)] hover:bg-[var(--surface-2)]"
-          : "bg-[var(--bg)] text-[var(--text)] hover:bg-[var(--surface-2)]",
+          ? "text-[#64748b] hover:bg-[#f1ede4]"
+          : "bg-[#faf8f4] text-[#0f172a] hover:bg-[#f1ede4]",
       )}
     >
       {children}

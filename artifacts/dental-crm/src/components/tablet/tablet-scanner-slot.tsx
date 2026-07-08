@@ -19,7 +19,7 @@ export function TabletScannerSlot() {
     <>
       <TabletQrScannerButton
         onScan={(token) => void processToken(token)}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-2)] text-[var(--ds-primary)] transition-colors hover:bg-[var(--ds-border)]/60"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f1ede4] text-[#1f75fe] transition-colors hover:bg-[var(--ds-border)]/60"
       />
       <TabletPairingCodeModal
         open={pairingCodeOpen}

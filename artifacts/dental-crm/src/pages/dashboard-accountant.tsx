@@ -206,17 +206,17 @@ export default function AccountantDashboard() {
         <div className="dash-card dash-card-padded dash-card-elevated">
           <div className="flex items-center gap-2 mb-4">
             <div className="p-2 bg-[var(--primary-light)] rounded-xl">
-              <Banknote className="w-5 h-5 text-[var(--ds-primary)]" />
+              <Banknote className="w-5 h-5 text-[#1f75fe]" />
             </div>
             <div className="flex-1">
               <h3 className="dash-section-title text-sm">{t("payroll.fot")}</h3>
-              <p className="text-caption text-[var(--text-secondary)]">
+              <p className="text-xs text-[#64748b]">
                 {`${currentMonth.toString().padStart(2, "0")}/${currentYear}`}
               </p>
             </div>
             <button
               onClick={() => setShowApproveModal(true)}
-              className="dash-btn dash-btn-primary text-caption py-1.5 px-3"
+              className="dash-btn dash-btn-primary text-xs py-1.5 px-3"
             >
               <PlusCircle className="w-3.5 h-3.5" />
               {t("payroll.approveFot", "Утвердить ФОТ")}
@@ -229,7 +229,7 @@ export default function AccountantDashboard() {
 
           {approvedThisMonth.length > 0 ? (
             <div className="space-y-2">
-              <p className="text-caption font-semibold text-[var(--success)] flex items-center gap-1">
+              <p className="text-xs font-semibold text-[#16a34a] flex items-center gap-1">
                 <CheckCircle className="w-3.5 h-3.5" />
                 {approvedThisMonth.length} {t("payroll.fotApproved", "сотр. утверждено")}
               </p>
@@ -239,19 +239,19 @@ export default function AccountantDashboard() {
                   className="flex items-center justify-between p-2.5 bg-[var(--success-light)] rounded-lg border border-[var(--success-light)]"
                 >
                   <div className="min-w-0">
-                    <p className="text-caption font-semibold text-[var(--text)] truncate">{r.userName ?? "—"}</p>
-                    <p className="text-[11px] text-[var(--text-secondary)]">
+                    <p className="text-xs font-semibold text-[#0f172a] truncate">{r.userName ?? "—"}</p>
+                    <p className="text-[11px] text-[#64748b]">
                       {r.periodMonth.toString().padStart(2, "0")}/{r.periodYear}
                     </p>
                   </div>
-                  <span className="ml-2 text-caption font-bold text-[var(--success)]">
+                  <span className="ml-2 text-xs font-bold text-[#16a34a]">
                     ₸{Number(r.approvedAmount ?? r.calculatedAmount).toLocaleString("ru-KZ")}
                   </span>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 text-[var(--text-secondary)]">
+            <div className="flex items-center gap-1.5 text-[#64748b]">
               <Clock className="w-4 h-4" />
               <span className="text-xs">{t("payroll.fotNotApproved", "ФОТ за текущий месяц не утверждён")}</span>
             </div>
@@ -262,12 +262,12 @@ export default function AccountantDashboard() {
         <div className="lg:col-span-2 dash-card dash-card-padded dash-card-elevated">
           <div className="flex items-center justify-between mb-6">
             <h3 className="dash-section-title text-lg">
-              <Stethoscope className="w-5 h-5 text-[var(--ds-primary)]" />
+              <Stethoscope className="w-5 h-5 text-[#1f75fe]" />
               {t("accountantDashboard.revenueByDoctor")}
             </h3>
             <button
               onClick={() => navigate("/procedures")}
-              className="text-body text-[var(--ds-primary)] font-semibold flex items-center gap-1 hover:underline"
+              className="text-sm text-[#1f75fe] font-semibold flex items-center gap-1 hover:underline"
             >
               {t("dashboard.viewAll")} <ChevronRight className="w-4 h-4" />
             </button>
@@ -290,8 +290,8 @@ export default function AccountantDashboard() {
             </div>
           ) : doctorRevenueList.length === 0 ? (
             <div className="text-center py-8">
-              <TrendingUp className="w-10 h-10 text-[var(--text-subtle)]/30 mx-auto mb-3" />
-              <p className="text-[var(--text-secondary)] font-medium">{t("accountantDashboard.noData")}</p>
+              <TrendingUp className="w-10 h-10 text-[#94a3b8]/30 mx-auto mb-3" />
+              <p className="text-[#64748b] font-medium">{t("accountantDashboard.noData")}</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -305,20 +305,20 @@ export default function AccountantDashboard() {
                     transition={{ delay: i * 0.05 }}
                     className="flex items-center gap-4"
                   >
-                    <div className="w-8 h-8 rounded-full bg-[var(--primary-light)] flex items-center justify-center text-[var(--ds-primary)] font-bold text-caption flex-none">
+                    <div className="w-8 h-8 rounded-full bg-[var(--primary-light)] flex items-center justify-center text-[#1f75fe] font-bold text-xs flex-none">
                       {d.name.charAt(0)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-center mb-1">
-                        <span className="text-body font-medium text-[var(--text)] truncate">{d.name}</span>
+                        <span className="text-sm font-medium text-[#0f172a] truncate">{d.name}</span>
                         <div className="ml-2 flex-none text-right">
-                          <span className="text-body font-semibold text-[var(--text)]">
+                          <span className="text-sm font-semibold text-[#0f172a]">
                             ₸ {d.revenue.toLocaleString("ru-KZ")}
                           </span>
-                          <span className="text-caption text-[var(--text-secondary)] ml-1">({d.count} {t("dashboard.procedures").toLowerCase()})</span>
+                          <span className="text-xs text-[#64748b] ml-1">({d.count} {t("dashboard.procedures").toLowerCase()})</span>
                         </div>
                       </div>
-                      <div className="w-full bg-[var(--surface-2)] rounded-full h-1.5">
+                      <div className="w-full bg-[#f1ede4] rounded-full h-1.5">
                         <div
                           className="bg-[#1f75fe] rounded-full h-1.5 transition-all"
                           style={{ width: `${pct}%` }}
@@ -328,9 +328,9 @@ export default function AccountantDashboard() {
                   </motion.div>
                 );
               })}
-              <div className="pt-3 mt-2 border-t border-[var(--ds-border)] flex justify-between items-center">
-                <span className="text-body font-semibold text-[var(--text-secondary)]">{t("accountantDashboard.totalRevenue")}</span>
-                <span className="text-lg font-bold text-[var(--text)]">₸ {totalRevenue.toLocaleString("ru-KZ")}</span>
+              <div className="pt-3 mt-2 border-t border-[#e8e3d9] flex justify-between items-center">
+                <span className="text-sm font-semibold text-[#64748b]">{t("accountantDashboard.totalRevenue")}</span>
+                <span className="text-lg font-bold text-[#0f172a]">₸ {totalRevenue.toLocaleString("ru-KZ")}</span>
               </div>
             </div>
           )}
@@ -340,7 +340,7 @@ export default function AccountantDashboard() {
       {/* Billing Queue */}
       <div className="dash-card dash-card-padded dash-card-elevated">
         <h3 className="dash-section-title text-lg mb-4">
-          <Wallet className="w-5 h-5 text-[var(--ds-primary)]" />
+          <Wallet className="w-5 h-5 text-[#1f75fe]" />
           {t("accountantDashboard.billingQueue")}
           {completedNoBilling.length > 0 && (
             <span className="dash-badge dash-badge-warning ml-auto">
@@ -357,26 +357,26 @@ export default function AccountantDashboard() {
         ) : completedNoBilling.length === 0 ? (
           <div className="text-center py-8">
             <div className="w-12 h-12 bg-[var(--success-light)] rounded-full flex items-center justify-center mx-auto mb-3">
-              <TrendingUp className="w-6 h-6 text-[var(--success)]" />
+              <TrendingUp className="w-6 h-6 text-[#16a34a]" />
             </div>
-            <p className="text-[var(--success)] font-semibold">{t("accountantDashboard.allBilled")}</p>
-            <p className="text-body text-[var(--text-secondary)] mt-1">{t("accountantDashboard.allBilledDesc")}</p>
+            <p className="text-[#16a34a] font-semibold">{t("accountantDashboard.allBilled")}</p>
+            <p className="text-sm text-[#64748b] mt-1">{t("accountantDashboard.allBilledDesc")}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {completedNoBilling.slice(0, 6).map((proc) => (
-              <div key={proc.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-[var(--bg)]">
+              <div key={proc.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-[#faf8f4]">
                 <div className="w-2 h-2 rounded-full bg-[var(--warning)] flex-none" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-body font-medium text-[var(--text)] truncate">{proc.name}</p>
-                  <p className="text-caption text-[var(--text-secondary)]">{proc.doctorName ?? "—"}</p>
+                  <p className="text-sm font-medium text-[#0f172a] truncate">{proc.name}</p>
+                  <p className="text-xs text-[#64748b]">{proc.doctorName ?? "—"}</p>
                 </div>
               </div>
             ))}
             {completedNoBilling.length > 6 && (
               <button
                 onClick={() => navigate("/procedures")}
-                className="w-full text-center text-body text-[var(--ds-primary)] font-semibold mt-2 hover:underline"
+                className="w-full text-center text-sm text-[#1f75fe] font-semibold mt-2 hover:underline"
               >
                 +{completedNoBilling.length - 6} {t("accountantDashboard.more")}
               </button>

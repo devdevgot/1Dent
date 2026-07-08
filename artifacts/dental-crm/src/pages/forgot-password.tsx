@@ -44,17 +44,17 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[var(--bg)] font-manrope flex flex-col items-center justify-start px-6 py-12">
+    <div className="min-h-screen w-full bg-[#faf8f4] font-manrope flex flex-col items-center justify-start px-6 py-12">
       {/* Back button */}
       <div className="w-full max-w-sm mb-6">
         <Link href="/login">
-          <button type="button" className="flex items-center gap-1.5 text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors">
+          <button type="button" className="flex items-center gap-1.5 text-[#64748b] hover:text-[#0f172a] transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
         </Link>
       </div>
 
-      <div className="w-full max-w-sm bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] shadow-md p-6">
+      <div className="w-full max-w-sm bg-white rounded-2xl border border-[#e8e3d9] shadow-md p-6">
         <AnimatePresence mode="wait">
           {step === "form" ? (
             <motion.div
@@ -64,19 +64,19 @@ export default function ForgotPassword() {
               exit={{ opacity: 0, y: -16 }}
               transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
             >
-              <h2 className="text-2xl font-bold text-[var(--text)] text-center mb-3">
+              <h2 className="text-2xl font-bold text-[#0f172a] text-center mb-3">
                 Восстановить пароль
               </h2>
-              <p className="text-body text-[var(--text-secondary)] text-center mb-8 leading-relaxed">
+              <p className="text-sm text-[#64748b] text-center mb-8 leading-relaxed">
                 Введите email, который вы использовали при регистрации, чтобы установить новый пароль.
               </p>
 
               <form onSubmit={handleSubmit} className="space-y-3">
                 <div className={`
-                  w-full px-4 py-3.5 rounded-xl border bg-[var(--ds-surface)] transition-all
-                  ${error ? "border-[#dc2626] bg-[#fef2f2]" : "border-[var(--ds-border)] focus-within:border-[#1f75fe] focus-within:ring-2 focus-within:ring-[#1f75fe]/20"}
+                  w-full px-4 py-3.5 rounded-xl border bg-white transition-all
+                  ${error ? "border-[#dc2626] bg-[#fef2f2]" : "border-[#e8e3d9] focus-within:border-[#1f75fe] focus-within:ring-2 focus-within:ring-[#1f75fe]/20"}
                 `}>
-                  <p className="section-label mb-0.5">
+                  <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide mb-0.5">
                     Email
                   </p>
                   <input
@@ -89,17 +89,17 @@ export default function ForgotPassword() {
                     placeholder="doctor@clinic.com"
                     autoComplete="email"
                     disabled={forgotMutation.isPending}
-                    className="w-full bg-transparent text-base text-[var(--text)] placeholder:text-[var(--text-subtle)] outline-none disabled:opacity-60"
+                    className="w-full bg-transparent text-base text-[#0f172a] placeholder:text-[#94a3b8] outline-none disabled:opacity-60"
                   />
                 </div>
                 {error && (
-                  <p className="text-caption text-[var(--danger)] font-medium px-1">{error}</p>
+                  <p className="text-xs text-[#dc2626] font-medium px-1">{error}</p>
                 )}
 
                 <button
                   type="submit"
                   disabled={forgotMutation.isPending}
-                  className="w-full py-4 rounded-full text-base font-semibold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed hover:scale-105 active:scale-95 mt-2 bg-[#1f75fe] hover:bg-[var(--primary-hover)] text-white"
+                  className="w-full py-4 rounded-full text-base font-semibold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed hover:scale-105 active:scale-95 mt-2 bg-[#1f75fe] hover:bg-[#1a65e8] text-white"
                 >
                   {forgotMutation.isPending ? "Отправляем..." : "Восстановить"}
                 </button>
@@ -116,27 +116,27 @@ export default function ForgotPassword() {
             >
               <div className="flex items-center justify-center mb-6">
                 <div className="w-20 h-20 rounded-full flex items-center justify-center bg-[#1f75fe]/10">
-                  <Mail className="w-9 h-9 text-[var(--ds-primary)]" />
+                  <Mail className="w-9 h-9 text-[#1f75fe]" />
                 </div>
               </div>
 
-              <h2 className="text-2xl font-bold text-[var(--text)] mb-3">
+              <h2 className="text-2xl font-bold text-[#0f172a] mb-3">
                 Ссылка отправлена
               </h2>
-              <p className="text-body text-[var(--text-secondary)] leading-relaxed mb-8">
+              <p className="text-sm text-[#64748b] leading-relaxed mb-8">
                 Если аккаунт с адресом{" "}
-                <span className="font-semibold text-[var(--text)]">{email.trim()}</span>{" "}
+                <span className="font-semibold text-[#0f172a]">{email.trim()}</span>{" "}
                 зарегистрирован, мы отправили ссылку для сброса пароля.
                 Проверьте ящик входящих и папку «Спам».
               </p>
 
               {/* Dev mode: show direct link */}
               {devToken && (
-                <div className="mb-6 p-4 rounded-2xl border border-dashed border-[var(--ds-border)] bg-[var(--bg)] text-left">
-                  <p className="section-label mb-2">
+                <div className="mb-6 p-4 rounded-2xl border border-dashed border-[#e8e3d9] bg-[#faf8f4] text-left">
+                  <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide mb-2">
                     Режим разработки
                   </p>
-                  <p className="text-caption text-[var(--text-secondary)] mb-3">
+                  <p className="text-xs text-[#64748b] mb-3">
                     Email не настроен — используйте ссылку напрямую:
                   </p>
                   <button
@@ -144,7 +144,7 @@ export default function ForgotPassword() {
                     onClick={() =>
                       setLocation(`/reset-password?token=${encodeURIComponent(devToken)}`)
                     }
-                    className="w-full py-2.5 rounded-full text-body font-semibold text-white transition-all hover:scale-105 active:scale-95 bg-[#1f75fe] hover:bg-[var(--primary-hover)]"
+                    className="w-full py-2.5 rounded-full text-sm font-semibold text-white transition-all hover:scale-105 active:scale-95 bg-[#1f75fe] hover:bg-[#1a65e8]"
                   >
                     Перейти к сбросу пароля →
                   </button>
@@ -154,7 +154,7 @@ export default function ForgotPassword() {
               <button
                 type="button"
                 onClick={() => setLocation("/login")}
-                className="w-full py-4 rounded-full text-base font-semibold text-[var(--text-secondary)] border border-[var(--ds-border)] hover:bg-[var(--surface-2)] transition-all duration-200 active:scale-95"
+                className="w-full py-4 rounded-full text-base font-semibold text-[#64748b] border border-[#e8e3d9] hover:bg-[#f1ede4] transition-all duration-200 active:scale-95"
               >
                 Вернуться ко входу
               </button>

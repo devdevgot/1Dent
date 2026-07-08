@@ -26,7 +26,7 @@ export const STATUS_PILL: Record<string, string> = {
   scheduled:   "bg-blue-50 text-blue-800 border border-blue-200",
   in_progress: "bg-amber-50 text-amber-800 border border-amber-200",
   completed:   "bg-green-50 text-green-800 border border-green-200",
-  cancelled:   "bg-[var(--surface-2)] text-muted-foreground border border-[var(--ds-border)]",
+  cancelled:   "bg-[#f1ede4] text-muted-foreground border border-[#e8e3d9]",
 };
 
 export const STATUS_OPTIONS = [
@@ -86,7 +86,7 @@ export interface AppointmentModalProps {
   isSaving?: boolean;
 }
 
-const INPUT = "w-full border border-border rounded-lg px-3 py-2 text-body focus:outline-none focus:ring-2 focus:ring-primary/30";
+const INPUT = "w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30";
 
 /* ─── helpers ─── */
 const MONTHS_RU = ["Январь","Февраль","Март","Апрель","Май","Июнь",
@@ -167,10 +167,10 @@ function DateTimePickerModal({ date, time, onConfirm, onClose }: DateTimePickerM
     <div className="fixed inset-0 z-[70] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="relative z-10 bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] shadow-xl w-full max-w-sm mx-4 overflow-hidden">
+      <div className="relative z-10 bg-white rounded-2xl border border-[#e8e3d9] shadow-xl w-full max-w-sm mx-4 overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--ds-border)]">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#e8e3d9]">
           <p className="font-semibold text-foreground">Дата и время</p>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
             <X className="w-5 h-5" />
@@ -182,14 +182,14 @@ function DateTimePickerModal({ date, time, onConfirm, onClose }: DateTimePickerM
           {/* Month nav */}
           <div className="flex items-center justify-between mb-3">
             <button onClick={prevMonth}
-              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[var(--surface-2)] transition-colors">
+              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[#f1ede4] transition-colors">
               <ChevronLeft className="w-4 h-4 text-muted-foreground" />
             </button>
-            <span className="text-body font-semibold text-foreground">
+            <span className="text-sm font-semibold text-foreground">
               {MONTHS_RU[viewMonth]} {viewYear}
             </span>
             <button onClick={nextMonth}
-              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[var(--surface-2)] transition-colors">
+              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[#f1ede4] transition-colors">
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </button>
           </div>
@@ -197,7 +197,7 @@ function DateTimePickerModal({ date, time, onConfirm, onClose }: DateTimePickerM
           {/* Day headers */}
           <div className="grid grid-cols-7 mb-1">
             {DAYS_RU.map(d => (
-              <div key={d} className="text-center text-caption font-medium text-muted-foreground py-1">{d}</div>
+              <div key={d} className="text-center text-xs font-medium text-muted-foreground py-1">{d}</div>
             ))}
           </div>
 
@@ -217,7 +217,7 @@ function DateTimePickerModal({ date, time, onConfirm, onClose }: DateTimePickerM
                     disabled={!day}
                     onClick={() => day && selectDay(day)}
                     className={cn(
-                      "aspect-square flex items-center justify-center text-body rounded-full transition-all m-0.5",
+                      "aspect-square flex items-center justify-center text-sm rounded-full transition-all m-0.5",
                       !day && "invisible",
                       isSelected && "bg-primary text-white font-semibold shadow-sm",
                       !isSelected && isToday && "text-primary font-semibold",
@@ -233,13 +233,13 @@ function DateTimePickerModal({ date, time, onConfirm, onClose }: DateTimePickerM
         </div>
 
         {/* Divider */}
-        <div className="mx-5 border-t border-[var(--ds-border)] my-1" />
+        <div className="mx-5 border-t border-[#e8e3d9] my-1" />
 
         {/* ── Time list ── */}
         <div className="px-5 pb-2">
           <div className="flex items-center gap-1.5 mb-2">
             <Clock className="w-3.5 h-3.5 text-muted-foreground" />
-            <span className="text-caption font-medium text-muted-foreground uppercase tracking-wide">Время</span>
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Время</span>
           </div>
           <div ref={timeRef} className="h-36 overflow-y-scroll custom-scrollbar space-y-0.5 pr-1">
             {TIME_SLOTS.map(slot => (
@@ -249,7 +249,7 @@ function DateTimePickerModal({ date, time, onConfirm, onClose }: DateTimePickerM
                 type="button"
                 onClick={() => setSelTime(slot)}
                 className={cn(
-                  "w-full text-left px-3 py-1.5 rounded-lg text-body transition-all",
+                  "w-full text-left px-3 py-1.5 rounded-lg text-sm transition-all",
                   slot === selTime
                     ? "bg-primary text-white font-semibold"
                     : "text-foreground hover:bg-primary/10",
@@ -262,7 +262,7 @@ function DateTimePickerModal({ date, time, onConfirm, onClose }: DateTimePickerM
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t border-[var(--ds-border)] flex gap-3">
+        <div className="px-5 py-4 border-t border-[#e8e3d9] flex gap-3">
           <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
             Отмена
           </Button>
@@ -381,7 +381,7 @@ export function AppointmentModal({
 
         {/* Panel */}
         <div className={cn(
-          "absolute z-10 bg-[var(--ds-surface)] border border-[var(--ds-border)] shadow-xl flex flex-col",
+          "absolute z-10 bg-white border border-[#e8e3d9] shadow-xl flex flex-col",
           "bottom-0 left-0 right-0 rounded-t-2xl max-h-[90dvh]",
           "sm:bottom-auto sm:top-[8%] sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-md sm:rounded-2xl",
         )}>
@@ -391,7 +391,7 @@ export function AppointmentModal({
           </div>
 
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 shrink-0 border-b border-[var(--ds-border)]">
+          <div className="flex items-center justify-between px-6 py-4 shrink-0 border-b border-[#e8e3d9]">
             <h2 className="text-lg font-bold">
               {procedure ? "Редактировать запись" : "Новая запись"}
             </h2>
@@ -408,16 +408,16 @@ export function AppointmentModal({
                 /* ── Edit mode ── */
                 <>
                   <div>
-                    <label className="text-body font-medium text-foreground mb-1 block">Пациент</label>
-                    <div className="w-full border border-border rounded-lg px-3 py-2 text-body bg-[var(--surface-2)] text-[var(--text-secondary)] min-h-[38px] flex items-center">
+                    <label className="text-sm font-medium text-foreground mb-1 block">Пациент</label>
+                    <div className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-[#f1ede4] text-[#64748b] min-h-[38px] flex items-center">
                       {patients.find((p) => p.id === selectedPatientId)?.name ?? "—"}
                     </div>
                   </div>
 
                   {doctors.length > 0 && (
                     <div>
-                      <label className="text-body font-medium text-foreground mb-1 block">Врач</label>
-                      <select value={doctorId} onChange={(e) => setDoctorId(e.target.value)} className={INPUT + " bg-[var(--ds-surface)]"}>
+                      <label className="text-sm font-medium text-foreground mb-1 block">Врач</label>
+                      <select value={doctorId} onChange={(e) => setDoctorId(e.target.value)} className={INPUT + " bg-white"}>
                         <option value="">Не назначен</option>
                         {doctors.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                       </select>
@@ -425,12 +425,12 @@ export function AppointmentModal({
                   )}
 
                   <div>
-                    <label className="text-body font-medium text-foreground mb-1 block">Статус</label>
+                    <label className="text-sm font-medium text-foreground mb-1 block">Статус</label>
                     <div className="flex flex-wrap gap-2">
                       {STATUS_OPTIONS.map((s) => (
                         <button key={s.value} type="button" onClick={() => setStatus(s.value)}
-                          className={cn("px-3 py-1.5 rounded-lg text-caption font-medium border transition-all",
-                            status === s.value ? STATUS_PILL[s.value] : "border-[var(--ds-border)] text-muted-foreground hover:border-[var(--ds-border)]")}>
+                          className={cn("px-3 py-1.5 rounded-lg text-xs font-medium border transition-all",
+                            status === s.value ? STATUS_PILL[s.value] : "border-[#e8e3d9] text-muted-foreground hover:border-[#e8e3d9]")}>
                           {s.label}
                         </button>
                       ))}
@@ -438,7 +438,7 @@ export function AppointmentModal({
                   </div>
 
                   <div>
-                    <label className="text-body font-medium text-foreground mb-1 block">Заметки</label>
+                    <label className="text-sm font-medium text-foreground mb-1 block">Заметки</label>
                     <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2}
                       className={INPUT + " resize-none"} placeholder="Дополнительная информация..." />
                   </div>
@@ -447,15 +447,15 @@ export function AppointmentModal({
                 /* ── Create mode ── */
                 <>
                   <div>
-                    <label className="text-body font-medium text-foreground mb-1 block">ИИН</label>
+                    <label className="text-sm font-medium text-foreground mb-1 block">ИИН</label>
                     <input type="text" value={iin} onChange={(e) => handleIINChange(e.target.value)}
                       maxLength={12} inputMode="numeric"
                       className={cn(INPUT, "font-mono",
                         iinError ? "border-red-400 bg-red-50" : foundPatient ? "border-green-400 bg-green-50" : "")}
                       placeholder="000000000000" />
-                    {iinError && <p className="text-caption text-red-500 mt-1">{iinError}</p>}
+                    {iinError && <p className="text-xs text-red-500 mt-1">{iinError}</p>}
                     {!iinError && iin.length === 0 && (
-                      <p className="text-caption text-muted-foreground mt-1">Введите ИИН для автозаполнения даты рождения и пола</p>
+                      <p className="text-xs text-muted-foreground mt-1">Введите ИИН для автозаполнения даты рождения и пола</p>
                     )}
                   </div>
 
@@ -463,13 +463,13 @@ export function AppointmentModal({
                     <div className="rounded-xl border border-green-200 bg-green-50 p-4 space-y-3">
                       <div className="flex items-center gap-2">
                         <UserCheck className="w-4 h-4 text-green-600 shrink-0" />
-                        <p className="text-body font-semibold text-green-800">Пациент найден в базе</p>
+                        <p className="text-sm font-semibold text-green-800">Пациент найден в базе</p>
                       </div>
                       <div className="space-y-1">
-                        <p className="text-body font-medium text-foreground">{foundPatient.name}</p>
-                        {foundPatient.phone && <p className="text-caption text-muted-foreground">{foundPatient.phone}</p>}
+                        <p className="text-sm font-medium text-foreground">{foundPatient.name}</p>
+                        {foundPatient.phone && <p className="text-xs text-muted-foreground">{foundPatient.phone}</p>}
                       </div>
-                      <p className="text-caption text-green-700">Выберите пациента или введите другой ИИН</p>
+                      <p className="text-xs text-green-700">Выберите пациента или введите другой ИИН</p>
                       <div className="flex gap-2">
                         <Button type="button" className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm"
                           onClick={() => { setSelectedPatientId(foundPatient.id); if (foundPatient.doctorId) setDoctorId(foundPatient.doctorId); }}>
@@ -486,8 +486,8 @@ export function AppointmentModal({
                   {selectedPatientId && (
                     <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 flex items-center justify-between">
                       <div>
-                        <p className="text-body font-semibold text-foreground">{patients.find((p) => p.id === selectedPatientId)?.name}</p>
-                        <p className="text-caption text-muted-foreground">{patients.find((p) => p.id === selectedPatientId)?.phone}</p>
+                        <p className="text-sm font-semibold text-foreground">{patients.find((p) => p.id === selectedPatientId)?.name}</p>
+                        <p className="text-xs text-muted-foreground">{patients.find((p) => p.id === selectedPatientId)?.phone}</p>
                       </div>
                       <button type="button" onClick={resetPatient} className="text-primary/50 hover:text-primary transition-colors">
                         <X className="w-4 h-4" />
@@ -498,36 +498,36 @@ export function AppointmentModal({
                   {!foundPatient && !selectedPatientId && (
                     <>
                       <div>
-                        <label className="text-body font-medium text-foreground mb-1 block">Имя пациента <span className="text-red-400">*</span></label>
+                        <label className="text-sm font-medium text-foreground mb-1 block">Имя пациента <span className="text-red-400">*</span></label>
                         <input type="text" value={patientName} onChange={(e) => setPatientName(e.target.value)}
                           className={INPUT} placeholder="Фамилия Имя Отчество" />
                       </div>
                       <div>
-                        <label className="text-body font-medium text-foreground mb-1 block">Телефон <span className="text-red-400">*</span></label>
+                        <label className="text-sm font-medium text-foreground mb-1 block">Телефон <span className="text-red-400">*</span></label>
                         <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
                           className={INPUT} placeholder="+7 (___) ___-__-__" />
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="text-body font-medium text-foreground mb-1 block">Дата рождения</label>
-                          <div className={cn("w-full border rounded-lg px-3 py-2 text-body min-h-[38px] flex items-center",
-                            dateOfBirth ? "border-primary/30 bg-primary/5 text-foreground" : "border-border bg-[var(--surface-2)]")}>
+                          <label className="text-sm font-medium text-foreground mb-1 block">Дата рождения</label>
+                          <div className={cn("w-full border rounded-lg px-3 py-2 text-sm min-h-[38px] flex items-center",
+                            dateOfBirth ? "border-primary/30 bg-primary/5 text-foreground" : "border-border bg-[#f1ede4]")}>
                             {dateOfBirth
                               ? new Date(dateOfBirth).toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" })
                               : <span className="text-muted-foreground/50">из ИИН</span>}
                           </div>
                         </div>
                         <div>
-                          <label className="text-body font-medium text-foreground mb-1 block">Пол</label>
-                          <div className={cn("w-full border rounded-lg px-3 py-2 text-body min-h-[38px] flex items-center",
-                            gender ? "border-primary/30 bg-primary/5 text-foreground" : "border-border bg-[var(--surface-2)]")}>
+                          <label className="text-sm font-medium text-foreground mb-1 block">Пол</label>
+                          <div className={cn("w-full border rounded-lg px-3 py-2 text-sm min-h-[38px] flex items-center",
+                            gender ? "border-primary/30 bg-primary/5 text-foreground" : "border-border bg-[#f1ede4]")}>
                             {gender ? genderLabel(gender) : <span className="text-muted-foreground/50">из ИИН</span>}
                           </div>
                         </div>
                       </div>
                       <div>
-                        <label className="text-body font-medium text-foreground mb-1 block">Источник</label>
-                        <select value={source} onChange={(e) => setSource(e.target.value)} className={INPUT + " bg-[var(--ds-surface)]"}>
+                        <label className="text-sm font-medium text-foreground mb-1 block">Источник</label>
+                        <select value={source} onChange={(e) => setSource(e.target.value)} className={INPUT + " bg-white"}>
                           <option value="walk_in">Самостоятельно</option>
                           <option value="referral">Рекомендация</option>
                           <option value="doctor_referred">Записан врачом</option>
@@ -538,8 +538,8 @@ export function AppointmentModal({
 
                   {doctors.length > 0 && (
                     <div>
-                      <label className="text-body font-medium text-foreground mb-1 block">Врач</label>
-                      <select value={doctorId} onChange={(e) => setDoctorId(e.target.value)} className={INPUT + " bg-[var(--ds-surface)]"}>
+                      <label className="text-sm font-medium text-foreground mb-1 block">Врач</label>
+                      <select value={doctorId} onChange={(e) => setDoctorId(e.target.value)} className={INPUT + " bg-white"}>
                         <option value="">Не назначен</option>
                         {doctors.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                       </select>
@@ -547,7 +547,7 @@ export function AppointmentModal({
                   )}
 
                   <div>
-                    <label className="text-body font-medium text-foreground mb-1 block">Заметки</label>
+                    <label className="text-sm font-medium text-foreground mb-1 block">Заметки</label>
                     <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2}
                       className={INPUT + " resize-none"} placeholder="Дополнительная информация..." />
                   </div>
@@ -556,11 +556,11 @@ export function AppointmentModal({
 
               {/* ── Дата и время — единая кнопка ── */}
               <div>
-                <label className="text-body font-medium text-foreground mb-1 block">Дата и время</label>
+                <label className="text-sm font-medium text-foreground mb-1 block">Дата и время</label>
                 <button
                   type="button"
                   onClick={() => setShowPicker(true)}
-                  className={cn(INPUT, "flex items-center gap-2 text-left bg-[var(--ds-surface)] hover:bg-[var(--surface-2)] transition-colors cursor-pointer")}
+                  className={cn(INPUT, "flex items-center gap-2 text-left bg-white hover:bg-[#f1ede4] transition-colors cursor-pointer")}
                 >
                   <CalendarDays className="w-4 h-4 text-primary shrink-0" />
                   <span className="text-foreground">
@@ -576,14 +576,14 @@ export function AppointmentModal({
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 border-t border-[var(--ds-border)] shrink-0 flex gap-3 bg-[var(--ds-surface)] rounded-b-2xl">
+          <div className="px-6 py-4 border-t border-[#e8e3d9] shrink-0 flex gap-3 bg-white rounded-b-2xl">
             {confirmDelete ? (
               <>
-                <span className="text-body text-red-600 flex-1 flex items-center">Удалить запись?</span>
+                <span className="text-sm text-red-600 flex-1 flex items-center">Удалить запись?</span>
                 <button onClick={() => setConfirmDelete(false)}
-                  className="px-4 py-2 rounded-xl border border-[var(--ds-border)] text-body text-muted-foreground hover:bg-[var(--bg)]">Нет</button>
+                  className="px-4 py-2 rounded-xl border border-[#e8e3d9] text-sm text-muted-foreground hover:bg-[#faf8f4]">Нет</button>
                 <button onClick={onDelete}
-                  className="px-4 py-2 rounded-xl bg-red-500 text-white text-body font-medium hover:bg-red-600">Удалить</button>
+                  className="px-4 py-2 rounded-xl bg-red-500 text-white text-sm font-medium hover:bg-red-600">Удалить</button>
               </>
             ) : (
               <>

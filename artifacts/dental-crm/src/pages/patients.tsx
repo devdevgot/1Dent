@@ -157,16 +157,16 @@ function PatientsListView({
   const canDelete = user?.role === "owner" || user?.role === "admin";
 
   const SortIcon = ({ col }: { col: SortKey }) => {
-    if (sortKey !== col) return <ChevronsUpDown className="w-3 h-3 text-[var(--text-subtle)]" />;
+    if (sortKey !== col) return <ChevronsUpDown className="w-3 h-3 text-[#94a3b8]" />;
     return sortDir === "asc"
-      ? <ChevronUp className="w-3 h-3 text-[var(--ds-primary)]" />
-      : <ChevronDown className="w-3 h-3 text-[var(--ds-primary)]" />;
+      ? <ChevronUp className="w-3 h-3 text-[#1f75fe]" />
+      : <ChevronDown className="w-3 h-3 text-[#1f75fe]" />;
   };
 
   const Th = ({ col, label, className = "" }: { col: SortKey; label: string; className?: string }) => (
     <th
       onClick={() => handleSort(col)}
-      className={`px-4 py-3 text-left section-label whitespace-nowrap cursor-pointer select-none hover:text-[var(--text)] ${className}`}
+      className={`px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wide whitespace-nowrap cursor-pointer select-none hover:text-[#0f172a] ${className}`}
     >
       <span className="inline-flex items-center gap-1">
         {label}
@@ -176,30 +176,30 @@ function PatientsListView({
   );
 
   return (
-    <div className="flex flex-col h-full bg-[var(--bg)]">
+    <div className="flex flex-col h-full bg-[#faf8f4]">
       {/* Table */}
       <div className="flex-1 overflow-auto custom-scrollbar">
         {isLoading ? (
           <PatientsTableSkeleton />
         ) : error ? (
-          <div className="flex items-center justify-center h-48 text-[var(--danger)] text-sm">
+          <div className="flex items-center justify-center h-48 text-[#dc2626] text-sm">
             {t("kanban.loadError")}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-48 text-[var(--text-subtle)]">
+          <div className="flex flex-col items-center justify-center h-48 text-[#94a3b8]">
             <Search className="w-10 h-10 mb-2 opacity-40" />
             <p className="text-sm">{t("patients.noResults")}</p>
           </div>
         ) : (
           <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-[var(--ds-surface)] border-b border-[var(--ds-border)] z-10">
+            <thead className="sticky top-0 bg-white border-b border-[#e8e3d9] z-10">
               <tr>
-                <th className="px-4 py-3 text-left section-label w-10">#</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wide w-10">#</th>
                 <Th col="name"        label={t("patients.colName")} />
                 <Th col="phone"       label={t("patients.colPhone")} className="hidden sm:table-cell" />
                 <Th col="doctor"      label="Врач" className="hidden md:table-cell" />
                 <Th col="status"      label={t("patients.colStatus")} />
-                <th className="px-4 py-3 text-left section-label whitespace-nowrap min-w-[140px]">Прогресс</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wide whitespace-nowrap min-w-[140px]">Прогресс</th>
                 <Th col="dateOfBirth" label={t("patients.colAge")} className="hidden lg:table-cell" />
                 <Th col="source"      label={t("patients.colSource")} className="hidden xl:table-cell" />
                 <Th col="createdAt"   label={t("patients.colCreated")} className="hidden xl:table-cell" />
@@ -221,36 +221,36 @@ function PatientsListView({
                   <tr
                     key={patient.id}
                     onClick={() => setSelectedPatientId(patient.id)}
-                    className="bg-[var(--ds-surface)] hover:bg-[var(--bg)] cursor-pointer transition-colors group"
+                    className="bg-white hover:bg-[#faf8f4] cursor-pointer transition-colors group"
                   >
-                    <td className="px-4 py-3 text-[var(--text-subtle)] text-caption font-mono">{idx + 1}</td>
+                    <td className="px-4 py-3 text-[#94a3b8] text-xs font-mono">{idx + 1}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-[var(--ds-primary)]/10 text-[var(--ds-primary)] text-caption font-bold flex items-center justify-center shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-[var(--ds-primary)]/10 text-[#1f75fe] text-xs font-bold flex items-center justify-center shrink-0">
                           {initials}
                         </div>
                         <div>
-                          <p className="font-medium text-[var(--text)] group-hover:text-[var(--ds-primary)] transition-colors">
+                          <p className="font-medium text-[#0f172a] group-hover:text-[#1f75fe] transition-colors">
                             {patient.name}
                           </p>
                           {patient.notes && (
-                            <p className="text-caption text-[var(--text-subtle)] truncate max-w-[200px]">{patient.notes}</p>
+                            <p className="text-xs text-[#94a3b8] truncate max-w-[200px]">{patient.notes}</p>
                           )}
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3 hidden sm:table-cell">
-                      <span className="font-mono text-[var(--text-secondary)] text-xs">{patient.phone}</span>
+                      <span className="font-mono text-[#64748b] text-xs">{patient.phone}</span>
                     </td>
                     <td className="px-4 py-3 hidden md:table-cell">
                       {patient.doctorId && doctorMap[patient.doctorId] ? (
-                        <span className="text-caption font-medium text-[var(--text-secondary)]">{doctorMap[patient.doctorId]}</span>
+                        <span className="text-xs font-medium text-[#64748b]">{doctorMap[patient.doctorId]}</span>
                       ) : (
-                        <span className="text-[var(--text-subtle)] text-xs">—</span>
+                        <span className="text-[#94a3b8] text-xs">—</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center text-caption font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${statusCol ? COLUMN_HEADER_COLOR[patient.status] : "bg-[var(--surface-2)] text-[var(--text-secondary)]"}`}>
+                      <span className={`inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${statusCol ? COLUMN_HEADER_COLOR[patient.status] : "bg-[#f1ede4] text-[#64748b]"}`}>
                         {statusCol?.label ?? patient.status}
                       </span>
                     </td>
@@ -258,26 +258,26 @@ function PatientsListView({
                       {progressMap?.[patient.id] && (progressMap[patient.id].paid > 0 || progressMap[patient.id].debt > 0 || progressMap[patient.id].pending > 0) ? (
                         <PatientTreatmentProgressBar data={progressMap[patient.id]} compact />
                       ) : (
-                        <span className="text-[var(--text-subtle)] text-xs">—</span>
+                        <span className="text-[#94a3b8] text-xs">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 hidden lg:table-cell text-[var(--text-secondary)] text-caption whitespace-nowrap">
+                    <td className="px-4 py-3 hidden lg:table-cell text-[#64748b] text-xs whitespace-nowrap">
                       {patient.dateOfBirth ? (
                         <span>
                           {calculateAge(patient.dateOfBirth)} лет
-                          <span className="text-[var(--text-subtle)] ml-1">· {formatDateOfBirth(patient.dateOfBirth)}</span>
-                          {patient.iin && <span className="text-[var(--text-subtle)] ml-1 font-mono">· {maskIIN(patient.iin)}</span>}
+                          <span className="text-[#94a3b8] ml-1">· {formatDateOfBirth(patient.dateOfBirth)}</span>
+                          {patient.iin && <span className="text-[#94a3b8] ml-1 font-mono">· {maskIIN(patient.iin)}</span>}
                         </span>
                       ) : (
-                        <span className="text-[var(--text-subtle)]">—</span>
+                        <span className="text-[#94a3b8]">—</span>
                       )}
                     </td>
                     <td className="px-4 py-3 hidden xl:table-cell">
-                      <span className={`inline-flex items-center text-caption font-medium px-2.5 py-1 rounded-full ${SOURCE_COLORS[patient.source] ?? "bg-[var(--surface-2)] text-[var(--text-secondary)]"}`}>
+                      <span className={`inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-full ${SOURCE_COLORS[patient.source] ?? "bg-[#f1ede4] text-[#64748b]"}`}>
                         {SOURCE_LABELS[patient.source] ?? patient.source}
                       </span>
                     </td>
-                    <td className="px-4 py-3 hidden xl:table-cell text-[var(--text-subtle)] text-caption whitespace-nowrap">
+                    <td className="px-4 py-3 hidden xl:table-cell text-[#94a3b8] text-xs whitespace-nowrap">
                       {new Date(patient.createdAt).toLocaleDateString("ru", {
                         day: "2-digit", month: "short", year: "numeric",
                       })}
@@ -286,7 +286,7 @@ function PatientsListView({
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => setDeleteConfirm(patient.id)}
-                          className="opacity-0 group-hover:opacity-100 text-[var(--text-subtle)] hover:text-[var(--danger)] transition-all"
+                          className="opacity-0 group-hover:opacity-100 text-[#94a3b8] hover:text-[#dc2626] transition-all"
                           title={t("patients.delete")}
                         >
                           <Trash2 className="w-4 h-4" />
@@ -302,7 +302,7 @@ function PatientsListView({
       </div>
 
       {!isLoading && !error && filtered.length > 0 && (
-        <div className="bg-[var(--ds-surface)] border-t border-[var(--ds-border)] px-6 py-2 text-caption text-[var(--text-subtle)] shrink-0">
+        <div className="bg-white border-t border-[#e8e3d9] px-6 py-2 text-xs text-[#94a3b8] shrink-0">
           {t("patients.showing", { count: filtered.length, total: allPatients.length })}
         </div>
       )}
@@ -357,12 +357,12 @@ function PatientsKanbanView({
   }, [patients, search, statusFilter, sourceFilter, dateFilterFn]);
 
   return (
-    <div className="flex flex-col h-full bg-[var(--bg)]">
+    <div className="flex flex-col h-full bg-[#faf8f4]">
       <div className="flex flex-col flex-1 overflow-hidden gap-4 p-4">
         {isLoading ? (
           <KanbanSkeleton className="flex-1 pb-4" />
         ) : error ? (
-          <div className="flex-1 flex items-center justify-center text-[var(--danger)] text-sm">
+          <div className="flex-1 flex items-center justify-center text-[#dc2626] text-sm">
             {t("kanban.loadError")}
           </div>
         ) : (
@@ -445,7 +445,7 @@ export default function PatientsPage() {
         title={t("nav.patients")}
         onBack={() => window.history.back()}
         badge={
-          <span className="bg-[var(--primary-light)] text-[var(--ds-primary)] text-caption font-semibold px-2 py-0.5 rounded-full">
+          <span className="bg-[var(--primary-light)] text-[#1f75fe] text-xs font-semibold px-2 py-0.5 rounded-full">
             {allPatients.length}
           </span>
         }
@@ -479,17 +479,17 @@ export default function PatientsPage() {
         bottom={
           <>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-subtle)]" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8]" />
               <input
                 type="text"
                 value={filterSearch}
                 onChange={(e) => setFilterSearch(e.target.value)}
                 placeholder={t("patients.searchPlaceholder")}
-                className="w-full pl-9 pr-3 py-2 text-body border border-[var(--ds-border)] rounded-xl focus:outline-none focus:border-[var(--ds-primary)] focus:ring-2 focus:ring-[var(--ds-primary)]/20 bg-[var(--ds-surface)] text-[var(--text)]"
+                className="w-full pl-9 pr-3 py-2 text-sm border border-[#e8e3d9] rounded-xl focus:outline-none focus:border-[var(--ds-primary)] focus:ring-2 focus:ring-[var(--ds-primary)]/20 bg-white text-[#0f172a]"
               />
             </div>
 
-            <div className="flex items-center bg-[var(--surface-2)] rounded-xl p-0.5 mt-2.5">
+            <div className="flex items-center bg-[#f1ede4] rounded-xl p-0.5 mt-2.5">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 return (
@@ -497,10 +497,10 @@ export default function PatientsPage() {
                     key={tab.key}
                     onClick={() => setView(tab.key)}
                     className={cn(
-                      "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-caption font-semibold transition-all duration-150",
+                      "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150",
                       view === tab.key
-                        ? "bg-[var(--primary-light)] text-[var(--ds-primary)]"
-                        : "text-[var(--text-secondary)] hover:text-[var(--text)]",
+                        ? "bg-[var(--primary-light)] text-[#1f75fe]"
+                        : "text-[#64748b] hover:text-[#0f172a]",
                     )}
                   >
                     <Icon className="w-3.5 h-3.5" />
@@ -511,17 +511,17 @@ export default function PatientsPage() {
             </div>
 
             {showFilters && (
-              <div className="mt-2.5 space-y-2.5 border-t border-[var(--ds-border)] pt-2.5">
-                <div className="flex items-center gap-1.5 bg-[var(--surface-2)] rounded-xl p-1">
+              <div className="mt-2.5 space-y-2.5 border-t border-[#e8e3d9] pt-2.5">
+                <div className="flex items-center gap-1.5 bg-[#f1ede4] rounded-xl p-1">
                   {DATE_OPTIONS.map((opt) => (
                     <button
                       key={opt.key}
                       onClick={() => setDateFilter(opt.key)}
                       className={cn(
-                        "flex-1 py-1.5 rounded-lg text-caption font-semibold transition-all",
+                        "flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all",
                         dateFilter === opt.key
-                          ? "bg-[var(--primary-light)] text-[var(--ds-primary)]"
-                          : "text-[var(--text-secondary)] hover:text-[var(--text)]",
+                          ? "bg-[var(--primary-light)] text-[#1f75fe]"
+                          : "text-[#64748b] hover:text-[#0f172a]",
                       )}
                     >
                       {opt.label}
@@ -532,7 +532,7 @@ export default function PatientsPage() {
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value as PatientStatus | "all")}
-                    className="flex-1 text-body border border-[var(--ds-border)] rounded-xl px-3 py-2 bg-[var(--ds-surface)] focus:outline-none focus:border-[var(--ds-primary)] focus:ring-2 focus:ring-[var(--ds-primary)]/20 text-[var(--text)]"
+                    className="flex-1 text-sm border border-[#e8e3d9] rounded-xl px-3 py-2 bg-white focus:outline-none focus:border-[var(--ds-primary)] focus:ring-2 focus:ring-[var(--ds-primary)]/20 text-[#0f172a]"
                   >
                     <option value="all">{t("patients.allStatuses")}</option>
                     {KANBAN_COLUMNS.map((col) => (
@@ -544,7 +544,7 @@ export default function PatientsPage() {
                   <select
                     value={sourceFilter}
                     onChange={(e) => setSourceFilter(e.target.value as PatientSource | "all")}
-                    className="flex-1 text-body border border-[var(--ds-border)] rounded-xl px-3 py-2 bg-[var(--ds-surface)] focus:outline-none focus:border-[var(--ds-primary)] focus:ring-2 focus:ring-[var(--ds-primary)]/20 text-[var(--text)]"
+                    className="flex-1 text-sm border border-[#e8e3d9] rounded-xl px-3 py-2 bg-white focus:outline-none focus:border-[var(--ds-primary)] focus:ring-2 focus:ring-[var(--ds-primary)]/20 text-[#0f172a]"
                   >
                     <option value="all">{t("patients.allSources")}</option>
                     {ALL_SOURCES.map((s) => (
@@ -560,7 +560,7 @@ export default function PatientsPage() {
                       <button
                         key={col.id}
                         onClick={() => setStatusFilter(statusFilter === col.id ? "all" : col.id)}
-                        className={`text-caption px-2.5 py-0.5 rounded-full font-medium transition-all ${COLUMN_HEADER_COLOR[col.id]} ${statusFilter === col.id ? "ring-2 ring-offset-1 ring-current" : "opacity-80 hover:opacity-100"}`}
+                        className={`text-xs px-2.5 py-0.5 rounded-full font-medium transition-all ${COLUMN_HEADER_COLOR[col.id]} ${statusFilter === col.id ? "ring-2 ring-offset-1 ring-current" : "opacity-80 hover:opacity-100"}`}
                       >
                         {col.label}: {count}
                       </button>

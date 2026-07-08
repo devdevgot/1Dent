@@ -171,19 +171,19 @@ export function DiagnosisServicePicker({
       {/* ── Search bar ─────────────────────────────────────────────────────── */}
       <div className="px-3 pt-3 pb-2 shrink-0">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--text-secondary)] pointer-events-none" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#64748b] pointer-events-none" />
           <input
             type="text"
             placeholder="Поиск услуги по названию или коду..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             autoFocus
-            className="w-full text-[13px] pl-9 pr-9 py-2.5 border border-[var(--ds-border)] rounded-xl bg-[var(--ds-surface)] focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-[var(--text-secondary)]/50"
+            className="w-full text-[13px] pl-9 pr-9 py-2.5 border border-[#e8e3d9] rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-[#64748b]/50"
           />
           {search && (
             <button
               onClick={() => setSearch("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748b] hover:text-[#0f172a] transition-colors"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -207,7 +207,7 @@ export function DiagnosisServicePicker({
                 "flex items-center gap-1 shrink-0 text-[12px] font-medium px-3 py-1.5 rounded-full border transition-all duration-150",
                 isActive
                   ? "bg-primary text-white border-primary shadow-sm"
-                  : "border-[var(--ds-border)]/60 text-[var(--text-secondary)] bg-[var(--ds-surface)] hover:border-primary/40 hover:text-[var(--text)]",
+                  : "border-[#e8e3d9]/60 text-[#64748b] bg-white hover:border-primary/40 hover:text-[#0f172a]",
               )}
             >
               <span>{cat.label}</span>
@@ -215,7 +215,7 @@ export function DiagnosisServicePicker({
                 <span
                   className={cn(
                     "text-[10px] font-bold rounded-full min-w-[16px] text-center",
-                    isActive ? "text-white/70" : "text-[var(--text-secondary)]/60",
+                    isActive ? "text-white/70" : "text-[#64748b]/60",
                   )}
                 >
                   {count}
@@ -231,19 +231,19 @@ export function DiagnosisServicePicker({
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-12 gap-3">
             <Loader2 className="w-5 h-5 animate-spin text-primary" />
-            <span className="text-caption text-[var(--text-secondary)]">Загрузка прейскуранта...</span>
+            <span className="text-xs text-[#64748b]">Загрузка прейскуранта...</span>
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
             <span className="text-2xl">🔍</span>
-            <p className="text-body font-medium text-[var(--text)]">Ничего не найдено</p>
-            <p className="text-caption text-[var(--text-secondary)]">
+            <p className="text-sm font-medium text-[#0f172a]">Ничего не найдено</p>
+            <p className="text-xs text-[#64748b]">
               {search ? `По запросу «${search}» нет совпадений` : "В этой категории нет услуг"}
             </p>
             {search && (
               <button
                 onClick={() => setSearch("")}
-                className="text-caption text-primary hover:underline mt-1"
+                className="text-xs text-primary hover:underline mt-1"
               >
                 Сбросить поиск
               </button>
@@ -260,7 +260,7 @@ export function DiagnosisServicePicker({
                   "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-all duration-100",
                   checked
                     ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                    : "border-[var(--ds-border)]/60 bg-[var(--ds-surface)] hover:border-primary/40 hover:bg-[var(--bg)]/80",
+                    : "border-[#e8e3d9]/60 bg-white hover:border-primary/40 hover:bg-[#faf8f4]/80",
                 )}
               >
                 {/* Checkbox */}
@@ -268,7 +268,7 @@ export function DiagnosisServicePicker({
                   {checked ? (
                     <CheckSquare className="w-4 h-4 text-primary" />
                   ) : (
-                    <Square className="w-4 h-4 text-[var(--text-secondary)]/50" />
+                    <Square className="w-4 h-4 text-[#64748b]/50" />
                   )}
                 </span>
 
@@ -276,16 +276,16 @@ export function DiagnosisServicePicker({
                 <span className="flex-1 min-w-0">
                   <span className="flex items-baseline gap-1.5">
                     {svc.code && (
-                      <span className="text-[11px] text-[var(--text-secondary)] font-mono shrink-0">
+                      <span className="text-[11px] text-[#64748b] font-mono shrink-0">
                         {svc.code}
                       </span>
                     )}
-                    <span className="text-[13px] font-medium text-[var(--text)] leading-snug">
+                    <span className="text-[13px] font-medium text-[#0f172a] leading-snug">
                       {svc.name}
                     </span>
                   </span>
                   {activeCategory === "all" && svc.category && (
-                    <span className="block text-[11px] text-[var(--text-secondary)] mt-0.5">
+                    <span className="block text-[11px] text-[#64748b] mt-0.5">
                       {CATEGORY_LABEL_MAP[svc.category] ?? svc.category}
                     </span>
                   )}
@@ -295,7 +295,7 @@ export function DiagnosisServicePicker({
                 <span
                   className={cn(
                     "shrink-0 text-[13px] font-bold tabular-nums",
-                    checked ? "text-primary" : "text-[var(--text)]/80",
+                    checked ? "text-primary" : "text-[#0f172a]/80",
                   )}
                 >
                   {svc.defaultPrice > 0
@@ -309,11 +309,11 @@ export function DiagnosisServicePicker({
       </div>
 
       {/* ── Footer ─────────────────────────────────────────────────────────── */}
-      <div className="shrink-0 border-t border-[var(--ds-border)]/50 bg-[var(--ds-surface)] px-3 py-3 space-y-2.5">
+      <div className="shrink-0 border-t border-[#e8e3d9]/50 bg-white px-3 py-3 space-y-2.5">
         {batchError && (
           <div className="flex items-start gap-2 rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2">
             <AlertCircle className="w-3.5 h-3.5 text-destructive mt-0.5 shrink-0" />
-            <p className="text-caption text-destructive leading-snug">{batchError}</p>
+            <p className="text-xs text-destructive leading-snug">{batchError}</p>
           </div>
         )}
 
@@ -321,15 +321,15 @@ export function DiagnosisServicePicker({
         <div className="flex items-center justify-between">
           {selectedIds.size > 0 ? (
             <>
-              <span className="text-caption text-[var(--text-secondary)]">
+              <span className="text-xs text-[#64748b]">
                 Выбрано: {selectedIds.size} услуг
               </span>
-              <span className="text-body font-bold text-primary">
+              <span className="text-sm font-bold text-primary">
                 {total.toLocaleString("ru-KZ")} ₸
               </span>
             </>
           ) : (
-            <span className="text-caption text-[var(--text-secondary)]">
+            <span className="text-xs text-[#64748b]">
               Зуб {toothFdi} — выберите услуги из прейскуранта
             </span>
           )}

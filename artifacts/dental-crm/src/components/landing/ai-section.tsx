@@ -13,10 +13,10 @@ function ChatBubble({ text, from, delay }: { text: string; from: "user" | "ai"; 
       style={{ willChange: "transform, opacity" }}
       className={`flex ${from === "ai" ? "justify-end" : "justify-start"}`}
     >
-      <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-body font-manrope ${
+      <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm font-manrope ${
         from === "ai"
           ? "bg-[var(--ds-primary)] text-white rounded-br-sm"
-          : "bg-[var(--ds-surface)]/10 text-white/80 rounded-bl-sm border border-white/10"
+          : "bg-white/10 text-white/80 rounded-bl-sm border border-white/10"
       }`}>
         {text}
       </div>
@@ -106,7 +106,7 @@ export function AiSection() {
                   </div>
                   <div>
                     <div className="font-manrope font-bold text-white text-base mb-1">{f.title}</div>
-                    <div className="font-manrope text-white/50 text-body leading-relaxed">{f.desc}</div>
+                    <div className="font-manrope text-white/50 text-sm leading-relaxed">{f.desc}</div>
                   </div>
                 </motion.div>
               ))}
@@ -121,7 +121,7 @@ export function AiSection() {
                 </div>
                 <div>
                   <div className="font-manrope font-bold text-white text-sm">{SITE.name} ИИ-Ассистент</div>
-                  <div className="font-manrope text-white/50 text-caption flex items-center gap-1.5">
+                  <div className="font-manrope text-white/50 text-xs flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 bg-green-400 rounded-full inline-block" />
                     Онлайн 24/7
                   </div>
@@ -137,14 +137,14 @@ export function AiSection() {
                 <ChatBubble from="ai" text="Записал! Завтра в 10:00. Накануне вечером придёт напоминание в WhatsApp." delay={0.6} />
               </div>
 
-              <div className="mt-6 flex gap-2 bg-[var(--ds-surface)]/5 rounded-2xl p-3 border border-[var(--dark-border)]">
+              <div className="mt-6 flex gap-2 bg-white/5 rounded-2xl p-3 border border-[var(--dark-border)]">
                 <input
                   readOnly
                   placeholder="Напишите сообщение..."
                   aria-label="Сообщение"
-                  className="flex-1 bg-transparent font-manrope text-white/40 text-body outline-none placeholder:text-white/30"
+                  className="flex-1 bg-transparent font-manrope text-white/40 text-sm outline-none placeholder:text-white/30"
                 />
-                <button type="button" aria-label="Отправить" className="w-8 h-8 rounded-xl bg-[var(--ds-primary)] flex items-center justify-center hover:bg-[var(--primary-hover)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50">
+                <button type="button" aria-label="Отправить" className="w-8 h-8 rounded-xl bg-[var(--ds-primary)] flex items-center justify-center hover:bg-[#1a65e8] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50">
                   <Send size={14} className="text-white" />
                 </button>
               </div>
@@ -165,7 +165,7 @@ export function AiSection() {
                   className="landing-card-dark p-4 text-center"
                 >
                   <div className="font-manrope font-bold text-white text-xl">{s.value}</div>
-                  <div className="font-manrope text-white/40 text-caption mt-1">{s.label}</div>
+                  <div className="font-manrope text-white/40 text-xs mt-1">{s.label}</div>
                 </motion.div>
               ))}
             </motion.div>

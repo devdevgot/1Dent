@@ -91,14 +91,14 @@ export function TabletQrScanner({
       size="md"
     >
       <div className="font-manrope">
-        <p className="mb-4 text-body text-[var(--text-secondary)]">
+        <p className="mb-4 text-sm text-[#64748b]">
           Наведите камеру на QR-код на экране планшета в кабинете
         </p>
-        <div className="overflow-hidden rounded-2xl border border-[var(--ds-border)] bg-black">
+        <div className="overflow-hidden rounded-2xl border border-[#e8e3d9] bg-black">
           <div id={scannerRegionId} className="min-h-[280px] w-full" />
         </div>
         {error && (
-          <p className="mt-3 text-body text-[var(--danger)]">{error}</p>
+          <p className="mt-3 text-sm text-[#dc2626]">{error}</p>
         )}
         <Button type="button" variant="outline" className="mt-4 w-full" onClick={onClose}>
           <X className="mr-2 h-4 w-4" /> Закрыть

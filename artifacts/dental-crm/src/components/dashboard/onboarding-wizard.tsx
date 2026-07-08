@@ -457,12 +457,12 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
             <div className="dash-modal-header">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <div className="p-1 rounded-lg bg-[var(--primary-light)] text-[var(--ds-primary)]">
+                  <div className="p-1 rounded-lg bg-[var(--primary-light)] text-[#1f75fe]">
                     <Sparkles className="w-5 h-5 animate-pulse" />
                   </div>
                   <div>
-                    <h3 className="text-body sm:text-base font-black text-[var(--text)] leading-tight">Быстрый старт в 1Dent</h3>
-                    <p className="text-micro text-[var(--text-subtle)] font-semibold hidden sm:block">Настройка основных модулей клиники</p>
+                    <h3 className="text-sm sm:text-base font-black text-[#0f172a] leading-tight">Быстрый старт в 1Dent</h3>
+                    <p className="text-xs text-[#94a3b8] font-semibold hidden sm:block">Настройка основных модулей клиники</p>
                   </div>
                 </div>
                 <button
@@ -471,7 +471,7 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                     localStorage.removeItem("show_onboarding_wizard");
                     onClose();
                   }}
-                  className="text-caption font-bold text-[var(--text-subtle)] hover:text-[var(--text-secondary)] transition-colors bg-[var(--surface-2)] hover:bg-[var(--surface-2)] border border-[var(--ds-border)]/60 rounded-xl px-3.5 py-1.5 shrink-0"
+                  className="text-xs font-bold text-[#94a3b8] hover:text-[#64748b] transition-colors bg-[#f1ede4] hover:bg-[#f1ede4] border border-[#e8e3d9]/60 rounded-xl px-3.5 py-1.5 shrink-0"
                 >
                   Настрою позже
                 </button>
@@ -492,7 +492,7 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
 
                   return (
                     <div key={s.id} className="flex-1 animate-fade-in">
-                      <div className="h-1.5 rounded-full bg-[var(--surface-2)] overflow-hidden border border-[var(--ds-border)]/20">
+                      <div className="h-1.5 rounded-full bg-[#f1ede4] overflow-hidden border border-[#e8e3d9]/20">
                         <div
                           className={cn(
                             "h-full rounded-full transition-all duration-500 ease-out",
@@ -507,10 +507,10 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
               </div>
 
               <div className="flex items-center justify-between mt-2">
-                <span className="text-caption sm:text-sm font-extrabold text-[var(--text)]">
+                <span className="text-xs sm:text-sm font-extrabold text-[#0f172a]">
                   {currentStepLabels[currentStep as keyof typeof currentStepLabels]}
                 </span>
-                <span className="text-micro sm:text-xs font-extrabold text-[var(--ds-primary)] bg-[var(--primary-light)] border border-[var(--ds-primary)]/20 px-2.5 py-0.5 rounded-full shrink-0">
+                <span className="text-xs sm:text-xs font-extrabold text-[#1f75fe] bg-[var(--primary-light)] border border-[var(--ds-primary)]/20 px-2.5 py-0.5 rounded-full shrink-0">
                   Шаг {currentStepNum} из 4
                 </span>
               </div>
@@ -530,8 +530,8 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                   className="space-y-4 sm:space-y-5"
                 >
                   <div className="text-center max-w-md mx-auto">
-                    <h2 className="text-base sm:text-lg font-black text-[var(--text)]">Добавление команды клиники</h2>
-                    <p className="text-caption text-[var(--text-secondary)] mt-1">
+                    <h2 className="text-base sm:text-lg font-black text-[#0f172a]">Добавление команды клиники</h2>
+                    <p className="text-xs text-[#64748b] mt-1">
                       Добавьте сотрудников, чтобы выслать им временные пароли. Они смогут войти и начать работу с первого дня.
                     </p>
                   </div>
@@ -539,34 +539,34 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                   <div className="dash-form-card space-y-3.5">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-micro font-bold uppercase tracking-wider text-[var(--text-subtle)] mb-1">ФИО сотрудника *</label>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#94a3b8] mb-1">ФИО сотрудника *</label>
                         <input
                           type="text"
                           value={empName}
                           onChange={e => setEmpName(e.target.value)}
                           placeholder="Иванов Александр"
-                          className="w-full border border-[var(--ds-border)] rounded-xl px-3.5 py-2.5 text-body bg-[var(--ds-surface)] focus:outline-none focus:border-[var(--ds-primary)] focus:ring-4 focus:ring-[var(--ds-primary)]/10 transition-all duration-200"
+                          className="w-full border border-[#e8e3d9] rounded-xl px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:border-[var(--ds-primary)] focus:ring-4 focus:ring-[var(--ds-primary)]/10 transition-all duration-200"
                         />
                       </div>
                       <div>
-                        <label className="block text-micro font-bold uppercase tracking-wider text-[var(--text-subtle)] mb-1">Email (Логин) *</label>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#94a3b8] mb-1">Email (Логин) *</label>
                         <input
                           type="email"
                           value={empEmail}
                           onChange={e => setEmpEmail(e.target.value)}
                           placeholder="doctor@1dent.kz"
-                          className="w-full border border-[var(--ds-border)] rounded-xl px-3.5 py-2.5 text-body bg-[var(--ds-surface)] focus:outline-none focus:border-[var(--ds-primary)] focus:ring-4 focus:ring-[var(--ds-primary)]/10 transition-all duration-200"
+                          className="w-full border border-[#e8e3d9] rounded-xl px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:border-[var(--ds-primary)] focus:ring-4 focus:ring-[var(--ds-primary)]/10 transition-all duration-200"
                         />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-micro font-bold uppercase tracking-wider text-[var(--text-subtle)] mb-1">Роль сотрудника</label>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#94a3b8] mb-1">Роль сотрудника</label>
                         <select
                           value={empRole}
                           onChange={e => setEmpRole(e.target.value as any)}
-                          className="w-full border border-[var(--ds-border)] rounded-xl px-3.5 py-2.5 text-body bg-[var(--ds-surface)] focus:outline-none focus:border-[var(--ds-primary)] focus:ring-4 focus:ring-[var(--ds-primary)]/10 transition-all duration-200"
+                          className="w-full border border-[#e8e3d9] rounded-xl px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:border-[var(--ds-primary)] focus:ring-4 focus:ring-[var(--ds-primary)]/10 transition-all duration-200"
                         >
                           <option value="doctor">Врач</option>
                           <option value="assistant">Ассистент</option>
@@ -577,13 +577,13 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-micro font-bold uppercase tracking-wider text-[var(--text-subtle)] mb-1">Телефон</label>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#94a3b8] mb-1">Телефон</label>
                         <input
                           type="tel"
                           value={empPhone}
                           onChange={e => setEmpPhone(e.target.value)}
                           placeholder="+7 777 123 45 67"
-                          className="w-full border border-[var(--ds-border)] rounded-xl px-3.5 py-2.5 text-body bg-[var(--ds-surface)] focus:outline-none focus:border-[var(--ds-primary)] focus:ring-4 focus:ring-[var(--ds-primary)]/10 transition-all duration-200"
+                          className="w-full border border-[#e8e3d9] rounded-xl px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:border-[var(--ds-primary)] focus:ring-4 focus:ring-[var(--ds-primary)]/10 transition-all duration-200"
                         />
                       </div>
                     </div>
@@ -594,7 +594,7 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                         animate={{ opacity: 1, height: "auto" }}
                         className="grid grid-cols-1"
                       >
-                        <label className="block text-micro font-bold uppercase tracking-wider text-[var(--text-subtle)] mb-1">Специализация (терапевт, хирург и др.)</label>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#94a3b8] mb-1">Специализация (терапевт, хирург и др.)</label>
                         <SpecialtyTagInput
                           values={empSpecialty ? empSpecialty.split(",").map(s => s.trim()).filter(Boolean) : []}
                           onChange={tags => setEmpSpecialty(tags.join(", "))}
@@ -607,7 +607,7 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                       type="button"
                       disabled={loading}
                       onClick={handleAddEmployee}
-                      className="w-full py-3 bg-[var(--ds-primary)] hover:bg-[#0053d6] disabled:opacity-60 text-white rounded-xl text-body font-bold flex items-center justify-center gap-2 shadow-md transition-colors"
+                      className="w-full py-3 bg-[var(--ds-primary)] hover:bg-[#0053d6] disabled:opacity-60 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-md transition-colors"
                     >
                       {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
                       Пригласить и выслать пароль
@@ -617,15 +617,15 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                   {/* List of added employees */}
                   {addedEmployees.length > 0 && (
                     <div className="space-y-2">
-                      <h4 className="text-micro font-bold text-[var(--text-subtle)] uppercase tracking-wider">Добавленные сотрудники ({addedEmployees.length})</h4>
-                      <div className="max-h-[120px] overflow-y-auto border border-[var(--ds-border)] rounded-2xl divide-y divide-[var(--ds-border)] bg-[var(--ds-surface)] shadow-sm">
+                      <h4 className="text-xs font-bold text-[#94a3b8] uppercase tracking-wider">Добавленные сотрудники ({addedEmployees.length})</h4>
+                      <div className="max-h-[120px] overflow-y-auto border border-[#e8e3d9] rounded-2xl divide-y divide-[var(--ds-border)] bg-white shadow-sm">
                         {addedEmployees.map((e, idx) => (
-                          <div key={idx} className="flex items-center justify-between p-3 hover:bg-[var(--surface-2)] transition-colors">
+                          <div key={idx} className="flex items-center justify-between p-3 hover:bg-[#f1ede4] transition-colors">
                             <div className="min-w-0 flex-1 pr-2">
-                              <p className="text-caption font-bold text-[var(--text)] truncate">{e.name}</p>
-                              <p className="text-micro text-[var(--text-subtle)] truncate">{e.email}</p>
+                              <p className="text-xs font-bold text-[#0f172a] truncate">{e.name}</p>
+                              <p className="text-xs text-[#94a3b8] truncate">{e.email}</p>
                             </div>
-                            <span className="text-micro font-bold uppercase tracking-wider text-blue-600 bg-[var(--primary-light)] border border-[var(--ds-primary)]/50 px-2 py-0.5 rounded-full shrink-0">
+                            <span className="text-xs font-bold uppercase tracking-wider text-blue-600 bg-[var(--primary-light)] border border-[var(--ds-primary)]/50 px-2 py-0.5 rounded-full shrink-0">
                               {roleLabels[e.role as keyof typeof roleLabels]}
                             </span>
                           </div>
@@ -648,8 +648,8 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                   className="space-y-4 sm:space-y-5"
                 >
                   <div className="text-center max-w-md mx-auto">
-                    <h2 className="text-base sm:text-lg font-black text-[var(--text)]">Настройка и обучение ИИ чат-бота</h2>
-                    <p className="text-caption text-[var(--text-secondary)] mt-1">
+                    <h2 className="text-base sm:text-lg font-black text-[#0f172a]">Настройка и обучение ИИ чат-бота</h2>
+                    <p className="text-xs text-[#64748b] mt-1">
                       Дайте чат-боту информацию о вашей клинике (цены, услуги), чтобы обучить его отвечать на вопросы пациентов в WhatsApp.
                     </p>
                   </div>
@@ -657,15 +657,15 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                   {!isTrained ? (
                     <div className="space-y-4">
                       {/* Premium Tabs Selection */}
-                      <div className="flex p-1 bg-[var(--surface-2)] rounded-xl">
+                      <div className="flex p-1 bg-[#f1ede4] rounded-xl">
                         <button
                           type="button"
                           onClick={() => setActiveChatbotTab("url")}
                           className={cn(
-                            "flex-1 py-2 rounded-lg text-caption font-bold transition-all flex items-center justify-center gap-1.5",
+                            "flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5",
                             activeChatbotTab === "url"
-                              ? "bg-[var(--ds-surface)] text-[var(--text)] shadow-sm"
-                              : "text-[var(--text-secondary)] hover:text-[var(--text)]"
+                              ? "bg-white text-[#0f172a] shadow-sm"
+                              : "text-[#64748b] hover:text-[#0f172a]"
                           )}
                         >
                           <Link2 className="w-3.5 h-3.5" />
@@ -675,10 +675,10 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                           type="button"
                           onClick={() => setActiveChatbotTab("file")}
                           className={cn(
-                            "flex-1 py-2 rounded-lg text-caption font-bold transition-all flex items-center justify-center gap-1.5",
+                            "flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5",
                             activeChatbotTab === "file"
-                              ? "bg-[var(--ds-surface)] text-[var(--text)] shadow-sm"
-                              : "text-[var(--text-secondary)] hover:text-[var(--text)]"
+                              ? "bg-white text-[#0f172a] shadow-sm"
+                              : "text-[#64748b] hover:text-[#0f172a]"
                           )}
                         >
                           <Upload className="w-3.5 h-3.5" />
@@ -688,10 +688,10 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                           type="button"
                           onClick={() => setActiveChatbotTab("text")}
                           className={cn(
-                            "flex-1 py-2 rounded-lg text-caption font-bold transition-all flex items-center justify-center gap-1.5",
+                            "flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5",
                             activeChatbotTab === "text"
-                              ? "bg-[var(--ds-surface)] text-[var(--text)] shadow-sm"
-                              : "text-[var(--text-secondary)] hover:text-[var(--text)]"
+                              ? "bg-white text-[#0f172a] shadow-sm"
+                              : "text-[#64748b] hover:text-[#0f172a]"
                           )}
                         >
                           <AlignLeft className="w-3.5 h-3.5" />
@@ -703,14 +703,14 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                         {/* URL TAB */}
                         {activeChatbotTab === "url" && (
                           <div className="space-y-2">
-                            <label className="block text-micro font-bold uppercase tracking-wider text-[var(--text-subtle)] mb-1">Добавить ссылку на сайт / прайс-лист</label>
+                            <label className="block text-xs font-bold uppercase tracking-wider text-[#94a3b8] mb-1">Добавить ссылку на сайт / прайс-лист</label>
                             <div className="flex gap-2">
                               <input
                                 type="url"
                                 value={botUrl}
                                 onChange={e => setBotUrl(e.target.value)}
                                 placeholder="https://myclinic.kz/prices"
-                                className="flex-1 border border-[var(--ds-border)] rounded-xl px-3.5 py-2 text-body bg-[var(--ds-surface)] focus:outline-none focus:border-[var(--ds-primary)] focus:ring-4 focus:ring-[var(--ds-primary)]/10 transition-all duration-200"
+                                className="flex-1 border border-[#e8e3d9] rounded-xl px-3.5 py-2 text-sm bg-white focus:outline-none focus:border-[var(--ds-primary)] focus:ring-4 focus:ring-[var(--ds-primary)]/10 transition-all duration-200"
                               />
                               <button
                                 type="button"
@@ -727,26 +727,26 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                         {/* FILE TAB */}
                         {activeChatbotTab === "file" && (
                           <div className="space-y-2">
-                            <label className="block text-micro font-bold uppercase tracking-wider text-[var(--text-subtle)] mb-1">Загрузить файлы (PDF, Word) или Фото</label>
+                            <label className="block text-xs font-bold uppercase tracking-wider text-[#94a3b8] mb-1">Загрузить файлы (PDF, Word) или Фото</label>
                             <button
                               type="button"
                               onClick={() => fileInputRef.current?.click()}
                               disabled={uploadingFile}
-                              className="w-full flex flex-col items-center justify-center gap-2 py-4 px-4 rounded-xl border-2 border-dashed border-[var(--ds-border)] hover:border-[var(--ds-primary)]/50 hover:bg-[var(--ds-primary)]/5 transition-all text-[var(--text-secondary)] disabled:opacity-50 group bg-[var(--ds-surface)]"
+                              className="w-full flex flex-col items-center justify-center gap-2 py-4 px-4 rounded-xl border-2 border-dashed border-[#e8e3d9] hover:border-[var(--ds-primary)]/50 hover:bg-[var(--ds-primary)]/5 transition-all text-[#64748b] disabled:opacity-50 group bg-white"
                             >
                               {uploadingFile ? (
                                 <>
-                                  <Loader2 className="w-6 h-6 animate-spin text-[var(--ds-primary)]" />
-                                  <span className="text-micro font-bold text-[var(--text)] animate-pulse">Загрузка и извлечение данных...</span>
+                                  <Loader2 className="w-6 h-6 animate-spin text-[#1f75fe]" />
+                                  <span className="text-xs font-bold text-[#0f172a] animate-pulse">Загрузка и извлечение данных...</span>
                                 </>
                               ) : (
                                 <>
-                                  <div className="p-1.5 rounded-full bg-[var(--surface-2)] group-hover:bg-[var(--ds-primary)]/10 transition-colors">
-                                    <Upload className="w-4 h-4 text-[var(--text-subtle)] group-hover:text-[var(--ds-primary)] transition-colors" />
+                                  <div className="p-1.5 rounded-full bg-[#f1ede4] group-hover:bg-[var(--ds-primary)]/10 transition-colors">
+                                    <Upload className="w-4 h-4 text-[#94a3b8] group-hover:text-[#1f75fe] transition-colors" />
                                   </div>
                                   <div className="text-center">
-                                    <span className="text-micro font-bold text-[var(--text)] block">Выбрать файл с устройства</span>
-                                    <span className="text-micro text-[var(--text-subtle)] mt-0.5 block">PDF, DOCX, JPG, PNG, WEBP — до 10 МБ</span>
+                                    <span className="text-xs font-bold text-[#0f172a] block">Выбрать файл с устройства</span>
+                                    <span className="text-xs text-[#94a3b8] mt-0.5 block">PDF, DOCX, JPG, PNG, WEBP — до 10 МБ</span>
                                   </div>
                                 </>
                               )}
@@ -769,20 +769,20 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                         {/* TEXT TAB */}
                         {activeChatbotTab === "text" && (
                           <div className="space-y-2">
-                            <label className="block text-micro font-bold uppercase tracking-wider text-[var(--text-subtle)]">Вставить текстовую информацию вручную</label>
+                            <label className="block text-xs font-bold uppercase tracking-wider text-[#94a3b8]">Вставить текстовую информацию вручную</label>
                             <input
                               type="text"
                               value={botTextTitle}
                               onChange={e => setBotTextTitle(e.target.value)}
                               placeholder="Название документа (напр., Врачи клиники)"
-                              className="w-full border border-[var(--ds-border)] rounded-xl px-3.5 py-1.5 text-body bg-[var(--ds-surface)] focus:outline-none focus:border-[var(--ds-primary)] transition-all"
+                              className="w-full border border-[#e8e3d9] rounded-xl px-3.5 py-1.5 text-sm bg-white focus:outline-none focus:border-[var(--ds-primary)] transition-all"
                             />
                             <textarea
                               value={botTextContent}
                               onChange={e => setBotTextContent(e.target.value)}
                               placeholder="Вставьте текстовую информацию сюда (режим работы, цены, услуги)..."
                               rows={3}
-                              className="w-full border border-[var(--ds-border)] rounded-xl px-3.5 py-2 text-body bg-[var(--ds-surface)] focus:outline-none focus:border-[var(--ds-primary)] resize-none transition-all"
+                              className="w-full border border-[#e8e3d9] rounded-xl px-3.5 py-2 text-sm bg-white focus:outline-none focus:border-[var(--ds-primary)] resize-none transition-all"
                             />
                             <button
                               type="button"
@@ -799,10 +799,10 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                       {/* Knowledge Sources List */}
                       {knowledgeSources.length > 0 && (
                         <div className="space-y-2">
-                          <h4 className="text-micro font-bold text-[var(--text-subtle)] uppercase tracking-wider">Добавленные источники ({knowledgeSources.length})</h4>
-                          <div className="max-h-[120px] overflow-y-auto border border-[var(--ds-border)] rounded-2xl divide-y divide-[var(--ds-border)] bg-[var(--ds-surface)] shadow-sm">
+                          <h4 className="text-xs font-bold text-[#94a3b8] uppercase tracking-wider">Добавленные источники ({knowledgeSources.length})</h4>
+                          <div className="max-h-[120px] overflow-y-auto border border-[#e8e3d9] rounded-2xl divide-y divide-[var(--ds-border)] bg-white shadow-sm">
                             {knowledgeSources.map((source, idx) => (
-                              <div key={source.id || idx} className="flex items-center justify-between p-2.5 hover:bg-[var(--surface-2)] transition-colors">
+                              <div key={source.id || idx} className="flex items-center justify-between p-2.5 hover:bg-[#f1ede4] transition-colors">
                                 <div className="flex items-center gap-2 min-w-0 flex-1">
                                   {source.type === "url" && (
                                     <span className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-100 shrink-0">
@@ -820,8 +820,8 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                                     </span>
                                   )}
                                   <div className="min-w-0 flex-1">
-                                    <p className="text-caption font-bold text-[var(--text)] truncate">{source.title}</p>
-                                    <p className="text-micro text-[var(--text-subtle)] uppercase tracking-wider font-semibold">
+                                    <p className="text-xs font-bold text-[#0f172a] truncate">{source.title}</p>
+                                    <p className="text-xs text-[#94a3b8] uppercase tracking-wider font-semibold">
                                       {source.type === "url" ? "Ссылка" : source.type === "file" ? "Файл / Фото" : "Текст"}
                                     </p>
                                   </div>
@@ -829,7 +829,7 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteSource(source.id)}
-                                  className="p-1.5 text-[var(--text-subtle)] hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors ml-2 shrink-0"
+                                  className="p-1.5 text-[#94a3b8] hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors ml-2 shrink-0"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
@@ -841,18 +841,18 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
 
                       {/* Training Action */}
                       {isTraining ? (
-                        <div className="bg-[var(--surface-2)] border border-[var(--ds-border)] rounded-2xl p-5 flex flex-col items-center justify-center space-y-3 animate-pulse">
-                          <Loader2 className="w-7 h-7 text-[var(--ds-primary)] animate-spin" />
+                        <div className="bg-[#f1ede4] border border-[#e8e3d9] rounded-2xl p-5 flex flex-col items-center justify-center space-y-3 animate-pulse">
+                          <Loader2 className="w-7 h-7 text-[#1f75fe] animate-spin" />
                           <div className="w-full max-w-xs bg-[var(--ds-border)] rounded-full h-1.5">
                             <div className="bg-[var(--ds-primary)] h-1.5 rounded-full transition-all duration-300" style={{ width: `${trainingProgress}%` }} />
                           </div>
-                          <p className="text-micro text-[var(--text-secondary)] font-bold">Анализируем базу знаний и строим mindmap...</p>
+                          <p className="text-xs text-[#64748b] font-bold">Анализируем базу знаний и строим mindmap...</p>
                         </div>
                       ) : (
                         <button
                           type="button"
                           onClick={handleTrainChatbot}
-                          className="w-full py-3 bg-[var(--ds-primary)] hover:bg-[#0053d6] text-white font-bold rounded-xl text-body flex items-center justify-center gap-2 shadow-md transition-colors"
+                          className="w-full py-3 bg-[var(--ds-primary)] hover:bg-[#0053d6] text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 shadow-md transition-colors"
                         >
                           <Bot className="w-4 h-4" />
                           Обучить чат-бота
@@ -865,8 +865,8 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                       <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl p-3.5 flex items-start gap-2.5 shadow-sm">
                         <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                         <div>
-                          <p className="text-caption sm:text-sm font-bold">Бот успешно обучен и готов к работе!</p>
-                          <p className="text-micro sm:text-xs text-emerald-700/95 mt-0.5 leading-normal">
+                          <p className="text-xs sm:text-sm font-bold">Бот успешно обучен и готов к работе!</p>
+                          <p className="text-xs sm:text-xs text-emerald-700/95 mt-0.5 leading-normal">
                             Мы построили ментальную карту знаний вашей клиники. Попробуйте написать ему прямо в песочнице ниже, чтобы протестировать его ответы.
                           </p>
                         </div>
@@ -875,15 +875,15 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                       {/* Playground panel */}
                       <div className="dash-playground h-[180px] sm:h-[220px] flex flex-col shadow-inner">
                         <div className="dash-playground-header flex items-center gap-2">
-                          <Bot className="w-3.5 h-3.5 text-[var(--ds-primary)]" />
-                          <span className="text-micro sm:text-xs font-bold text-white/80">Тестирование ответов ИИ-бота</span>
+                          <Bot className="w-3.5 h-3.5 text-[#1f75fe]" />
+                          <span className="text-xs sm:text-xs font-bold text-white/80">Тестирование ответов ИИ-бота</span>
                         </div>
                         <div className="flex-1 p-3 overflow-y-auto space-y-2.5 flex flex-col">
                           {playgroundMessages.map((m, idx) => (
                             <div
                               key={idx}
                               className={cn(
-                                "max-w-[85%] rounded-2xl px-3 py-2 text-micro leading-relaxed",
+                                "max-w-[85%] rounded-2xl px-3 py-2 text-xs leading-relaxed",
                                 m.role === "user"
                                   ? "bg-[var(--ds-primary)] text-white self-end rounded-tr-none"
                                   : "bg-[var(--dark-surface)] text-white/90 self-start rounded-tl-none border border-[var(--dark-border)]"
@@ -893,8 +893,8 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                             </div>
                           ))}
                           {testMessage.isPending && (
-                            <div className="bg-[var(--dark-surface)] text-white/70 self-start rounded-2xl rounded-tl-none px-3 py-2 text-micro border border-[var(--dark-border)] flex items-center gap-1.5">
-                              <Loader2 className="w-3 h-3 animate-spin text-[var(--ds-primary)]" />
+                            <div className="bg-[var(--dark-surface)] text-white/70 self-start rounded-2xl rounded-tl-none px-3 py-2 text-xs border border-[var(--dark-border)] flex items-center gap-1.5">
+                              <Loader2 className="w-3 h-3 animate-spin text-[#1f75fe]" />
                               <span>Бот печатает...</span>
                             </div>
                           )}
@@ -920,11 +920,11 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                       </div>
 
                       {/* Footer Navigation */}
-                      <div className="flex flex-col sm:flex-row gap-3 sm:justify-between sm:items-center pt-4 border-t border-[var(--ds-border)] shrink-0">
+                      <div className="flex flex-col sm:flex-row gap-3 sm:justify-between sm:items-center pt-4 border-t border-[#e8e3d9] shrink-0">
                         <button
                           type="button"
                           onClick={() => setIsTrained(false)}
-                          className="text-caption font-bold text-[var(--ds-primary)] hover:underline flex items-center justify-center gap-1 py-1"
+                          className="text-xs font-bold text-[#1f75fe] hover:underline flex items-center justify-center gap-1 py-1"
                         >
                           <RefreshCw className="w-3.5 h-3.5" />
                           Переобучить заново
@@ -932,7 +932,7 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                         <button
                           type="button"
                           onClick={() => setCurrentStep("channels")}
-                          className="w-full sm:w-auto px-6 py-3 dash-btn-dark px-6 py-3 text-body flex items-center justify-center gap-2 transition-colors shadow-sm"
+                          className="w-full sm:w-auto px-6 py-3 dash-btn-dark px-6 py-3 text-sm flex items-center justify-center gap-2 transition-colors shadow-sm"
                         >
                           Далее к добавлению каналов
                           <ArrowRight className="w-4 h-4" />
@@ -953,8 +953,8 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                   className="space-y-4 sm:space-y-5"
                 >
                   <div className="text-center max-w-md mx-auto">
-                    <h2 className="text-base sm:text-lg font-black text-[var(--text)]">Каналы привлечения пациентов</h2>
-                    <p className="text-caption text-[var(--text-secondary)] mt-1">
+                    <h2 className="text-base sm:text-lg font-black text-[#0f172a]">Каналы привлечения пациентов</h2>
+                    <p className="text-xs text-[#64748b] mt-1">
                       Создайте ссылки отслеживания для разных рекламных площадок (Instagram, сайт, 2GIS), чтобы измерять эффективность вашей рекламы.
                     </p>
                   </div>
@@ -963,8 +963,8 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                   <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-3 sm:p-4 flex gap-2.5 shadow-sm">
                     <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-caption font-bold text-amber-800">Сквозная аналитика (Важно!)</p>
-                      <p className="text-micro sm:text-xs text-amber-700 mt-0.5 leading-relaxed font-semibold">
+                      <p className="text-xs font-bold text-amber-800">Сквозная аналитика (Важно!)</p>
+                      <p className="text-xs sm:text-xs text-amber-700 mt-0.5 leading-relaxed font-semibold">
                         Пожалуйста, сохраните созданные ссылки и используйте именно их в рекламных кампаниях (в шапке Instagram, на кнопках сайта, в 2GIS).
                         Только так система автоматически определит рекламный источник каждого пациента и посчитает ROI (окупаемость)!
                       </p>
@@ -974,29 +974,29 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                   <div className="dash-form-card space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-micro font-bold uppercase tracking-wider text-[var(--text-subtle)] mb-1">Название источника *</label>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#94a3b8] mb-1">Название источника *</label>
                         <input
                           type="text"
                           value={channelName}
                           onChange={e => setChannelName(e.target.value)}
                           placeholder="Реклама Instagram июнь"
-                          className="w-full border border-[var(--ds-border)] rounded-xl px-3.5 py-2.5 text-body bg-[var(--ds-surface)] focus:outline-none focus:border-[var(--ds-primary)] focus:ring-4 focus:ring-[var(--ds-primary)]/10 transition-all duration-200"
+                          className="w-full border border-[#e8e3d9] rounded-xl px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:border-[var(--ds-primary)] focus:ring-4 focus:ring-[var(--ds-primary)]/10 transition-all duration-200"
                         />
                       </div>
                       <div>
-                        <label className="block text-micro font-bold uppercase tracking-wider text-[var(--text-subtle)] mb-1">Реферальный код *</label>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#94a3b8] mb-1">Реферальный код *</label>
                         <input
                           type="text"
                           value={channelRef}
                           onChange={e => setChannelRef(e.target.value)}
                           placeholder="ig_june"
-                          className="w-full border border-[var(--ds-border)] rounded-xl px-3.5 py-2.5 text-body bg-[var(--ds-surface)] focus:outline-none focus:border-[var(--ds-primary)] focus:ring-4 focus:ring-[var(--ds-primary)]/10 transition-all duration-200"
+                          className="w-full border border-[#e8e3d9] rounded-xl px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:border-[var(--ds-primary)] focus:ring-4 focus:ring-[var(--ds-primary)]/10 transition-all duration-200"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-micro font-bold uppercase tracking-wider text-[var(--text-subtle)] mb-1.5">Тип канала</label>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-[#94a3b8] mb-1.5">Тип канала</label>
                       <div className="grid grid-cols-2 min-[400px]:grid-cols-4 gap-2">
                         {(["instagram", "website", "2gis", "referral"] as const).map(t => (
                           <button
@@ -1004,10 +1004,10 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                             type="button"
                             onClick={() => setChannelType(t)}
                             className={cn(
-                              "py-2 rounded-xl text-caption font-bold border text-center transition-all",
+                              "py-2 rounded-xl text-xs font-bold border text-center transition-all",
                               channelType === t
                                 ? "bg-[var(--text)] border-[var(--text)] text-white shadow-sm"
-                                : "bg-[var(--ds-surface)] border-[var(--ds-border)] text-[var(--text-secondary)] hover:bg-[var(--surface-2)]"
+                                : "bg-white border-[#e8e3d9] text-[#64748b] hover:bg-[#f1ede4]"
                             )}
                           >
                             {channelTypeLabels[t]}
@@ -1020,7 +1020,7 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                       type="button"
                       disabled={loading}
                       onClick={handleAddChannel}
-                      className="w-full py-3 bg-[var(--ds-primary)] hover:bg-[#0053d6] disabled:opacity-60 text-white rounded-xl text-body font-bold flex items-center justify-center gap-2 shadow-md transition-colors"
+                      className="w-full py-3 bg-[var(--ds-primary)] hover:bg-[#0053d6] disabled:opacity-60 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-md transition-colors"
                     >
                       <Plus className="w-4 h-4" />
                       Создать ссылку отслеживания
@@ -1030,18 +1030,18 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                   {/* List of created channels */}
                   {addedChannels.length > 0 && (
                     <div className="space-y-2">
-                      <h4 className="text-micro font-bold text-[var(--text-subtle)] uppercase tracking-wider">Ваши ссылки для рекламы</h4>
-                      <div className="max-h-[120px] overflow-y-auto border border-[var(--ds-border)] rounded-2xl divide-y divide-[var(--ds-border)] bg-[var(--ds-surface)] shadow-sm animate-fade-in">
+                      <h4 className="text-xs font-bold text-[#94a3b8] uppercase tracking-wider">Ваши ссылки для рекламы</h4>
+                      <div className="max-h-[120px] overflow-y-auto border border-[#e8e3d9] rounded-2xl divide-y divide-[var(--ds-border)] bg-white shadow-sm animate-fade-in">
                         {addedChannels.map((c, idx) => (
-                          <div key={idx} className="flex items-center justify-between p-3 hover:bg-[var(--surface-2)] transition-colors">
+                          <div key={idx} className="flex items-center justify-between p-3 hover:bg-[#f1ede4] transition-colors">
                             <div className="min-w-0 flex-1 pr-3">
-                              <p className="text-caption font-bold text-[var(--text)]">{c.name}</p>
-                              <p className="text-micro text-[var(--ds-primary)] truncate mt-0.5">{c.link}</p>
+                              <p className="text-xs font-bold text-[#0f172a]">{c.name}</p>
+                              <p className="text-xs text-[#1f75fe] truncate mt-0.5">{c.link}</p>
                             </div>
                             <button
                               type="button"
                               onClick={() => copyToClipboard(c.link)}
-                              className="p-2 bg-[var(--surface-2)] border border-[var(--ds-border)] rounded-xl hover:bg-[var(--surface-2)] text-[var(--text-secondary)] shrink-0 transition-colors"
+                              className="p-2 bg-[#f1ede4] border border-[#e8e3d9] rounded-xl hover:bg-[#f1ede4] text-[#64748b] shrink-0 transition-colors"
                             >
                               {copiedLink === c.link ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
                             </button>
@@ -1052,11 +1052,11 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                   )}
 
                   {/* Footer Actions */}
-                  <div className="flex justify-end pt-4 border-t border-[var(--ds-border)] shrink-0">
+                  <div className="flex justify-end pt-4 border-t border-[#e8e3d9] shrink-0">
                     <button
                       type="button"
                       onClick={() => setCurrentStep("tracking")}
-                      className="w-full sm:w-auto px-6 py-3 dash-btn-dark px-6 py-3 text-body flex items-center justify-center gap-2 transition-colors shadow-sm"
+                      className="w-full sm:w-auto px-6 py-3 dash-btn-dark px-6 py-3 text-sm flex items-center justify-center gap-2 transition-colors shadow-sm"
                     >
                       Продолжить к трекингу сотрудников
                       <ArrowRight className="w-4 h-4" />
@@ -1075,8 +1075,8 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                   className="space-y-4 sm:space-y-5"
                 >
                   <div className="text-center max-w-md mx-auto">
-                    <h2 className="text-base sm:text-lg font-black text-[var(--text)]">Геолокация филиалов и Telegram-трекинг</h2>
-                    <p className="text-caption text-[var(--text-secondary)] mt-1">
+                    <h2 className="text-base sm:text-lg font-black text-[#0f172a]">Геолокация филиалов и Telegram-трекинг</h2>
+                    <p className="text-xs text-[#64748b] mt-1">
                       Настройте филиалы клиники для учета рабочего времени сотрудников по приходу и подключите свой Telegram.
                     </p>
                   </div>
@@ -1084,8 +1084,8 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* Geofencing branch settings */}
                     <div className="dash-form-card space-y-3">
-                      <div className="flex items-center gap-1.5 text-caption font-bold text-[var(--text)]">
-                        <MapPin className="w-4 h-4 text-[var(--ds-primary)]" />
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-[#0f172a]">
+                        <MapPin className="w-4 h-4 text-[#1f75fe]" />
                         <span>Добавить филиал</span>
                       </div>
                       <div className="space-y-2">
@@ -1094,38 +1094,38 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                           value={branchName}
                           onChange={e => setBranchName(e.target.value)}
                           placeholder="Название филиала (Алматы, Достык)"
-                          className="w-full border border-[var(--ds-border)] rounded-xl px-3 py-2.5 text-caption bg-[var(--ds-surface)] focus:outline-none focus:border-[var(--ds-primary)]"
+                          className="w-full border border-[#e8e3d9] rounded-xl px-3 py-2.5 text-xs bg-white focus:outline-none focus:border-[var(--ds-primary)]"
                         />
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <span className="text-micro text-[var(--text-subtle)] font-bold block mb-0.5">Широта</span>
+                            <span className="text-xs text-[#94a3b8] font-bold block mb-0.5">Широта</span>
                             <input
                               type="text"
                               value={branchLat}
                               onChange={e => setBranchLat(e.target.value)}
                               placeholder="43.2389"
-                              className="w-full border border-[var(--ds-border)] rounded-xl px-2.5 py-2 text-micro bg-[var(--ds-surface)] focus:outline-none"
+                              className="w-full border border-[#e8e3d9] rounded-xl px-2.5 py-2 text-xs bg-white focus:outline-none"
                             />
                           </div>
                           <div>
-                            <span className="text-micro text-[var(--text-subtle)] font-bold block mb-0.5">Долгота</span>
+                            <span className="text-xs text-[#94a3b8] font-bold block mb-0.5">Долгота</span>
                             <input
                               type="text"
                               value={branchLon}
                               onChange={e => setBranchLon(e.target.value)}
                               placeholder="76.8897"
-                              className="w-full border border-[var(--ds-border)] rounded-xl px-2.5 py-2 text-micro bg-[var(--ds-surface)] focus:outline-none"
+                              className="w-full border border-[#e8e3d9] rounded-xl px-2.5 py-2 text-xs bg-white focus:outline-none"
                             />
                           </div>
                         </div>
                         <div>
-                          <span className="text-micro text-[var(--text-subtle)] font-bold block mb-0.5">Радиус зоны прихода (в метрах)</span>
+                          <span className="text-xs text-[#94a3b8] font-bold block mb-0.5">Радиус зоны прихода (в метрах)</span>
                           <input
                             type="number"
                             value={branchRadius}
                             onChange={e => setBranchRadius(e.target.value)}
                             placeholder="100"
-                            className="w-full border border-[var(--ds-border)] rounded-xl px-3 py-2 text-caption bg-[var(--ds-surface)] focus:outline-none"
+                            className="w-full border border-[#e8e3d9] rounded-xl px-3 py-2 text-xs bg-white focus:outline-none"
                           />
                         </div>
                         <button
@@ -1143,20 +1143,20 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                     <div className="dash-form-card flex flex-col justify-between gap-3">
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between">
-                          <span className="text-caption font-bold text-[var(--text)]">Telegram-уведомления</span>
+                          <span className="text-xs font-bold text-[#0f172a]">Telegram-уведомления</span>
                           {tgPlatformChatId && (
-                            <span className="text-micro font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5">
+                            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5">
                               Подключен
                             </span>
                           )}
                         </div>
-                        <p className="text-micro text-[var(--text-subtle)] leading-relaxed">
+                        <p className="text-xs text-[#94a3b8] leading-relaxed">
                           Подключите наш Telegram-бот, чтобы моментально получать уведомления, когда сотрудники отмечают приход/уход на работе.
                         </p>
                       </div>
 
                       {tgPlatformChatId ? (
-                        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center gap-2 text-emerald-800 text-micro sm:text-micro">
+                        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center gap-2 text-emerald-800 text-xs sm:text-xs">
                           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                           <span>Telegram успешно подключён!</span>
                         </div>
@@ -1165,7 +1165,7 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                           type="button"
                           onClick={handleConnectTelegram}
                           disabled={connectingTg}
-                          className="w-full py-3 bg-[#229ED9] hover:bg-[#1d82b3] disabled:opacity-50 text-white rounded-xl text-caption font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm mt-auto animate-pulse-slow"
+                          className="w-full py-3 bg-[#229ED9] hover:bg-[#1d82b3] disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm mt-auto animate-pulse-slow"
                         >
                           {connectingTg ? (
                             <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Подключаем...</>
@@ -1180,13 +1180,13 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                   {/* Added branches preview */}
                   {addedBranches.length > 0 && (
                     <div className="space-y-2">
-                      <h4 className="text-micro font-bold text-[var(--text-subtle)] uppercase tracking-wider">Ваши филиалы ({addedBranches.length})</h4>
+                      <h4 className="text-xs font-bold text-[#94a3b8] uppercase tracking-wider">Ваши филиалы ({addedBranches.length})</h4>
                       <div className="flex gap-2 overflow-x-auto pb-1">
                         {addedBranches.map((b, idx) => (
-                          <div key={idx} className="bg-[var(--surface-2)] border border-[var(--ds-border)]/80 rounded-xl px-3 py-2 flex items-center gap-1.5 text-caption text-[var(--text)] shrink-0 shadow-sm">
-                            <MapPin className="w-3.5 h-3.5 text-[var(--ds-primary)]" />
+                          <div key={idx} className="bg-[#f1ede4] border border-[#e8e3d9]/80 rounded-xl px-3 py-2 flex items-center gap-1.5 text-xs text-[#0f172a] shrink-0 shadow-sm">
+                            <MapPin className="w-3.5 h-3.5 text-[#1f75fe]" />
                             <span className="font-bold">{b.name}</span>
-                            <span className="text-micro text-[var(--text-subtle)]">({b.radius}м)</span>
+                            <span className="text-xs text-[#94a3b8]">({b.radius}м)</span>
                           </div>
                         ))}
                       </div>
@@ -1194,11 +1194,11 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                   )}
 
                   {/* Footer Actions */}
-                  <div className="flex justify-end pt-4 border-t border-[var(--ds-border)] shrink-0">
+                  <div className="flex justify-end pt-4 border-t border-[#e8e3d9] shrink-0">
                     <button
                       type="button"
                       onClick={handleCompleteOnboarding}
-                      className="w-full sm:w-auto px-6 py-3 bg-[var(--ds-primary)] hover:bg-[#0053d6] text-white rounded-xl text-body font-bold flex items-center justify-center gap-2 transition-colors shadow-sm"
+                      className="w-full sm:w-auto px-6 py-3 bg-[var(--ds-primary)] hover:bg-[#0053d6] text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors shadow-sm"
                     >
                       Завершить первоначальную настройку
                       <Check className="w-4 h-4" />
@@ -1227,11 +1227,11 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
                   </div>
 
                   <div className="max-w-md space-y-2 px-4">
-                    <h2 className="text-xl sm:text-2xl font-black text-[var(--text)]">Первоначальная настройка завершена!</h2>
-                    <p className="text-caption sm:text-caption text-[var(--text-secondary)] leading-relaxed">
+                    <h2 className="text-xl sm:text-2xl font-black text-[#0f172a]">Первоначальная настройка завершена!</h2>
+                    <p className="text-xs sm:text-xs text-[#64748b] leading-relaxed">
                       Поздравляем! Вы добавили сотрудников, настроили и обучили ИИ чат-бота, создали рекламные ссылки для сквозной аналитики и подключили филиалы и Telegram-бота.
                     </p>
-                    <p className="text-micro sm:text-xs text-[var(--ds-primary)] font-bold">
+                    <p className="text-xs sm:text-xs text-[#1f75fe] font-bold">
                       Теперь клиника полностью готова к работе в системе 1Dent!
                     </p>
                   </div>
@@ -1310,7 +1310,7 @@ function SpecialtyTagInput({
           {values.map((tag) => (
             <span
               key={tag}
-              className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full text-caption font-semibold"
+              className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full text-xs font-semibold"
             >
               {tag}
               <button
@@ -1352,7 +1352,7 @@ function SpecialtyTagInput({
             }
             if (e.key === "Escape") setIsOpen(false);
           }}
-          className="w-full border border-[var(--ds-border)] rounded-xl px-3.5 py-2.5 text-body bg-[var(--ds-surface)] focus:outline-none focus:border-[var(--ds-primary)] focus:ring-4 focus:ring-[var(--ds-primary)]/10 transition-all duration-200"
+          className="w-full border border-[#e8e3d9] rounded-xl px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:border-[var(--ds-primary)] focus:ring-4 focus:ring-[var(--ds-primary)]/10 transition-all duration-200"
         />
         <button
           type="button"
@@ -1361,19 +1361,19 @@ function SpecialtyTagInput({
             setIsOpen((o) => !o);
             inputRef.current?.focus();
           }}
-          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]"
+          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#94a3b8]"
         >
           <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
         </button>
 
         {isOpen && (filtered.length > 0 || customNotInList) && (
-          <div className="absolute top-full mt-1 left-0 right-0 bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-xl shadow-lg z-20 max-h-52 overflow-y-auto">
+          <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-[#e8e3d9] rounded-xl shadow-lg z-20 max-h-52 overflow-y-auto">
             {filtered.map((s) => (
               <button
                 key={s}
                 type="button"
                 onMouseDown={() => addTag(s)}
-                className="w-full text-left px-4 py-2.5 text-body text-[var(--text)] hover:bg-[var(--bg)] transition-colors"
+                className="w-full text-left px-4 py-2.5 text-sm text-[#0f172a] hover:bg-[#faf8f4] transition-colors"
               >
                 {s}
               </button>
@@ -1382,7 +1382,7 @@ function SpecialtyTagInput({
               <button
                 type="button"
                 onMouseDown={() => addTag(inputValue.trim())}
-                className="w-full text-left px-4 py-2.5 text-body font-semibold border-t border-[var(--ds-border)] hover:bg-[var(--bg)] transition-colors text-[var(--ds-primary)]"
+                className="w-full text-left px-4 py-2.5 text-sm font-semibold border-t border-[#e8e3d9] hover:bg-[#faf8f4] transition-colors text-[#1f75fe]"
               >
                 + Добавить «{inputValue.trim()}»
               </button>

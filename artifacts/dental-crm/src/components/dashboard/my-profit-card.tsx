@@ -110,9 +110,9 @@ export function MyProfitCard({ listPreset, onListPresetChange, onSelectBranch }:
   }, [branches, dateFromStr, dateToStr]);
 
   return (
-    <div className="mx-4 mt-4 bg-[var(--ds-surface)] rounded-3xl border border-[var(--ds-border)] shadow-sm overflow-hidden">
+    <div className="mx-4 mt-4 bg-white rounded-3xl border border-[#e8e3d9] shadow-sm overflow-hidden">
       <div className="px-5 pt-5 pb-3">
-        <h2 className="text-[22px] font-bold text-[var(--text)] tracking-tight">Мой прибыль</h2>
+        <h2 className="text-[22px] font-bold text-[#0f172a] tracking-tight">Мой прибыль</h2>
         <div
           className="flex gap-2 mt-3 overflow-x-auto pb-0.5"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
@@ -123,10 +123,10 @@ export function MyProfitCard({ listPreset, onListPresetChange, onSelectBranch }:
               type="button"
               onClick={() => onListPresetChange(p.key)}
               className={cn(
-                "shrink-0 px-3.5 py-2 rounded-full text-caption font-semibold border transition-colors",
+                "shrink-0 px-3.5 py-2 rounded-full text-xs font-semibold border transition-colors",
                 listPreset === p.key
                   ? "bg-[var(--text)] text-white border-[var(--text)]"
-                  : "bg-[var(--ds-surface)] text-[var(--text)] border-[var(--ds-border)] hover:bg-[var(--bg)]",
+                  : "bg-white text-[#0f172a] border-[#e8e3d9] hover:bg-[#faf8f4]",
               )}
             >
               {p.label}
@@ -141,7 +141,7 @@ export function MyProfitCard({ listPreset, onListPresetChange, onSelectBranch }:
             key={row.id ?? "main"}
             type="button"
             onClick={() => onSelectBranch({ id: row.id, name: row.name })}
-            className="flex items-center gap-3.5 w-full px-5 py-3.5 text-left hover:bg-[var(--bg)] active:bg-[var(--surface-2)] transition-colors"
+            className="flex items-center gap-3.5 w-full px-5 py-3.5 text-left hover:bg-[#faf8f4] active:bg-[#f1ede4] transition-colors"
           >
             <div
               className="w-[52px] h-[52px] rounded-2xl flex items-center justify-center shrink-0 overflow-hidden"
@@ -156,14 +156,14 @@ export function MyProfitCard({ listPreset, onListPresetChange, onSelectBranch }:
               />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-body text-[var(--text)] truncate">{row.name}</p>
-              <p className="text-caption text-[var(--text-secondary)] mt-0.5 truncate">{row.subtitle}</p>
+              <p className="font-bold text-sm text-[#0f172a] truncate">{row.name}</p>
+              <p className="text-xs text-[#64748b] mt-0.5 truncate">{row.subtitle}</p>
             </div>
             <div className="shrink-0 text-right">
               {loadingRevenues || row.revenue === null ? (
-                <div className="h-4 w-16 rounded bg-[var(--surface-2)] animate-pulse ml-auto" />
+                <div className="h-4 w-16 rounded bg-[#f1ede4] animate-pulse ml-auto" />
               ) : (
-                <p className="font-bold text-body text-[var(--text)] tabular-nums">
+                <p className="font-bold text-sm text-[#0f172a] tabular-nums">
                   {fmtRevenue(row.revenue)}
                 </p>
               )}
@@ -172,7 +172,7 @@ export function MyProfitCard({ listPreset, onListPresetChange, onSelectBranch }:
         ))}
 
         {hasFetched && branches.length === 0 && (
-          <p className="px-5 py-4 text-caption text-[var(--text-secondary)] text-center">
+          <p className="px-5 py-4 text-xs text-[#64748b] text-center">
             Добавьте филиалы, чтобы видеть прибыль по каждой точке
           </p>
         )}
@@ -181,10 +181,10 @@ export function MyProfitCard({ listPreset, onListPresetChange, onSelectBranch }:
       <button
         type="button"
         onClick={() => navigate("/clinic-branches")}
-        className="mx-4 my-4 w-[calc(100%-2rem)] py-3.5 rounded-2xl bg-[var(--surface-2)] hover:bg-[#e8e3d9] text-[var(--text)] text-body font-semibold transition-colors flex items-center justify-center gap-1"
+        className="mx-4 my-4 w-[calc(100%-2rem)] py-3.5 rounded-2xl bg-[#f1ede4] hover:bg-[#e8e3d9] text-[#0f172a] text-sm font-semibold transition-colors flex items-center justify-center gap-1"
       >
         Управление филиалами
-        <ChevronRight className="w-4 h-4 text-[var(--text-secondary)]" />
+        <ChevronRight className="w-4 h-4 text-[#64748b]" />
       </button>
     </div>
   );

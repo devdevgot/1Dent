@@ -11,7 +11,7 @@ const fadeUp = (delay = 0) => ({
 
 export function Hero() {
   return (
-    <section className="relative flex flex-col items-center bg-[var(--bg)] overflow-hidden pt-28 pb-32">
+    <section className="relative flex flex-col items-center bg-[#faf8f4] overflow-hidden pt-28 pb-32">
       <div className="absolute inset-0 pointer-events-none landing-grid-bg" />
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[min(900px,100vw)] h-[480px] pointer-events-none landing-hero-glow" />
 
@@ -21,15 +21,15 @@ export function Hero() {
           href="#features"
           className="landing-badge landing-badge-light font-manrope mb-8"
         >
-          <Star size={13} className="text-[var(--ds-primary)]" fill="currentColor" />
+          <Star size={13} className="text-[#1f75fe]" fill="currentColor" />
           <span className="font-semibold">Новое:</span>
-          <span className="text-[var(--text-secondary)]">{SITE.hero.announcement}</span>
-          <ArrowRight size={13} className="text-[var(--text-subtle)]" />
+          <span className="text-[#64748b]">{SITE.hero.announcement}</span>
+          <ArrowRight size={13} className="text-[#94a3b8]" />
         </motion.a>
 
         <motion.h1
           {...fadeUp(0.15)}
-          className="landing-display font-manrope text-[var(--text)] mb-6"
+          className="landing-display font-manrope text-[#0f172a] mb-6"
         >
           {SITE.hero.headline}
           <br />
@@ -62,8 +62,8 @@ export function Hero() {
             { icon: MessageSquare, text: "WhatsApp интеграция" },
             { icon: Users, text: "Для клиник Казахстана" },
           ].map((b) => (
-            <div key={b.text} className="flex items-center gap-2 text-body font-manrope text-[var(--text-subtle)]">
-              <b.icon size={14} className="text-[var(--ds-primary)]" />
+            <div key={b.text} className="flex items-center gap-2 text-sm font-manrope text-[#94a3b8]">
+              <b.icon size={14} className="text-[#1f75fe]" />
               <span>{b.text}</span>
             </div>
           ))}

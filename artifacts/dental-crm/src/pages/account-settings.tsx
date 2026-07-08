@@ -196,7 +196,7 @@ export default function AccountSettings() {
                   onClick={() => fileInputRef.current?.click()}
                   className="relative shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-primary)]/25 rounded-full"
                 >
-                  <div className="w-[64px] h-[64px] rounded-full overflow-hidden bg-[var(--ds-primary)]/10 flex items-center justify-center text-[var(--ds-primary)] font-bold text-[22px] ring-2 ring-[var(--ds-primary)]/10 transition-transform active:scale-95 duration-150">
+                  <div className="w-[64px] h-[64px] rounded-full overflow-hidden bg-[var(--ds-primary)]/10 flex items-center justify-center text-[#1f75fe] font-bold text-[22px] ring-2 ring-[var(--ds-primary)]/10 transition-transform active:scale-95 duration-150">
                     {photoUrl ? (
                       <img key={photoVersion} src={photoUrl} alt="avatar" className="w-full h-full object-cover" />
                     ) : (
@@ -215,14 +215,14 @@ export default function AccountSettings() {
                   onChange={handlePhotoSelect}
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-section-title text-[var(--text)] leading-tight truncate">
+                  <p className="font-bold text-base text-[#0f172a] leading-tight truncate">
                     {user?.name}
                   </p>
-                  <p className="text-caption text-[var(--text-secondary)] truncate mt-0.5">
+                  <p className="text-xs text-[#64748b] truncate mt-0.5">
                     {user?.email}
                   </p>
                   {user?.role && (
-                    <span className="inline-block mt-1.5 text-micro font-bold text-[var(--ds-primary)] uppercase tracking-wider bg-[var(--ds-primary)]/10 px-2 py-0.5 rounded-full">
+                    <span className="inline-block mt-1.5 text-xs font-bold text-[#1f75fe] uppercase tracking-wider bg-[var(--ds-primary)]/10 px-2 py-0.5 rounded-full">
                       {t(`role.${user.role}`)}
                     </span>
                   )}
@@ -242,16 +242,16 @@ export default function AccountSettings() {
                 onClick={() => setLocation(item.href)}
                 className="w-full"
               >
-                <IosGroupRow as="div" className="cursor-pointer hover:bg-[var(--bg)]">
+                <IosGroupRow as="div" className="cursor-pointer hover:bg-[#faf8f4]">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <SettingsRowIcon icon={item.icon} className={item.iconClass} />
-                    <p className="text-body text-[var(--text)]">{item.label}</p>
+                    <p className="text-sm text-[#0f172a]">{item.label}</p>
                   </div>
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-caption text-[var(--text-secondary)] truncate max-w-[150px]">
+                    <span className="text-xs text-[#64748b] truncate max-w-[150px]">
                       {item.value}
                     </span>
-                    <ChevronRight className="w-4 h-4 text-[var(--text-subtle)] shrink-0" />
+                    <ChevronRight className="w-4 h-4 text-[#94a3b8] shrink-0" />
                   </div>
                 </IosGroupRow>
               </button>
@@ -263,15 +263,15 @@ export default function AccountSettings() {
         {(user?.role === "admin" || user?.role === "accountant" || user?.role === "warehouse") && (
           <IosSection title={t("payroll.mySalary")}>
             <IosGroup>
-              <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[var(--ds-border)]/60">
+              <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[#e8e3d9]/60">
                 <SettingsRowIcon icon={Banknote} className="bg-[#0ea5e9] text-white" />
                 <div className="min-w-0">
-                  <p className="text-body font-semibold text-[var(--text)]">{t("payroll.mySalary")}</p>
-                  <p className="text-caption text-[var(--text-secondary)]">{t("payroll.mySalaryDesc")}</p>
+                  <p className="text-sm font-semibold text-[#0f172a]">{t("payroll.mySalary")}</p>
+                  <p className="text-xs text-[#64748b]">{t("payroll.mySalaryDesc")}</p>
                 </div>
               </div>
               {myRecords.length === 0 ? (
-                <div className="px-4 py-6 text-center text-caption text-[var(--text-secondary)]">
+                <div className="px-4 py-6 text-center text-xs text-[#64748b]">
                   {t("payroll.noMySalary")}
                 </div>
               ) : (
@@ -279,29 +279,29 @@ export default function AccountSettings() {
                   {myRecords.slice(0, 6).map((r) => (
                     <div
                       key={r.id}
-                      className="flex items-center justify-between px-4 py-3 border-b border-[var(--ds-border)]/60 last:border-b-0"
+                      className="flex items-center justify-between px-4 py-3 border-b border-[#e8e3d9]/60 last:border-b-0"
                     >
                       <div>
-                        <p className="text-body font-semibold text-[var(--text)]">
+                        <p className="text-sm font-semibold text-[#0f172a]">
                           {r.periodMonth.toString().padStart(2, "0")}/{r.periodYear}
                         </p>
-                        <p className="text-caption text-[var(--text-secondary)]">
+                        <p className="text-xs text-[#64748b]">
                           {t("payroll.myCalculated")}: ₸{Number(r.calculatedAmount).toLocaleString("ru-KZ")}
                         </p>
                       </div>
                       <div className="text-right">
                         {r.approvedAmount && (
-                          <p className="text-body font-bold text-[var(--success)]">
+                          <p className="text-sm font-bold text-[#16a34a]">
                             ₸{Number(r.approvedAmount).toLocaleString("ru-KZ")}
                           </p>
                         )}
                         {r.status === "approved" || r.status === "paid" ? (
-                          <span className="inline-flex items-center gap-1 text-micro font-semibold text-[var(--success)] bg-[#f0fdf4] px-2 py-0.5 rounded-full">
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#16a34a] bg-[#f0fdf4] px-2 py-0.5 rounded-full">
                             <CheckCircle className="w-3 h-3" />
                             {r.status === "paid" ? t("payroll.paid") : t("payroll.approved")}
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-micro font-semibold text-[var(--warning)] bg-[#fef3c7] px-2 py-0.5 rounded-full">
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#d97706] bg-[#fef3c7] px-2 py-0.5 rounded-full">
                             <Clock className="w-3 h-3" />
                             {t("payroll.pending")}
                           </span>
@@ -322,19 +322,19 @@ export default function AccountSettings() {
               <IosGroupRow className="gap-2">
                 <div className="flex items-center gap-3 min-w-0">
                   <SettingsRowIcon icon={Globe} className="bg-[#8b5cf6] text-white" />
-                  <span className="text-body shrink-0">{t("menuPage.language")}</span>
+                  <span className="text-sm shrink-0">{t("menuPage.language")}</span>
                 </div>
-                <div className="flex bg-[var(--surface-2)] rounded-lg p-0.5 shrink-0 ml-auto font-lang">
+                <div className="flex bg-[#f1ede4] rounded-lg p-0.5 shrink-0 ml-auto font-lang">
                   {SUPPORTED_LANGS.map((lang) => (
                     <button
                       key={lang}
                       type="button"
                       onClick={() => handleLangChange(lang)}
                       className={cn(
-                        "min-w-[2.5rem] text-center text-caption font-semibold px-2 py-1 rounded-md transition-all",
+                        "min-w-[2.5rem] text-center text-xs font-semibold px-2 py-1 rounded-md transition-all",
                         currentLang === lang
-                          ? "bg-[var(--ds-surface)] text-[var(--ds-primary)] shadow-sm"
-                          : "text-[var(--text-secondary)] hover:text-[var(--text)]",
+                          ? "bg-white text-[#1f75fe] shadow-sm"
+                          : "text-[#64748b] hover:text-[#0f172a]",
                       )}
                     >
                       {t(`lang.${lang}`)}
@@ -346,27 +346,27 @@ export default function AccountSettings() {
               <IosGroupRow onClick={() => setLocation("/ai-credits")}>
                 <div className="flex items-center gap-3 min-w-0">
                   <SettingsRowIcon icon={Sparkles} className="bg-[#f59e0b] text-white" />
-                  <span className="text-body">{t("nav.aiCredits")}</span>
+                  <span className="text-sm">{t("nav.aiCredits")}</span>
                 </div>
-                <ChevronRight className="w-4 h-4 text-[var(--text-subtle)] shrink-0" />
+                <ChevronRight className="w-4 h-4 text-[#94a3b8] shrink-0" />
               </IosGroupRow>
 
               {user?.role === "owner" && (
                 <IosGroupRow onClick={() => setLocation("/logs")}>
                   <div className="flex items-center gap-3 min-w-0">
                     <SettingsRowIcon icon={ScrollText} className="bg-[var(--text-secondary)] text-white" />
-                    <span className="text-body">{t("nav.logs")}</span>
+                    <span className="text-sm">{t("nav.logs")}</span>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-[var(--text-subtle)] shrink-0" />
+                  <ChevronRight className="w-4 h-4 text-[#94a3b8] shrink-0" />
                 </IosGroupRow>
               )}
 
               <IosGroupRow>
                 <div className="flex items-center gap-3 min-w-0">
                   <SettingsRowIcon icon={Bell} className="bg-[#ec4899] text-white" />
-                  <span className="text-body">{t("menuPage.notifications")}</span>
+                  <span className="text-sm">{t("menuPage.notifications")}</span>
                 </div>
-                <ChevronRight className="w-4 h-4 text-[var(--text-subtle)] shrink-0" />
+                <ChevronRight className="w-4 h-4 text-[#94a3b8] shrink-0" />
               </IosGroupRow>
             </IosGroup>
           </IosSection>
@@ -380,7 +380,7 @@ export default function AccountSettings() {
               onClick={() => logoutMutation.mutate()}
               className={cn("justify-center", logoutMutation.isPending && "opacity-60 pointer-events-none")}
             >
-              <span className="flex items-center gap-2 text-body font-semibold text-[var(--danger)]">
+              <span className="flex items-center gap-2 text-sm font-semibold text-[#dc2626]">
                 <LogOut className="w-[18px] h-[18px] shrink-0" />
                 {logoutMutation.isPending ? t("account.signingOut") : t("account.signOut")}
               </span>
@@ -388,7 +388,7 @@ export default function AccountSettings() {
           </IosGroup>
         </IosSection>
 
-        <p className="text-center text-caption text-[var(--text-subtle)]">
+        <p className="text-center text-xs text-[#94a3b8]">
           {t("menuPage.copyright")}
         </p>
       </div>

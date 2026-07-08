@@ -111,7 +111,7 @@ function UserActionMenu({
         <button
           type="button"
           onClick={(e) => e.stopPropagation()}
-          className="w-8 h-8 rounded-xl flex items-center justify-center text-[var(--text-subtle)] hover:bg-[var(--ds-primary)]/10 hover:text-[var(--ds-primary)] transition-all duration-200"
+          className="w-8 h-8 rounded-xl flex items-center justify-center text-[#94a3b8] hover:bg-[var(--ds-primary)]/10 hover:text-[#1f75fe] transition-all duration-200"
           aria-label={t("common.actions", "Действия")}
         >
           <MoreVertical className="w-4 h-4" />
@@ -122,7 +122,7 @@ function UserActionMenu({
         side="bottom"
         sideOffset={6}
         collisionPadding={12}
-        className="min-w-[180px] rounded-2xl border border-[var(--ds-border)] p-2 shadow-lg font-manrope"
+        className="min-w-[180px] rounded-2xl border border-[#e8e3d9] p-2 shadow-lg font-manrope"
         onClick={(e) => e.stopPropagation()}
       >
         <DropdownMenuItem
@@ -146,7 +146,7 @@ function UserActionMenu({
             onClick={(e) => { e.stopPropagation(); onToggleActive(); }}
             className={cn(
               "gap-3 rounded-xl px-4 py-2.5 cursor-pointer",
-              user.isActive ? "text-[var(--warning)] focus:text-[var(--warning)] focus:bg-[#fef3c7]" : "text-[var(--success)] focus:text-[var(--success)] focus:bg-[#f0fdf4]",
+              user.isActive ? "text-[#d97706] focus:text-[#d97706] focus:bg-[#fef3c7]" : "text-[#16a34a] focus:text-[#16a34a] focus:bg-[#f0fdf4]",
             )}
           >
             {user.isActive
@@ -159,7 +159,7 @@ function UserActionMenu({
             <DropdownMenuSeparator className="my-1" />
             <DropdownMenuItem
               onClick={(e) => { e.stopPropagation(); onDelete(); }}
-              className="gap-3 rounded-xl px-4 py-2.5 text-[var(--danger)] focus:text-[var(--danger)] focus:bg-[#fef2f2] cursor-pointer"
+              className="gap-3 rounded-xl px-4 py-2.5 text-[#dc2626] focus:text-[#dc2626] focus:bg-[#fef2f2] cursor-pointer"
             >
               <Trash2 className="w-4 h-4" />
               {t("common.delete")}
@@ -366,12 +366,12 @@ export default function StaffPage() {
                 <div className="space-y-3 mb-4">
                   {/* Search */}
                   <div className="relative">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-subtle)]" />
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8]" />
                     <input
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                       placeholder="Поиск по имени или email..."
-                      className="w-full pl-10 pr-4 py-2.5 bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-xl text-body text-[var(--text)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)] transition-all shadow-sm"
+                      className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#e8e3d9] rounded-xl text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)] transition-all shadow-sm"
                     />
                   </div>
 
@@ -385,17 +385,17 @@ export default function StaffPage() {
                           key={r}
                           onClick={() => setRoleFilter(r)}
                           className={cn(
-                            "shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-caption font-semibold border transition-all duration-200",
+                            "shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition-all duration-200",
                             isActive
                               ? "bg-[var(--ds-primary)] text-white border-[var(--ds-primary)] shadow-md"
-                              : "bg-[var(--ds-surface)] text-[var(--text-secondary)] border-[var(--ds-border)] hover:border-[var(--ds-primary)]/30 hover:text-[var(--ds-primary)] hover:bg-[var(--ds-primary)]/5",
+                              : "bg-white text-[#64748b] border-[#e8e3d9] hover:border-[var(--ds-primary)]/30 hover:text-[#1f75fe] hover:bg-[var(--ds-primary)]/5",
                           )}
                         >
                           {r === "all" ? "Все" : t(`role.${r}`, ROLE_LABELS[r] ?? r)}
                           {count > 0 && (
                             <span className={cn(
-                              "text-micro font-bold px-1.5 py-0.5 rounded-md min-w-[18px] text-center",
-                              isActive ? "bg-[var(--ds-surface)]/25" : "bg-[var(--surface-2)] text-[var(--text-subtle)]",
+                              "text-xs font-bold px-1.5 py-0.5 rounded-md min-w-[18px] text-center",
+                              isActive ? "bg-white/25" : "bg-[#f1ede4] text-[#94a3b8]",
                             )}>
                               {count}
                             </span>
@@ -405,14 +405,14 @@ export default function StaffPage() {
                     })}
 
                     {currentUser?.role === "owner" && (
-                      <label className="shrink-0 flex items-center gap-2 cursor-pointer select-none ml-auto pl-3 border-l border-[var(--ds-border)]">
+                      <label className="shrink-0 flex items-center gap-2 cursor-pointer select-none ml-auto pl-3 border-l border-[#e8e3d9]">
                         <input
                           type="checkbox"
                           checked={showInactive}
                           onChange={(e) => setShowInactive(e.target.checked)}
                           className="w-3.5 h-3.5 rounded accent-[#1f75fe]"
                         />
-                        <span className="text-caption text-[var(--text-subtle)] whitespace-nowrap">Неактивные</span>
+                        <span className="text-xs text-[#94a3b8] whitespace-nowrap">Неактивные</span>
                       </label>
                     )}
                   </div>
@@ -431,26 +431,26 @@ export default function StaffPage() {
               className="text-center py-20"
             >
               <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-[#1f75fe]/10 to-[#1f75fe]/5 flex items-center justify-center mx-auto mb-5">
-                <Users className="w-10 h-10 text-[var(--ds-primary)]/40" />
+                <Users className="w-10 h-10 text-[#1f75fe]/40" />
               </div>
-              <p className="text-base font-bold text-[var(--text-secondary)]">Сотрудников не найдено</p>
-              <p className="text-caption text-[var(--text-subtle)] mt-1.5 max-w-xs mx-auto">
+              <p className="text-base font-bold text-[#64748b]">Сотрудников не найдено</p>
+              <p className="text-xs text-[#94a3b8] mt-1.5 max-w-xs mx-auto">
                 {search ? "Попробуйте изменить запрос поиска" : "Нажмите «+» чтобы добавить сотрудника"}
               </p>
             </motion.div>
           ) : (
-            <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] shadow-md overflow-x-auto">
+            <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-md overflow-x-auto">
               <div className="min-w-[720px]">
                 <table className="w-full text-sm">
-                  <thead className="sticky top-0 bg-[var(--bg)] backdrop-blur-sm border-b border-[var(--ds-border)] z-10">
+                  <thead className="sticky top-0 bg-[#faf8f4] backdrop-blur-sm border-b border-[#e8e3d9] z-10">
                     <tr>
-                      <th className="px-4 py-3 text-left section-labelr w-10">#</th>
-                      <th className="px-4 py-3 text-left section-labelr">Сотрудник</th>
-                      <th className="px-4 py-3 text-left section-labelr">Роль</th>
-                      <th className="px-4 py-3 text-left section-labelr hidden sm:table-cell">Телефон</th>
-                      <th className="px-4 py-3 text-left section-labelr hidden md:table-cell">Email</th>
-                      <th className="px-4 py-3 text-left section-labelr hidden lg:table-cell">Дата найма</th>
-                      <th className="px-4 py-3 text-left section-labelr hidden lg:table-cell">Зарплата</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider w-10">#</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider">Сотрудник</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider">Роль</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider hidden sm:table-cell">Телефон</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider hidden md:table-cell">Email</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider hidden lg:table-cell">Дата найма</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider hidden lg:table-cell">Зарплата</th>
                       <th className="px-4 py-3 w-12" />
                     </tr>
                   </thead>
@@ -469,20 +469,20 @@ export default function StaffPage() {
                             }
                           }}
                           className={cn(
-                            "bg-[var(--ds-surface)] hover:bg-[var(--bg)] transition-colors group",
+                            "bg-white hover:bg-[#faf8f4] transition-colors group",
                             u.role !== "owner" && "cursor-pointer",
                             isInactive && "opacity-50",
                           )}
                         >
                           {/* # */}
-                          <td className="px-4 py-3.5 text-[var(--text-subtle)] text-caption font-mono">{idx + 1}</td>
+                          <td className="px-4 py-3.5 text-[#94a3b8] text-xs font-mono">{idx + 1}</td>
 
                           {/* Name + avatar */}
                           <td className="px-4 py-3.5">
                             <div className="flex items-center gap-3">
                               <div className="relative shrink-0">
                                 <div
-                                  className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-caption shadow-sm"
+                                  className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-xs shadow-sm"
                                   style={{
                                     background: "linear-gradient(135deg, #1f75fe 0%, #4d94ff 100%)",
                                   }}
@@ -495,22 +495,22 @@ export default function StaffPage() {
                               </div>
                               <div className="min-w-0">
                                 <div className="flex items-center gap-1.5">
-                                  <p className="text-body font-semibold text-[var(--text)] truncate group-hover:text-[var(--ds-primary)] transition-colors">
+                                  <p className="text-sm font-semibold text-[#0f172a] truncate group-hover:text-[#1f75fe] transition-colors">
                                     {u.name}
                                   </p>
                                   {isSelf && (
-                                    <span className="text-micro bg-[var(--ds-primary)]/10 text-[var(--ds-primary)] font-bold px-1.5 py-0.5 rounded-md shrink-0">
+                                    <span className="text-xs bg-[var(--ds-primary)]/10 text-[#1f75fe] font-bold px-1.5 py-0.5 rounded-md shrink-0">
                                       Вы
                                     </span>
                                   )}
                                   {isInactive && (
-                                    <span className="text-micro bg-[var(--surface-2)] text-[var(--text-subtle)] font-semibold px-1.5 py-0.5 rounded-md shrink-0">
+                                    <span className="text-xs bg-[#f1ede4] text-[#94a3b8] font-semibold px-1.5 py-0.5 rounded-md shrink-0">
                                       Неактивен
                                     </span>
                                   )}
                                 </div>
                                 {(u.position || u.specialty) && (
-                                  <p className="text-micro text-[var(--text-subtle)] truncate max-w-[180px]">
+                                  <p className="text-xs text-[#94a3b8] truncate max-w-[180px]">
                                     {u.specialty || u.position}
                                   </p>
                                 )}
@@ -520,7 +520,7 @@ export default function StaffPage() {
 
                           {/* Role */}
                           <td className="px-4 py-3.5">
-                            <span className="inline-flex items-center gap-1 text-micro font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-[var(--ds-primary)]/10 text-[var(--ds-primary)] border border-[var(--ds-primary)]/20 whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-[var(--ds-primary)]/10 text-[#1f75fe] border border-[var(--ds-primary)]/20 whitespace-nowrap">
                               <RoleIcon className="w-3 h-3" />
                               {t(`role.${u.role}`, ROLE_LABELS[u.role] ?? u.role)}
                             </span>
@@ -529,38 +529,38 @@ export default function StaffPage() {
                           {/* Phone */}
                           <td className="px-4 py-3.5 hidden sm:table-cell">
                             {u.phone ? (
-                              <span className="font-mono text-caption text-[var(--text-secondary)]">{u.phone}</span>
+                              <span className="font-mono text-xs text-[#64748b]">{u.phone}</span>
                             ) : (
-                              <span className="text-[var(--text-subtle)] text-xs">—</span>
+                              <span className="text-[#94a3b8] text-xs">—</span>
                             )}
                           </td>
 
                           {/* Email */}
                           <td className="px-4 py-3.5 hidden md:table-cell">
                             {u.email ? (
-                              <span className="text-caption text-[var(--text-secondary)] truncate max-w-[160px] block">{u.email}</span>
+                              <span className="text-xs text-[#64748b] truncate max-w-[160px] block">{u.email}</span>
                             ) : (
-                              <span className="text-[var(--text-subtle)] text-xs">—</span>
+                              <span className="text-[#94a3b8] text-xs">—</span>
                             )}
                           </td>
 
                           {/* Hire date */}
-                          <td className="px-4 py-3.5 hidden lg:table-cell text-caption text-[var(--text-secondary)] whitespace-nowrap">
+                          <td className="px-4 py-3.5 hidden lg:table-cell text-xs text-[#64748b] whitespace-nowrap">
                             {u.hireDate ? (
                               <span>с {fmtHireDate(u.hireDate)}</span>
                             ) : (
-                              <span className="text-[var(--text-subtle)]">—</span>
+                              <span className="text-[#94a3b8]">—</span>
                             )}
                           </td>
 
                           {/* Salary */}
                           <td className="px-4 py-3.5 hidden lg:table-cell">
                             {u.salarySettings ? (
-                              <span className="text-caption font-semibold text-[var(--ds-primary)] bg-[var(--ds-primary)]/10 px-2.5 py-1 rounded-lg inline-block">
+                              <span className="text-xs font-semibold text-[#1f75fe] bg-[var(--ds-primary)]/10 px-2.5 py-1 rounded-lg inline-block">
                                 {fmtSalaryShort(u)}
                               </span>
                             ) : (
-                              <span className="text-[var(--text-subtle)] text-xs">—</span>
+                              <span className="text-[#94a3b8] text-xs">—</span>
                             )}
                           </td>
 
@@ -584,7 +584,7 @@ export default function StaffPage() {
               </div>
 
               {/* Footer with count */}
-              <div className="bg-[var(--bg)] border-t border-[var(--ds-border)] px-5 py-2.5 text-caption text-[var(--text-subtle)]">
+              <div className="bg-[#faf8f4] border-t border-[#e8e3d9] px-5 py-2.5 text-xs text-[#94a3b8]">
                 Показано {filtered.length} из {rawUsers.length} сотрудников
               </div>
             </div>

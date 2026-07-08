@@ -40,7 +40,7 @@ function StatCard({
         </div>
         {trend && trendUp !== null && trendUp !== undefined && (
           <span
-            className={`dash-badge text-body ${trendUp ? "dash-badge-success" : "dash-badge-danger"}`}
+            className={`dash-badge text-sm ${trendUp ? "dash-badge-success" : "dash-badge-danger"}`}
           >
             {trend}
           </span>
@@ -185,7 +185,7 @@ export default function Dashboard() {
             <div className="lg:col-span-2 dash-card dash-card-padded dash-card-elevated">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="dash-section-title">
-                  <Stethoscope className="w-5 h-5 text-[var(--ds-primary)]" />
+                  <Stethoscope className="w-5 h-5 text-[#1f75fe]" />
                   {t("dashboard.doctorKpi")}
                 </h3>
                 <button
@@ -217,18 +217,18 @@ export default function Dashboard() {
                       >
                         <td className="py-3 pr-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-[var(--primary-light)] flex items-center justify-center text-[var(--ds-primary)] font-bold text-xs">
+                            <div className="w-8 h-8 rounded-full bg-[var(--primary-light)] flex items-center justify-center text-[#1f75fe] font-bold text-xs">
                               {kpi.doctorName.charAt(0)}
                             </div>
-                            <span className="font-medium text-[var(--text)]">{kpi.doctorName}</span>
+                            <span className="font-medium text-[#0f172a]">{kpi.doctorName}</span>
                           </div>
                         </td>
-                        <td className="py-3 text-right text-[var(--text)]">{kpi.patientsCount}</td>
-                        <td className="py-3 text-right text-[var(--text)]">{kpi.proceduresCount}</td>
-                        <td className="py-3 text-right font-semibold text-[var(--text)]">
+                        <td className="py-3 text-right text-[#0f172a]">{kpi.patientsCount}</td>
+                        <td className="py-3 text-right text-[#0f172a]">{kpi.proceduresCount}</td>
+                        <td className="py-3 text-right font-semibold text-[#0f172a]">
                           ₸ {Number(kpi.revenueTotal).toLocaleString("ru-KZ")}
                         </td>
-                        <td className="py-3 text-right text-[var(--text-secondary)]">
+                        <td className="py-3 text-right text-[#64748b]">
                           ₸ {Number(kpi.averageCheck ?? 0).toLocaleString("ru-KZ")}
                         </td>
                       </motion.tr>
@@ -239,11 +239,11 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="lg:col-span-2 dash-card dash-card-padded dash-card-elevated min-h-[300px] flex flex-col items-center justify-center text-center">
-              <div className="w-16 h-16 bg-[var(--surface-2)] rounded-2xl flex items-center justify-center text-[var(--text-subtle)] mb-4">
+              <div className="w-16 h-16 bg-[#f1ede4] rounded-2xl flex items-center justify-center text-[#94a3b8] mb-4">
                 <Activity className="w-8 h-8 opacity-50" />
               </div>
-              <h3 className="text-xl font-bold text-[var(--text)]">{t("dashboard.activityFeedTitle")}</h3>
-              <p className="text-[var(--text-secondary)] max-w-sm mt-2">{t("dashboard.activityFeedDesc")}</p>
+              <h3 className="text-xl font-bold text-[#0f172a]">{t("dashboard.activityFeedTitle")}</h3>
+              <p className="text-[#64748b] max-w-sm mt-2">{t("dashboard.activityFeedDesc")}</p>
               <button
                 type="button"
                 onClick={() => navigate("/procedures")}
@@ -271,8 +271,8 @@ export default function Dashboard() {
                   <div className="dash-quick-action-icon">
                     <item.icon className="w-4 h-4" />
                   </div>
-                  <span className="font-medium text-body text-[var(--text)]">{item.label}</span>
-                  <ChevronRight className="w-4 h-4 text-[var(--text-subtle)] ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <span className="font-medium text-sm text-[#0f172a]">{item.label}</span>
+                  <ChevronRight className="w-4 h-4 text-[#94a3b8] ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
                 </button>
               ))}
             </div>

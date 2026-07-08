@@ -19,7 +19,7 @@ export function PageShell({
   const body = (
     <div
       className={cn(
-        "min-h-full bg-[var(--bg)] text-[var(--text)] font-manrope",
+        "min-h-full bg-[#faf8f4] text-[#0f172a] font-manrope",
         withTabBarOffset && "pb-24",
         className,
       )}

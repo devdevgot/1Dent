@@ -175,21 +175,21 @@ export function CreatePatientDialog({ open, onClose, onExistingPatient }: Create
 
         {/* ИИН */}
         <div>
-          <label className="text-body font-medium text-[var(--text)] mb-1 block">{t("createPatient.iin")}</label>
+          <label className="text-sm font-medium text-[#0f172a] mb-1 block">{t("createPatient.iin")}</label>
           <input
             type="text"
             value={iin}
             onChange={(e) => handleIINChange(e.target.value)}
             maxLength={12}
             inputMode="numeric"
-            className={`w-full border rounded-lg px-3 py-2 text-body focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono ${
-              iinError ? "border-red-400 bg-red-50" : foundPatient ? "border-green-400 bg-green-50" : "border-[var(--ds-border)]"
+            className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono ${
+              iinError ? "border-red-400 bg-red-50" : foundPatient ? "border-green-400 bg-green-50" : "border-[#e8e3d9]"
             }`}
             placeholder={t("createPatient.iinPlaceholder")}
           />
-          {iinError && <p className="text-caption text-red-500 mt-1">{iinError}</p>}
+          {iinError && <p className="text-xs text-red-500 mt-1">{iinError}</p>}
           {!iinError && iin.length === 0 && (
-            <p className="text-caption text-[var(--text-secondary)] mt-1">{t("createPatient.iinHint")}</p>
+            <p className="text-xs text-[#64748b] mt-1">{t("createPatient.iinHint")}</p>
           )}
         </div>
 
@@ -198,19 +198,19 @@ export function CreatePatientDialog({ open, onClose, onExistingPatient }: Create
           <div className="rounded-xl border border-green-200 bg-green-50 p-4 space-y-3">
             <div className="flex items-center gap-2">
               <UserCheck className="w-4 h-4 text-green-600 shrink-0" />
-              <p className="text-body font-semibold text-green-800">{t("createPatient.foundPatientTitle")}</p>
+              <p className="text-sm font-semibold text-green-800">{t("createPatient.foundPatientTitle")}</p>
             </div>
             <div className="space-y-1">
-              <p className="text-body font-medium text-[var(--text)]">{foundPatient.name}</p>
-              <p className="text-caption text-[var(--text-secondary)]">{foundPatient.phone}</p>
+              <p className="text-sm font-medium text-[#0f172a]">{foundPatient.name}</p>
+              <p className="text-xs text-[#64748b]">{foundPatient.phone}</p>
               {foundPatient.dateOfBirth && (
-                <p className="text-caption text-[var(--text-secondary)]">{formatDob(foundPatient.dateOfBirth)}</p>
+                <p className="text-xs text-[#64748b]">{formatDob(foundPatient.dateOfBirth)}</p>
               )}
               {foundPatient.gender && (
-                <p className="text-caption text-[var(--text-secondary)]">{genderLabel(foundPatient.gender)}</p>
+                <p className="text-xs text-[#64748b]">{genderLabel(foundPatient.gender)}</p>
               )}
             </div>
-            <p className="text-caption text-green-700">{t("createPatient.foundPatientHint")}</p>
+            <p className="text-xs text-green-700">{t("createPatient.foundPatientHint")}</p>
             <div className="flex gap-2">
               <Button
                 type="button"
@@ -235,58 +235,58 @@ export function CreatePatientDialog({ open, onClose, onExistingPatient }: Create
         {!foundPatient && (
           <>
             <div>
-              <label className="text-body font-medium text-[var(--text)] mb-1 block">{t("createPatient.fullName")}</label>
+              <label className="text-sm font-medium text-[#0f172a] mb-1 block">{t("createPatient.fullName")}</label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
                 minLength={2}
-                className="w-full border border-[var(--ds-border)] rounded-lg px-3 py-2 text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="w-full border border-[#e8e3d9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                 placeholder={t("createPatient.fullNamePlaceholder")}
               />
             </div>
 
             <div>
-              <label className="text-body font-medium text-[var(--text)] mb-1 block">{t("createPatient.phone")}</label>
+              <label className="text-sm font-medium text-[#0f172a] mb-1 block">{t("createPatient.phone")}</label>
               <input
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 required
                 minLength={5}
-                className="w-full border border-[var(--ds-border)] rounded-lg px-3 py-2 text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="w-full border border-[#e8e3d9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                 placeholder={t("createPatient.phonePlaceholder")}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-body font-medium text-[var(--text)] mb-1 block">{t("createPatient.dateOfBirth")}</label>
-                <div className={`w-full border rounded-lg px-3 py-2 text-body min-h-[38px] flex items-center ${
-                  dateOfBirth ? "border-primary/30 bg-primary/5 text-[var(--text)]" : "border-[var(--ds-border)] bg-[var(--bg)] text-[var(--text-subtle)]"
+                <label className="text-sm font-medium text-[#0f172a] mb-1 block">{t("createPatient.dateOfBirth")}</label>
+                <div className={`w-full border rounded-lg px-3 py-2 text-sm min-h-[38px] flex items-center ${
+                  dateOfBirth ? "border-primary/30 bg-primary/5 text-[#0f172a]" : "border-[#e8e3d9] bg-[#faf8f4] text-[#94a3b8]"
                 }`}>
                   {dateOfBirth
                     ? new Date(dateOfBirth).toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" })
-                    : <span className="text-[var(--text-subtle)]">из ИИН</span>}
+                    : <span className="text-[#94a3b8]">из ИИН</span>}
                 </div>
               </div>
               <div>
-                <label className="text-body font-medium text-[var(--text)] mb-1 block">{t("createPatient.gender")}</label>
-                <div className={`w-full border rounded-lg px-3 py-2 text-body min-h-[38px] flex items-center ${
-                  gender ? "border-primary/30 bg-primary/5 text-[var(--text)]" : "border-[var(--ds-border)] bg-[var(--bg)] text-[var(--text-subtle)]"
+                <label className="text-sm font-medium text-[#0f172a] mb-1 block">{t("createPatient.gender")}</label>
+                <div className={`w-full border rounded-lg px-3 py-2 text-sm min-h-[38px] flex items-center ${
+                  gender ? "border-primary/30 bg-primary/5 text-[#0f172a]" : "border-[#e8e3d9] bg-[#faf8f4] text-[#94a3b8]"
                 }`}>
-                  {gender ? genderLabel(gender) : <span className="text-[var(--text-subtle)]">из ИИН</span>}
+                  {gender ? genderLabel(gender) : <span className="text-[#94a3b8]">из ИИН</span>}
                 </div>
               </div>
             </div>
 
             <div>
-              <label className="text-body font-medium text-[var(--text)] mb-1 block">{t("createPatient.source")}</label>
+              <label className="text-sm font-medium text-[#0f172a] mb-1 block">{t("createPatient.source")}</label>
               <select
                 value={source}
                 onChange={(e) => setSource(e.target.value)}
-                className="w-full border border-[var(--ds-border)] rounded-lg px-3 py-2 text-body focus:outline-none focus:ring-2 focus:ring-primary/30 bg-[var(--ds-surface)]"
+                className="w-full border border-[#e8e3d9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
               >
                 {SOURCE_KEYS.map((s) => (
                   <option key={s} value={s}>{t(`source.${s}`)}</option>
@@ -303,11 +303,11 @@ export function CreatePatientDialog({ open, onClose, onExistingPatient }: Create
 
             {doctors.length > 0 && (
               <div>
-                <label className="text-body font-medium text-[var(--text)] mb-1 block">{t("createPatient.doctor")}</label>
+                <label className="text-sm font-medium text-[#0f172a] mb-1 block">{t("createPatient.doctor")}</label>
                 <select
                   value={doctorId}
                   onChange={(e) => setDoctorId(e.target.value)}
-                  className="w-full border border-[var(--ds-border)] rounded-lg px-3 py-2 text-body focus:outline-none focus:ring-2 focus:ring-primary/30 bg-[var(--ds-surface)]"
+                  className="w-full border border-[#e8e3d9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
                 >
                   <option value="">{t("createPatient.noDoctor")}</option>
                   {doctors.map((d) => (
@@ -318,12 +318,12 @@ export function CreatePatientDialog({ open, onClose, onExistingPatient }: Create
             )}
 
             <div>
-              <label className="text-body font-medium text-[var(--text)] mb-1 block">{t("createPatient.notes")}</label>
+              <label className="text-sm font-medium text-[#0f172a] mb-1 block">{t("createPatient.notes")}</label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={2}
-                className="w-full border border-[var(--ds-border)] rounded-lg px-3 py-2 text-body focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+                className="w-full border border-[#e8e3d9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
                 placeholder={t("createPatient.notesPlaceholder")}
               />
             </div>

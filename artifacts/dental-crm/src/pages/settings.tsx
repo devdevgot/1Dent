@@ -13,12 +13,12 @@ function RoleBadge({ role }: { role: string }) {
   const colors: Record<string, string> = {
     owner:      "bg-[#f5f3ff] text-[#7c3aed]",
     admin:      "bg-[#e0f2fe] text-[#0284c7]",
-    doctor:     "bg-[#f0fdf4] text-[var(--success)]",
-    accountant: "bg-[#fef3c7] text-[var(--warning)]",
-    warehouse:  "bg-[var(--surface-2)] text-[var(--text-secondary)]",
+    doctor:     "bg-[#f0fdf4] text-[#16a34a]",
+    accountant: "bg-[#fef3c7] text-[#d97706]",
+    warehouse:  "bg-[#f1ede4] text-[#64748b]",
   };
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-caption font-bold uppercase tracking-wide ${colors[role] ?? "bg-[var(--surface-2)] text-[var(--text-secondary)]"}`}>
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide ${colors[role] ?? "bg-[#f1ede4] text-[#64748b]"}`}>
       {t(`role.${role}`)}
     </span>
   );
@@ -26,10 +26,10 @@ function RoleBadge({ role }: { role: string }) {
 
 function Section({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] shadow-md overflow-hidden">
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--ds-border)]">
-        <span className="text-[var(--ds-primary)]">{icon}</span>
-        <h2 className="font-semibold text-base text-[var(--text)]">{title}</h2>
+    <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-md overflow-hidden">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-[#e8e3d9]">
+        <span className="text-[#1f75fe]">{icon}</span>
+        <h2 className="font-semibold text-base text-[#0f172a]">{title}</h2>
       </div>
       <div className="p-5">{children}</div>
     </div>
@@ -104,11 +104,11 @@ export default function SettingsPage() {
         <div className="space-y-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-[#1f75fe]/10 flex items-center justify-center shrink-0">
-              <User className="w-5 h-5 text-[var(--ds-primary)]" />
+              <User className="w-5 h-5 text-[#1f75fe]" />
             </div>
             <div>
-              <p className="font-semibold text-[var(--text)]">{user?.name}</p>
-              <p className="text-caption text-[var(--text-secondary)]">{user?.email}</p>
+              <p className="font-semibold text-[#0f172a]">{user?.name}</p>
+              <p className="text-xs text-[#64748b]">{user?.email}</p>
             </div>
           </div>
           {user?.role && (
@@ -123,22 +123,22 @@ export default function SettingsPage() {
       <Section icon={<Shield className="w-5 h-5" />} title={t("settingsPage.security")}>
         <form onSubmit={handleChangePassword} className="space-y-3">
           <div className="relative">
-            <label className="block text-caption font-medium text-[var(--text-secondary)] mb-1">{t("settingsPage.currentPassword")}</label>
+            <label className="block text-xs font-medium text-[#64748b] mb-1">{t("settingsPage.currentPassword")}</label>
             <div className="relative">
               <input
                 type={showCurrent ? "text" : "password"}
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 required
-                className="w-full h-10 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-3 pr-10 text-body text-[var(--text)] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20"
+                className="w-full h-10 rounded-xl border border-[#e8e3d9] bg-white px-3 pr-10 text-sm text-[#0f172a] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20"
               />
-              <button type="button" onClick={() => setShowCurrent(!showCurrent)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]">
+              <button type="button" onClick={() => setShowCurrent(!showCurrent)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8]">
                 {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
           </div>
           <div>
-            <label className="block text-caption font-medium text-[var(--text-secondary)] mb-1">{t("settingsPage.newPassword")}</label>
+            <label className="block text-xs font-medium text-[#64748b] mb-1">{t("settingsPage.newPassword")}</label>
             <div className="relative">
               <input
                 type={showNew ? "text" : "password"}
@@ -146,15 +146,15 @@ export default function SettingsPage() {
                 onChange={(e) => setNewPassword(e.target.value)}
                 required
                 minLength={6}
-                className="w-full h-10 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-3 pr-10 text-body text-[var(--text)] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20"
+                className="w-full h-10 rounded-xl border border-[#e8e3d9] bg-white px-3 pr-10 text-sm text-[#0f172a] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20"
               />
-              <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]">
+              <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8]">
                 {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
           </div>
           <div>
-            <label className="block text-caption font-medium text-[var(--text-secondary)] mb-1">{t("settingsPage.confirmPassword")}</label>
+            <label className="block text-xs font-medium text-[#64748b] mb-1">{t("settingsPage.confirmPassword")}</label>
             <div className="relative">
               <input
                 type={showConfirm ? "text" : "password"}
@@ -162,9 +162,9 @@ export default function SettingsPage() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 minLength={6}
-                className="w-full h-10 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-3 pr-10 text-body text-[var(--text)] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20"
+                className="w-full h-10 rounded-xl border border-[#e8e3d9] bg-white px-3 pr-10 text-sm text-[#0f172a] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20"
               />
-              <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]">
+              <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8]">
                 {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
@@ -172,7 +172,7 @@ export default function SettingsPage() {
           <button
             type="submit"
             disabled={changePasswordMutation.isPending}
-            className="w-full h-10 rounded-full bg-[#1f75fe] text-white text-body font-semibold hover:bg-[var(--primary-hover)] hover:scale-105 transition-all disabled:opacity-60 disabled:hover:scale-100"
+            className="w-full h-10 rounded-full bg-[#1f75fe] text-white text-sm font-semibold hover:bg-[#1a65e8] hover:scale-105 transition-all disabled:opacity-60 disabled:hover:scale-100"
           >
             {changePasswordMutation.isPending ? t("common.saving") : t("settingsPage.changePassword")}
           </button>
@@ -187,10 +187,10 @@ export default function SettingsPage() {
               key={lang.code}
               onClick={() => i18n.changeLanguage(lang.code)}
               className={cn(
-                "flex-1 h-10 rounded-xl border text-body font-semibold transition-all",
+                "flex-1 h-10 rounded-xl border text-sm font-semibold transition-all",
                 i18n.language === lang.code
-                  ? "border-[#1f75fe] bg-[#1f75fe]/10 text-[var(--ds-primary)]"
-                  : "border-[var(--ds-border)] bg-[var(--ds-surface)] text-[var(--text-secondary)] hover:border-[#1f75fe]/40",
+                  ? "border-[#1f75fe] bg-[#1f75fe]/10 text-[#1f75fe]"
+                  : "border-[#e8e3d9] bg-white text-[#64748b] hover:border-[#1f75fe]/40",
               )}
             >
               {lang.label}

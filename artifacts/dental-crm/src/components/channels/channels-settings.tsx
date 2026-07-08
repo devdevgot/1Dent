@@ -283,7 +283,7 @@ export function ChannelsSettings() {
         >
           {disconnectProgress}%
         </div>
-        <div className="w-full h-2.5 bg-[var(--surface-2)] rounded-full overflow-hidden">
+        <div className="w-full h-2.5 bg-[#f1ede4] rounded-full overflow-hidden">
           <div
             className="h-full rounded-full transition-all duration-200 ease-linear"
             style={{
@@ -292,7 +292,7 @@ export function ChannelsSettings() {
             }}
           />
         </div>
-        <p className="text-caption text-[var(--text-subtle)] text-center leading-relaxed">
+        <p className="text-xs text-[#94a3b8] text-center leading-relaxed">
           Пожалуйста, не закрывайте страницу.<br />Устройство отвязывается от WhatsApp...
         </p>
       </AppDialog>
@@ -327,7 +327,7 @@ export function ChannelsSettings() {
       </AppDialog>
 
       {isOwner && (
-        <div className="bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-xl p-4">
+        <div className="bg-white border border-[#e8e3d9] rounded-xl p-4">
           <div className="flex flex-col gap-3">
             {/* Top: icon + label + phone */}
             <div className="flex items-center gap-2 min-w-0">
@@ -338,22 +338,22 @@ export function ChannelsSettings() {
                 <WhatsAppIcon size={18} color="#25d366" />
               </div>
               <div className="min-w-0">
-                <p className="text-body font-semibold text-[var(--text)]">WhatsApp клиники</p>
+                <p className="text-sm font-semibold text-[#0f172a]">WhatsApp клиники</p>
                 {savedPhone ? (
                   <div className="flex items-center gap-1">
-                    <p className="text-caption text-[var(--text-secondary)] font-mono">{formatPhone(savedPhone)}</p>
+                    <p className="text-xs text-[#64748b] font-mono">{formatPhone(savedPhone)}</p>
                     {isOwner && !phoneEditing && (
                       <button
                         onClick={() => { setPhoneEditing(true); setPhoneInput(savedPhone); }}
                         title="Исправить номер вручную"
-                        className="text-[var(--text-subtle)] hover:text-[var(--text-secondary)] transition-colors"
+                        className="text-[#94a3b8] hover:text-[#64748b] transition-colors"
                       >
                         <Pencil className="w-3 h-3" />
                       </button>
                     )}
                   </div>
                 ) : (
-                  <p className="text-caption text-[var(--text-subtle)]">Не подключён</p>
+                  <p className="text-xs text-[#94a3b8]">Не подключён</p>
                 )}
               </div>
             </div>
@@ -364,7 +364,7 @@ export function ChannelsSettings() {
                   onClick={handleRecheckWebhook}
                   disabled={recheckingWebhook}
                   title="Принудительно перерегистрировать вебхук в Green API"
-                  className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-caption font-semibold border border-[var(--ds-border)] text-[var(--text-secondary)] hover:bg-[var(--bg)] transition-colors disabled:opacity-60"
+                  className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold border border-[#e8e3d9] text-[#64748b] hover:bg-[#faf8f4] transition-colors disabled:opacity-60"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${recheckingWebhook ? "animate-spin" : ""}`} />
                   Проверить
@@ -373,7 +373,7 @@ export function ChannelsSettings() {
               {waStatus?.connected && (
                 <button
                   onClick={() => setConfirmDisconnect(true)}
-                  className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-caption font-semibold border border-[#dc2626]/30 text-[var(--danger)] hover:bg-[#fef2f2] transition-colors"
+                  className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold border border-[#dc2626]/30 text-[#dc2626] hover:bg-[#fef2f2] transition-colors"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   Отключить
@@ -384,7 +384,7 @@ export function ChannelsSettings() {
                   setWaForceSetup(!!waStatus?.connected);
                   setWaModalOpen(true);
                 }}
-                className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-caption font-semibold border border-[var(--ds-border)] text-[var(--text-secondary)] hover:bg-[var(--bg)] transition-colors"
+                className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold border border-[#e8e3d9] text-[#64748b] hover:bg-[#faf8f4] transition-colors"
               >
                 {waStatus?.connected ? "Изменить" : "Подключить"}
               </button>
@@ -392,8 +392,8 @@ export function ChannelsSettings() {
           </div>
 
           {phoneEditing && (
-            <div className="mt-3 pt-3 border-t border-[var(--ds-border)]">
-              <p className="text-caption text-[var(--text-secondary)] mb-2">
+            <div className="mt-3 pt-3 border-t border-[#e8e3d9]">
+              <p className="text-xs text-[#64748b] mb-2">
                 Введите правильный номер WhatsApp (в международном формате, например <span className="font-mono">77071234567</span>):
               </p>
               <div className="flex gap-2">
@@ -402,13 +402,13 @@ export function ChannelsSettings() {
                   value={phoneInput}
                   onChange={e => setPhoneInput(e.target.value)}
                   placeholder="77071234567"
-                  className="flex-1 h-8 px-3 rounded-lg border border-[var(--ds-border)] text-caption font-mono focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/50"
+                  className="flex-1 h-8 px-3 rounded-lg border border-[#e8e3d9] text-xs font-mono focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/50"
                   onKeyDown={e => { if (e.key === "Enter") handlePhoneSave(); if (e.key === "Escape") setPhoneEditing(false); }}
                   autoFocus
                 />
                 <button
                   onClick={() => { setPhoneEditing(false); setPhoneInput(""); }}
-                  className="w-8 h-8 rounded-lg border border-[var(--ds-border)] flex items-center justify-center text-[var(--text-subtle)] hover:bg-[var(--bg)] transition-colors"
+                  className="w-8 h-8 rounded-lg border border-[#e8e3d9] flex items-center justify-center text-[#94a3b8] hover:bg-[#faf8f4] transition-colors"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -428,17 +428,17 @@ export function ChannelsSettings() {
       )}
 
       <div className="mt-2">
-        <h2 className="text-caption font-semibold text-[var(--text-subtle)] uppercase tracking-wider mb-3">
+        <h2 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider mb-3">
           Каналы сквозной аналитики
         </h2>
 
         {/* Warning: WhatsApp not connected — ref links won't redirect to WhatsApp */}
         {channels.length > 0 && waStatus !== null && !waStatus?.connected && (
           <div className="flex items-start gap-2 p-3 rounded-xl bg-[#fef3c7] border border-[#d97706]/30 mb-3">
-            <AlertTriangle className="w-4 h-4 text-[var(--warning)] shrink-0 mt-0.5" />
+            <AlertTriangle className="w-4 h-4 text-[#d97706] shrink-0 mt-0.5" />
             <div className="min-w-0">
-              <p className="text-caption font-semibold text-[var(--warning)]">WhatsApp не подключён</p>
-              <p className="text-caption text-[var(--warning)] mt-0.5 leading-relaxed">
+              <p className="text-xs font-semibold text-[#d97706]">WhatsApp не подключён</p>
+              <p className="text-xs text-[#d97706] mt-0.5 leading-relaxed">
                 Реферальные ссылки не будут открывать WhatsApp. Подключите WhatsApp клиники выше, чтобы ссылки работали корректно.
               </p>
             </div>
@@ -447,37 +447,37 @@ export function ChannelsSettings() {
 
         <div className="space-y-4">
           {channels.length === 0 ? (
-            <p className="text-body text-[var(--text-secondary)] text-center py-6">{t("channels.noChannels")}</p>
+            <p className="text-sm text-[#64748b] text-center py-6">{t("channels.noChannels")}</p>
           ) : (
             <div className="space-y-2">
               {channels.map((ch) => {
                 const refUrl = getRefUrl(ch.refCode, savedPhone);
                 return (
-                  <div key={ch.id} className="flex items-center gap-3 p-3 border border-[var(--ds-border)] rounded-xl bg-[var(--ds-surface)]">
+                  <div key={ch.id} className="flex items-center gap-3 p-3 border border-[#e8e3d9] rounded-xl bg-white">
                     <ChannelIcon type={ch.type} size={20} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-body font-semibold text-[var(--text)] truncate">{ch.name}</p>
-                      <p className="text-caption text-[var(--text-secondary)] font-mono truncate">{refUrl}</p>
+                      <p className="text-sm font-semibold text-[#0f172a] truncate">{ch.name}</p>
+                      <p className="text-xs text-[#64748b] font-mono truncate">{refUrl}</p>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       <button
                         onClick={() => handleCopyLink(ch.refCode)}
                         title={t("channels.copyLink")}
-                        className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-[var(--surface-2)] transition-colors text-[var(--text-secondary)] hover:text-[var(--text)]"
+                        className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-[#f1ede4] transition-colors text-[#64748b] hover:text-[#0f172a]"
                       >
                         <Copy className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDownloadQr(ch)}
                         title={t("channels.downloadQr")}
-                        className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-[var(--surface-2)] transition-colors text-[var(--text-secondary)] hover:text-[var(--text)]"
+                        className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-[#f1ede4] transition-colors text-[#64748b] hover:text-[#0f172a]"
                       >
                         <Download className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => setConfirmDeleteId(ch.id)}
                         title={t("channels.deleteChannel")}
-                        className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-[#fef2f2] transition-colors text-[var(--text-secondary)] hover:text-[var(--danger)]"
+                        className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-[#fef2f2] transition-colors text-[#64748b] hover:text-[#dc2626]"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -491,7 +491,7 @@ export function ChannelsSettings() {
           {showAddForm ? (
             <form onSubmit={handleCreate} className="border border-[#1f75fe]/30 rounded-xl p-4 bg-[#1f75fe]/10 space-y-3">
               <div>
-                <label className="text-caption font-medium text-[var(--text-secondary)] mb-1 block">{t("channels.channelName")}</label>
+                <label className="text-xs font-medium text-[#64748b] mb-1 block">{t("channels.channelName")}</label>
                 <input
                   type="text"
                   value={newName}
@@ -500,28 +500,28 @@ export function ChannelsSettings() {
                   minLength={1}
                   maxLength={100}
                   placeholder={t("channels.channelNamePlaceholder")}
-                  className="w-full h-9 rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface)] px-3 text-body focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/30"
+                  className="w-full h-9 rounded-lg border border-[#e8e3d9] bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/30"
                 />
               </div>
               <div>
-                <label className="text-caption font-medium text-[var(--text-secondary)] mb-1 block">{t("channels.channelType")}</label>
+                <label className="text-xs font-medium text-[#64748b] mb-1 block">{t("channels.channelType")}</label>
                 <div className="relative">
                   <button
                     type="button"
                     onClick={() => setShowTypeDropdown((v) => !v)}
-                    className="w-full h-9 rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface)] px-3 text-body flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/30"
+                    className="w-full h-9 rounded-lg border border-[#e8e3d9] bg-white px-3 text-sm flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/30"
                   >
                     <ChannelIcon type={newType} size={16} />
-                    <span className="flex-1 text-left text-[var(--text)]">
+                    <span className="flex-1 text-left text-[#0f172a]">
                       {newType === "other" && customTypeName
                         ? customTypeName
                         : t(`source.${newType}`, { defaultValue: newType })}
                     </span>
-                    <ChevronDown className={`w-4 h-4 text-[var(--text-subtle)] transition-transform ${showTypeDropdown ? "rotate-180" : ""}`} />
+                    <ChevronDown className={`w-4 h-4 text-[#94a3b8] transition-transform ${showTypeDropdown ? "rotate-180" : ""}`} />
                   </button>
 
                   {showTypeDropdown && (
-                    <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-xl shadow-lg overflow-hidden">
+                    <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-[#e8e3d9] rounded-xl shadow-lg overflow-hidden">
                       {(["instagram", "telegram", "2gis", "website", "whatsapp", "other"] as const).map((type) => (
                         <button
                           key={type}
@@ -531,8 +531,8 @@ export function ChannelsSettings() {
                             if (type !== "other") setCustomTypeName("");
                             setShowTypeDropdown(false);
                           }}
-                          className={`w-full flex items-center gap-3 px-3 py-2.5 text-body transition-colors hover:bg-[var(--bg)] ${
-                            newType === type ? "text-[var(--ds-primary)] font-medium bg-[#1f75fe]/10" : "text-[var(--text)]"
+                          className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm transition-colors hover:bg-[#faf8f4] ${
+                            newType === type ? "text-[#1f75fe] font-medium bg-[#1f75fe]/10" : "text-[#0f172a]"
                           }`}
                         >
                           <ChannelIcon type={type} size={16} />
@@ -553,7 +553,7 @@ export function ChannelsSettings() {
                     }}
                     placeholder="Например: TikTok, YouTube, Баннер..."
                     autoFocus
-                    className="mt-2 w-full h-9 rounded-lg border border-[#1f75fe]/50 bg-[var(--ds-surface)] px-3 text-body focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/30"
+                    className="mt-2 w-full h-9 rounded-lg border border-[#1f75fe]/50 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/30"
                   />
                 )}
               </div>
@@ -561,14 +561,14 @@ export function ChannelsSettings() {
                 <button
                   type="button"
                   onClick={() => { setShowAddForm(false); setNewName(""); setCustomTypeName(""); setNewType("instagram"); setShowTypeDropdown(false); }}
-                  className="flex-1 h-9 rounded-lg border border-[var(--ds-border)] text-body font-medium hover:bg-[var(--surface-2)] transition-colors"
+                  className="flex-1 h-9 rounded-lg border border-[#e8e3d9] text-sm font-medium hover:bg-[#f1ede4] transition-colors"
                 >
                   {t("channels.cancel")}
                 </button>
                 <button
                   type="submit"
                   disabled={createMutation.isPending || !newName.trim()}
-                  className="flex-1 h-9 rounded-lg bg-[#1f75fe] text-white text-body font-semibold hover:opacity-90 transition-opacity disabled:opacity-60"
+                  className="flex-1 h-9 rounded-lg bg-[#1f75fe] text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-60"
                 >
                   {createMutation.isPending ? t("channels.creating") : t("channels.create")}
                 </button>
@@ -577,7 +577,7 @@ export function ChannelsSettings() {
           ) : (
             <button
               onClick={() => setShowAddForm(true)}
-              className="w-full h-10 rounded-xl border-2 border-dashed border-[var(--ds-border)] hover:border-[#1f75fe]/50 text-body text-[var(--text-secondary)] hover:text-[var(--ds-primary)] flex items-center justify-center gap-2 transition-colors"
+              className="w-full h-10 rounded-xl border-2 border-dashed border-[#e8e3d9] hover:border-[#1f75fe]/50 text-sm text-[#64748b] hover:text-[#1f75fe] flex items-center justify-center gap-2 transition-colors"
             >
               <Plus className="w-4 h-4" />
               {t("channels.addChannel")}

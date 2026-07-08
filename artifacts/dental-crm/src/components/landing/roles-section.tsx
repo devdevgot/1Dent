@@ -70,14 +70,14 @@ const roles = [
 
 export function RolesSection() {
   return (
-    <section className="bg-[var(--ds-surface)] landing-section-sm px-6">
+    <section className="bg-white landing-section-sm px-6">
       <div className="max-w-7xl mx-auto">
         <motion.div {...fadeUp(0)} className="text-center mb-6">
           <div className="landing-badge landing-badge-primary font-manrope mb-6">
             <ShieldCheck size={14} />
             <span>Безопасность и роли</span>
           </div>
-          <h2 className="landing-h2 font-manrope text-[var(--text)]">
+          <h2 className="landing-h2 font-manrope text-[#0f172a]">
             Каждый видит только своё
           </h2>
         </motion.div>
@@ -112,7 +112,7 @@ export function RolesSection() {
                 <role.icon size={20} style={{ color: role.accent }} />
               </div>
 
-              <h3 className="font-manrope font-bold text-[var(--text)] text-lg mb-4 tracking-tight">{role.title}</h3>
+              <h3 className="font-manrope font-bold text-[#0f172a] text-lg mb-4 tracking-tight">{role.title}</h3>
 
               <ul className="space-y-2.5">
                 {role.perms.map((perm, j) => (
@@ -122,10 +122,10 @@ export function RolesSection() {
                       style={{ backgroundColor: role.accent }}
                     />
                     <span
-                      className={`font-manrope text-caption leading-snug ${
+                      className={`font-manrope text-xs leading-snug ${
                         perm === "Телефоны — скрыты"
                           ? "text-orange-500 font-semibold"
-                          : "text-[var(--text-secondary)]"
+                          : "text-[#64748b]"
                       }`}
                     >
                       {perm}
@@ -137,7 +137,7 @@ export function RolesSection() {
               {role.antiTheft && (
                 <div className="mt-4 flex items-center gap-2 bg-orange-50 rounded-xl p-3 border border-orange-100/80">
                   <ShieldCheck size={14} className="text-orange-500 flex-shrink-0" />
-                  <span className="font-manrope text-caption text-orange-600 font-medium">
+                  <span className="font-manrope text-xs text-orange-600 font-medium">
                     Защита от кражи базы пациентов
                   </span>
                 </div>
@@ -155,11 +155,11 @@ export function RolesSection() {
             <ShieldCheck size={24} className="text-orange-500" />
           </div>
           <div>
-            <h4 className="font-manrope font-bold text-[var(--text)] text-xl mb-1 tracking-tight">
+            <h4 className="font-manrope font-bold text-[#0f172a] text-xl mb-1 tracking-tight">
               Anti-theft защита базы пациентов
             </h4>
-            <p className="font-manrope text-[var(--text-secondary)] max-w-2xl leading-relaxed">
-              Врачи видят телефоны в формате <strong className="text-[var(--text)]">+7 *** *** **XX</strong> — нельзя скопировать базу и унести к конкуренту. Ваши пациенты остаются с вами.
+            <p className="font-manrope text-[#64748b] max-w-2xl leading-relaxed">
+              Врачи видят телефоны в формате <strong className="text-[#0f172a]">+7 *** *** **XX</strong> — нельзя скопировать базу и унести к конкуренту. Ваши пациенты остаются с вами.
             </p>
           </div>
         </motion.div>

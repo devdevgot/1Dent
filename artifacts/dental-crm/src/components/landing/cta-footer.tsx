@@ -85,7 +85,7 @@ export function CtaFooter() {
                 <h3 className="font-manrope font-bold text-white text-xl mb-2 tracking-tight">
                   Оставить заявку
                 </h3>
-                <p className="font-manrope text-white/50 text-body mb-6">
+                <p className="font-manrope text-white/50 text-sm mb-6">
                   Заполните форму или сразу создайте клинику
                 </p>
 
@@ -128,13 +128,13 @@ export function CtaFooter() {
         </div>
       </section>
 
-      <footer className="bg-[var(--bg)] border-t border-[var(--ds-border)] px-6 py-12">
+      <footer className="bg-[#faf8f4] border-t border-[#e8e3d9] px-6 py-12">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-6">
           <Link href="/" className="flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-primary)] rounded-lg">
             <img src="/logo_clean.png" alt={SITE.name} className="h-9 w-auto" />
           </Link>
 
-          <p className="font-manrope text-[var(--text-subtle)] text-body text-center">
+          <p className="font-manrope text-[#94a3b8] text-sm text-center">
             © 2025 {SITE.name}. Dental CRM для стоматологий Казахстана.
           </p>
 
@@ -144,7 +144,7 @@ export function CtaFooter() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="WhatsApp"
-              className="w-10 h-10 rounded-full bg-[var(--ds-border)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-primary)]"
+              className="w-10 h-10 rounded-full bg-[var(--ds-border)] flex items-center justify-center text-[#64748b] hover:text-[#0f172a] hover:bg-[#f1ede4] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-primary)]"
             >
               <FaWhatsapp size={16} />
             </a>
@@ -153,7 +153,7 @@ export function CtaFooter() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Telegram"
-              className="w-10 h-10 rounded-full bg-[var(--ds-border)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-primary)]"
+              className="w-10 h-10 rounded-full bg-[var(--ds-border)] flex items-center justify-center text-[#64748b] hover:text-[#0f172a] hover:bg-[#f1ede4] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-primary)]"
             >
               <FaTelegram size={16} />
             </a>

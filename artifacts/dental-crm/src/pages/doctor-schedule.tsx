@@ -21,9 +21,9 @@ import { ScheduleMonthSkeleton } from "@/components/skeletons";
 /* ─── Status colours ────────────────────────────────────────────────────────── */
 const STATUS_PILL: Record<ProcedureStatus, string> = {
   scheduled:   "bg-[#e0f2fe] text-[#0284c7]",
-  in_progress: "bg-[#fef3c7] text-[var(--warning)]",
-  completed:   "bg-[#f0fdf4] text-[var(--success)]",
-  cancelled:   "bg-[#f1f5f9] text-[var(--text-subtle)]",
+  in_progress: "bg-[#fef3c7] text-[#d97706]",
+  completed:   "bg-[#f0fdf4] text-[#16a34a]",
+  cancelled:   "bg-[#f1f5f9] text-[#94a3b8]",
 };
 
 const STATUS_DOT: Record<ProcedureStatus, string> = {
@@ -144,7 +144,7 @@ export default function DoctorSchedulePage() {
         bottom={
           <div className="grid grid-cols-7">
             {DOW.map((d) => (
-              <div key={d} className="text-center text-[11px] font-semibold text-[var(--text-secondary)] uppercase tracking-wide py-1">
+              <div key={d} className="text-center text-[11px] font-semibold text-[#64748b] uppercase tracking-wide py-1">
                 {d}
               </div>
             ))}
@@ -156,12 +156,12 @@ export default function DoctorSchedulePage() {
       {isLoading ? (
         <ScheduleMonthSkeleton />
       ) : (
-        <div className="bg-[var(--ds-surface)] border-b border-[var(--ds-border)]">
+        <div className="bg-white border-b border-[#e8e3d9]">
           {weeks.map((week, wi) => (
-            <div key={wi} className="border-b border-[var(--ds-border)] grid grid-cols-7">
+            <div key={wi} className="border-b border-[#e8e3d9] grid grid-cols-7">
               {week.map((day, di) => {
                 if (!day) return (
-                  <div key={di} className="min-h-[80px] bg-[var(--surface-2)]/30" />
+                  <div key={di} className="min-h-[80px] bg-[#f1ede4]/30" />
                 );
 
                 const ds     = toStr(day);
@@ -174,20 +174,20 @@ export default function DoctorSchedulePage() {
                     key={di}
                     onClick={() => navigate(`/schedule/${ds}`)}
                     className={`
-                      min-h-[80px] border-r border-[var(--ds-border)] last:border-r-0 p-1.5 cursor-pointer
+                      min-h-[80px] border-r border-[#e8e3d9] last:border-r-0 p-1.5 cursor-pointer
                       transition-colors select-none
-                      ${isOther ? "bg-[var(--surface-2)]/20" : "hover:bg-[var(--bg)]"}
+                      ${isOther ? "bg-[#f1ede4]/20" : "hover:bg-[#faf8f4]"}
                     `}
                   >
                     {/* Day number */}
                     <div className="flex justify-center mb-1.5">
                       <span className={`
-                        w-7 h-7 flex items-center justify-center rounded-full text-body font-bold leading-none
+                        w-7 h-7 flex items-center justify-center rounded-full text-sm font-bold leading-none
                         ${isToday
                           ? "bg-[#1f75fe] text-white shadow-md"
                           : isOther
-                            ? "text-[var(--text-subtle)]/40 font-normal"
-                            : "text-[var(--text)]"}
+                            ? "text-[#94a3b8]/40 font-normal"
+                            : "text-[#0f172a]"}
                       `}>
                         {day.getDate()}
                       </span>
@@ -208,7 +208,7 @@ export default function DoctorSchedulePage() {
                         </div>
                       ))}
                       {procs.length > 2 && (
-                        <p className="text-[9px] text-[var(--ds-primary)] font-semibold pl-1">
+                        <p className="text-[9px] text-[#1f75fe] font-semibold pl-1">
                           +{procs.length - 2} ещё
                         </p>
                       )}
@@ -222,13 +222,13 @@ export default function DoctorSchedulePage() {
       )}
 
       {/* ── Legend ── */}
-      <div className="mx-4 mt-4 p-3 bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] shadow-md">
-        <p className="text-[10px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-2">Статусы</p>
+      <div className="mx-4 mt-4 p-3 bg-white rounded-2xl border border-[#e8e3d9] shadow-md">
+        <p className="text-[10px] font-semibold text-[#64748b] uppercase tracking-wider mb-2">Статусы</p>
         <div className="grid grid-cols-2 gap-1.5">
           {(["scheduled","in_progress","completed","cancelled"] as ProcedureStatus[]).map(s => (
             <div key={s} className="flex items-center gap-1.5">
               <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOT[s]}`} />
-              <span className="text-[11px] text-[var(--text-secondary)]">{t(`procedure.status.${s}`)}</span>
+              <span className="text-[11px] text-[#64748b]">{t(`procedure.status.${s}`)}</span>
             </div>
           ))}
         </div>

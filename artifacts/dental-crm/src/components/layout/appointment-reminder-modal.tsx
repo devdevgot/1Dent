@@ -83,10 +83,10 @@ export function AppointmentReminderModal() {
       }
     >
       <div className="bg-primary px-5 py-3 flex items-center gap-2">
-        <div className="w-8 h-8 bg-[var(--ds-surface)]/20 rounded-xl flex items-center justify-center shrink-0">
+        <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
           <Clock className="w-4 h-4 text-white" />
         </div>
-        <p className="text-white/90 text-caption font-medium">
+        <p className="text-white/90 text-xs font-medium">
           {t("appointmentReminder.subtitle", "Напоминание о записи")}
         </p>
       </div>
@@ -98,10 +98,10 @@ export function AppointmentReminderModal() {
               <User className="w-4 h-4 text-blue-600" />
             </div>
             <div>
-              <p className="text-micro text-[var(--text-secondary)] uppercase tracking-wide">
+              <p className="text-xs text-[#64748b] uppercase tracking-wide">
                 {t("appointmentReminder.patient", "Пациент")}
               </p>
-              <p className="text-body font-medium text-[var(--text)]">{payload.patientName}</p>
+              <p className="text-sm font-medium text-[#0f172a]">{payload.patientName}</p>
             </div>
           </div>
         )}
@@ -112,10 +112,10 @@ export function AppointmentReminderModal() {
               <Stethoscope className="w-4 h-4 text-green-600" />
             </div>
             <div>
-              <p className="text-micro text-[var(--text-secondary)] uppercase tracking-wide">
+              <p className="text-xs text-[#64748b] uppercase tracking-wide">
                 {t("appointmentReminder.procedure", "Процедура")}
               </p>
-              <p className="text-body font-medium text-[var(--text)]">{payload.procedureName}</p>
+              <p className="text-sm font-medium text-[#0f172a]">{payload.procedureName}</p>
             </div>
           </div>
         )}
@@ -126,10 +126,10 @@ export function AppointmentReminderModal() {
               <Calendar className="w-4 h-4 text-amber-600" />
             </div>
             <div>
-              <p className="text-micro text-[var(--text-secondary)] uppercase tracking-wide">
+              <p className="text-xs text-[#64748b] uppercase tracking-wide">
                 {t("appointmentReminder.scheduledAt", "Время приёма")}
               </p>
-              <p className="text-body font-medium text-[var(--text)]">
+              <p className="text-sm font-medium text-[#0f172a]">
                 {formatted.date}, {formatted.time}
               </p>
             </div>
@@ -142,10 +142,10 @@ export function AppointmentReminderModal() {
               <User className="w-4 h-4 text-purple-600" />
             </div>
             <div>
-              <p className="text-micro text-[var(--text-secondary)] uppercase tracking-wide">
+              <p className="text-xs text-[#64748b] uppercase tracking-wide">
                 {t("appointmentReminder.doctor", "Врач")}
               </p>
-              <p className="text-body font-medium text-[var(--text)]">{payload.doctorName}</p>
+              <p className="text-sm font-medium text-[#0f172a]">{payload.doctorName}</p>
             </div>
           </div>
         )}
