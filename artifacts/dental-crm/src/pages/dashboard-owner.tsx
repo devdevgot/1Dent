@@ -8,6 +8,7 @@ import {
   type ProfitBranchTarget,
 } from "@/components/dashboard/my-profit-card";
 import { OwnerProfitSheet } from "@/components/dashboard/owner-profit-sheet";
+import type { FilterPreset } from "@/components/dashboard/owner-dashboard-shared";
 import { SITE } from "@/config/site";
 import "@/styles/dashboard.css";
 
@@ -25,6 +26,7 @@ export default function OwnerDashboard() {
   });
   const [profitSheetOpen, setProfitSheetOpen] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<ProfitBranchTarget | null>(null);
+  const [profitPeriod, setProfitPeriod] = useState<FilterPreset>("today");
 
   const { data: analyticsData, isLoading: analyticsLoading } = useGetOwnerDashboardSummary(
     undefined,
@@ -76,7 +78,11 @@ export default function OwnerDashboard() {
         <HomePromoBanners />
       </div>
 
-      <MyProfitCard onSelectBranch={handleSelectBranch} />
+      <MyProfitCard
+        listPreset={profitPeriod}
+        onListPresetChange={setProfitPeriod}
+        onSelectBranch={handleSelectBranch}
+      />
 
       {!isOnboardingCompleted && (
         <div className="mx-4 mt-4 dash-card dash-card-padded-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -107,6 +113,7 @@ export default function OwnerDashboard() {
           onOpenChange={setProfitSheetOpen}
           branchId={selectedBranch.id}
           branchName={selectedBranch.name}
+          filterPreset={profitPeriod}
         />
       )}
 

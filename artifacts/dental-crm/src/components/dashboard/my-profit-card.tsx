@@ -31,14 +31,15 @@ type BranchRow = ProfitBranchTarget & {
 };
 
 type MyProfitCardProps = {
+  listPreset: FilterPreset;
+  onListPresetChange: (preset: FilterPreset) => void;
   onSelectBranch: (target: ProfitBranchTarget) => void;
 };
 
-export function MyProfitCard({ onSelectBranch }: MyProfitCardProps) {
+export function MyProfitCard({ listPreset, onListPresetChange, onSelectBranch }: MyProfitCardProps) {
   const [, navigate] = useLocation();
   const { clinic } = useAuthStore();
   const { branches, fetchBranches, hasFetched } = useBranchStore();
-  const [listPreset, setListPreset] = useState<FilterPreset>("month");
   const [revenues, setRevenues] = useState<Record<string, number>>({});
   const [loadingRevenues, setLoadingRevenues] = useState(false);
 
@@ -120,7 +121,7 @@ export function MyProfitCard({ onSelectBranch }: MyProfitCardProps) {
             <button
               key={p.key}
               type="button"
-              onClick={() => setListPreset(p.key)}
+              onClick={() => onListPresetChange(p.key)}
               className={cn(
                 "shrink-0 px-3.5 py-2 rounded-full text-[13px] font-semibold border transition-colors",
                 listPreset === p.key
