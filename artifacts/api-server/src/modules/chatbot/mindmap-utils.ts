@@ -18,7 +18,11 @@ export interface ScriptMindMapEdge {
 
 export interface ScriptMindMapData {
   nodes: ScriptMindMapNode[];
-  edges: ScriptMindMapEdge[];
+  edges?: ScriptMindMapEdge[];
+}
+
+function mindMapEdges(mindMap: ScriptMindMapData | null | undefined): ScriptMindMapEdge[] {
+  return Array.isArray(mindMap?.edges) ? mindMap!.edges! : [];
 }
 
 const SERVICE_TYPE_KEYWORDS: Record<string, string[]> = {
@@ -78,7 +82,7 @@ export function findMindMapBranchParent(
   let bestCount = 0;
 
   for (const node of mindMap.nodes) {
-    const childCount = mindMap.edges.filter((edge) => {
+    const childCount = mindMapEdges(mindMap).filter((edge) => {
       if (edge.source !== node.id) return false;
       return nodeById.get(edge.target)?.fsmState === childFsmState;
     }).length;
@@ -111,7 +115,7 @@ function followMindMapPathToState(
     if (node.fsmState === targetState) return node;
 
     if (current.depth >= maxDepth) continue;
-    for (const edge of mindMap.edges) {
+    for (const edge of mindMapEdges(mindMap)) {
       if (edge.source === current.id) {
         queue.push({ id: edge.target, depth: current.depth + 1 });
       }
@@ -161,7 +165,7 @@ export function matchMindMapBranch(
   if (!mindMap?.nodes?.length) return null;
 
   const nodeById = new Map(mindMap.nodes.map((n) => [n.id, n]));
-  const childEdges = mindMap.edges.filter((e) => e.source === parentNodeId);
+  const childEdges = mindMapEdges(mindMap).filter((e) => e.source === parentNodeId);
   if (childEdges.length === 0) return null;
 
   let best: { node: ScriptMindMapNode; edge: ScriptMindMapEdge; score: number } | null = null;
@@ -209,7 +213,7 @@ export function renderMindMapScript(
 ): string {
   if (!mindMap?.nodes?.length) return "";
 
-  const { nodes, edges = [] } = mindMap;
+  const { nodes, edges = mindMapEdges(mindMap) } = mindMap;
   const childrenMap: Record<string, Array<{ targetId: string; label?: string }>> = {};
   const hasParent = new Set<string>();
 

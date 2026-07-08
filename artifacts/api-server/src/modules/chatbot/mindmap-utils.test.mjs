@@ -32,4 +32,15 @@ const qualificationActive = resolveMindMapNodeIdForState(mindMap, "collect_quali
 });
 assert.equal(qualificationActive, "step2-qualification");
 
+const brokenMap = {
+  nodes: mindMap.nodes.slice(0, 5),
+  edges: undefined,
+};
+assert.doesNotThrow(() => {
+  resolveMindMapNodeIdForState(brokenMap, "collect_problem", {
+    serviceType: "therapy",
+    userText: "болит зуб",
+  });
+});
+
 console.log("mindmap-utils tests passed");
