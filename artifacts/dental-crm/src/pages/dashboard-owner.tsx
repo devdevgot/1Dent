@@ -23,6 +23,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { RevenueEmptyState } from "@/components/dashboard/revenue-empty-state";
+import { HomeServiceTiles, HomePromoBanners } from "@/components/dashboard/home-services";
 import { SITE } from "@/config/site";
 import { PeriodPills } from "@/components/layout/period-pills";
 import "@/styles/dashboard.css";
@@ -481,7 +482,17 @@ export default function OwnerDashboard() {
   return (
     <div className="dashboard-page min-h-full pb-8">
 
-      <div className="dash-top-strip">
+      {/* ─── Services row (superapp style) ─── */}
+      <div className="pt-4">
+        <HomeServiceTiles />
+      </div>
+
+      {/* ─── Promo banners ─── */}
+      <div className="mt-3">
+        <HomePromoBanners />
+      </div>
+
+      <div className="dash-top-strip mt-4">
         {/* Doctor leaderboard */}
         {kpis.length > 0 && (
           <div className="px-4 pt-4 pb-2">
