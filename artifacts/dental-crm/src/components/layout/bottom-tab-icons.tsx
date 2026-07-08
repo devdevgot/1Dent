@@ -14,7 +14,11 @@ function TabIconShell({
   children,
   highlightId,
   viewBox = "0 0 24 24",
-}: TabIconProps & { children: React.ReactNode; highlightId: string; viewBox?: string }) {
+}: TabIconProps & {
+  children: (gradId: string) => React.ReactNode;
+  highlightId: string;
+  viewBox?: string;
+}) {
   const color = active ? TAB_ACTIVE : TAB_INACTIVE;
   const gradId = `${highlightId}-${active ? "on" : "off"}`;
   return (
