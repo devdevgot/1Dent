@@ -151,8 +151,7 @@ function buildContractPage(opts: {
     .meta { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
     .meta-chip { background: #f2f2f7; border-radius: 8px; padding: 6px 12px; font-size: 13px; color: #3a3a3c; }
     .meta-chip span { font-weight: 600; }
-    .contract-body { line-height: 1.7; font-size: 14px; color: #3a3a3c; white-space: pre-wrap; word-break: break-word; }
-    .contract-body p { margin-bottom: 8px; }
+    .contract-body { line-height: 1.7; font-size: 14px; color: #3a3a3c; white-space: normal; word-break: break-word; }
     ${CONTRACT_TABLE_CSS}
     .filled-field { background: #fff9c4; border-radius: 3px; padding: 0 2px; font-weight: 700; font-style: normal; }
     .actions { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #e5e5ea; padding: 16px 20px; display: flex; gap: 12px; }
@@ -606,14 +605,23 @@ function buildBundlePage(opts: {
     })),
   ).replace(/<\/script>/gi, "<\\/script>");
 
-  const shortLabels = ["Договор", "ИДС", "Вкладыш", "Памятка"];
+  function bundleTabLabel(name: string): string {
+    const lower = name.toLowerCase();
+    if (lower.includes("договор")) return "Договор";
+    if (lower.startsWith("идс") || lower.includes("информирован")) return "ИДС";
+    if (lower.includes("план")) return "План";
+    if (lower.includes("памятка")) return "Памятка";
+    if (lower.includes("акт")) return "Акт";
+    if (lower.includes("гарант")) return "Гарантия";
+    return name.length > 22 ? `${name.slice(0, 20)}…` : name;
+  }
 
   const tabButtons = contracts
     .map(
       (c, i) =>
         `<button class="tab-btn${i === 0 ? " active" : ""}" onclick="showTab(${i})" id="tab-btn-${i}">
           <span class="tab-num">${i + 1}</span>
-          <span class="tab-label">${escHtml(shortLabels[i] ?? c.templateName)}</span>
+          <span class="tab-label">${escHtml(bundleTabLabel(c.templateName))}</span>
           ${c.status === "signed" ? '<span class="tab-check">✓</span>' : ""}
         </button>`,
     )

@@ -23,6 +23,98 @@ export function parsePipeCells(line: string): string[] {
   return inner.split("|").map((cell) => cell.trim());
 }
 
+/** Collapse antiword justification gaps while preserving intentional leading indent. */
+function collapseInteriorSpaces(line: string): string {
+  const leadingLen = line.length - line.trimStart().length;
+  const leading = line.slice(0, leadingLen);
+  const body = line.slice(leadingLen).replace(/ {2,}/g, " ");
+  return leading + body;
+}
+
+/** Centered title lines from Word often have heavy leading whitespace. */
+function isCenteredLine(line: string): boolean {
+  const trimmed = line.trim();
+  if (!trimmed) return false;
+  const leading = line.length - line.trimStart().length;
+  return leading >= 12 && trimmed.length <= 90;
+}
+
+/** Decide whether antiword wrapped the previous line mid-sentence. */
+function shouldJoinLines(prev: string, rawNext: string, nextTrimmed: string): boolean {
+  if (isCenteredLine(rawNext)) return false;
+  if (/^\d+(\.\d+)*\.?\s/.test(nextTrimmed)) return false;
+  if (isPipeTableLine(prev)) return false;
+  if (/^Приложение\s+№/i.test(nextTrimmed)) return false;
+  if (/^[-•●]\s/.test(nextTrimmed)) return false;
+  if (/^[_\-.…]{5,}$/.test(nextTrimmed)) return false;
+
+  const prevTrim = prev.trim();
+  if (!prevTrim) return false;
+
+  // New block when previous line clearly ended a sentence/section.
+  if (/[.!?:;»"')\]]$/.test(prevTrim) && /^[А-ЯЁA-Z\d«"([]/.test(nextTrimmed)) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Repairs antiword artifacts: hard wraps (~70 chars) and double spaces from Word justification.
+ */
+export function normalizeContractText(text: string): string {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const result: string[] = [];
+  let current = "";
+
+  const flush = () => {
+    if (current.trim()) {
+      result.push(collapseInteriorSpaces(current.trim()));
+    }
+    current = "";
+  };
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    if (!trimmed) {
+      flush();
+      result.push("");
+      continue;
+    }
+
+    if (isPipeTableLine(line)) {
+      flush();
+      result.push(collapseInteriorSpaces(line));
+      continue;
+    }
+
+    if (!current) {
+      if (isCenteredLine(line)) {
+        flush();
+        result.push(collapseInteriorSpaces(line));
+        continue;
+      }
+      current = trimmed;
+      continue;
+    }
+
+    if (shouldJoinLines(current, line, trimmed)) {
+      current = `${current} ${trimmed}`;
+    } else {
+      flush();
+      if (isCenteredLine(line)) {
+        result.push(collapseInteriorSpaces(line));
+      } else {
+        current = trimmed;
+      }
+    }
+  }
+
+  flush();
+  return result.join("\n");
+}
+
 function renderPipeTableHtml(lines: string[]): string {
   const rows = lines.map(parsePipeCells);
   const colCount = Math.max(...rows.map((r) => r.length), 1);
@@ -37,11 +129,19 @@ function renderPipeTableHtml(lines: string[]): string {
   return `<table class="contract-table">\n${trs}\n</table>`;
 }
 
+function paragraphClass(rawLine: string): string {
+  if (isCenteredLine(rawLine)) return "contract-center";
+  const trimmed = rawLine.trim();
+  if (/^\d+(\.\d+)*\.?\s/.test(trimmed)) return "contract-clause";
+  return "contract-para";
+}
+
 /**
- * Converts plain-text template to safe HTML with line breaks and pipe tables preserved.
+ * Converts plain-text template to safe HTML with paragraphs and pipe tables preserved.
  */
 export function textToHtml(text: string): string {
-  const lines = text.split("\n");
+  const normalized = normalizeContractText(text);
+  const lines = normalized.split("\n");
   const parts: string[] = [];
   let i = 0;
 
@@ -56,13 +156,24 @@ export function textToHtml(text: string): string {
       continue;
     }
 
-    const chunkLines: string[] = [lines[i]!];
-    i++;
-    while (i < lines.length && !isPipeTableLine(lines[i]!)) {
+    const chunkLines: string[] = [];
+    while (i < lines.length && !isPipeTableLine(lines[i]!) && lines[i]!.trim() !== "") {
       chunkLines.push(lines[i]!);
       i++;
     }
-    parts.push(chunkLines.map((line) => escapeHtml(line)).join("<br>\n"));
+
+    if (chunkLines.length > 0) {
+      for (const line of chunkLines) {
+        const cls = paragraphClass(line);
+        const content = escapeHtml(line.trim());
+        parts.push(`<p class="${cls}">${content}</p>`);
+      }
+    }
+
+    if (i < lines.length && lines[i]!.trim() === "") {
+      parts.push('<p class="contract-spacer">&nbsp;</p>');
+      i++;
+    }
   }
 
   return parts.join("\n");
@@ -133,17 +244,29 @@ function parseHtmlTable(html: string): Record<string, unknown> | null {
   };
 }
 
-function htmlTextBlockToLines(fragment: string): string[] {
-  const text = decodeHtmlEntities(
-    fragment
-      .replace(/<br\s*\/?>/gi, "\n")
-      .replace(/<\/p>/gi, "\n")
-      .replace(/<p[^>]*>/gi, "")
-      .replace(/<strong[^>]*>/gi, "")
-      .replace(/<\/strong>/gi, "")
-      .replace(/<[^>]+>/g, ""),
-  );
-  return text.split("\n");
+function htmlTextBlockToParagraphs(fragment: string): string[] {
+  const paragraphs: string[] = [];
+  const pRe = /<p[^>]*>([\s\S]*?)<\/p>/gi;
+  let pMatch: RegExpExecArray | null;
+  let found = false;
+
+  while ((pMatch = pRe.exec(fragment)) !== null) {
+    found = true;
+    const text = stripInlineHtml(pMatch[1]);
+    if (text) paragraphs.push(text);
+  }
+
+  if (!found) {
+    const text = stripInlineHtml(fragment);
+    if (text) {
+      for (const line of text.split("\n")) {
+        const trimmed = line.trim();
+        if (trimmed) paragraphs.push(trimmed);
+      }
+    }
+  }
+
+  return paragraphs;
 }
 
 /** Converts rendered contract HTML into pdfmake content blocks. */
@@ -160,17 +283,12 @@ export function htmlToPdfmakeContent(html: string): Record<string, unknown>[] {
       continue;
     }
 
-    const lines = htmlTextBlockToLines(token);
-    for (const line of lines) {
-      if (line.trim().length === 0) {
-        parts.push({ text: " ", margin: [0, 2, 0, 2] });
-        continue;
-      }
+    const paragraphs = htmlTextBlockToParagraphs(token);
+    for (const paragraph of paragraphs) {
       parts.push({
-        text: line,
+        text: paragraph,
         style: "body",
-        preserveLeadingSpaces: true,
-        margin: [0, 0, 0, 2],
+        margin: [0, 0, 0, 6],
       });
     }
   }
@@ -179,6 +297,10 @@ export function htmlToPdfmakeContent(html: string): Record<string, unknown>[] {
 }
 
 export const CONTRACT_TABLE_CSS = `
+.contract-para { margin: 0 0 10px; text-align: justify; white-space: normal; word-break: break-word; }
+.contract-clause { margin: 0 0 8px; text-align: justify; white-space: normal; word-break: break-word; }
+.contract-center { margin: 0 0 10px; text-align: center; white-space: normal; word-break: break-word; font-weight: 600; }
+.contract-spacer { margin: 0 0 6px; height: 4px; }
 .contract-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; white-space: normal; }
 .contract-table td { border: 1px solid #d1d1d6; padding: 8px 10px; vertical-align: top; word-break: break-word; }
 `;
