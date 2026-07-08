@@ -1,68 +1,80 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 88 88" fill="none">
   <defs>
-    <!-- Squircle body: diagonal blue with depth -->
-    <linearGradient id="pm-body" x1="14" y1="8" x2="58" y2="64" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#5AA2FF"/>
-      <stop offset="0.5" stop-color="#2A7DFF"/>
-      <stop offset="1" stop-color="#1454D6"/>
+    <!-- Top face: bright diagonal blue -->
+    <linearGradient id="pm-top" x1="20" y1="10" x2="66" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6BB0FF"/>
+      <stop offset="0.45" stop-color="#3183FF"/>
+      <stop offset="1" stop-color="#1E63EC"/>
     </linearGradient>
-    <!-- Top glossy reflection -->
-    <linearGradient id="pm-gloss" x1="36" y1="6" x2="36" y2="40" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFFFFF" stop-opacity="0.55"/>
+    <!-- Extruded side/thickness: darker -->
+    <linearGradient id="pm-side" x1="20" y1="52" x2="60" y2="82" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1B5AD6"/>
+      <stop offset="1" stop-color="#0E3AA0"/>
+    </linearGradient>
+    <!-- Top gloss reflection -->
+    <linearGradient id="pm-gloss" x1="44" y1="8" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.6"/>
       <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
     </linearGradient>
-    <!-- Inner top edge light -->
-    <linearGradient id="pm-edge" x1="36" y1="6" x2="36" y2="66" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFFFFF" stop-opacity="0.9"/>
-      <stop offset="0.12" stop-color="#FFFFFF" stop-opacity="0"/>
-      <stop offset="0.85" stop-color="#0A3AA0" stop-opacity="0"/>
-      <stop offset="1" stop-color="#0A3AA0" stop-opacity="0.55"/>
+    <!-- Rim light on top edge / AO on bottom edge -->
+    <linearGradient id="pm-rim" x1="44" y1="8" x2="44" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="0.14" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="0.8" stop-color="#0A2E86" stop-opacity="0"/>
+      <stop offset="1" stop-color="#0A2E86" stop-opacity="0.6"/>
     </linearGradient>
-    <!-- Front person: white with soft blue shade -->
-    <radialGradient id="pm-front" cx="0.38" cy="0.3" r="0.85" gradientUnits="objectBoundingBox">
+    <!-- Front figure body -->
+    <radialGradient id="pm-front" cx="0.36" cy="0.26" r="0.9" gradientUnits="objectBoundingBox">
       <stop stop-color="#FFFFFF"/>
-      <stop offset="0.6" stop-color="#F2F7FF"/>
-      <stop offset="1" stop-color="#D6E6FF"/>
+      <stop offset="0.55" stop-color="#EEF5FF"/>
+      <stop offset="1" stop-color="#CBE0FF"/>
     </radialGradient>
-    <!-- Back person: light blue -->
-    <radialGradient id="pm-back" cx="0.4" cy="0.3" r="0.9" gradientUnits="objectBoundingBox">
-      <stop stop-color="#CFE4FF"/>
-      <stop offset="1" stop-color="#8FBEFF"/>
+    <!-- Back figure body -->
+    <radialGradient id="pm-back" cx="0.4" cy="0.28" r="0.95" gradientUnits="objectBoundingBox">
+      <stop stop-color="#D5E7FF"/>
+      <stop offset="1" stop-color="#88B9FF"/>
     </radialGradient>
-    <!-- Drop shadow under the whole tile -->
-    <filter id="pm-drop" x="-30%" y="-20%" width="160%" height="170%">
-      <feDropShadow dx="0" dy="3" stdDeviation="3.2" flood-color="#123A8A" flood-opacity="0.35"/>
-    </filter>
-    <!-- Soft shadow for figures -->
+    <!-- Contact shadow on ground -->
+    <radialGradient id="pm-ground" cx="0.5" cy="0.5" r="0.5" gradientUnits="objectBoundingBox">
+      <stop stop-color="#123A8A" stop-opacity="0.42"/>
+      <stop offset="0.7" stop-color="#123A8A" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#123A8A" stop-opacity="0"/>
+    </radialGradient>
     <filter id="pm-fig" x="-40%" y="-40%" width="180%" height="180%">
-      <feDropShadow dx="0" dy="1.4" stdDeviation="1.6" flood-color="#0B3287" flood-opacity="0.45"/>
+      <feDropShadow dx="0" dy="1.6" stdDeviation="1.8" flood-color="#0A2E86" flood-opacity="0.4"/>
     </filter>
   </defs>
 
-  <!-- Slight 3D tilt via rotation -->
-  <g transform="rotate(-8 36 36)" filter="url(#pm-drop)">
-    <!-- base body -->
-    <rect x="10" y="8" width="52" height="52" rx="16"
-          fill="url(#pm-body)" stroke="#1E63E0" stroke-width="0.5"/>
-    <!-- inner edge highlight/shadow -->
-    <rect x="10.75" y="8.75" width="50.5" height="50.5" rx="15.3"
-          fill="none" stroke="url(#pm-edge)" stroke-width="1.5"/>
+  <!-- ground contact shadow -->
+  <ellipse cx="46" cy="79" rx="27" ry="6.5" fill="url(#pm-ground)"/>
+
+  <!-- Perspective tilt: rotate + slight vertical squash -->
+  <g transform="translate(44 42) rotate(-10) scale(1 0.94) translate(-44 -42)">
+    <!-- Extruded thickness (bottom slab) -->
+    <path d="M18 24C18 15.16 25.16 8 34 8h20c8.84 0 16 7.16 16 16v30c0 8.84-7.16 16-16 16H34c-8.84 0-16-7.16-16-16V24z"
+          transform="translate(0 6)" fill="url(#pm-side)"/>
+    <!-- Top face -->
+    <path d="M18 24C18 15.16 25.16 8 34 8h20c8.84 0 16 7.16 16 16v30c0 8.84-7.16 16-16 16H34c-8.84 0-16-7.16-16-16V24z"
+          fill="url(#pm-top)"/>
+    <!-- rim light + inner AO on top face -->
+    <path d="M19.5 24C19.5 16 26 9.5 34 9.5h20c8 0 14.5 6.5 14.5 14.5v30c0 8-6.5 14.5-14.5 14.5H34C26 68.5 19.5 62 19.5 54V24z"
+          fill="none" stroke="url(#pm-rim)" stroke-width="1.8"/>
     <!-- top gloss -->
-    <path d="M10 24C10 15.16 17.16 8 26 8h20c8.84 0 16 7.16 16 16v3c-10 6-18 8.5-26 8.5S18 33 10 27v-3z"
+    <path d="M18 26C18 16.6 25.6 9 35 9h18c9.4 0 17 7.6 17 17v3.5c-11.5 6.8-20.8 9.8-26 9.8S29.5 36.3 18 29.5V26z"
           fill="url(#pm-gloss)"/>
 
-    <!-- figures with depth -->
+    <!-- figures -->
     <g filter="url(#pm-fig)">
       <!-- back person -->
-      <circle cx="45" cy="27" r="7.2" fill="url(#pm-back)"/>
-      <path d="M32.5 50c0-7.4 5.6-13.4 12.5-13.4S57.5 42.6 57.5 50v1.6a2 2 0 0 1-2 2H34.5a2 2 0 0 1-2-2V50z"
+      <circle cx="53" cy="30" r="7.6" fill="url(#pm-back)"/>
+      <path d="M39 54c0-7.9 6-14.3 14-14.3S67 46.1 67 54v1.8a2.2 2.2 0 0 1-2.2 2.2H41.2A2.2 2.2 0 0 1 39 55.8V54z"
             fill="url(#pm-back)"/>
       <!-- front person -->
-      <circle cx="28.5" cy="26" r="8.4" fill="url(#pm-front)"/>
-      <path d="M14 51c0-8.5 6.5-15.4 14.5-15.4S43 42.5 43 51v1.8a2.4 2.4 0 0 1-2.4 2.4H16.4A2.4 2.4 0 0 1 14 52.8V51z"
+      <circle cx="36" cy="29" r="9" fill="url(#pm-front)"/>
+      <path d="M20 56c0-9.1 7-16.5 16-16.5S52 46.9 52 56v2a2.6 2.6 0 0 1-2.6 2.6H22.6A2.6 2.6 0 0 1 20 58v-2z"
             fill="url(#pm-front)"/>
-      <!-- tiny specular highlight on front head -->
-      <ellipse cx="25.5" cy="22.5" rx="2.4" ry="3" fill="#FFFFFF" opacity="0.7"/>
+      <!-- specular highlight on front head -->
+      <ellipse cx="32.5" cy="25" rx="2.6" ry="3.3" fill="#FFFFFF" opacity="0.75"/>
     </g>
   </g>
 </svg>
