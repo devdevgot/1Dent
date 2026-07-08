@@ -17,6 +17,7 @@ import type { ProcedureTemplate } from "@/components/appointment-modal";
 import { isCalendarProcedure } from "@/lib/calendar-procedures";
 import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-header";
 import { PageShell } from "@/components/layout/page-shell";
+import { Bone } from "@/components/skeletons";
 
 /* ─── Constants ─────────────────────────────────────────────────────────────── */
 const HOUR_H  = 64;   // px per hour
@@ -137,7 +138,7 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
   }, [dateStr]);
 
   /* Data */
-  const { data: pData }        = useListProcedures();
+  const { data: pData, isLoading: proceduresLoading } = useListProcedures();
   const { data: ptData }       = useListPatients();
   const { data: userData }     = useListUsers();
   const { data: templateData } = useListProcedureTemplates();
@@ -351,8 +352,17 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
             );
           })}
 
+          {/* Loading: appointment-block silhouettes over the hour grid */}
+          {proceduresLoading && (
+            <div className="absolute left-14 right-3 top-0 pointer-events-none">
+              <Bone className="absolute w-3/4 h-14 rounded-xl" style={{ top: HOUR_H + 2 }} />
+              <Bone className="absolute w-2/3 h-14 rounded-xl" style={{ top: HOUR_H * 3 + 2 }} />
+              <Bone className="absolute w-3/4 h-14 rounded-xl" style={{ top: HOUR_H * 5 + 2 }} />
+            </div>
+          )}
+
           {/* Empty state */}
-          {dayProcs.length === 0 && (
+          {!proceduresLoading && dayProcs.length === 0 && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 pointer-events-none">
               <div className="w-14 h-14 rounded-2xl bg-[var(--surface-2)] flex items-center justify-center">
                 <Calendar className="w-7 h-7 text-[var(--text-subtle)]" />

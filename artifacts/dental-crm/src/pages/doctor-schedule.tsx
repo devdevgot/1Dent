@@ -16,6 +16,7 @@ import type { ProcedureTemplate } from "@/components/appointment-modal";
 import { isCalendarProcedure } from "@/lib/calendar-procedures";
 import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-header";
+import { ScheduleMonthSkeleton } from "@/components/skeletons";
 
 /* ─── Status colours ────────────────────────────────────────────────────────── */
 const STATUS_PILL: Record<ProcedureStatus, string> = {
@@ -153,9 +154,7 @@ export default function DoctorSchedulePage() {
 
       {/* ── Calendar body ── */}
       {isLoading ? (
-        <div className="h-64 flex items-center justify-center">
-          <div className="w-8 h-8 border-4 border-[#1f75fe]/20 border-t-[#1f75fe] rounded-full animate-spin" />
-        </div>
+        <ScheduleMonthSkeleton />
       ) : (
         <div className="bg-white border-b border-[#e8e3d9]">
           {weeks.map((week, wi) => (

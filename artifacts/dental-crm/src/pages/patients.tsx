@@ -35,6 +35,7 @@ import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { usePatientTreatmentProgress } from "@/hooks/use-patient-treatment-progress";
 import { PatientTreatmentProgressBar } from "@/components/kanban/patient-treatment-progress-bar";
+import { PatientsTableSkeleton, KanbanSkeleton } from "@/components/skeletons";
 
 type PatientView = "list" | "kanban";
 type SortKey = "name" | "phone" | "dateOfBirth" | "status" | "source" | "createdAt" | "doctor";
@@ -179,9 +180,7 @@ function PatientsListView({
       {/* Table */}
       <div className="flex-1 overflow-auto custom-scrollbar">
         {isLoading ? (
-          <div className="flex items-center justify-center h-48">
-            <div className="w-10 h-10 border-4 border-[#1f75fe]/20 border-t-[#1f75fe] rounded-full animate-spin" />
-          </div>
+          <PatientsTableSkeleton />
         ) : error ? (
           <div className="flex items-center justify-center h-48 text-[#dc2626] text-sm">
             {t("kanban.loadError")}
@@ -361,9 +360,7 @@ function PatientsKanbanView({
     <div className="flex flex-col h-full bg-[#faf8f4]">
       <div className="flex flex-col flex-1 overflow-hidden gap-4 p-4">
         {isLoading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="w-10 h-10 border-4 border-[#1f75fe]/20 border-t-[#1f75fe] rounded-full animate-spin" />
-          </div>
+          <KanbanSkeleton className="flex-1 pb-4" />
         ) : error ? (
           <div className="flex-1 flex items-center justify-center text-[#dc2626] text-sm">
             {t("kanban.loadError")}

@@ -24,6 +24,7 @@ import { useLocation } from "wouter";
 import { format, parseISO, startOfDay, endOfDay, isYesterday } from "date-fns";
 import { AppointmentModal, type ProcedureItem } from "@/components/appointment-modal";
 import { useAppointmentSave } from "@/hooks/use-appointment-save";
+import { AdminScheduleListSkeleton, Bone } from "@/components/skeletons";
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   kaspi_transfer: "Kaspi Transfer",
@@ -44,11 +45,11 @@ export default function AdminDashboard() {
   const [showApptModal, setShowApptModal] = useState(false);
   const qc = useQueryClient();
 
-  const { data: proceduresData } = useListProcedures();
+  const { data: proceduresData, isLoading: proceduresLoading } = useListProcedures();
   const { data: patientsData } = useListPatients();
   const { data: usersData } = useListUsers();
   const { data: templateData } = useListProcedureTemplates();
-  const { data: kpiData } = useGetDoctorKpis({
+  const { data: kpiData, isLoading: kpiLoading } = useGetDoctorKpis({
     query: { queryKey: getGetDoctorKpisQueryKey() },
   });
 
@@ -184,7 +185,9 @@ export default function AdminDashboard() {
             </button>
           </div>
 
-          {todayProcedures.length === 0 ? (
+          {proceduresLoading ? (
+            <AdminScheduleListSkeleton rows={6} />
+          ) : todayProcedures.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <Calendar className="w-10 h-10 text-[var(--text-subtle)] mb-3" />
               <p className="text-[var(--text-secondary)] font-medium">{t("adminDashboard.noSchedule")}</p>
@@ -237,7 +240,13 @@ export default function AdminDashboard() {
                 </span>
               )}
             </h3>
-            {pendingPaymentQueue.length === 0 ? (
+            {proceduresLoading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Bone key={i} className="h-16 w-full rounded-xl" />
+                ))}
+              </div>
+            ) : pendingPaymentQueue.length === 0 ? (
               <p className="text-sm text-[var(--text-subtle)] py-2">Нет ожидающих оплат</p>
             ) : (
               <div className="space-y-4">
@@ -365,7 +374,19 @@ export default function AdminDashboard() {
                 {t("adminDashboard.topDoctors")}
               </h3>
             </div>
-            {topDoctors.length === 0 ? (
+            {kpiLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <Bone className="h-4 w-32 rounded" />
+                      <Bone className="h-4 w-16 rounded" />
+                    </div>
+                    <Bone className="h-1.5 w-full rounded-full" />
+                  </div>
+                ))}
+              </div>
+            ) : topDoctors.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-4 text-center">
                 <Stethoscope className="w-8 h-8 text-[var(--text-subtle)] mb-2" />
                 <p className="text-[var(--text-secondary)] text-sm">{t("adminDashboard.noDoctor")}</p>

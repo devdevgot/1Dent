@@ -16,6 +16,16 @@ import { ProtectedRoute } from "@/components/auth/protected-route";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { installGlobalErrorHandlers } from "@/lib/report-error";
+import {
+  PatientsPageSkeleton,
+  ToothDetailPageSkeleton,
+  AdminCalendarPageSkeleton,
+  AppointmentNewPageSkeleton,
+  DoctorSchedulePageSkeleton,
+  DoctorScheduleDayPageSkeleton,
+  DoctorAnalyticsPageSkeleton,
+  AdminDashboardSkeleton,
+} from "@/components/skeletons";
 
 function LazyPageFallback() {
   return (
@@ -71,12 +81,12 @@ const Register = lazyPage(() => import("@/pages/register"));
 const ForgotPassword = lazyPage(() => import("@/pages/forgot-password"));
 const ResetPassword = lazyPage(() => import("@/pages/reset-password"));
 const OwnerDashboard = lazyPage(() => import("@/pages/dashboard-owner"));
-const AdminDashboard = lazyPage(() => import("@/pages/dashboard-admin"));
+const AdminDashboard = lazyPage(() => import("@/pages/dashboard-admin"), <AdminDashboardSkeleton />);
 const DoctorDashboard = lazyPage(() => import("@/pages/dashboard-doctor"));
 const AccountantDashboard = lazyPage(() => import("@/pages/dashboard-accountant"));
 const WarehouseDashboard = lazyPage(() => import("@/pages/dashboard-warehouse"));
-const PatientsPage = lazyPage(() => import("@/pages/patients"));
-const ToothDetailPage = lazyPage(() => import("@/pages/tooth-detail"));
+const PatientsPage = lazyPage(() => import("@/pages/patients"), <PatientsPageSkeleton />);
+const ToothDetailPage = lazyPage(() => import("@/pages/tooth-detail"), <ToothDetailPageSkeleton />);
 const ChatPage = lazyPage(() => import("@/pages/chat"));
 const AnalyticsPage = lazyPage(() => import("@/pages/analytics"));
 const InventoryPage = lazyPage(() => import("@/pages/inventory"));
@@ -87,9 +97,9 @@ const WarehousePage = lazyPage(() => import("@/pages/warehouse"));
 const UsersPage = lazyPage(() => import("@/pages/users"), <StaffRouteFallback />);
 const ChatbotPage = lazyPage(() => import("@/pages/chatbot"));
 const StaffDetailPage = lazyPage(() => import("@/pages/staff-detail"), <StaffRouteFallback />);
-const DoctorAnalyticsPage = lazyPage(() => import("@/pages/doctor-analytics"));
-const DoctorSchedulePage = lazyPage(() => import("@/pages/doctor-schedule"));
-const DoctorScheduleDayPage = lazyPage(() => import("@/pages/doctor-schedule-day"));
+const DoctorAnalyticsPage = lazyPage(() => import("@/pages/doctor-analytics"), <DoctorAnalyticsPageSkeleton />);
+const DoctorSchedulePage = lazyPage(() => import("@/pages/doctor-schedule"), <DoctorSchedulePageSkeleton />);
+const DoctorScheduleDayPage = lazyPage(() => import("@/pages/doctor-schedule-day"), <DoctorScheduleDayPageSkeleton />);
 const AccountSettingsPage = lazyPage(() => import("@/pages/account-settings"));
 const AccountEditProfilePage = lazyPage(() => import("@/pages/account-edit-profile"));
 const AccountChangeEmailPage = lazyPage(() => import("@/pages/account-change-email"));
@@ -106,8 +116,8 @@ const LandingPage = lazyPage(() => import("@/pages/landing"));
 const SlashTabletPage = lazyPage(() => import("@/pages/slash-tablet"));
 const TabletLinkPage = lazyPage(() => import("@/pages/slash-tablet/tablet-link"));
 const NotFound = lazyPage(() => import("@/pages/not-found"));
-const AdminCalendarPage = lazyPage(() => import("@/pages/admin-calendar"));
-const AdminAppointmentNewPage = lazyPage(() => import("@/pages/admin-appointment-new"));
+const AdminCalendarPage = lazyPage(() => import("@/pages/admin-calendar"), <AdminCalendarPageSkeleton />);
+const AdminAppointmentNewPage = lazyPage(() => import("@/pages/admin-appointment-new"), <AppointmentNewPageSkeleton />);
 const AdminFinancePage = lazyPage(() => import("@/pages/admin-finance"));
 const PayrollMyPage = lazyPage(() => import("@/pages/payroll-my"));
 const PlanPaywall = lazy(() =>

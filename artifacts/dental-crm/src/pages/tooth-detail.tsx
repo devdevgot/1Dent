@@ -9,6 +9,7 @@ import {
 } from "@workspace/api-client-react";
 import { useKanbanStore } from "@/hooks/use-kanban";
 import { useTranslation } from "react-i18next";
+import { ToothDetailContentSkeleton } from "@/components/skeletons";
 
 function isValidFdi(fdi: number): boolean {
   if (!Number.isFinite(fdi)) return false;
@@ -86,9 +87,7 @@ export default function ToothDetailPage() {
       {/* Full-page tooth detail content */}
       <div className="flex-1 overflow-hidden">
         {isLoading ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="w-10 h-10 border-4 border-[#1f75fe]/20 border-t-[#1f75fe] rounded-full animate-spin" />
-          </div>
+          <ToothDetailContentSkeleton />
         ) : isError || !patient ? (
           <div className="flex flex-col items-center justify-center h-full text-[#dc2626] text-sm gap-2">
             <p>{t("kanban.loadError")}</p>

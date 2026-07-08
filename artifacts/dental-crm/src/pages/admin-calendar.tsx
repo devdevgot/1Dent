@@ -48,6 +48,7 @@ import { isCalendarProcedure } from "@/lib/calendar-procedures";
 import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-header";
 import { useToast } from "@/hooks/use-toast";
+import { CalendarDaysGridSkeleton } from "@/components/skeletons";
 
 /* ─── Appointment Group ─────────────────────────────────────────────────────
    Multiple procedures belonging to the same patient at the same time slot
@@ -213,7 +214,7 @@ export default function AdminCalendar() {
   const [editingGroupIds, setEditingGroupIds] = useState<string[]>([]);
   const [draggingKey, setDraggingKey] = useState<string | null>(null);
 
-  const { data: procedureData } = useListProcedures();
+  const { data: procedureData, isLoading: proceduresLoading } = useListProcedures();
   const { data: patientData }   = useListPatients();
   const { data: userData }      = useListUsers();
   const { data: templateData }  = useListProcedureTemplates();
@@ -414,6 +415,9 @@ export default function AdminCalendar() {
 
           {/* Grid rows — inner scroll, outer stays fixed */}
           <div className="flex-1 overflow-auto custom-scrollbar">
+          {proceduresLoading ? (
+            <CalendarDaysGridSkeleton />
+          ) : (
           <div className="grid grid-cols-7">
             {gridDays.map((day, idx) => {
               const groups = getGroupsForDay(day);
@@ -505,6 +509,7 @@ export default function AdminCalendar() {
               );
             })}
           </div>
+          )}
           </div>
         </div>
 
