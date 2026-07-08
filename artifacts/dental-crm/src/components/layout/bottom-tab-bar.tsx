@@ -2,10 +2,13 @@ import { Link, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import {
+  TabCalendarIcon,
+  TabFinanceIcon,
   TabHomeIcon,
+  TabInventoryIcon,
   TabMessagesIcon,
   TabMoreIcon,
-  TabOperationsIcon,
+  TabPatientsIcon,
   TabServicesIcon,
   TAB_ACTIVE,
 } from "./bottom-tab-icons";
@@ -23,11 +26,13 @@ type TabContext = {
   operationsHref: string;
 };
 
+type TabIcon = typeof TabHomeIcon;
+
 type TabDef = {
   id: string;
-  labelKey: string;
+  labelKey: string | ((role: string) => string);
   href: string | ((ctx: TabContext) => string);
-  icon: typeof TabHomeIcon;
+  icon: TabIcon | ((role: string) => TabIcon);
   roles?: string[];
   geoRestricted?: boolean;
   isActive: (ctx: TabContext) => boolean;
@@ -53,6 +58,19 @@ function getOperationsHref(role: string): string {
   }
 }
 
+function getOperationsTab(role: string): { labelKey: string; icon: TabIcon } {
+  switch (role) {
+    case "doctor":
+      return { labelKey: "nav.schedule", icon: TabCalendarIcon };
+    case "accountant":
+      return { labelKey: "nav.financials", icon: TabFinanceIcon };
+    case "warehouse":
+      return { labelKey: "nav.inventory", icon: TabInventoryIcon };
+    default:
+      return { labelKey: "nav.patients", icon: TabPatientsIcon };
+  }
+}
+
 const BOTTOM_TABS: TabDef[] = [
   {
     id: "home",
@@ -63,10 +81,10 @@ const BOTTOM_TABS: TabDef[] = [
       location === roleDashboardHref || location.startsWith(`${roleDashboardHref}/`),
   },
   {
-    id: "operations",
-    labelKey: "nav.operations",
+    id: "work",
+    labelKey: (role) => getOperationsTab(role).labelKey,
     href: (ctx) => ctx.operationsHref,
-    icon: TabOperationsIcon,
+    icon: (role) => getOperationsTab(role).icon,
     geoRestricted: true,
     isActive: ({ location, operationsHref }) =>
       location === operationsHref || location.startsWith(`${operationsHref}/`),
@@ -101,6 +119,14 @@ function resolveHref(tab: TabDef, ctx: TabContext): string {
   return typeof tab.href === "function" ? tab.href(ctx) : tab.href;
 }
 
+function resolveLabelKey(tab: TabDef, role: string): string {
+  return typeof tab.labelKey === "function" ? tab.labelKey(role) : tab.labelKey;
+}
+
+function resolveIcon(tab: TabDef, role: string): TabIcon {
+  return typeof tab.icon === "function" ? tab.icon(role) : tab.icon;
+}
+
 export function BottomTabBar({
   roleDashboardHref,
   role,
@@ -125,8 +151,8 @@ export function BottomTabBar({
           const href = resolveHref(tab, ctx);
           const isActive = tab.isActive(ctx);
           const blocked = isRestricted && hasBranches && tab.geoRestricted;
-          const Icon = tab.icon;
-          const label = t(tab.labelKey);
+          const Icon = resolveIcon(tab, role);
+          const label = t(resolveLabelKey(tab, role));
 
           if (blocked) {
             return (
