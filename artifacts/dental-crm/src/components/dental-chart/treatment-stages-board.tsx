@@ -1300,13 +1300,13 @@ interface SortablePlanItemCardProps {
   isEditMode: boolean;
   completingId: string | null;
   cancellingId: string | null;
-  activeTimerItemId: string | null;
+  activeTimers: Map<string, number>;
   onComplete: (id: string) => void;
   onCancel: (id: string) => void;
   onOpenModal: (id: string) => void;
 }
 
-function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, activeTimerItemId, onComplete, onCancel, onOpenModal }: SortablePlanItemCardProps) {
+function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, activeTimers, onComplete, onCancel, onOpenModal }: SortablePlanItemCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
     disabled: !isEditMode || item.status !== "pending",
@@ -1331,8 +1331,8 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, ac
   const isCancellingThis = cancellingId === item.id;
 
   // Timer-aware states
-  const isActive = activeTimerItemId === item.id;
-  const isBlocked = isPending && !isActive && activeTimerItemId !== null;
+  const isActive = activeTimers.has(item.id);
+  const isBlocked = isPending && !isActive && activeTimers.size > 0;
 
   return (
     <div
@@ -1559,7 +1559,7 @@ function StageContainer({
               isEditMode={isEditMode}
               completingId={completingId}
               cancellingId={cancellingId}
-              activeTimerItemId={activeTimers.size > 0 ? (activeTimers.keys().next().value ?? null) : null}
+              activeTimers={activeTimers}
               onComplete={handleComplete}
               onCancel={handleCancel}
               onOpenModal={setModalItemId}
@@ -1795,9 +1795,17 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan, filterFdi =
         qc.invalidateQueries({ queryKey: getListTeethQueryKey(patientId) });
         toast({ title: "Процедура завершена", description: "Зубная карта обновлена" });
       },
-      onError: () => {
+      onError: (err: unknown) => {
         setCompletingId(null);
-        toast({ title: "Ошибка", description: "Не удалось завершить процедуру", variant: "destructive" });
+        const apiMsg =
+          (err as { data?: { error?: string; message?: string }; message?: string })?.data?.error ??
+          (err as { data?: { message?: string } })?.data?.message ??
+          (err as { message?: string })?.message;
+        const description =
+          typeof apiMsg === "string"
+            ? apiMsg.replace(/^HTTP \d{3} [^:]+:\s*/, "")
+            : "Не удалось завершить процедуру";
+        toast({ title: "Ошибка", description, variant: "destructive" });
       },
     },
   });
@@ -1976,11 +1984,15 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan, filterFdi =
   }, []);
 
   const handleComplete = useCallback((itemId: string) => {
-    if (!planId || completingId || cancellingId) return;
+    if (!planId) {
+      toast({ title: "Ошибка", description: "Активный план лечения не найден", variant: "destructive" });
+      return;
+    }
+    if (completingId || cancellingId) return;
     setCompletionPromptItemId(null);
     setCompletingId(itemId);
     completeMutation.mutate({ id: patientId, planId, itemId });
-  }, [planId, patientId, completingId, cancellingId, completeMutation]);
+  }, [planId, patientId, completingId, cancellingId, completeMutation, toast]);
 
   const handleCancel = useCallback((itemId: string) => {
     if (!planId || completingId || cancellingId) return;
