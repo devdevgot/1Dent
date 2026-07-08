@@ -40,7 +40,7 @@ function StatCard({
         </div>
         {trend && trendUp !== null && trendUp !== undefined && (
           <span
-            className={`dash-badge text-sm ${trendUp ? "dash-badge-success" : "dash-badge-danger"}`}
+            className={`dash-badge text-body ${trendUp ? "dash-badge-success" : "dash-badge-danger"}`}
           >
             {trend}
           </span>
@@ -271,7 +271,7 @@ export default function Dashboard() {
                   <div className="dash-quick-action-icon">
                     <item.icon className="w-4 h-4" />
                   </div>
-                  <span className="font-medium text-sm text-[var(--text)]">{item.label}</span>
+                  <span className="font-medium text-body text-[var(--text)]">{item.label}</span>
                   <ChevronRight className="w-4 h-4 text-[var(--text-subtle)] ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
                 </button>
               ))}

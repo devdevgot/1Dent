@@ -118,34 +118,34 @@ export function AttendanceCheckModal() {
       }
     >
       <div className="bg-amber-500 px-5 py-4 flex items-center gap-3">
-        <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+        <div className="w-8 h-8 bg-[var(--ds-surface)]/20 rounded-xl flex items-center justify-center shrink-0">
           <AlertTriangle className="w-4 h-4 text-white" />
         </div>
         <p className="text-white font-bold text-sm">Требуется подтверждение</p>
       </div>
 
       <div className="px-5 py-5 space-y-4">
-        <p className="text-sm font-semibold text-foreground text-center leading-relaxed">
+        <p className="text-body font-semibold text-[var(--text)] text-center leading-relaxed">
           Пожалуйста, отметьте, пришёл ли пациент на приём?
         </p>
 
-        <div className="rounded-xl p-3.5 space-y-2.5 border border-[#e8e3d9] bg-[#faf8f4]">
+        <div className="rounded-xl p-3.5 space-y-2.5 border border-[var(--ds-border)] bg-[var(--bg)]">
           <div className="flex items-center gap-2.5">
-            <User className="w-4 h-4 text-muted-foreground shrink-0" />
-            <span className="text-xs font-semibold text-muted-foreground w-20">Пациент:</span>
-            <span className="text-xs font-bold text-foreground truncate">{patientName}</span>
+            <User className="w-4 h-4 text-[var(--text-secondary)] shrink-0" />
+            <span className="text-caption font-semibold text-[var(--text-secondary)] w-20">Пациент:</span>
+            <span className="text-caption font-bold text-[var(--text)] truncate">{patientName}</span>
           </div>
 
           <div className="flex items-center gap-2.5">
-            <Stethoscope className="w-4 h-4 text-muted-foreground shrink-0" />
-            <span className="text-xs font-semibold text-muted-foreground w-20">Процедура:</span>
-            <span className="text-xs font-bold text-foreground truncate">{currentProc.name}</span>
+            <Stethoscope className="w-4 h-4 text-[var(--text-secondary)] shrink-0" />
+            <span className="text-caption font-semibold text-[var(--text-secondary)] w-20">Процедура:</span>
+            <span className="text-caption font-bold text-[var(--text)] truncate">{currentProc.name}</span>
           </div>
 
           <div className="flex items-center gap-2.5">
-            <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
-            <span className="text-xs font-semibold text-muted-foreground w-20">Врач:</span>
-            <span className="text-xs font-bold text-foreground truncate">
+            <Clock className="w-4 h-4 text-[var(--text-secondary)] shrink-0" />
+            <span className="text-caption font-semibold text-[var(--text-secondary)] w-20">Врач:</span>
+            <span className="text-caption font-bold text-[var(--text)] truncate">
               {currentProc.doctorName ?? "—"}
             </span>
           </div>

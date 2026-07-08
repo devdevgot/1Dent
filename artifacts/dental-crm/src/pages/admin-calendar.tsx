@@ -147,7 +147,7 @@ function DayAppointmentsModal({
     >
       <div className="space-y-2">
         {groups.length === 0 ? (
-          <div className="text-center py-10 text-[#94a3b8] text-sm">
+          <div className="text-center py-10 text-[var(--text-subtle)] text-sm">
             Записей на этот день нет
           </div>
         ) : (
@@ -156,7 +156,7 @@ function DayAppointmentsModal({
               key={group.key}
               type="button"
               onClick={() => onEditAppointment(group.procedures[0])}
-              className="w-full text-left px-4 py-3 rounded-xl border border-[#e8e3d9] hover:border-[#1f75fe]/30 hover:bg-[#1f75fe]/5 transition-all flex items-start gap-3"
+              className="w-full text-left px-4 py-3 rounded-xl border border-[var(--ds-border)] hover:border-[#1f75fe]/30 hover:bg-[#1f75fe]/5 transition-all flex items-start gap-3"
             >
               <span
                 className={cn(
@@ -166,24 +166,24 @@ function DayAppointmentsModal({
               />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <span className="text-sm font-semibold text-[#0f172a] truncate">
+                  <span className="text-body font-semibold text-[var(--text)] truncate">
                     {group.patientName}
                   </span>
                   {group.timeLabel && (
-                    <span className="flex items-center gap-1 text-xs text-[#64748b] shrink-0">
+                    <span className="flex items-center gap-1 text-caption text-[var(--text-secondary)] shrink-0">
                       <Clock className="w-3 h-3" />
                       {group.timeLabel}
                     </span>
                   )}
                 </div>
                 {group.doctorName && (
-                  <p className="text-xs text-[#64748b] truncate mt-0.5 flex items-center gap-1">
+                  <p className="text-caption text-[var(--text-secondary)] truncate mt-0.5 flex items-center gap-1">
                     <User className="w-3 h-3" />
                     {group.doctorName}
                   </p>
                 )}
                 {group.procedures.length > 0 && (
-                  <p className="text-xs text-[#94a3b8] truncate mt-0.5">
+                  <p className="text-caption text-[var(--text-subtle)] truncate mt-0.5">
                     {group.procedures.map((p) => p.name).join(", ")}
                   </p>
                 )}
@@ -338,7 +338,7 @@ export default function AdminCalendar() {
               </PageHeaderIconButton>
               <button
                 onClick={() => setCurrentDate(new Date())}
-                className="px-3 py-1.5 text-sm font-medium text-[var(--text)] rounded-xl border border-[var(--ds-border)] hover:bg-[var(--surface-2)] transition-colors min-w-[90px] capitalize"
+                className="px-3 py-1.5 text-body font-medium text-[var(--text)] rounded-xl border border-[var(--ds-border)] hover:bg-[var(--surface-2)] transition-colors min-w-[90px] capitalize"
               >
                 {format(currentDate, "LLLL", { locale: ru })}
               </button>
@@ -369,7 +369,7 @@ export default function AdminCalendar() {
                         key={d.id}
                         onClick={() => { setFilterDoctorId(d.id); setFilterOpen(false); }}
                         className={cn(
-                          "w-full flex items-center justify-between gap-3 px-4 py-2 text-sm transition-colors text-left",
+                          "w-full flex items-center justify-between gap-3 px-4 py-2 text-body transition-colors text-left",
                           d.id === filterDoctorId
                             ? "bg-[var(--primary-light)] text-[var(--ds-primary)] font-semibold"
                             : "text-[var(--text)] hover:bg-[var(--bg)]",
@@ -387,7 +387,7 @@ export default function AdminCalendar() {
             <Button
               onClick={() => openCreateModal(new Date())}
               size="sm"
-              className="w-9 h-9 p-0 shrink-0 rounded-full bg-[#1f75fe] hover:bg-[#1a65e8] hover:scale-105 font-semibold shadow-sm"
+              className="w-9 h-9 p-0 shrink-0 rounded-full bg-[#1f75fe] hover:bg-[var(--primary-hover)] hover:scale-105 font-semibold shadow-sm"
             >
               <Plus className="w-5 h-5" />
             </Button>
@@ -396,15 +396,15 @@ export default function AdminCalendar() {
       />
 
       <div className="flex-1 overflow-hidden p-3 sm:p-4 flex flex-col gap-2">
-        <div className="flex-1 bg-white rounded-2xl shadow-md border border-[#e8e3d9] overflow-hidden flex flex-col">
+        <div className="flex-1 bg-[var(--ds-surface)] rounded-2xl shadow-md border border-[var(--ds-border)] overflow-hidden flex flex-col">
           {/* Day-of-week header */}
-          <div className="flex-none grid grid-cols-7 border-b border-[#e8e3d9]">
+          <div className="flex-none grid grid-cols-7 border-b border-[var(--ds-border)]">
             {DOW_LABELS.map((label, i) => (
               <div
                 key={label}
                 className={cn(
-                  "py-2.5 text-center text-xs font-semibold uppercase tracking-wide",
-                  i >= 5 ? "text-[#dc2626]" : "text-[#64748b]",
+                  "py-2.5 text-center text-caption font-semibold uppercase tracking-wide",
+                  i >= 5 ? "text-[var(--danger)]" : "text-[var(--text-secondary)]",
                 )}
               >
                 {label}
@@ -438,9 +438,9 @@ export default function AdminCalendar() {
                     }
                   }}
                   className={cn(
-                    "min-h-[80px] p-2 border-b border-r border-[#e8e3d9] cursor-pointer transition-colors",
-                    "hover:bg-[#faf8f4]",
-                    !inMonth && "bg-[#f1ede4]/30",
+                    "min-h-[80px] p-2 border-b border-r border-[var(--ds-border)] cursor-pointer transition-colors",
+                    "hover:bg-[var(--bg)]",
+                    !inMonth && "bg-[var(--surface-2)]/30",
                     isWeekend && inMonth && "bg-[#fef2f2]/30",
                     today && "ring-2 ring-inset ring-[#1f75fe]/30",
                   )}
@@ -449,18 +449,18 @@ export default function AdminCalendar() {
                   <div className="flex items-center justify-between mb-1.5">
                     <span
                       className={cn(
-                        "text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full",
+                        "text-body font-medium w-7 h-7 flex items-center justify-center rounded-full",
                         today
                           ? "bg-[#1f75fe] text-white font-bold"
                           : inMonth
-                          ? isWeekend ? "text-[#dc2626]" : "text-[#0f172a]"
-                          : "text-[#94a3b8]",
+                          ? isWeekend ? "text-[var(--danger)]" : "text-[var(--text)]"
+                          : "text-[var(--text-subtle)]",
                       )}
                     >
                       {format(day, "d")}
                     </span>
                     {groups.length > 0 && (
-                      <span className="text-[10px] text-[#94a3b8] font-medium">{groups.length}</span>
+                      <span className="text-[10px] text-[var(--text-subtle)] font-medium">{groups.length}</span>
                     )}
                   </div>
 
@@ -496,7 +496,7 @@ export default function AdminCalendar() {
                       </div>
                     ))}
                     {groups.length > 3 && (
-                      <div className="text-[10px] text-[#94a3b8] pl-1">
+                      <div className="text-[10px] text-[var(--text-subtle)] pl-1">
                         +{groups.length - 3} ещё
                       </div>
                     )}
@@ -513,7 +513,7 @@ export default function AdminCalendar() {
           {STATUS_OPTIONS.map((s) => (
             <div key={s.value} className="flex items-center gap-1.5">
               <span className={cn("w-2 h-2 rounded-full", STATUS_DOT[s.value])} />
-              <span className="text-xs text-[#64748b]">{s.label}</span>
+              <span className="text-caption text-[var(--text-secondary)]">{s.label}</span>
             </div>
           ))}
         </div>

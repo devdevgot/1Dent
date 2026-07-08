@@ -137,7 +137,7 @@ export function LockScreen({
   }, [sessionId, handleUnlock, bootstrapSession, cabinetId]);
 
   return (
-    <div className="relative flex h-[100dvh] w-full items-center justify-center overflow-hidden bg-[#faf8f4] px-6 font-manrope">
+    <div className="relative flex h-[100dvh] w-full items-center justify-center overflow-hidden bg-[var(--bg)] px-6 font-manrope">
       <OneDentLogo className="absolute left-5 top-5 h-10" />
 
       <div className="pointer-events-none absolute inset-0 opacity-60">
@@ -148,11 +148,11 @@ export function LockScreen({
       <div className="relative w-full max-w-lg">
         {bootError ? (
           <div className="rounded-3xl border border-[#fecaca] bg-[#fef2f2] p-8 text-center">
-            <p className="text-sm text-[#dc2626]">{bootError}</p>
+            <p className="text-body text-[var(--danger)]">{bootError}</p>
             <button
               type="button"
               onClick={() => void bootstrapSession(cabinetId ?? undefined)}
-              className="mt-4 rounded-xl bg-[#1f75fe] px-4 py-2 text-sm font-semibold text-white"
+              className="mt-4 rounded-xl bg-[#1f75fe] px-4 py-2 text-body font-semibold text-white"
             >
               Повторить
             </button>
@@ -161,9 +161,9 @@ export function LockScreen({
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center rounded-3xl border border-[#e8e3d9] bg-white p-8 shadow-sm"
+            className="flex flex-col items-center rounded-3xl border border-[var(--ds-border)] bg-[var(--ds-surface)] p-8 shadow-sm"
           >
-            <div className="relative rounded-2xl border border-[#e8e3d9] bg-white p-4">
+            <div className="relative rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] p-4">
               <canvas
                 ref={canvasRef}
                 className={cn("rounded-lg", loading && "opacity-0")}
@@ -177,7 +177,7 @@ export function LockScreen({
               )}
             </div>
 
-            <p className="mt-5 max-w-sm text-center text-sm leading-relaxed text-[#64748b]">
+            <p className="mt-5 max-w-sm text-center text-body leading-relaxed text-[var(--text-secondary)]">
               {waitingForOwner
                 ? "Ожидание подтверждения владельцем клиники…"
                 : cabinetId
@@ -188,7 +188,7 @@ export function LockScreen({
             <button
               type="button"
               onClick={() => void bootstrapSession(cabinetId ?? undefined)}
-              className="mt-6 flex items-center gap-2 rounded-xl border border-[#e8e3d9] bg-white px-4 py-3 text-sm font-semibold text-[#64748b] transition-colors hover:bg-[#faf8f4]"
+              className="mt-6 flex items-center gap-2 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-4 py-3 text-body font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg)]"
             >
               <RefreshCw className="h-4 w-4" /> Обновить код
             </button>

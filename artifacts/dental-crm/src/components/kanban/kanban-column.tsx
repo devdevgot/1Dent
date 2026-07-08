@@ -81,10 +81,10 @@ export const KanbanColumn = memo(function KanbanColumn({
       )}
     >
       <div className="p-3 flex items-center justify-between shrink-0 sticky top-0 z-10 rounded-t-2xl bg-inherit">
-        <h3 className="font-semibold text-xs uppercase tracking-wider text-[#0f172a]/80 leading-tight">
+        <h3 className="font-semibold text-caption uppercase tracking-wider text-[var(--text)]/80 leading-tight">
           {label}
         </h3>
-        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${headerColor}`}>
+        <span className={`text-caption font-bold px-2 py-0.5 rounded-full ${headerColor}`}>
           {count}
         </span>
       </div>

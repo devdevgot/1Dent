@@ -221,7 +221,7 @@ export function GlobalSearch() {
         className="flex-1 flex min-w-0 items-center gap-2 bg-[var(--surface-2)] rounded-xl px-3 py-2 text-left cursor-pointer hover:bg-[var(--ds-border)]/60 transition-colors"
       >
         <Search className="w-4 h-4 text-[var(--text-subtle)] shrink-0" />
-        <span className="min-w-0 truncate text-sm text-[var(--text-subtle)] select-none font-manrope whitespace-nowrap">
+        <span className="min-w-0 truncate text-caption text-[var(--text-subtle)] select-none font-manrope whitespace-nowrap">
           Поиск…
         </span>
       </button>
@@ -239,7 +239,7 @@ export function GlobalSearch() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Имя, телефон, ИИН"
-                className="flex-1 text-[15px] bg-transparent outline-none text-[var(--text)] placeholder:text-[var(--text-subtle)] font-manrope"
+                className="flex-1 text-body bg-transparent outline-none text-[var(--text)] placeholder:text-[var(--text-subtle)] font-manrope"
               />
               {query && (
                 <button onClick={() => setQuery("")} className="shrink-0 text-[var(--text-subtle)] hover:text-[var(--text-secondary)]">
@@ -249,7 +249,7 @@ export function GlobalSearch() {
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="text-[15px] font-medium shrink-0 text-[var(--ds-primary)]"
+              className="text-body font-medium shrink-0 text-[var(--ds-primary)]"
             >
               Отмена
             </button>
@@ -260,14 +260,14 @@ export function GlobalSearch() {
             {!query.trim() && (
               <div className="flex flex-col items-center justify-center py-20 gap-3">
                 <Search className="w-12 h-12 text-[var(--ds-border)]" />
-                <p className="text-[15px] text-[var(--text-subtle)]">Введите запрос для поиска</p>
+                <p className="text-body text-[var(--text-subtle)]">Введите запрос для поиска</p>
               </div>
             )}
 
             {isEmpty && (
               <div className="flex flex-col items-center justify-center py-20 gap-3">
-                <p className="text-[15px] text-[var(--text-subtle)]">Ничего не найдено</p>
-                <p className="text-[13px] text-[var(--text-subtle)]/70">Попробуйте другой запрос</p>
+                <p className="text-body text-[var(--text-subtle)]">Ничего не найдено</p>
+                <p className="text-caption text-[var(--text-subtle)]/70">Попробуйте другой запрос</p>
               </div>
             )}
 
@@ -289,7 +289,7 @@ export function GlobalSearch() {
                             <result.Icon className={cn("w-4 h-4", result.iconColor)} />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-[15px] text-[var(--text)] truncate">{result.label}</p>
+                            <p className="text-body text-[var(--text)] truncate">{result.label}</p>
                             {result.subtitle && (
                               <p className="text-[12px] text-[var(--text-subtle)] truncate">{result.subtitle}</p>
                             )}

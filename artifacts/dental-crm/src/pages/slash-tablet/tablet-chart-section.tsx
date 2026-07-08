@@ -167,7 +167,7 @@ export function TabletChartSection({
           <button
             type="button"
             onClick={startDiagnosis}
-            className="flex items-center gap-2 rounded-2xl bg-[#1f75fe] px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-[#1a65e8] active:scale-[0.99]"
+            className="flex items-center gap-2 rounded-2xl bg-[#1f75fe] px-5 py-3 text-body font-bold text-white transition-colors hover:bg-[var(--primary-hover)] active:scale-[0.99]"
           >
             <Stethoscope className="h-5 w-5" />
             {hasDiagnosis ? "Повторная диагностика" : "Сделать диагностику"}
@@ -175,7 +175,7 @@ export function TabletChartSection({
           <button
             type="button"
             onClick={() => setShowVoiceModal(true)}
-            className="flex items-center gap-2 rounded-2xl border-2 border-[#1f75fe]/40 bg-[#1f75fe]/5 px-5 py-3 text-sm font-bold text-[#1f75fe] transition-colors hover:bg-[#1f75fe]/10 active:scale-[0.99]"
+            className="flex items-center gap-2 rounded-2xl border-2 border-[#1f75fe]/40 bg-[#1f75fe]/5 px-5 py-3 text-body font-bold text-[var(--ds-primary)] transition-colors hover:bg-[#1f75fe]/10 active:scale-[0.99]"
           >
             <Mic className="h-5 w-5" />
             Голосовая диагностика
@@ -185,7 +185,7 @@ export function TabletChartSection({
 
       {isDiagnosisMode && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-          <p className="text-sm font-medium text-amber-900">
+          <p className="text-body font-medium text-amber-900">
             Режим диагностики — выберите зуб и укажите состояние
           </p>
         </div>
@@ -206,9 +206,9 @@ export function TabletChartSection({
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
-            className="rounded-2xl border border-[#e8e3d9] bg-white p-4"
+            className="rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] p-4"
           >
-            <p className="mb-3 text-sm font-bold text-[#0f172a]">
+            <p className="mb-3 text-body font-bold text-[var(--text)]">
               Зуб {diagnosisToothFdi} — выберите диагноз
             </p>
             <div className="grid grid-cols-4 gap-2">
@@ -221,10 +221,10 @@ export function TabletChartSection({
                     type="button"
                     onClick={() => setToothCondition(diagnosisToothFdi, cond)}
                     className={cn(
-                      "flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-left text-sm font-semibold transition-all active:scale-[0.98]",
+                      "flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-left text-body font-semibold transition-all active:scale-[0.98]",
                       active
-                        ? "border-[#1f75fe] bg-[#1f75fe]/8 text-[#1f75fe]"
-                        : "border-[#e8e3d9] bg-white text-[#0f172a] hover:border-[#1f75fe]/40",
+                        ? "border-[#1f75fe] bg-[#1f75fe]/8 text-[var(--ds-primary)]"
+                        : "border-[var(--ds-border)] bg-[var(--ds-surface)] text-[var(--text)] hover:border-[#1f75fe]/40",
                     )}
                   >
                     <span
@@ -247,7 +247,7 @@ export function TabletChartSection({
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 16 }}
-            className="mt-2 rounded-2xl border border-[#e8e3d9] bg-white px-4 py-4 shadow-sm"
+            className="mt-2 rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-4 py-4 shadow-sm"
           >
             <div className="flex items-center justify-center gap-10">
               <ActionCircle label="Отмена" onClick={cancelDiagnosis} variant="muted">
@@ -298,14 +298,14 @@ function ActionCircle({
         disabled={disabled}
         className={cn(
           "flex h-14 w-14 items-center justify-center rounded-full border-2 transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-40",
-          variant === "muted" && "border-[#e8e3d9] text-[#64748b] hover:bg-[#faf8f4]",
-          variant === "voice" && "border-[#1f75fe]/40 bg-[#1f75fe]/5 text-[#1f75fe] hover:bg-[#1f75fe]/15",
-          variant === "primary" && "border-[#1f75fe] bg-[#1f75fe] text-white hover:bg-[#1a65e8]",
+          variant === "muted" && "border-[var(--ds-border)] text-[var(--text-secondary)] hover:bg-[var(--bg)]",
+          variant === "voice" && "border-[#1f75fe]/40 bg-[#1f75fe]/5 text-[var(--ds-primary)] hover:bg-[#1f75fe]/15",
+          variant === "primary" && "border-[#1f75fe] bg-[#1f75fe] text-white hover:bg-[var(--primary-hover)]",
         )}
       >
         {children}
       </button>
-      <span className="text-[11px] font-medium text-[#64748b]">{label}</span>
+      <span className="text-[11px] font-medium text-[var(--text-secondary)]">{label}</span>
     </div>
   );
 }

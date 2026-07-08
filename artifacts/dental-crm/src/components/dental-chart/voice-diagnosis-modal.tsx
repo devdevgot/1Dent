@@ -523,7 +523,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
               <Mic className="w-4 h-4 text-primary" />
             </div>
             <div>
-              <h2 className="font-bold text-sm text-[var(--text)]">Голосовая диагностика</h2>
+              <h2 className="font-bold text-body text-[var(--text)]">Голосовая диагностика</h2>
               <p className="text-[11px] text-[var(--text-secondary)]">Диктуйте на русском, казахском или английском</p>
             </div>
           </div>
@@ -549,7 +549,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
           <div className="mx-4 mt-3 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 flex items-center gap-3">
             <Clock className="w-4 h-4 text-amber-600 shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-amber-800">Есть несохранённый черновик</p>
+              <p className="text-caption font-medium text-amber-800">Есть несохранённый черновик</p>
               <p className="text-[11px] text-amber-600">Сохранён в {formatTime(draftInfo.ts)}</p>
             </div>
             <div className="flex gap-1.5 shrink-0">
@@ -574,9 +574,9 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
           {(phase === "idle" || phase === "recording") && (
             <div className="flex flex-col items-center justify-center gap-6 py-10 px-6">
               {phase === "idle" && (
-                <p className="text-sm text-[var(--text-secondary)] text-center max-w-xs leading-relaxed">
+                <p className="text-body text-[var(--text-secondary)] text-center max-w-xs leading-relaxed">
                   Нажмите кнопку и продиктуйте состояние зубов. Например:
-                  <span className="block mt-2 italic text-xs bg-[var(--bg)] border border-[var(--ds-border)]/40 rounded-lg px-3 py-2 text-[var(--text)]/70 leading-relaxed">
+                  <span className="block mt-2 italic text-caption bg-[var(--bg)] border border-[var(--ds-border)]/40 rounded-lg px-3 py-2 text-[var(--text)]/70 leading-relaxed">
                     «Шестнадцатый — кариес, пломба композитная. Двадцать первый — коронка циркониевая»
                   </span>
                 </p>
@@ -595,7 +595,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                     <p className="text-lg font-mono font-bold tabular-nums text-[var(--text)]">
                       {String(Math.floor(recordingSeconds / 60)).padStart(2, "0")}:{String(recordingSeconds % 60).padStart(2, "0")}
                     </p>
-                    <p className="text-xs text-[var(--text-secondary)]">Говорите чётко, затем нажмите «Готово»</p>
+                    <p className="text-caption text-[var(--text-secondary)]">Говорите чётко, затем нажмите «Готово»</p>
                   </div>
                   <div className="flex items-end gap-[3px] h-7">
                     {[0.4, 0.7, 1, 0.6, 0.9, 0.5, 0.8, 1, 0.6, 0.4, 0.75, 0.9].map((h, i) => (
@@ -610,7 +610,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
               )}
 
               {error && (
-                <div className="w-full bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
+                <div className="w-full bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-body text-red-700">
                   {error}
                 </div>
               )}
@@ -637,8 +637,8 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
             <div className="flex flex-col items-center justify-center gap-4 py-14">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
               <div className="text-center">
-                <p className="text-sm font-medium">ИИ обрабатывает запись...</p>
-                <p className="text-xs text-[var(--text-secondary)] mt-1">Транскрибирование и анализ диагнозов</p>
+                <p className="text-body font-medium">ИИ обрабатывает запись...</p>
+                <p className="text-caption text-[var(--text-secondary)] mt-1">Транскрибирование и анализ диагнозов</p>
               </div>
             </div>
           )}
@@ -653,13 +653,13 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                     onClick={() => setTranscriptOpen((v) => !v)}
                     className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-[var(--bg)] border border-[var(--ds-border)]/40 rounded-xl text-left hover:bg-[var(--surface-2)] transition-colors"
                   >
-                    <span className="text-xs font-medium text-[var(--text-secondary)]">Расшифровка речи</span>
+                    <span className="text-caption font-medium text-[var(--text-secondary)]">Расшифровка речи</span>
                     {transcriptOpen
                       ? <ChevronDown className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
                       : <ChevronRight className="w-3.5 h-3.5 text-[var(--text-secondary)]" />}
                   </button>
                   {transcriptOpen && (
-                    <p className="text-xs text-[var(--text-secondary)] bg-[var(--bg)] border border-[var(--ds-border)]/40 rounded-xl px-3 py-2 leading-relaxed italic">
+                    <p className="text-caption text-[var(--text-secondary)] bg-[var(--bg)] border border-[var(--ds-border)]/40 rounded-xl px-3 py-2 leading-relaxed italic">
                       «{transcript}»
                     </p>
                   )}
@@ -668,7 +668,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
 
               {entries.length === 0 ? (
                 <div className="flex flex-col items-center gap-3 py-8 text-center">
-                  <p className="text-sm text-[var(--text-secondary)]">Не удалось распознать диагнозы. Попробуйте снова.</p>
+                  <p className="text-body text-[var(--text-secondary)]">Не удалось распознать диагнозы. Попробуйте снова.</p>
                   <Button variant="outline" onClick={() => setPhase("idle")} className="gap-2">
                     <Mic className="w-3.5 h-3.5" />
                     Записать снова
@@ -676,13 +676,13 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                 </div>
               ) : (
                 <>
-                  <p className="text-xs text-[var(--text-secondary)] px-1">
+                  <p className="text-caption text-[var(--text-secondary)] px-1">
                     Проверьте диагнозы. В списке услуг — только позиции, совпадающие со словами из расшифровки.
                   </p>
 
                   <div className="border border-[var(--ds-border)]/50 rounded-xl overflow-hidden w-full min-w-0 isolate">
                     <div className="table-h-scroll w-full min-w-0 touch-pan-x">
-                      <table className="text-xs w-full table-fixed min-w-0">
+                      <table className="text-caption w-full table-fixed min-w-0">
                         <thead>
                           <tr className="bg-[var(--bg)] border-b border-[var(--ds-border)]/50 text-[10px] uppercase tracking-wide text-[var(--text-secondary)]">
                             <th className="text-left font-semibold px-3 py-2 w-[11%]">Зуб</th>
@@ -719,7 +719,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                                   <select
                                     value={entry.condition}
                                     onChange={(e) => handleConditionChange(idx, entry, e.target.value)}
-                                    className="w-full min-w-0 max-w-full text-xs border border-[var(--ds-border)] rounded-lg px-2 py-1.5 bg-[var(--ds-surface)] focus:outline-none focus:ring-2 focus:ring-primary/30 truncate"
+                                    className="w-full min-w-0 max-w-full text-caption border border-[var(--ds-border)] rounded-lg px-2 py-1.5 bg-[var(--ds-surface)] focus:outline-none focus:ring-2 focus:ring-primary/30 truncate"
                                   >
                                     {CONDITION_VALUES.map((c) => (
                                       <option key={c} value={c}>{CONDITION_CONFIG[c]?.label ?? c}</option>
@@ -739,7 +739,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                                     <select
                                       value={selectedId}
                                       onChange={(e) => setServiceForTooth(entry.fdi, e.target.value)}
-                                      className="w-full min-w-0 max-w-full text-xs border border-[var(--ds-border)] rounded-lg px-2 py-1.5 bg-[var(--ds-surface)] focus:outline-none focus:ring-2 focus:ring-primary/30 truncate"
+                                      className="w-full min-w-0 max-w-full text-caption border border-[var(--ds-border)] rounded-lg px-2 py-1.5 bg-[var(--ds-surface)] focus:outline-none focus:ring-2 focus:ring-primary/30 truncate"
                                     >
                                       <option value="">— не выбрано —</option>
                                       {suggestions.map((tpl) => (
@@ -779,7 +779,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
 
                   <button
                     onClick={() => setPhase("idle")}
-                    className="text-xs text-[var(--text-secondary)] hover:text-[var(--text)] underline underline-offset-2 transition-colors"
+                    className="text-caption text-[var(--text-secondary)] hover:text-[var(--text)] underline underline-offset-2 transition-colors"
                   >
                     Записать снова
                   </button>
@@ -792,7 +792,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
           {phase === "applying" && (
             <div className="flex flex-col items-center justify-center gap-4 py-14">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
-              <p className="text-sm font-medium">Применяем диагнозы и услуги...</p>
+              <p className="text-body font-medium">Применяем диагнозы и услуги...</p>
             </div>
           )}
         </div>
@@ -812,7 +812,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
               </div>
             )}
             <div className="flex items-center justify-between gap-3">
-              <span className="text-xs text-[var(--text-secondary)]">
+              <span className="text-caption text-[var(--text-secondary)]">
                 {entries.length} {plural(entries.length, "зуб", "зуба", "зубов")}
               </span>
               <div className="flex gap-2">

@@ -205,16 +205,16 @@ export default function AdminDashboard() {
                     className="flex items-center gap-4 py-3"
                   >
                     <div className="w-12 text-center flex-none">
-                      <span className="text-sm font-bold text-[var(--ds-primary)]">{timeStr}</span>
+                      <span className="text-body font-bold text-[var(--ds-primary)]">{timeStr}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-[var(--text)] truncate">{proc.name}</p>
-                      <p className="text-xs text-[var(--text-secondary)]">
+                      <p className="text-body font-semibold text-[var(--text)] truncate">{proc.name}</p>
+                      <p className="text-caption text-[var(--text-secondary)]">
                         {patient?.name ?? "—"}
                         {proc.doctorName && ` · ${proc.doctorName}`}
                       </p>
                     </div>
-                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[var(--info-light)] text-[var(--info)] flex-none">
+                    <span className="text-caption font-bold px-2 py-0.5 rounded-full bg-[var(--info-light)] text-[var(--info)] flex-none">
                       {t("adminDashboard.scheduled")}
                     </span>
                   </motion.div>
@@ -238,12 +238,12 @@ export default function AdminDashboard() {
               )}
             </h3>
             {pendingPaymentQueue.length === 0 ? (
-              <p className="text-sm text-[var(--text-subtle)] py-2">Нет ожидающих оплат</p>
+              <p className="text-caption text-[var(--text-subtle)] py-2">Нет ожидающих оплат</p>
             ) : (
               <div className="space-y-4">
                 {todayPendingPayment.length > 0 && (
                   <div>
-                    <p className="text-[10px] font-bold text-[var(--success)] uppercase tracking-wide mb-1.5">Сегодня</p>
+                    <p className="text-micro font-bold text-[var(--success)] uppercase tracking-wide mb-1.5">Сегодня</p>
                     <div className="space-y-2">
                       {todayPendingPayment.map((proc) => {
                         const patient = patients.find((p) => p.id === proc.patientId);
@@ -253,18 +253,18 @@ export default function AdminDashboard() {
                           <div key={proc.id} className="flex flex-col gap-2 p-3 rounded-xl bg-[var(--success-light)]/50 border border-[var(--success-light)]">
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1 min-w-0">
-                                <p className="text-xs font-semibold text-[var(--text)] truncate">{proc.name}</p>
-                                <p className="text-[10px] text-[var(--text-secondary)] truncate">
+                                <p className="text-caption font-semibold text-[var(--text)] truncate">{proc.name}</p>
+                                <p className="text-micro text-[var(--text-secondary)] truncate">
                                   {patient?.name ?? "—"}{proc.doctorName && ` · ${proc.doctorName}`}
                                 </p>
-                                <p className="text-[10px] font-bold text-[var(--success)] mt-0.5">
+                                <p className="text-micro font-bold text-[var(--success)] mt-0.5">
                                   {proc.price ? formatMoney(proc.price) : "—"}
                                 </p>
                               </div>
                               {!isSelecting && (
                                 <button
                                   onClick={() => setSelectingPayment(proc.id)}
-                                  className="shrink-0 flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold rounded-lg bg-[var(--success-light)] text-[var(--success)] hover:bg-[var(--success-light)]/80 transition-colors"
+                                  className="shrink-0 flex items-center gap-1 px-2.5 py-1 text-micro font-semibold rounded-lg bg-[var(--success-light)] text-[var(--success)] hover:bg-[var(--success-light)]/80 transition-colors"
                                 >
                                   <CheckCircle2 className="w-3 h-3 text-[var(--success)]" />
                                   Оплата
@@ -278,14 +278,14 @@ export default function AdminDashboard() {
                                     key={method}
                                     disabled={isSaving}
                                     onClick={() => updatePayment.mutate({ id: proc.id, data: { paymentMethod: method } })}
-                                    className="px-1.5 py-0.5 text-[9px] font-medium rounded-md border border-[var(--ds-border)] bg-white hover:border-[var(--ds-primary)] hover:bg-[var(--primary-light)] hover:text-[var(--ds-primary)] transition-colors disabled:opacity-50"
+                                    className="px-1.5 py-0.5 text-micro font-medium rounded-md border border-[var(--ds-border)] bg-[var(--ds-surface)] hover:border-[var(--ds-primary)] hover:bg-[var(--primary-light)] hover:text-[var(--ds-primary)] transition-colors disabled:opacity-50"
                                   >
                                     {PAYMENT_METHOD_LABELS[method]}
                                   </button>
                                 ))}
                                 <button
                                   onClick={() => setSelectingPayment(null)}
-                                  className="px-1.5 py-0.5 text-[9px] font-medium rounded-md border border-[var(--ds-border)] text-[var(--text-subtle)] bg-white hover:bg-[var(--surface-2)] transition-colors"
+                                  className="px-1.5 py-0.5 text-micro font-medium rounded-md border border-[var(--ds-border)] text-[var(--text-subtle)] bg-[var(--ds-surface)] hover:bg-[var(--surface-2)] transition-colors"
                                 >
                                   Отмена
                                 </button>
@@ -299,7 +299,7 @@ export default function AdminDashboard() {
                 )}
                 {overduePendingPayment.length > 0 && (
                   <div>
-                    <p className="text-[10px] font-bold text-[var(--danger)] uppercase tracking-wide mb-1.5">Незакрытые</p>
+                    <p className="text-micro font-bold text-[var(--danger)] uppercase tracking-wide mb-1.5">Незакрытые</p>
                     <div className="space-y-2">
                       {overduePendingPayment.map((proc) => {
                         const patient = patients.find((p) => p.id === proc.patientId);
@@ -309,18 +309,18 @@ export default function AdminDashboard() {
                           <div key={proc.id} className="flex flex-col gap-2 p-3 rounded-xl bg-[var(--danger-light)]/50 border border-[var(--danger-light)]">
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1 min-w-0">
-                                <p className="text-xs font-semibold text-[var(--text)] truncate">{proc.name}</p>
-                                <p className="text-[10px] text-[var(--text-secondary)] truncate">
+                                <p className="text-caption font-semibold text-[var(--text)] truncate">{proc.name}</p>
+                                <p className="text-micro text-[var(--text-secondary)] truncate">
                                   {patient?.name ?? "—"}{proc.doctorName && ` · ${proc.doctorName}`}
                                 </p>
-                                <p className="text-[10px] font-bold text-[var(--danger)] mt-0.5">
-                                  {proc.price ? formatMoney(proc.price) : "—"} · <span className="text-[9px] text-[var(--danger)] font-semibold">{fmtOverdueDate(proc)}</span>
+                                <p className="text-micro font-bold text-[var(--danger)] mt-0.5">
+                                  {proc.price ? formatMoney(proc.price) : "—"} · <span className="text-micro text-[var(--danger)] font-semibold">{fmtOverdueDate(proc)}</span>
                                 </p>
                               </div>
                               {!isSelecting && (
                                 <button
                                   onClick={() => setSelectingPayment(proc.id)}
-                                  className="shrink-0 flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold rounded-lg bg-[var(--danger-light)] text-[var(--danger)] hover:bg-[var(--danger-light)]/80 transition-colors"
+                                  className="shrink-0 flex items-center gap-1 px-2.5 py-1 text-micro font-semibold rounded-lg bg-[var(--danger-light)] text-[var(--danger)] hover:bg-[var(--danger-light)]/80 transition-colors"
                                 >
                                   <CheckCircle2 className="w-3 h-3 text-[var(--danger)]" />
                                   Оплата
@@ -334,14 +334,14 @@ export default function AdminDashboard() {
                                     key={method}
                                     disabled={isSaving}
                                     onClick={() => updatePayment.mutate({ id: proc.id, data: { paymentMethod: method } })}
-                                    className="px-1.5 py-0.5 text-[9px] font-medium rounded-md border border-[var(--ds-border)] bg-white hover:border-[var(--ds-primary)] hover:bg-[var(--primary-light)] hover:text-[var(--ds-primary)] transition-colors disabled:opacity-50"
+                                    className="px-1.5 py-0.5 text-micro font-medium rounded-md border border-[var(--ds-border)] bg-[var(--ds-surface)] hover:border-[var(--ds-primary)] hover:bg-[var(--primary-light)] hover:text-[var(--ds-primary)] transition-colors disabled:opacity-50"
                                   >
                                     {PAYMENT_METHOD_LABELS[method]}
                                   </button>
                                 ))}
                                 <button
                                   onClick={() => setSelectingPayment(null)}
-                                  className="px-1.5 py-0.5 text-[9px] font-medium rounded-md border border-[var(--ds-border)] text-[var(--text-subtle)] bg-white hover:bg-[var(--surface-2)] transition-colors"
+                                  className="px-1.5 py-0.5 text-micro font-medium rounded-md border border-[var(--ds-border)] text-[var(--text-subtle)] bg-[var(--ds-surface)] hover:bg-[var(--surface-2)] transition-colors"
                                 >
                                   Отмена
                                 </button>
@@ -378,10 +378,10 @@ export default function AdminDashboard() {
                     <div key={doc.doctorId}>
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-xs font-bold text-[var(--text-subtle)] w-4 shrink-0">{i + 1}</span>
-                          <span className="text-sm font-medium text-[var(--text)] truncate">{doc.doctorName}</span>
+                          <span className="text-caption font-bold text-[var(--text-subtle)] w-4 shrink-0">{i + 1}</span>
+                          <span className="text-body font-medium text-[var(--text)] truncate">{doc.doctorName}</span>
                         </div>
-                        <span className="text-xs font-bold text-[var(--success)] shrink-0 ml-2">
+                        <span className="text-caption font-bold text-[var(--success)] shrink-0 ml-2">
                           {formatMoney(doc.revenueTotal)}
                         </span>
                       </div>
@@ -391,7 +391,7 @@ export default function AdminDashboard() {
                           style={{ width: `${pct}%`, backgroundColor: BRAND_BLUE }}
                         />
                       </div>
-                      <p className="text-[10px] text-[var(--text-subtle)] mt-0.5">
+                      <p className="text-micro text-[var(--text-subtle)] mt-0.5">
                         {doc.proceduresCount} {t("adminDashboard.procedures")} · {doc.patientsCount} {t("adminDashboard.patients")}
                       </p>
                     </div>
@@ -426,7 +426,7 @@ export default function AdminDashboard() {
               <div className="dash-quick-action-icon w-10 h-10">
                 <item.icon className="w-5 h-5" />
               </div>
-              <span className="text-xs font-medium text-[var(--text-secondary)] group-hover:text-[var(--ds-primary)] transition-colors leading-tight">{item.label}</span>
+              <span className="text-caption font-medium text-[var(--text-secondary)] group-hover:text-[var(--ds-primary)] transition-colors leading-tight">{item.label}</span>
             </button>
           ))}
         </div>

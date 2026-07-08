@@ -94,7 +94,7 @@ for (const id of [...TOP_TEETH, ...BOTTOM_TEETH]) {
 // Legend is static — render once
 const Legend = memo(function Legend() {
   return (
-    <div className="flex flex-wrap gap-x-4 gap-y-2 mt-6 pt-4 border-t border-[#e8e3d9] justify-start">
+    <div className="flex flex-wrap gap-x-4 gap-y-2 mt-6 pt-4 border-t border-[var(--ds-border)] justify-start">
       {(Object.entries(CONDITION_CONFIG) as [ToothCondition, (typeof CONDITION_CONFIG)[ToothCondition]][]).map(
         ([cond, cfg]) => (
           <div key={cond} className="flex items-center gap-2">
@@ -106,7 +106,7 @@ const Legend = memo(function Legend() {
                 borderStyle: cond === 'missing' ? 'dashed' : 'solid'
               }}
             />
-            <span className="text-[11px] font-medium text-[#64748b]">{cfg.label}</span>
+            <span className="text-[11px] font-medium text-[var(--text-secondary)]">{cfg.label}</span>
           </div>
         )
       )}
@@ -169,13 +169,13 @@ const Tooth = memo(function Tooth({ id, condition, isSelected, isInProgress, isD
         "flex flex-col items-center gap-0.5 sm:gap-1 md:gap-2 cursor-pointer group p-0.5 sm:p-1 rounded-lg sm:rounded-xl",
         isSelected && "ring-2 ring-blue-500 ring-offset-1 sm:ring-offset-2 bg-blue-50/40 scale-105 shadow-sm",
         isInProgress && "ring-2 ring-emerald-500 ring-offset-1 sm:ring-offset-2 bg-emerald-50/40 animate-pulse scale-105",
-        isDisabled ? "opacity-35 cursor-not-allowed pointer-events-none" : "hover:scale-105 hover:bg-[#faf8f4]/50",
+        isDisabled ? "opacity-35 cursor-not-allowed pointer-events-none" : "hover:scale-105 hover:bg-[var(--bg)]/50",
       )}
       role="button"
       tabIndex={isDisabled ? -1 : 0}
       aria-label={`Зуб ${id}`}
     >
-      {isTop && <span className="text-[10px] md:text-xs font-semibold text-[#94a3b8] group-hover:text-blue-500 transition-colors">{id}</span>}
+      {isTop && <span className="text-[10px] md:text-xs font-semibold text-[var(--text-subtle)] group-hover:text-blue-500 transition-colors">{id}</span>}
 
       <svg viewBox="0 0 40 100" className="w-full h-auto max-w-[28px] sm:max-w-[32px] md:max-w-[40px] aspect-[4/10]">
         {condition !== 'implant' && (
@@ -218,7 +218,7 @@ const Tooth = memo(function Tooth({ id, condition, isSelected, isInProgress, isD
         )}
       </svg>
 
-      {!isTop && <span className="text-[10px] md:text-xs font-semibold text-[#94a3b8] group-hover:text-blue-500 transition-colors">{id}</span>}
+      {!isTop && <span className="text-[10px] md:text-xs font-semibold text-[var(--text-subtle)] group-hover:text-blue-500 transition-colors">{id}</span>}
     </div>
   );
 });
@@ -234,12 +234,12 @@ interface FdiChartProps {
 
 export const FdiChart = memo(function FdiChart({ teethData, selectedFdi, onToothClick, inProgressFdi, disabledFdis, className }: FdiChartProps) {
   return (
-    <div className={cn("w-full bg-white rounded-2xl border border-[#e8e3d9]/80 p-4 sm:p-5", className)}>
+    <div className={cn("w-full bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)]/80 p-4 sm:p-5", className)}>
       <div className="w-full pb-2">
         <div className="w-full px-1 py-2 space-y-6 sm:space-y-8 relative">
 
           {/* Upper jaw */}
-          <div className="grid items-end pb-8 border-b border-[#e8e3d9] relative" style={{ gridTemplateColumns: "repeat(16, minmax(0, 1fr))" }}>
+          <div className="grid items-end pb-8 border-b border-[var(--ds-border)] relative" style={{ gridTemplateColumns: "repeat(16, minmax(0, 1fr))" }}>
             <div className="absolute left-1/2 top-2 bottom-6 w-px bg-[#e8e3d9]/60 transform -translate-x-1/2" />
             {TOP_TEETH.map((id) => (
               <Tooth

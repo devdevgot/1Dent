@@ -57,9 +57,9 @@ export default function AccountChangePassword() {
       <div className="px-4 py-6 space-y-5">
         {done ? (
           <div className="flex flex-col items-center gap-4 py-10">
-            <CheckCircle2 className="w-16 h-16 text-[#1f75fe]" />
-            <p className="text-nav-title font-semibold text-[#0f172a]">Пароль изменён</p>
-            <p className="text-caption text-[#94a3b8] text-center">
+            <CheckCircle2 className="w-16 h-16 text-[var(--ds-primary)]" />
+            <p className="text-nav-title font-semibold text-[var(--text)]">Пароль изменён</p>
+            <p className="text-caption text-[var(--text-subtle)] text-center">
               Используйте новый пароль при следующем входе
             </p>
             <Button
@@ -72,34 +72,34 @@ export default function AccountChangePassword() {
         ) : (
           <>
             <IosGroup>
-              <label className="flex flex-col px-4 py-3.5 gap-0.5 border-b border-[#e8e3d9]">
+              <label className="flex flex-col px-4 py-3.5 gap-0.5 border-b border-[var(--ds-border)]">
                 <span className="section-label">Текущий пароль</span>
                 <div className="flex items-center mt-0.5">
                   <input
                     type={showCurrent ? "text" : "password"}
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="flex-1 text-body text-[#0f172a] bg-transparent outline-none placeholder:text-[#94a3b8]"
+                    className="flex-1 text-body text-[var(--text)] bg-transparent outline-none placeholder:text-[var(--text-subtle)]"
                     placeholder="••••••••"
                     autoFocus
                   />
-                  <button type="button" onClick={() => setShowCurrent((v) => !v)} className="ml-2 text-[#94a3b8] p-1 hover:text-[#64748b]">
+                  <button type="button" onClick={() => setShowCurrent((v) => !v)} className="ml-2 text-[var(--text-subtle)] p-1 hover:text-[var(--text-secondary)]">
                     {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </label>
 
-              <label className="flex flex-col px-4 py-3.5 gap-0.5 border-b border-[#e8e3d9]">
+              <label className="flex flex-col px-4 py-3.5 gap-0.5 border-b border-[var(--ds-border)]">
                 <span className="section-label">Новый пароль</span>
                 <div className="flex items-center mt-0.5">
                   <input
                     type={showNew ? "text" : "password"}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="flex-1 text-body text-[#0f172a] bg-transparent outline-none placeholder:text-[#94a3b8]"
+                    className="flex-1 text-body text-[var(--text)] bg-transparent outline-none placeholder:text-[var(--text-subtle)]"
                     placeholder="Мин. 6 символов"
                   />
-                  <button type="button" onClick={() => setShowNew((v) => !v)} className="ml-2 text-[#94a3b8] p-1 hover:text-[#64748b]">
+                  <button type="button" onClick={() => setShowNew((v) => !v)} className="ml-2 text-[var(--text-subtle)] p-1 hover:text-[var(--text-secondary)]">
                     {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
@@ -112,10 +112,10 @@ export default function AccountChangePassword() {
                     type={showConfirm ? "text" : "password"}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="flex-1 text-body text-[#0f172a] bg-transparent outline-none placeholder:text-[#94a3b8]"
+                    className="flex-1 text-body text-[var(--text)] bg-transparent outline-none placeholder:text-[var(--text-subtle)]"
                     placeholder="••••••••"
                   />
-                  <button type="button" onClick={() => setShowConfirm((v) => !v)} className="ml-2 text-[#94a3b8] p-1 hover:text-[#64748b]">
+                  <button type="button" onClick={() => setShowConfirm((v) => !v)} className="ml-2 text-[var(--text-subtle)] p-1 hover:text-[var(--text-secondary)]">
                     {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
@@ -123,7 +123,7 @@ export default function AccountChangePassword() {
             </IosGroup>
 
             {newPassword && confirmPassword && newPassword !== confirmPassword && (
-              <p className="text-caption text-[#dc2626] px-1">Пароли не совпадают</p>
+              <p className="text-caption text-[var(--danger)] px-1">Пароли не совпадают</p>
             )}
 
             <Button

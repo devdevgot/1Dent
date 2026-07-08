@@ -68,21 +68,21 @@ export function TabletVoiceDiagnosisModal({ patientName, onClose, onApply }: Pro
         className={cn(overlayPanelClass(true, { tablet: "max-w-2xl" }), "z-10")}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#e8e3d9] px-5 py-4">
+        <div className="flex items-center justify-between border-b border-[var(--ds-border)] px-5 py-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1f75fe]/10">
-              <Mic className="h-5 w-5 text-[#1f75fe]" />
+              <Mic className="h-5 w-5 text-[var(--ds-primary)]" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-[#0f172a]">Голосовая диагностика</h2>
-              <p className="text-xs text-[#64748b]">{patientName}</p>
+              <h2 className="text-base font-bold text-[var(--text)]">Голосовая диагностика</h2>
+              <p className="text-caption text-[var(--text-secondary)]">{patientName}</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
             disabled={phase === "recording" || phase === "processing"}
-            className="rounded-xl p-2 text-[#64748b] hover:bg-[#faf8f4] disabled:opacity-40"
+            className="rounded-xl p-2 text-[var(--text-secondary)] hover:bg-[var(--bg)] disabled:opacity-40"
           >
             <X className="h-5 w-5" />
           </button>
@@ -93,10 +93,10 @@ export function TabletVoiceDiagnosisModal({ patientName, onClose, onApply }: Pro
             <div className="flex flex-col items-center gap-6 py-8">
               {phase === "idle" && (
                 <>
-                  <p className="max-w-md text-center text-sm leading-relaxed text-[#64748b]">
+                  <p className="max-w-md text-center text-body leading-relaxed text-[var(--text-secondary)]">
                     Нажмите кнопку и продиктуйте состояние зубов. Например:
                   </p>
-                  <p className="rounded-xl border border-[#e8e3d9] bg-[#faf8f4] px-4 py-3 text-center text-xs italic leading-relaxed text-[#64748b]">
+                  <p className="rounded-xl border border-[var(--ds-border)] bg-[var(--bg)] px-4 py-3 text-center text-caption italic leading-relaxed text-[var(--text-secondary)]">
                     «Шестнадцатый — кариес. Двадцать первый — коронка. Тридцать шестой — каналы»
                   </p>
                 </>
@@ -110,8 +110,8 @@ export function TabletVoiceDiagnosisModal({ patientName, onClose, onApply }: Pro
                       <Mic className="h-7 w-7 text-white" />
                     </div>
                   </div>
-                  <p className="font-mono text-2xl font-bold text-[#1f75fe]">{fmt(seconds)}</p>
-                  <p className="text-sm text-[#64748b]">Слушаю…</p>
+                  <p className="font-mono text-2xl font-bold text-[var(--ds-primary)]">{fmt(seconds)}</p>
+                  <p className="text-body text-[var(--text-secondary)]">Слушаю…</p>
                 </div>
               )}
 
@@ -120,7 +120,7 @@ export function TabletVoiceDiagnosisModal({ patientName, onClose, onApply }: Pro
                 onClick={phase === "idle" ? startRecording : stopRecording}
                 className={cn(
                   "flex items-center gap-2 rounded-2xl px-8 py-4 text-base font-bold text-white transition-colors",
-                  phase === "recording" ? "bg-[#dc2626] hover:bg-[#b91c1c]" : "bg-[#1f75fe] hover:bg-[#1a65e8]",
+                  phase === "recording" ? "bg-[var(--danger)] hover:bg-[#b91c1c]" : "bg-[#1f75fe] hover:bg-[var(--primary-hover)]",
                 )}
               >
                 <Mic className="h-5 w-5" />
@@ -131,19 +131,19 @@ export function TabletVoiceDiagnosisModal({ patientName, onClose, onApply }: Pro
 
           {phase === "processing" && (
             <div className="flex flex-col items-center gap-4 py-16">
-              <Loader2 className="h-10 w-10 animate-spin text-[#1f75fe]" />
-              <p className="text-sm font-medium text-[#64748b]">Распознаём и анализируем…</p>
+              <Loader2 className="h-10 w-10 animate-spin text-[var(--ds-primary)]" />
+              <p className="text-body font-medium text-[var(--text-secondary)]">Распознаём и анализируем…</p>
             </div>
           )}
 
           {phase === "review" && (
             <div className="space-y-4">
-              <div className="rounded-xl border border-[#e8e3d9] bg-[#faf8f4] p-3">
-                <p className="mb-1 text-xs font-bold uppercase tracking-wide text-[#94a3b8]">Транскрипт</p>
-                <p className="text-sm leading-relaxed text-[#0f172a]">{transcript}</p>
+              <div className="rounded-xl border border-[var(--ds-border)] bg-[var(--bg)] p-3">
+                <p className="mb-1 text-caption font-bold uppercase tracking-wide text-[var(--text-subtle)]">Транскрипт</p>
+                <p className="text-body leading-relaxed text-[var(--text)]">{transcript}</p>
               </div>
 
-              <p className="text-sm font-bold text-[#0f172a]">
+              <p className="text-body font-bold text-[var(--text)]">
                 Найдено зубов: {DEMO_ENTRIES.length}
               </p>
 
@@ -153,25 +153,25 @@ export function TabletVoiceDiagnosisModal({ patientName, onClose, onApply }: Pro
                   return (
                     <div
                       key={entry.fdi}
-                      className="flex items-center gap-3 rounded-xl border border-[#e8e3d9] bg-white p-3"
+                      className="flex items-center gap-3 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] p-3"
                     >
                       <span
-                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-black"
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-body font-black"
                         style={{ color: meta.color, backgroundColor: meta.bg }}
                       >
                         {entry.fdi}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-bold text-[#0f172a]">{meta.label}</p>
-                        <p className="text-xs text-[#64748b]">{entry.note}</p>
+                        <p className="text-body font-bold text-[var(--text)]">{meta.label}</p>
+                        <p className="text-caption text-[var(--text-secondary)]">{entry.note}</p>
                       </div>
-                      <Check className="h-5 w-5 shrink-0 text-[#16a34a]" />
+                      <Check className="h-5 w-5 shrink-0 text-[var(--success)]" />
                     </div>
                   );
                 })}
               </div>
 
-              <p className="text-xs text-[#94a3b8]">
+              <p className="text-caption text-[var(--text-subtle)]">
                 Демо-режим: после подключения бэкенда здесь будет реальное распознавание речи.
               </p>
             </div>
@@ -180,18 +180,18 @@ export function TabletVoiceDiagnosisModal({ patientName, onClose, onApply }: Pro
 
         {/* Footer */}
         {phase === "review" && (
-          <div className="flex gap-3 border-t border-[#e8e3d9] p-4">
+          <div className="flex gap-3 border-t border-[var(--ds-border)] p-4">
             <button
               type="button"
               onClick={() => { setPhase("idle"); setTranscript(""); }}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[#e8e3d9] py-3 text-sm font-semibold text-[#64748b] hover:bg-[#faf8f4]"
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[var(--ds-border)] py-3 text-body font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg)]"
             >
               <RotateCcw className="h-4 w-4" /> Заново
             </button>
             <button
               type="button"
               onClick={handleApply}
-              className="flex flex-[2] items-center justify-center gap-2 rounded-xl bg-[#1f75fe] py-3 text-sm font-bold text-white hover:bg-[#1a65e8]"
+              className="flex flex-[2] items-center justify-center gap-2 rounded-xl bg-[#1f75fe] py-3 text-body font-bold text-white hover:bg-[var(--primary-hover)]"
             >
               <Check className="h-4 w-4" /> Применить к карте
             </button>

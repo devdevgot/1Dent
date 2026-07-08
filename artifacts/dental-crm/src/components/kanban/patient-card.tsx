@@ -49,7 +49,7 @@ export const PatientCardView = memo(function PatientCardView({
       )}
     >
       <div className="flex items-start justify-between mb-2">
-        <p className="font-semibold text-sm text-[var(--text)] leading-tight line-clamp-1 flex items-center gap-1">
+        <p className="font-semibold text-body text-[var(--text)] leading-tight line-clamp-1 flex items-center gap-1">
           {hasRedAlert && (
             <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
           )}
@@ -60,7 +60,7 @@ export const PatientCardView = memo(function PatientCardView({
         </span>
       </div>
 
-      <p className="text-xs text-[var(--text-secondary)] mb-2 font-mono tracking-tight">
+      <p className="text-caption text-[var(--text-secondary)] mb-2 font-mono tracking-tight">
         {patient.phone}
       </p>
 

@@ -133,10 +133,10 @@ export function PatientList({ onSelect }: { onSelect: (patientId: string) => voi
     <div className="mx-auto w-full max-w-6xl px-5 py-6">
       <div className="mb-5 flex items-center justify-between gap-3">
         <div>
-          <h1 className="flex items-center gap-2 text-2xl font-extrabold text-[#0f172a]">
-            <Users className="h-6 w-6 text-[#1f75fe]" /> Пациенты
+          <h1 className="flex items-center gap-2 text-2xl font-extrabold text-[var(--text)]">
+            <Users className="h-6 w-6 text-[var(--ds-primary)]" /> Пациенты
           </h1>
-          <p className="mt-1 flex items-center gap-1.5 text-sm capitalize text-[#64748b]">
+          <p className="mt-1 flex items-center gap-1.5 text-body capitalize text-[var(--text-secondary)]">
             <CalendarDays className="h-4 w-4" /> {todayLabel} · {filtered.length} из {allPatients.length}
           </p>
         </div>
@@ -145,7 +145,7 @@ export function PatientList({ onSelect }: { onSelect: (patientId: string) => voi
             type="button"
             onClick={() => refetch()}
             disabled={isFetching}
-            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#e8e3d9] bg-white text-[#64748b] transition-colors hover:bg-[#faf8f4] disabled:opacity-50"
+            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg)] disabled:opacity-50"
             title={t("kanban.refresh")}
           >
             <RefreshCw className={cn("h-4 w-4", isFetching && "animate-spin")} />
@@ -154,10 +154,10 @@ export function PatientList({ onSelect }: { onSelect: (patientId: string) => voi
             type="button"
             onClick={() => setShowFilters((v) => !v)}
             className={cn(
-              "flex h-11 w-11 items-center justify-center rounded-2xl border bg-white transition-colors",
+              "flex h-11 w-11 items-center justify-center rounded-2xl border bg-[var(--ds-surface)] transition-colors",
               showFilters || hasActiveFilter
-                ? "border-[#1f75fe] text-[#1f75fe] bg-[#1f75fe]/5"
-                : "border-[#e8e3d9] text-[#64748b] hover:bg-[#faf8f4]",
+                ? "border-[#1f75fe] text-[var(--ds-primary)] bg-[#1f75fe]/5"
+                : "border-[var(--ds-border)] text-[var(--text-secondary)] hover:bg-[var(--bg)]",
             )}
             title="Фильтры"
           >
@@ -167,7 +167,7 @@ export function PatientList({ onSelect }: { onSelect: (patientId: string) => voi
             <button
               type="button"
               onClick={() => setCreateOpen(true)}
-              className="flex items-center gap-2 rounded-2xl bg-[#1f75fe] px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-[#1a65e8]"
+              className="flex items-center gap-2 rounded-2xl bg-[#1f75fe] px-4 py-3 text-body font-bold text-white transition-colors hover:bg-[var(--primary-hover)]"
             >
               <Plus className="h-4 w-4" /> Новый
             </button>
@@ -176,12 +176,12 @@ export function PatientList({ onSelect }: { onSelect: (patientId: string) => voi
       </div>
 
       <div className="relative mb-4">
-        <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#94a3b8]" />
+        <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--text-subtle)]" />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t("patients.searchPlaceholder")}
-          className="w-full rounded-2xl border border-[#e8e3d9] bg-white py-4 pl-12 pr-4 text-base text-[#0f172a] outline-none transition-colors placeholder:text-[#94a3b8] focus:border-[#1f75fe]"
+          className="w-full rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] py-4 pl-12 pr-4 text-base text-[var(--text)] outline-none transition-colors placeholder:text-[var(--text-subtle)] focus:border-[#1f75fe]"
         />
       </div>
 
@@ -193,7 +193,7 @@ export function PatientList({ onSelect }: { onSelect: (patientId: string) => voi
             exit={{ height: 0, opacity: 0 }}
             className="mb-4 overflow-hidden"
           >
-            <div className="space-y-3 rounded-2xl border border-[#e8e3d9] bg-white p-4">
+            <div className="space-y-3 rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] p-4">
               <div className="flex flex-wrap gap-2">
                 {DATE_OPTIONS.map((opt) => (
                   <button
@@ -201,10 +201,10 @@ export function PatientList({ onSelect }: { onSelect: (patientId: string) => voi
                     type="button"
                     onClick={() => setDateFilter(opt.key)}
                     className={cn(
-                      "rounded-full px-4 py-2 text-sm font-semibold transition-colors",
+                      "rounded-full px-4 py-2 text-body font-semibold transition-colors",
                       dateFilter === opt.key
                         ? "bg-[#1f75fe] text-white"
-                        : "border border-[#e8e3d9] bg-[#faf8f4] text-[#64748b]",
+                        : "border border-[var(--ds-border)] bg-[var(--bg)] text-[var(--text-secondary)]",
                     )}
                   >
                     {opt.label}
@@ -215,7 +215,7 @@ export function PatientList({ onSelect }: { onSelect: (patientId: string) => voi
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value as PatientStatus | "all")}
-                  className="rounded-xl border border-[#e8e3d9] px-3 py-2.5 text-sm outline-none focus:border-[#1f75fe]"
+                  className="rounded-xl border border-[var(--ds-border)] px-3 py-2.5 text-body outline-none focus:border-[#1f75fe]"
                 >
                   <option value="all">{t("patients.allStatuses")}</option>
                   {KANBAN_COLUMNS.map((col) => (
@@ -227,7 +227,7 @@ export function PatientList({ onSelect }: { onSelect: (patientId: string) => voi
                 <select
                   value={sourceFilter}
                   onChange={(e) => setSourceFilter(e.target.value as PatientSource | "all")}
-                  className="rounded-xl border border-[#e8e3d9] px-3 py-2.5 text-sm outline-none focus:border-[#1f75fe]"
+                  className="rounded-xl border border-[var(--ds-border)] px-3 py-2.5 text-body outline-none focus:border-[#1f75fe]"
                 >
                   <option value="all">{t("patients.allSources")}</option>
                   {ALL_SOURCES.map((s) => (
@@ -245,11 +245,11 @@ export function PatientList({ onSelect }: { onSelect: (patientId: string) => voi
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#1f75fe]/20 border-t-[#1f75fe]" />
         </div>
       ) : error ? (
-        <div className="flex flex-col items-center justify-center py-24 text-[#dc2626]">
+        <div className="flex flex-col items-center justify-center py-24 text-[var(--danger)]">
           <p className="text-sm">{t("kanban.loadError")}</p>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 text-[#94a3b8]">
+        <div className="flex flex-col items-center justify-center py-24 text-[var(--text-subtle)]">
           <Search className="mb-3 h-12 w-12 opacity-40" />
           <p className="text-sm">{t("patients.noResults")}</p>
         </div>
@@ -275,40 +275,40 @@ export function PatientList({ onSelect }: { onSelect: (patientId: string) => voi
                 transition={{ delay: i * 0.03 }}
                 onClick={() => onSelect(p.id)}
                 className={cn(
-                  "group flex flex-col rounded-3xl border bg-white p-5 text-left transition-all hover:shadow-md active:scale-[0.99]",
-                  isNow ? "border-[#1f75fe] ring-2 ring-[#1f75fe]/20" : "border-[#e8e3d9]",
+                  "group flex flex-col rounded-3xl border bg-[var(--ds-surface)] p-5 text-left transition-all hover:shadow-md active:scale-[0.99]",
+                  isNow ? "border-[#1f75fe] ring-2 ring-[#1f75fe]/20" : "border-[var(--ds-border)]",
                 )}
               >
                 <div className="mb-4 flex items-center justify-between">
                   <span className={cn(
-                    "flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-bold",
-                    isNow ? "bg-[#1f75fe] text-white" : "bg-[#faf8f4] text-[#0f172a]",
+                    "flex items-center gap-1.5 rounded-full px-3 py-1 text-body font-bold",
+                    isNow ? "bg-[#1f75fe] text-white" : "bg-[var(--bg)] text-[var(--text)]",
                   )}>
                     <Clock className="h-3.5 w-3.5" />
                     {isNow ? "Сейчас" : procTime ? formatTime(procTime) : "—"}
                   </span>
                   {statusCol && (
-                    <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", COLUMN_HEADER_COLOR[p.status])}>
+                    <span className={cn("rounded-full px-2.5 py-1 text-caption font-semibold", COLUMN_HEADER_COLOR[p.status])}>
                       {statusCol.label}
                     </span>
                   )}
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#1f75fe]/10 text-base font-bold text-[#1f75fe]">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#1f75fe]/10 text-base font-bold text-[var(--ds-primary)]">
                     {initials(p.name)}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-lg font-bold text-[#0f172a] group-hover:text-[#1f75fe]">{p.name}</p>
-                    <p className="text-xs text-[#94a3b8]">
+                    <p className="truncate text-lg font-bold text-[var(--text)] group-hover:text-[var(--ds-primary)]">{p.name}</p>
+                    <p className="text-caption text-[var(--text-subtle)]">
                       {age != null ? `${age} лет` : "—"}
                       {p.gender ? ` · ${p.gender === "female" ? "жен." : p.gender === "male" ? "муж." : ""}` : ""}
                     </p>
                   </div>
-                  <ChevronRight className="h-5 w-5 text-[#cbd5e1] group-hover:text-[#1f75fe]" />
+                  <ChevronRight className="h-5 w-5 text-[#cbd5e1] group-hover:text-[var(--ds-primary)]" />
                 </div>
 
-                <p className="mt-4 rounded-xl bg-[#faf8f4] px-3 py-2 text-sm font-medium text-[#64748b]">
+                <p className="mt-4 rounded-xl bg-[var(--bg)] px-3 py-2 text-body font-medium text-[var(--text-secondary)]">
                   {nextProc?.title ?? statusCol?.label ?? t(`status.${p.status}`)}
                 </p>
 
@@ -316,7 +316,7 @@ export function PatientList({ onSelect }: { onSelect: (patientId: string) => voi
                   {progress ? (
                     <PatientTreatmentProgressBar data={progress} compact />
                   ) : (
-                    <span className="text-xs text-[#94a3b8]">Прогресс лечения</span>
+                    <span className="text-caption text-[var(--text-subtle)]">Прогресс лечения</span>
                   )}
                 </div>
               </motion.button>

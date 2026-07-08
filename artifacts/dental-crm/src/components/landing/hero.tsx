@@ -62,7 +62,7 @@ export function Hero() {
             { icon: MessageSquare, text: "WhatsApp интеграция" },
             { icon: Users, text: "Для клиник Казахстана" },
           ].map((b) => (
-            <div key={b.text} className="flex items-center gap-2 text-sm font-manrope text-[var(--text-subtle)]">
+            <div key={b.text} className="flex items-center gap-2 text-body font-manrope text-[var(--text-subtle)]">
               <b.icon size={14} className="text-[var(--ds-primary)]" />
               <span>{b.text}</span>
             </div>

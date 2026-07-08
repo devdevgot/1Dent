@@ -82,7 +82,7 @@ export default function AccountEditProfile() {
       <div className="px-4 py-6 space-y-5">
         <div className="flex flex-col items-center gap-2">
           <div className="relative">
-            <div className="w-24 h-24 rounded-full overflow-hidden bg-[#1f75fe]/10 flex items-center justify-center text-[#1f75fe] font-bold text-3xl border border-[#e8e3d9] shadow-sm transition-transform active:scale-95 duration-100">
+            <div className="w-24 h-24 rounded-full overflow-hidden bg-[#1f75fe]/10 flex items-center justify-center text-[var(--ds-primary)] font-bold text-3xl border border-[var(--ds-border)] shadow-sm transition-transform active:scale-95 duration-100">
               {photoPreview ? (
                 <img src={photoPreview} alt="avatar" className="w-full h-full object-cover" />
               ) : (
@@ -92,7 +92,7 @@ export default function AccountEditProfile() {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-[#1f75fe] flex items-center justify-center shadow-lg border-2 border-white hover:bg-[#1a65e8] transition-colors"
+              className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-[#1f75fe] flex items-center justify-center shadow-lg border-2 border-white hover:bg-[var(--primary-hover)] transition-colors"
             >
               <Camera className="w-4 h-4 text-white" />
             </button>
@@ -101,7 +101,7 @@ export default function AccountEditProfile() {
           <Button
             variant="link"
             size="sm"
-            className="text-caption h-auto p-0 text-[#1f75fe]"
+            className="text-caption h-auto p-0 text-[var(--ds-primary)]"
             onClick={() => fileInputRef.current?.click()}
           >
             Изменить фото
@@ -115,7 +115,7 @@ export default function AccountEditProfile() {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="text-body text-[#0f172a] bg-transparent outline-none placeholder:text-[#94a3b8] mt-0.5"
+              className="text-body text-[var(--text)] bg-transparent outline-none placeholder:text-[var(--text-subtle)] mt-0.5"
               placeholder="Введите имя"
               autoFocus
             />

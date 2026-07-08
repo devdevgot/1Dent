@@ -190,7 +190,7 @@ export function DonutChart({
             <button
               type="button"
               onClick={onDetailsClick}
-              className="mt-1 px-3 py-1 bg-[#1f75fe]/10 hover:bg-[#1f75fe]/15 border border-[#1f75fe]/20 rounded-full text-[10px] font-bold text-[#1f75fe] transition-colors cursor-pointer"
+              className="mt-1 px-3 py-1 bg-[var(--ds-primary)]/10 hover:bg-[var(--ds-primary)]/15 border border-[var(--ds-primary)]/20 rounded-full text-micro font-bold text-[var(--ds-primary)] transition-colors cursor-pointer"
             >
               Подробнее
             </button>

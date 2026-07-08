@@ -58,8 +58,8 @@ function NotificationItem({
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-xs text-[var(--text)] leading-relaxed">{notification.message}</p>
-        <p className="text-[10px] text-[var(--text-subtle)] mt-1">
+        <p className="text-caption text-[var(--text)] leading-relaxed">{notification.message}</p>
+        <p className="text-micro text-[var(--text-subtle)] mt-1">
           {new Date(notification.createdAt).toLocaleTimeString(undefined, {
             hour: "2-digit",
             minute: "2-digit",
@@ -97,7 +97,7 @@ export function NotificationBell() {
           {count > 0 && (
             <span
               className={cn(
-                "absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full text-[10px] font-bold flex items-center justify-center text-white px-1",
+                "absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full text-micro font-bold flex items-center justify-center text-white px-1",
                 unreadRedAlerts > 0
                   ? "bg-[var(--danger)] animate-pulse"
                   : unreadPendingPayments > 0
@@ -113,14 +113,14 @@ export function NotificationBell() {
       <PopoverContent className="w-96 p-0 shadow-xl bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-2xl font-manrope" align="end">
         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--ds-border)]">
           <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-sm text-[var(--text)]">{t("notifications.title")}</h3>
+            <h3 className="font-semibold text-body text-[var(--text)]">{t("notifications.title")}</h3>
             {unreadRedAlerts > 0 && (
-              <Badge variant="destructive" className="text-[10px] py-0">
+              <Badge variant="destructive" className="text-micro py-0">
                 {t("notifications.redAlerts", { count: unreadRedAlerts })}
               </Badge>
             )}
             {unreadPendingPayments > 0 && (
-              <Badge className="text-[10px] py-0 bg-orange-500 hover:bg-orange-600">
+              <Badge className="text-micro py-0 bg-orange-500 hover:bg-orange-600">
                 {unreadPendingPayments} оплата
               </Badge>
             )}
@@ -129,7 +129,7 @@ export function NotificationBell() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 text-xs text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]"
+              className="h-7 text-caption text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]"
               onClick={() => markAllMutation.mutate()}
               disabled={markAllMutation.isPending}
             >
@@ -148,10 +148,10 @@ export function NotificationBell() {
               <Bell className="w-4 h-4 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-[var(--danger)]">
+              <p className="text-body font-bold text-[var(--danger)]">
                 {t("dashboard.redAlertTitle", { count: unreadRedAlerts })}
               </p>
-              <p className="text-xs text-[var(--danger)]/80">{t("dashboard.redAlertDesc")}</p>
+              <p className="text-caption text-[var(--danger)]/80">{t("dashboard.redAlertDesc")}</p>
             </div>
             <ChevronRight className="w-4 h-4 text-[var(--danger)]/60 shrink-0" />
           </button>
@@ -166,10 +166,10 @@ export function NotificationBell() {
               <Wallet className="w-4 h-4 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-[var(--warning)]">
+              <p className="text-body font-bold text-[var(--warning)]">
                 {unreadPendingPayments} {unreadPendingPayments === 1 ? "процедура ожидает" : "процедур ожидают"} оплаты
               </p>
-              <p className="text-xs text-[var(--warning)]/80">Перейти в раздел финансов</p>
+              <p className="text-caption text-[var(--warning)]/80">Перейти в раздел финансов</p>
             </div>
             <ChevronRight className="w-4 h-4 text-[var(--warning)]/60 shrink-0" />
           </button>
@@ -177,7 +177,7 @@ export function NotificationBell() {
 
         <ScrollArea className="max-h-96">
           {notifications.length === 0 && (
-            <div className="py-8 text-center text-sm text-[var(--text-secondary)]">
+            <div className="py-8 text-center text-caption text-[var(--text-secondary)]">
               {t("notifications.empty")}
             </div>
           )}

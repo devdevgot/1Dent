@@ -432,7 +432,7 @@ export default function StaffDetailPage() {
         ].filter(Boolean).join(" • ")}
         onBack={() => setLocation("/users")}
         icon={
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--ds-primary)] to-[var(--ds-primary)] flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-sm">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--ds-primary)] to-[var(--ds-primary)] flex items-center justify-center text-white font-bold text-caption shrink-0 shadow-sm">
             {getInitials(selectedUser.name)}
           </div>
         }
@@ -459,7 +459,7 @@ export default function StaffDetailPage() {
               className="overflow-hidden"
             >
               <div className="flex flex-wrap gap-2 items-center">
-                <span className="text-xs font-bold text-[var(--text-subtle)] mr-2 uppercase tracking-wider">Период:</span>
+                <span className="text-caption font-bold text-[var(--text-subtle)] mr-2 uppercase tracking-wider">Период:</span>
                 {[
                   { value: "today", label: "Сегодня" },
                   { value: "week", label: "На неделю" },
@@ -473,7 +473,7 @@ export default function StaffDetailPage() {
                       key={item.value}
                       onClick={() => setDateFilter(item.value as typeof dateFilter)}
                       className={cn(
-                        "px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200",
+                        "px-3 py-1.5 rounded-full text-caption font-semibold transition-all duration-200",
                         isActive
                           ? "bg-[var(--ds-primary)] text-white shadow-sm"
                           : "bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[var(--ds-border)] hover:text-[var(--text)]",
@@ -497,7 +497,7 @@ export default function StaffDetailPage() {
             metricsLoading ? (
               <div className="grid grid-cols-2 gap-4 sm:gap-6">
                 {Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="h-[130px] rounded-2xl bg-[#f1ede4]" />
+                  <Skeleton key={i} className="h-[130px] rounded-2xl bg-[var(--surface-2)]" />
                 ))}
               </div>
             ) : (
@@ -507,65 +507,65 @@ export default function StaffDetailPage() {
                 {/* Left Column: Rows 1, 2, 3 */}
                 <div className="flex flex-col gap-4">
                   {/* Card 1: Всего пациентов */}
-                  <div className="bg-white rounded-2xl border border-[#e8e3d9] p-4 sm:p-5 shadow-md hover:shadow-lg transition-all duration-200 flex flex-col justify-between h-[130px]">
+                  <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] p-4 sm:p-5 shadow-md hover:shadow-lg transition-all duration-200 flex flex-col justify-between h-[130px]">
                     <div>
-                      <h4 className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider truncate">Всего пациентов</h4>
-                      <span className="text-xl sm:text-2xl font-black text-[#0f172a] block mt-1 truncate">{totalPatientsCount}</span>
+                      <h4 className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider truncate">Всего пациентов</h4>
+                      <span className="text-xl sm:text-2xl font-black text-[var(--text)] block mt-1 truncate">{totalPatientsCount}</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#e8e3d9] items-center">
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[var(--ds-border)] items-center">
                       <div>
-                        <span className="text-[9px] text-[#94a3b8] block font-medium uppercase tracking-tight truncate">День</span>
-                        <span className="text-xs sm:text-sm font-semibold text-[#0f172a] block mt-0.5 truncate">{totalPatientsDay}</span>
+                        <span className="text-[9px] text-[var(--text-subtle)] block font-medium uppercase tracking-tight truncate">День</span>
+                        <span className="text-caption sm:text-sm font-semibold text-[var(--text)] block mt-0.5 truncate">{totalPatientsDay}</span>
                       </div>
                       <div>
-                        <span className="text-[9px] text-[#94a3b8] block font-medium uppercase tracking-tight truncate">Ночь</span>
-                        <span className="text-xs sm:text-sm font-semibold text-[#0f172a] block mt-0.5 truncate">{totalPatientsNight}</span>
+                        <span className="text-[9px] text-[var(--text-subtle)] block font-medium uppercase tracking-tight truncate">Ночь</span>
+                        <span className="text-caption sm:text-sm font-semibold text-[var(--text)] block mt-0.5 truncate">{totalPatientsNight}</span>
                       </div>
                     </div>
                   </div>
 
                   {/* Card 2: Принятые пациенты */}
-                  <div className="bg-white rounded-2xl border border-[#e8e3d9] p-4 sm:p-5 shadow-md hover:shadow-lg transition-all duration-200 flex flex-col justify-between h-[130px]">
+                  <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] p-4 sm:p-5 shadow-md hover:shadow-lg transition-all duration-200 flex flex-col justify-between h-[130px]">
                     <div>
-                      <h4 className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider truncate">Принятые пациенты</h4>
-                      <span className="text-xl sm:text-2xl font-black text-[#0f172a] block mt-1 truncate">{completedPatientsCount}</span>
+                      <h4 className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider truncate">Принятые пациенты</h4>
+                      <span className="text-xl sm:text-2xl font-black text-[var(--text)] block mt-1 truncate">{completedPatientsCount}</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#e8e3d9] items-center">
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[var(--ds-border)] items-center">
                       <div>
-                        <span className="text-[9px] text-[#94a3b8] block font-medium uppercase tracking-tight truncate">День</span>
-                        <span className="text-xs sm:text-sm font-semibold text-[#0f172a] block mt-0.5 truncate">{completedPatientsDay}</span>
+                        <span className="text-[9px] text-[var(--text-subtle)] block font-medium uppercase tracking-tight truncate">День</span>
+                        <span className="text-caption sm:text-sm font-semibold text-[var(--text)] block mt-0.5 truncate">{completedPatientsDay}</span>
                       </div>
                       <div>
-                        <span className="text-[9px] text-[#94a3b8] block font-medium uppercase tracking-tight truncate">Ночь</span>
-                        <span className="text-xs sm:text-sm font-semibold text-[#0f172a] block mt-0.5 truncate">{completedPatientsNight}</span>
+                        <span className="text-[9px] text-[var(--text-subtle)] block font-medium uppercase tracking-tight truncate">Ночь</span>
+                        <span className="text-caption sm:text-sm font-semibold text-[var(--text)] block mt-0.5 truncate">{completedPatientsNight}</span>
                       </div>
                     </div>
                   </div>
 
                   {/* Card 3: Конверсия приёма / Часы работы */}
-                  <div className="bg-white rounded-2xl border border-[#e8e3d9] p-4 sm:p-5 shadow-md hover:shadow-lg transition-all duration-200 flex flex-col justify-between h-[130px]">
+                  <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] p-4 sm:p-5 shadow-md hover:shadow-lg transition-all duration-200 flex flex-col justify-between h-[130px]">
                     <div>
-                      <h4 className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider truncate">
+                      <h4 className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider truncate">
                         {(isAssistant || salType === "hourly") ? "Часы работы" : "Конверсия приёма"}
                       </h4>
-                      <span className="text-xl sm:text-2xl font-black text-[#0f172a] block mt-1 truncate">
+                      <span className="text-xl sm:text-2xl font-black text-[var(--text)] block mt-1 truncate">
                         {(isAssistant || salType === "hourly") ? `${workHours.toFixed(1)} ч.` : `${conversionPercent}%`}
                       </span>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#e8e3d9] items-center">
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[var(--ds-border)] items-center">
                       <div>
-                        <span className="text-[9px] text-[#94a3b8] block font-medium uppercase tracking-tight truncate">
+                        <span className="text-[9px] text-[var(--text-subtle)] block font-medium uppercase tracking-tight truncate">
                           {(isAssistant || salType === "hourly") ? "Ставка" : "День"}
                         </span>
-                        <span className="text-xs sm:text-sm font-semibold text-[#0f172a] block mt-0.5 truncate">
+                        <span className="text-caption sm:text-sm font-semibold text-[var(--text)] block mt-0.5 truncate">
                           {(isAssistant || salType === "hourly") ? `₸${fixedSal.toLocaleString()}` : "—"}
                         </span>
                       </div>
                       <div>
-                        <span className="text-[9px] text-[#94a3b8] block font-medium uppercase tracking-tight truncate">
+                        <span className="text-[9px] text-[var(--text-subtle)] block font-medium uppercase tracking-tight truncate">
                           {(isAssistant || salType === "hourly") ? "Бонус" : "Ночь"}
                         </span>
-                        <span className="text-xs sm:text-sm font-semibold text-[#0f172a] block mt-0.5 truncate">
+                        <span className="text-caption sm:text-sm font-semibold text-[var(--text)] block mt-0.5 truncate">
                           {(isAssistant || salType === "hourly") ? `+${commPercent}%` : "—"}
                         </span>
                       </div>
@@ -576,57 +576,57 @@ export default function StaffDetailPage() {
                 {/* Right Column: Rows 4, 5, 6 */}
                 <div className="flex flex-col gap-4">
                   {/* Card 4: Выручка */}
-                  <div className="bg-white rounded-2xl border border-[#e8e3d9] p-4 sm:p-5 shadow-md hover:shadow-lg transition-all duration-200 flex flex-col justify-between h-[130px]">
+                  <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] p-4 sm:p-5 shadow-md hover:shadow-lg transition-all duration-200 flex flex-col justify-between h-[130px]">
                     <div>
-                      <h4 className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider truncate">
+                      <h4 className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider truncate">
                         {isDoctor ? "Общая выручка" : "Выручка клиники"}
                       </h4>
-                      <span className="text-xl sm:text-2xl font-black text-[#0f172a] block mt-1 truncate">₸{totalRevenue.toLocaleString()}</span>
+                      <span className="text-xl sm:text-2xl font-black text-[var(--text)] block mt-1 truncate">₸{totalRevenue.toLocaleString()}</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#e8e3d9] items-center">
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[var(--ds-border)] items-center">
                       <div>
-                        <span className="text-[9px] text-[#94a3b8] block font-medium uppercase tracking-tight truncate">День</span>
-                        <span className="text-xs sm:text-sm font-semibold text-[#0f172a] block mt-0.5 truncate">₸{dayRevenue.toLocaleString()}</span>
+                        <span className="text-[9px] text-[var(--text-subtle)] block font-medium uppercase tracking-tight truncate">День</span>
+                        <span className="text-caption sm:text-sm font-semibold text-[var(--text)] block mt-0.5 truncate">₸{dayRevenue.toLocaleString()}</span>
                       </div>
                       <div>
-                        <span className="text-[9px] text-[#94a3b8] block font-medium uppercase tracking-tight truncate">Ночь</span>
-                        <span className="text-xs sm:text-sm font-semibold text-[#0f172a] block mt-0.5 truncate">₸{nightRevenue.toLocaleString()}</span>
+                        <span className="text-[9px] text-[var(--text-subtle)] block font-medium uppercase tracking-tight truncate">Ночь</span>
+                        <span className="text-caption sm:text-sm font-semibold text-[var(--text)] block mt-0.5 truncate">₸{nightRevenue.toLocaleString()}</span>
                       </div>
                     </div>
                   </div>
 
                   {/* Card 5: Средний чек */}
-                  <div className="bg-white rounded-2xl border border-[#e8e3d9] p-4 sm:p-5 shadow-md hover:shadow-lg transition-all duration-200 flex flex-col justify-between h-[130px]">
+                  <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] p-4 sm:p-5 shadow-md hover:shadow-lg transition-all duration-200 flex flex-col justify-between h-[130px]">
                     <div>
-                      <h4 className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider truncate">Средний чек</h4>
-                      <span className="text-xl sm:text-2xl font-black text-[#0f172a] block mt-1 truncate">₸{avgCheckTotal.toLocaleString()}</span>
+                      <h4 className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider truncate">Средний чек</h4>
+                      <span className="text-xl sm:text-2xl font-black text-[var(--text)] block mt-1 truncate">₸{avgCheckTotal.toLocaleString()}</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#e8e3d9] items-center">
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[var(--ds-border)] items-center">
                       <div>
-                        <span className="text-[9px] text-[#94a3b8] block font-medium uppercase tracking-tight truncate">День</span>
-                        <span className="text-xs sm:text-sm font-semibold text-[#0f172a] block mt-0.5 truncate">₸{avgCheckDay.toLocaleString()}</span>
+                        <span className="text-[9px] text-[var(--text-subtle)] block font-medium uppercase tracking-tight truncate">День</span>
+                        <span className="text-caption sm:text-sm font-semibold text-[var(--text)] block mt-0.5 truncate">₸{avgCheckDay.toLocaleString()}</span>
                       </div>
                       <div>
-                        <span className="text-[9px] text-[#94a3b8] block font-medium uppercase tracking-tight truncate">Ночь</span>
-                        <span className="text-xs sm:text-sm font-semibold text-[#0f172a] block mt-0.5 truncate">₸{avgCheckNight.toLocaleString()}</span>
+                        <span className="text-[9px] text-[var(--text-subtle)] block font-medium uppercase tracking-tight truncate">Ночь</span>
+                        <span className="text-caption sm:text-sm font-semibold text-[var(--text)] block mt-0.5 truncate">₸{avgCheckNight.toLocaleString()}</span>
                       </div>
                     </div>
                   </div>
 
                   {/* Card 6: Выданный аванс */}
-                  <div className="bg-white rounded-2xl border border-[#e8e3d9] p-4 sm:p-5 shadow-md hover:shadow-lg transition-all duration-200 flex flex-col justify-between h-[130px]">
+                  <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] p-4 sm:p-5 shadow-md hover:shadow-lg transition-all duration-200 flex flex-col justify-between h-[130px]">
                     <div>
-                      <h4 className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider truncate">Выданный аванс</h4>
-                      <span className="text-xl sm:text-2xl font-black text-[#0f172a] block mt-1 truncate">₸{advance.toLocaleString()}</span>
+                      <h4 className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider truncate">Выданный аванс</h4>
+                      <span className="text-xl sm:text-2xl font-black text-[var(--text)] block mt-1 truncate">₸{advance.toLocaleString()}</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#e8e3d9] items-center">
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[var(--ds-border)] items-center">
                       <div>
-                        <span className="text-[9px] text-[#94a3b8] block font-medium uppercase tracking-tight truncate">День</span>
-                        <span className="text-xs sm:text-sm font-semibold text-[#94a3b8] block mt-0.5 truncate">—</span>
+                        <span className="text-[9px] text-[var(--text-subtle)] block font-medium uppercase tracking-tight truncate">День</span>
+                        <span className="text-caption sm:text-sm font-semibold text-[var(--text-subtle)] block mt-0.5 truncate">—</span>
                       </div>
                       <div>
-                        <span className="text-[9px] text-[#94a3b8] block font-medium uppercase tracking-tight truncate">Ночь</span>
-                        <span className="text-xs sm:text-sm font-semibold text-[#94a3b8] block mt-0.5 truncate">—</span>
+                        <span className="text-[9px] text-[var(--text-subtle)] block font-medium uppercase tracking-tight truncate">Ночь</span>
+                        <span className="text-caption sm:text-sm font-semibold text-[var(--text-subtle)] block mt-0.5 truncate">—</span>
                       </div>
                     </div>
                   </div>
@@ -634,7 +634,7 @@ export default function StaffDetailPage() {
 
               </div>
 
-              <div className="text-right text-xs text-[#94a3b8] mt-2">
+              <div className="text-right text-caption text-[var(--text-subtle)] mt-2">
                 Показатели рассчитаны автоматически на основании гео-событий трекера и завершенных процедур.
               </div>
             </div>
@@ -642,19 +642,19 @@ export default function StaffDetailPage() {
           ) : (
             <div className="grid grid-cols-2 gap-4 sm:gap-6">
               {/* Card 6: Выданный аванс for other employees */}
-              <div className="bg-white rounded-2xl border border-[#e8e3d9] p-4 sm:p-5 shadow-md hover:shadow-lg transition-all duration-200 flex flex-col justify-between h-[130px]">
+              <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] p-4 sm:p-5 shadow-md hover:shadow-lg transition-all duration-200 flex flex-col justify-between h-[130px]">
                 <div>
-                  <h4 className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider truncate">Выданный аванс</h4>
-                  <span className="text-xl sm:text-2xl font-black text-[#0f172a] block mt-1 truncate">₸{advance.toLocaleString()}</span>
+                  <h4 className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider truncate">Выданный аванс</h4>
+                  <span className="text-xl sm:text-2xl font-black text-[var(--text)] block mt-1 truncate">₸{advance.toLocaleString()}</span>
                 </div>
-                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#e8e3d9] items-center">
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[var(--ds-border)] items-center">
                   <div>
-                    <span className="text-[9px] text-[#94a3b8] block font-medium uppercase tracking-tight truncate">День</span>
-                    <span className="text-xs sm:text-sm font-semibold text-[#94a3b8] block mt-0.5 truncate">—</span>
+                    <span className="text-[9px] text-[var(--text-subtle)] block font-medium uppercase tracking-tight truncate">День</span>
+                    <span className="text-caption sm:text-sm font-semibold text-[var(--text-subtle)] block mt-0.5 truncate">—</span>
                   </div>
                   <div>
-                    <span className="text-[9px] text-[#94a3b8] block font-medium uppercase tracking-tight truncate">Ночь</span>
-                    <span className="text-xs sm:text-sm font-semibold text-[#94a3b8] block mt-0.5 truncate">—</span>
+                    <span className="text-[9px] text-[var(--text-subtle)] block font-medium uppercase tracking-tight truncate">Ночь</span>
+                    <span className="text-caption sm:text-sm font-semibold text-[var(--text-subtle)] block mt-0.5 truncate">—</span>
                   </div>
                 </div>
               </div>
@@ -663,21 +663,21 @@ export default function StaffDetailPage() {
           )}
 
           {/* Card 7: Зарплата (stretched full-width) */}
-          <div className="bg-white rounded-2xl border border-[#e8e3d9] p-6 shadow-md">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-[#e8e3d9]">
+          <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] p-6 shadow-md">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-[var(--ds-border)]">
               <div className="flex items-center gap-4">
                 <div className="h-12 w-12 rounded-2xl bg-[#1f75fe]/10 flex items-center justify-center shrink-0">
-                  <Wallet className="h-6 w-6 text-[#1f75fe]" />
+                  <Wallet className="h-6 w-6 text-[var(--ds-primary)]" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-[#0f172a]">Итого к выплате (ФОТ)</h3>
-                  <p className="text-[12px] text-[#94a3b8] font-medium">С учётом выданного аванса и выполненных процедур</p>
+                  <h3 className="text-base font-bold text-[var(--text)]">Итого к выплате (ФОТ)</h3>
+                  <p className="text-[12px] text-[var(--text-subtle)] font-medium">С учётом выданного аванса и выполненных процедур</p>
                 </div>
               </div>
 
               <div className="text-left lg:text-right">
-                <span className="text-[11px] font-semibold text-[#64748b] uppercase tracking-wider block">Итоговая сумма</span>
-                <span className="text-4xl font-black text-[#1f75fe] block mt-1">₸{finalSalary.toLocaleString()}</span>
+                <span className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider block">Итоговая сумма</span>
+                <span className="text-4xl font-black text-[var(--ds-primary)] block mt-1">₸{finalSalary.toLocaleString()}</span>
               </div>
             </div>
 
@@ -686,12 +686,12 @@ export default function StaffDetailPage() {
               
               {/* Formula explanation */}
               <div className="lg:col-span-2 space-y-4">
-                <h4 className="text-xs font-bold text-[#64748b] uppercase tracking-wider">Детализация начислений</h4>
+                <h4 className="text-caption font-bold text-[var(--text-secondary)] uppercase tracking-wider">Детализация начислений</h4>
                 
-                <div className="bg-[#faf8f4] rounded-2xl p-4 space-y-3">
+                <div className="bg-[var(--bg)] rounded-2xl p-4 space-y-3">
                   <div className="flex justify-between text-sm">
-                    <span className="text-[#64748b] font-medium">Схема начисления:</span>
-                    <span className="font-semibold text-[#0f172a]">
+                    <span className="text-[var(--text-secondary)] font-medium">Схема начисления:</span>
+                    <span className="font-semibold text-[var(--text)]">
                       {salType === "fixed" && "Оклад"}
                       {salType === "commission" && "Процент от выручки"}
                       {salType === "fixed_plus_commission" && "Оклад + Процент"}
@@ -700,59 +700,59 @@ export default function StaffDetailPage() {
                   </div>
                   {salType === "fixed" && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-[#64748b] font-medium">Фиксированный оклад:</span>
-                      <span className="font-semibold text-[#0f172a]">₸{fixedSal.toLocaleString()}</span>
+                      <span className="text-[var(--text-secondary)] font-medium">Фиксированный оклад:</span>
+                      <span className="font-semibold text-[var(--text)]">₸{fixedSal.toLocaleString()}</span>
                     </div>
                   )}
                   {salType === "commission" && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-[#64748b] font-medium">Комиссия ({commPercent}% от ₸{totalRevenue.toLocaleString()}):</span>
-                      <span className="font-semibold text-[#0f172a]">₸{calculatedSalary.toLocaleString()}</span>
+                      <span className="text-[var(--text-secondary)] font-medium">Комиссия ({commPercent}% от ₸{totalRevenue.toLocaleString()}):</span>
+                      <span className="font-semibold text-[var(--text)]">₸{calculatedSalary.toLocaleString()}</span>
                     </div>
                   )}
                   {salType === "fixed_plus_commission" && (
                     <>
                       <div className="flex justify-between text-sm">
-                        <span className="text-[#64748b] font-medium">Фиксированный оклад:</span>
-                        <span className="font-semibold text-[#0f172a]">₸{fixedSal.toLocaleString()}</span>
+                        <span className="text-[var(--text-secondary)] font-medium">Фиксированный оклад:</span>
+                        <span className="font-semibold text-[var(--text)]">₸{fixedSal.toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-[#64748b] font-medium">Комиссия ({commPercent}% от ₸{totalRevenue.toLocaleString()}):</span>
-                        <span className="font-semibold text-[#0f172a]">₸{((totalRevenue * commPercent) / 100).toLocaleString()}</span>
+                        <span className="text-[var(--text-secondary)] font-medium">Комиссия ({commPercent}% от ₸{totalRevenue.toLocaleString()}):</span>
+                        <span className="font-semibold text-[var(--text)]">₸{((totalRevenue * commPercent) / 100).toLocaleString()}</span>
                       </div>
                     </>
                   )}
                   {salType === "hourly" && (
                     <>
                       <div className="flex justify-between text-sm">
-                        <span className="text-[#64748b] font-medium">Отработано часов:</span>
-                        <span className="font-semibold text-[#0f172a]">{workHours.toFixed(1)} ч.</span>
+                        <span className="text-[var(--text-secondary)] font-medium">Отработано часов:</span>
+                        <span className="font-semibold text-[var(--text)]">{workHours.toFixed(1)} ч.</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-[#64748b] font-medium">Почасовая ставка:</span>
-                        <span className="font-semibold text-[#0f172a]">₸{fixedSal.toLocaleString()}/час</span>
+                        <span className="text-[var(--text-secondary)] font-medium">Почасовая ставка:</span>
+                        <span className="font-semibold text-[var(--text)]">₸{fixedSal.toLocaleString()}/час</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-[#64748b] font-medium">Оплата за часы:</span>
-                        <span className="font-semibold text-[#0f172a]">₸{Math.round(fixedSal * workHours).toLocaleString()}</span>
+                        <span className="text-[var(--text-secondary)] font-medium">Оплата за часы:</span>
+                        <span className="font-semibold text-[var(--text)]">₸{Math.round(fixedSal * workHours).toLocaleString()}</span>
                       </div>
                       {commPercent > 0 && (
                         <div className="flex justify-between text-sm">
-                          <span className="text-[#64748b] font-medium">Комиссия ({commPercent}% от ₸{totalRevenue.toLocaleString()}):</span>
-                          <span className="font-semibold text-[#0f172a]">₸{Math.round((totalRevenue * commPercent) / 100).toLocaleString()}</span>
+                          <span className="text-[var(--text-secondary)] font-medium">Комиссия ({commPercent}% от ₸{totalRevenue.toLocaleString()}):</span>
+                          <span className="font-semibold text-[var(--text)]">₸{Math.round((totalRevenue * commPercent) / 100).toLocaleString()}</span>
                         </div>
                       )}
                     </>
                   )}
-                  <div className="flex justify-between text-sm border-t border-[#e8e3d9]/60 pt-3">
-                    <span className="text-[#64748b] font-semibold">Всего начислено:</span>
-                    <span className="font-bold text-[#0f172a]">₸{calculatedSalary.toLocaleString()}</span>
+                  <div className="flex justify-between text-body border-t border-[var(--ds-border)]/60 pt-3">
+                    <span className="text-[var(--text-secondary)] font-semibold">Всего начислено:</span>
+                    <span className="font-bold text-[var(--text)]">₸{calculatedSalary.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between text-sm text-[#dc2626]">
+                  <div className="flex justify-between text-body text-[var(--danger)]">
                     <span className="font-semibold">Вычтено авансом:</span>
                     <span className="font-bold">- ₸{advance.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between text-sm border-t border-[#e8e3d9]/60 pt-3 text-[#1f75fe] font-bold">
+                  <div className="flex justify-between text-body border-t border-[var(--ds-border)]/60 pt-3 text-[var(--ds-primary)] font-bold">
                     <span>Итого к выплате:</span>
                     <span>₸{finalSalary.toLocaleString()}</span>
                   </div>
@@ -763,7 +763,7 @@ export default function StaffDetailPage() {
                   <div className="pt-2">
                     <button
                       onClick={() => setShowPayrollModal(true)}
-                      className="w-full py-3 bg-[#1f75fe] text-white text-sm font-semibold rounded-full hover:bg-[#1a65e8] hover:scale-105 transition-all flex items-center justify-center gap-2 shadow-md"
+                      className="w-full py-3 bg-[#1f75fe] text-white text-body font-semibold rounded-full hover:bg-[var(--primary-hover)] hover:scale-105 transition-all flex items-center justify-center gap-2 shadow-md"
                     >
                       <Banknote className="w-4 h-4" />
                       Утвердить выплату ФОТ
@@ -775,11 +775,11 @@ export default function StaffDetailPage() {
               {/* Action column (Edit settings / status) */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold text-[#64748b] uppercase tracking-wider">Параметры оплаты</h4>
+                  <h4 className="text-caption font-bold text-[var(--text-secondary)] uppercase tracking-wider">Параметры оплаты</h4>
                   {user?.role === "owner" && (
                     <button
                       onClick={() => setEditingSalary((v) => !v)}
-                      className="text-xs text-[#1f75fe] font-semibold hover:underline"
+                      className="text-caption text-[var(--ds-primary)] font-semibold hover:underline"
                     >
                       {editingSalary ? "Отмена" : "Изменить"}
                     </button>
@@ -787,13 +787,13 @@ export default function StaffDetailPage() {
                 </div>
 
                 {editingSalary ? (
-                  <div className="bg-[#faf8f4] rounded-2xl p-4 space-y-4">
+                  <div className="bg-[var(--bg)] rounded-2xl p-4 space-y-4">
                     <div>
-                      <label className="text-xs font-semibold text-[#64748b]">Тип начисления</label>
+                      <label className="text-caption font-semibold text-[var(--text-secondary)]">Тип начисления</label>
                       <select
                         value={salaryType}
                         onChange={(e) => setSalaryType(e.target.value as typeof salaryType)}
-                        className="mt-1 w-full border border-[#e8e3d9] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe] bg-white font-semibold text-[#0f172a]"
+                        className="mt-1 w-full border border-[var(--ds-border)] rounded-xl px-3 py-2 text-body focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe] bg-[var(--ds-surface)] font-semibold text-[var(--text)]"
                       >
                         <option value="fixed">Оклад</option>
                         <option value="commission">Процент от выручки</option>
@@ -803,7 +803,7 @@ export default function StaffDetailPage() {
                     </div>
                     {(salaryType === "fixed" || salaryType === "fixed_plus_commission" || salaryType === "hourly") && (
                       <div>
-                        <label className="text-xs font-semibold text-[#64748b]">
+                        <label className="text-caption font-semibold text-[var(--text-secondary)]">
                           {salaryType === "hourly" ? "Почасовая ставка (₸/час)" : "Сумма оклада (₸)"}
                         </label>
                         <input
@@ -811,13 +811,13 @@ export default function StaffDetailPage() {
                           min={0}
                           value={fixedAmount}
                           onChange={(e) => setFixedAmount(Number(e.target.value))}
-                          className="mt-1 w-full border border-[#e8e3d9] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe] bg-white font-bold text-[#0f172a]"
+                          className="mt-1 w-full border border-[var(--ds-border)] rounded-xl px-3 py-2 text-body focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe] bg-[var(--ds-surface)] font-bold text-[var(--text)]"
                         />
                       </div>
                     )}
                     {(salaryType === "commission" || salaryType === "fixed_plus_commission" || salaryType === "hourly") && (
                       <div>
-                        <label className="text-xs font-semibold text-[#64748b]">Процент комиссии (%)</label>
+                        <label className="text-caption font-semibold text-[var(--text-secondary)]">Процент комиссии (%)</label>
                         <input
                           type="number"
                           min={0}
@@ -825,23 +825,23 @@ export default function StaffDetailPage() {
                           step={0.5}
                           value={commissionPercent}
                           onChange={(e) => setCommissionPercent(Number(e.target.value))}
-                          className="mt-1 w-full border border-[#e8e3d9] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe] bg-white font-bold text-[#0f172a]"
+                          className="mt-1 w-full border border-[var(--ds-border)] rounded-xl px-3 py-2 text-body focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe] bg-[var(--ds-surface)] font-bold text-[var(--text)]"
                         />
                       </div>
                     )}
                     <button
                       onClick={handleSaveSettings}
                       disabled={savingSettings}
-                      className="w-full py-2 bg-[#1f75fe] text-white text-sm font-semibold rounded-full hover:bg-[#1a65e8] hover:scale-105 disabled:opacity-50 transition-all"
+                      className="w-full py-2 bg-[#1f75fe] text-white text-body font-semibold rounded-full hover:bg-[var(--primary-hover)] hover:scale-105 disabled:opacity-50 transition-all"
                     >
                       {savingSettings ? "Сохранение..." : "Сохранить"}
                     </button>
                   </div>
                 ) : settings ? (
-                  <div className="bg-[#faf8f4] rounded-2xl p-4 space-y-3">
+                  <div className="bg-[var(--bg)] rounded-2xl p-4 space-y-3">
                     <div>
-                      <p className="text-[11px] text-[#94a3b8] font-semibold uppercase">Схема начисления</p>
-                      <p className="text-sm font-bold text-[#0f172a] mt-0.5">
+                      <p className="text-[11px] text-[var(--text-subtle)] font-semibold uppercase">Схема начисления</p>
+                      <p className="text-body font-bold text-[var(--text)] mt-0.5">
                         {settings.salaryType === "fixed" ? "Оклад" :
                          settings.salaryType === "commission" ? "Процент от выручки" :
                          settings.salaryType === "fixed_plus_commission" ? "Оклад + Процент" :
@@ -850,10 +850,10 @@ export default function StaffDetailPage() {
                     </div>
                     {(settings.salaryType === "fixed" || settings.salaryType === "fixed_plus_commission" || settings.salaryType === "hourly") && (
                       <div>
-                        <p className="text-[11px] text-[#94a3b8] font-semibold uppercase">
+                        <p className="text-[11px] text-[var(--text-subtle)] font-semibold uppercase">
                           {settings.salaryType === "hourly" ? "Почасовая ставка" : "Размер оклада"}
                         </p>
-                        <p className="text-sm font-bold text-[#0f172a] mt-0.5">
+                        <p className="text-body font-bold text-[var(--text)] mt-0.5">
                           ₸{Number(settings.fixedAmount).toLocaleString()}
                           {settings.salaryType === "hourly" && " / час"}
                         </p>
@@ -861,14 +861,14 @@ export default function StaffDetailPage() {
                     )}
                     {(settings.salaryType === "commission" || settings.salaryType === "fixed_plus_commission" || settings.salaryType === "hourly") && (
                       <div>
-                        <p className="text-[11px] text-[#94a3b8] font-semibold uppercase">Процентная ставка</p>
-                        <p className="text-sm font-bold text-[#0f172a] mt-0.5">{settings.commissionPercent}%</p>
+                        <p className="text-[11px] text-[var(--text-subtle)] font-semibold uppercase">Процентная ставка</p>
+                        <p className="text-body font-bold text-[var(--text)] mt-0.5">{settings.commissionPercent}%</p>
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div className="bg-[#faf8f4] rounded-2xl p-4 text-center">
-                    <p className="text-sm text-[#94a3b8] font-medium">Схема оплаты не настроена</p>
+                  <div className="bg-[var(--bg)] rounded-2xl p-4 text-center">
+                    <p className="text-body text-[var(--text-subtle)] font-medium">Схема оплаты не настроена</p>
                   </div>
                 )}
               </div>
@@ -877,54 +877,54 @@ export default function StaffDetailPage() {
 
             {/* History collapse */}
             {canManagePayroll && (
-              <div className="mt-8 pt-6 border-t border-[#e8e3d9]">
+              <div className="mt-8 pt-6 border-t border-[var(--ds-border)]">
                 <details className="group">
                   <summary className="list-none flex items-center justify-between cursor-pointer select-none">
-                    <span className="text-xs font-bold text-[#64748b] uppercase tracking-wider">История начислений и выплат</span>
-                    <span className="text-xs text-[#1f75fe] font-semibold group-open:hidden">Показать историю</span>
-                    <span className="text-xs text-[#1f75fe] font-semibold hidden group-open:inline">Скрыть историю</span>
+                    <span className="text-caption font-bold text-[var(--text-secondary)] uppercase tracking-wider">История начислений и выплат</span>
+                    <span className="text-caption text-[var(--ds-primary)] font-semibold group-open:hidden">Показать историю</span>
+                    <span className="text-caption text-[var(--ds-primary)] font-semibold hidden group-open:inline">Скрыть историю</span>
                   </summary>
 
                   <div className="mt-4 pt-2">
                     {payrollRecords.length === 0 ? (
-                      <div className="text-center py-8 text-sm text-[#94a3b8] font-medium">Записи о начислениях отсутствуют</div>
+                      <div className="text-center py-8 text-body text-[var(--text-subtle)] font-medium">Записи о начислениях отсутствуют</div>
                     ) : (
-                      <div className="overflow-x-auto rounded-xl border border-[#e8e3d9]">
-                        <table className="w-full text-sm text-left">
+                      <div className="overflow-x-auto rounded-xl border border-[var(--ds-border)]">
+                        <table className="w-full text-body text-left">
                           <thead>
-                            <tr className="bg-[#faf8f4] border-b border-[#e8e3d9]">
-                              <th className="px-4 py-3 text-xs font-bold text-[#64748b] uppercase">Период</th>
-                              <th className="px-4 py-3 text-xs font-bold text-[#64748b] uppercase text-right">Базовая выручка</th>
-                              <th className="px-4 py-3 text-xs font-bold text-[#64748b] uppercase text-right">Расчитано</th>
-                              <th className="px-4 py-3 text-xs font-bold text-[#64748b] uppercase text-right">Выплачено</th>
-                              <th className="px-4 py-3 text-xs font-bold text-[#64748b] uppercase text-center">Статус</th>
+                            <tr className="bg-[var(--bg)] border-b border-[var(--ds-border)]">
+                              <th className="px-4 py-3 text-caption font-bold text-[var(--text-secondary)] uppercase">Период</th>
+                              <th className="px-4 py-3 text-caption font-bold text-[var(--text-secondary)] uppercase text-right">Базовая выручка</th>
+                              <th className="px-4 py-3 text-caption font-bold text-[var(--text-secondary)] uppercase text-right">Расчитано</th>
+                              <th className="px-4 py-3 text-caption font-bold text-[var(--text-secondary)] uppercase text-right">Выплачено</th>
+                              <th className="px-4 py-3 text-caption font-bold text-[var(--text-secondary)] uppercase text-center">Статус</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-[#e8e3d9]">
                             {payrollRecords.map((r) => {
                               if (!r) return null;
                               return (
-                                <tr key={r.id} className="hover:bg-[#faf8f4] transition-colors">
-                                  <td className="px-4 py-3 font-semibold text-[#0f172a]">
+                                <tr key={r.id} className="hover:bg-[var(--bg)] transition-colors">
+                                  <td className="px-4 py-3 font-semibold text-[var(--text)]">
                                     {(r.periodMonth ?? "").toString().padStart(2, "0")}/{r.periodYear ?? ""}
                                   </td>
-                                  <td className="px-4 py-3 text-right text-[#64748b] font-medium">
+                                  <td className="px-4 py-3 text-right text-[var(--text-secondary)] font-medium">
                                     ₸{Number(r.revenueBase).toLocaleString("ru-KZ")}
                                   </td>
-                                  <td className="px-4 py-3 text-right font-bold text-[#0f172a]">
+                                  <td className="px-4 py-3 text-right font-bold text-[var(--text)]">
                                     ₸{Number(r.calculatedAmount).toLocaleString("ru-KZ")}
                                   </td>
-                                  <td className="px-4 py-3 text-right text-[#16a34a] font-bold">
+                                  <td className="px-4 py-3 text-right text-[var(--success)] font-bold">
                                     {r.approvedAmount ? `₸${Number(r.approvedAmount).toLocaleString("ru-KZ")}` : "—"}
                                   </td>
                                   <td className="px-4 py-3 text-center">
                                     {r.status === "approved" || r.status === "paid" ? (
-                                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#16a34a] bg-[#f0fdf4] px-2 py-0.5 rounded-full">
+                                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[var(--success)] bg-[#f0fdf4] px-2 py-0.5 rounded-full">
                                         <CheckCircle className="w-3 h-3" />
                                         {r.status === "paid" ? "Выплачено" : "Утверждено"}
                                       </span>
                                     ) : (
-                                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#d97706] bg-[#fef3c7] px-2 py-0.5 rounded-full">
+                                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[var(--warning)] bg-[#fef3c7] px-2 py-0.5 rounded-full">
                                         <Clock className="w-3 h-3" />
                                         Ожидает
                                       </span>

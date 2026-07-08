@@ -46,28 +46,28 @@ export function TabletPairingCodeModal({
     >
       <div className="flex flex-col items-center font-manrope text-center">
         {cabinetName && (
-          <p className="mb-1 text-sm font-semibold text-[#0f172a]">{cabinetName}</p>
+          <p className="mb-1 text-body font-semibold text-[var(--text)]">{cabinetName}</p>
         )}
-        <p className="mb-4 text-xs text-[#64748b]">
+        <p className="mb-4 text-caption text-[var(--text-secondary)]">
           Код виден только на вашем телефоне. Подтвердите подключение планшета к клинике.
         </p>
 
         {code && (
           <>
             <div className="mb-2 flex items-center gap-3">
-              <span className="font-mono text-4xl font-extrabold tracking-[0.35em] text-[#0f172a]">
+              <span className="font-mono text-4xl font-extrabold tracking-[0.35em] text-[var(--text)]">
                 {code}
               </span>
               <button
                 type="button"
                 onClick={() => void copyCode()}
-                className="rounded-xl p-2 text-[#64748b] hover:bg-[#f1ede4]"
+                className="rounded-xl p-2 text-[var(--text-secondary)] hover:bg-[var(--surface-2)]"
                 aria-label="Скопировать код"
               >
                 {copied ? <Check className="h-5 w-5 text-green-600" /> : <Copy className="h-5 w-5" />}
               </button>
             </div>
-            <p className="mb-4 max-w-xs text-sm leading-relaxed text-[#64748b]">
+            <p className="mb-4 max-w-xs text-body leading-relaxed text-[var(--text-secondary)]">
               Этот код не отображается на планшете. Нажмите «Подтвердить», чтобы привязать кабинет.
             </p>
           </>

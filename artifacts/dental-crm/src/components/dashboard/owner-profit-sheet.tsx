@@ -281,26 +281,26 @@ export function OwnerProfitSheet({
           side="bottom"
           className="dash-sheet rounded-t-3xl p-0 pb-6 gap-0 max-h-[92dvh] overflow-y-auto"
         >
-          <div className="sticky top-0 z-10 bg-white border-b border-[#f1ede4] px-5 pt-5 pb-3 rounded-t-3xl">
+          <div className="sticky top-0 z-10 bg-[var(--ds-surface)] border-b border-[#f1ede4] px-5 pt-5 pb-3 rounded-t-3xl">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <h2 className="text-lg font-bold text-[#0f172a] truncate">{branchName}</h2>
-                <p className="text-xs font-medium text-[#64748b] mt-0.5">Прибыль и аналитика</p>
+                <h2 className="text-lg font-bold text-[var(--text)] truncate">{branchName}</h2>
+                <p className="text-caption font-medium text-[var(--text-secondary)] mt-0.5">Прибыль и аналитика</p>
               </div>
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
-                className="w-9 h-9 rounded-full bg-[#f1ede4] flex items-center justify-center text-[#64748b] shrink-0"
+                className="w-9 h-9 rounded-full bg-[var(--surface-2)] flex items-center justify-center text-[var(--text-secondary)] shrink-0"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="mt-3 flex items-center gap-1.5 text-sm font-semibold text-[#0f172a] min-w-0">
-              <CalendarDays className="w-4 h-4 text-[#1f75fe] shrink-0" />
+            <div className="mt-3 flex items-center gap-1.5 text-body font-semibold text-[var(--text)] min-w-0">
+              <CalendarDays className="w-4 h-4 text-[var(--ds-primary)] shrink-0" />
               <span className="capitalize truncate">{filterLabel}</span>
-              <span className="text-[#94a3b8] font-medium">·</span>
-              <span className="capitalize truncate text-[#64748b] font-medium">{dateRangeLabel}</span>
+              <span className="text-[var(--text-subtle)] font-medium">·</span>
+              <span className="capitalize truncate text-[var(--text-secondary)] font-medium">{dateRangeLabel}</span>
             </div>
           </div>
 
@@ -340,10 +340,10 @@ export function OwnerProfitSheet({
                         <Icon className="w-5 h-5" style={{ color: stat.color }} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-[#0f172a]">{stat.label}</p>
-                        <p className="text-xs text-[#94a3b8]">{stat.percent}%</p>
+                        <p className="text-body font-semibold text-[var(--text)]">{stat.label}</p>
+                        <p className="text-caption text-[var(--text-subtle)]">{stat.percent}%</p>
                       </div>
-                      <span className="text-sm font-bold text-[#0f172a] shrink-0">
+                      <span className="text-body font-bold text-[var(--text)] shrink-0">
                         {fmtRevenue(stat.amount)}
                       </span>
                     </motion.div>
@@ -360,12 +360,12 @@ export function OwnerProfitSheet({
         <SheetContent side="bottom" className="dash-sheet rounded-t-3xl p-0 pb-8 gap-0 max-h-[85dvh] overflow-y-auto">
           <div className="flex items-center justify-between px-5 pt-4 pb-2">
             <div>
-              <h2 className="text-base font-bold text-[#0f172a]">Детальная аналитика</h2>
-              <p className="text-[11px] font-medium text-[#94a3b8] mt-0.5">
+              <h2 className="text-base font-bold text-[var(--text)]">Детальная аналитика</h2>
+              <p className="text-micro font-medium text-[var(--text-subtle)] mt-0.5">
                 {activeTab === "channels" ? `Период: ${dateRangeLabel}` : "За всё время"}
               </p>
             </div>
-            <button type="button" onClick={() => setDetailsOpen(false)} className="w-8 h-8 rounded-full bg-[#f1ede4] flex items-center justify-center text-[#64748b]">
+            <button type="button" onClick={() => setDetailsOpen(false)} className="w-8 h-8 rounded-full bg-[var(--surface-2)] flex items-center justify-center text-[var(--text-secondary)]">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -391,20 +391,20 @@ export function OwnerProfitSheet({
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-baseline mb-1">
-                        <p className="text-xs font-semibold text-[#0f172a] truncate pr-2">{stat.name}</p>
-                        <span className="text-xs font-bold text-[#0f172a] shrink-0">{fmtRevenue(stat.amount)}</span>
+                        <p className="text-caption font-semibold text-[var(--text)] truncate pr-2">{stat.name}</p>
+                        <span className="text-caption font-bold text-[var(--text)] shrink-0">{fmtRevenue(stat.amount)}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-[#f1ede4] rounded-full h-1.5 overflow-hidden">
-                          <div className="h-1.5 rounded-full bg-[#1f75fe]" style={{ width: `${stat.percent}%` }} />
+                        <div className="flex-1 bg-[var(--surface-2)] rounded-full h-1.5 overflow-hidden">
+                          <div className="h-1.5 rounded-full bg-[var(--ds-primary)]" style={{ width: `${stat.percent}%` }} />
                         </div>
-                        <span className="text-[9px] font-bold text-[#94a3b8] shrink-0 w-7 text-right">{stat.percent}%</span>
+                        <span className="text-micro font-bold text-[var(--text-subtle)] shrink-0 w-7 text-right">{stat.percent}%</span>
                       </div>
                     </div>
                   </div>
                 ))
               ) : (
-                <p className="py-8 text-center text-xs text-[#94a3b8]">Нет данных по источникам пациентов за этот период</p>
+                <p className="py-8 text-center text-caption text-[var(--text-subtle)]">Нет данных по источникам пациентов за этот период</p>
               )
             ) : conditionStats.length > 0 ? (
               conditionStats.map((stat) => (
@@ -414,20 +414,20 @@ export function OwnerProfitSheet({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-baseline mb-1">
-                      <p className="text-xs font-semibold text-[#0f172a] truncate pr-2">{stat.label}</p>
-                      <span className="text-xs font-bold text-[#0f172a] shrink-0">{stat.count} пац.</span>
+                      <p className="text-caption font-semibold text-[var(--text)] truncate pr-2">{stat.label}</p>
+                      <span className="text-caption font-bold text-[var(--text)] shrink-0">{stat.count} пац.</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-[#f1ede4] rounded-full h-1.5 overflow-hidden">
+                      <div className="flex-1 bg-[var(--surface-2)] rounded-full h-1.5 overflow-hidden">
                         <div className="h-1.5 rounded-full" style={{ width: `${stat.percent}%`, backgroundColor: stat.color }} />
                       </div>
-                      <span className="text-[9px] font-bold text-[#94a3b8] shrink-0 w-7 text-right">{stat.percent}%</span>
+                      <span className="text-micro font-bold text-[var(--text-subtle)] shrink-0 w-7 text-right">{stat.percent}%</span>
                     </div>
                   </div>
                 </div>
               ))
             ) : (
-              <p className="py-8 text-center text-xs text-[#94a3b8]">Нет данных по видам лечения</p>
+              <p className="py-8 text-center text-caption text-[var(--text-subtle)]">Нет данных по видам лечения</p>
             )}
           </div>
         </SheetContent>

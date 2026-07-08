@@ -40,10 +40,10 @@ export function RevenueEmptyState() {
       <h3 className="text-lg font-bold text-[var(--text)] tracking-tight">
         {t("ownerDashboard.revenueEmptyTitle")}
       </h3>
-      <p className="text-sm text-[var(--text-secondary)] mt-2 max-w-[300px] leading-relaxed">
+      <p className="text-caption text-[var(--text-secondary)] mt-2 max-w-[300px] leading-relaxed">
         {t("ownerDashboard.revenueEmptyDesc")}
       </p>
-      <p className="text-xs text-[var(--text-subtle)] mt-2.5 max-w-[280px] leading-relaxed">
+      <p className="text-caption text-[var(--text-subtle)] mt-2.5 max-w-[280px] leading-relaxed">
         {t("ownerDashboard.revenueEmptyHint")}
       </p>
 
