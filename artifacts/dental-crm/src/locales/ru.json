@@ -111,12 +111,17 @@
     "errorDesc": "Не удалось выйти из системы. Попробуйте снова."
   },
   "menuPage": {
-    "title": "Меню",
+    "title": "Сервисы",
     "settings": "Настройки",
     "language": "Язык приложения",
     "notifications": "Уведомления",
     "noShortcuts": "Нет доступных разделов",
-    "copyright": "© 2025 1Dent"
+    "copyright": "© 2025 1Dent",
+    "categoryClinic": "Клиника",
+    "categoryFinance": "Финансы",
+    "categoryAutomation": "Автоматизация",
+    "categoryAdmin": "Администрирование",
+    "categoryWarehouse": "Склад"
   },
   "role": {
     "owner": "Владелец",

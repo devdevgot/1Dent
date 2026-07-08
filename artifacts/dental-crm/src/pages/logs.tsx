@@ -153,7 +153,7 @@ export default function LogsPage() {
         title={t("logs.title")}
         subtitle={t("logs.subtitle", "Аудит всех изменений в системе")}
         icon={<Activity className="w-5 h-5 animate-pulse" strokeWidth={1.8} />}
-        onBack={() => navigate("/menu")}
+        onBack={() => navigate("/account-settings")}
       />
 
       <div className="p-4 space-y-4 max-w-7xl mx-auto">

@@ -1,10 +1,19 @@
-import { useState, useRef } from "react";
-import { useLocation } from "wouter";
+import { useState, useRef, useEffect } from "react";
+import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { useAuthStore } from "@/hooks/use-auth";
-import { ChevronRight, User, Mail, Lock, Camera, Banknote, CheckCircle, Clock } from "lucide-react";
-import { useGetMyPayrollRecords, useUpdateProfile, type PayrollRecord } from "@workspace/api-client-react";
+import { ChevronRight, User, Mail, Lock, Camera, Banknote, CheckCircle, Clock, LogOut, Bell } from "lucide-react";
+import {
+  useGetMyPayrollRecords,
+  useUpdateProfile,
+  useLogout,
+  type PayrollRecord,
+} from "@workspace/api-client-react";
+import { clearAuthToken } from "@/lib/auth-token";
+import { clearBranchContext } from "@/lib/branch-context";
+import { clearPersistedQueryCache } from "@/lib/query-persist";
 import { useTranslation } from "react-i18next";
+import i18n from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import PhotoCropModal from "@/components/account/photo-crop-modal";
@@ -12,6 +21,14 @@ import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { IosGroup, IosGroupRow, IosSection } from "@/components/layout/ios-group";
 import { Button } from "@/components/ui/button";
+
+const SUPPORTED_LANGS = ["ru", "kz", "en"] as const;
+type Lang = (typeof SUPPORTED_LANGS)[number];
+
+function normalizeLang(value: string | undefined): Lang {
+  const base = value?.split("-")[0]?.toLowerCase();
+  return SUPPORTED_LANGS.includes(base as Lang) ? (base as Lang) : "ru";
+}
 
 const rowMotion = {
   hidden: { opacity: 0, y: 8 },
@@ -25,12 +42,19 @@ const rowMotion = {
 export default function AccountSettings() {
   const { t } = useTranslation();
   const [, setLocation] = useLocation();
-  const { user, clinic, setAuth } = useAuthStore();
+  const { user, clinic, setAuth, clearAuth } = useAuthStore();
   const { toast } = useToast();
+  const [currentLang, setCurrentLang] = useState<Lang>(() => normalizeLang(i18n.language));
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isCropOpen, setIsCropOpen] = useState(false);
+
+  useEffect(() => {
+    const handleLanguageChanged = (lang: string) => setCurrentLang(normalizeLang(lang));
+    i18n.on("languageChanged", handleLanguageChanged);
+    return () => i18n.off("languageChanged", handleLanguageChanged);
+  }, []);
 
   const { data: myPayrollData } = useGetMyPayrollRecords();
   const myRecords: PayrollRecord[] = myPayrollData?.data?.records ?? [];
@@ -63,6 +87,25 @@ export default function AccountSettings() {
     },
   });
 
+  const logoutMutation = useLogout({
+    mutation: {
+      onSuccess: () => {
+        clearPersistedQueryCache();
+        clearBranchContext();
+        clearAuthToken();
+        clearAuth();
+        setLocation("/login");
+      },
+      onError: () => {
+        toast({
+          title: t("account.errorTitle"),
+          description: t("account.errorDesc"),
+          variant: "destructive",
+        });
+      },
+    },
+  });
+
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -77,6 +120,11 @@ export default function AccountSettings() {
 
   const handleCropComplete = async (croppedBase64: string) => {
     await updateMutation.mutateAsync({ photoUrl: croppedBase64 });
+  };
+
+  const handleLangChange = (lang: Lang) => {
+    void i18n.changeLanguage(lang);
+    setCurrentLang(lang);
   };
 
   const photoUrl = (user as typeof user & { photoUrl?: string | null })?.photoUrl;
@@ -107,13 +155,8 @@ export default function AccountSettings() {
   ];
 
   return (
-    <PageShell animate={false}>
-      <PageHeader
-        title={t("settingsPage.accountTitle")}
-        onBack={() => setLocation("/menu")}
-        backLabel={t("common.back")}
-        sticky
-      />
+    <PageShell animate={false} className="pb-6">
+      <PageHeader title={t("nav.more")} sticky />
 
       <div className="px-4 py-6 space-y-5">
         <motion.div
@@ -145,6 +188,8 @@ export default function AccountSettings() {
             className="hidden"
             onChange={handlePhotoSelect}
           />
+          <p className="font-semibold text-[#0f172a] text-body leading-tight">{user?.name}</p>
+          <p className="text-caption text-[#64748b]">{user?.email}</p>
           <Button
             variant="link"
             size="sm"
@@ -155,7 +200,7 @@ export default function AccountSettings() {
           </Button>
         </motion.div>
 
-        <IosSection>
+        <IosSection title={t("settingsPage.profile")}>
           <IosGroup>
             {items.map((item, index) => (
               <motion.div
@@ -241,6 +286,75 @@ export default function AccountSettings() {
             </IosGroup>
           </IosSection>
         )}
+
+        {user?.role !== "admin" && (
+          <IosSection title={t("menuPage.settings")}>
+            <IosGroup>
+              <IosGroupRow className="gap-2">
+                <span className="text-body shrink-0">{t("menuPage.language")}</span>
+                <div className="flex bg-[#f1ede4] rounded-lg p-0.5 shrink-0 ml-auto font-lang">
+                  {SUPPORTED_LANGS.map((lang) => (
+                    <button
+                      key={lang}
+                      type="button"
+                      onClick={() => handleLangChange(lang)}
+                      className={cn(
+                        "min-w-[2.5rem] text-center text-caption font-semibold px-2 py-1 rounded-md transition-all",
+                        currentLang === lang
+                          ? "bg-white text-[#1f75fe] shadow-sm"
+                          : "text-[#64748b] hover:text-[#0f172a]",
+                      )}
+                    >
+                      {t(`lang.${lang}`)}
+                    </button>
+                  ))}
+                </div>
+              </IosGroupRow>
+
+              <Link href="/ai-credits" className="block">
+                <IosGroupRow className="border-b-0">
+                  <span className="text-body">{t("nav.aiCredits")}</span>
+                  <ChevronRight className="w-4 h-4 text-[#94a3b8] shrink-0" />
+                </IosGroupRow>
+              </Link>
+
+              {user?.role === "owner" && (
+                <Link href="/logs" className="block">
+                  <IosGroupRow>
+                    <span className="text-body">{t("nav.logs")}</span>
+                    <ChevronRight className="w-4 h-4 text-[#94a3b8] shrink-0" />
+                  </IosGroupRow>
+                </Link>
+              )}
+
+              <IosGroupRow>
+                <span className="text-body">{t("menuPage.notifications")}</span>
+                <div className="flex items-center gap-1 text-[#94a3b8]">
+                  <Bell className="w-4 h-4" />
+                  <ChevronRight className="w-4 h-4" />
+                </div>
+              </IosGroupRow>
+            </IosGroup>
+          </IosSection>
+        )}
+
+        <IosSection>
+          <Button
+            variant="outline"
+            className="w-full justify-start gap-3 h-auto py-3.5 text-[#dc2626] border-[#e8e3d9] hover:text-[#dc2626] hover:bg-[#fef2f2]"
+            onClick={() => logoutMutation.mutate()}
+            disabled={logoutMutation.isPending}
+          >
+            <LogOut className="w-[18px] h-[18px] shrink-0" />
+            <span className="text-body font-medium">
+              {logoutMutation.isPending ? t("account.signingOut") : t("account.signOut")}
+            </span>
+          </Button>
+        </IosSection>
+
+        <p className="text-center text-caption text-[#94a3b8]">
+          {t("menuPage.copyright")}
+        </p>
       </div>
 
       {selectedImage && (
