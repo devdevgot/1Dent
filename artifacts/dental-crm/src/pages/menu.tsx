@@ -164,7 +164,12 @@ export default function MenuPage() {
                     ) : (
                       <item.icon className="w-6 h-6 text-[#1f75fe]" strokeWidth={1.8} />
                     )}
-                    <span className="text-micro text-[#64748b] text-center leading-tight font-medium line-clamp-2">
+                    <span
+                      className={cn(
+                        "text-micro text-[#64748b] text-center leading-tight line-clamp-2",
+                        item.href === "/patients" ? "font-semibold" : "font-medium",
+                      )}
+                    >
                       {item.name}
                     </span>
                   </Link>
