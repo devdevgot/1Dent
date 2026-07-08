@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 import WebApp from "@twa-dev/sdk";
 
-export function useTgBackButton(onBack: () => void) {
+export function useTgBackButton(onBack: () => void, enabled = true) {
   useEffect(() => {
+    if (!enabled) return;
     const handler = () => onBack();
     try {
       WebApp.BackButton.show();
@@ -18,7 +19,7 @@ export function useTgBackButton(onBack: () => void) {
         // not in TMA context
       }
     };
-  }, [onBack]);
+  }, [onBack, enabled]);
 }
 
 export function haptic(type: "light" | "medium" | "heavy" | "rigid" | "soft" = "light") {

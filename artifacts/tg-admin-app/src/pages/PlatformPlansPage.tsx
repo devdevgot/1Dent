@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
-import { haptic, hapticNotify, useTgBackButton } from "../hooks/useTgBackButton";
+import { haptic, hapticNotify } from "../hooks/useTgBackButton";
+import { TmaPage } from "@/components/layout/tma-page";
 
 interface PlanLimits {
   staff: number;
@@ -36,7 +37,6 @@ function fmt(n: number) {
 
 export default function PlatformPlansPage() {
   const navigate = useNavigate();
-  useTgBackButton(() => navigate("/content"));
   const qc = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -80,15 +80,19 @@ export default function PlatformPlansPage() {
   };
 
   if (isLoading || !working) {
-    return <div className="p-6 text-sm text-muted-foreground">Загрузка тарифов...</div>;
+    return (
+      <TmaPage title="Тарифы" onBack={() => navigate("/content")}>
+        <p className="text-sm text-[#64748b]">Загрузка тарифов...</p>
+      </TmaPage>
+    );
   }
 
   return (
-    <div className="px-4 pt-5 pb-4 space-y-4">
-      <div>
-        <h1 className="text-xl font-bold text-foreground">Тарифы</h1>
-        <p className="text-sm text-muted-foreground">Цены и лимиты применяются ко всем клиникам</p>
-      </div>
+    <TmaPage
+      title="Тарифы"
+      subtitle="Цены и лимиты применяются ко всем клиникам"
+      onBack={() => navigate("/content")}
+    >
 
       <div className="rounded-xl border border-border bg-card p-4 space-y-3">
         <p className="text-sm font-semibold">Общие параметры</p>
@@ -189,6 +193,6 @@ export default function PlatformPlansPage() {
       >
         {save.isPending ? "Сохранение..." : "Сохранить тарифы"}
       </button>
-    </div>
+    </TmaPage>
   );
 }

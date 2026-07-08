@@ -1,8 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Plus, Search } from "lucide-react";
 import { api, type Clinic } from "../lib/api";
 import { haptic, hapticNotify, tgConfirm, tgAlert } from "../hooks/useTgBackButton";
+import { TmaPage } from "@/components/layout/tma-page";
+import { PageHeaderAddButton } from "@/components/layout/page-header";
+import { EmptyState } from "@/components/empty-state";
 
 const planColors: Record<string, string> = {
   free: "bg-muted text-muted-foreground",
@@ -67,17 +71,17 @@ export default function ClinicsPage() {
   );
 
   return (
-    <div className="px-4 pt-6 space-y-4 pb-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-foreground">Клиники</h1>
-          <p className="text-sm text-muted-foreground">{clinics.length} клиник</p>
-        </div>
-        <button
+    <TmaPage
+      title="Клиники"
+      subtitle={`${clinics.length} клиник`}
+      withTabBarOffset
+      right={
+        <PageHeaderAddButton
+          title="Добавить клинику"
           onClick={() => { haptic("medium"); setShowCreate(true); }}
-          className="w-9 h-9 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xl font-bold"
-        >+</button>
-      </div>
+        />
+      }
+    >
 
       {showCreate && (
         <div className="bg-card border border-border rounded-xl p-4 space-y-3">
@@ -127,12 +131,15 @@ export default function ClinicsPage() {
         </div>
       )}
 
-      <input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="🔍 Поиск клиники..."
-        className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary"
-      />
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8]" />
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Поиск клиники..."
+          className="w-full bg-white border border-[#e8e3d9] rounded-xl pl-9 pr-3 py-2.5 text-sm text-[#0f172a] focus:outline-none focus:border-[#1f75fe]"
+        />
+      </div>
 
       <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
         <input
@@ -185,12 +192,9 @@ export default function ClinicsPage() {
             </div>
           ))}
         {!isLoading && !clinics.length && (
-          <div className="py-10 text-center">
-            <p className="text-3xl mb-2">🏥</p>
-            <p className="text-sm text-muted-foreground">Клиники не найдены</p>
-          </div>
+          <EmptyState text="Клиники не найдены" />
         )}
       </div>
-    </div>
+    </TmaPage>
   );
 }
