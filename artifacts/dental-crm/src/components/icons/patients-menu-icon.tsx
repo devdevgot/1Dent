@@ -1,27 +1,27 @@
 import { cn } from "@/lib/utils";
 
-const PATIENTS_ICON_SIZE = "2.75rem"; // 44px
-const PATIENTS_LABEL_WIDTH = "2.5rem"; // 40px — чуть уже иконки
+const PATIENTS_TILE_SIZE = "3.25rem"; // 52px — squircle tile like reference
+const PATIENTS_LABEL_WIDTH = "2.875rem"; // 46px — чуть уже плитки
 
 type PatientsMenuTileProps = {
   label: string;
   className?: string;
 };
 
-/** «Пациенты» tile: крупная иконка + компактная подпись той же ширины (чуть уже). */
+/** «Пациенты» tile in reference style: pastel squircle + 3D object + bold label. */
 export function PatientsMenuTile({ label, className }: PatientsMenuTileProps) {
   return (
-    <div className={cn("flex flex-col items-center gap-1", className)}>
+    <div className={cn("flex flex-col items-center gap-1.5", className)}>
       <img
         src="/icons/patients-menu.svg"
         alt=""
         aria-hidden
         className="shrink-0 object-contain"
-        style={{ width: PATIENTS_ICON_SIZE, height: PATIENTS_ICON_SIZE }}
+        style={{ width: PATIENTS_TILE_SIZE, height: PATIENTS_TILE_SIZE }}
         draggable={false}
       />
       <span
-        className="block text-[9px] font-semibold text-[#64748b] text-center leading-[1.15] line-clamp-2"
+        className="block text-[10px] font-bold text-[#0f172a] text-center leading-[1.15] line-clamp-2"
         style={{ width: PATIENTS_LABEL_WIDTH, maxWidth: PATIENTS_LABEL_WIDTH }}
       >
         {label}

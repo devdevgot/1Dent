@@ -1,80 +1,66 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 88 88" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" fill="none">
   <defs>
-    <!-- Top face: bright diagonal blue -->
-    <linearGradient id="pm-top" x1="20" y1="10" x2="66" y2="60" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#6BB0FF"/>
-      <stop offset="0.45" stop-color="#3183FF"/>
-      <stop offset="1" stop-color="#1E63EC"/>
+    <!-- Soft pastel tile — like reference category cards -->
+    <linearGradient id="pm-tile" x1="12" y1="8" x2="68" y2="72" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F0F7FF"/>
+      <stop offset="0.5" stop-color="#E3EFFE"/>
+      <stop offset="1" stop-color="#D4E6FD"/>
     </linearGradient>
-    <!-- Extruded side/thickness: darker -->
-    <linearGradient id="pm-side" x1="20" y1="52" x2="60" y2="82" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#1B5AD6"/>
-      <stop offset="1" stop-color="#0E3AA0"/>
-    </linearGradient>
-    <!-- Top gloss reflection -->
-    <linearGradient id="pm-gloss" x1="44" y1="8" x2="44" y2="44" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFFFFF" stop-opacity="0.6"/>
+    <linearGradient id="pm-tile-shine" x1="40" y1="6" x2="40" y2="42" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.85"/>
       <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
     </linearGradient>
-    <!-- Rim light on top edge / AO on bottom edge -->
-    <linearGradient id="pm-rim" x1="44" y1="8" x2="44" y2="64" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFFFFF" stop-opacity="0.95"/>
-      <stop offset="0.14" stop-color="#FFFFFF" stop-opacity="0"/>
-      <stop offset="0.8" stop-color="#0A2E86" stop-opacity="0"/>
-      <stop offset="1" stop-color="#0A2E86" stop-opacity="0.6"/>
+    <!-- 3D figure materials -->
+    <linearGradient id="pm-blue" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
+      <stop stop-color="#5AA2FF"/>
+      <stop offset="0.55" stop-color="#2B82FF"/>
+      <stop offset="1" stop-color="#1A65E8"/>
     </linearGradient>
-    <!-- Front figure body -->
-    <radialGradient id="pm-front" cx="0.36" cy="0.26" r="0.9" gradientUnits="objectBoundingBox">
+    <linearGradient id="pm-blue-light" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
+      <stop stop-color="#B8D9FF"/>
+      <stop offset="1" stop-color="#7EB8FF"/>
+    </linearGradient>
+    <radialGradient id="pm-white" cx="0.35" cy="0.28" r="0.85" gradientUnits="objectBoundingBox">
       <stop stop-color="#FFFFFF"/>
-      <stop offset="0.55" stop-color="#EEF5FF"/>
-      <stop offset="1" stop-color="#CBE0FF"/>
+      <stop offset="0.55" stop-color="#F4F8FF"/>
+      <stop offset="1" stop-color="#D9E8FF"/>
     </radialGradient>
-    <!-- Back figure body -->
-    <radialGradient id="pm-back" cx="0.4" cy="0.28" r="0.95" gradientUnits="objectBoundingBox">
-      <stop stop-color="#D5E7FF"/>
-      <stop offset="1" stop-color="#88B9FF"/>
+    <radialGradient id="pm-shadow" cx="0.5" cy="0.5" r="0.5" gradientUnits="objectBoundingBox">
+      <stop stop-color="#1A65E8" stop-opacity="0.22"/>
+      <stop offset="0.65" stop-color="#1A65E8" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#1A65E8" stop-opacity="0"/>
     </radialGradient>
-    <!-- Contact shadow on ground -->
-    <radialGradient id="pm-ground" cx="0.5" cy="0.5" r="0.5" gradientUnits="objectBoundingBox">
-      <stop stop-color="#123A8A" stop-opacity="0.42"/>
-      <stop offset="0.7" stop-color="#123A8A" stop-opacity="0.18"/>
-      <stop offset="1" stop-color="#123A8A" stop-opacity="0"/>
-    </radialGradient>
-    <filter id="pm-fig" x="-40%" y="-40%" width="180%" height="180%">
-      <feDropShadow dx="0" dy="1.6" stdDeviation="1.8" flood-color="#0A2E86" flood-opacity="0.4"/>
+    <filter id="pm-soft" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#1A65E8" flood-opacity="0.28"/>
     </filter>
   </defs>
 
-  <!-- ground contact shadow -->
-  <ellipse cx="46" cy="79" rx="27" ry="6.5" fill="url(#pm-ground)"/>
+  <!-- Tile container -->
+  <rect x="4" y="4" width="72" height="72" rx="22" fill="url(#pm-tile)"/>
+  <rect x="4" y="4" width="72" height="36" rx="22" fill="url(#pm-tile-shine)"/>
 
-  <!-- Perspective tilt: rotate + slight vertical squash -->
-  <g transform="translate(44 42) rotate(-10) scale(1 0.94) translate(-44 -42)">
-    <!-- Extruded thickness (bottom slab) -->
-    <path d="M18 24C18 15.16 25.16 8 34 8h20c8.84 0 16 7.16 16 16v30c0 8.84-7.16 16-16 16H34c-8.84 0-16-7.16-16-16V24z"
-          transform="translate(0 6)" fill="url(#pm-side)"/>
-    <!-- Top face -->
-    <path d="M18 24C18 15.16 25.16 8 34 8h20c8.84 0 16 7.16 16 16v30c0 8.84-7.16 16-16 16H34c-8.84 0-16-7.16-16-16V24z"
-          fill="url(#pm-top)"/>
-    <!-- rim light + inner AO on top face -->
-    <path d="M19.5 24C19.5 16 26 9.5 34 9.5h20c8 0 14.5 6.5 14.5 14.5v30c0 8-6.5 14.5-14.5 14.5H34C26 68.5 19.5 62 19.5 54V24z"
-          fill="none" stroke="url(#pm-rim)" stroke-width="1.8"/>
-    <!-- top gloss -->
-    <path d="M18 26C18 16.6 25.6 9 35 9h18c9.4 0 17 7.6 17 17v3.5c-11.5 6.8-20.8 9.8-26 9.8S29.5 36.3 18 29.5V26z"
-          fill="url(#pm-gloss)"/>
+  <!-- 3D group: slight tilt like reference objects -->
+  <g transform="translate(40 42) rotate(-12) scale(1.02 0.96) translate(-40 -42)">
+    <!-- Ground shadow inside tile -->
+    <ellipse cx="40" cy="58" rx="22" ry="5" fill="url(#pm-shadow)"/>
 
-    <!-- figures -->
-    <g filter="url(#pm-fig)">
-      <!-- back person -->
-      <circle cx="53" cy="30" r="7.6" fill="url(#pm-back)"/>
-      <path d="M39 54c0-7.9 6-14.3 14-14.3S67 46.1 67 54v1.8a2.2 2.2 0 0 1-2.2 2.2H41.2A2.2 2.2 0 0 1 39 55.8V54z"
-            fill="url(#pm-back)"/>
-      <!-- front person -->
-      <circle cx="36" cy="29" r="9" fill="url(#pm-front)"/>
-      <path d="M20 56c0-9.1 7-16.5 16-16.5S52 46.9 52 56v2a2.6 2.6 0 0 1-2.6 2.6H22.6A2.6 2.6 0 0 1 20 58v-2z"
-            fill="url(#pm-front)"/>
-      <!-- specular highlight on front head -->
-      <ellipse cx="32.5" cy="25" rx="2.6" ry="3.3" fill="#FFFFFF" opacity="0.75"/>
+    <g filter="url(#pm-soft)">
+      <!-- back person — light blue, behind -->
+      <g transform="translate(8 -1)">
+        <ellipse cx="48" cy="36" rx="7.5" ry="7" fill="url(#pm-blue-light)"/>
+        <ellipse cx="46" cy="34" rx="2.2" ry="2.6" fill="#FFFFFF" opacity="0.55"/>
+        <path d="M36 54c0-6.8 5.2-12.3 12-12.3s12 5.5 12 12.3v1.2a1.8 1.8 0 0 1-1.8 1.8H37.8a1.8 1.8 0 0 1-1.8-1.8V54z"
+              fill="url(#pm-blue-light)"/>
+      </g>
+
+      <!-- front person — white/blue, larger -->
+      <ellipse cx="32" cy="35" rx="8.8" ry="8.2" fill="url(#pm-white)"/>
+      <ellipse cx="29.5" cy="32" rx="2.8" ry="3.2" fill="#FFFFFF" opacity="0.85"/>
+      <path d="M18 56c0-8.6 6.6-15.6 14.5-15.6S47 47.4 47 56v1.4a2.2 2.2 0 0 1-2.2 2.2H20.2A2.2 2.2 0 0 1 18 57.4V56z"
+            fill="url(#pm-white)"/>
+      <!-- blue accent on front torso edge -->
+      <path d="M18 56c0-8.6 6.6-15.6 14.5-15.6c2.2 0 4.2 0.5 6 1.4-4.8 1.2-8.5 4.8-10.2 9.5-0.5 1.4-0.8 2.9-0.8 4.7v1.4a2.2 2.2 0 0 1-2.2 2.2H20.2A2.2 2.2 0 0 1 18 57.4V56z"
+            fill="url(#pm-blue)" opacity="0.15"/>
     </g>
   </g>
 </svg>
