@@ -38,10 +38,13 @@ const ACCOUNT_SETTINGS_PREFIXES = [
   "/account-change-password",
 ];
 
+import { isClinicalStaff } from "@/lib/role-groups";
+
 function getWorkTab(role: string): { labelKey: string; icon: TabIcon; href: string } {
+  if (isClinicalStaff(role)) {
+    return { labelKey: "nav.schedule", icon: TabCalendarIcon, href: "/schedule" };
+  }
   switch (role) {
-    case "doctor":
-      return { labelKey: "nav.schedule", icon: TabCalendarIcon, href: "/schedule" };
     case "accountant":
       return { labelKey: "nav.financials", icon: TabFinanceIcon, href: "/financials" };
     case "warehouse":

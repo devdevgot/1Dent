@@ -1,9 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/hooks/use-auth";
-import { useChangePassword } from "@workspace/api-client-react";
+import {
+  useChangePassword,
+  useGetClinicContractSettings,
+  useUpdateClinicContractSettings,
+} from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
-import { User, Shield, Globe, Eye, EyeOff, Settings2 } from "lucide-react";
+import { User, Shield, Globe, Eye, EyeOff, Settings2, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader } from "@/components/layout/page-header";
@@ -49,6 +53,50 @@ export default function SettingsPage() {
   const [showConfirm, setShowConfirm] = useState(false);
 
   const changePasswordMutation = useChangePassword();
+
+  const canEditContractSettings = user?.role === "owner" || user?.role === "admin";
+  const { data: contractSettingsData, isLoading: contractSettingsLoading } = useGetClinicContractSettings({
+    query: { enabled: canEditContractSettings },
+  });
+  const updateContractSettingsMutation = useUpdateClinicContractSettings();
+
+  const [contractLegalName, setContractLegalName] = useState("");
+  const [contractCity, setContractCity] = useState("");
+  const [contractAddress, setContractAddress] = useState("");
+  const [contractLicense, setContractLicense] = useState("");
+  const [contractDirector, setContractDirector] = useState("");
+
+  useEffect(() => {
+    const s = contractSettingsData?.data;
+    if (!s) return;
+    setContractLegalName(s.contractLegalName ?? "");
+    setContractCity(s.contractCity ?? "");
+    setContractAddress(s.contractAddress ?? "");
+    setContractLicense(s.contractLicense ?? "");
+    setContractDirector(s.contractDirector ?? "");
+  }, [contractSettingsData]);
+
+  const handleSaveContractSettings = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateContractSettingsMutation.mutate(
+      {
+        contractLegalName: contractLegalName.trim() || null,
+        contractCity: contractCity.trim() || null,
+        contractAddress: contractAddress.trim() || null,
+        contractLicense: contractLicense.trim() || null,
+        contractDirector: contractDirector.trim() || null,
+      },
+      {
+        onSuccess: () => {
+          toast({ title: "Данные для договоров сохранены" });
+        },
+        onError: (err: unknown) => {
+          const msg = (err as { data?: { error?: string } })?.data?.error ?? "Ошибка сохранения";
+          toast({ title: msg, variant: "destructive" });
+        },
+      },
+    );
+  };
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -178,6 +226,78 @@ export default function SettingsPage() {
           </button>
         </form>
       </Section>
+
+      {/* Clinic contract details — owner/admin only */}
+      {canEditContractSettings && (
+        <Section icon={<FileText className="w-5 h-5" />} title="Данные для договоров">
+          <p className="text-xs text-[#64748b] mb-4">
+            Юридические реквизиты клиники подставляются во встроенные шаблоны договоров.
+          </p>
+          {contractSettingsLoading ? (
+            <p className="text-sm text-[#94a3b8]">{t("common.loading", { defaultValue: "Загрузка…" })}</p>
+          ) : (
+            <form onSubmit={handleSaveContractSettings} className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-[#64748b] mb-1">Юридическое название</label>
+                <input
+                  type="text"
+                  value={contractLegalName}
+                  onChange={(e) => setContractLegalName(e.target.value)}
+                  placeholder='ТОО «Стоматология Пример»'
+                  className="w-full h-10 rounded-xl border border-[#e8e3d9] bg-white px-3 text-sm text-[#0f172a] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[#64748b] mb-1">Город</label>
+                <input
+                  type="text"
+                  value={contractCity}
+                  onChange={(e) => setContractCity(e.target.value)}
+                  placeholder="г. Алматы"
+                  className="w-full h-10 rounded-xl border border-[#e8e3d9] bg-white px-3 text-sm text-[#0f172a] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[#64748b] mb-1">Адрес</label>
+                <input
+                  type="text"
+                  value={contractAddress}
+                  onChange={(e) => setContractAddress(e.target.value)}
+                  placeholder="г. Алматы, ул. Примерная, 1"
+                  className="w-full h-10 rounded-xl border border-[#e8e3d9] bg-white px-3 text-sm text-[#0f172a] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[#64748b] mb-1">Номер лицензии</label>
+                <input
+                  type="text"
+                  value={contractLicense}
+                  onChange={(e) => setContractLicense(e.target.value)}
+                  placeholder="18021758"
+                  className="w-full h-10 rounded-xl border border-[#e8e3d9] bg-white px-3 text-sm text-[#0f172a] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[#64748b] mb-1">Директор</label>
+                <input
+                  type="text"
+                  value={contractDirector}
+                  onChange={(e) => setContractDirector(e.target.value)}
+                  placeholder="Иванов И.И."
+                  className="w-full h-10 rounded-xl border border-[#e8e3d9] bg-white px-3 text-sm text-[#0f172a] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={updateContractSettingsMutation.isPending}
+                className="w-full h-10 rounded-full bg-[#1f75fe] text-white text-sm font-semibold hover:bg-[#1a65e8] hover:scale-105 transition-all disabled:opacity-60 disabled:hover:scale-100"
+              >
+                {updateContractSettingsMutation.isPending ? t("common.saving") : "Сохранить"}
+              </button>
+            </form>
+          )}
+        </Section>
+      )}
 
       {/* Language */}
       <Section icon={<Globe className="w-5 h-5" />} title={t("settingsPage.language")}>

@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   useListPatientContracts,
   useListContractTemplates,
   useSendContract,
   type PatientContract,
+  type ContractTemplate,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { matchSubcategoriesFromTitles } from "@/lib/contract-service-matching";
 import {
   FileText, Send, CheckCircle2, Eye, ExternalLink,
   RefreshCw, FileSignature, Clock, ChevronDown, ChevronUp,
@@ -30,16 +32,23 @@ interface BundleCardProps {
 
 interface ContractsTabProps {
   patientId: string;
+  planServiceTitles?: string[];
   bundle?: BundleCardProps;
 }
 
 const STATUS_LABELS: Record<string, string> = {
+  created: "Подготовлен",
   sent: "Отправлен",
   viewed: "Просмотрен",
   signed: "Подписан",
 };
 
 const STATUS_CONFIG: Record<string, { color: string; icon: React.ReactNode; dot: string }> = {
+  created: {
+    color: "bg-violet-50 text-violet-700 border-violet-200",
+    icon: <ClipboardList className="w-3 h-3" />,
+    dot: "bg-violet-400",
+  },
   sent: {
     color: "bg-sky-50 text-sky-700 border-sky-200",
     icon: <Send className="w-3 h-3" />,
@@ -57,12 +66,18 @@ const STATUS_CONFIG: Record<string, { color: string; icon: React.ReactNode; dot:
   },
 };
 
-const STATUS_PRIORITY: Record<string, number> = { sent: 0, viewed: 1, signed: 2 };
+const STATUS_PRIORITY: Record<string, number> = { created: -1, sent: 0, viewed: 1, signed: 2 };
+
+function isSystemTemplate(t: ContractTemplate): boolean {
+  return Boolean(t.isSystem ?? (t as ContractTemplate & { is_system?: boolean }).is_system);
+}
 
 function bundleAggregateStatus(contracts: PatientContract[]): string {
   if (contracts.every((c) => c.status === "signed")) return "signed";
   if (contracts.some((c) => c.status === "viewed" || c.status === "signed")) return "viewed";
-  return "sent";
+  if (contracts.every((c) => c.status === "created")) return "created";
+  if (contracts.some((c) => c.status === "sent" || c.status === "viewed" || c.status === "signed")) return "sent";
+  return "created";
 }
 
 function formatDate(iso: string | null): string {
@@ -227,7 +242,7 @@ function BundleModal({ bundle, onClose }: { bundle: BundleGroup; onClose: () => 
   );
 }
 
-export function ContractsTab({ patientId, bundle }: ContractsTabProps) {
+export function ContractsTab({ patientId, planServiceTitles = [], bundle }: ContractsTabProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
@@ -239,8 +254,43 @@ export function ContractsTab({ patientId, bundle }: ContractsTabProps) {
   const sendMutation = useSendContract();
 
   const allContracts = contractsData?.data?.contracts ?? [];
-  const contracts = allContracts.filter((c: PatientContract) => c.status !== "created");
-  const templates = templatesData?.data?.templates ?? [];
+  const contracts = allContracts;
+  const allTemplates = templatesData?.data?.templates ?? [];
+
+  const matchedSubcategories = useMemo(
+    () => matchSubcategoriesFromTitles(planServiceTitles),
+    [planServiceTitles],
+  );
+
+  const { userTemplates, groupedSystemTemplates } = useMemo(() => {
+    const user = allTemplates.filter((t) => !isSystemTemplate(t));
+    const matchedSet = new Set(matchedSubcategories);
+    const system = matchedSet.size > 0
+      ? allTemplates.filter(
+          (t) => isSystemTemplate(t) && t.subcategory && matchedSet.has(t.subcategory),
+        )
+      : [];
+
+    const groups: Record<string, Record<string, ContractTemplate[]>> = {};
+    for (const tmpl of system) {
+      const category = tmpl.category || "Другое";
+      const subcategory = tmpl.subcategory || "Общие";
+      if (!groups[category]) groups[category] = {};
+      if (!groups[category][subcategory]) groups[category][subcategory] = [];
+      groups[category][subcategory].push(tmpl);
+    }
+
+    return { userTemplates: user, groupedSystemTemplates: groups };
+  }, [allTemplates, matchedSubcategories]);
+
+  const sendableTemplates = useMemo(() => {
+    const system = Object.values(groupedSystemTemplates).flatMap((subs) =>
+      Object.values(subs).flat(),
+    );
+    return [...userTemplates, ...system];
+  }, [userTemplates, groupedSystemTemplates]);
+
+  const templates = sendableTemplates;
 
   const historyItems = groupContracts(contracts);
 
@@ -293,12 +343,23 @@ export function ContractsTab({ patientId, bundle }: ContractsTabProps) {
                 <div className="flex flex-col items-center gap-2 py-4 text-center">
                   <FileText className="w-8 h-8 text-[var(--ds-border)]" />
                   <p className="text-[12px] text-[#64748b]">
-                    Нет шаблонов.{" "}
-                    <span className="font-medium text-primary">Меню → Шаблоны договоров</span>
+                    {matchedSubcategories.length === 0 && userTemplates.length === 0
+                      ? "Нет шаблонов. "
+                      : matchedSubcategories.length === 0
+                        ? "Добавьте услуги в план лечения, чтобы увидеть встроенные шаблоны. "
+                        : "Нет подходящих шаблонов для услуг в плане. "}
+                    {userTemplates.length === 0 && (
+                      <span className="font-medium text-primary">Меню → Шаблоны договоров</span>
+                    )}
                   </p>
                 </div>
               ) : (
                 <>
+                  {matchedSubcategories.length > 0 && (
+                    <p className="text-[11px] text-[#94a3b8]">
+                      Показаны шаблоны для: {matchedSubcategories.join(", ")}
+                    </p>
+                  )}
                   <div className="relative">
                     <div className={cn(
                       "flex items-center gap-2.5 rounded-xl border px-3 py-0 transition-all",
@@ -316,9 +377,26 @@ export function ContractsTab({ patientId, bundle }: ContractsTabProps) {
                         className="flex-1 bg-transparent text-[13px] font-medium text-[#0f172a] py-3 outline-none appearance-none cursor-pointer"
                       >
                         <option value="">— Выберите шаблон —</option>
-                        {templates.map((tmpl) => (
-                          <option key={tmpl.id} value={tmpl.id}>{tmpl.name}</option>
-                        ))}
+                        {userTemplates.length > 0 && (
+                          <optgroup label="Загруженные шаблоны">
+                            {userTemplates.map((tmpl) => (
+                              <option key={tmpl.id} value={tmpl.id}>{tmpl.name}</option>
+                            ))}
+                          </optgroup>
+                        )}
+                        {Object.keys(groupedSystemTemplates).sort().map((category) => {
+                          const subcategories = groupedSystemTemplates[category]!;
+                          return Object.keys(subcategories).sort().map((subcategory) => {
+                            const docs = subcategories[subcategory]!;
+                            return (
+                              <optgroup key={`${category}:${subcategory}`} label={`${category} · ${subcategory}`}>
+                                {docs.map((tmpl) => (
+                                  <option key={tmpl.id} value={tmpl.id}>{tmpl.name}</option>
+                                ))}
+                              </optgroup>
+                            );
+                          });
+                        })}
                       </select>
                       <ChevronDown className={cn(
                         "w-4 h-4 shrink-0 transition-all pointer-events-none",
@@ -504,9 +582,11 @@ export function ContractsTab({ patientId, bundle }: ContractsTabProps) {
                                     {cfg.icon}
                                     {aggStatus === "signed"
                                       ? "Все подписаны"
-                                      : signedCount > 0
-                                        ? `${signedCount}/${bundle.contracts.length} подписано`
-                                        : STATUS_LABELS[aggStatus]}
+                                      : aggStatus === "created"
+                                        ? "Подготовлен"
+                                        : signedCount > 0
+                                          ? `${signedCount}/${bundle.contracts.length} подписано`
+                                          : STATUS_LABELS[aggStatus]}
                                   </span>
                                   <span className="text-[10px] text-[#94a3b8] flex items-center gap-1">
                                     <Clock className="w-2.5 h-2.5" />

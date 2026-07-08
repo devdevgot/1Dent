@@ -13,6 +13,7 @@ import followupsRouter from "../modules/followups/followups.controller";
 import chatbotRouter from "../modules/chatbot/chatbot.controller";
 import migrationRouter from "../modules/migration/migration.controller";
 import clinicPricesRouter from "../modules/clinic/clinic-prices.controller";
+import clinicContractSettingsRouter from "../modules/clinic/clinic-contract-settings.controller";
 import treatmentPlansRouter from "../modules/treatment-plans/treatment-plans.controller";
 import channelsRouter from "../modules/channels/channels.controller";
 import payrollRouter from "../modules/payroll/payroll.controller";
@@ -62,6 +63,7 @@ router.use("/users", usersRouter);
 router.use("/patients", patientsRouter);
 router.use("/patients/:id/teeth", dentalRouter);
 router.use("/clinic/condition-prices", clinicPricesRouter);
+router.use("/", clinicContractSettingsRouter);
 router.use("/", treatmentPlansRouter);
 
 const dentalReadRoles = roleGuard("owner", "admin", "doctor");

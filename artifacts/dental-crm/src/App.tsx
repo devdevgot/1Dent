@@ -13,7 +13,7 @@ import { restoreBranchContext, clearBranchContext } from "@/lib/branch-context";
 import type { User, Clinic } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/components/auth/protected-route";
-import { getRoleDashboardPath } from "@/lib/role-redirect";
+import { getRoleDashboardPath, CLINICAL_STAFF_ROLES } from "@/lib/role-redirect";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { installGlobalErrorHandlers } from "@/lib/report-error";
 import {
@@ -87,6 +87,7 @@ const LogsPage = lazyPage(() => import("@/pages/logs"), <LogsPageSkeleton />);
 const FinancialsPage = lazyPage(() => import("@/pages/financials"), <FinancialsPageSkeleton />);
 const WarehousePage = lazyPage(() => import("@/pages/warehouse"), <WarehousePageSkeleton />);
 const UsersPage = lazyPage(() => import("@/pages/users"), <UsersPageSkeleton />);
+const DoctorRatingsPage = lazyPage(() => import("@/pages/doctor-ratings"), <UsersPageSkeleton />);
 const ChatbotPage = lazyPage(() => import("@/pages/chatbot"), <ChatbotPageSkeleton />);
 const StaffDetailPage = lazyPage(() => import("@/pages/staff-detail"), <StaffDetailPageSkeleton />);
 const DoctorAnalyticsPage = lazyPage(() => import("@/pages/doctor-analytics"), <DoctorAnalyticsPageSkeleton />);
@@ -260,9 +261,9 @@ function Router() {
         <ProtectedRoute component={AdminDashboard} allowedRoles={['admin']} />
       </Route>
 
-      {/* Doctor dashboard */}
+      {/* Doctor dashboard (doctor, assistant, nurse) */}
       <Route path="/dashboard/doctor">
-        <ProtectedRoute component={DoctorDashboard} allowedRoles={['doctor']} />
+        <ProtectedRoute component={DoctorDashboard} allowedRoles={[...CLINICAL_STAFF_ROLES]} />
       </Route>
 
       {/* Accountant dashboard */}
@@ -298,10 +299,10 @@ function Router() {
 
       {/* Feature Routes */}
       <Route path="/patients">
-        <ProtectedRoute component={PatientsPage} allowedRoles={['owner', 'admin', 'doctor', 'accountant']} />
+        <ProtectedRoute component={PatientsPage} allowedRoles={['owner', 'admin', ...CLINICAL_STAFF_ROLES, 'accountant']} />
       </Route>
       <Route path="/patients/:patientId/teeth/:fdi">
-        <ProtectedRoute component={ToothDetailPage} allowedRoles={['owner', 'admin', 'doctor']} />
+        <ProtectedRoute component={ToothDetailPage} allowedRoles={['owner', 'admin', ...CLINICAL_STAFF_ROLES]} />
       </Route>
       <Route path="/chat">
         <ProtectedRoute component={ChatPage} allowedRoles={['owner', 'admin', 'doctor']} />
@@ -313,15 +314,15 @@ function Router() {
         <ProtectedRoute component={InventoryPage} allowedRoles={['owner', 'admin', 'warehouse', 'doctor', 'accountant']} />
       </Route>
       <Route path="/services">
-        <ProtectedRoute component={ServicesPage} allowedRoles={['owner', 'admin', 'doctor', 'accountant']} />
+        <ProtectedRoute component={ServicesPage} allowedRoles={['owner', 'admin', ...CLINICAL_STAFF_ROLES, 'accountant']} />
       </Route>
 
-      {/* Doctor schedule (read-only calendar) */}
+      {/* Clinical schedule (read-only calendar) */}
       <Route path="/schedule">
-        <ProtectedRoute component={DoctorSchedulePage} allowedRoles={['doctor']} />
+        <ProtectedRoute component={DoctorSchedulePage} allowedRoles={[...CLINICAL_STAFF_ROLES]} />
       </Route>
       <Route path="/schedule/:date">
-        <ProtectedRoute component={DoctorScheduleDayPage} allowedRoles={['doctor']} />
+        <ProtectedRoute component={DoctorScheduleDayPage} allowedRoles={[...CLINICAL_STAFF_ROLES]} />
       </Route>
       <Route path="/payroll/my">
         <ProtectedRoute component={PayrollMyPage} allowedRoles={['doctor']} />
@@ -340,6 +341,9 @@ function Router() {
       </Route>
 
       {/* Users management */}
+      <Route path="/users/ratings">
+        <ProtectedRoute component={DoctorRatingsPage} allowedRoles={['owner', 'admin']} />
+      </Route>
       <Route path="/users">
         <ProtectedRoute component={UsersPage} allowedRoles={['owner', 'admin']} />
       </Route>
@@ -361,7 +365,7 @@ function Router() {
 
       {/* Menu page */}
       <Route path="/menu">
-        <ProtectedRoute component={MenuPage} allowedRoles={['owner', 'admin', 'doctor', 'accountant', 'warehouse']} />
+        <ProtectedRoute component={MenuPage} allowedRoles={['owner', 'admin', ...CLINICAL_STAFF_ROLES, 'accountant', 'warehouse']} />
       </Route>
 
       {/* Channels page */}
@@ -396,21 +400,21 @@ function Router() {
       </Route>
 
       <Route path="/ai-credits">
-        <ProtectedRoute component={AiCreditsPage} allowedRoles={['owner', 'admin', 'doctor', 'accountant', 'warehouse']} />
+        <ProtectedRoute component={AiCreditsPage} allowedRoles={['owner', 'admin', ...CLINICAL_STAFF_ROLES, 'accountant', 'warehouse']} />
       </Route>
 
       {/* Account settings pages */}
       <Route path="/account-settings">
-        <ProtectedRoute component={AccountSettingsPage} allowedRoles={['owner', 'admin', 'doctor', 'accountant', 'warehouse']} />
+        <ProtectedRoute component={AccountSettingsPage} allowedRoles={['owner', 'admin', ...CLINICAL_STAFF_ROLES, 'accountant', 'warehouse']} />
       </Route>
       <Route path="/account/edit-profile">
-        <ProtectedRoute component={AccountEditProfilePage} allowedRoles={['owner', 'admin', 'doctor', 'accountant', 'warehouse']} />
+        <ProtectedRoute component={AccountEditProfilePage} allowedRoles={['owner', 'admin', ...CLINICAL_STAFF_ROLES, 'accountant', 'warehouse']} />
       </Route>
       <Route path="/account/change-email">
-        <ProtectedRoute component={AccountChangeEmailPage} allowedRoles={['owner', 'admin', 'doctor', 'accountant', 'warehouse']} />
+        <ProtectedRoute component={AccountChangeEmailPage} allowedRoles={['owner', 'admin', ...CLINICAL_STAFF_ROLES, 'accountant', 'warehouse']} />
       </Route>
       <Route path="/account/change-password">
-        <ProtectedRoute component={AccountChangePasswordPage} allowedRoles={['owner', 'admin', 'doctor', 'accountant', 'warehouse']} />
+        <ProtectedRoute component={AccountChangePasswordPage} allowedRoles={['owner', 'admin', ...CLINICAL_STAFF_ROLES, 'accountant', 'warehouse']} />
       </Route>
 
       {/* 404 */}

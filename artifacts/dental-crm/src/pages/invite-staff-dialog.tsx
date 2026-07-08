@@ -4,12 +4,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Mail, User2, Phone, Calendar, ShieldCheck, Activity,
   BarChart3, Package, Wallet, Percent, Layers, Clock,
-  ChevronLeft, ChevronDown, Send, AlertCircle,
+  ChevronLeft, ChevronDown, Send, AlertCircle, MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { customFetch, getListUsersAllQueryKey } from "@workspace/api-client-react";
 import { AppDialog } from "@/components/layout/app-dialog";
 import { cn } from "@/lib/utils";
+import { formatPhoneInput, phoneToApi } from "@/lib/whatsapp-auth";
 
 type Role = "admin" | "doctor" | "accountant" | "warehouse" | "assistant" | "nurse";
 type SalaryType = "fixed" | "commission" | "fixed_plus_commission" | "hourly";
@@ -278,8 +279,8 @@ const ROLE_COLOR: Record<Role, { bg: string; text: string; border: string }> = {
   nurse:      { bg: "bg-[#fce7f3]",    text: "text-[#db2777]",    border: "border-[#fce7f3]" },
 };
 
-function isValidEmail(e: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
+function isValidPhone(p: string) {
+  return phoneToApi(p).length >= 11;
 }
 
 function NumericInput({
@@ -316,7 +317,7 @@ function NumericInput({
   );
 }
 
-const STEP_LABELS = ["Email", "Информация", "Зарплата", "Приглашение"];
+const STEP_LABELS = ["WhatsApp", "Информация", "Зарплата", "Приглашение"];
 
 interface InviteStaffDialogProps {
   open: boolean;
@@ -327,11 +328,12 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
   const queryClient = useQueryClient();
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<InviteFormData>(DEFAULT_FORM);
+  const [phoneError, setPhoneError] = useState("");
   const [emailError, setEmailError] = useState("");
   const [nameError, setNameError] = useState("");
   const [confirmClose, setConfirmClose] = useState(false);
 
-  const isDirty = form.email.trim() !== "" || form.name.trim() !== "";
+  const isDirty = form.phone.trim() !== "" || form.name.trim() !== "" || form.email.trim() !== "";
 
   const set = <K extends keyof InviteFormData>(k: K, v: InviteFormData[K]) =>
     setForm((prev) => ({ ...prev, [k]: v }));
@@ -345,7 +347,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
           name: data.name,
           email: data.email.trim().toLowerCase(),
           role: data.role,
-          phone: data.phone || undefined,
+          phone: phoneToApi(data.phone),
           specialty: (data.role === "doctor" || data.role === "assistant" || data.role === "nurse") && data.specialty ? data.specialty : undefined,
           maxPatientsPerDay: data.role === "doctor" && data.maxPatientsPerDay > 0 ? data.maxPatientsPerDay : undefined,
           hireDate: data.hireDate || undefined,
@@ -365,7 +367,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
       queryClient.invalidateQueries({ queryKey: getListUsersAllQueryKey(false) });
       queryClient.invalidateQueries({ queryKey: getListUsersAllQueryKey(true) });
       toast.success("Сотрудник добавлен", {
-        description: `Приглашение отправлено на ${form.email.trim()}`,
+        description: `Данные для входа отправлены в WhatsApp на ${formatPhoneInput(form.phone)}`,
       });
       handleReset();
       onClose();
@@ -384,6 +386,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
   function handleReset() {
     setStep(1);
     setForm(DEFAULT_FORM);
+    setPhoneError("");
     setEmailError("");
     setNameError("");
     setConfirmClose(false);
@@ -405,18 +408,23 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
 
   function goNext() {
     if (step === 1) {
-      if (!isValidEmail(form.email)) {
-        setEmailError("Введите корректный email");
+      if (!isValidPhone(form.phone)) {
+        setPhoneError("Введите корректный номер WhatsApp");
         return;
       }
-      setEmailError("");
+      setPhoneError("");
       setStep(2);
     } else if (step === 2) {
       if (!form.name.trim()) {
         setNameError("Введите ФИО сотрудника");
         return;
       }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+        setEmailError("Введите корректный email");
+        return;
+      }
       setNameError("");
+      setEmailError("");
       setStep(3);
     } else if (step === 3) {
       setStep(4);
@@ -517,7 +525,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
 
       <div className="pb-4">
               <AnimatePresence mode="wait">
-                {/* ── Step 1: Email ── */}
+                {/* ── Step 1: WhatsApp ── */}
                 {step === 1 && (
                   <motion.div
                     key="step1"
@@ -527,32 +535,33 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                     transition={{ duration: 0.18 }}
                     className="flex flex-col items-center pt-4 pb-2"
                   >
-                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5 bg-[#1f75fe]/10">
-                      <Mail className="w-7 h-7 text-[#1f75fe]" />
+                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5 bg-[#25D366]/10">
+                      <MessageCircle className="w-7 h-7 text-[#128C7E]" />
                     </div>
-                    <h3 className="text-lg font-bold text-[#0f172a] mb-1 text-center">Email сотрудника</h3>
+                    <h3 className="text-lg font-bold text-[#0f172a] mb-1 text-center">WhatsApp сотрудника</h3>
                     <p className="text-sm text-[#94a3b8] text-center mb-6 leading-relaxed">
-                      На этот адрес придёт приглашение<br />войти в систему
+                      На этот номер придёт временный пароль<br />с официального номера 1Dent
                     </p>
                     <div className="w-full max-w-sm">
                       <input
-                        type="email"
-                        value={form.email}
+                        type="tel"
+                        value={form.phone}
                         onChange={(e) => {
-                          set("email", e.target.value);
-                          if (emailError) setEmailError("");
+                          set("phone", formatPhoneInput(e.target.value));
+                          if (phoneError) setPhoneError("");
                         }}
                         onKeyDown={(e) => { if (e.key === "Enter") goNext(); }}
-                        placeholder="doctor@clinic.kz"
+                        placeholder="+7 700 000 00 00"
                         className={cn(
-                          "w-full border rounded-2xl px-5 py-4 text-base font-medium text-[#0f172a] text-center focus:outline-none focus:ring-2 transition-all",
-                          emailError
+                          "w-full border rounded-2xl px-5 py-4 text-base font-medium text-[#0f172a] text-center focus:outline-none focus:ring-2 transition-all duration-200",
+                          "hover:border-[#cfc9bd]",
+                          phoneError
                             ? "border-[#dc2626] focus:ring-[#dc2626]/20"
-                            : "border-[#e8e3d9] focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]",
+                            : "border-[#e8e3d9] focus:ring-[#25D366]/20 focus:border-[#25D366]",
                         )}
                       />
-                      {emailError && (
-                        <p className="text-xs text-[#dc2626] mt-2 text-center">{emailError}</p>
+                      {phoneError && (
+                        <p className="text-xs text-[#dc2626] mt-2 text-center">{phoneError}</p>
                       )}
                     </div>
                   </motion.div>
@@ -579,26 +588,39 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                         onChange={(e) => { set("name", e.target.value); if (nameError) setNameError(""); }}
                         placeholder="Др. Иванова Мария"
                         className={cn(
-                          "w-full border rounded-xl px-4 py-3 text-sm font-medium text-[#0f172a] focus:outline-none focus:ring-2 transition-all",
+                          "w-full border rounded-xl px-4 py-3 text-sm font-medium text-[#0f172a] focus:outline-none focus:ring-2 transition-all duration-200 hover:border-[#cfc9bd]",
                           nameError ? "border-[#dc2626] focus:ring-[#dc2626]/20" : "border-[#e8e3d9] focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]",
                         )}
                       />
                       {nameError && <p className="text-xs text-[#dc2626] mt-1">{nameError}</p>}
                     </div>
 
-                    {/* Phone */}
+                    {/* Email */}
                     <div>
                       <label className="block text-xs font-semibold text-[#64748b] mb-1.5">
-                        <Phone className="inline w-3.5 h-3.5 mr-1 mb-0.5" />
-                        Телефон
+                        <Mail className="inline w-3.5 h-3.5 mr-1 mb-0.5" />
+                        Email *
                       </label>
                       <input
-                        type="tel"
-                        value={form.phone}
-                        onChange={(e) => set("phone", e.target.value)}
-                        placeholder="+7 700 000 00 00"
-                        className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 text-sm font-medium text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
+                        type="email"
+                        value={form.email}
+                        onChange={(e) => { set("email", e.target.value); if (emailError) setEmailError(""); }}
+                        placeholder="doctor@clinic.kz"
+                        className={cn(
+                          "w-full border rounded-xl px-4 py-3 text-sm font-medium text-[#0f172a] focus:outline-none focus:ring-2 transition-all duration-200 hover:border-[#cfc9bd]",
+                          emailError ? "border-[#dc2626] focus:ring-[#dc2626]/20" : "border-[#e8e3d9] focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]",
+                        )}
                       />
+                      {emailError && <p className="text-xs text-[#dc2626] mt-1">{emailError}</p>}
+                    </div>
+
+                    {/* Phone summary */}
+                    <div className="rounded-xl border border-[#25D366]/20 bg-[#25D366]/5 px-4 py-3 flex items-center gap-3">
+                      <MessageCircle className="w-4 h-4 text-[#128C7E] shrink-0" />
+                      <div>
+                        <p className="text-[10px] text-[#64748b] font-semibold uppercase tracking-wide">WhatsApp</p>
+                        <p className="text-sm font-medium text-[#0f172a]">{formatPhoneInput(form.phone)}</p>
+                      </div>
                     </div>
 
                     {/* Role cards */}
@@ -614,10 +636,10 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                               type="button"
                               onClick={() => set("role", r.value)}
                               className={cn(
-                                "flex flex-col items-start gap-2 p-3.5 rounded-2xl border text-left transition-all",
+                                "flex flex-col items-start gap-2 p-3.5 rounded-2xl border text-left transition-all duration-200",
                                 selected
                                   ? `${r.bg} ${r.border} border-2`
-                                  : "border-[#e8e3d9] bg-white hover:bg-[#faf8f4]",
+                                  : "border-[#e8e3d9] bg-white hover:border-[#cfc9bd] hover:bg-[#faf8f4]",
                               )}
                             >
                               <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center", selected ? r.bg : "bg-[#f1ede4]")}>
@@ -704,10 +726,10 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                               type="button"
                               onClick={() => set("salaryType", s.value)}
                               className={cn(
-                                "flex flex-col items-start gap-2 p-3.5 rounded-2xl border text-left transition-all",
+                                "flex flex-col items-start gap-2 p-3.5 rounded-2xl border text-left transition-all duration-200",
                                 selected
                                   ? "border-[#1f75fe] bg-[#1f75fe]/10 border-2"
-                                  : "border-[#e8e3d9] bg-white hover:bg-[#faf8f4]",
+                                  : "border-[#e8e3d9] bg-white hover:border-[#cfc9bd] hover:bg-[#faf8f4]",
                               )}
                             >
                               <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center", selected ? "bg-[#1f75fe]/10" : "bg-[#f1ede4]")}>
@@ -843,10 +865,10 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                       </div>
                     </div>
 
-                    <div className="rounded-2xl bg-[#1f75fe]/10 border border-[#1f75fe]/20 px-4 py-3 flex items-start gap-3">
-                      <Send className="w-4 h-4 shrink-0 mt-0.5 text-[#1f75fe]" />
+                    <div className="rounded-2xl bg-[#25D366]/10 border border-[#25D366]/20 px-4 py-3 flex items-start gap-3">
+                      <MessageCircle className="w-4 h-4 shrink-0 mt-0.5 text-[#128C7E]" />
                       <p className="text-xs text-[#64748b] leading-relaxed">
-                        Сотрудник получит письмо с временным паролем и ссылкой для входа. После первого входа он сможет сменить пароль.
+                        Сотрудник получит временный пароль в WhatsApp с номера 1Dent. Для входа используйте подтверждённый номер телефона.
                       </p>
                     </div>
                   </motion.div>

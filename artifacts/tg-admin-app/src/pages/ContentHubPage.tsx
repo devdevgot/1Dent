@@ -26,6 +26,12 @@ const items = [
     title: "Чатбот (глобально)",
     desc: "Приветствие и follow-up для новых клиник",
   },
+  {
+    path: "/platform/whatsapp",
+    icon: "📱",
+    title: "WhatsApp 1Dent",
+    desc: "Системные инстансы для OTP и приглашений",
+  },
 ];
 
 export default function ContentHubPage() {

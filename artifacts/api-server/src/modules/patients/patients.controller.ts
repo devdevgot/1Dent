@@ -84,7 +84,7 @@ const addInteractionSchema = z.object({
 
 router.use(authMiddleware);
 
-const patientReadRoles = roleGuard("owner", "admin", "doctor", "accountant");
+const patientReadRoles = roleGuard("owner", "admin", "doctor", "accountant", "assistant", "nurse");
 const patientCreateRoles = roleGuard("owner", "admin", "doctor");
 const patientWriteRoles = roleGuard("owner", "admin");
 const patientDeleteRoles = roleGuard("owner", "admin");

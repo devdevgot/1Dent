@@ -1,4 +1,5 @@
 import { lazy, type ComponentType } from "react";
+import { CLINICAL_STAFF_ROLES } from "@/lib/role-groups";
 import {
   AnalyticsPageSkeleton,
   BranchesPageSkeleton,
@@ -40,6 +41,8 @@ const MENU_CATEGORIES: { key: MenuCategory; titleKey: string }[] = [
 
 export { MENU_CATEGORIES };
 
+const CLINICAL = [...CLINICAL_STAFF_ROLES] as string[];
+
 export const MENU_SERVICES: MenuServiceDefinition[] = [
   {
     slug: "warehouse-dashboard",
@@ -66,7 +69,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     nameKey: "nav.patients",
     href: "/patients",
     img: "/icons/menu/patients.png",
-    roles: ["owner", "admin", "doctor", "accountant"],
+    roles: ["owner", "admin", ...CLINICAL, "accountant"],
     category: "clinic",
     component: lazy(() => import("@/pages/patients")),
     Skeleton: AppShellSkeleton,
@@ -76,7 +79,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     nameKey: "nav.schedule",
     href: "/schedule",
     img: "/icons/menu/schedule.png",
-    roles: ["doctor"],
+    roles: CLINICAL,
     category: "clinic",
     component: lazy(() => import("@/pages/doctor-schedule")),
     Skeleton: DoctorSchedulePageSkeleton,
@@ -86,7 +89,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     nameKey: "nav.services",
     href: "/services",
     img: "/icons/menu/services.png",
-    roles: ["owner", "admin", "doctor", "accountant"],
+    roles: ["owner", "admin", ...CLINICAL, "accountant"],
     category: "clinic",
     component: lazy(() => import("@/pages/services")),
     Skeleton: ServicesPageSkeleton,

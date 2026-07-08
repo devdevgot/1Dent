@@ -39,6 +39,8 @@ const ROLE_DASHBOARD_HREF: Record<string, string> = {
   owner:      "/dashboard",
   admin:      "/dashboard/admin",
   doctor:     "/dashboard/doctor",
+  assistant:  "/dashboard/doctor",
+  nurse:      "/dashboard/doctor",
   accountant: "/dashboard/accountant",
   warehouse:  "/dashboard/warehouse",
 };

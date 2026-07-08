@@ -13,7 +13,7 @@ import type {
 } from "@workspace/db";
 
 function maskPhone(phone: string, role: UserRole): string {
-  if (role === "doctor") {
+  if (role === "doctor" || role === "assistant" || role === "nurse") {
     const cleaned = phone.replace(/\D/g, "");
     const last2 = cleaned.slice(-2);
     return `+7 *** *** **${last2}`;

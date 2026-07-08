@@ -17,6 +17,7 @@ import { isCalendarProcedure } from "@/lib/calendar-procedures";
 import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-header";
 import { ScheduleMonthSkeleton } from "@/components/skeletons";
+import { seesClinicSchedule } from "@/lib/role-groups";
 
 /* ─── Status colours ────────────────────────────────────────────────────────── */
 const STATUS_PILL: Record<ProcedureStatus, string> = {
@@ -86,10 +87,12 @@ export default function DoctorSchedulePage() {
 
   const apptSave = useAppointmentSave({ onDone: () => setModalDate(null) });
 
+  const clinicWideSchedule = seesClinicSchedule(user?.role);
+
   /* Group procedures by local date — only scheduled / in-progress appointments */
   const byDate = useMemo(() => {
     const all = (data?.data?.procedures ?? []) as Procedure[];
-    const mine = user?.id ? all.filter(p => p.doctorId === user.id) : all;
+    const mine = clinicWideSchedule || !user?.id ? all : all.filter(p => p.doctorId === user.id);
     const active = mine.filter(isCalendarProcedure);
     const map = new Map<string, Procedure[]>();
     active.forEach(p => {
@@ -98,7 +101,7 @@ export default function DoctorSchedulePage() {
       map.set(k, [...(map.get(k) ?? []), p]);
     });
     return map;
-  }, [data, user?.id]);
+  }, [data, user?.id, clinicWideSchedule]);
 
   /* Calendar grid (Mon-first) */
   const weeks = useMemo(() => {

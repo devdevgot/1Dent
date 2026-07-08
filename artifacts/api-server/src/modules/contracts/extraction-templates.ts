@@ -10219,6 +10219,7 @@ function postProcessRenderedTemplate(
   const clinicCity = vars.clinic_city ?? "";
   const clinicLicense = vars.clinic_license ?? "";
   const clinicAddress = vars.clinic_address ?? "";
+  const clinicDirector = vars.clinic_director ?? "";
 
   if (clinic) {
     t = t.replace(/ТОО\s*«\s*[^»|\n]+\s*»/g, clinic);
@@ -10265,7 +10266,55 @@ function postProcessRenderedTemplate(
   if (clinicAddress) {
     t = t.replace(/Адрес:\s*г\.\s*Алматы[^\n]*/gi, `Адрес: ${clinicAddress}`);
   }
+  if (clinicDirector) {
+    t = t.replace(/Мендекеев\s+А\.А\./gi, clinicDirector);
+    t = t.replace(/Мендекеев\s+А\.Ә\./gi, clinicDirector);
+  }
+  const date = vars.date ?? "";
+  const year = vars.year ?? "";
+  if (date) {
+    t = t.replace(/«___»\s*_+\s*20\d{2}\s*г\.?/gi, `«${date}» ${year} г.`);
+    t = t.replace(/«____»\s*_+\s*20\d{2}\s*г\.?/gi, `«${date}» ${year} г.`);
+    t = t.replace(/от\s+_{3,}\s*20\d{2}\s*г\.?/gi, `от «${date}» ${year} г.`);
+    t = t.replace(/от\s+_{3,}20\d{2}г\./gi, `от «${date}» ${year} г.`);
+    t = t.replace(/Дата\s*«\s*___\s*»\s*_+\s*20\d{2}/gi, `Дата «${date}» ${year}`);
+    t = t.replace(/Дата\s*«\s*»\s*_+\s*20\d{2}/gi, `Дата «${date}» ${year}`);
+  }
+  if (year) {
+    t = t.replace(/20(?:19|20)\s*г\.?/g, `${year} г.`);
+  }
+  t = rebuildRequisitesSection(t, vars);
   return t;
+}
+
+function rebuildRequisitesSection(text: string, vars: Record<string, string>): string {
+  if (!/\|«ИСПОЛНИТЕЛЬ»/.test(text)) return text;
+
+  const clinic = vars.clinic_name ?? "";
+  const name = vars.patient_name ?? "";
+  const iin = vars.iin ?? "";
+  const phone = vars.phone ?? "";
+  const dob = vars.dob ?? "";
+  const clinicPhone = vars.clinic_phone ?? "";
+  const clinicCity = vars.clinic_city ?? "";
+  const date = vars.date ?? "";
+  const year = vars.year ?? "";
+
+  const cleanTable = [
+    `|«ИСПОЛНИТЕЛЬ»|«ПАЦИЕНТ»|`,
+    `|${clinic}|${name}|`,
+    `|${clinicCity || " "}|${iin ? `Уд.л№ ${iin} выдан` : " "}|`,
+    `|${clinicPhone ? `Тел. ${clinicPhone}` : " "}|${dob ? `Дата рождения: ${dob}` : " "}|`,
+    `| |${phone ? `Моб. тел.: ${phone}` : " "}|`,
+    `| |${date ? `«${date}» ${year} г.` : " "}|`,
+    `|«ИСПОЛНИТЕЛЬ» __________________|«ПАЦИЕНТ» __________________|`,
+    `|Подпись|ФИО полностью, подпись|`,
+  ].join("\n");
+
+  return text.replace(
+    /\|«ИСПОЛНИТЕЛЬ»[\s\S]*?\|Подпись[^\n|]*\|[^\n]*/m,
+    cleanTable,
+  );
 }
 
 export { textToHtml } from "./contract-render";
