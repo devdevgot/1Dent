@@ -87,33 +87,33 @@ function MappingEditor({ template, onClose }: { template: ContractTemplate; onCl
   };
 
   return (
-    <div className="bg-[#f1ede4] border border-[#e8e3d9] rounded-xl mt-3 p-4 space-y-3">
-      <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide">
+    <div className="bg-[var(--surface-2)] border border-[var(--ds-border)] rounded-xl mt-3 p-4 space-y-3">
+      <p className="text-caption font-semibold text-[var(--text-secondary)] uppercase tracking-wide">
         Маппинг полей ({mappings.length})
       </p>
-      <p className="text-xs text-[#64748b]">
+      <p className="text-caption text-[var(--text-secondary)]">
         Укажите, какой плейсхолдер в документе соответствует какому полю пациента.
       </p>
 
       {mappings.length === 0 && (
-        <p className="text-xs text-[#94a3b8] italic py-2 text-center">
+        <p className="text-caption text-[var(--text-subtle)] italic py-2 text-center">
           Нет полей. Нажмите «Добавить» или AI не обнаружил плейсхолдеров.
         </p>
       )}
 
       <div className="space-y-2">
         {mappings.map((m, idx) => (
-          <div key={idx} className="flex items-center gap-2 bg-white border border-[#e8e3d9] rounded-xl p-2">
+          <div key={idx} className="flex items-center gap-2 bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-xl p-2">
             <div className="flex-1 min-w-0">
               <input
                 type="text"
-                className="w-full text-xs border border-[#e8e3d9] rounded-xl px-2 py-1.5 outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 mb-1 text-[#0f172a]"
+                className="w-full text-caption border border-[var(--ds-border)] rounded-xl px-2 py-1.5 outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 mb-1 text-[var(--text)]"
                 placeholder="Плейсхолдер (напр. «ФИО»)"
                 value={m.placeholder}
                 onChange={(e) => updateMapping(idx, "placeholder", e.target.value)}
               />
               <select
-                className="w-full text-xs border border-[#e8e3d9] rounded-xl px-2 py-1.5 outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 bg-white text-[#0f172a]"
+                className="w-full text-caption border border-[var(--ds-border)] rounded-xl px-2 py-1.5 outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 bg-[var(--ds-surface)] text-[var(--text)]"
                 value={m.patientField}
                 onChange={(e) => updateMapping(idx, "patientField", e.target.value)}
               >
@@ -124,7 +124,7 @@ function MappingEditor({ template, onClose }: { template: ContractTemplate; onCl
             </div>
             <button
               onClick={() => removeMapping(idx)}
-              className="shrink-0 p-1.5 rounded-xl text-[#94a3b8] hover:text-[#dc2626] hover:bg-[#fef2f2] transition-colors"
+              className="shrink-0 p-1.5 rounded-xl text-[var(--text-subtle)] hover:text-[var(--danger)] hover:bg-[#fef2f2] transition-colors"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -160,8 +160,8 @@ function SystemTemplatePreview({ templateId, open }: { templateId: string; open:
   if (!open) return null;
   if (isLoading) {
     return (
-      <div className="px-3 pb-3 border-t border-[#e8e3d9] pt-2 bg-[#faf8f4] flex justify-center py-4">
-        <Loader2 className="w-4 h-4 text-[#94a3b8] animate-spin" />
+      <div className="px-3 pb-3 border-t border-[var(--ds-border)] pt-2 bg-[var(--bg)] flex justify-center py-4">
+        <Loader2 className="w-4 h-4 text-[var(--text-subtle)] animate-spin" />
       </div>
     );
   }
@@ -170,9 +170,9 @@ function SystemTemplatePreview({ templateId, open }: { templateId: string; open:
   if (!text) return null;
 
   return (
-    <div className="px-3 pb-3 border-t border-[#e8e3d9] pt-2 bg-[#faf8f4]">
-      <div className="bg-white rounded-xl border border-[#e8e3d9] p-2.5 max-h-48 overflow-y-auto">
-        <pre className="text-[11px] text-[#64748b] whitespace-pre-wrap font-sans leading-relaxed">
+    <div className="px-3 pb-3 border-t border-[var(--ds-border)] pt-2 bg-[var(--bg)]">
+      <div className="bg-[var(--ds-surface)] rounded-xl border border-[var(--ds-border)] p-2.5 max-h-48 overflow-y-auto">
+        <pre className="text-[11px] text-[var(--text-secondary)] whitespace-pre-wrap font-sans leading-relaxed">
           {text}
         </pre>
       </div>
@@ -319,7 +319,7 @@ export default function ContractTemplatesPage() {
             </h2>
 
             <div className="mb-3">
-              <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">
+              <label className="block text-caption font-medium text-[var(--text-secondary)] mb-1.5">
                 Название шаблона{" "}
                 <span className="text-[var(--text-subtle)] font-normal">(необязательно — по умолчанию имя файла)</span>
               </label>
@@ -328,7 +328,7 @@ export default function ContractTemplatesPage() {
                 placeholder="Например: Договор на лечение зубов"
                 value={customName}
                 onChange={(e) => setCustomName(e.target.value)}
-                className="w-full border border-[var(--ds-border)] rounded-xl px-3 py-2 text-sm text-[var(--text)] outline-none focus:border-[var(--ds-primary)] focus:ring-2 focus:ring-[var(--ds-primary)]/20"
+                className="w-full border border-[var(--ds-border)] rounded-xl px-3 py-2 text-body text-[var(--text)] outline-none focus:border-[var(--ds-primary)] focus:ring-2 focus:ring-[var(--ds-primary)]/20"
               />
             </div>
 
@@ -352,8 +352,8 @@ export default function ContractTemplatesPage() {
                 <div className="flex flex-col items-center gap-3">
                   <Loader2 className="w-8 h-8 text-[var(--ds-primary)] animate-spin" />
                   <div>
-                    <p className="text-sm font-medium text-[var(--text)]">Загрузка и анализ файла…</p>
-                    <p className="text-xs text-[var(--text-subtle)] mt-1">AI определяет поля для автозаполнения</p>
+                    <p className="text-body font-medium text-[var(--text)]">Загрузка и анализ файла…</p>
+                    <p className="text-caption text-[var(--text-subtle)] mt-1">AI определяет поля для автозаполнения</p>
                   </div>
                 </div>
               ) : (
@@ -362,8 +362,8 @@ export default function ContractTemplatesPage() {
                     <Upload className="w-6 h-6 text-[var(--ds-primary)]" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-[var(--text)]">Перетащите файл или нажмите</p>
-                    <p className="text-xs text-[var(--text-subtle)] mt-1">DOCX или PDF, до 10 МБ</p>
+                    <p className="text-body font-semibold text-[var(--text)]">Перетащите файл или нажмите</p>
+                    <p className="text-caption text-[var(--text-subtle)] mt-1">DOCX или PDF, до 10 МБ</p>
                   </div>
                 </div>
               )}
@@ -375,7 +375,7 @@ export default function ContractTemplatesPage() {
         {canEdit && (
           <div className="bg-[var(--info-light)] border border-[var(--info)]/20 rounded-2xl p-4 mb-6 flex gap-3">
             <AlertCircle className="w-4 h-4 text-[var(--info)] shrink-0 mt-0.5" />
-            <div className="text-xs text-[var(--info)] space-y-1">
+            <div className="text-caption text-[var(--info)] space-y-1">
               <p className="font-semibold">Как работает AI-анализ</p>
               <p>
                 После загрузки AI сканирует договор и находит места с пустыми строками, метками
@@ -390,7 +390,7 @@ export default function ContractTemplatesPage() {
         {!isLoading && systemTemplates.length === 0 && (
           <div className="mb-8 bg-[var(--warning-light)] border border-[var(--warning)]/20 rounded-2xl p-4 flex gap-3">
             <AlertCircle className="w-4 h-4 text-[var(--warning)] shrink-0 mt-0.5" />
-            <div className="text-xs text-[var(--warning)] space-y-2">
+            <div className="text-caption text-[var(--warning)] space-y-2">
               <p className="font-semibold">Встроенные пакеты документов не загрузились</p>
               <p>Нажмите «Обновить» — шаблоны создаются автоматически для каждой клиники.</p>
               <Button
@@ -415,7 +415,7 @@ export default function ContractTemplatesPage() {
                 Только просмотр
               </span>
             </div>
-            <p className="text-xs text-[var(--text-subtle)] mb-4">
+            <p className="text-caption text-[var(--text-subtle)] mb-4">
               Пакеты документов готовятся автоматически в зависимости от услуг в плане лечения.
             </p>
 
@@ -428,29 +428,29 @@ export default function ContractTemplatesPage() {
                 const totalDocs = Object.values(subcategories).reduce((sum, list) => sum + list.length, 0);
 
                 return (
-                  <div key={category} className="bg-white border border-[#e8e3d9] rounded-2xl overflow-hidden shadow-md hover:border-[#d4cfc6] transition-colors">
+                  <div key={category} className="bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-2xl overflow-hidden shadow-md hover:border-[#d4cfc6] transition-colors">
                     {/* Category Header */}
                     <button
                       onClick={() => toggleCategory(category)}
-                      className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-[#faf8f4] transition-colors"
+                      className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-[var(--bg)] transition-colors"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-[#1f75fe]/10 flex items-center justify-center text-[#1f75fe] shrink-0">
+                        <div className="w-10 h-10 rounded-xl bg-[#1f75fe]/10 flex items-center justify-center text-[var(--ds-primary)] shrink-0">
                           {isCatExpanded ? <FolderOpen className="w-5 h-5" /> : <Folder className="w-5 h-5" />}
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-[#0f172a]">{category}</p>
-                          <p className="text-xs text-[#94a3b8] mt-0.5">{totalDocs} документов в пакете</p>
+                          <p className="text-body font-semibold text-[var(--text)]">{category}</p>
+                          <p className="text-caption text-[var(--text-subtle)] mt-0.5">{totalDocs} документов в пакете</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        {isCatExpanded ? <ChevronUp className="w-4 h-4 text-[#94a3b8]" /> : <ChevronDown className="w-4 h-4 text-[#94a3b8]" />}
+                        {isCatExpanded ? <ChevronUp className="w-4 h-4 text-[var(--text-subtle)]" /> : <ChevronDown className="w-4 h-4 text-[var(--text-subtle)]" />}
                       </div>
                     </button>
 
                     {/* Subcategories & Files */}
                     {isCatExpanded && (
-                      <div className="border-t border-[#e8e3d9] bg-[#faf8f4]/50 px-5 py-4 space-y-4">
+                      <div className="border-t border-[var(--ds-border)] bg-[var(--bg)]/50 px-5 py-4 space-y-4">
                         {Object.keys(subcategories).sort().map((subcategory) => {
                           const docs = subcategories[subcategory]!;
                           const subKey = `${category}:${subcategory}`;
@@ -461,30 +461,30 @@ export default function ContractTemplatesPage() {
                               {/* Subcategory Header */}
                               <button
                                 onClick={() => toggleSubcategory(subKey)}
-                                className="flex items-center gap-2 text-xs font-semibold text-[#64748b] hover:text-[#0f172a] transition-colors py-1 outline-none"
+                                className="flex items-center gap-2 text-caption font-semibold text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors py-1 outline-none"
                               >
                                 {isSubExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                                 <span>{subcategory}</span>
-                                <span className="bg-[#e8e3d9] text-[#64748b] px-1.5 py-0.2 rounded-full text-[10px]">
+                                <span className="bg-[#e8e3d9] text-[var(--text-secondary)] px-1.5 py-0.2 rounded-full text-[10px]">
                                   {docs.length}
                                 </span>
                               </button>
 
                               {/* Document list under Subcategory */}
                               {isSubExpanded && (
-                                <div className="pl-4 space-y-2 border-l-2 border-dashed border-[#e8e3d9] ml-1.5 py-1">
+                                <div className="pl-4 space-y-2 border-l-2 border-dashed border-[var(--ds-border)] ml-1.5 py-1">
                                   {docs.map((tmpl) => {
                                     const isExpanded = expandedId === tmpl.id;
                                     return (
-                                      <div key={tmpl.id} className="bg-white rounded-xl border border-[#e8e3d9] overflow-hidden shadow-sm">
+                                      <div key={tmpl.id} className="bg-[var(--ds-surface)] rounded-xl border border-[var(--ds-border)] overflow-hidden shadow-sm">
                                         <div className="p-3 flex items-center justify-between gap-4">
                                           <div className="flex items-center gap-2.5 min-w-0">
-                                            <FileText className="w-4 h-4 text-[#d97706] shrink-0" />
-                                            <p className="text-xs font-medium text-[#0f172a] truncate">{tmpl.name}</p>
+                                            <FileText className="w-4 h-4 text-[var(--warning)] shrink-0" />
+                                            <p className="text-caption font-medium text-[var(--text)] truncate">{tmpl.name}</p>
                                           </div>
                                           <button
                                             onClick={() => setExpandedId(isExpanded ? null : tmpl.id)}
-                                            className="p-1.5 rounded-xl text-[#94a3b8] hover:text-[#64748b] hover:bg-[#f1ede4] transition-colors shrink-0"
+                                            className="p-1.5 rounded-xl text-[var(--text-subtle)] hover:text-[var(--text-secondary)] hover:bg-[var(--surface-2)] transition-colors shrink-0"
                                             title="Посмотреть содержимое"
                                           >
                                             {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
@@ -516,16 +516,16 @@ export default function ContractTemplatesPage() {
 
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-6 h-6 text-[#94a3b8] animate-spin" />
+              <Loader2 className="w-6 h-6 text-[var(--text-subtle)] animate-spin" />
             </div>
           ) : templates.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-3 py-12 text-center bg-white rounded-2xl border border-[#e8e3d9]">
-              <div className="w-12 h-12 rounded-2xl bg-[#f1ede4] flex items-center justify-center">
-                <FileText className="w-6 h-6 text-[#94a3b8]" />
+            <div className="flex flex-col items-center justify-center gap-3 py-12 text-center bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)]">
+              <div className="w-12 h-12 rounded-2xl bg-[var(--surface-2)] flex items-center justify-center">
+                <FileText className="w-6 h-6 text-[var(--text-subtle)]" />
               </div>
               <div>
-                <p className="text-sm font-medium text-[#0f172a]">Нет шаблонов</p>
-                <p className="text-xs text-[#94a3b8] mt-0.5">Загрузите первый шаблон договора</p>
+                <p className="text-body font-medium text-[var(--text)]">Нет шаблонов</p>
+                <p className="text-caption text-[var(--text-subtle)] mt-0.5">Загрузите первый шаблон договора</p>
               </div>
             </div>
           ) : (
@@ -539,24 +539,24 @@ export default function ContractTemplatesPage() {
                 const isEditing = editingId === tmpl.id;
 
                 return (
-                  <div key={tmpl.id} className="bg-white rounded-2xl border border-[#e8e3d9] shadow-md overflow-hidden">
+                  <div key={tmpl.id} className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] shadow-md overflow-hidden">
                     <div className="p-4 flex items-start gap-4">
                       <div className="w-10 h-10 rounded-xl bg-[#1f75fe]/10 flex items-center justify-center shrink-0">
-                        <FileText className="w-5 h-5 text-[#1f75fe]" />
+                        <FileText className="w-5 h-5 text-[var(--ds-primary)]" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-[#0f172a] truncate">{tmpl.name}</p>
-                        <p className="text-xs text-[#94a3b8] mt-0.5">
+                        <p className="text-body font-semibold text-[var(--text)] truncate">{tmpl.name}</p>
+                        <p className="text-caption text-[var(--text-subtle)] mt-0.5">
                           {tmpl.fileType.toUpperCase()} · {new Date(tmpl.createdAt).toLocaleDateString("ru-RU")}
                         </p>
                         <div className="flex items-center gap-1.5 mt-2">
                           {fieldCount > 0 ? (
-                            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#16a34a] bg-[#f0fdf4] border border-[#16a34a]/20 px-2 py-0.5 rounded-full">
+                            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--success)] bg-[#f0fdf4] border border-[#16a34a]/20 px-2 py-0.5 rounded-full">
                               <CheckCircle2 className="w-3 h-3" />
                               {fieldCount} поле(й) AI
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 text-[11px] text-[#d97706] bg-[#fef3c7] border border-[#d97706]/20 px-2 py-0.5 rounded-full">
+                            <span className="inline-flex items-center gap-1 text-[11px] text-[var(--warning)] bg-[#fef3c7] border border-[#d97706]/20 px-2 py-0.5 rounded-full">
                               <AlertCircle className="w-3 h-3" />
                               Нет полей
                             </span>
@@ -575,7 +575,7 @@ export default function ContractTemplatesPage() {
                                 setEditingId(tmpl.id);
                               }
                             }}
-                            className="p-2 rounded-xl text-[#94a3b8] hover:text-[#1f75fe] hover:bg-[#1f75fe]/10 transition-colors"
+                            className="p-2 rounded-xl text-[var(--text-subtle)] hover:text-[var(--ds-primary)] hover:bg-[#1f75fe]/10 transition-colors"
                             title="Редактировать маппинг полей"
                           >
                             <Pencil className="w-4 h-4" />
@@ -583,7 +583,7 @@ export default function ContractTemplatesPage() {
                         )}
                         <button
                           onClick={() => setExpandedId(isExpanded && !isEditing ? null : tmpl.id)}
-                          className="p-2 rounded-xl text-[#94a3b8] hover:text-[#64748b] hover:bg-[#faf8f4] transition-colors"
+                          className="p-2 rounded-xl text-[var(--text-subtle)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg)] transition-colors"
                           title="Показать поля"
                         >
                           {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -592,7 +592,7 @@ export default function ContractTemplatesPage() {
                           <button
                             onClick={() => handleDelete(tmpl.id, tmpl.name)}
                             disabled={deleteMutation.isPending}
-                            className="p-2 rounded-xl text-[#94a3b8] hover:text-[#dc2626] hover:bg-[#fef2f2] transition-colors"
+                            className="p-2 rounded-xl text-[var(--text-subtle)] hover:text-[var(--danger)] hover:bg-[#fef2f2] transition-colors"
                             title="Удалить шаблон"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -603,7 +603,7 @@ export default function ContractTemplatesPage() {
 
                     {/* Expanded mapping view / editor */}
                     {isExpanded && (
-                      <div className="px-4 pb-4 border-t border-[#e8e3d9] pt-2">
+                      <div className="px-4 pb-4 border-t border-[var(--ds-border)] pt-2">
                         {isEditing ? (
                           <MappingEditor
                             template={tmpl}
@@ -612,14 +612,14 @@ export default function ContractTemplatesPage() {
                         ) : (
                           <div className="space-y-1.5">
                             {rawMappings.length === 0 ? (
-                              <p className="text-xs text-[#94a3b8] italic py-2">Нет полей</p>
+                              <p className="text-caption text-[var(--text-subtle)] italic py-2">Нет полей</p>
                             ) : rawMappings.map((m, i) => (
-                              <div key={i} className="flex items-center gap-2 text-xs text-[#64748b]">
-                                <span className="font-mono bg-[#f1ede4] px-1.5 py-0.5 rounded text-[#64748b] max-w-[160px] truncate">
+                              <div key={i} className="flex items-center gap-2 text-caption text-[var(--text-secondary)]">
+                                <span className="font-mono bg-[var(--surface-2)] px-1.5 py-0.5 rounded text-[var(--text-secondary)] max-w-[160px] truncate">
                                   {m.placeholder}
                                 </span>
                                 <span className="text-[#e8e3d9]">→</span>
-                                <span className="font-medium text-[#0f172a]">{m.label}</span>
+                                <span className="font-medium text-[var(--text)]">{m.label}</span>
                               </div>
                             ))}
                           </div>

@@ -123,7 +123,7 @@ export default function PayrollApproveModal({ onClose, onSuccess, filterUserId }
           <select
             value={year}
             onChange={(e) => { setYear(Number(e.target.value)); setOverrides({}); }}
-            className="w-full h-9 px-3 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)]"
+            className="w-full h-9 px-3 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] text-body text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)]"
           >
             {YEARS.map((y) => (
               <option key={y} value={y}>{y}</option>
@@ -135,7 +135,7 @@ export default function PayrollApproveModal({ onClose, onSuccess, filterUserId }
           <select
             value={month}
             onChange={(e) => { setMonth(Number(e.target.value)); setOverrides({}); }}
-            className="w-full h-9 px-3 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)]"
+            className="w-full h-9 px-3 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] text-body text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)]"
           >
             {MONTHS.map((m) => (
               <option key={m} value={m}>{MONTH_NAMES[m - 1]}</option>
@@ -146,11 +146,11 @@ export default function PayrollApproveModal({ onClose, onSuccess, filterUserId }
 
       <div className="flex-1 overflow-y-auto max-h-[50vh]">
         {isFetching ? (
-          <div className="flex items-center justify-center py-12 text-sm text-[var(--text-secondary)]">
+          <div className="flex items-center justify-center py-12 text-body text-[var(--text-secondary)]">
             {t("common.loading", "Загрузка...")}
           </div>
         ) : rows.length === 0 ? (
-          <div className="flex items-center justify-center py-12 text-sm text-[var(--text-secondary)]">
+          <div className="flex items-center justify-center py-12 text-body text-[var(--text-secondary)]">
             {t("payroll.noStaffSettings", "Нет сотрудников с настроенной зарплатой")}
           </div>
         ) : (
@@ -182,7 +182,7 @@ export default function PayrollApproveModal({ onClose, onSuccess, filterUserId }
                       min={0}
                       value={getApproved(row)}
                       onChange={(e) => handleOverride(row.userId, e.target.value)}
-                      className="w-28 h-8 px-2 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] text-sm text-right text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)]"
+                      className="w-28 h-8 px-2 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] text-body text-right text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)]"
                     />
                   </TableCell>
                 </TableRow>

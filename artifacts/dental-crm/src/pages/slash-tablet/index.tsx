@@ -44,7 +44,7 @@ export default function SlashTabletPage() {
   }
 
   return (
-    <div className="h-[100dvh] w-full overflow-hidden bg-[#faf8f4] font-manrope" data-slash-tablet>
+    <div className="h-[100dvh] w-full overflow-hidden bg-[var(--bg)] font-manrope" data-slash-tablet>
       <AnimatePresence mode="wait">
         {step === "lock" && (
           <motion.div key="lock" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -91,28 +91,28 @@ function TabletTopBar({
   onLogout: () => void;
 }) {
   return (
-    <header className="flex items-center justify-between border-b border-[#e8e3d9] bg-white px-5 py-3">
+    <header className="flex items-center justify-between border-b border-[var(--ds-border)] bg-[var(--ds-surface)] px-5 py-3">
       <div className="flex items-center gap-4">
         <OneDentLogo />
-        <span className="flex items-center gap-1.5 text-sm text-[#64748b]">
+        <span className="flex items-center gap-1.5 text-body text-[var(--text-secondary)]">
           <LayoutGrid className="h-4 w-4" /> {cabinetName}
         </span>
       </div>
 
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-white"
+          <div className="flex h-9 w-9 items-center justify-center rounded-full text-caption font-bold text-white"
             style={{ backgroundColor: doctor.avatarColor }}>
             {initials(doctor.name)}
           </div>
           <div className="text-right">
-            <p className="text-sm font-bold leading-tight text-[#0f172a]">{doctor.name}</p>
+            <p className="text-body font-bold leading-tight text-[var(--text)]">{doctor.name}</p>
           </div>
         </div>
         <button
           type="button"
           onClick={onLogout}
-          className="flex items-center gap-1.5 rounded-xl border border-[#e8e3d9] px-3 py-2 text-sm font-semibold text-[#64748b] transition-colors hover:bg-[#faf8f4]"
+          className="flex items-center gap-1.5 rounded-xl border border-[var(--ds-border)] px-3 py-2 text-body font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg)]"
         >
           <LogOut className="h-4 w-4" /> Выход
         </button>

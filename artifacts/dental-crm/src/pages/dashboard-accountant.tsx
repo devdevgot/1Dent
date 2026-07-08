@@ -210,13 +210,13 @@ export default function AccountantDashboard() {
             </div>
             <div className="flex-1">
               <h3 className="dash-section-title text-sm">{t("payroll.fot")}</h3>
-              <p className="text-xs text-[var(--text-secondary)]">
+              <p className="text-caption text-[var(--text-secondary)]">
                 {`${currentMonth.toString().padStart(2, "0")}/${currentYear}`}
               </p>
             </div>
             <button
               onClick={() => setShowApproveModal(true)}
-              className="dash-btn dash-btn-primary text-xs py-1.5 px-3"
+              className="dash-btn dash-btn-primary text-caption py-1.5 px-3"
             >
               <PlusCircle className="w-3.5 h-3.5" />
               {t("payroll.approveFot", "Утвердить ФОТ")}
@@ -229,7 +229,7 @@ export default function AccountantDashboard() {
 
           {approvedThisMonth.length > 0 ? (
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-[var(--success)] flex items-center gap-1">
+              <p className="text-caption font-semibold text-[var(--success)] flex items-center gap-1">
                 <CheckCircle className="w-3.5 h-3.5" />
                 {approvedThisMonth.length} {t("payroll.fotApproved", "сотр. утверждено")}
               </p>
@@ -239,12 +239,12 @@ export default function AccountantDashboard() {
                   className="flex items-center justify-between p-2.5 bg-[var(--success-light)] rounded-lg border border-[var(--success-light)]"
                 >
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold text-[var(--text)] truncate">{r.userName ?? "—"}</p>
+                    <p className="text-caption font-semibold text-[var(--text)] truncate">{r.userName ?? "—"}</p>
                     <p className="text-[11px] text-[var(--text-secondary)]">
                       {r.periodMonth.toString().padStart(2, "0")}/{r.periodYear}
                     </p>
                   </div>
-                  <span className="ml-2 text-xs font-bold text-[var(--success)]">
+                  <span className="ml-2 text-caption font-bold text-[var(--success)]">
                     ₸{Number(r.approvedAmount ?? r.calculatedAmount).toLocaleString("ru-KZ")}
                   </span>
                 </div>
@@ -267,7 +267,7 @@ export default function AccountantDashboard() {
             </h3>
             <button
               onClick={() => navigate("/procedures")}
-              className="text-sm text-[var(--ds-primary)] font-semibold flex items-center gap-1 hover:underline"
+              className="text-body text-[var(--ds-primary)] font-semibold flex items-center gap-1 hover:underline"
             >
               {t("dashboard.viewAll")} <ChevronRight className="w-4 h-4" />
             </button>
@@ -290,17 +290,17 @@ export default function AccountantDashboard() {
                     transition={{ delay: i * 0.05 }}
                     className="flex items-center gap-4"
                   >
-                    <div className="w-8 h-8 rounded-full bg-[var(--primary-light)] flex items-center justify-center text-[var(--ds-primary)] font-bold text-xs flex-none">
+                    <div className="w-8 h-8 rounded-full bg-[var(--primary-light)] flex items-center justify-center text-[var(--ds-primary)] font-bold text-caption flex-none">
                       {d.name.charAt(0)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm font-medium text-[var(--text)] truncate">{d.name}</span>
+                        <span className="text-body font-medium text-[var(--text)] truncate">{d.name}</span>
                         <div className="ml-2 flex-none text-right">
-                          <span className="text-sm font-semibold text-[var(--text)]">
+                          <span className="text-body font-semibold text-[var(--text)]">
                             ₸ {d.revenue.toLocaleString("ru-KZ")}
                           </span>
-                          <span className="text-xs text-[var(--text-secondary)] ml-1">({d.count} {t("dashboard.procedures").toLowerCase()})</span>
+                          <span className="text-caption text-[var(--text-secondary)] ml-1">({d.count} {t("dashboard.procedures").toLowerCase()})</span>
                         </div>
                       </div>
                       <div className="w-full bg-[var(--surface-2)] rounded-full h-1.5">
@@ -314,7 +314,7 @@ export default function AccountantDashboard() {
                 );
               })}
               <div className="pt-3 mt-2 border-t border-[var(--ds-border)] flex justify-between items-center">
-                <span className="text-sm font-semibold text-[var(--text-secondary)]">{t("accountantDashboard.totalRevenue")}</span>
+                <span className="text-body font-semibold text-[var(--text-secondary)]">{t("accountantDashboard.totalRevenue")}</span>
                 <span className="text-lg font-bold text-[var(--text)]">₸ {totalRevenue.toLocaleString("ru-KZ")}</span>
               </div>
             </div>
@@ -339,7 +339,7 @@ export default function AccountantDashboard() {
               <TrendingUp className="w-6 h-6 text-[var(--success)]" />
             </div>
             <p className="text-[var(--success)] font-semibold">{t("accountantDashboard.allBilled")}</p>
-            <p className="text-sm text-[var(--text-secondary)] mt-1">{t("accountantDashboard.allBilledDesc")}</p>
+            <p className="text-body text-[var(--text-secondary)] mt-1">{t("accountantDashboard.allBilledDesc")}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -347,15 +347,15 @@ export default function AccountantDashboard() {
               <div key={proc.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-[var(--bg)]">
                 <div className="w-2 h-2 rounded-full bg-[var(--warning)] flex-none" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-[var(--text)] truncate">{proc.name}</p>
-                  <p className="text-xs text-[var(--text-secondary)]">{proc.doctorName ?? "—"}</p>
+                  <p className="text-body font-medium text-[var(--text)] truncate">{proc.name}</p>
+                  <p className="text-caption text-[var(--text-secondary)]">{proc.doctorName ?? "—"}</p>
                 </div>
               </div>
             ))}
             {completedNoBilling.length > 6 && (
               <button
                 onClick={() => navigate("/procedures")}
-                className="w-full text-center text-sm text-[var(--ds-primary)] font-semibold mt-2 hover:underline"
+                className="w-full text-center text-body text-[var(--ds-primary)] font-semibold mt-2 hover:underline"
               >
                 +{completedNoBilling.length - 6} {t("accountantDashboard.more")}
               </button>

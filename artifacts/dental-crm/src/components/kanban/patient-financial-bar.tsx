@@ -24,7 +24,7 @@ export function PatientFinancialBar({ data, compact = false }: Props) {
   if (compact) {
     return (
       <div className="space-y-1">
-        <div className="h-1.5 rounded-full bg-[#f1ede4] overflow-hidden flex">
+        <div className="h-1.5 rounded-full bg-[var(--surface-2)] overflow-hidden flex">
           {paidPct > 0 && <div className="h-full bg-emerald-500" style={{ width: `${paidPct}%` }} />}
           {debtPct > 0 && <div className="h-full bg-amber-400" style={{ width: `${debtPct}%` }} />}
           {remainPct > 0 && <div className="h-full bg-red-300" style={{ width: `${remainPct}%` }} />}
@@ -40,7 +40,7 @@ export function PatientFinancialBar({ data, compact = false }: Props) {
 
   return (
     <div className="space-y-1">
-      <div className="h-2 rounded-full bg-[#f1ede4] overflow-hidden flex">
+      <div className="h-2 rounded-full bg-[var(--surface-2)] overflow-hidden flex">
         {paidPct > 0 && <div className="h-full bg-emerald-500 transition-all" style={{ width: `${paidPct}%` }} />}
         {debtPct > 0 && <div className="h-full bg-amber-400 transition-all" style={{ width: `${debtPct}%` }} />}
         {remainPct > 0 && <div className="h-full bg-red-300 transition-all" style={{ width: `${remainPct}%` }} />}

@@ -63,7 +63,7 @@ const Tooth = memo(function Tooth({
       className={cn(
         "font-semibold transition-colors leading-none",
         big ? "text-[13px]" : "text-[11px]",
-        selected ? "text-[#1f75fe]" : "text-[#94a3b8]",
+        selected ? "text-[var(--ds-primary)]" : "text-[var(--text-subtle)]",
       )}
     >
       {id}
@@ -77,7 +77,7 @@ const Tooth = memo(function Tooth({
       title={`Зуб ${id} — ${meta.label}`}
       className={cn(
         "flex flex-col items-center gap-1 rounded-xl p-1 transition-all outline-none",
-        onClick && "cursor-pointer active:scale-95 hover:bg-[#faf8f4]",
+        onClick && "cursor-pointer active:scale-95 hover:bg-[var(--bg)]",
         selected && "bg-[#1f75fe]/8 ring-2 ring-[#1f75fe] ring-offset-1",
       )}
     >
@@ -135,7 +135,7 @@ export function TabletDentalChart({
 
   return (
     <div className="w-full">
-      <div className="rounded-2xl border border-[#e8e3d9] bg-white p-4 md:p-6">
+      <div className="rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] p-4 md:p-6">
         {/* Upper jaw */}
         <div className="grid items-end" style={{ gridTemplateColumns: "repeat(16, minmax(0, 1fr))" }}>
           {TOP_TEETH.map((id) => (
@@ -166,12 +166,12 @@ export function TabletDentalChart({
             .map(([key, m]) => (
               <div key={key} className="flex items-center gap-1.5">
                 <span className="w-3.5 h-3.5 rounded-full border" style={{ background: m.bg, borderColor: m.color }} />
-                <span className="text-[11px] font-medium text-[#64748b]">{m.label}</span>
+                <span className="text-[11px] font-medium text-[var(--text-secondary)]">{m.label}</span>
               </div>
             ))}
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-lime-500" />
-            <span className="text-[11px] font-medium text-[#64748b]">В плане</span>
+            <span className="text-[11px] font-medium text-[var(--text-secondary)]">В плане</span>
           </div>
         </div>
       )}

@@ -661,12 +661,12 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
         <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--ds-border)]">
           <div className="flex-1">
             <h2 className="font-semibold text-base text-[var(--text)]">Филиалы и геозоны</h2>
-            <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+            <p className="text-caption text-[var(--text-secondary)] mt-0.5">
               {branches.length > 0 ? `${branches.length} филиал${branches.length === 1 ? "" : branches.length < 5 ? "а" : "ов"}` : "Нет добавленных филиалов"}
             </p>
           </div>
           <Button
-            className="gap-1.5 h-8 text-xs px-2.5 sm:px-3"
+            className="gap-1.5 h-8 text-caption px-2.5 sm:px-3"
             onClick={() => setIsModalOpen(true)}
           >
             <Plus className="w-3.5 h-3.5 shrink-0" />
@@ -684,12 +684,12 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                 placeholder="Поиск по филиалам…"
                 value={branchSearch}
                 onChange={(e) => setBranchSearch(e.target.value)}
-                className="w-full h-9 pl-9 pr-3 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/40"
+                className="w-full h-9 pl-9 pr-3 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] text-body focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/40"
               />
               {branchSearch.trim() && (
                 <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-xl shadow-lg overflow-hidden">
                   {branches.filter((b) => b.name.toLowerCase().includes(branchSearch.toLowerCase())).length === 0 ? (
-                    <div className="px-4 py-3 text-sm text-[var(--text-secondary)] text-center">Ничего не найдено</div>
+                    <div className="px-4 py-3 text-body text-[var(--text-secondary)] text-center">Ничего не найдено</div>
                   ) : (
                     branches
                       .filter((b) => b.name.toLowerCase().includes(branchSearch.toLowerCase()))
@@ -704,8 +704,8 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                         >
                           <MapPin className="w-3.5 h-3.5 text-[var(--ds-primary)] shrink-0" />
                           <div className="min-w-0">
-                            <p className="text-sm font-medium text-[var(--text)] truncate">{b.name}</p>
-                            <p className="text-xs text-[var(--text-secondary)]">{b.latitude.toFixed(4)}, {b.longitude.toFixed(4)} · {b.radiusMeters}м</p>
+                            <p className="text-body font-medium text-[var(--text)] truncate">{b.name}</p>
+                            <p className="text-caption text-[var(--text-secondary)]">{b.latitude.toFixed(4)}, {b.longitude.toFixed(4)} · {b.radiusMeters}м</p>
                           </div>
                         </button>
                       ))
@@ -726,7 +726,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
               <div className="w-12 h-12 rounded-2xl bg-[var(--surface-2)] flex items-center justify-center">
                 <MapPin className="w-6 h-6 text-[var(--text-secondary)]" />
               </div>
-              <p className="text-sm text-[var(--text-secondary)]">Нажмите «Новый филиал»,<br />чтобы добавить первый филиал</p>
+              <p className="text-body text-[var(--text-secondary)]">Нажмите «Новый филиал»,<br />чтобы добавить первый филиал</p>
             </div>
           )}
           <div className="space-y-2">
@@ -738,8 +738,8 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                 <div className="flex items-center gap-2.5 min-w-0">
                   <MapPin className="w-4 h-4 text-[var(--ds-primary)] shrink-0" />
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-[var(--text)] truncate">{b.name}</p>
-                    <p className="text-xs text-[var(--text-secondary)]">
+                    <p className="text-body font-medium text-[var(--text)] truncate">{b.name}</p>
+                    <p className="text-caption text-[var(--text-secondary)]">
                       {b.latitude.toFixed(4)}, {b.longitude.toFixed(4)} · {b.radiusMeters}м
                     </p>
                   </div>
@@ -788,7 +788,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                   placeholder="Поиск адреса…"
                   value={mapQuery}
                   onChange={(e) => handleMapSearch(e.target.value)}
-                  className="w-full h-10 pl-9 pr-8 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/40"
+                  className="w-full h-10 pl-9 pr-8 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] text-body focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/40"
                 />
                 {mapQuery.trim() && (
                   <button
@@ -802,7 +802,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
               {mapQuery.trim() && (mapGeoResults.length > 0 || (searchDone && !mapSearching)) && (
                 <div className="absolute left-4 right-4 top-full z-50 bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-xl shadow-lg overflow-hidden">
                   {mapGeoResults.length === 0 ? (
-                    <div className="px-4 py-3 text-sm text-[var(--text-secondary)] text-center">Ничего не найдено</div>
+                    <div className="px-4 py-3 text-body text-[var(--text-secondary)] text-center">Ничего не найдено</div>
                   ) : (
                     mapGeoResults.map((r, i) => (
                       <button
@@ -836,7 +836,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                         }}
                       >
                         <MapPin className="w-3.5 h-3.5 text-[var(--ds-primary)] shrink-0 mt-0.5" />
-                        <span className="text-sm text-[var(--text)] leading-snug">{r.name}</span>
+                        <span className="text-body text-[var(--text)] leading-snug">{r.name}</span>
                       </button>
                     ))
                   )}
@@ -854,12 +854,12 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
               {modalMapError && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-[var(--bg)] gap-2 p-4 text-center">
                   <MapPin className="w-8 h-8 text-[var(--text-subtle)]" />
-                  <p className="text-sm text-[var(--text-secondary)]">{modalMapError}</p>
+                  <p className="text-body text-[var(--text-secondary)]">{modalMapError}</p>
                 </div>
               )}
               <div ref={mapRef} className="w-full h-full" />
               {modalMapReady && !pendingCoords && (
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/60 text-white text-xs px-3 py-1.5 rounded-full whitespace-nowrap pointer-events-none">
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/60 text-white text-caption px-3 py-1.5 rounded-full whitespace-nowrap pointer-events-none">
                   Нажмите на карту, чтобы выбрать точку
                 </div>
               )}
@@ -867,7 +867,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
 
             {/* Location banner */}
             {locating && (
-              <div className="mx-4 mt-2 flex items-center gap-2 text-xs text-[var(--text-secondary)]">
+              <div className="mx-4 mt-2 flex items-center gap-2 text-caption text-[var(--text-secondary)]">
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 Определяем местоположение…
               </div>
@@ -875,7 +875,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
             {myLocation && !pendingCoords && (
               <div className="mx-4 mt-2 flex items-center gap-3 bg-[var(--info-light)] border border-[var(--info)]/30 rounded-xl px-4 py-2.5">
                 <Navigation className="w-4 h-4 text-[var(--info)] shrink-0" />
-                <p className="text-xs text-[var(--info)] flex-1">Вы здесь — нажмите сюда, чтобы добавить точку</p>
+                <p className="text-caption text-[var(--info)] flex-1">Вы здесь — нажмите сюда, чтобы добавить точку</p>
                 <button
                   onMouseDown={(e) => {
                     e.preventDefault();
@@ -893,7 +893,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                     setPendingCoords({ lat: myLocation.lat, lon: myLocation.lon });
                     setNewName("");
                   }}
-                  className="shrink-0 text-xs font-semibold text-[var(--info)] bg-[var(--info-light)] hover:bg-[var(--info-light)] transition-colors px-3 py-1 rounded-lg"
+                  className="shrink-0 text-caption font-semibold text-[var(--info)] bg-[var(--info-light)] hover:bg-[var(--info-light)] transition-colors px-3 py-1 rounded-lg"
                 >
                   Да
                 </button>
@@ -903,7 +903,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
             {/* Form — shown after point is selected */}
             {pendingCoords && (
               <div className="mx-4 mt-3 mb-4 space-y-3">
-                <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)] bg-[var(--surface-2)]/50 rounded-xl px-3 py-2">
+                <div className="flex items-center gap-2 text-caption text-[var(--text-secondary)] bg-[var(--surface-2)]/50 rounded-xl px-3 py-2">
                   <MapPin className="w-3.5 h-3.5 text-[var(--danger)] shrink-0" />
                   <span>Точка: {pendingCoords.lat.toFixed(5)}, {pendingCoords.lon.toFixed(5)}</span>
                   <button
@@ -925,20 +925,20 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                   placeholder="Название филиала"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  className="w-full h-10 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/40"
+                  className="w-full h-10 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-3 text-body focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/40"
                   autoFocus
                 />
 
                 {/* Radius presets */}
                 <div className="space-y-2">
-                  <p className="text-xs font-medium text-[var(--text-secondary)]">Радиус геозоны</p>
+                  <p className="text-caption font-medium text-[var(--text-secondary)]">Радиус геозоны</p>
                   <div className="flex gap-2 flex-wrap">
                     {RADIUS_PRESETS.map((p) => (
                       <button
                         key={p.value}
                         onClick={() => { setNewRadius(p.value); setUseCustomRadius(false); }}
                         className={cn(
-                          "h-8 px-3 rounded-lg text-xs font-medium border transition-colors",
+                          "h-8 px-3 rounded-lg text-caption font-medium border transition-colors",
                           !useCustomRadius && newRadius === p.value
                             ? "bg-[var(--ds-primary)] text-white border-[var(--ds-primary)]"
                             : "bg-[var(--ds-surface)] text-[var(--text)] border-[var(--ds-border)] hover:border-[var(--ds-primary)]/50",
@@ -950,7 +950,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                     <button
                       onClick={() => setUseCustomRadius(true)}
                       className={cn(
-                        "h-8 px-3 rounded-lg text-xs font-medium border transition-colors",
+                        "h-8 px-3 rounded-lg text-caption font-medium border transition-colors",
                         useCustomRadius
                           ? "bg-[var(--ds-primary)] text-white border-[var(--ds-primary)]"
                           : "bg-[var(--ds-surface)] text-[var(--text)] border-[var(--ds-border)] hover:border-[var(--ds-primary)]/50",
@@ -968,14 +968,14 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                         placeholder="Введите метры"
                         value={customRadius}
                         onChange={(e) => setCustomRadius(e.target.value)}
-                        className="w-full h-10 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/40"
+                        className="w-full h-10 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-3 text-body focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/40"
                         autoFocus
                       />
-                      <span className="text-sm text-[var(--text-secondary)] whitespace-nowrap shrink-0">м</span>
+                      <span className="text-body text-[var(--text-secondary)] whitespace-nowrap shrink-0">м</span>
                     </div>
                   )}
                   {effectiveRadius > 0 && (
-                    <p className="text-xs text-[var(--text-secondary)]">
+                    <p className="text-caption text-[var(--text-secondary)]">
                       Зона: <span className="font-medium text-[var(--text)]">
                         {effectiveRadius >= 1000 ? `${(effectiveRadius / 1000).toFixed(1)} км` : `${effectiveRadius} м`}
                       </span>
@@ -1013,7 +1013,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                 {!confirmingDelete ? (
                   <button
                     onClick={() => setConfirmingDelete(true)}
-                    className="w-full flex items-center justify-center gap-2 h-9 rounded-xl border border-[var(--danger)]/30 text-sm text-[var(--danger)] hover:bg-[var(--danger-light)] transition-colors"
+                    className="w-full flex items-center justify-center gap-2 h-9 rounded-xl border border-[var(--danger)]/30 text-body text-[var(--danger)] hover:bg-[var(--danger-light)] transition-colors"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     Удалить филиал
@@ -1023,8 +1023,8 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                     <div className="flex items-start gap-2.5">
                       <Trash2 className="w-4 h-4 text-[var(--danger)] shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-sm font-semibold text-[var(--danger)]">Удалить филиал?</p>
-                        <p className="text-xs text-[var(--danger)] mt-0.5 leading-relaxed">
+                        <p className="text-body font-semibold text-[var(--danger)]">Удалить филиал?</p>
+                        <p className="text-caption text-[var(--danger)] mt-0.5 leading-relaxed">
                           Все данные трекинга по этому филиалу тоже будут удалены. Это действие нельзя отменить.
                         </p>
                       </div>
@@ -1035,7 +1035,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                           void handleDeleteBranch(editingBranch.id).then(() => closeModal());
                         }}
                         disabled={deletingId === editingBranch.id}
-                        className="flex-1 h-9 rounded-xl bg-[var(--danger)] text-white text-sm font-semibold flex items-center justify-center gap-1.5 hover:opacity-90 transition-colors disabled:opacity-60"
+                        className="flex-1 h-9 rounded-xl bg-[var(--danger)] text-white text-body font-semibold flex items-center justify-center gap-1.5 hover:opacity-90 transition-colors disabled:opacity-60"
                       >
                         {deletingId === editingBranch.id
                           ? <Loader2 className="w-4 h-4 animate-spin" />
@@ -1045,7 +1045,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                       <button
                         onClick={() => setConfirmingDelete(false)}
                         disabled={deletingId === editingBranch.id}
-                        className="px-4 h-9 rounded-xl border border-[var(--danger)]/30 text-sm text-[var(--danger)] bg-[var(--ds-surface)] hover:bg-[var(--danger-light)] transition-colors disabled:opacity-60"
+                        className="px-4 h-9 rounded-xl border border-[var(--danger)]/30 text-body text-[var(--danger)] bg-[var(--ds-surface)] hover:bg-[var(--danger-light)] transition-colors disabled:opacity-60"
                       >
                         Отмена
                       </button>
@@ -1086,7 +1086,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                 <>
                   <button
                     onClick={exportJournalCSV}
-                    className="flex items-center gap-1.5 h-8 px-3 rounded-xl border border-[var(--ds-border)] text-xs text-[var(--text-secondary)] hover:border-[var(--success)] hover:text-[var(--success)] transition-colors"
+                    className="flex items-center gap-1.5 h-8 px-3 rounded-xl border border-[var(--ds-border)] text-caption text-[var(--text-secondary)] hover:border-[var(--success)] hover:text-[var(--success)] transition-colors"
                     title="Скачать Excel (CSV)"
                   >
                     <FileSpreadsheet className="w-3.5 h-3.5" />
@@ -1094,7 +1094,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                   </button>
                   <button
                     onClick={exportJournalPDF}
-                    className="flex items-center gap-1.5 h-8 px-3 rounded-xl border border-[var(--ds-border)] text-xs text-[var(--text-secondary)] hover:border-[var(--danger)] hover:text-[var(--danger)] transition-colors"
+                    className="flex items-center gap-1.5 h-8 px-3 rounded-xl border border-[var(--ds-border)] text-caption text-[var(--text-secondary)] hover:border-[var(--danger)] hover:text-[var(--danger)] transition-colors"
                     title="Открыть для печати / PDF"
                   >
                     <FileText className="w-3.5 h-3.5" />
@@ -1114,7 +1114,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                   key={p.label}
                   onClick={() => { setJournalFrom(p.from); setJournalTo(p.to); }}
                   className={cn(
-                    "h-7 px-3 rounded-full text-xs font-medium transition-all",
+                    "h-7 px-3 rounded-full text-caption font-medium transition-all",
                     journalFrom === p.from && journalTo === p.to
                       ? "bg-[var(--text)] text-white"
                       : "bg-[var(--surface-2)] text-[var(--text-secondary)] hover:text-[var(--text)]",
@@ -1133,16 +1133,16 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                   value={journalFrom}
                   max={journalTo}
                   onChange={e => setJournalFrom(e.target.value)}
-                  className="flex-1 h-8 rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface)] px-2 text-xs text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/40"
+                  className="flex-1 h-8 rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface)] px-2 text-caption text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/40"
                 />
-                <span className="text-xs text-[var(--text-secondary)]">—</span>
+                <span className="text-caption text-[var(--text-secondary)]">—</span>
                 <input
                   type="date"
                   value={journalTo}
                   min={journalFrom}
                   max={todayStr}
                   onChange={e => setJournalTo(e.target.value)}
-                  className="flex-1 h-8 rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface)] px-2 text-xs text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/40"
+                  className="flex-1 h-8 rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface)] px-2 text-caption text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/40"
                 />
               </div>
               {journalStaff.length > 1 && (
@@ -1151,7 +1151,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                   <select
                     value={journalEmployee}
                     onChange={e => setJournalEmployee(e.target.value)}
-                    className="h-8 rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface)] px-2 text-xs text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/40 min-w-[140px]"
+                    className="h-8 rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface)] px-2 text-caption text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/40 min-w-[140px]"
                   >
                     <option value="all">Все сотрудники</option>
                     {journalStaff.map(s => (
@@ -1176,8 +1176,8 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                   <Filter className="w-6 h-6 text-[var(--text-subtle)]" />
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-medium text-[var(--text)]">Нет событий</p>
-                  <p className="text-xs text-[var(--text-secondary)] mt-0.5">Попробуйте изменить период или фильтр сотрудника</p>
+                  <p className="text-body font-medium text-[var(--text)]">Нет событий</p>
+                  <p className="text-caption text-[var(--text-secondary)] mt-0.5">Попробуйте изменить период или фильтр сотрудника</p>
                 </div>
               </div>
             ) : (
@@ -1204,10 +1204,10 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="bg-[var(--surface-2)]/50 border-b border-[var(--ds-border)]">
-                          <th className="text-left px-4 py-2.5 text-xs font-medium text-[var(--text-secondary)]">Сотрудник</th>
-                          <th className="text-left px-4 py-2.5 text-xs font-medium text-[var(--text-secondary)]">Событие</th>
-                          <th className="text-left px-4 py-2.5 text-xs font-medium text-[var(--text-secondary)]">Дата</th>
-                          <th className="text-right px-4 py-2.5 text-xs font-medium text-[var(--text-secondary)]">Время</th>
+                          <th className="text-left px-4 py-2.5 text-caption font-medium text-[var(--text-secondary)]">Сотрудник</th>
+                          <th className="text-left px-4 py-2.5 text-caption font-medium text-[var(--text-secondary)]">Событие</th>
+                          <th className="text-left px-4 py-2.5 text-caption font-medium text-[var(--text-secondary)]">Дата</th>
+                          <th className="text-right px-4 py-2.5 text-caption font-medium text-[var(--text-secondary)]">Время</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1220,7 +1220,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                               <td className="px-4 py-3 font-medium text-[var(--text)]">{e.userName}</td>
                               <td className="px-4 py-3">
                                 <span className={cn(
-                                  "inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full",
+                                  "inline-flex items-center gap-1.5 text-caption font-medium px-2 py-1 rounded-full",
                                   e.eventType === "checkin"
                                     ? "bg-[var(--success-light)] text-[var(--success)] border border-[var(--success)]/30"
                                     : "bg-[var(--warning-light)] text-[var(--warning)] border border-[var(--warning)]/30",
@@ -1228,8 +1228,8 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                                   {e.eventType === "checkin" ? <><LogIn className="w-3 h-3" />Приход</> : <><LogOut className="w-3 h-3" />Уход</>}
                                 </span>
                               </td>
-                              <td className="px-4 py-3 text-xs text-[var(--text-secondary)]">{date}</td>
-                              <td className="px-4 py-3 text-right font-mono text-sm text-[var(--text)]">{time}</td>
+                              <td className="px-4 py-3 text-caption text-[var(--text-secondary)]">{date}</td>
+                              <td className="px-4 py-3 text-right font-mono text-body text-[var(--text)]">{time}</td>
                             </tr>
                           );
                         })}
@@ -1248,10 +1248,10 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
         <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--ds-border)]">
           <div className="flex-1">
             <h2 className="font-semibold text-base text-[var(--text)]">Telegram-уведомления</h2>
-            <p className="text-xs text-[var(--text-secondary)] mt-0.5">Получайте уведомления о приходе и уходе сотрудников</p>
+            <p className="text-caption text-[var(--text-secondary)] mt-0.5">Получайте уведомления о приходе и уходе сотрудников</p>
           </div>
           {tgPlatformChatId && (
-            <div className="flex items-center gap-1.5 bg-[var(--success-light)] border border-[var(--success)]/30 text-[var(--success)] rounded-full px-3 py-1 text-xs font-medium">
+            <div className="flex items-center gap-1.5 bg-[var(--success-light)] border border-[var(--success)]/30 text-[var(--success)] rounded-full px-3 py-1 text-caption font-medium">
               <CheckCircle2 className="w-3.5 h-3.5" />
               Подключён
             </div>
@@ -1264,8 +1264,8 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
               <div className="flex items-start gap-3 rounded-xl bg-[var(--success-light)] border border-[var(--success)]/30 p-4">
                 <Bot className="w-5 h-5 text-[var(--success)] mt-0.5 shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-[var(--success)]">Telegram подключён</p>
-                  <p className="text-xs text-[var(--success)] mt-0.5">
+                  <p className="text-body font-semibold text-[var(--success)]">Telegram подключён</p>
+                  <p className="text-caption text-[var(--success)] mt-0.5">
                     Уведомления о приходе и уходе сотрудников отправляются через бот 1Dent
                   </p>
                 </div>
@@ -1274,7 +1274,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                 <button
                   onClick={() => void handleTestPlatform()}
                   disabled={testingPlatform}
-                  className="flex-1 h-10 rounded-xl border border-[var(--ds-border)] text-sm text-[var(--text-secondary)] hover:border-[var(--ds-primary)]/40 hover:text-[var(--ds-primary)] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  className="flex-1 h-10 rounded-xl border border-[var(--ds-border)] text-body text-[var(--text-secondary)] hover:border-[var(--ds-primary)]/40 hover:text-[var(--ds-primary)] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
                   {testingPlatform ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   Проверить
@@ -1282,7 +1282,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                 <button
                   onClick={() => void handleDisconnectPlatform()}
                   disabled={disconnectingPlatform}
-                  className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-[var(--danger)]/30 text-sm text-[var(--danger)] hover:bg-[var(--danger-light)] transition-colors disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-[var(--danger)]/30 text-body text-[var(--danger)] hover:bg-[var(--danger-light)] transition-colors disabled:opacity-50"
                 >
                   {disconnectingPlatform ? <Loader2 className="w-4 h-4 animate-spin" /> : <Unlink className="w-4 h-4" />}
                   Отключить
@@ -1295,8 +1295,8 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
               <div className="flex items-start gap-3 rounded-xl bg-[var(--surface-2)]/50 border border-[var(--ds-border)] p-4">
                 <Bot className="w-5 h-5 text-[var(--text-secondary)] mt-0.5 shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-[var(--text)]">Подключите Telegram за 1 шаг</p>
-                  <p className="text-xs text-[var(--text-secondary)] mt-0.5 leading-relaxed">
+                  <p className="text-body font-semibold text-[var(--text)]">Подключите Telegram за 1 шаг</p>
+                  <p className="text-caption text-[var(--text-secondary)] mt-0.5 leading-relaxed">
                     Нажмите кнопку — откроется бот 1Dent. Нажмите&nbsp;<b>«Начать»</b>&nbsp;— и уведомления будут приходить вам автоматически.
                   </p>
                 </div>
@@ -1304,7 +1304,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
               <button
                 onClick={() => void handleConnectPlatform()}
                 disabled={connectingPlatform}
-                className="w-full h-11 rounded-xl bg-[#2481cc] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-60"
+                className="w-full h-11 rounded-xl bg-[#2481cc] text-white text-body font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-60"
               >
                 {connectingPlatform ? (
                   <><Loader2 className="w-4 h-4 animate-spin" /> Ожидаем подключения…</>
@@ -1313,7 +1313,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                 )}
               </button>
               {connectingPlatform && (
-                <p className="text-xs text-center text-[var(--text-secondary)]">
+                <p className="text-caption text-center text-[var(--text-secondary)]">
                   Откройте бота и нажмите «Начать» — страница обновится автоматически
                 </p>
               )}

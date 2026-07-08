@@ -198,7 +198,7 @@ export default function ServicesPage() {
       />
 
       {/* ── Category tabs ───────────────────────────── */}
-      <div className="bg-white border-b border-[#e8e3d9] overflow-x-auto shrink-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="bg-[var(--ds-surface)] border-b border-[var(--ds-border)] overflow-x-auto shrink-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="flex gap-0 px-2 min-w-max">
           {CATEGORIES.map((cat) => {
             const count = categoryCount[cat.key] ?? 0;
@@ -209,17 +209,17 @@ export default function ServicesPage() {
                 key={cat.key}
                 onClick={() => { setActiveTab(cat.key); setSearch(""); }}
                 className={cn(
-                  "px-3.5 py-3 text-[13px] font-medium transition-colors whitespace-nowrap border-b-2 relative",
+                  "px-3.5 py-3 text-caption font-medium transition-colors whitespace-nowrap border-b-2 relative",
                   isActive
-                    ? "text-[#1f75fe] border-[#1f75fe]"
-                    : "text-[#64748b] border-transparent hover:text-[#0f172a]",
+                    ? "text-[var(--ds-primary)] border-[var(--ds-primary)]"
+                    : "text-[var(--text-secondary)] border-transparent hover:text-[var(--text)]",
                 )}
               >
                 {cat.label}
                 {cat.key !== "all" && (
                   <span className={cn(
-                    "ml-1.5 text-[11px] font-bold px-1.5 py-0.5 rounded-full",
-                    isActive ? "bg-[#1f75fe]/10 text-[#1f75fe]" : "bg-[#f1ede4] text-[#94a3b8]",
+                    "ml-1.5 text-micro font-bold px-1.5 py-0.5 rounded-full",
+                    isActive ? "bg-[var(--ds-primary)]/10 text-[var(--ds-primary)]" : "bg-[var(--surface-2)] text-[var(--text-subtle)]",
                   )}>
                     {count}
                   </span>
@@ -238,42 +238,42 @@ export default function ServicesPage() {
           {showAdd && isOwner && (
             <form
               onSubmit={handleAdd}
-              className="bg-white rounded-2xl border border-[#1f75fe]/20 shadow-md p-4 space-y-3"
+              className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-primary)]/20 shadow-md p-4 space-y-3"
             >
-              <h3 className="text-sm font-bold text-[#0f172a] flex items-center gap-2">
-                <Plus className="w-4 h-4 text-[#1f75fe]" />
+              <h3 className="text-body font-bold text-[var(--text)] flex items-center gap-2">
+                <Plus className="w-4 h-4 text-[var(--ds-primary)]" />
                 Новая услуга
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-[#64748b] mb-1">Название *</label>
+                  <label className="block text-caption font-medium text-[var(--text-secondary)] mb-1">Название *</label>
                   <input
                     id="add-service-name"
                     value={addState.name}
                     onChange={(e) => setAddState({ ...addState, name: e.target.value })}
                     placeholder="Например: Чистка зубов"
                     required
-                    className="w-full px-3 py-2.5 rounded-xl border border-[#e8e3d9] text-sm text-[#0f172a] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20"
+                    className="w-full px-3 py-2.5 rounded-xl border border-[var(--ds-border)] text-body text-[var(--text)] focus:outline-none focus:border-[var(--ds-primary)] focus:ring-2 focus:ring-[var(--ds-primary)]/20"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-[#64748b] mb-1">Цена (₸)</label>
+                  <label className="block text-caption font-medium text-[var(--text-secondary)] mb-1">Цена (₸)</label>
                   <input
                     type="number"
                     min="0"
                     value={addState.price}
                     onChange={(e) => setAddState({ ...addState, price: e.target.value })}
                     placeholder="0"
-                    className="w-full px-3 py-2.5 rounded-xl border border-[#e8e3d9] text-sm text-[#0f172a] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20"
+                    className="w-full px-3 py-2.5 rounded-xl border border-[var(--ds-border)] text-body text-[var(--text)] focus:outline-none focus:border-[var(--ds-primary)] focus:ring-2 focus:ring-[var(--ds-primary)]/20"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-[#64748b] mb-1">Категория</label>
+                <label className="block text-caption font-medium text-[var(--text-secondary)] mb-1">Категория</label>
                 <select
                   value={addState.category}
                   onChange={(e) => setAddState({ ...addState, category: e.target.value })}
-                  className="w-full px-3 py-2.5 rounded-xl border border-[#e8e3d9] text-sm text-[#0f172a] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 bg-white"
+                  className="w-full px-3 py-2.5 rounded-xl border border-[var(--ds-border)] text-body text-[var(--text)] focus:outline-none focus:border-[var(--ds-primary)] focus:ring-2 focus:ring-[var(--ds-primary)]/20 bg-[var(--ds-surface)]"
                 >
                   {CATEGORIES.filter((c) => c.key !== "all").map((c) => (
                     <option key={c.key} value={c.key}>{c.label}</option>
@@ -284,14 +284,14 @@ export default function ServicesPage() {
                 <button
                   type="button"
                   onClick={() => { setShowAdd(false); setAddState({ name: "", price: "", category: "therapy" }); }}
-                  className="px-4 py-2 rounded-full border border-[#e8e3d9] text-sm text-[#64748b] hover:bg-[#f1ede4] transition-colors"
+                  className="px-4 py-2 rounded-full border border-[var(--ds-border)] text-caption text-[var(--text-secondary)] hover:bg-[var(--surface-2)] transition-colors"
                 >
                   Отмена
                 </button>
                 <button
                   type="submit"
                   disabled={!addState.name.trim() || saving}
-                  className="px-5 py-2 rounded-full bg-[#1f75fe] text-white text-sm font-semibold disabled:opacity-50 hover:bg-[#1a65e8] hover:scale-105 transition-all disabled:hover:scale-100"
+                  className="px-5 py-2 rounded-full bg-[var(--ds-primary)] text-white text-body font-semibold disabled:opacity-50 hover:bg-[var(--primary-hover)] hover:scale-105 transition-all disabled:hover:scale-100"
                 >
                   {saving ? "Сохранение..." : "Сохранить"}
                 </button>
@@ -301,17 +301,17 @@ export default function ServicesPage() {
 
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-subtle)]" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Поиск по названию..."
-              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-[#e8e3d9] bg-white text-sm text-[#0f172a] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 shadow-sm"
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] text-body text-[var(--text)] focus:outline-none focus:border-[var(--ds-primary)] focus:ring-2 focus:ring-[var(--ds-primary)]/20 shadow-sm"
             />
             {search && (
               <button
                 onClick={() => setSearch("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#64748b]"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)] hover:text-[var(--text-secondary)]"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -319,28 +319,28 @@ export default function ServicesPage() {
           </div>
 
           {/* Services table */}
-          <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-md overflow-hidden">
+          <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] shadow-md overflow-hidden">
             {/* Horizontal scroll wrapper */}
             <div className="overflow-x-auto [scrollbar-width:thin] [scrollbar-color:#e8e3d9_transparent]">
               <div className="min-w-[480px]">
 
                 {/* Table header */}
                 <div className={cn(
-                  "grid px-4 py-2.5 border-b border-[#e8e3d9] bg-[#faf8f4]",
+                  "grid px-4 py-2.5 border-b border-[var(--ds-border)] bg-[var(--bg)]",
                   colClass,
                 )}>
-                  <span className="text-[11px] font-semibold text-[#64748b] uppercase tracking-wide">Код</span>
-                  <span className="text-[11px] font-semibold text-[#64748b] uppercase tracking-wide">Услуга</span>
-                  <span className="text-[11px] font-semibold text-[#64748b] uppercase tracking-wide text-right">Цена (₸)</span>
-                  {isOwner && <span className="text-[11px] font-semibold text-[#64748b] uppercase tracking-wide text-right">Действия</span>}
+                  <span className="section-label">Код</span>
+                  <span className="section-label">Услуга</span>
+                  <span className="section-label text-right">Цена (₸)</span>
+                  {isOwner && <span className="section-label text-right">Действия</span>}
                 </div>
 
                 {isLoading ? (
-                  <div className="px-4 py-12 text-center text-sm text-[#94a3b8]">Загрузка...</div>
+                  <div className="px-4 py-12 text-center text-caption text-[var(--text-subtle)]">Загрузка...</div>
                 ) : filtered.length === 0 ? (
                   <div className="px-4 py-12 text-center">
                     <ClipboardList className="w-10 h-10 text-[#e8e3d9] mx-auto mb-3" />
-                    <p className="text-sm text-[#94a3b8]">
+                    <p className="text-caption text-[var(--text-subtle)]">
                       {search ? "Услуги не найдены" : "В этой категории нет услуг"}
                     </p>
                   </div>
@@ -354,14 +354,14 @@ export default function ServicesPage() {
                           className={cn(
                             "grid items-center px-4 py-3 transition-colors",
                             colClass,
-                            isEditing ? "bg-[#1f75fe]/5" : "hover:bg-[#faf8f4]",
+                            isEditing ? "bg-[var(--ds-primary)]/5" : "hover:bg-[var(--bg)]",
                           )}
                         >
                           {/* Code */}
-                          <span className="text-xs text-[#94a3b8] font-mono truncate">{t.code ?? "—"}</span>
+                          <span className="text-caption text-[var(--text-subtle)] font-mono truncate">{t.code ?? "—"}</span>
 
                           {/* Name */}
-                          <span className="text-sm text-[#0f172a] pr-3 leading-snug">{t.name}</span>
+                          <span className="text-body text-[var(--text)] pr-3 leading-snug">{t.name}</span>
 
                           {/* Price */}
                           {isEditing ? (
@@ -372,14 +372,14 @@ export default function ServicesPage() {
                               onChange={(e) => setEditing({ ...editing, price: e.target.value })}
                               onKeyDown={handlePriceKeyDown}
                               autoFocus
-                              className="w-full px-2 py-1 rounded-xl border border-[#1f75fe]/40 text-sm text-right focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 font-mono text-[#0f172a]"
+                              className="w-full px-2 py-1 rounded-xl border border-[var(--ds-primary)]/40 text-body text-right focus:outline-none focus:border-[var(--ds-primary)] focus:ring-2 focus:ring-[var(--ds-primary)]/20 font-mono text-[var(--text)]"
                             />
                           ) : (
                             <span
                               className={cn(
-                                "text-sm text-right font-mono tabular-nums",
-                                templatePrice(t.defaultPrice) <= 0 ? "text-[#94a3b8]" : "text-[#0f172a]",
-                                isOwner && "cursor-pointer hover:text-[#1f75fe] transition-colors",
+                                "text-body text-right font-mono tabular-nums",
+                                templatePrice(t.defaultPrice) <= 0 ? "text-[var(--text-subtle)]" : "text-[var(--text)]",
+                                isOwner && "cursor-pointer hover:text-[var(--ds-primary)] transition-colors",
                               )}
                               onClick={isOwner ? () => setEditing({ id: t.id, price: String(templatePrice(t.defaultPrice)) }) : undefined}
                               title={isOwner ? "Нажмите для изменения цены" : undefined}
@@ -396,14 +396,14 @@ export default function ServicesPage() {
                                   <button
                                     onClick={handlePriceSave}
                                     disabled={saving}
-                                    className="p-1.5 rounded-xl bg-[#1f75fe] text-white hover:bg-[#1a65e8] disabled:opacity-50 transition-colors"
+                                    className="p-1.5 rounded-xl bg-[var(--ds-primary)] text-white hover:bg-[var(--primary-hover)] disabled:opacity-50 transition-colors"
                                     title="Сохранить"
                                   >
                                     <Check className="w-3.5 h-3.5" />
                                   </button>
                                   <button
                                     onClick={() => { setEditing(null); setSaving(false); }}
-                                    className="p-1.5 rounded-xl border border-[#e8e3d9] text-[#64748b] hover:bg-[#f1ede4] transition-colors"
+                                    className="p-1.5 rounded-xl border border-[var(--ds-border)] text-[var(--text-secondary)] hover:bg-[var(--surface-2)] transition-colors"
                                     title="Отмена"
                                   >
                                     <X className="w-3.5 h-3.5" />
@@ -413,14 +413,14 @@ export default function ServicesPage() {
                                 <>
                                   <button
                                     onClick={() => setEditing({ id: t.id, price: String(templatePrice(t.defaultPrice)) })}
-                                    className="p-1.5 rounded-xl text-[#94a3b8] hover:text-[#1f75fe] hover:bg-[#1f75fe]/10 transition-colors"
+                                    className="p-1.5 rounded-xl text-[var(--text-subtle)] hover:text-[var(--ds-primary)] hover:bg-[var(--ds-primary)]/10 transition-colors"
                                     title="Изменить цену"
                                   >
                                     <Pencil className="w-3.5 h-3.5" />
                                   </button>
                                   <button
                                     onClick={() => setConfirmDeleteId(t.id)}
-                                    className="p-1.5 rounded-xl text-[#94a3b8] hover:text-[#dc2626] hover:bg-[#fef2f2] transition-colors"
+                                    className="p-1.5 rounded-xl text-[var(--text-subtle)] hover:text-[var(--danger)] hover:bg-[#fef2f2] transition-colors"
                                     title="Удалить"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
@@ -441,7 +441,7 @@ export default function ServicesPage() {
 
           {/* Итого по активной вкладке */}
           {filtered.length > 0 && !search && (
-            <div className="text-xs text-[#94a3b8] text-right px-1">
+            <div className="text-caption text-[var(--text-subtle)] text-right px-1">
               {filtered.length} услуг ·{" "}
               {activeTab === "all"
                 ? "все категории"

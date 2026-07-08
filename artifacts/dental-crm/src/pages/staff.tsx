@@ -34,7 +34,7 @@ export default function StaffPage() {
 
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         {doctors.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-[#64748b]">
+          <div className="flex items-center justify-center h-full text-[var(--text-secondary)]">
             <p>{t("staff.noStaff")}</p>
           </div>
         ) : (
@@ -43,7 +43,7 @@ export default function StaffPage() {
               <button
                 key={doctor.doctorId}
                 onClick={() => setLocation(`/users/${doctor.doctorId}`)}
-                className="bg-white rounded-2xl border border-[#e8e3d9] p-6 text-left shadow-md hover:shadow-lg hover:border-[#1f75fe]/30 transition-all"
+                className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] p-6 text-left shadow-md hover:shadow-lg hover:border-[#1f75fe]/30 transition-all"
               >
                 {/* Avatar */}
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#1f75fe] to-[#1a65e8] flex items-center justify-center text-white font-bold text-lg mb-4 shrink-0">
@@ -51,33 +51,33 @@ export default function StaffPage() {
                 </div>
 
                 {/* Name */}
-                <h3 className="text-lg font-bold text-[#0f172a] mb-3">{doctor.doctorName}</h3>
+                <h3 className="text-lg font-bold text-[var(--text)] mb-3">{doctor.doctorName}</h3>
 
                 {/* Stats Grid */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-[#64748b]">{t("staff.patients")}</span>
-                    <span className="text-sm font-semibold text-[#0f172a]">{doctor.patientsCount}</span>
+                    <span className="text-caption text-[var(--text-secondary)]">{t("staff.patients")}</span>
+                    <span className="text-body font-semibold text-[var(--text)]">{doctor.patientsCount}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-[#64748b]">{t("staff.procedures")}</span>
-                    <span className="text-sm font-semibold text-[#0f172a]">{doctor.proceduresCount}</span>
+                    <span className="text-caption text-[var(--text-secondary)]">{t("staff.procedures")}</span>
+                    <span className="text-body font-semibold text-[var(--text)]">{doctor.proceduresCount}</span>
                   </div>
-                  <div className="flex items-center justify-between pt-2 border-t border-[#e8e3d9]">
-                    <span className="text-xs text-[#64748b]">{t("staff.revenue")}</span>
-                    <span className="text-sm font-semibold text-[#0f172a]">₸{doctor.revenueTotal.toLocaleString()}</span>
+                  <div className="flex items-center justify-between pt-2 border-t border-[var(--ds-border)]">
+                    <span className="text-caption text-[var(--text-secondary)]">{t("staff.revenue")}</span>
+                    <span className="text-body font-semibold text-[var(--text)]">₸{doctor.revenueTotal.toLocaleString()}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-[#64748b]">{t("staff.avgCheck")}</span>
-                    <span className="text-sm font-semibold text-[#0f172a]">₸{Math.round(doctor.averageCheck).toLocaleString()}</span>
+                    <span className="text-caption text-[var(--text-secondary)]">{t("staff.avgCheck")}</span>
+                    <span className="text-body font-semibold text-[var(--text)]">₸{Math.round(doctor.averageCheck).toLocaleString()}</span>
                   </div>
                   {doctor.nps > 0 && (
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-[#64748b]">NPS</span>
-                    <span className={`text-sm font-semibold px-2 py-1 rounded-full ${
-                      doctor.nps >= 70 ? "bg-[#f0fdf4] text-[#16a34a]" :
-                      doctor.nps >= 50 ? "bg-[#fef3c7] text-[#d97706]" :
-                      "bg-[#fef2f2] text-[#dc2626]"
+                    <span className="text-caption text-[var(--text-secondary)]">NPS</span>
+                    <span className={`text-body font-semibold px-2 py-1 rounded-full ${
+                      doctor.nps >= 70 ? "bg-[#f0fdf4] text-[var(--success)]" :
+                      doctor.nps >= 50 ? "bg-[#fef3c7] text-[var(--warning)]" :
+                      "bg-[#fef2f2] text-[var(--danger)]"
                     }`}>
                       {doctor.nps}
                     </span>

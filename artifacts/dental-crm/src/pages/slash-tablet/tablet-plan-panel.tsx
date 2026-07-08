@@ -124,7 +124,7 @@ export function TabletPlanPanel({
 
   if (plan.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-2 p-10 text-center text-[#94a3b8]">
+      <div className="flex flex-col items-center justify-center gap-2 p-10 text-center text-[var(--text-subtle)]">
         <ClipboardList className="h-10 w-10 opacity-40" />
         <p className="text-sm">План лечения ещё не создан</p>
       </div>
@@ -136,26 +136,26 @@ export function TabletPlanPanel({
       <div className="border-b border-[#f1ede4] p-4">
         <div className="mb-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <ClipboardList className="h-4 w-4 text-[#1f75fe]" />
-            <span className="text-sm font-bold text-[#0f172a]">План лечения №{planNumber ?? "—"}</span>
+            <ClipboardList className="h-4 w-4 text-[var(--ds-primary)]" />
+            <span className="text-body font-bold text-[var(--text)]">План лечения №{planNumber ?? "—"}</span>
           </div>
-          <span className="rounded-full bg-[#f0fdf4] px-2.5 py-0.5 text-xs font-bold text-[#16a34a]">Активен</span>
+          <span className="rounded-full bg-[#f0fdf4] px-2.5 py-0.5 text-caption font-bold text-[var(--success)]">Активен</span>
         </div>
         <div className="mb-1.5 flex items-center justify-between text-xs">
-          <span className="text-[#94a3b8]">Выполнено {doneCount} из {total}</span>
-          <span className="font-bold text-[#64748b]">{progress}%</span>
+          <span className="text-[var(--text-subtle)]">Выполнено {doneCount} из {total}</span>
+          <span className="font-bold text-[var(--text-secondary)]">{progress}%</span>
         </div>
-        <div className="h-2 overflow-hidden rounded-full bg-[#f1ede4]">
+        <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-2)]">
           <div className="h-full rounded-full bg-[#1f75fe] transition-all" style={{ width: `${progress}%` }} />
         </div>
         {filterFdi && (
-          <p className="mt-2 text-xs font-medium text-[#1f75fe]">Показаны позиции по зубу {filterFdi}</p>
+          <p className="mt-2 text-caption font-medium text-[var(--ds-primary)]">Показаны позиции по зубу {filterFdi}</p>
         )}
       </div>
 
       <div className="flex-1 overflow-auto p-3">
         {stages.length === 0 ? (
-          <p className="p-6 text-center text-sm text-[#94a3b8]">Нет позиций по выбранному зубу</p>
+          <p className="p-6 text-center text-body text-[var(--text-subtle)]">Нет позиций по выбранному зубу</p>
         ) : (
           <div className="space-y-2">
             {stages.map((stage) => {
@@ -166,17 +166,17 @@ export function TabletPlanPanel({
                   <button
                     type="button"
                     onClick={() => toggle(stage.id)}
-                    className="flex w-full items-center justify-between px-3 py-2.5 transition-colors hover:bg-[#faf8f4]"
+                    className="flex w-full items-center justify-between px-3 py-2.5 transition-colors hover:bg-[var(--bg)]"
                     style={{ backgroundColor: open ? stage.bg : undefined }}
                   >
                     <div className="flex items-center gap-2">
                       <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: stage.color }} />
-                      <span className="text-sm font-bold text-[#0f172a]">{stage.label}</span>
-                      <span className="text-xs text-[#94a3b8]">({stage.items.length})</span>
+                      <span className="text-body font-bold text-[var(--text)]">{stage.label}</span>
+                      <span className="text-caption text-[var(--text-subtle)]">({stage.items.length})</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-[#64748b]">{fmtTenge(stageTotal)}</span>
-                      <ChevronDown className={cn("h-4 w-4 text-[#94a3b8] transition-transform", open && "rotate-180")} />
+                      <span className="text-caption font-semibold text-[var(--text-secondary)]">{fmtTenge(stageTotal)}</span>
+                      <ChevronDown className={cn("h-4 w-4 text-[var(--text-subtle)] transition-transform", open && "rotate-180")} />
                     </div>
                   </button>
                   {open && (
@@ -189,17 +189,17 @@ export function TabletPlanPanel({
                           <div key={item.id} className="flex items-center gap-3 px-3 py-3">
                             <StatusIcon status={status} />
                             <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-medium text-[#0f172a]">{item.title}</p>
-                              <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-[#94a3b8]">
+                              <p className="truncate text-body font-medium text-[var(--text)]">{item.title}</p>
+                              <div className="mt-0.5 flex flex-wrap items-center gap-2 text-caption text-[var(--text-subtle)]">
                                 {item.tooth && <span>Зуб {item.tooth}</span>}
                                 {timerStart && (
-                                  <span className="font-mono font-semibold text-[#1f75fe]">
+                                  <span className="font-mono font-semibold text-[var(--ds-primary)]">
                                     {formatElapsed(timerStart)}
                                   </span>
                                 )}
                               </div>
                             </div>
-                            <span className="hidden text-sm font-semibold text-[#0f172a] sm:inline">
+                            <span className="hidden text-body font-semibold text-[var(--text)] sm:inline">
                               {fmtTenge(item.price)}
                             </span>
                             {status !== "completed" && planId && (
@@ -208,7 +208,7 @@ export function TabletPlanPanel({
                                   <button
                                     type="button"
                                     onClick={() => handleStart(item.id)}
-                                    className="flex items-center gap-1.5 rounded-xl bg-[#1f75fe] px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-[#1a65e8] active:scale-[0.98]"
+                                    className="flex items-center gap-1.5 rounded-xl bg-[#1f75fe] px-3 py-2 text-caption font-bold text-white transition-colors hover:bg-[var(--primary-hover)] active:scale-[0.98]"
                                   >
                                     <Play className="h-3.5 w-3.5" />
                                     Начать
@@ -218,7 +218,7 @@ export function TabletPlanPanel({
                                     type="button"
                                     onClick={() => handleComplete(item.id)}
                                     disabled={isCompleting}
-                                    className="flex items-center gap-1.5 rounded-xl bg-[#16a34a] px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-[#15803d] active:scale-[0.98] disabled:opacity-60"
+                                    className="flex items-center gap-1.5 rounded-xl bg-[var(--success)] px-3 py-2 text-caption font-bold text-white transition-colors hover:bg-[#15803d] active:scale-[0.98] disabled:opacity-60"
                                   >
                                     {isCompleting ? (
                                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -242,10 +242,10 @@ export function TabletPlanPanel({
         )}
       </div>
 
-      <div className="border-t border-[#f1ede4] bg-[#faf8f4] p-4">
+      <div className="border-t border-[#f1ede4] bg-[var(--bg)] p-4">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-[#64748b]">Итого по плану</span>
-          <span className="text-xl font-extrabold text-[#0f172a]">{fmtTenge(planTotal)}</span>
+          <span className="text-body font-medium text-[var(--text-secondary)]">Итого по плану</span>
+          <span className="text-xl font-extrabold text-[var(--text)]">{fmtTenge(planTotal)}</span>
         </div>
       </div>
     </div>
@@ -253,7 +253,7 @@ export function TabletPlanPanel({
 }
 
 function StatusIcon({ status }: { status: "completed" | "in_progress" | "pending" }) {
-  if (status === "completed") return <CheckCircle2 className="h-5 w-5 shrink-0 text-[#16a34a]" />;
-  if (status === "in_progress") return <Loader2 className="h-5 w-5 shrink-0 animate-spin text-[#1f75fe]" />;
+  if (status === "completed") return <CheckCircle2 className="h-5 w-5 shrink-0 text-[var(--success)]" />;
+  if (status === "in_progress") return <Loader2 className="h-5 w-5 shrink-0 animate-spin text-[var(--ds-primary)]" />;
   return <Circle className="h-5 w-5 shrink-0 text-[#cbd5e1]" />;
 }

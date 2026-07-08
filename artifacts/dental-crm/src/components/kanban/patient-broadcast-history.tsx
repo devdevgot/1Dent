@@ -22,7 +22,7 @@ export function PatientBroadcastHistory({ patientId }: Props) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-6 text-[#64748b]">
+      <div className="flex items-center justify-center py-6 text-[var(--text-secondary)]">
         <Loader2 className="h-4 w-4 animate-spin mr-2" />
         <span className="text-xs">Загрузка рассылок…</span>
       </div>
@@ -31,9 +31,9 @@ export function PatientBroadcastHistory({ patientId }: Props) {
 
   if (deliveries.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-[#e8e3d9] bg-[#faf8f4] p-4 text-center">
-        <Megaphone className="h-5 w-5 text-[#94a3b8] mx-auto mb-1.5" />
-        <p className="text-xs text-[#64748b]">Рассылок по WhatsApp пока не было</p>
+      <div className="rounded-2xl border border-dashed border-[var(--ds-border)] bg-[var(--bg)] p-4 text-center">
+        <Megaphone className="h-5 w-5 text-[var(--text-subtle)] mx-auto mb-1.5" />
+        <p className="text-caption text-[var(--text-secondary)]">Рассылок по WhatsApp пока не было</p>
       </div>
     );
   }
@@ -41,9 +41,9 @@ export function PatientBroadcastHistory({ patientId }: Props) {
   return (
     <div className="space-y-3">
       {deliveries.map((d) => (
-        <div key={d.id} className="rounded-2xl border border-[#e8e3d9] bg-white p-3 space-y-2">
+        <div key={d.id} className="rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] p-3 space-y-2">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 text-xs text-[#64748b]">
+            <div className="flex items-center gap-1.5 text-caption text-[var(--text-secondary)]">
               <Megaphone className="h-3.5 w-3.5" />
               <span>{formatDt(d.sentAt)}</span>
             </div>
@@ -54,7 +54,7 @@ export function PatientBroadcastHistory({ patientId }: Props) {
               </span>
             )}
           </div>
-          <p className="text-xs text-[#0f172a] leading-relaxed whitespace-pre-wrap line-clamp-4">
+          <p className="text-caption text-[var(--text)] leading-relaxed whitespace-pre-wrap line-clamp-4">
             {d.content}
           </p>
           <div className="flex flex-wrap gap-2">
@@ -64,7 +64,7 @@ export function PatientBroadcastHistory({ patientId }: Props) {
                 Ответ {formatDt(d.repliedAt)}
               </span>
             ) : (
-              <span className="text-[10px] text-[#94a3b8]">Без ответа</span>
+              <span className="text-[10px] text-[var(--text-subtle)]">Без ответа</span>
             )}
             {d.bookedAt && (
               <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#eff6ff] text-[#2563eb] border border-[#bfdbfe]">

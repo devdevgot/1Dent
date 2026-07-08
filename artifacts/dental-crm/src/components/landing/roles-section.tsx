@@ -122,7 +122,7 @@ export function RolesSection() {
                       style={{ backgroundColor: role.accent }}
                     />
                     <span
-                      className={`font-manrope text-xs leading-snug ${
+                      className={`font-manrope text-caption leading-snug ${
                         perm === "Телефоны — скрыты"
                           ? "text-orange-500 font-semibold"
                           : "text-[var(--text-secondary)]"
@@ -137,7 +137,7 @@ export function RolesSection() {
               {role.antiTheft && (
                 <div className="mt-4 flex items-center gap-2 bg-orange-50 rounded-xl p-3 border border-orange-100/80">
                   <ShieldCheck size={14} className="text-orange-500 flex-shrink-0" />
-                  <span className="font-manrope text-xs text-orange-600 font-medium">
+                  <span className="font-manrope text-caption text-orange-600 font-medium">
                     Защита от кражи базы пациентов
                   </span>
                 </div>

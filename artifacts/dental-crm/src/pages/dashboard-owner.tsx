@@ -87,12 +87,12 @@ export default function OwnerDashboard() {
       {!isOnboardingCompleted && (
         <div className="mx-4 mt-4 dash-card dash-card-padded-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <span className="inline-flex items-center gap-1.5 bg-[#fef3c7] text-[#d97706] rounded-full px-3 py-1 text-xs font-medium mb-2">
+            <span className="inline-flex items-center gap-1.5 bg-[#fef3c7] text-[var(--warning)] rounded-full px-3 py-1 text-caption font-medium mb-2">
               <Layers className="w-3 h-3" />
               Быстрый старт
             </span>
-            <h4 className="text-base font-bold text-[#0f172a]">Мастер настроек 1Dent</h4>
-            <p className="text-sm text-[#64748b] mt-1 leading-relaxed">
+            <h4 className="text-base font-bold text-[var(--text)]">Мастер настроек 1Dent</h4>
+            <p className="text-caption text-[var(--text-secondary)] mt-1 leading-relaxed">
               Настройте сотрудников, ИИ-чатбота, геолокацию и Telegram для полноценного старта.
             </p>
           </div>

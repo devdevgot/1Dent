@@ -71,13 +71,13 @@ function SpecialtyTagInput({
           {values.map((tag) => (
             <span
               key={tag}
-              className="inline-flex items-center gap-1 bg-[#f0fdf4] text-[#16a34a] border border-[#16a34a]/20 px-2.5 py-1 rounded-full text-xs font-semibold"
+              className="inline-flex items-center gap-1 bg-[#f0fdf4] text-[var(--success)] border border-[#16a34a]/20 px-2.5 py-1 rounded-full text-caption font-semibold"
             >
               {tag}
               <button
                 type="button"
                 onClick={() => removeTag(tag)}
-                className="text-[#16a34a] hover:text-[#15803d] ml-0.5"
+                className="text-[var(--success)] hover:text-[#15803d] ml-0.5"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -113,7 +113,7 @@ function SpecialtyTagInput({
             }
             if (e.key === "Escape") setIsOpen(false);
           }}
-          className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 pr-10 text-sm font-medium text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
+          className="w-full border border-[var(--ds-border)] rounded-xl px-4 py-3 pr-10 text-body font-medium text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
         />
         <button
           type="button"
@@ -122,19 +122,19 @@ function SpecialtyTagInput({
             setIsOpen((o) => !o);
             inputRef.current?.focus();
           }}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8]"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]"
         >
           <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
         </button>
 
         {isOpen && (filtered.length > 0 || customNotInList) && (
-          <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-[#e8e3d9] rounded-xl shadow-lg z-20 max-h-52 overflow-y-auto">
+          <div className="absolute top-full mt-1 left-0 right-0 bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-xl shadow-lg z-20 max-h-52 overflow-y-auto">
             {filtered.map((s) => (
               <button
                 key={s}
                 type="button"
                 onMouseDown={() => addTag(s)}
-                className="w-full text-left px-4 py-2.5 text-sm text-[#0f172a] hover:bg-[#faf8f4] transition-colors"
+                className="w-full text-left px-4 py-2.5 text-body text-[var(--text)] hover:bg-[var(--bg)] transition-colors"
               >
                 {s}
               </button>
@@ -143,7 +143,7 @@ function SpecialtyTagInput({
               <button
                 type="button"
                 onMouseDown={() => addTag(inputValue.trim())}
-                className="w-full text-left px-4 py-2.5 text-sm font-semibold border-t border-[#e8e3d9] hover:bg-[#faf8f4] transition-colors text-[#1f75fe]"
+                className="w-full text-left px-4 py-2.5 text-body font-semibold border-t border-[var(--ds-border)] hover:bg-[var(--bg)] transition-colors text-[var(--ds-primary)]"
               >
                 + Добавить «{inputValue.trim()}»
               </button>
@@ -206,7 +206,7 @@ const ROLE_DEFS: {
     icon: Activity,
     label: "Врач",
     desc: "Ведёт приём пациентов",
-    color: "text-[#16a34a]",
+    color: "text-[var(--success)]",
     bg: "bg-[#f0fdf4]",
     border: "border-[#f0fdf4]",
   },
@@ -215,7 +215,7 @@ const ROLE_DEFS: {
     icon: BarChart3,
     label: "Бухгалтер",
     desc: "Видит финансы",
-    color: "text-[#d97706]",
+    color: "text-[var(--warning)]",
     bg: "bg-[#fef3c7]",
     border: "border-[#fef3c7]",
   },
@@ -271,8 +271,8 @@ const ROLE_LABEL: Record<Role, string> = {
 
 const ROLE_COLOR: Record<Role, { bg: string; text: string; border: string }> = {
   admin:      { bg: "bg-[#e0f2fe]",    text: "text-[#0284c7]",    border: "border-[#e0f2fe]" },
-  doctor:     { bg: "bg-[#f0fdf4]", text: "text-[#16a34a]", border: "border-[#f0fdf4]" },
-  accountant: { bg: "bg-[#fef3c7]",   text: "text-[#d97706]",   border: "border-[#fef3c7]" },
+  doctor:     { bg: "bg-[#f0fdf4]", text: "text-[var(--success)]", border: "border-[#f0fdf4]" },
+  accountant: { bg: "bg-[#fef3c7]",   text: "text-[var(--warning)]",   border: "border-[#fef3c7]" },
   warehouse:  { bg: "bg-[#f5f3ff]",   text: "text-[#7c3aed]",   border: "border-[#f5f3ff]" },
   assistant:  { bg: "bg-[#e0e7ff]",  text: "text-[#4f46e5]",  border: "border-[#e0e7ff]" },
   nurse:      { bg: "bg-[#fce7f3]",    text: "text-[#db2777]",    border: "border-[#fce7f3]" },
@@ -307,10 +307,10 @@ function NumericInput({
           const n = raw === "" ? 0 : Number(raw);
           onChange(max !== undefined ? Math.min(max, n) : n);
         }}
-        className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 pr-10 text-sm font-medium text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
+        className="w-full border border-[var(--ds-border)] rounded-xl px-4 py-3 pr-10 text-body font-medium text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
       />
       {suffix && (
-        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] text-sm font-bold">{suffix}</span>
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)] text-body font-bold">{suffix}</span>
       )}
     </div>
   );
@@ -477,10 +477,10 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
             className="absolute inset-0 z-10 bg-[var(--ds-surface)]/95 backdrop-blur-sm flex flex-col items-center justify-center p-8"
           >
             <div className="w-12 h-12 rounded-2xl bg-[#fef3c7] flex items-center justify-center mb-4">
-              <AlertCircle className="w-6 h-6 text-[#d97706]" />
+              <AlertCircle className="w-6 h-6 text-[var(--warning)]" />
             </div>
             <p className="text-base font-bold text-[var(--text)] text-center mb-1">Закрыть без сохранения?</p>
-            <p className="text-sm text-[var(--text-secondary)] text-center mb-6">Введённые данные будут потеряны</p>
+            <p className="text-body text-[var(--text-secondary)] text-center mb-6">Введённые данные будут потеряны</p>
             <div className="flex gap-3 w-full max-w-xs">
               <button
                 type="button"
@@ -492,7 +492,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
               <button
                 type="button"
                 onClick={forceClose}
-                className="dash-btn flex-1 rounded-full text-sm font-bold text-white bg-[#dc2626] hover:bg-[#b91c1c]"
+                className="dash-btn flex-1 rounded-full text-body font-bold text-white bg-[var(--danger)] hover:bg-[#b91c1c]"
               >
                 Закрыть
               </button>
@@ -528,10 +528,10 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                     className="flex flex-col items-center pt-4 pb-2"
                   >
                     <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5 bg-[#1f75fe]/10">
-                      <Mail className="w-7 h-7 text-[#1f75fe]" />
+                      <Mail className="w-7 h-7 text-[var(--ds-primary)]" />
                     </div>
-                    <h3 className="text-lg font-bold text-[#0f172a] mb-1 text-center">Email сотрудника</h3>
-                    <p className="text-sm text-[#94a3b8] text-center mb-6 leading-relaxed">
+                    <h3 className="text-lg font-bold text-[var(--text)] mb-1 text-center">Email сотрудника</h3>
+                    <p className="text-body text-[var(--text-subtle)] text-center mb-6 leading-relaxed">
                       На этот адрес придёт приглашение<br />войти в систему
                     </p>
                     <div className="w-full max-w-sm">
@@ -545,14 +545,14 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                         onKeyDown={(e) => { if (e.key === "Enter") goNext(); }}
                         placeholder="doctor@clinic.kz"
                         className={cn(
-                          "w-full border rounded-2xl px-5 py-4 text-base font-medium text-[#0f172a] text-center focus:outline-none focus:ring-2 transition-all",
+                          "w-full border rounded-2xl px-5 py-4 text-base font-medium text-[var(--text)] text-center focus:outline-none focus:ring-2 transition-all",
                           emailError
                             ? "border-[#dc2626] focus:ring-[#dc2626]/20"
-                            : "border-[#e8e3d9] focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]",
+                            : "border-[var(--ds-border)] focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]",
                         )}
                       />
                       {emailError && (
-                        <p className="text-xs text-[#dc2626] mt-2 text-center">{emailError}</p>
+                        <p className="text-caption text-[var(--danger)] mt-2 text-center">{emailError}</p>
                       )}
                     </div>
                   </motion.div>
@@ -570,7 +570,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                   >
                     {/* Name */}
                     <div>
-                      <label className="block text-xs font-semibold text-[#64748b] mb-1.5">
+                      <label className="block text-caption font-semibold text-[var(--text-secondary)] mb-1.5">
                         <User2 className="inline w-3.5 h-3.5 mr-1 mb-0.5" />
                         ФИО *
                       </label>
@@ -579,16 +579,16 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                         onChange={(e) => { set("name", e.target.value); if (nameError) setNameError(""); }}
                         placeholder="Др. Иванова Мария"
                         className={cn(
-                          "w-full border rounded-xl px-4 py-3 text-sm font-medium text-[#0f172a] focus:outline-none focus:ring-2 transition-all",
-                          nameError ? "border-[#dc2626] focus:ring-[#dc2626]/20" : "border-[#e8e3d9] focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]",
+                          "w-full border rounded-xl px-4 py-3 text-body font-medium text-[var(--text)] focus:outline-none focus:ring-2 transition-all",
+                          nameError ? "border-[#dc2626] focus:ring-[#dc2626]/20" : "border-[var(--ds-border)] focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]",
                         )}
                       />
-                      {nameError && <p className="text-xs text-[#dc2626] mt-1">{nameError}</p>}
+                      {nameError && <p className="text-caption text-[var(--danger)] mt-1">{nameError}</p>}
                     </div>
 
                     {/* Phone */}
                     <div>
-                      <label className="block text-xs font-semibold text-[#64748b] mb-1.5">
+                      <label className="block text-caption font-semibold text-[var(--text-secondary)] mb-1.5">
                         <Phone className="inline w-3.5 h-3.5 mr-1 mb-0.5" />
                         Телефон
                       </label>
@@ -597,13 +597,13 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                         value={form.phone}
                         onChange={(e) => set("phone", e.target.value)}
                         placeholder="+7 700 000 00 00"
-                        className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 text-sm font-medium text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
+                        className="w-full border border-[var(--ds-border)] rounded-xl px-4 py-3 text-body font-medium text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
                       />
                     </div>
 
                     {/* Role cards */}
                     <div>
-                      <label className="block text-xs font-semibold text-[#64748b] mb-2">Роль *</label>
+                      <label className="block text-caption font-semibold text-[var(--text-secondary)] mb-2">Роль *</label>
                       <div className="grid grid-cols-2 gap-2">
                         {ROLE_DEFS.map((r) => {
                           const Icon = r.icon;
@@ -617,15 +617,15 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                                 "flex flex-col items-start gap-2 p-3.5 rounded-2xl border text-left transition-all",
                                 selected
                                   ? `${r.bg} ${r.border} border-2`
-                                  : "border-[#e8e3d9] bg-white hover:bg-[#faf8f4]",
+                                  : "border-[var(--ds-border)] bg-[var(--ds-surface)] hover:bg-[var(--bg)]",
                               )}
                             >
-                              <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center", selected ? r.bg : "bg-[#f1ede4]")}>
-                                <Icon className={cn("w-4 h-4", selected ? r.color : "text-[#94a3b8]")} />
+                              <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center", selected ? r.bg : "bg-[var(--surface-2)]")}>
+                                <Icon className={cn("w-4 h-4", selected ? r.color : "text-[var(--text-subtle)]")} />
                               </div>
                               <div>
-                                <p className={cn("text-xs font-bold", selected ? r.color : "text-[#0f172a]")}>{r.label}</p>
-                                <p className="text-[10px] text-[#94a3b8] leading-snug mt-0.5">{r.desc}</p>
+                                <p className={cn("text-caption font-bold", selected ? r.color : "text-[var(--text)]")}>{r.label}</p>
+                                <p className="text-[10px] text-[var(--text-subtle)] leading-snug mt-0.5">{r.desc}</p>
                               </div>
                             </button>
                           );
@@ -641,7 +641,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                         className="space-y-4"
                       >
                         <div>
-                          <label className="block text-xs font-semibold text-[#64748b] mb-1.5">
+                          <label className="block text-caption font-semibold text-[var(--text-secondary)] mb-1.5">
                             Специализация
                           </label>
                           <SpecialtyTagInput
@@ -652,7 +652,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                         </div>
                         {form.role === "doctor" && (
                           <div>
-                            <label className="block text-xs font-semibold text-[#64748b] mb-1.5">
+                            <label className="block text-caption font-semibold text-[var(--text-secondary)] mb-1.5">
                               Макс. пациентов в день
                             </label>
                             <NumericInput
@@ -668,7 +668,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
 
                     {/* Hire date */}
                     <div>
-                      <label className="block text-xs font-semibold text-[#64748b] mb-1.5">
+                      <label className="block text-caption font-semibold text-[var(--text-secondary)] mb-1.5">
                         <Calendar className="inline w-3.5 h-3.5 mr-1 mb-0.5" />
                         Дата приёма на работу
                       </label>
@@ -676,7 +676,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                         type="date"
                         value={form.hireDate}
                         onChange={(e) => set("hireDate", e.target.value)}
-                        className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 text-sm font-medium text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
+                        className="w-full border border-[var(--ds-border)] rounded-xl px-4 py-3 text-body font-medium text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
                       />
                     </div>
                   </motion.div>
@@ -693,7 +693,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                     className="space-y-4"
                   >
                     <div>
-                      <label className="block text-xs font-semibold text-[#64748b] mb-2">Тип оплаты</label>
+                      <label className="block text-caption font-semibold text-[var(--text-secondary)] mb-2">Тип оплаты</label>
                       <div className="grid grid-cols-2 gap-2">
                         {SALARY_DEFS.map((s) => {
                           const Icon = s.icon;
@@ -707,15 +707,15 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                                 "flex flex-col items-start gap-2 p-3.5 rounded-2xl border text-left transition-all",
                                 selected
                                   ? "border-[#1f75fe] bg-[#1f75fe]/10 border-2"
-                                  : "border-[#e8e3d9] bg-white hover:bg-[#faf8f4]",
+                                  : "border-[var(--ds-border)] bg-[var(--ds-surface)] hover:bg-[var(--bg)]",
                               )}
                             >
-                              <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center", selected ? "bg-[#1f75fe]/10" : "bg-[#f1ede4]")}>
-                                <Icon className={cn("w-4 h-4", selected ? "text-[#1f75fe]" : "text-[#94a3b8]")} />
+                              <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center", selected ? "bg-[#1f75fe]/10" : "bg-[var(--surface-2)]")}>
+                                <Icon className={cn("w-4 h-4", selected ? "text-[var(--ds-primary)]" : "text-[var(--text-subtle)]")} />
                               </div>
                               <div>
-                                <p className={cn("text-xs font-bold", selected ? "text-[#1f75fe]" : "text-[#0f172a]")}>{s.label}</p>
-                                <p className="text-[10px] text-[#94a3b8] leading-snug mt-0.5">{s.desc}</p>
+                                <p className={cn("text-caption font-bold", selected ? "text-[var(--ds-primary)]" : "text-[var(--text)]")}>{s.label}</p>
+                                <p className="text-[10px] text-[var(--text-subtle)] leading-snug mt-0.5">{s.desc}</p>
                               </div>
                             </button>
                           );
@@ -735,7 +735,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                       >
                         {(form.salaryType === "fixed" || form.salaryType === "fixed_plus_commission") && (
                           <div>
-                            <label className="block text-xs font-semibold text-[#64748b] mb-1.5">Оклад (₸/мес)</label>
+                            <label className="block text-caption font-semibold text-[var(--text-secondary)] mb-1.5">Оклад (₸/мес)</label>
                             <NumericInput
                               value={form.fixedAmount}
                               onChange={(v) => set("fixedAmount", v)}
@@ -746,7 +746,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                         )}
                         {(form.salaryType === "commission" || form.salaryType === "fixed_plus_commission") && (
                           <div>
-                            <label className="block text-xs font-semibold text-[#64748b] mb-1.5">Процент от выручки</label>
+                            <label className="block text-caption font-semibold text-[var(--text-secondary)] mb-1.5">Процент от выручки</label>
                             <div className="relative">
                               <input
                                 type="text"
@@ -758,15 +758,15 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                                   const n = parseFloat(v);
                                   set("commissionPercent", v === "" || isNaN(n) ? 0 : Math.min(100, n));
                                 }}
-                                className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 pr-9 text-sm font-medium text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
+                                className="w-full border border-[var(--ds-border)] rounded-xl px-4 py-3 pr-9 text-body font-medium text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
                               />
-                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] text-sm font-bold">%</span>
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)] text-body font-bold">%</span>
                             </div>
                           </div>
                         )}
                         {form.salaryType === "hourly" && (
                           <div>
-                            <label className="block text-xs font-semibold text-[#64748b] mb-1.5">Ставка (₸/час)</label>
+                            <label className="block text-caption font-semibold text-[var(--text-secondary)] mb-1.5">Ставка (₸/час)</label>
                             <NumericInput
                               value={form.hourlyRate}
                               onChange={(v) => set("hourlyRate", v)}
@@ -794,7 +794,7 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                       <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 text-white text-xl font-bold bg-[#1f75fe]">
                         {form.name.split(" ").map((w) => w[0]?.toUpperCase() ?? "").slice(0, 2).join("")}
                       </div>
-                      <h3 className="text-lg font-bold text-[#0f172a]">{form.name}</h3>
+                      <h3 className="text-lg font-bold text-[var(--text)]">{form.name}</h3>
                       <span className={cn(
                         "inline-block mt-1 text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full border",
                         roleColor.bg, roleColor.text, roleColor.border,
@@ -803,37 +803,37 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                       </span>
                     </div>
 
-                    <div className="rounded-2xl border border-[#e8e3d9] bg-[#faf8f4] divide-y divide-[#e8e3d9]">
+                    <div className="rounded-2xl border border-[var(--ds-border)] bg-[var(--bg)] divide-y divide-[#e8e3d9]">
                       <div className="flex items-center gap-3 px-4 py-3">
-                        <Mail className="w-4 h-4 text-[#94a3b8] shrink-0" />
+                        <Mail className="w-4 h-4 text-[var(--text-subtle)] shrink-0" />
                         <div>
-                          <p className="text-[10px] text-[#94a3b8] font-semibold uppercase tracking-wide">Email</p>
-                          <p className="text-sm font-medium text-[#0f172a]">{form.email}</p>
+                          <p className="text-[10px] text-[var(--text-subtle)] font-semibold uppercase tracking-wide">Email</p>
+                          <p className="text-body font-medium text-[var(--text)]">{form.email}</p>
                         </div>
                       </div>
                       {form.phone && (
                         <div className="flex items-center gap-3 px-4 py-3">
-                          <Phone className="w-4 h-4 text-[#94a3b8] shrink-0" />
+                          <Phone className="w-4 h-4 text-[var(--text-subtle)] shrink-0" />
                           <div>
-                            <p className="text-[10px] text-[#94a3b8] font-semibold uppercase tracking-wide">Телефон</p>
-                            <p className="text-sm font-medium text-[#0f172a]">{form.phone}</p>
+                            <p className="text-[10px] text-[var(--text-subtle)] font-semibold uppercase tracking-wide">Телефон</p>
+                            <p className="text-body font-medium text-[var(--text)]">{form.phone}</p>
                           </div>
                         </div>
                       )}
                       {(form.role === "doctor" || form.role === "assistant" || form.role === "nurse") && form.specialty && (
                         <div className="flex items-center gap-3 px-4 py-3">
-                          <Activity className="w-4 h-4 text-[#94a3b8] shrink-0" />
+                          <Activity className="w-4 h-4 text-[var(--text-subtle)] shrink-0" />
                           <div>
-                            <p className="text-[10px] text-[#94a3b8] font-semibold uppercase tracking-wide">Специализация</p>
-                            <p className="text-sm font-medium text-[#0f172a]">{form.specialty}</p>
+                            <p className="text-[10px] text-[var(--text-subtle)] font-semibold uppercase tracking-wide">Специализация</p>
+                            <p className="text-body font-medium text-[var(--text)]">{form.specialty}</p>
                           </div>
                         </div>
                       )}
                       <div className="flex items-center gap-3 px-4 py-3">
-                        <Wallet className="w-4 h-4 text-[#94a3b8] shrink-0" />
+                        <Wallet className="w-4 h-4 text-[var(--text-subtle)] shrink-0" />
                         <div>
-                          <p className="text-[10px] text-[#94a3b8] font-semibold uppercase tracking-wide">Оплата</p>
-                          <p className="text-sm font-medium text-[#0f172a]">
+                          <p className="text-[10px] text-[var(--text-subtle)] font-semibold uppercase tracking-wide">Оплата</p>
+                          <p className="text-body font-medium text-[var(--text)]">
                             {form.salaryType === "fixed" && `${form.fixedAmount.toLocaleString("ru-KZ")} ₸/мес`}
                             {form.salaryType === "commission" && `${form.commissionPercent}%`}
                             {form.salaryType === "fixed_plus_commission" && `${form.fixedAmount.toLocaleString("ru-KZ")} ₸ + ${form.commissionPercent}%`}
@@ -844,8 +844,8 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
                     </div>
 
                     <div className="rounded-2xl bg-[#1f75fe]/10 border border-[#1f75fe]/20 px-4 py-3 flex items-start gap-3">
-                      <Send className="w-4 h-4 shrink-0 mt-0.5 text-[#1f75fe]" />
-                      <p className="text-xs text-[#64748b] leading-relaxed">
+                      <Send className="w-4 h-4 shrink-0 mt-0.5 text-[var(--ds-primary)]" />
+                      <p className="text-caption text-[var(--text-secondary)] leading-relaxed">
                         Сотрудник получит письмо с временным паролем и ссылкой для входа. После первого входа он сможет сменить пароль.
                       </p>
                     </div>

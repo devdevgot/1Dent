@@ -83,7 +83,7 @@ function CurrentSubscriptionBanner({ clinic }: { clinic: Clinic | null }) {
 
   const config = {
     active_plan: {
-      bg: "bg-[#f0fdf4] border-[#16a34a]/25 text-[#16a34a]",
+      bg: "bg-[#f0fdf4] border-[#16a34a]/25 text-[var(--success)]",
       icon: Check,
       label: "Ваш тариф",
       title: status.kind === "active_plan" ? PLAN_DISPLAY_NAMES[status.plan] : "",
@@ -103,7 +103,7 @@ function CurrentSubscriptionBanner({ clinic }: { clinic: Clinic | null }) {
         status.kind === "active_trial" ? `до ${formatExpiryDate(status.expiresAt)}` : "",
     },
     expired_plan: {
-      bg: "bg-[#fef3c7] border-[#d97706]/25 text-[#d97706]",
+      bg: "bg-[#fef3c7] border-[#d97706]/25 text-[var(--warning)]",
       icon: AlertCircle,
       label: "Тариф истёк",
       title: status.kind === "expired_plan" ? PLAN_DISPLAY_NAMES[status.plan] : "",
@@ -111,7 +111,7 @@ function CurrentSubscriptionBanner({ clinic }: { clinic: Clinic | null }) {
         status.kind === "expired_plan" ? formatExpiryDate(status.expiresAt) : "",
     },
     expired_trial: {
-      bg: "bg-[#fef3c7] border-[#d97706]/25 text-[#d97706]",
+      bg: "bg-[#fef3c7] border-[#d97706]/25 text-[var(--warning)]",
       icon: AlertCircle,
       label: "Пробный период",
       title: "Закончился",
@@ -119,7 +119,7 @@ function CurrentSubscriptionBanner({ clinic }: { clinic: Clinic | null }) {
         status.kind === "expired_trial" ? formatExpiryDate(status.expiresAt) : "",
     },
     none: {
-      bg: "bg-white border-[#e8e3d9] text-[#64748b]",
+      bg: "bg-[var(--ds-surface)] border-[var(--ds-border)] text-[var(--text-secondary)]",
       icon: AlertCircle,
       label: "Статус",
       title: "Тариф не подключён",
@@ -134,7 +134,7 @@ function CurrentSubscriptionBanner({ clinic }: { clinic: Clinic | null }) {
       <Icon className="w-4 h-4 shrink-0" strokeWidth={2.5} />
       <div className="min-w-0 flex-1">
         <p className="text-micro font-semibold uppercase tracking-wide opacity-80">{config.label}</p>
-        <p className="text-caption font-semibold text-[#0f172a] truncate">{config.title}</p>
+        <p className="text-caption font-semibold text-[var(--text)] truncate">{config.title}</p>
       </div>
       {config.detail ? (
         <p className="text-caption font-medium shrink-0">{config.detail}</p>
@@ -218,7 +218,7 @@ export default function PricingPage() {
 
         <PlanComparisonAccordion />
 
-        <p className="text-center text-caption text-[#94a3b8] leading-relaxed pb-2 px-1">
+        <p className="text-center text-caption text-[var(--text-subtle)] leading-relaxed pb-2 px-1">
           {COMMON_FEATURES_SUMMARY}. Оплата через Kaspi.
         </p>
       </div>
@@ -230,18 +230,18 @@ export default function PricingPage() {
           role="presentation"
         >
           <div
-            className="bg-white w-full max-w-md rounded-2xl border border-[#e8e3d9] shadow-xl overflow-hidden font-manrope"
+            className="bg-[var(--ds-surface)] w-full max-w-md rounded-2xl border border-[var(--ds-border)] shadow-xl overflow-hidden font-manrope"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
             aria-labelledby="plan-request-title"
           >
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[#e8e3d9]">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--ds-border)]">
               <div>
-                <h3 id="plan-request-title" className="font-bold text-[#0f172a]">
+                <h3 id="plan-request-title" className="font-bold text-[var(--text)]">
                   Заявка на тариф {PLAN_DISPLAY_NAMES[requestPlan]}
                 </h3>
-                <p className="text-caption text-[#64748b] mt-0.5">
+                <p className="text-caption text-[var(--text-secondary)] mt-0.5">
                   Внедрение {formatPlanPrice(IMPLEMENTATION_FEE)} ₸ + подписка
                 </p>
               </div>
@@ -249,25 +249,25 @@ export default function PricingPage() {
                 type="button"
                 onClick={closeRequestModal}
                 aria-label="Закрыть"
-                className="p-1.5 rounded-xl hover:bg-[#f1ede4] transition-colors"
+                className="p-1.5 rounded-xl hover:bg-[var(--surface-2)] transition-colors"
               >
-                <X className="w-5 h-5 text-[#94a3b8]" />
+                <X className="w-5 h-5 text-[var(--text-subtle)]" />
               </button>
             </div>
 
             {submitted ? (
               <div className="p-8 text-center">
                 <div className="w-14 h-14 rounded-full bg-[#f0fdf4] flex items-center justify-center mx-auto mb-4">
-                  <Check className="w-7 h-7 text-[#16a34a]" strokeWidth={3} />
+                  <Check className="w-7 h-7 text-[var(--success)]" strokeWidth={3} />
                 </div>
-                <h4 className="text-nav-title font-bold text-[#0f172a] mb-1">Заявка отправлена!</h4>
-                <p className="text-body text-[#64748b] mb-5">
+                <h4 className="text-nav-title font-bold text-[var(--text)] mb-1">Заявка отправлена!</h4>
+                <p className="text-body text-[var(--text-secondary)] mb-5">
                   Мы свяжемся с вами в ближайшее время для подключения тарифа.
                 </p>
                 <button
                   type="button"
                   onClick={closeRequestModal}
-                  className="px-6 py-2.5 bg-[#1f75fe] hover:bg-[#1a65e8] text-white rounded-full text-body font-semibold transition-colors"
+                  className="px-6 py-2.5 bg-[#1f75fe] hover:bg-[var(--primary-hover)] text-white rounded-full text-body font-semibold transition-colors"
                 >
                   Закрыть
                 </button>
@@ -275,54 +275,54 @@ export default function PricingPage() {
             ) : (
               <div className="p-5 space-y-3">
                 <div>
-                  <label className="text-caption font-medium text-[#64748b] mb-1 block">
-                    Имя <span className="text-[#dc2626]">*</span>
+                  <label className="text-caption font-medium text-[var(--text-secondary)] mb-1 block">
+                    Имя <span className="text-[var(--danger)]">*</span>
                   </label>
                   <input
                     type="text"
                     value={formName}
                     onChange={(e) => setFormName(e.target.value)}
                     placeholder="Ваше имя"
-                    className="w-full bg-white border border-[#e8e3d9] rounded-xl px-3 py-2.5 text-body text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 transition-colors"
+                    className="w-full bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-xl px-3 py-2.5 text-body text-[var(--text)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="text-caption font-medium text-[#64748b] mb-1 block">
-                    Телефон <span className="text-[#dc2626]">*</span>
+                  <label className="text-caption font-medium text-[var(--text-secondary)] mb-1 block">
+                    Телефон <span className="text-[var(--danger)]">*</span>
                   </label>
                   <input
                     type="tel"
                     value={formPhone}
                     onChange={(e) => setFormPhone(e.target.value)}
                     placeholder="+7 (___) ___-__-__"
-                    className="w-full bg-white border border-[#e8e3d9] rounded-xl px-3 py-2.5 text-body text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 transition-colors"
+                    className="w-full bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-xl px-3 py-2.5 text-body text-[var(--text)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="text-caption font-medium text-[#64748b] mb-1 block">Email</label>
+                  <label className="text-caption font-medium text-[var(--text-secondary)] mb-1 block">Email</label>
                   <input
                     type="email"
                     value={formEmail}
                     onChange={(e) => setFormEmail(e.target.value)}
                     placeholder="email@example.com"
-                    className="w-full bg-white border border-[#e8e3d9] rounded-xl px-3 py-2.5 text-body text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 transition-colors"
+                    className="w-full bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-xl px-3 py-2.5 text-body text-[var(--text)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="text-caption font-medium text-[#64748b] mb-1 block">Комментарий</label>
+                  <label className="text-caption font-medium text-[var(--text-secondary)] mb-1 block">Комментарий</label>
                   <textarea
                     value={formMessage}
                     onChange={(e) => setFormMessage(e.target.value)}
                     placeholder="Дополнительная информация..."
                     rows={2}
-                    className="w-full bg-white border border-[#e8e3d9] rounded-xl px-3 py-2.5 text-body text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 resize-none transition-colors"
+                    className="w-full bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-xl px-3 py-2.5 text-body text-[var(--text)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 resize-none transition-colors"
                   />
                 </div>
                 <button
                   type="button"
                   onClick={() => void handleSubmitRequest()}
                   disabled={createPlanMutation.isPending || !formName.trim() || !formPhone.trim()}
-                  className="w-full py-3 bg-[#1f75fe] hover:bg-[#1a65e8] text-white rounded-full text-body font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-[#1f75fe] hover:bg-[var(--primary-hover)] text-white rounded-full text-body font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {createPlanMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
                   Отправить заявку

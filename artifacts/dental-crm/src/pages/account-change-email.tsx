@@ -87,10 +87,10 @@ export default function AccountChangeEmail() {
       <div className="px-4 py-6 space-y-5">
         {step === "done" ? (
           <div className="flex flex-col items-center gap-4 py-10">
-            <CheckCircle2 className="w-16 h-16 text-[#1f75fe]" />
-            <p className="text-nav-title font-semibold text-[#0f172a]">Email обновлён</p>
-            <p className="text-caption text-[#94a3b8] text-center">
-              Ваш новый email: <span className="text-[#64748b] font-medium">{newEmail}</span>
+            <CheckCircle2 className="w-16 h-16 text-[var(--ds-primary)]" />
+            <p className="text-nav-title font-semibold text-[var(--text)]">Email обновлён</p>
+            <p className="text-caption text-[var(--text-subtle)] text-center">
+              Ваш новый email: <span className="text-[var(--text-secondary)] font-medium">{newEmail}</span>
             </p>
             <Button
               className="mt-4 w-full py-3.5 rounded-full text-body font-semibold hover:scale-105 active:scale-95"
@@ -102,9 +102,9 @@ export default function AccountChangeEmail() {
         ) : step === "enter-email" ? (
           <>
             <IosGroup>
-              <div className="px-4 py-3 border-b border-[#e8e3d9]">
-                <p className="text-caption text-[#94a3b8]">Текущий email</p>
-                <p className="text-body text-[#64748b] mt-0.5">{user?.email}</p>
+              <div className="px-4 py-3 border-b border-[var(--ds-border)]">
+                <p className="text-caption text-[var(--text-subtle)]">Текущий email</p>
+                <p className="text-body text-[var(--text-secondary)] mt-0.5">{user?.email}</p>
               </div>
               <label className="flex flex-col px-4 py-3.5 gap-0.5">
                 <span className="section-label">Новый email</span>
@@ -112,7 +112,7 @@ export default function AccountChangeEmail() {
                   type="email"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
-                  className="text-body text-[#0f172a] bg-transparent outline-none placeholder:text-[#94a3b8] mt-0.5"
+                  className="text-body text-[var(--text)] bg-transparent outline-none placeholder:text-[var(--text-subtle)] mt-0.5"
                   placeholder="новый@email.com"
                   autoCapitalize="none"
                   autoCorrect="off"
@@ -133,11 +133,11 @@ export default function AccountChangeEmail() {
         ) : (
           <>
             <div className="bg-[#1f75fe]/10 border border-[#1f75fe]/20 rounded-2xl px-4 py-3.5 flex items-start gap-3">
-              <Mail className="w-5 h-5 text-[#1f75fe] mt-0.5 shrink-0" />
+              <Mail className="w-5 h-5 text-[var(--ds-primary)] mt-0.5 shrink-0" />
               <div>
-                <p className="text-body text-[#0f172a] font-medium">Код отправлен</p>
-                <p className="text-caption text-[#94a3b8] mt-0.5">
-                  Проверьте почту <span className="text-[#64748b]">{newEmail}</span>
+                <p className="text-body text-[var(--text)] font-medium">Код отправлен</p>
+                <p className="text-caption text-[var(--text-subtle)] mt-0.5">
+                  Проверьте почту <span className="text-[var(--text-secondary)]">{newEmail}</span>
                 </p>
               </div>
             </div>
@@ -149,7 +149,7 @@ export default function AccountChangeEmail() {
                   type="text"
                   value={code}
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                  className="text-[22px] font-bold tracking-[0.3em] text-[#0f172a] bg-transparent outline-none placeholder:text-[#e8e3d9] mt-1"
+                  className="text-[22px] font-bold tracking-[0.3em] text-[var(--text)] bg-transparent outline-none placeholder:text-[#e8e3d9] mt-1"
                   placeholder="------"
                   inputMode="numeric"
                   autoFocus
@@ -169,7 +169,7 @@ export default function AccountChangeEmail() {
             <button
               type="button"
               onClick={() => { setCode(""); setStep("enter-email"); }}
-              className="w-full py-3 text-caption text-[#94a3b8] hover:text-[#64748b] transition-colors"
+              className="w-full py-3 text-caption text-[var(--text-subtle)] hover:text-[var(--text-secondary)] transition-colors"
             >
               Изменить email
             </button>
