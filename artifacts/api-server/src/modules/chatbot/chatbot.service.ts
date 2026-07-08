@@ -133,7 +133,6 @@ import {
 
 type CachedSettings = { settings: ChatbotSettings; expiresAt: number };
 type CachedExamples = { examples: ManagerExample[]; expiresAt: number };
-type CachedKnowledge = { text: string; expiresAt: number };
 type CachedDoctors = { text: string; expiresAt: number };
 type CachedPriceList = { text: string; expiresAt: number };
 
@@ -375,12 +374,10 @@ const settingsCache = new Map<string, CachedSettings>();
 // Manager examples cache (60s TTL) — shared across sessions
 const examplesCache = new Map<string, CachedExamples>();
 
-// Knowledge base cache (5min TTL) — refreshed lazily on each processMessage call
-const knowledgeCache = new Map<string, CachedKnowledge>();
-
-export function invalidateKnowledgeCache(clinicId: string): void {
-  knowledgeCache.delete(clinicId);
-}
+import {
+  getKnowledgeCacheEntry,
+  setKnowledgeCacheEntry,
+} from "../knowledge/knowledge-cache";
 
 // Doctors cache (5min TTL)
 const doctorsCache = new Map<string, CachedDoctors>();
@@ -389,10 +386,10 @@ const doctorsCache = new Map<string, CachedDoctors>();
 const priceListCache = new Map<string, CachedPriceList>();
 
 async function loadKnowledgeContext(clinicId: string, query?: string): Promise<string> {
-  const cached = knowledgeCache.get(clinicId);
+  const cachedText = getKnowledgeCacheEntry(clinicId);
   let fullText: string;
-  if (cached && cached.expiresAt > Date.now()) {
-    fullText = cached.text;
+  if (cachedText !== null) {
+    fullText = cachedText;
   } else {
     try {
       const sources = await db
@@ -404,7 +401,7 @@ async function loadKnowledgeContext(clinicId: string, query?: string): Promise<s
         ));
 
       if (sources.length === 0) {
-        knowledgeCache.set(clinicId, { text: "", expiresAt: Date.now() + 5 * 60_000 });
+        setKnowledgeCacheEntry(clinicId, "");
         return "";
       }
 
@@ -412,7 +409,7 @@ async function loadKnowledgeContext(clinicId: string, query?: string): Promise<s
         .map((s) => `=== ${s.name} ===\n${(s.extractedText ?? "").slice(0, 8000)}`)
         .join("\n\n---\n\n");
 
-      knowledgeCache.set(clinicId, { text: fullText, expiresAt: Date.now() + 5 * 60_000 });
+      setKnowledgeCacheEntry(clinicId, fullText);
     } catch (err) {
       logger.warn({ err }, "[ChatbotService] loadKnowledgeContext failed — skipping knowledge injection");
       return "";
