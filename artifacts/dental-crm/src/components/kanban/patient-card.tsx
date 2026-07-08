@@ -24,9 +24,9 @@ export const PatientCardView = memo(function PatientCardView({
   className,
 }: PatientCardViewProps) {
   const sourceLabel = SOURCE_LABELS[patient.source] ?? patient.source;
-  const sourceColor = SOURCE_COLORS[patient.source] ?? "bg-[var(--surface-2)] text-[var(--text-secondary)]";
+  const sourceColor = SOURCE_COLORS[patient.source] ?? "bg-[#f1ede4] text-[#64748b]";
   const statusLabel = KANBAN_COLUMNS.find((c) => c.id === patient.status)?.label ?? patient.status;
-  const statusColor = COLUMN_HEADER_COLOR[patient.status] ?? "text-[var(--text-secondary)] bg-[var(--surface-2)]";
+  const statusColor = COLUMN_HEADER_COLOR[patient.status] ?? "text-[#64748b] bg-[#f1ede4]";
 
   const formattedDate = new Date(patient.createdAt).toLocaleDateString("ru-RU", {
     day: "2-digit",
@@ -42,14 +42,14 @@ export const PatientCardView = memo(function PatientCardView({
   return (
     <div
       className={cn(
-        "bg-[var(--ds-surface)] rounded-2xl border p-3.5 select-none group shadow-sm",
-        hasRedAlert ? "border-red-400 bg-red-50/40" : "border-[var(--ds-border)]/60",
+        "bg-white rounded-2xl border p-3.5 select-none group shadow-sm",
+        hasRedAlert ? "border-red-400 bg-red-50/40" : "border-[#e8e3d9]/60",
         onSelect && "cursor-pointer hover:shadow-md",
         className,
       )}
     >
       <div className="flex items-start justify-between mb-2">
-        <p className="font-semibold text-body text-[var(--text)] leading-tight line-clamp-1 flex items-center gap-1">
+        <p className="font-semibold text-sm text-[#0f172a] leading-tight line-clamp-1 flex items-center gap-1">
           {hasRedAlert && (
             <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
           )}
@@ -60,7 +60,7 @@ export const PatientCardView = memo(function PatientCardView({
         </span>
       </div>
 
-      <p className="text-caption text-[var(--text-secondary)] mb-2 font-mono tracking-tight">
+      <p className="text-xs text-[#64748b] mb-2 font-mono tracking-tight">
         {patient.phone}
       </p>
 
@@ -69,20 +69,20 @@ export const PatientCardView = memo(function PatientCardView({
       </span>
 
       <div className="mb-2.5">
-        <p className="text-[9px] font-semibold text-[var(--text-subtle)] uppercase tracking-wide mb-1.5">Прогресс</p>
+        <p className="text-[9px] font-semibold text-[#94a3b8] uppercase tracking-wide mb-1.5">Прогресс</p>
         {progress && (progress.paid > 0 || progress.debt > 0 || progress.pending > 0) ? (
           <PatientTreatmentProgressBar data={progress} compact />
         ) : (
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-full border-[3px] border-[var(--ds-border)] flex items-center justify-center shrink-0">
-              <span className="text-[10px] text-[var(--text-subtle)]">—</span>
+            <div className="w-10 h-10 rounded-full border-[3px] border-[#e8e3d9] flex items-center justify-center shrink-0">
+              <span className="text-[10px] text-[#94a3b8]">—</span>
             </div>
-            <span className="text-[10px] text-[var(--text-subtle)]">Нет плана</span>
+            <span className="text-[10px] text-[#94a3b8]">Нет плана</span>
           </div>
         )}
       </div>
 
-      <div className="flex items-center justify-between text-[11px] text-[var(--text-secondary)]">
+      <div className="flex items-center justify-between text-[11px] text-[#64748b]">
         <div className="flex items-center gap-1">
           <Calendar className="w-3 h-3" />
           <span>{formattedDate}</span>

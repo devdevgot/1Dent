@@ -28,8 +28,8 @@ function NotificationItem({
     <button
       onClick={() => !notification.read && onRead(notification.id)}
       className={cn(
-        "w-full text-left px-4 py-3 border-b border-[var(--ds-border)] flex items-start gap-3 transition-colors font-manrope",
-        notification.read ? "opacity-60" : "bg-[var(--ds-surface)] hover:bg-[var(--bg)]",
+        "w-full text-left px-4 py-3 border-b border-[#e8e3d9] flex items-start gap-3 transition-colors font-manrope",
+        notification.read ? "opacity-60" : "bg-white hover:bg-[#faf8f4]",
         isRedAlert && !notification.read && "bg-[var(--danger-light)] hover:bg-[var(--danger-light)]/80",
         isAppointmentReminder && !notification.read && "bg-[var(--primary-light)] hover:bg-[var(--primary-light)]",
         isPendingPayment && !notification.read && "bg-[var(--warning-light)] hover:bg-[var(--warning-light)]/80",
@@ -39,11 +39,11 @@ function NotificationItem({
         className={cn(
           "mt-0.5 w-8 h-8 rounded-full flex items-center justify-center shrink-0",
           isRedAlert
-            ? "bg-[var(--danger-light)] text-[var(--danger)]"
+            ? "bg-[var(--danger-light)] text-[#dc2626]"
             : isAppointmentReminder
-            ? "bg-[var(--primary-light)] text-[var(--ds-primary)]"
+            ? "bg-[var(--primary-light)] text-[#1f75fe]"
             : isPendingPayment
-            ? "bg-[var(--warning-light)] text-[var(--warning)]"
+            ? "bg-[var(--warning-light)] text-[#d97706]"
             : "bg-[var(--info-light)] text-[var(--info)]",
         )}
       >
@@ -58,8 +58,8 @@ function NotificationItem({
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-caption text-[var(--text)] leading-relaxed">{notification.message}</p>
-        <p className="text-micro text-[var(--text-subtle)] mt-1">
+        <p className="text-xs text-[#0f172a] leading-relaxed">{notification.message}</p>
+        <p className="text-xs text-[#94a3b8] mt-1">
           {new Date(notification.createdAt).toLocaleTimeString(undefined, {
             hour: "2-digit",
             minute: "2-digit",
@@ -92,12 +92,12 @@ export function NotificationBell() {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button className="relative p-2 rounded-xl hover:bg-[var(--surface-2)] transition-colors">
-          <Bell className="w-5 h-5 text-[var(--text-secondary)]" />
+        <button className="relative p-2 rounded-xl hover:bg-[#f1ede4] transition-colors">
+          <Bell className="w-5 h-5 text-[#64748b]" />
           {count > 0 && (
             <span
               className={cn(
-                "absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full text-micro font-bold flex items-center justify-center text-white px-1",
+                "absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full text-xs font-bold flex items-center justify-center text-white px-1",
                 unreadRedAlerts > 0
                   ? "bg-[var(--danger)] animate-pulse"
                   : unreadPendingPayments > 0
@@ -110,17 +110,17 @@ export function NotificationBell() {
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-96 p-0 shadow-xl bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-2xl font-manrope" align="end">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--ds-border)]">
+      <PopoverContent className="w-96 p-0 shadow-xl bg-white border border-[#e8e3d9] rounded-2xl font-manrope" align="end">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[#e8e3d9]">
           <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-body text-[var(--text)]">{t("notifications.title")}</h3>
+            <h3 className="font-semibold text-sm text-[#0f172a]">{t("notifications.title")}</h3>
             {unreadRedAlerts > 0 && (
-              <Badge variant="destructive" className="text-micro py-0">
+              <Badge variant="destructive" className="text-xs py-0">
                 {t("notifications.redAlerts", { count: unreadRedAlerts })}
               </Badge>
             )}
             {unreadPendingPayments > 0 && (
-              <Badge className="text-micro py-0 bg-orange-500 hover:bg-orange-600">
+              <Badge className="text-xs py-0 bg-orange-500 hover:bg-orange-600">
                 {unreadPendingPayments} оплата
               </Badge>
             )}
@@ -129,7 +129,7 @@ export function NotificationBell() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 text-caption text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]"
+              className="h-7 text-xs text-[#64748b] hover:text-[#0f172a] hover:bg-[#f1ede4]"
               onClick={() => markAllMutation.mutate()}
               disabled={markAllMutation.isPending}
             >
@@ -142,42 +142,42 @@ export function NotificationBell() {
         {unreadRedAlerts > 0 && (
           <button
             onClick={() => navigate("/kanban")}
-            className="w-full bg-[var(--danger-light)] border-b border-[var(--ds-border)] p-3.5 flex items-center gap-3 text-left hover:bg-[var(--danger-light)]/80 transition-colors"
+            className="w-full bg-[var(--danger-light)] border-b border-[#e8e3d9] p-3.5 flex items-center gap-3 text-left hover:bg-[var(--danger-light)]/80 transition-colors"
           >
             <div className="w-9 h-9 bg-[var(--danger)] rounded-xl flex items-center justify-center shrink-0">
               <Bell className="w-4 h-4 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-body font-bold text-[var(--danger)]">
+              <p className="text-sm font-bold text-[#dc2626]">
                 {t("dashboard.redAlertTitle", { count: unreadRedAlerts })}
               </p>
-              <p className="text-caption text-[var(--danger)]/80">{t("dashboard.redAlertDesc")}</p>
+              <p className="text-xs text-[#dc2626]/80">{t("dashboard.redAlertDesc")}</p>
             </div>
-            <ChevronRight className="w-4 h-4 text-[var(--danger)]/60 shrink-0" />
+            <ChevronRight className="w-4 h-4 text-[#dc2626]/60 shrink-0" />
           </button>
         )}
 
         {unreadPendingPayments > 0 && (
           <button
             onClick={() => navigate("/admin/finance")}
-            className="w-full bg-[var(--warning-light)] border-b border-[var(--ds-border)] p-3.5 flex items-center gap-3 text-left hover:bg-[var(--warning-light)]/80 transition-colors"
+            className="w-full bg-[var(--warning-light)] border-b border-[#e8e3d9] p-3.5 flex items-center gap-3 text-left hover:bg-[var(--warning-light)]/80 transition-colors"
           >
             <div className="w-9 h-9 bg-[var(--warning)] rounded-xl flex items-center justify-center shrink-0">
               <Wallet className="w-4 h-4 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-body font-bold text-[var(--warning)]">
+              <p className="text-sm font-bold text-[#d97706]">
                 {unreadPendingPayments} {unreadPendingPayments === 1 ? "процедура ожидает" : "процедур ожидают"} оплаты
               </p>
-              <p className="text-caption text-[var(--warning)]/80">Перейти в раздел финансов</p>
+              <p className="text-xs text-[#d97706]/80">Перейти в раздел финансов</p>
             </div>
-            <ChevronRight className="w-4 h-4 text-[var(--warning)]/60 shrink-0" />
+            <ChevronRight className="w-4 h-4 text-[#d97706]/60 shrink-0" />
           </button>
         )}
 
         <ScrollArea className="max-h-96">
           {notifications.length === 0 && (
-            <div className="py-8 text-center text-caption text-[var(--text-secondary)]">
+            <div className="py-8 text-center text-xs text-[#64748b]">
               {t("notifications.empty")}
             </div>
           )}

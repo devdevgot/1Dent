@@ -133,9 +133,9 @@ export default function LogsPage() {
   const inventoryMap = useMemo(() => new Map(inventoryItems.map((i) => [i.id, i.name])), [inventoryItems]);
 
   const actionBadgeColor: Record<string, string> = {
-    CREATE: "bg-[#f0fdf4] text-[var(--success)] border-[#16a34a]/20",
+    CREATE: "bg-[#f0fdf4] text-[#16a34a] border-[#16a34a]/20",
     UPDATE: "bg-[#e0f2fe] text-[#0284c7] border-[#0284c7]/20",
-    DELETE: "bg-[#fef2f2] text-[var(--danger)] border-[#dc2626]/20",
+    DELETE: "bg-[#fef2f2] text-[#dc2626] border-[#dc2626]/20",
   };
 
   const actionBorderColor: Record<string, string> = {
@@ -159,16 +159,16 @@ export default function LogsPage() {
 
       <div className="p-4 space-y-4 max-w-7xl mx-auto">
         {/* Filters */}
-        <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] p-5 space-y-4 shadow-md">
-          <div className="flex items-center justify-between border-b border-[var(--ds-border)] pb-3">
-            <div className="flex items-center gap-2 text-body font-semibold text-[var(--text)]">
-              <Filter className="w-4 h-4 text-[var(--ds-primary)]" />
+        <div className="bg-white rounded-2xl border border-[#e8e3d9] p-5 space-y-4 shadow-md">
+          <div className="flex items-center justify-between border-b border-[#e8e3d9] pb-3">
+            <div className="flex items-center gap-2 text-sm font-semibold text-[#0f172a]">
+              <Filter className="w-4 h-4 text-[#1f75fe]" />
               {t("logs.filters")}
             </div>
             {(userId || actionType || entityType || dateFrom || dateTo) && (
               <button
                 onClick={() => { setUserId(""); setActionType(""); setEntityType(""); setDateFrom(""); setDateTo(""); setPage(1); }}
-                className="text-caption font-semibold text-[var(--danger)] hover:text-[var(--danger)]/80 transition-colors"
+                className="text-xs font-semibold text-[#dc2626] hover:text-[#dc2626]/80 transition-colors"
               >
                 {t("logs.clearFilters")}
               </button>
@@ -178,13 +178,13 @@ export default function LogsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {/* User Filter */}
             <div className="space-y-1">
-              <label className="text-caption font-semibold text-[var(--text-secondary)]">
+              <label className="text-xs font-semibold text-[#64748b]">
                 {t("logs.filterUserLabel", "Сотрудник")}
               </label>
               <select
                 value={userId}
                 onChange={(e) => { setUserId(e.target.value); setPage(1); }}
-                className="w-full text-body px-3 py-2 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe] transition-all text-[var(--text)]"
+                className="w-full text-sm px-3 py-2 rounded-xl border border-[#e8e3d9] bg-white focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe] transition-all text-[#0f172a]"
               >
                 <option value="">{t("logs.allUsers")}</option>
                 {users.map((u) => (
@@ -195,13 +195,13 @@ export default function LogsPage() {
 
             {/* Action Filter */}
             <div className="space-y-1">
-              <label className="text-caption font-semibold text-[var(--text-secondary)]">
+              <label className="text-xs font-semibold text-[#64748b]">
                 {t("logs.filterActionLabel", "Действие")}
               </label>
               <select
                 value={actionType}
                 onChange={(e) => { setActionType(e.target.value); setPage(1); }}
-                className="w-full text-body px-3 py-2 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe] transition-all text-[var(--text)]"
+                className="w-full text-sm px-3 py-2 rounded-xl border border-[#e8e3d9] bg-white focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe] transition-all text-[#0f172a]"
               >
                 <option value="">{t("logs.allActions")}</option>
                 {ACTION_TYPES.map((a) => (
@@ -214,13 +214,13 @@ export default function LogsPage() {
 
             {/* Entity Filter */}
             <div className="space-y-1">
-              <label className="text-caption font-semibold text-[var(--text-secondary)]">
+              <label className="text-xs font-semibold text-[#64748b]">
                 {t("logs.filterEntityLabel", "Объект")}
               </label>
               <select
                 value={entityType}
                 onChange={(e) => { setEntityType(e.target.value); setPage(1); }}
-                className="w-full text-body px-3 py-2 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe] transition-all text-[var(--text)]"
+                className="w-full text-sm px-3 py-2 rounded-xl border border-[#e8e3d9] bg-white focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe] transition-all text-[#0f172a]"
               >
                 <option value="">{t("logs.allEntities")}</option>
                 {ENTITY_TYPES.map((e) => (
@@ -233,7 +233,7 @@ export default function LogsPage() {
 
             {/* Date From */}
             <div className="space-y-1">
-              <label className="text-caption font-semibold text-[var(--text-secondary)]">
+              <label className="text-xs font-semibold text-[#64748b]">
                 {t("logs.dateFrom")}
               </label>
               <input
@@ -241,13 +241,13 @@ export default function LogsPage() {
                 value={dateFrom}
                 max={dateTo || undefined}
                 onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
-                className="w-full text-body px-3 py-2 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe] transition-all text-[var(--text)]"
+                className="w-full text-sm px-3 py-2 rounded-xl border border-[#e8e3d9] bg-white focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe] transition-all text-[#0f172a]"
               />
             </div>
 
             {/* Date To */}
             <div className="space-y-1">
-              <label className="text-caption font-semibold text-[var(--text-secondary)]">
+              <label className="text-xs font-semibold text-[#64748b]">
                 {t("logs.dateTo")}
               </label>
               <input
@@ -255,46 +255,46 @@ export default function LogsPage() {
                 value={dateTo}
                 min={dateFrom || undefined}
                 onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
-                className="w-full text-body px-3 py-2 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe] transition-all text-[var(--text)]"
+                className="w-full text-sm px-3 py-2 rounded-xl border border-[#e8e3d9] bg-white focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe] transition-all text-[#0f172a]"
               />
             </div>
           </div>
         </div>
 
         {/* Audit List */}
-        <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] overflow-hidden shadow-md">
-          <div className="px-5 py-4 border-b border-[var(--ds-border)] flex items-center justify-between bg-[var(--bg)]">
-            <span className="text-body font-semibold text-[var(--text)]">
-              {t("logs.total")}: <span className="text-[var(--ds-primary)] font-bold">{total}</span>
+        <div className="bg-white rounded-2xl border border-[#e8e3d9] overflow-hidden shadow-md">
+          <div className="px-5 py-4 border-b border-[#e8e3d9] flex items-center justify-between bg-[#faf8f4]">
+            <span className="text-sm font-semibold text-[#0f172a]">
+              {t("logs.total")}: <span className="text-[#1f75fe] font-bold">{total}</span>
             </span>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
-                className="p-1.5 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] hover:bg-[var(--surface-2)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
+                className="p-1.5 rounded-xl border border-[#e8e3d9] bg-white hover:bg-[#f1ede4] disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
               >
-                <ChevronLeft className="w-4 h-4 text-[var(--text-secondary)]" />
+                <ChevronLeft className="w-4 h-4 text-[#64748b]" />
               </button>
-              <span className="text-caption font-semibold text-[var(--text-secondary)] bg-[var(--ds-surface)] border border-[var(--ds-border)] px-2.5 py-1 rounded-xl shadow-sm">
+              <span className="text-xs font-semibold text-[#64748b] bg-white border border-[#e8e3d9] px-2.5 py-1 rounded-xl shadow-sm">
                 {page} / {totalPages}
               </span>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages}
-                className="p-1.5 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] hover:bg-[var(--surface-2)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
+                className="p-1.5 rounded-xl border border-[#e8e3d9] bg-white hover:bg-[#f1ede4] disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
               >
-                <ChevronRight className="w-4 h-4 text-[var(--text-secondary)]" />
+                <ChevronRight className="w-4 h-4 text-[#64748b]" />
               </button>
             </div>
           </div>
 
           {isError ? (
             <div className="p-12 text-center flex flex-col items-center gap-3">
-              <p className="text-body text-[var(--danger)]">{t("common.loadError", "Не удалось загрузить логи")}</p>
+              <p className="text-sm text-[#dc2626]">{t("common.loadError", "Не удалось загрузить логи")}</p>
               <button
                 type="button"
                 onClick={() => refetch()}
-                className="text-caption font-semibold px-4 py-2 rounded-xl bg-[var(--ds-surface)] border border-[#dc2626]/20 text-[var(--danger)] hover:bg-[#fef2f2]"
+                className="text-xs font-semibold px-4 py-2 rounded-xl bg-white border border-[#dc2626]/20 text-[#dc2626] hover:bg-[#fef2f2]"
               >
                 {t("common.retry", "Повторить")}
               </button>
@@ -302,7 +302,7 @@ export default function LogsPage() {
           ) : isLoading ? (
             <ListRowsSkeleton rows={6} avatar={false} card={false} className="p-2" />
           ) : logs.length === 0 ? (
-            <div className="p-12 text-center text-[var(--text-secondary)] text-sm">
+            <div className="p-12 text-center text-[#64748b] text-sm">
               {t("logs.empty")}
             </div>
           ) : (
@@ -310,25 +310,25 @@ export default function LogsPage() {
               {logs.map((log) => (
                 <div 
                   key={log.id} 
-                  className={`px-5 py-4 hover:bg-[var(--bg)] transition-colors flex items-start gap-4 pl-6 ${
+                  className={`px-5 py-4 hover:bg-[#faf8f4] transition-colors flex items-start gap-4 pl-6 ${
                     actionBorderColor[log.actionType] ?? "border-l-4 border-l-[#94a3b8]"
                   }`}
                 >
                   <div className="flex-1 min-w-0 space-y-2">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full border shadow-sm ${actionBadgeColor[log.actionType] ?? "bg-[var(--surface-2)] text-[var(--text-secondary)] border-[var(--ds-border)]"}`}>
+                      <span className={`shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full border shadow-sm ${actionBadgeColor[log.actionType] ?? "bg-[#f1ede4] text-[#64748b] border-[#e8e3d9]"}`}>
                         {t(`logs.actions.${log.actionType}`, log.actionType === "CREATE" ? "Создано" : log.actionType === "UPDATE" ? "Изменено" : log.actionType === "DELETE" ? "Удалено" : log.actionType)}
                       </span>
-                      <span className="text-caption text-[var(--text-subtle)] font-medium">{formatDate(log.createdAt)}</span>
+                      <span className="text-xs text-[#94a3b8] font-medium">{formatDate(log.createdAt)}</span>
                     </div>
                     
-                    <p className="text-body text-[var(--text)] font-medium leading-relaxed">
+                    <p className="text-sm text-[#0f172a] font-medium leading-relaxed">
                       {getLogDescription(log, t, userMap, patientMap, inventoryMap, users)}
                     </p>
                     
                     {log.ipAddress && (
-                      <div className="flex items-center text-caption text-[var(--text-subtle)]">
-                        <span className="bg-[var(--surface-2)] px-2 py-0.5 rounded-xl font-mono text-[10px]">
+                      <div className="flex items-center text-xs text-[#94a3b8]">
+                        <span className="bg-[#f1ede4] px-2 py-0.5 rounded-xl font-mono text-[10px]">
                           IP: {log.ipAddress}
                         </span>
                       </div>

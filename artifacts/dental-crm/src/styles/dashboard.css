@@ -85,7 +85,7 @@
 }
 
 .dash-page-title {
-  font-size: var(--text-page-title);
+  font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.2;
@@ -125,7 +125,7 @@
 }
 
 .dash-section-title {
-  font-size: var(--text-section-title);
+  font-size: 1rem;
   font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--text);
@@ -134,13 +134,12 @@
   gap: 0.5rem;
 }
 
-/* Alias — prefer .section-label in new code */
 .dash-section-label {
-  font-size: var(--text-micro);
+  font-size: 0.6875rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-secondary);
+  letter-spacing: 0.06em;
+  color: var(--text-subtle);
 }
 
 /* ── Stat cards ──────────────────────────────────────────────────────────── */

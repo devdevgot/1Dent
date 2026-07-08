@@ -50,8 +50,8 @@ function CategoryCard({
   items: { href: string; img: string; name: string }[];
 }) {
   return (
-    <section className="bg-[var(--ds-surface)] rounded-[20px] border border-[var(--ds-border)] px-3 pt-4 pb-2 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-      <h2 className="px-2 mb-1 section-label">
+    <section className="bg-white rounded-[20px] border border-[#e8e3d9] px-3 pt-4 pb-2 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+      <h2 className="px-2 mb-1 text-xs font-semibold text-[#64748b] uppercase tracking-wide">
         {title}
       </h2>
       <div className="grid grid-cols-4">
@@ -59,7 +59,7 @@ function CategoryCard({
           <Link
             key={item.href}
             href={item.href}
-            className="flex flex-col items-center gap-2 pt-3 pb-3.5 px-1 rounded-2xl hover:bg-[var(--surface-2)] active:bg-[var(--surface-2)] active:scale-[0.97] transition-all"
+            className="flex flex-col items-center gap-2 pt-3 pb-3.5 px-1 rounded-2xl hover:bg-[#f1ede4] active:bg-[#f1ede4] active:scale-[0.97] transition-all"
           >
             <img
               src={item.img}
@@ -68,7 +68,7 @@ function CategoryCard({
               className="w-14 h-14 shrink-0 object-contain drop-shadow-sm"
               draggable={false}
             />
-            <span className="w-full min-h-[26px] text-micro font-semibold text-[var(--text)] text-center leading-[1.2] line-clamp-2 break-words">
+            <span className="w-full min-h-[26px] text-xs font-semibold text-[#0f172a] text-center leading-[1.2] line-clamp-2 break-words">
               {item.name}
             </span>
           </Link>
@@ -106,7 +106,7 @@ export default function MenuPage() {
 
       <div className="px-4 pt-2 space-y-4">
         {categoriesWithItems.length === 0 ? (
-          <p className="py-10 text-center text-caption text-[var(--text-subtle)]">
+          <p className="py-10 text-center text-xs text-[#94a3b8]">
             {t("menuPage.noShortcuts")}
           </p>
         ) : (

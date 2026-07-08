@@ -120,7 +120,7 @@ export function BottomTabBar({
   const tabs = buildTabs(role, roleDashboardHref, location);
 
   return (
-    <nav className="flex-none bg-[var(--ds-surface)] border-t border-[var(--ds-border)] z-20 safe-area-bottom">
+    <nav className="flex-none bg-white border-t border-[#e8e3d9] z-20 safe-area-bottom">
       <div className="flex items-stretch h-[calc(4rem+env(safe-area-inset-bottom,0px))] pb-[env(safe-area-inset-bottom,0px)]">
         {tabs.map((tab) => {
           const blocked = isRestricted && hasBranches && tab.geoRestricted;
@@ -134,7 +134,7 @@ export function BottomTabBar({
                 className="flex-1 flex flex-col items-center justify-center gap-1 min-w-0 px-1 select-none opacity-35"
               >
                 <Icon active={false} />
-                <span className="text-micro font-medium leading-none text-[var(--text-subtle)] truncate max-w-full">
+                <span className="text-[11px] font-medium leading-none text-[#94a3b8] truncate max-w-full">
                   {label}
                 </span>
               </div>
@@ -150,8 +150,8 @@ export function BottomTabBar({
               <Icon active={tab.isActive} />
               <span
                 className={cn(
-                  "text-micro font-medium leading-none truncate max-w-full",
-                  tab.isActive ? "text-[#22c55e]" : "text-[var(--text-subtle)]",
+                  "text-[11px] font-medium leading-none truncate max-w-full",
+                  tab.isActive ? "text-[#22c55e]" : "text-[#94a3b8]",
                 )}
                 style={tab.isActive ? { color: TAB_ACTIVE } : undefined}
               >

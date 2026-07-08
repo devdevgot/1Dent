@@ -15,17 +15,17 @@ export function PlanCard({ plan, isCurrentPlan, onSelect }: PlanCardProps) {
   return (
     <div
       className={cn(
-        "relative bg-[var(--ds-surface)] rounded-2xl overflow-hidden",
+        "relative bg-white rounded-2xl overflow-hidden",
         plan.recommended
           ? "border-2 border-[#1f75fe]/80 shadow-sm"
           : isCurrentPlan
             ? "border-2 border-[#16a34a]/70"
-            : "border border-[var(--ds-border)]",
+            : "border border-[#e8e3d9]",
       )}
     >
       {plan.badge && !isCurrentPlan && (
         <div className="absolute top-3 right-3 z-10">
-          <span className="inline-flex items-center gap-1 bg-[#1f75fe] text-white text-micro font-semibold px-2 py-0.5 rounded-full">
+          <span className="inline-flex items-center gap-1 bg-[#1f75fe] text-white text-xs font-semibold px-2 py-0.5 rounded-full">
             <Star className="w-3 h-3 fill-white" />
             {plan.badge}
           </span>
@@ -34,7 +34,7 @@ export function PlanCard({ plan, isCurrentPlan, onSelect }: PlanCardProps) {
 
       {isCurrentPlan && (
         <div className="absolute top-3 right-3 z-10">
-          <span className="inline-block bg-[var(--success)] text-white text-micro font-semibold px-2 py-0.5 rounded-full">
+          <span className="inline-block bg-[var(--success)] text-white text-xs font-semibold px-2 py-0.5 rounded-full">
             Текущий
           </span>
         </div>
@@ -46,16 +46,16 @@ export function PlanCard({ plan, isCurrentPlan, onSelect }: PlanCardProps) {
             <Icon className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <h3 className="text-body font-bold text-[var(--text)]">{plan.name}</h3>
-            <p className="text-caption text-[var(--text-secondary)] mt-0.5">{plan.audience}</p>
+            <h3 className="text-sm font-bold text-[#0f172a]">{plan.name}</h3>
+            <p className="text-xs text-[#64748b] mt-0.5">{plan.audience}</p>
           </div>
         </div>
 
         <div className="flex items-baseline gap-1 mb-3">
-          <span className="text-[22px] font-bold text-[var(--text)] tabular-nums">
+          <span className="text-[22px] font-bold text-[#0f172a] tabular-nums">
             {formatPlanPrice(plan.price)}
           </span>
-          <span className="text-caption text-[var(--text-secondary)]">₸ / мес</span>
+          <span className="text-xs text-[#64748b]">₸ / мес</span>
         </div>
 
         <ul className="space-y-1.5 mb-4">
@@ -66,7 +66,7 @@ export function PlanCard({ plan, isCurrentPlan, onSelect }: PlanCardProps) {
                 strokeWidth={2.5}
                 style={{ color: plan.accentColor }}
               />
-              <span className="text-caption text-[#475569] leading-snug">{highlight}</span>
+              <span className="text-xs text-[#475569] leading-snug">{highlight}</span>
             </li>
           ))}
         </ul>
@@ -77,9 +77,9 @@ export function PlanCard({ plan, isCurrentPlan, onSelect }: PlanCardProps) {
           onClick={onSelect}
           variant={plan.recommended && !isCurrentPlan ? "default" : "outline"}
           className={cn(
-            "w-full rounded-full h-10 text-caption font-semibold",
-            isCurrentPlan && "bg-[#f0fdf4] text-[var(--success)] border-[#16a34a]/30 hover:bg-[#f0fdf4] cursor-default",
-            !isCurrentPlan && !plan.recommended && "border-[var(--ds-border)] text-[var(--text)] hover:bg-[var(--bg)]",
+            "w-full rounded-full h-10 text-xs font-semibold",
+            isCurrentPlan && "bg-[#f0fdf4] text-[#16a34a] border-[#16a34a]/30 hover:bg-[#f0fdf4] cursor-default",
+            !isCurrentPlan && !plan.recommended && "border-[#e8e3d9] text-[#0f172a] hover:bg-[#faf8f4]",
           )}
         >
           {isCurrentPlan ? "Текущий план" : plan.ctaLabel}

@@ -117,13 +117,13 @@ export default function PayrollApproveModal({ onClose, onSuccess, filterUserId }
         </>
       }
     >
-      <div className="px-5 py-4 border-b border-[var(--ds-border)] flex items-center gap-3 shrink-0">
+      <div className="px-5 py-4 border-b border-[#e8e3d9] flex items-center gap-3 shrink-0">
         <div className="flex-1">
-          <label className="text-caption font-semibold text-[var(--text-secondary)] block mb-1">{t("payroll.year", "Год")}</label>
+          <label className="text-xs font-semibold text-[#64748b] block mb-1">{t("payroll.year", "Год")}</label>
           <select
             value={year}
             onChange={(e) => { setYear(Number(e.target.value)); setOverrides({}); }}
-            className="w-full h-9 px-3 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] text-body text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)]"
+            className="w-full h-9 px-3 rounded-xl border border-[#e8e3d9] bg-white text-sm text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)]"
           >
             {YEARS.map((y) => (
               <option key={y} value={y}>{y}</option>
@@ -131,11 +131,11 @@ export default function PayrollApproveModal({ onClose, onSuccess, filterUserId }
           </select>
         </div>
         <div className="flex-1">
-          <label className="text-caption font-semibold text-[var(--text-secondary)] block mb-1">{t("payroll.month", "Месяц")}</label>
+          <label className="text-xs font-semibold text-[#64748b] block mb-1">{t("payroll.month", "Месяц")}</label>
           <select
             value={month}
             onChange={(e) => { setMonth(Number(e.target.value)); setOverrides({}); }}
-            className="w-full h-9 px-3 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] text-body text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)]"
+            className="w-full h-9 px-3 rounded-xl border border-[#e8e3d9] bg-white text-sm text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)]"
           >
             {MONTHS.map((m) => (
               <option key={m} value={m}>{MONTH_NAMES[m - 1]}</option>
@@ -146,16 +146,16 @@ export default function PayrollApproveModal({ onClose, onSuccess, filterUserId }
 
       <div className="flex-1 overflow-y-auto max-h-[50vh]">
         {isFetching ? (
-          <div className="flex items-center justify-center py-12 text-body text-[var(--text-secondary)]">
+          <div className="flex items-center justify-center py-12 text-sm text-[#64748b]">
             {t("common.loading", "Загрузка...")}
           </div>
         ) : rows.length === 0 ? (
-          <div className="flex items-center justify-center py-12 text-body text-[var(--text-secondary)]">
+          <div className="flex items-center justify-center py-12 text-sm text-[#64748b]">
             {t("payroll.noStaffSettings", "Нет сотрудников с настроенной зарплатой")}
           </div>
         ) : (
           <Table>
-            <TableHeader className="sticky top-0 bg-[var(--surface-2)]">
+            <TableHeader className="sticky top-0 bg-[#f1ede4]">
               <TableRow className="hover:bg-transparent">
                 <TableHead>{t("payroll.employee", "Сотрудник")}</TableHead>
                 <TableHead className="text-right">{t("payroll.revenueBase")}</TableHead>
@@ -167,13 +167,13 @@ export default function PayrollApproveModal({ onClose, onSuccess, filterUserId }
               {rows.map((row) => (
                 <TableRow key={row.userId}>
                   <TableCell>
-                    <p className="font-medium text-[var(--text)]">{row.userName || "—"}</p>
-                    <p className="text-[11px] text-[var(--text-secondary)] capitalize">{row.userRole}</p>
+                    <p className="font-medium text-[#0f172a]">{row.userName || "—"}</p>
+                    <p className="text-[11px] text-[#64748b] capitalize">{row.userRole}</p>
                   </TableCell>
-                  <TableCell className="text-right text-[var(--text-secondary)]">
+                  <TableCell className="text-right text-[#64748b]">
                     ₸{row.revenueBase.toLocaleString("ru-KZ")}
                   </TableCell>
-                  <TableCell className="text-right text-[var(--text-secondary)]">
+                  <TableCell className="text-right text-[#64748b]">
                     ₸{row.calculatedAmount.toLocaleString("ru-KZ")}
                   </TableCell>
                   <TableCell className="text-right">
@@ -182,18 +182,18 @@ export default function PayrollApproveModal({ onClose, onSuccess, filterUserId }
                       min={0}
                       value={getApproved(row)}
                       onChange={(e) => handleOverride(row.userId, e.target.value)}
-                      className="w-28 h-8 px-2 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] text-body text-right text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)]"
+                      className="w-28 h-8 px-2 rounded-xl border border-[#e8e3d9] bg-white text-sm text-right text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)]"
                     />
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
             <TableFooter>
-              <TableRow className="hover:bg-transparent border-t-2 border-[var(--ds-border)] bg-[var(--surface-2)]">
-                <TableCell colSpan={3} className="font-bold text-[var(--text)]">
+              <TableRow className="hover:bg-transparent border-t-2 border-[#e8e3d9] bg-[#f1ede4]">
+                <TableCell colSpan={3} className="font-bold text-[#0f172a]">
                   {t("payroll.fotTotal", "Итого ФОТ")}
                 </TableCell>
-                <TableCell className="text-right font-bold text-[var(--ds-primary)]">
+                <TableCell className="text-right font-bold text-[#1f75fe]">
                   ₸{totalFot.toLocaleString("ru-KZ")}
                 </TableCell>
               </TableRow>

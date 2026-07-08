@@ -312,8 +312,8 @@ export function KnowledgeTab({
 
       {/* Header */}
       <div>
-        <p className="text-body font-semibold text-[var(--text)]">База знаний</p>
-        <p className="text-caption text-[var(--text-secondary)] mt-0.5">
+        <p className="text-sm font-semibold text-[#0f172a]">База знаний</p>
+        <p className="text-xs text-[#64748b] mt-0.5">
           Добавьте ссылки и файлы — ИИ обучится на них и сгенерирует скрипты в майнд-мэпе
         </p>
       </div>
@@ -322,8 +322,8 @@ export function KnowledgeTab({
       {showAddForms && (
         <>
           {/* URL input */}
-          <div className="rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] p-4 space-y-3">
-            <p className="text-caption font-medium text-[var(--text)]">Добавить ссылку</p>
+          <div className="rounded-2xl border border-[#e8e3d9] bg-white p-4 space-y-3">
+            <p className="text-xs font-medium text-[#0f172a]">Добавить ссылку</p>
             <div className="flex gap-2">
               <input
                 type="url"
@@ -331,18 +331,18 @@ export function KnowledgeTab({
                 value={urlInput}
                 onChange={(e) => setUrlInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") void handleAddUrl(); }}
-                className="flex-1 h-9 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-3 text-body focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="flex-1 h-9 rounded-xl border border-[#e8e3d9] bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
               <button
                 onClick={() => void handleAddUrl()}
                 disabled={addingUrl || !urlInput.trim()}
-                className="flex items-center gap-1.5 h-9 px-3 rounded-xl bg-[#1f75fe] text-white text-caption font-medium disabled:opacity-50 hover:bg-[var(--primary-hover)] transition-colors shrink-0"
+                className="flex items-center gap-1.5 h-9 px-3 rounded-xl bg-[#1f75fe] text-white text-xs font-medium disabled:opacity-50 hover:bg-[#1a65e8] transition-colors shrink-0"
               >
                 {addingUrl ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
                 Добавить
               </button>
             </div>
-            <p className="text-[11px] text-[var(--text-secondary)]">
+            <p className="text-[11px] text-[#64748b]">
               Сайт клиники, Instagram, 2GIS, отзывы — любая публичная страница
             </p>
           </div>
@@ -351,14 +351,14 @@ export function KnowledgeTab({
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setFileModalOpen(true)}
-              className="flex items-center gap-2 h-9 px-3 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] hover:bg-[var(--bg)] text-caption font-medium text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors"
+              className="flex items-center gap-2 h-9 px-3 rounded-xl border border-[#e8e3d9] bg-white hover:bg-[#faf8f4] text-xs font-medium text-[#64748b] hover:text-[#0f172a] transition-colors"
             >
               <Upload className="h-3.5 w-3.5 shrink-0" />
               Загрузить файл / фото
             </button>
             <button
               onClick={() => setTextModalOpen(true)}
-              className="flex items-center gap-2 h-9 px-3 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] hover:bg-[var(--bg)] text-caption font-medium text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors"
+              className="flex items-center gap-2 h-9 px-3 rounded-xl border border-[#e8e3d9] bg-white hover:bg-[#faf8f4] text-xs font-medium text-[#64748b] hover:text-[#0f172a] transition-colors"
             >
               <AlignLeft className="h-3.5 w-3.5 shrink-0" />
               Добавить текст
@@ -378,18 +378,18 @@ export function KnowledgeTab({
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={uploadingFile}
-          className="w-full flex flex-col items-center justify-center gap-2 h-32 rounded-xl border-2 border-dashed border-[var(--ds-border)] hover:border-[var(--ds-primary)]/50 hover:bg-[var(--primary-light)] transition-colors text-body text-[var(--text-secondary)] disabled:opacity-50"
+          className="w-full flex flex-col items-center justify-center gap-2 h-32 rounded-xl border-2 border-dashed border-[#e8e3d9] hover:border-[var(--ds-primary)]/50 hover:bg-[var(--primary-light)] transition-colors text-sm text-[#64748b] disabled:opacity-50"
         >
           {uploadingFile ? (
             <>
-              <Loader2 className="h-6 w-6 animate-spin text-[var(--ds-primary)]" />
+              <Loader2 className="h-6 w-6 animate-spin text-[#1f75fe]" />
               <span className="text-xs">Загрузка…</span>
             </>
           ) : (
             <>
-              <Upload className="h-6 w-6 text-[var(--text-subtle)]/60" />
-              <span className="text-caption font-medium">Нажмите, чтобы выбрать файл</span>
-              <span className="text-[11px] text-[var(--text-subtle)]/70">PDF, DOCX, TXT, JPG, PNG, WEBP</span>
+              <Upload className="h-6 w-6 text-[#94a3b8]/60" />
+              <span className="text-xs font-medium">Нажмите, чтобы выбрать файл</span>
+              <span className="text-[11px] text-[#94a3b8]/70">PDF, DOCX, TXT, JPG, PNG, WEBP</span>
             </>
           )}
         </button>
@@ -431,7 +431,7 @@ export function KnowledgeTab({
             placeholder="Название (например: Адреса клиники)"
             value={textName}
             onChange={(e) => setTextName(e.target.value)}
-            className="w-full h-9 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-3 text-body text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20"
+            className="w-full h-9 rounded-xl border border-[#e8e3d9] bg-white px-3 text-sm text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20"
           />
 
           <textarea
@@ -439,7 +439,7 @@ export function KnowledgeTab({
             value={textContent}
             onChange={(e) => setTextContent(e.target.value)}
             rows={7}
-            className="w-full rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-3 py-2.5 text-body text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 resize-none"
+            className="w-full rounded-xl border border-[#e8e3d9] bg-white px-3 py-2.5 text-sm text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 resize-none"
           />
         </div>
       </AppDialog>
@@ -447,17 +447,17 @@ export function KnowledgeTab({
       {/* Sources list */}
       {loading ? (
         <div className="flex justify-center py-6">
-          <Loader2 className="h-5 w-5 text-[var(--ds-primary)] animate-spin" />
+          <Loader2 className="h-5 w-5 text-[#1f75fe] animate-spin" />
         </div>
       ) : sources.length > 0 && (
         <div className="space-y-2">
-          <p className="text-caption font-medium text-[var(--text-secondary)]">
+          <p className="text-xs font-medium text-[#64748b]">
             {sources.length} источник{sources.length === 1 ? "" : sources.length < 5 ? "а" : "ов"}
             {pendingSources.length > 0 && (
               <span className="ml-2 text-amber-600 animate-pulse">· {pendingSources.length} обрабатывается…</span>
             )}
           </p>
-          <div className="divide-y divide-[#e8e3d9] rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] overflow-hidden">
+          <div className="divide-y divide-[#e8e3d9] rounded-2xl border border-[#e8e3d9] bg-white overflow-hidden">
             {sources.map((source) => {
               const isRescanning = rescanningIds.has(source.id);
               return (
@@ -472,9 +472,9 @@ export function KnowledgeTab({
                       }
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-caption font-medium text-[var(--text)] truncate">{source.name}</p>
+                      <p className="text-xs font-medium text-[#0f172a] truncate">{source.name}</p>
                       {source.url && (
-                        <p className="text-[10px] text-[var(--text-secondary)] truncate">{source.url}</p>
+                        <p className="text-[10px] text-[#64748b] truncate">{source.url}</p>
                       )}
                     </div>
                     <div className="shrink-0 flex items-center gap-1.5">
@@ -493,14 +493,14 @@ export function KnowledgeTab({
                           onClick={() => void handleRescan(source.id)}
                           disabled={isRescanning || source.status === "pending"}
                           title="Повторно извлечь контент"
-                          className="p-1 rounded hover:bg-blue-50 text-[var(--text-secondary)] hover:text-blue-500 transition-colors disabled:opacity-40"
+                          className="p-1 rounded hover:bg-blue-50 text-[#64748b] hover:text-blue-500 transition-colors disabled:opacity-40"
                         >
                           <RefreshCw className={cn("h-3 w-3", isRescanning && "animate-spin")} />
                         </button>
                       )}
                       <button
                         onClick={() => void handleDeleteSource(source.id)}
-                        className="p-1 rounded hover:bg-red-50 text-[var(--text-secondary)] hover:text-red-500 transition-colors"
+                        className="p-1 rounded hover:bg-red-50 text-[#64748b] hover:text-red-500 transition-colors"
                       >
                         <Trash2 className="h-3 w-3" />
                       </button>
@@ -517,7 +517,7 @@ export function KnowledgeTab({
       {sources.length > 0 && (
         <button
           onClick={() => setAddSourceOpen((v) => !v)}
-          className="w-full flex items-center justify-center gap-2 h-9 rounded-xl border border-dashed border-[var(--ds-border)] bg-[var(--ds-surface)] hover:bg-[var(--bg)] text-caption font-medium text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors"
+          className="w-full flex items-center justify-center gap-2 h-9 rounded-xl border border-dashed border-[#e8e3d9] bg-white hover:bg-[#faf8f4] text-xs font-medium text-[#64748b] hover:text-[#0f172a] transition-colors"
         >
           {addSourceOpen
             ? <><ChevronUp className="h-3.5 w-3.5" /> Скрыть формы добавления</>
@@ -531,10 +531,10 @@ export function KnowledgeTab({
         onClick={() => void handleGenerate()}
         disabled={generating || readySources.length === 0}
         className={cn(
-          "w-full flex items-center justify-center gap-2 h-11 rounded-xl text-body font-semibold transition-all",
+          "w-full flex items-center justify-center gap-2 h-11 rounded-xl text-sm font-semibold transition-all",
           readySources.length > 0
-            ? "bg-[#1f75fe] text-white hover:bg-[var(--primary-hover)]"
-            : "bg-[var(--surface-2)] text-[var(--text-secondary)] cursor-not-allowed",
+            ? "bg-[#1f75fe] text-white hover:bg-[#1a65e8]"
+            : "bg-[#f1ede4] text-[#64748b] cursor-not-allowed",
         )}
       >
         {generating
@@ -544,12 +544,12 @@ export function KnowledgeTab({
       </button>
 
       {readySources.length === 0 && sources.length > 0 && pendingSources.length > 0 && (
-        <p className="text-caption text-center text-[var(--text-secondary)]">
+        <p className="text-xs text-center text-[#64748b]">
           Дождитесь обработки источников, затем нажмите «Сгенерировать»
         </p>
       )}
       {sources.length === 0 && (
-        <p className="text-caption text-center text-[var(--text-secondary)]">
+        <p className="text-xs text-center text-[#64748b]">
           Добавьте хотя бы один источник, чтобы ИИ мог создать скрипты
         </p>
       )}
@@ -594,19 +594,19 @@ export function KnowledgeAndScriptModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[var(--bg)] font-manrope">
+    <div className="fixed inset-0 z-50 flex flex-col bg-[#faf8f4] font-manrope">
       {/* Header */}
-      <div className="shrink-0 flex items-center gap-3 px-4 py-3 bg-[var(--ds-surface)] border-b border-[var(--ds-border)] shadow-sm">
-        <BookOpen className="h-4 w-4 text-[var(--ds-primary)] shrink-0" />
+      <div className="shrink-0 flex items-center gap-3 px-4 py-3 bg-white border-b border-[#e8e3d9] shadow-sm">
+        <BookOpen className="h-4 w-4 text-[#1f75fe] shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="text-body font-semibold text-[var(--text)]">База знаний и скрипт</p>
-          <p className="text-caption text-[var(--text-secondary)] leading-tight">Обучение чат-бота и сценарий разговора</p>
+          <p className="text-sm font-semibold text-[#0f172a]">База знаний и скрипт</p>
+          <p className="text-xs text-[#64748b] leading-tight">Обучение чат-бота и сценарий разговора</p>
         </div>
         <button
           onClick={onClose}
-          className="p-1.5 rounded-lg hover:bg-[var(--surface-2)] transition-colors shrink-0"
+          className="p-1.5 rounded-lg hover:bg-[#f1ede4] transition-colors shrink-0"
         >
-          <X className="h-4 w-4 text-[var(--text-secondary)]" />
+          <X className="h-4 w-4 text-[#64748b]" />
         </button>
       </div>
 
@@ -627,10 +627,10 @@ export function KnowledgeAndScriptModal({
         <div className="px-4 py-4 pb-8 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <GitBranch className="h-4 w-4 text-[var(--ds-primary)] shrink-0" />
+              <GitBranch className="h-4 w-4 text-[#1f75fe] shrink-0" />
               <div>
-                <p className="text-body font-semibold text-[var(--text)]">Скрипт диалога</p>
-                <p className="text-caption text-[var(--text-secondary)] mt-0.5">
+                <p className="text-sm font-semibold text-[#0f172a]">Скрипт диалога</p>
+                <p className="text-xs text-[#64748b] mt-0.5">
                   {liveMindMapData?.nodes?.length
                     ? "Нажмите на узел для редактирования"
                     : "Сгенерируйте скрипты выше — они появятся здесь"}
@@ -639,14 +639,14 @@ export function KnowledgeAndScriptModal({
             </div>
             <button
               onClick={() => setMapExpanded(true)}
-              className="flex items-center gap-1.5 text-caption text-[var(--text-secondary)] hover:text-[var(--text)] px-2.5 py-1.5 rounded-lg border border-[var(--ds-border)] hover:bg-[var(--surface-2)] transition-colors shrink-0"
+              className="flex items-center gap-1.5 text-xs text-[#64748b] hover:text-[#0f172a] px-2.5 py-1.5 rounded-lg border border-[#e8e3d9] hover:bg-[#f1ede4] transition-colors shrink-0"
             >
               <Maximize2 className="h-3.5 w-3.5" />
               На весь экран
             </button>
           </div>
           <div
-            className="rounded-2xl border border-[var(--ds-border)] overflow-hidden bg-[var(--ds-surface)]"
+            className="rounded-2xl border border-[#e8e3d9] overflow-hidden bg-white"
             style={{ height: 320 }}
           >
             <ScriptMindMap

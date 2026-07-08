@@ -78,10 +78,10 @@ export default function WarehouseDashboard() {
               <AlertTriangle className="w-6 h-6" />
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-bold text-[var(--warning)]">
+              <h3 className="text-lg font-bold text-[#d97706]">
                 {t("warehouseDashboard.lowStockAlert", { count: lowStockItems.length })}
               </h3>
-              <p className="text-[var(--warning)] font-medium mt-0.5 opacity-90">{t("warehouseDashboard.lowStockDesc")}</p>
+              <p className="text-[#d97706] font-medium mt-0.5 opacity-90">{t("warehouseDashboard.lowStockDesc")}</p>
             </div>
             <button
               type="button"
@@ -95,9 +95,9 @@ export default function WarehouseDashboard() {
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { icon: Package, label: t("warehouseDashboard.totalItems"), value: isLoading ? <span className="dash-skeleton inline-block h-8 w-16 rounded" /> : items.length, delay: 0, iconBg: "bg-[var(--surface-2)] text-[var(--ds-primary)]" },
-            { icon: TrendingDown, label: t("warehouseDashboard.lowStock"), value: isLoading ? <span className="dash-skeleton inline-block h-8 w-16 rounded" /> : lowStockItems.length, delay: 0.05, iconBg: "bg-[var(--warning-light)] text-[var(--warning)]" },
-            { icon: Activity, label: t("warehouseDashboard.totalValue"), value: isLoading ? <span className="dash-skeleton inline-block h-8 w-24 rounded" /> : `₸ ${totalValue.toLocaleString("ru-KZ")}`, delay: 0.1, iconBg: "bg-[var(--success-light)] text-[var(--success)]", small: true },
+            { icon: Package, label: t("warehouseDashboard.totalItems"), value: isLoading ? <span className="dash-skeleton inline-block h-8 w-16 rounded" /> : items.length, delay: 0, iconBg: "bg-[#f1ede4] text-[#1f75fe]" },
+            { icon: TrendingDown, label: t("warehouseDashboard.lowStock"), value: isLoading ? <span className="dash-skeleton inline-block h-8 w-16 rounded" /> : lowStockItems.length, delay: 0.05, iconBg: "bg-[var(--warning-light)] text-[#d97706]" },
+            { icon: Activity, label: t("warehouseDashboard.totalValue"), value: isLoading ? <span className="dash-skeleton inline-block h-8 w-24 rounded" /> : `₸ ${totalValue.toLocaleString("ru-KZ")}`, delay: 0.1, iconBg: "bg-[var(--success-light)] text-[#16a34a]", small: true },
           ].map((stat) => (
             <motion.div
               key={stat.label}
@@ -119,7 +119,7 @@ export default function WarehouseDashboard() {
           <div className="lg:col-span-2 dash-card dash-card-padded dash-card-elevated">
             <div className="flex items-center justify-between mb-6">
               <h3 className="dash-section-title">
-                <Package className="w-5 h-5 text-[var(--ds-primary)]" />
+                <Package className="w-5 h-5 text-[#1f75fe]" />
                 {t("warehouseDashboard.inventoryTitle")}
               </h3>
             </div>
@@ -131,8 +131,8 @@ export default function WarehouseDashboard() {
               </div>
             ) : items.length === 0 ? (
               <div className="text-center py-12">
-                <Package className="w-12 h-12 text-[var(--text-subtle)]/30 mx-auto mb-3" />
-                <p className="text-[var(--text-secondary)] font-medium">{t("warehouseDashboard.emptyInventory")}</p>
+                <Package className="w-12 h-12 text-[#94a3b8]/30 mx-auto mb-3" />
+                <p className="text-[#64748b] font-medium">{t("warehouseDashboard.emptyInventory")}</p>
                 <button
                   type="button"
                   onClick={() => navigate("/inventory")}
@@ -166,13 +166,13 @@ export default function WarehouseDashboard() {
                           <td className="py-3 pr-4">
                             <div className="flex items-center gap-2">
                               {isLow && <span className="w-2 h-2 rounded-full bg-[var(--warning)] flex-none" />}
-                              <span className="font-medium text-[var(--text)]">{item.name}</span>
+                              <span className="font-medium text-[#0f172a]">{item.name}</span>
                             </div>
                           </td>
-                          <td className="py-3 text-right font-semibold text-[var(--text)]">
+                          <td className="py-3 text-right font-semibold text-[#0f172a]">
                             {item.quantity} {item.unit}
                           </td>
-                          <td className="py-3 text-right text-[var(--text-secondary)]">
+                          <td className="py-3 text-right text-[#64748b]">
                             {item.minQuantity} {item.unit}
                           </td>
                           <td className="py-3 text-right">
@@ -196,7 +196,7 @@ export default function WarehouseDashboard() {
 
           <div className="dash-card dash-card-padded dash-card-elevated">
             <h3 className="dash-section-title mb-5">
-              <Activity className="w-5 h-5 text-[var(--ds-primary)]" />
+              <Activity className="w-5 h-5 text-[#1f75fe]" />
               {t("warehouseDashboard.recentWriteoffs")}
             </h3>
             {proceduresLoading ? (
@@ -207,8 +207,8 @@ export default function WarehouseDashboard() {
               </div>
             ) : recentCompleted.length === 0 ? (
               <div className="text-center py-8">
-                <Activity className="w-10 h-10 text-[var(--text-subtle)]/30 mx-auto mb-3" />
-                <p className="text-[var(--text-secondary)] text-body font-medium">{t("warehouseDashboard.noWriteoffs")}</p>
+                <Activity className="w-10 h-10 text-[#94a3b8]/30 mx-auto mb-3" />
+                <p className="text-[#64748b] text-sm font-medium">{t("warehouseDashboard.noWriteoffs")}</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -222,14 +222,14 @@ export default function WarehouseDashboard() {
                       initial={{ opacity: 0, y: 4 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.04 }}
-                      className="flex items-start gap-3 py-2 border-b border-[var(--ds-border)] last:border-b-0"
+                      className="flex items-start gap-3 py-2 border-b border-[#e8e3d9] last:border-b-0"
                     >
                       <div className="w-2 h-2 rounded-full bg-[var(--ds-primary)] mt-1.5 flex-none" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-body font-medium text-[var(--text)] truncate">{proc.name}</p>
-                        <p className="text-caption text-[var(--text-secondary)]">{proc.doctorName ?? "—"}</p>
+                        <p className="text-sm font-medium text-[#0f172a] truncate">{proc.name}</p>
+                        <p className="text-xs text-[#64748b]">{proc.doctorName ?? "—"}</p>
                       </div>
-                      <span className="text-caption text-[var(--text-subtle)] flex-none">{dateStr}</span>
+                      <span className="text-xs text-[#94a3b8] flex-none">{dateStr}</span>
                     </motion.div>
                   );
                 })}

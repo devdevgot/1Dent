@@ -238,7 +238,7 @@ export const FdiChart = memo(function FdiChart({
   className,
 }: FdiChartProps) {
   return (
-    <div className={cn("w-full bg-[var(--ds-surface)] rounded-2xl border border-gray-100/80 p-3 sm:p-4", className)}>
+    <div className={cn("w-full bg-white rounded-2xl border border-gray-100/80 p-3 sm:p-4", className)}>
       <div className="w-full space-y-4 relative">
 
         {/* Upper jaw */}

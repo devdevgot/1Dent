@@ -28,13 +28,13 @@ const pains = [
 
 export function PainPoints() {
   return (
-    <section className="bg-[var(--bg)] landing-section px-6">
+    <section className="bg-[#faf8f4] landing-section px-6">
       <div className="max-w-5xl mx-auto">
         <motion.div {...fadeUp(0)} className="text-center mb-16">
-          <h2 className="landing-h2 font-manrope text-[var(--text)] mb-5">
+          <h2 className="landing-h2 font-manrope text-[#0f172a] mb-5">
             Стоматология без
             <br />
-            <span className="text-[var(--danger)]">нормальной системы</span>
+            <span className="text-[#dc2626]">нормальной системы</span>
           </h2>
           <p className="landing-lead font-manrope max-w-xl mx-auto">
             Большинство клиник теряют деньги и пациентов просто потому,
@@ -47,19 +47,19 @@ export function PainPoints() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-30px" }}
-          className="grid sm:grid-cols-2 gap-px bg-[var(--ds-border)] border border-[var(--ds-border)] rounded-[var(--radius-xl)] overflow-hidden shadow-[var(--shadow-sm)]"
+          className="grid sm:grid-cols-2 gap-px bg-[var(--ds-border)] border border-[#e8e3d9] rounded-[var(--radius-xl)] overflow-hidden shadow-[var(--shadow-sm)]"
         >
           {pains.map((pain, i) => (
             <motion.div
               key={i}
               variants={staggerChildVariants}
               style={{ willChange: "transform, opacity" }}
-              className="bg-[var(--ds-surface)] p-8 flex flex-col gap-4 group hover:bg-[var(--bg)] transition-colors duration-300"
+              className="bg-white p-8 flex flex-col gap-4 group hover:bg-[#faf8f4] transition-colors duration-300"
             >
               <span className="font-manrope font-extrabold text-5xl text-[var(--ds-border)] group-hover:text-red-100 transition-colors duration-300 leading-none select-none">
                 {pain.num}
               </span>
-              <h3 className="font-manrope font-bold text-[var(--text)] text-xl leading-tight tracking-tight">
+              <h3 className="font-manrope font-bold text-[#0f172a] text-xl leading-tight tracking-tight">
                 {pain.title}
               </h3>
               <div className="w-8 h-0.5 bg-red-400/80 rounded-full" />
@@ -71,10 +71,10 @@ export function PainPoints() {
         </motion.div>
 
         <motion.div {...fadeUp(0.1)} className="mt-16 text-center">
-          <p className="font-manrope font-bold text-[var(--text)] text-2xl mb-4 tracking-tight">
+          <p className="font-manrope font-bold text-[#0f172a] text-2xl mb-4 tracking-tight">
             {SITE.name} решает всё это одним инструментом
           </p>
-          <ArrowDown size={20} className="text-[var(--text-subtle)] mx-auto animate-bounce" aria-hidden />
+          <ArrowDown size={20} className="text-[#94a3b8] mx-auto animate-bounce" aria-hidden />
         </motion.div>
       </div>
     </section>

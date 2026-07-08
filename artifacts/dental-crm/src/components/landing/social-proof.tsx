@@ -42,7 +42,7 @@ function StatCard({ value, suffix, label, delay }: { value: number; suffix: stri
       <div className="landing-stat-value font-manrope mb-2">
         {count}{suffix}
       </div>
-      <div className="font-manrope text-[var(--text-secondary)] text-base">{label}</div>
+      <div className="font-manrope text-[#64748b] text-base">{label}</div>
     </motion.div>
   );
 }
@@ -80,7 +80,7 @@ const reasons = [
 
 export function SocialProof() {
   return (
-    <section className="bg-[var(--ds-surface)] landing-section-sm px-6">
+    <section className="bg-white landing-section-sm px-6">
       <div className="max-w-7xl mx-auto">
         <motion.div {...fadeUp(0)} className="text-center mb-6">
           <div className="landing-badge landing-badge-primary font-manrope mb-10">
@@ -100,7 +100,7 @@ export function SocialProof() {
 
         <motion.h2
           {...fadeUp(0)}
-          className="landing-h2 font-manrope text-[var(--text)] text-center mb-12"
+          className="landing-h2 font-manrope text-[#0f172a] text-center mb-12"
         >
           Почему выбирают нас
         </motion.h2>
@@ -126,7 +126,7 @@ export function SocialProof() {
               >
                 <r.icon size={20} style={{ color: r.accent }} />
               </div>
-              <h3 className="font-manrope font-bold text-[var(--text)] text-lg mb-2 tracking-tight">{r.title}</h3>
+              <h3 className="font-manrope font-bold text-[#0f172a] text-lg mb-2 tracking-tight">{r.title}</h3>
               <p className="landing-body font-manrope">{r.desc}</p>
             </motion.div>
           ))}

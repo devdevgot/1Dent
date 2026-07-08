@@ -92,13 +92,13 @@ function SpecialtyTagInput({
           {values.map((tag) => (
             <span
               key={tag}
-              className="inline-flex items-center gap-1 bg-[#f0fdf4] text-[var(--success)] border border-[#16a34a]/20 px-2.5 py-1 rounded-full text-caption font-semibold"
+              className="inline-flex items-center gap-1 bg-[#f0fdf4] text-[#16a34a] border border-[#16a34a]/20 px-2.5 py-1 rounded-full text-xs font-semibold"
             >
               {tag}
               <button
                 type="button"
                 onClick={() => removeTag(tag)}
-                className="text-[var(--success)] hover:text-[#15803d] ml-0.5"
+                className="text-[#16a34a] hover:text-[#15803d] ml-0.5"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -134,7 +134,7 @@ function SpecialtyTagInput({
             }
             if (e.key === "Escape") setIsOpen(false);
           }}
-          className="w-full border border-[var(--ds-border)] rounded-xl px-4 py-3 pr-10 text-body font-medium text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
+          className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 pr-10 text-sm font-medium text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
         />
         <button
           type="button"
@@ -143,19 +143,19 @@ function SpecialtyTagInput({
             setIsOpen((o) => !o);
             inputRef.current?.focus();
           }}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8]"
         >
           <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
         </button>
 
         {isOpen && (filtered.length > 0 || customNotInList) && (
-          <div className="absolute top-full mt-1 left-0 right-0 bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-xl shadow-lg z-20 max-h-52 overflow-y-auto">
+          <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-[#e8e3d9] rounded-xl shadow-lg z-20 max-h-52 overflow-y-auto">
             {filtered.map((s) => (
               <button
                 key={s}
                 type="button"
                 onMouseDown={() => addTag(s)}
-                className="w-full text-left px-4 py-2.5 text-body text-[var(--text)] hover:bg-[var(--bg)] transition-colors"
+                className="w-full text-left px-4 py-2.5 text-sm text-[#0f172a] hover:bg-[#faf8f4] transition-colors"
               >
                 {s}
               </button>
@@ -164,7 +164,7 @@ function SpecialtyTagInput({
               <button
                 type="button"
                 onMouseDown={() => addTag(inputValue.trim())}
-                className="w-full text-left px-4 py-2.5 text-body font-semibold border-t border-[var(--ds-border)] hover:bg-[var(--bg)] transition-colors text-[var(--ds-primary)]"
+                className="w-full text-left px-4 py-2.5 text-sm font-semibold border-t border-[#e8e3d9] hover:bg-[#faf8f4] transition-colors text-[#1f75fe]"
               >
                 + Добавить «{inputValue.trim()}»
               </button>
@@ -186,8 +186,8 @@ const TABS: { key: TabKey; icon: React.ElementType; labelKey: string }[] = [
 
 const ROLE_COLORS: Record<string, string> = {
   admin:      "bg-[#e0f2fe] text-[#0284c7] border-[#e0f2fe]",
-  doctor:     "bg-[#f0fdf4] text-[var(--success)] border-[#f0fdf4]",
-  accountant: "bg-[#fef3c7] text-[var(--warning)] border-[#fef3c7]",
+  doctor:     "bg-[#f0fdf4] text-[#16a34a] border-[#f0fdf4]",
+  accountant: "bg-[#fef3c7] text-[#d97706] border-[#fef3c7]",
   warehouse:  "bg-[#f5f3ff] text-[#7c3aed] border-[#f5f3ff]",
   assistant:  "bg-[#e0e7ff] text-[#4f46e5] border-[#e0e7ff]",
   nurse:      "bg-[#fce7f3] text-[#db2777] border-[#fce7f3]",
@@ -328,10 +328,10 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
             )}
           </div>
           {formError && (
-            <p className="text-caption text-[var(--danger)] text-center">{formError}</p>
+            <p className="text-xs text-[#dc2626] text-center">{formError}</p>
           )}
           {activeTab === "salary" && !isEdit && (
-            <p className="text-caption text-[var(--text-secondary)] text-center">
+            <p className="text-xs text-[#64748b] text-center">
               {t("employees.passwordNote", "После создания пароль будет показан — скопируйте его.")}
             </p>
           )}
@@ -347,7 +347,7 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
               key={tab.key}
               type="button"
               onClick={() => setActiveTab(tab.key)}
-              className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-caption font-semibold transition-all ${isActive ? "bg-[var(--ds-primary)]/10 text-[var(--ds-primary)]" : "text-[var(--text-secondary)]"}`}
+              className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-xs font-semibold transition-all ${isActive ? "bg-[var(--ds-primary)]/10 text-[#1f75fe]" : "text-[#64748b]"}`}
             >
               <Icon className="w-4 h-4" />
               {t(tab.labelKey, tab.key)}
@@ -375,7 +375,7 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                       className="space-y-4"
                     >
                       <div>
-                        <label className="block text-caption font-semibold text-[var(--text-secondary)] mb-1.5">
+                        <label className="block text-xs font-semibold text-[#64748b] mb-1.5">
                           {t("employees.name", "ФИО")} *
                         </label>
                         <input
@@ -383,16 +383,16 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                           value={form.name}
                           onChange={(e) => set("name", e.target.value)}
                           placeholder={t("employees.namePlaceholder", "Др. Иванова Мария")}
-                          className="w-full border border-[var(--ds-border)] rounded-xl px-4 py-3 text-body font-medium text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
+                          className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 text-sm font-medium text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-caption font-semibold text-[var(--text-secondary)] mb-1.5">
+                        <label className="block text-xs font-semibold text-[#64748b] mb-1.5">
                           Email {!isEdit && "*"}
                         </label>
                         {isEdit ? (
-                          <div className="w-full border border-[var(--ds-border)] rounded-xl px-4 py-3 text-body text-[var(--text-subtle)] bg-[var(--bg)] cursor-not-allowed select-none">
+                          <div className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 text-sm text-[#94a3b8] bg-[#faf8f4] cursor-not-allowed select-none">
                             {form.email}
                           </div>
                         ) : (
@@ -402,18 +402,18 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                             value={form.email}
                             onChange={(e) => set("email", e.target.value)}
                             placeholder="maria@clinic.kz"
-                            className="w-full border border-[var(--ds-border)] rounded-xl px-4 py-3 text-body font-medium text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
+                            className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 text-sm font-medium text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
                           />
                         )}
                         {isEdit && (
-                          <p className="text-[11px] text-[var(--text-subtle)] mt-1">
+                          <p className="text-[11px] text-[#94a3b8] mt-1">
                             {t("employees.emailReadonly", "Email нельзя изменить после создания")}
                           </p>
                         )}
                       </div>
 
                       <div>
-                        <label className="block text-caption font-semibold text-[var(--text-secondary)] mb-1.5">
+                        <label className="block text-xs font-semibold text-[#64748b] mb-1.5">
                           {t("employees.password", "Пароль")} {!isEdit && "*"}
                         </label>
                         <div className="relative">
@@ -423,12 +423,12 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                             value={form.password}
                             onChange={(e) => set("password", e.target.value)}
                             placeholder={isEdit ? t("employees.passwordEditHint", "Оставьте пустым, чтобы не менять") : t("employees.passwordPlaceholder", "Минимум 6 символов")}
-                            className="w-full border border-[var(--ds-border)] rounded-xl px-4 py-3 pr-11 text-body font-medium text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
+                            className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 pr-11 text-sm font-medium text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
                           />
                           <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8]"
                           >
                             {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                           </button>
@@ -436,7 +436,7 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                       </div>
 
                       <div>
-                        <label className="block text-caption font-semibold text-[var(--text-secondary)] mb-1.5">
+                        <label className="block text-xs font-semibold text-[#64748b] mb-1.5">
                           {t("employees.phone", "Телефон")}
                         </label>
                         <input
@@ -444,31 +444,31 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                           value={form.phone}
                           onChange={(e) => set("phone", e.target.value)}
                           placeholder="+7 700 000 00 00"
-                          className="w-full border border-[var(--ds-border)] rounded-xl px-4 py-3 text-body font-medium text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
+                          className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 text-sm font-medium text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
                         />
                       </div>
 
                       {isEdit && !isOwnerAccount && (
                         <div>
-                          <label className="block text-caption font-semibold text-[var(--text-secondary)] mb-2">
+                          <label className="block text-xs font-semibold text-[#64748b] mb-2">
                             {t("employees.status", "Статус")}
                           </label>
                           <button
                             type="button"
                             onClick={() => set("isActive", !form.isActive)}
-                            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all ${form.isActive ? "border-[#1f75fe] bg-[#1f75fe]/10" : "border-[var(--ds-border)] bg-[var(--bg)]"}`}
+                            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all ${form.isActive ? "border-[#1f75fe] bg-[#1f75fe]/10" : "border-[#e8e3d9] bg-[#faf8f4]"}`}
                           >
                             <div className="flex items-center gap-2.5">
                               {form.isActive
-                                ? <ToggleRight className="w-5 h-5 text-[var(--ds-primary)]" />
-                                : <ToggleLeft className="w-5 h-5 text-[var(--text-subtle)]" />}
-                              <span className={`text-body font-semibold ${form.isActive ? "text-[var(--ds-primary)]" : "text-[var(--text-secondary)]"}`}>
+                                ? <ToggleRight className="w-5 h-5 text-[#1f75fe]" />
+                                : <ToggleLeft className="w-5 h-5 text-[#94a3b8]" />}
+                              <span className={`text-sm font-semibold ${form.isActive ? "text-[#1f75fe]" : "text-[#64748b]"}`}>
                                 {form.isActive
                                   ? t("employees.statusActive", "Активен")
                                   : t("employees.statusInactive", "Неактивен")}
                               </span>
                             </div>
-                            <span className="text-caption text-[var(--text-subtle)]">
+                            <span className="text-xs text-[#94a3b8]">
                               {form.isActive
                                 ? t("employees.statusActiveHint", "Может входить в систему")
                                 : t("employees.statusInactiveHint", "Доступ заблокирован")}
@@ -490,11 +490,11 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                       className="space-y-4"
                     >
                       <div>
-                        <label className="block text-caption font-semibold text-[var(--text-secondary)] mb-2">
+                        <label className="block text-xs font-semibold text-[#64748b] mb-2">
                           {t("employees.role", "Роль")} *
                         </label>
                         {isOwnerAccount ? (
-                          <div className="w-full border border-[var(--ds-border)] rounded-xl px-4 py-3 text-body font-semibold text-[var(--text-secondary)] bg-[var(--bg)]">
+                          <div className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 text-sm font-semibold text-[#64748b] bg-[#faf8f4]">
                             {t("role.owner", "Владелец")}
                           </div>
                         ) : (
@@ -504,10 +504,10 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                               key={r}
                               type="button"
                               onClick={() => set("role", r)}
-                              className={`py-2.5 px-3 rounded-xl text-caption font-bold border transition-all ${
+                              className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition-all ${
                                 form.role === r
                                   ? ROLE_COLORS[r]
-                                  : "border-[var(--ds-border)] text-[var(--text-secondary)] bg-[var(--ds-surface)]"
+                                  : "border-[#e8e3d9] text-[#64748b] bg-white"
                               }`}
                             >
                               {t(`role.${r}`, r)}
@@ -519,7 +519,7 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
 
                       {(form.role === "doctor" || form.role === "assistant" || form.role === "nurse") ? (
                         <div>
-                          <label className="block text-caption font-semibold text-[var(--text-secondary)] mb-1.5">
+                          <label className="block text-xs font-semibold text-[#64748b] mb-1.5">
                             {t("employees.specialty", "Должность / Специализация")}
                           </label>
                           <SpecialtyTagInput
@@ -530,21 +530,21 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                         </div>
                       ) : (
                         <div>
-                          <label className="block text-caption font-semibold text-[var(--text-secondary)] mb-1.5">
+                          <label className="block text-xs font-semibold text-[#64748b] mb-1.5">
                             {t("employees.position", "Должность")}
                           </label>
                           <input
                             value={form.position}
                             onChange={(e) => set("position", e.target.value)}
                             placeholder={t("employees.positionPlaceholder", "Главный врач, Бухгалтер...")}
-                            className="w-full border border-[var(--ds-border)] rounded-xl px-4 py-3 text-body font-medium text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
+                            className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 text-sm font-medium text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
                           />
                         </div>
                       )}
 
                       {form.role === "doctor" && (
                         <div>
-                          <label className="block text-caption font-semibold text-[var(--text-secondary)] mb-1.5">
+                          <label className="block text-xs font-semibold text-[#64748b] mb-1.5">
                             {t("employees.maxPatients", "Макс. пациентов в день")}
                           </label>
                           <input
@@ -557,20 +557,20 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                               const n = v === "" ? 15 : Math.min(50, Math.max(1, Number(v)));
                               setMaxPatients(n);
                             }}
-                            className="w-full border border-[var(--ds-border)] rounded-xl px-4 py-3 text-body font-medium text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
+                            className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 text-sm font-medium text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
                           />
                         </div>
                       )}
 
                       <div>
-                        <label className="block text-caption font-semibold text-[var(--text-secondary)] mb-1.5">
+                        <label className="block text-xs font-semibold text-[#64748b] mb-1.5">
                           {t("employees.hireDate", "Дата приёма")}
                         </label>
                         <input
                           type="date"
                           value={form.hireDate}
                           onChange={(e) => set("hireDate", e.target.value)}
-                          className="w-full border border-[var(--ds-border)] rounded-xl px-4 py-3 text-body font-medium text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
+                          className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 text-sm font-medium text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
                         />
                       </div>
                     </motion.div>
@@ -587,7 +587,7 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                       className="space-y-4"
                     >
                       <div>
-                        <label className="block text-caption font-semibold text-[var(--text-secondary)] mb-2">
+                        <label className="block text-xs font-semibold text-[#64748b] mb-2">
                           {t("employees.salaryType", "Тип оплаты")}
                         </label>
                         <div className="space-y-2">
@@ -599,17 +599,17 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all ${
                                 form.salaryType === type
                                   ? "border-[#1f75fe] bg-[#1f75fe]/10"
-                                  : "border-[var(--ds-border)] bg-[var(--ds-surface)]"
+                                  : "border-[#e8e3d9] bg-white"
                               }`}
                             >
                               <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${form.salaryType === type ? "border-[#1f75fe]" : "border-[#d4cfc6]"}`}>
                                 {form.salaryType === type && <span className="w-2 h-2 rounded-full bg-[#1f75fe]" />}
                               </span>
                               <div>
-                                <p className="text-body font-semibold text-[var(--text)]">
+                                <p className="text-sm font-semibold text-[#0f172a]">
                                   {type === "fixed" ? "Оклад" : type === "commission" ? "Процент" : type === "fixed_plus_commission" ? "Оклад + Процент" : "Почасовая"}
                                 </p>
-                                <p className="text-caption text-[var(--text-subtle)]">
+                                <p className="text-xs text-[#94a3b8]">
                                   {type === "fixed" ? "Фиксированная сумма в месяц" : type === "commission" ? "Процент от выручки" : type === "fixed_plus_commission" ? "Оба варианта" : "Ставка за рабочий час"}
                                 </p>
                               </div>
@@ -620,7 +620,7 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
 
                       {(form.salaryType === "fixed" || form.salaryType === "fixed_plus_commission") && (
                         <div>
-                          <label className="block text-caption font-semibold text-[var(--text-secondary)] mb-1.5">
+                          <label className="block text-xs font-semibold text-[#64748b] mb-1.5">
                             {t("employees.fixedAmount", "Оклад (₸/мес)")}
                           </label>
                           <div className="relative">
@@ -633,16 +633,16 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                                 const v = e.target.value.replace(/\D/g, "");
                                 set("fixedAmount", v === "" ? 0 : Number(v));
                               }}
-                              className="w-full border border-[var(--ds-border)] rounded-xl px-4 py-3 pr-8 text-body font-medium text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
+                              className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 pr-8 text-sm font-medium text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
                             />
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)] text-body font-bold">₸</span>
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] text-sm font-bold">₸</span>
                           </div>
                         </div>
                       )}
 
                       {(form.salaryType === "commission" || form.salaryType === "fixed_plus_commission") && (
                         <div>
-                          <label className="block text-caption font-semibold text-[var(--text-secondary)] mb-1.5">
+                          <label className="block text-xs font-semibold text-[#64748b] mb-1.5">
                             {t("employees.commissionPercent", "Процент от выручки")}
                           </label>
                           <div className="relative">
@@ -658,16 +658,16 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                                 const n = parseFloat(clean);
                                 set("commissionPercent", clean === "" || isNaN(n) ? 0 : Math.min(100, n));
                               }}
-                              className="w-full border border-[var(--ds-border)] rounded-xl px-4 py-3 pr-8 text-body font-medium text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
+                              className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 pr-8 text-sm font-medium text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
                             />
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)] text-body font-bold">%</span>
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] text-sm font-bold">%</span>
                           </div>
                         </div>
                       )}
 
                       {form.salaryType === "hourly" && (
                         <div>
-                          <label className="block text-caption font-semibold text-[var(--text-secondary)] mb-1.5">
+                          <label className="block text-xs font-semibold text-[#64748b] mb-1.5">
                             Ставка (₸/час)
                           </label>
                           <div className="relative">
@@ -680,15 +680,15 @@ export default function EmployeeDialog({ open, onClose, onSave, isSaving, editUs
                                 const v = e.target.value.replace(/\D/g, "");
                                 set("hourlyRate", v === "" ? 0 : Number(v));
                               }}
-                              className="w-full border border-[var(--ds-border)] rounded-xl px-4 py-3 pr-8 text-body font-medium text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
+                              className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 pr-8 text-sm font-medium text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
                             />
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)] text-body font-bold">₸</span>
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] text-sm font-bold">₸</span>
                           </div>
                         </div>
                       )}
 
                       {form.salaryType !== "fixed" && form.salaryType !== "hourly" && form.role !== "doctor" && (
-                        <p className="text-caption text-[var(--warning)] bg-[#fef3c7] rounded-xl px-4 py-3">
+                        <p className="text-xs text-[#d97706] bg-[#fef3c7] rounded-xl px-4 py-3">
                           {t("employees.commissionNoteNonDoctor", "Для не-врачебных ролей процент от выручки = 0 (процедуры не назначаются).")}
                         </p>
                       )}
