@@ -18,6 +18,7 @@ import ContentHubPage from "./pages/ContentHubPage";
 import PlatformPlansPage from "./pages/PlatformPlansPage";
 import PlatformContractsPage from "./pages/PlatformContractsPage";
 import PlatformChatbotPage from "./pages/PlatformChatbotPage";
+import PlatformWhatsappPage from "./pages/PlatformWhatsappPage";
 import MorePage from "./pages/MorePage";
 
 const queryClient = new QueryClient({
@@ -128,6 +129,7 @@ function Inner() {
             <Route path="/platform/plans" element={<PlatformPlansPage />} />
             <Route path="/platform/contracts" element={<PlatformContractsPage />} />
             <Route path="/platform/chatbot" element={<PlatformChatbotPage />} />
+            <Route path="/platform/whatsapp" element={<PlatformWhatsappPage />} />
             <Route path="/more" element={<MorePage />} />
             <Route path="/activity" element={<ActivityPage />} />
             <Route path="/logs" element={<LogsPage />} />
