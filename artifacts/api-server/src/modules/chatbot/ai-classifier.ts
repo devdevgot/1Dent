@@ -284,10 +284,10 @@ export async function generateChatbotResponse(
       return response.choices[0]?.message?.content ?? "";
     };
 
-    let content = await runOnce(320);
+    let content = await runOnce(512);
     if (!content.trim()) {
       logger.warn({ model: CHAT_MODEL }, "[AIClassifier] Empty chatbot response — retrying with higher max_tokens");
-      content = await runOnce(480);
+      content = await runOnce(768);
     }
 
     if (content.trim()) {

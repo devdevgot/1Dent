@@ -30,7 +30,7 @@ assert.match(greetingPrompt, /=== BEHAVIOR ===/);
 assert.match(greetingPrompt, /=== STEP ===/);
 assert.match(greetingPrompt, /=== FACTS ===/);
 assert.match(greetingPrompt, /=== TASK ===/);
-assert.match(greetingPrompt, /=== OUTPUT ===/);
+assert.match(greetingPrompt, /ANTI-PATTERNS/);
 assert.doesNotMatch(greetingPrompt, /Dr\. Test/);
 
 const doctorPrompt = buildChatbotPrompt({

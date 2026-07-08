@@ -82,24 +82,37 @@ function channelNote(channel: "playground" | "whatsapp"): string {
 function buildRoleSection(clinicName: string, channel: "playground" | "whatsapp"): string {
   return [
     "=== ROLE ===",
-    `Ты — AI-ассистент стоматологической клиники «${clinicName}».`,
+    `Ты — AI-ассистент стоматологической клиники «${clinicName}» в WhatsApp.`,
+    "Цель: помочь записаться на приём или ответить на вопрос о клинике.",
+    "Ты не врач: не ставишь диагнозы и не назначаешь лечение.",
     channelNote(channel),
   ].join("\n");
 }
 
-function buildBehaviorSection(clinicName: string, iinRule: string): string {
+function buildBehaviorSection(clinicName: string): string {
   const rules = [
-    iinRule,
-    "Не спрашивай имя или телефон в начале диалога — они собираются только при оформлении записи.",
-    `Ты представляешь клинику «${clinicName}», но НЕ являешься клиникой. Правильно: «Я — AI-ассистент клиники «${clinicName}»».`,
-    "Не повторяй приветствие, название клиники или один и тот же вопрос дважды в одном ответе.",
-    "Строго следуй этапам скрипта: знакомство → квалификация (симптомы → филиал) → подбор врача → решение → запись или возражения.",
-    "Используй только факты из блока FACTS — врачей, филиалы, цены и материалы клиники. Не придумывай адреса, врачей и акции.",
-    `Все даты и время — только в часовом поясе Казахстана (${KZ_UTC_OFFSET_LABEL}). Не предлагай прошедшее время. Филиал уже выбран — не спрашивай его повторно.`,
-    "Отвечай коротко: один вопрос за раз, мягко веди к записи, без давления. Скидки и «бесплатно» — только если явно указаны в материалах.",
+    "ЯЗЫК: отвечай на том же языке, что пациент (ru / kz / en). Казахский — кириллица.",
+    "КРАТКОСТЬ: 1 предложение, максимум 2. Один вопрос за turn. Без списков и «воды».",
+    "ФАКТЫ: используй ТОЛЬКО блок FACTS. Если факта нет — честно скажи и предложи оператора или осмотр.",
+    "НЕ ПОВТОРЯЙ: не задавай вопрос из последних 2 сообщений ассистента.",
+    "НЕ СПРАШИВАЙ рано: ИИН, телефон, имя — только при оформлении записи.",
+    `ИДЕНТИЧНОСТЬ: «Я — AI-ассистент клиники «${clinicName}»». Никогда «меня зовут ${clinicName}».`,
   ];
 
   return ["=== BEHAVIOR ===", ...rules.map((rule, index) => `${index + 1}. ${rule}`)].join("\n");
+}
+
+function buildAntiPatternsSection(): string {
+  return [
+    "=== ANTI-PATTERNS (никогда) ===",
+    "✗ Выдуманные адреса, улицы, телефоны, часы работы",
+    "✗ Выдуманные цены, скидки, «бесплатная консультация»",
+    "✗ Меню «лечение / чистка / имплант / …» в greeting",
+    "✗ Два и более вопроса в одном сообщении",
+    "✗ Повтор вопроса, если пациент проигнорировал",
+    "✗ Длинные списки слотов (>5) без запроса пациента",
+    "✗ Медицинский диагноз («у вас пulpит»)",
+  ].join("\n");
 }
 
 function buildStepSection(
@@ -128,11 +141,8 @@ function buildStepSection(
     }
   }
 
-  if (opts.stepInstructions?.general?.trim()) {
-    lines.push(`Дополнительные инструкции клиники: ${opts.stepInstructions.general.trim()}`);
-  }
   if (opts.stepInstructions?.state?.trim()) {
-    lines.push(`Инструкции для этапа «${fsmState}»: ${opts.stepInstructions.state.trim()}`);
+    lines.push(`Инструкции клиники: ${opts.stepInstructions.state.trim().slice(0, 200)}`);
   }
 
   return lines.join("\n");
@@ -141,8 +151,9 @@ function buildStepSection(
 function buildOutputSection(kazakhNote?: boolean): string {
   const lines = [
     "=== OUTPUT ===",
-    "Ответь обычным текстом: 1–2 коротких предложения, без markdown и длинных списков.",
-    "Один вопрос за раз. Без вступлений, повторов и «воды».",
+    "Формат: обычный текст, 1–2 предложения, до 220 символов суммарно.",
+    "Эмодзи: максимум 1, только если уместно. Без markdown.",
+    "Один вопрос за turn.",
   ];
   if (kazakhNote) {
     lines.push(KAZAKH_NOTE);
@@ -318,35 +329,48 @@ export function buildFactsBlock(facts: ChatbotPromptFacts, state: ChatbotState):
     lines.push(`Материалы клиники: ${filtered.knowledgeSnippet.trim()}`);
   }
 
+  const hasBranchList = (filtered.officialBranches?.length ?? 0) > 0;
+  const hasClinicData =
+    hasBranchList ||
+    !!filtered.suggestedDoctor ||
+    !!filtered.knowledgeSnippet?.trim() ||
+    !!filtered.priceSnippet?.trim();
+  if (
+    !hasClinicData &&
+    (state === "collect_qualification" || state === "collect_branch" || state === "dental_qa")
+  ) {
+    lines.push("Данных нет в системе — не выдумывай адреса, цены и акции.");
+  }
+
   return lines.join("\n");
 }
 
 const TASK_TEMPLATES: Partial<Record<ChatbotState, string>> = {
   greeting:
-    "Поприветствуй пациента и мягко узнай причину обращения или чем можешь помочь. Не перегружай первое сообщение.",
+    "Поприветствуй коротко. Если в FACTS есть запрос — покажи понимание одной фразой. Задай ОДИН уточняющий вопрос. ЗАПРЕЩЕНО: меню услуг.",
   collect_problem:
-    "Узнай, что беспокоит пациента и к какой услуге относится запрос. Один короткий уточняющий вопрос.",
+    "Уточни симптом или услугу одним вопросом. Не спрашивай филиал, время, имя.",
   suggest_doctor:
-    "Представь рекомендованного врача: имя, рейтинг (если есть) и 1–2 причины выбора. Спроси, подходит ли врач.",
+    "Назови врача из FACTS: имя + 1 причина выбора. Спроси: «Записать к {doctor}?» Не упоминай других врачей.",
   await_decision:
-    "Спроси, готов ли пациент записаться. Если готов — переходи к выбору времени; если сомневается — выясни причину.",
+    "Если согласен — предложи время из FACTS. Если «нет»/сомневается — уточни: другой врач или время подумать? Не прощайся при простом «нет».",
   collect_datetime:
-    "Предложи удобное время из свободных слотов. Если пациент назвал время — подтверди с полной датой из списка.",
+    "Покажи 3–5 слотов из FACTS. Попроси выбрать. Если пациент назвал время — подтверди с полной датой.",
   handle_objections:
-    "Отработай возражение мягко и предложи один конкретный следующий шаг — обычно запись на осмотр.",
+    "Отработай возражение одной фразой. Закончи: «Записать на осмотр?»",
   confirm_appointment:
-    "Кратко подтверди детали записи (врач, дата, время, филиал) и попроси подтверждение.",
-  done: "Поблагодари за обращение и заверши диалог тепло. Не задавай новых вопросов.",
+    "Подтверди врач, дата, время, филиал одним сообщением. Спроси: «Всё верно?»",
+  done: "Поблагодари. Не задавай вопросов. Акции — только если есть в FACTS.",
 };
 
 function buildQualificationTask(ctx: BuildTaskForStateCtx): string {
   if (ctx.qualificationPhase === "branch" || ctx.hasSelectedBranch) {
     if (ctx.hasSelectedBranch) {
-      return "Филиал уже известен — не спрашивай его снова. Уточни симптомы или срочность, если нужно, и веди к подбору врача.";
+      return "Филиал в FACTS уже известен — не спрашивай снова. Переходи к подбору врача.";
     }
-    return "Спроси, какой филиал удобнее — только из официального списка. Один короткий вопрос.";
+    return "Если один филиал в FACTS — подтверди его. Если несколько — спроси какой удобнее, только из FACTS. Если списка нет — спроси район одним вопросом.";
   }
-  return "Уточни симптомы: есть ли боль или дискомфорт, насколько срочно. Один вопрос за раз.";
+  return "Спроси про боль/дискомфорт одним вопросом. Не переходи к филиалу, пока не ответил про симптомы.";
 }
 
 function buildObjectionTask(ctx: BuildTaskForStateCtx): string {
@@ -402,7 +426,7 @@ export function buildTaskForState(state: ChatbotState, ctx: BuildTaskForStateCtx
     case "manage_appointment":
       return "Помоги пациенту с существующей записью: перенести, отменить или оставить без изменений.";
     case "dental_qa":
-      return "Ответь на вопрос пациента, используя материалы и прайс клиники. Мягко предложи запись, если уместно.";
+      return "Ответь на вопрос из FACTS (цены, материалы). Если ответа нет — скажи честно, предложи оператора. Мягко предложи запись, если уместно.";
     case "collect_review":
       return "Попроси оценить визит по шкале от 1 до 5 звёзд.";
     case "human_takeover":
@@ -418,16 +442,20 @@ export function buildTaskForState(state: ChatbotState, ctx: BuildTaskForStateCtx
 export function buildChatbotPrompt(opts: BuildChatbotPromptOpts): string {
   const channel = opts.channel ?? "playground";
   const clinicName = opts.facts.clinicName;
-  const iinRule = resolveIinRule(opts.fsmState, opts.iinRule);
 
   const sections = [
     buildRoleSection(clinicName, channel),
-    buildBehaviorSection(clinicName, iinRule),
+    buildBehaviorSection(clinicName),
     buildStepSection(opts.fsmState, opts),
     buildFactsBlock(opts.facts, opts.fsmState),
     ["=== TASK ===", opts.task.trim()].join("\n"),
     buildOutputSection(opts.kazakhNote ?? true),
+    buildAntiPatternsSection(),
   ];
+
+  if (opts.fsmState === "collect_iin") {
+    sections.splice(2, 0, ["=== STEP NOTE ===", resolveIinRule(opts.fsmState, opts.iinRule)].join("\n"));
+  }
 
   return sections.filter(Boolean).join("\n\n");
 }

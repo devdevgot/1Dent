@@ -1119,7 +1119,7 @@ function buildUnifiedScriptPrompt(
 
   let task = buildTaskForState(fsmState, taskCtx);
   if (opts?.backendContext?.trim()) {
-    task = `${task}\n\nДополнительно: ${opts.backendContext.trim()}`;
+    task = opts.backendContext.trim();
   }
 
   return buildChatbotPrompt({

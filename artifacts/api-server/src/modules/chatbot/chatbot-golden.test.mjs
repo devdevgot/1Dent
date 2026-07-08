@@ -40,7 +40,7 @@ assert.equal(split.parts.join(" ").replace(/\s+/g, " ").trim(), longText.replace
 
 // 3. buildTaskForState await_decision — task should mention booking/recording
 const awaitDecisionTask = buildTaskForState("await_decision");
-assert.match(awaitDecisionTask, /запис/i);
+assert.match(awaitDecisionTask, /время|врач/i);
 
 // 4. isRefusing vs isNo — different keyword sets; bare «нет» is not a refuse signal
 assert.equal(isRefusing("не надо"), true);
