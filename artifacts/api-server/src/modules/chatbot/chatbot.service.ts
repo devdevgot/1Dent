@@ -114,6 +114,7 @@ import {
 } from "./clinic-knowledge";
 import { scheduleAppointmentReminders } from "../followups/appointment-reminders.queue";
 import { scheduleFollowups } from "../followups/followup.queue";
+import { transitionPatientStage, PATIENT_STAGE_TRIGGERS } from "../patients/patient-stage.service";
 import {
   isExplicitNegativeRepeatSaleReply,
   isMarketingOptOutReply,
@@ -1423,8 +1424,14 @@ async function finalizeBookingAppointment(params: {
       } else if (patientId && data.existingPatientId && data.suggestedDoctorId) {
         await db
           .update(patientsTable)
-          .set({ doctorId: data.suggestedDoctorId, status: "initial_consultation", updatedAt: new Date() })
+          .set({ doctorId: data.suggestedDoctorId, updatedAt: new Date() })
           .where(and(eq(patientsTable.id, patientId), eq(patientsTable.clinicId, clinicId)));
+        await transitionPatientStage({
+          patientId,
+          clinicId,
+          toStatus: "initial_consultation",
+          trigger: PATIENT_STAGE_TRIGGERS.APPOINTMENT_CREATED,
+        });
       }
 
       if (patientId && data.suggestedDoctorId) {
@@ -1849,10 +1856,12 @@ export class ChatbotService {
           return finishTurn(session, replyText);
         } else {
           if (!dryRun) {
-            await db
-              .update(patientsTable)
-              .set({ status: "completed", updatedAt: new Date() })
-              .where(eq(patientsTable.id, patientDb.id));
+            await transitionPatientStage({
+              patientId: patientDb.id,
+              clinicId,
+              toStatus: "completed",
+              trigger: PATIENT_STAGE_TRIGGERS.POST_OP_OK_REPLY,
+            });
           } else {
             noteAction("Статус пациента → completed");
           }
@@ -1871,10 +1880,12 @@ export class ChatbotService {
         if (isExplicitNegativeRepeatSaleReply(messageText)) {
           if (!dryRun && patientDb) {
             await setMarketingOptOut(patientDb.id, clinicId, true);
-            await db
-              .update(patientsTable)
-              .set({ status: "rejected", updatedAt: new Date() })
-              .where(eq(patientsTable.id, patientDb.id));
+            await transitionPatientStage({
+              patientId: patientDb.id,
+              clinicId,
+              toStatus: "rejected",
+              trigger: PATIENT_STAGE_TRIGGERS.REPEAT_SALE_OPT_OUT,
+            });
           }
           session.state = "done";
           session.data = data;
@@ -1892,10 +1903,12 @@ export class ChatbotService {
 
         if (showInterest) {
           if (!dryRun) {
-            await db
-              .update(patientsTable)
-              .set({ status: "initial_consultation", updatedAt: new Date() })
-              .where(eq(patientsTable.id, patientDb.id));
+            await transitionPatientStage({
+              patientId: patientDb.id,
+              clinicId,
+              toStatus: "initial_consultation",
+              trigger: PATIENT_STAGE_TRIGGERS.REPEAT_SALE_BOOKING_INTEREST,
+            });
             markBroadcastBooking(clinicId, patientDb.id).catch(() => {});
           } else {
             noteAction("Статус пациента → initial_consultation");
