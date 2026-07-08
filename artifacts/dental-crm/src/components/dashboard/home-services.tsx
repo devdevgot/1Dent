@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "wouter";
+import { useTranslation } from "react-i18next";
 import { MENU_SERVICES, HOME_SERVICE_SLUGS } from "@/lib/menu-services";
 import { useOpenMenuService } from "@/components/layout/menu-service-overlay";
 
@@ -54,27 +55,19 @@ function AllServicesTile() {
   );
 }
 
-const homeTiles = HOME_SERVICE_SLUGS.map((slug) => {
-  const service = MENU_SERVICES.find((s) => s.slug === slug);
-  if (!service) return null;
-  const labels: Record<string, string> = {
-    patients: "Пациенты",
-    users: "Сотрудники",
-    services: "Услуги",
-    analytics: "Аналитика",
-    financials: "Финансы",
-    chatbot: "ИИ-бот",
-    "contract-templates": "Договоры",
-  };
-  return {
-    slug,
-    label: labels[slug] ?? slug,
-    img: service.img,
-  };
-}).filter(Boolean) as { slug: string; label: string; img: string }[];
-
 export function HomeServiceTiles() {
+  const { t } = useTranslation();
   const openService = useOpenMenuService();
+
+  const homeTiles = HOME_SERVICE_SLUGS.map((slug) => {
+    const service = MENU_SERVICES.find((s) => s.slug === slug);
+    if (!service) return null;
+    return {
+      slug,
+      label: t(service.nameKey),
+      img: service.img,
+    };
+  }).filter(Boolean) as { slug: string; label: string; img: string }[];
 
   return (
     <HomeScrollRow>

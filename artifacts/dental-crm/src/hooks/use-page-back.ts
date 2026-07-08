@@ -3,17 +3,16 @@ import { useLocation } from "wouter";
 import { useOverlayNavigation } from "@/hooks/use-overlay-navigation";
 
 type UsePageBackOptions = {
-  /** When not in overlay, navigate to /menu instead of history.back(). */
   menuFallback?: boolean;
 };
 
 export function usePageBack(options?: UsePageBackOptions) {
-  const { isOverlay, dismiss } = useOverlayNavigation();
+  const { isOverlay, popStack, dismiss } = useOverlayNavigation();
   const [, navigate] = useLocation();
 
   return useCallback(() => {
     if (isOverlay) {
-      dismiss();
+      popStack();
       return;
     }
     if (options?.menuFallback) {
@@ -21,5 +20,5 @@ export function usePageBack(options?: UsePageBackOptions) {
       return;
     }
     window.history.back();
-  }, [isOverlay, dismiss, navigate, options?.menuFallback]);
+  }, [isOverlay, popStack, dismiss, navigate, options?.menuFallback]);
 }

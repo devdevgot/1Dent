@@ -9,6 +9,7 @@ import {
 import type { Procedure, ProcedureStatus } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
+import { useOverlayNavigation } from "@/hooks/use-overlay-navigation";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { AppointmentModal } from "@/components/appointment-modal";
 import { useAppointmentSave } from "@/hooks/use-appointment-save";
@@ -52,6 +53,7 @@ export default function DoctorSchedulePage() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const [, navigate] = useLocation();
+  const { isOverlay, pushDate } = useOverlayNavigation();
 
   const today = new Date();
   const [year,  setYear]  = useState(today.getFullYear());
@@ -175,7 +177,7 @@ export default function DoctorSchedulePage() {
                 return (
                   <div
                     key={di}
-                    onClick={() => navigate(`/schedule/${ds}`)}
+                    onClick={() => (isOverlay ? pushDate(ds) : navigate(`/schedule/${ds}`))}
                     className={`
                       min-h-[80px] border-r border-[#e8e3d9] last:border-r-0 p-1.5 cursor-pointer
                       transition-colors select-none

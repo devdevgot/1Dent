@@ -1,15 +1,16 @@
 import { useMemo } from "react";
 import { useLocation } from "wouter";
-import { useGetDoctorKpis } from "@workspace/api-client-react";
 import type { DoctorKpi } from "@workspace/api-client-react";
+import { useGetDoctorKpis, getGetDoctorKpisQueryKey } from "@workspace/api-client-react";
 import { useTranslation } from "react-i18next";
 import { Trophy, RefreshCw } from "lucide-react";
 import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-header";
 import { StaffSectionNav } from "@/components/staff/staff-section-nav";
-import { getGetDoctorKpisQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { usePageBack } from "@/hooks/use-page-back";
+import { useOverlayNavigation } from "@/hooks/use-overlay-navigation";
 
 function getInitials(name: string | null | undefined) {
   if (!name) return "";
@@ -116,11 +117,18 @@ function DoctorRatingCard({
 
 export default function DoctorRatingsPage() {
   const { t } = useTranslation();
-  const [, navigate] = useLocation();
   const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
+  const goBack = usePageBack({ menuFallback: true });
+  const { isOverlay, pushDetail } = useOverlayNavigation();
   const { data: kpiData, isLoading } = useGetDoctorKpis({
     query: { staleTime: 60_000 },
   });
+
+  const openStaffDetail = (id: string) => {
+    if (isOverlay) pushDetail(id);
+    else navigate(`/users/${id}`);
+  };
 
   const doctors = useMemo(() => {
     const kpis = kpiData?.data?.kpis ?? [];
@@ -136,7 +144,7 @@ export default function DoctorRatingsPage() {
             ? t("staff.ratingsSubtitle", "Рейтинг на основе выручки, процедур и отзывов пациентов")
             : undefined
         }
-        onBack={() => navigate("/menu")}
+        onBack={goBack}
         right={
           <PageHeaderIconButton
             onClick={() => queryClient.invalidateQueries({ queryKey: getGetDoctorKpisQueryKey() })}
@@ -145,11 +153,7 @@ export default function DoctorRatingsPage() {
             <RefreshCw className="w-4 h-4" />
           </PageHeaderIconButton>
         }
-        bottom={
-          <div className="px-4 pb-3">
-            <StaffSectionNav active="ratings" />
-          </div>
-        }
+        bottom={<StaffSectionNav active="ratings" />}
       />
 
       <div className="px-5 pt-4 pb-8">
@@ -176,7 +180,7 @@ export default function DoctorRatingsPage() {
                 key={doctor.doctorId}
                 doctor={doctor}
                 rank={idx + 1}
-                onClick={() => navigate(`/users/${doctor.doctorId}`)}
+                onClick={() => openStaffDetail(doctor.doctorId)}
                 t={t}
               />
             ))}

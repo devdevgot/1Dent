@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useOverlayNavigation } from "@/hooks/use-overlay-navigation";
 
 type PageShellProps = {
   children: ReactNode;
@@ -16,11 +17,14 @@ export function PageShell({
   withTabBarOffset = false,
   animate = true,
 }: PageShellProps) {
+  const { isOverlay } = useOverlayNavigation();
+
   const body = (
     <div
       className={cn(
-        "min-h-full bg-[#faf8f4] text-[#0f172a] font-manrope",
-        withTabBarOffset && "pb-24",
+        isOverlay ? "min-h-0 flex flex-col flex-1 bg-[#faf8f4]" : "min-h-full bg-[#faf8f4]",
+        "text-[#0f172a] font-manrope",
+        withTabBarOffset && !isOverlay && "pb-24",
         className,
       )}
     >
