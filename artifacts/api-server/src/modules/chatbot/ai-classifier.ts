@@ -257,7 +257,7 @@ export async function generateChatbotResponse(
         {
           model: CHAT_MODEL,
           max_tokens: maxTokens,
-          temperature: 0.65,
+          temperature: 0.4,
           response_format: { type: "json_object" },
           messages,
         },
@@ -266,10 +266,10 @@ export async function generateChatbotResponse(
       return response.choices[0]?.message?.content ?? "";
     };
 
-    let content = await runOnce(1200);
+    let content = await runOnce(450);
     if (!content.trim()) {
       logger.warn({ model: CHAT_MODEL }, "[AIClassifier] Empty chatbot response — retrying with higher max_tokens");
-      content = await runOnce(2400);
+      content = await runOnce(750);
     }
 
     const parsed = parseChatbotReplyJson(content);
@@ -346,13 +346,23 @@ export async function extractDatetimeFromText(text: string): Promise<Date | null
 
 // ─── Branch/address extractor ──────────────────────────────────────────────────
 
-export async function extractBranchFromText(text: string, knowledgeContext: string): Promise<string | null> {
-  const systemPrompt = `Тебе предоставлена информация о клинике, включая её филиалы и адреса:
-${knowledgeContext}
+export async function extractBranchFromText(
+  text: string,
+  knowledgeContext: string,
+  officialBranches?: string[],
+): Promise<string | null> {
+  const officialList =
+    officialBranches && officialBranches.length > 0
+      ? `\n\nОФИЦИАЛЬНЫЙ СПИСОК ФИЛИАЛОВ (единственные допустимые варианты):\n${officialBranches.map((b) => `• ${b}`).join("\n")}`
+      : "";
+
+  const systemPrompt = `Тебе предоставлена информация о клинике:
+${knowledgeContext}${officialList}
 
 Твоя задача — определить, какой именно филиал или адрес выбрал пациент в своем сообщении.
-Если пациент выбрал конкретный филиал/адрес из списка, верни JSON: {"branch": "Краткое название филиала/адреса"}.
-Если в тексте нет явного выбора филиала или указанный адрес не соответствует материалам клиники, верни {"branch": null}.
+Если пациент выбрал конкретный филиал/адрес из официального списка или материалов клиники, верни JSON: {"branch": "Точное название из списка"}.
+Если в тексте нет явного выбора филиала, указан адрес которого нет в списке, или пациент не отвечает на вопрос о филиале — верни {"branch": null}.
+НИКОГДА не возвращай адрес, которого нет в официальном списке или материалах.
 
 Отвечай ТОЛЬКО валидным JSON без markdown-обёрток.`;
 

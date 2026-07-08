@@ -67,6 +67,7 @@ export interface ChatbotSessionData {
   leadFollowup24Sent?: boolean;
   leadFollowup72Sent?: boolean;
   leadFollowup168Sent?: boolean;
+  branchAskCount?: number;
   handoffSummary?: string;
   createdProcedureId?: string;
   abVariantId?: string;

@@ -254,6 +254,43 @@ export function renderMindMapScript(
   return text;
 }
 
+/** Render a compact path from root to the active node (avoids dumping the entire mind map into the prompt). */
+export function renderMindMapCompactPath(
+  mindMap: ScriptMindMapData | null | undefined,
+  activeNodeId?: string,
+): string {
+  if (!mindMap?.nodes?.length || !activeNodeId) return "";
+
+  const { nodes, edges = mindMapEdges(mindMap) } = mindMap;
+  const nodeById = new Map(nodes.map((n) => [n.id, n]));
+  const parentByChild = new Map<string, { parentId: string; label?: string }>();
+  for (const edge of edges) {
+    parentByChild.set(edge.target, { parentId: edge.source, label: edge.label });
+  }
+
+  const pathIds: string[] = [];
+  let currentId: string | undefined = activeNodeId;
+  while (currentId && nodeById.has(currentId)) {
+    pathIds.unshift(currentId);
+    currentId = parentByChild.get(currentId)?.parentId;
+  }
+  if (pathIds.length === 0) return "";
+
+  let text =
+    "\n\nКРАТКИЙ ПУТЬ ПО СКРИПТУ (следуй только этой ветке, не перескакивай этапы):\n";
+  for (let i = 0; i < pathIds.length; i++) {
+    const node = nodeById.get(pathIds[i]!)!;
+    const prefix = i === pathIds.length - 1 ? "▶" : "–";
+    text += `${prefix} ${node.label}`;
+    if (node.fsmState) text += ` [${node.fsmState}]`;
+    if (i === pathIds.length - 1 && node.content?.trim()) {
+      text += `: ${node.content.trim()}`;
+    }
+    text += "\n";
+  }
+  return text;
+}
+
 /** Extra prompt section for the currently active script node. */
 export function buildActiveMindMapContext(
   mindMap: ScriptMindMapData | null | undefined,
