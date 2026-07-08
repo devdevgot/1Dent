@@ -62,7 +62,10 @@
     "aiCredits": "ИИ кредиты",
     "branches": "Трекинг",
     "logs": "Журнал",
-    "more": "Ещё",
+    "more": "Еще",
+    "operations": "Операции",
+    "servicesHub": "Сервисы",
+    "messages": "Сообщения",
     "settings": "Настройки"
   },
   "page": {

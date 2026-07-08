@@ -62,7 +62,10 @@
     "aiCredits": "AI кредиттер",
     "branches": "Трекинг",
     "logs": "Журнал",
-    "more": "Көбірек",
+    "more": "Тағы",
+    "operations": "Операциялар",
+    "servicesHub": "Сервистер",
+    "messages": "Хабарламалар",
     "settings": "Баптаулар"
   },
   "page": {
