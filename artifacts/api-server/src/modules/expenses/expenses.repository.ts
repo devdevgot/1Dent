@@ -26,6 +26,7 @@ export interface ExpenseFilters {
   dateFrom?: Date;
   dateTo?: Date;
   category?: string;
+  subcategory?: string;
   periodMonth?: number;
   periodYear?: number;
 }
@@ -49,6 +50,7 @@ export class ExpensesRepository {
 
     return rows.filter((r) => {
       if (filters?.category && r.category !== filters.category) return false;
+      if (filters?.subcategory && r.subcategory !== filters.subcategory) return false;
       if (filters?.periodMonth && r.periodMonth !== filters.periodMonth) return false;
       if (filters?.periodYear && r.periodYear !== filters.periodYear) return false;
       return true;

@@ -1,5 +1,5 @@
 
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { queryClient, persistOptions, clearPersistedQueryCache } from "@/lib/query-persist";
@@ -17,54 +17,102 @@ import { getRoleDashboardPath } from "@/lib/role-redirect";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { installGlobalErrorHandlers } from "@/lib/report-error";
 
-// Pages
-import Login from "@/pages/login";
-import Register from "@/pages/register";
-import ForgotPassword from "@/pages/forgot-password";
-import ResetPassword from "@/pages/reset-password";
-import OwnerDashboard from "@/pages/dashboard-owner";
-import AdminDashboard from "@/pages/dashboard-admin";
-import DoctorDashboard from "@/pages/dashboard-doctor";
-import AccountantDashboard from "@/pages/dashboard-accountant";
-import WarehouseDashboard from "@/pages/dashboard-warehouse";
-import PatientsPage from "@/pages/patients";
-import ToothDetailPage from "@/pages/tooth-detail";
-import ChatPage from "@/pages/chat";
-import AnalyticsPage from "@/pages/analytics";
-import InventoryPage from "@/pages/inventory";
-import ServicesPage from "@/pages/services";
-import LogsPage from "@/pages/logs";
-import FinancialsPage from "@/pages/financials";
-import WarehousePage from "@/pages/warehouse";
-import UsersPage from "@/pages/users";
-import ChatbotPage from "@/pages/chatbot";
-import StaffDetailPage from "@/pages/staff-detail";
-import DoctorAnalyticsPage from "@/pages/doctor-analytics";
-import DoctorSchedulePage from "@/pages/doctor-schedule";
-import DoctorScheduleDayPage from "@/pages/doctor-schedule-day";
-import AccountSettingsPage from "@/pages/account-settings";
-import AccountEditProfilePage from "@/pages/account-edit-profile";
-import AccountChangeEmailPage from "@/pages/account-change-email";
-import AccountChangePasswordPage from "@/pages/account-change-password";
-import MenuPage from "@/pages/menu";
-import MigrationPage from "@/pages/migration";
-import ChannelsPage from "@/pages/channels";
-import ContractTemplatesPage from "@/pages/contract-templates";
-import BranchesPage from "@/pages/branches";
-import ClinicBranchesPage from "@/pages/clinic-branches";
-import PricingPage from "@/pages/pricing";
-import { PlanPaywall } from "@/components/billing/plan-paywall";
-import AiCreditsPage from "@/pages/ai-credits";
-import LandingPage from "@/pages/landing";
-import SlashTabletPage from "@/pages/slash-tablet";
-import TabletLinkPage from "@/pages/slash-tablet/tablet-link";
-import NotFound from "@/pages/not-found";
+function LazyPageFallback() {
+  return (
+    <div className="flex items-center justify-center py-20">
+      <div className="w-10 h-10 border-4 border-[#1f75fe]/20 border-t-[#1f75fe] rounded-full animate-spin" />
+    </div>
+  );
+}
 
-// Admin-specific pages
-import AdminCalendarPage from "@/pages/admin-calendar";
-import AdminAppointmentNewPage from "@/pages/admin-appointment-new";
-import AdminFinancePage from "@/pages/admin-finance";
-import PayrollMyPage from "@/pages/payroll-my";
+function StaffRouteFallback() {
+  return (
+    <div className="min-h-screen bg-[#faf8f4] font-manrope">
+      <div className="px-5 pt-5 pb-4 bg-white border-b border-[#e8e3d9]">
+        <div className="h-7 w-40 rounded-xl bg-[#f1ede4] animate-pulse" />
+        <div className="h-4 w-32 rounded-lg bg-[#f1ede4] animate-pulse mt-2" />
+      </div>
+      <div className="p-5">
+        <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-md overflow-hidden">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <div key={i} className="px-4 py-3.5 flex items-center gap-3 border-b border-[#e8e3d9] last:border-b-0">
+              <div className="w-9 h-9 rounded-xl bg-[#f1ede4] animate-pulse shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-40 max-w-full rounded bg-[#f1ede4] animate-pulse" />
+                <div className="h-3 w-24 rounded bg-[#f1ede4] animate-pulse" />
+              </div>
+              <div className="h-6 w-16 rounded-lg bg-[#f1ede4] animate-pulse" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type LazyPageModule = { default: React.ComponentType<any> };
+
+function lazyPage(
+  load: () => Promise<LazyPageModule>,
+  fallback: React.ReactNode = <LazyPageFallback />,
+) {
+  const Component = lazy(load);
+  return function LazyRoutePage() {
+    return (
+      <Suspense fallback={fallback}>
+        <Component />
+      </Suspense>
+    );
+  };
+}
+
+const Login = lazyPage(() => import("@/pages/login"));
+const Register = lazyPage(() => import("@/pages/register"));
+const ForgotPassword = lazyPage(() => import("@/pages/forgot-password"));
+const ResetPassword = lazyPage(() => import("@/pages/reset-password"));
+const OwnerDashboard = lazyPage(() => import("@/pages/dashboard-owner"));
+const AdminDashboard = lazyPage(() => import("@/pages/dashboard-admin"));
+const DoctorDashboard = lazyPage(() => import("@/pages/dashboard-doctor"));
+const AccountantDashboard = lazyPage(() => import("@/pages/dashboard-accountant"));
+const WarehouseDashboard = lazyPage(() => import("@/pages/dashboard-warehouse"));
+const PatientsPage = lazyPage(() => import("@/pages/patients"));
+const ToothDetailPage = lazyPage(() => import("@/pages/tooth-detail"));
+const ChatPage = lazyPage(() => import("@/pages/chat"));
+const AnalyticsPage = lazyPage(() => import("@/pages/analytics"));
+const InventoryPage = lazyPage(() => import("@/pages/inventory"));
+const ServicesPage = lazyPage(() => import("@/pages/services"));
+const LogsPage = lazyPage(() => import("@/pages/logs"));
+const FinancialsPage = lazyPage(() => import("@/pages/financials"));
+const WarehousePage = lazyPage(() => import("@/pages/warehouse"));
+const UsersPage = lazyPage(() => import("@/pages/users"), <StaffRouteFallback />);
+const ChatbotPage = lazyPage(() => import("@/pages/chatbot"));
+const StaffDetailPage = lazyPage(() => import("@/pages/staff-detail"), <StaffRouteFallback />);
+const DoctorAnalyticsPage = lazyPage(() => import("@/pages/doctor-analytics"));
+const DoctorSchedulePage = lazyPage(() => import("@/pages/doctor-schedule"));
+const DoctorScheduleDayPage = lazyPage(() => import("@/pages/doctor-schedule-day"));
+const AccountSettingsPage = lazyPage(() => import("@/pages/account-settings"));
+const AccountEditProfilePage = lazyPage(() => import("@/pages/account-edit-profile"));
+const AccountChangeEmailPage = lazyPage(() => import("@/pages/account-change-email"));
+const AccountChangePasswordPage = lazyPage(() => import("@/pages/account-change-password"));
+const MenuPage = lazyPage(() => import("@/pages/menu"));
+const MigrationPage = lazyPage(() => import("@/pages/migration"));
+const ChannelsPage = lazyPage(() => import("@/pages/channels"));
+const ContractTemplatesPage = lazyPage(() => import("@/pages/contract-templates"));
+const BranchesPage = lazyPage(() => import("@/pages/branches"));
+const ClinicBranchesPage = lazyPage(() => import("@/pages/clinic-branches"));
+const PricingPage = lazyPage(() => import("@/pages/pricing"));
+const AiCreditsPage = lazyPage(() => import("@/pages/ai-credits"));
+const LandingPage = lazyPage(() => import("@/pages/landing"));
+const SlashTabletPage = lazyPage(() => import("@/pages/slash-tablet"));
+const TabletLinkPage = lazyPage(() => import("@/pages/slash-tablet/tablet-link"));
+const NotFound = lazyPage(() => import("@/pages/not-found"));
+const AdminCalendarPage = lazyPage(() => import("@/pages/admin-calendar"));
+const AdminAppointmentNewPage = lazyPage(() => import("@/pages/admin-appointment-new"));
+const AdminFinancePage = lazyPage(() => import("@/pages/admin-finance"));
+const PayrollMyPage = lazyPage(() => import("@/pages/payroll-my"));
+const PlanPaywall = lazy(() =>
+  import("@/components/billing/plan-paywall").then((m) => ({ default: m.PlanPaywall })),
+);
 
 // ---------------------------------------------------------------------------
 // Dev auth bypass — set VITE_DEV_BYPASS_AUTH=true in .env.local to skip login
@@ -191,7 +239,11 @@ function Router() {
 
   return (
     <>
-    {isAuthenticated && <PlanPaywall />}
+    {isAuthenticated && (
+      <Suspense fallback={null}>
+        <PlanPaywall />
+      </Suspense>
+    )}
     <Switch>
       <Route path="/" component={LandingPage} />
       {/* SlashTablet — планшетный режим для кабинета врача (QR / PIN вход) */}

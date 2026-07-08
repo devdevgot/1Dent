@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/hooks/use-auth";
-import { useLogout, listUsersAll, getListUsersAllQueryKey } from "@workspace/api-client-react";
+import { useLogout, prefetchStaffList } from "@workspace/api-client-react";
 import { clearAuthToken } from "@/lib/auth-token";
 import { clearBranchContext } from "@/lib/branch-context";
 import { clearPersistedQueryCache } from "@/lib/query-persist";
@@ -79,11 +79,7 @@ export default function MenuPage() {
   const queryClient = useQueryClient();
   useEffect(() => {
     if (user?.role !== "owner" && user?.role !== "admin") return;
-    void queryClient.prefetchQuery({
-      queryKey: getListUsersAllQueryKey(false),
-      queryFn: ({ signal }) => listUsersAll(undefined, { signal }),
-      staleTime: 5 * 60_000,
-    });
+    prefetchStaffList(queryClient);
   }, [user?.role, queryClient]);
 
   const navItems = ALL_NAV_ITEMS.filter((item) =>

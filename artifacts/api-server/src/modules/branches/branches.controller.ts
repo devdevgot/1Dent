@@ -166,7 +166,7 @@ router.post("/clinic/telegram-test", ownerOnly, async (req: Request, res: Respon
 // Returns geo events for the clinic, optionally filtered by branchId and date range
 router.get("/geo/tracking", roleGuard("owner", "admin"), async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { branchId, dateFrom, dateTo } = req.query as Record<string, string | undefined>;
+    const { branchId, userId, dateFrom, dateTo } = req.query as Record<string, string | undefined>;
 
     const now = new Date();
     const todayStart = new Date(now);
@@ -179,6 +179,7 @@ router.get("/geo/tracking", roleGuard("owner", "admin"), async (req: Request, re
 
     const events = await repo.getGeoTracking(req.user!.clinicId, {
       branchId: branchId || undefined,
+      userId: userId || undefined,
       dateFrom: from,
       dateTo: to,
     });

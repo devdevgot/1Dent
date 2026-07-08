@@ -45,10 +45,23 @@ export class ProceduresRepository {
     return map;
   }
 
-  async list(clinicId: string, doctorId?: string, patientId?: string): Promise<ProcedureWithDoctor[]> {
+  async list(
+    clinicId: string,
+    opts?: { doctorId?: string; patientId?: string; dateFrom?: Date; dateTo?: Date },
+  ): Promise<ProcedureWithDoctor[]> {
     const conditions = [eq(proceduresTable.clinicId, clinicId)];
-    if (doctorId) conditions.push(eq(proceduresTable.doctorId, doctorId));
-    if (patientId) conditions.push(eq(proceduresTable.patientId, patientId));
+    if (opts?.doctorId) conditions.push(eq(proceduresTable.doctorId, opts.doctorId));
+    if (opts?.patientId) conditions.push(eq(proceduresTable.patientId, opts.patientId));
+    if (opts?.dateFrom) {
+      conditions.push(
+        sql`COALESCE(${proceduresTable.completedAt}, ${proceduresTable.scheduledAt}, ${proceduresTable.createdAt}) >= ${opts.dateFrom}`,
+      );
+    }
+    if (opts?.dateTo) {
+      conditions.push(
+        sql`COALESCE(${proceduresTable.completedAt}, ${proceduresTable.scheduledAt}, ${proceduresTable.createdAt}) <= ${opts.dateTo}`,
+      );
+    }
 
     const rows = await db
       .select({

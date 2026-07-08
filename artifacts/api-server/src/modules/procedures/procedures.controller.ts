@@ -144,9 +144,26 @@ async function assertDoctorOwnership(
 // GET /procedures
 router.get("/", allRoles, async (req: Request, res: Response, next: NextFunction) => {
   const { clinicId, role, userId } = req.user!;
-  const doctorId = role === "doctor" ? userId : undefined;
+  const queryDoctorId = typeof req.query["doctorId"] === "string" ? req.query["doctorId"] : undefined;
   const patientId = typeof req.query["patientId"] === "string" ? req.query["patientId"] : undefined;
-  const procedures = await repo.list(clinicId, doctorId, patientId).catch(next);
+  const dateFrom = typeof req.query["dateFrom"] === "string" ? new Date(req.query["dateFrom"]) : undefined;
+  const dateTo = typeof req.query["dateTo"] === "string" ? new Date(req.query["dateTo"] + "T23:59:59") : undefined;
+
+  const doctorId =
+    role === "doctor"
+      ? userId
+      : (role === "owner" || role === "admin") && queryDoctorId
+        ? queryDoctorId
+        : undefined;
+
+  const procedures = await repo
+    .list(clinicId, {
+      doctorId,
+      patientId,
+      dateFrom: dateFrom && !isNaN(dateFrom.getTime()) ? dateFrom : undefined,
+      dateTo: dateTo && !isNaN(dateTo.getTime()) ? dateTo : undefined,
+    })
+    .catch(next);
   if (procedures === undefined) return;
   res.json({ success: true, data: { procedures } });
 });

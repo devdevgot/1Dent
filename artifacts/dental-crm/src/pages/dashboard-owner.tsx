@@ -1,13 +1,12 @@
-import { useState, useMemo, useEffect } from "react";
+import { Suspense, lazy, useState, useMemo, useEffect } from "react";
 import { useAuthStore } from "@/hooks/use-auth";
 import {
-  useGetOwnerAnalytics,
+  useGetOwnerDashboardSummary,
   useGetDoctorKpis,
   useListProcedures,
   useListPatients,
   useGetFinancialSummary,
   useListChannels,
-  getGetOwnerAnalyticsQueryKey,
   getGetDoctorKpisQueryKey,
 } from "@workspace/api-client-react";
 import {
@@ -23,11 +22,14 @@ import { useLocation } from "wouter";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { OnboardingWizard } from "@/components/dashboard/onboarding-wizard";
 import { RevenueEmptyState } from "@/components/dashboard/revenue-empty-state";
 import { SITE } from "@/config/site";
 import { PeriodPills } from "@/components/layout/period-pills";
 import "@/styles/dashboard.css";
+
+const OnboardingWizard = lazy(() =>
+  import("@/components/dashboard/onboarding-wizard").then((m) => ({ default: m.OnboardingWizard })),
+);
 
 const PAYMENT_ICONS: Record<string, React.ElementType> = {
   kaspi_transfer: Send,
@@ -188,11 +190,22 @@ function toInputValue(d: Date): string {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+function useAfterFirstPaint() {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setReady(true), 0);
+    return () => window.clearTimeout(id);
+  }, []);
+
+  return ready;
+}
 
 export default function OwnerDashboard() {
   const { t } = useTranslation();
   const { clinic } = useAuthStore();
   const [, navigate] = useLocation();
+  const afterFirstPaint = useAfterFirstPaint();
   const [onboardingOpen, setOnboardingOpen] = useState(() => {
     return localStorage.getItem("show_onboarding_wizard") === "true";
   });
@@ -232,9 +245,10 @@ export default function OwnerDashboard() {
   const dateFromStr = useMemo(() => format(dateRange.from, "yyyy-MM-dd"), [dateRange.from]);
   const dateToStr = useMemo(() => format(dateRange.to, "yyyy-MM-dd"), [dateRange.to]);
 
-  const { data: analyticsData, isLoading: analyticsLoading } = useGetOwnerAnalytics({
-    query: { queryKey: getGetOwnerAnalyticsQueryKey() },
-  });
+  const { data: analyticsData, isLoading: analyticsLoading } = useGetOwnerDashboardSummary(
+    { dateFrom: dateFromStr, dateTo: dateToStr },
+    { query: { staleTime: 60_000 } },
+  );
 
   const rawAnalyticsEarly = (analyticsData?.data?.analytics ?? {}) as Record<string, unknown>;
   const totalPatientsEarly = Number(rawAnalyticsEarly.totalPatients ?? 0);
@@ -247,17 +261,28 @@ export default function OwnerDashboard() {
 
   const { data: summaryData, isLoading: summaryLoading } = useGetFinancialSummary(
     { dateFrom: dateFromStr, dateTo: dateToStr },
-    { query: { enabled: !isLikelyEmptyClinic } },
+    { query: { enabled: !isLikelyEmptyClinic && totalPatientsEarly > 0 && completedProceduresEarly > 0 } },
   );
   const { data: kpiData } = useGetDoctorKpis({
-    query: { queryKey: getGetDoctorKpisQueryKey() },
+    query: {
+      queryKey: getGetDoctorKpisQueryKey(),
+      enabled: afterFirstPaint && !isLikelyEmptyClinic,
+      staleTime: 5 * 60_000,
+    },
   });
-  const { data: proceduresData } = useListProcedures();
-  const { data: patientsData } = useListPatients();
-  const { data: channelsRes } = useListChannels();
+  const loadDetailAnalytics = detailsOpen && activeTab === "channels" && !isLikelyEmptyClinic;
+  const { data: proceduresData } = useListProcedures({
+    query: { enabled: loadDetailAnalytics, staleTime: 60_000 },
+  });
+  const { data: patientsData } = useListPatients({
+    query: { enabled: loadDetailAnalytics, staleTime: 60_000 },
+  });
+  const { data: channelsRes } = useListChannels({
+    query: { enabled: loadDetailAnalytics, staleTime: 60_000 },
+  });
 
   // Empty clinics: show illustration after analytics only — skip waiting on financial summary.
-  const revenueCardLoading = analyticsLoading || (!isLikelyEmptyClinic && summaryLoading);
+  const revenueCardLoading = analyticsLoading || (!isLikelyEmptyClinic && completedProceduresEarly > 0 && summaryLoading);
 
   const allProcedures = proceduresData?.data?.procedures ?? [];
   const allPatients   = patientsData?.data?.patients ?? [];
@@ -285,10 +310,9 @@ export default function OwnerDashboard() {
     if (analyticsLoading) return false;
     return (
       totalPatients > 0 ||
-      allPatients.length > 0 ||
       completedProcedures > 0
     );
-  }, [analyticsLoading, totalPatients, allPatients.length, completedProcedures]);
+  }, [analyticsLoading, totalPatients, completedProcedures]);
 
   useEffect(() => {
     if (analyticsData && !isOnboardingCompleted && hasClinicData) {
@@ -308,41 +332,30 @@ export default function OwnerDashboard() {
     }
   }, [isOnboardingCompleted, hasClinicData, clinic?.createdAt]);
 
-  const realIncome = summaryData?.data?.netProfit ?? 0;
+  const realIncome = summaryData?.data?.netProfit ?? analytics.revenueThisMonth;
 
   const paymentStats = useMemo(() => {
-    const methodAmounts: Record<string, number> = {};
-    let total = 0;
-    allProcedures.forEach((p) => {
-      if (!p.completedAt || p.status !== "completed") return;
-      const d = new Date(p.completedAt);
-      const toWithTime = new Date(dateRange.to);
-      toWithTime.setHours(23, 59, 59, 999);
-      if (d >= dateRange.from && d <= toWithTime) {
-        const method = p.paymentMethod || "cash";
-        const amt = p.price ?? 0;
-        methodAmounts[method] = (methodAmounts[method] ?? 0) + amt;
-        total += amt;
-      }
-    });
+    const stats = analytics.revenueByPaymentMethod ?? [];
+    if (stats.length > 0) {
+      return stats
+        .map((stat) => ({
+          method: stat.method,
+          label: stat.label || PAYMENT_METHOD_LABELS[stat.method] || stat.method,
+          amount: Number(stat.amount) || 0,
+          percent: Number(stat.percent) || 0,
+          color: stat.color || PAYMENT_COLORS[stat.method] || "#B2BEC3",
+        }))
+        .filter((stat) => stat.amount > 0)
+        .sort((a, b) => b.amount - a.amount);
+    }
 
-    return Object.entries(PAYMENT_METHOD_LABELS).map(([method, label]) => {
-      const amount = methodAmounts[method] ?? 0;
-      const percent = total > 0 ? Math.round((amount / total) * 100) : 0;
-      return {
-        method,
-        label,
-        amount,
-        percent,
-        color: PAYMENT_COLORS[method] || "#B2BEC3",
-      };
-    }).filter(stat => stat.amount > 0).sort((a, b) => b.amount - a.amount);
-  }, [allProcedures, dateRange]);
+    return [];
+  }, [analytics.revenueByPaymentMethod]);
 
   const hasNoRevenueInPeriod =
     !revenueCardLoading &&
     (
-      (isLikelyEmptyClinic && allPatients.length === 0) ||
+      isLikelyEmptyClinic ||
       (paymentStats.length === 0 && realIncome === 0)
     );
 
@@ -369,6 +382,7 @@ export default function OwnerDashboard() {
   const [conditionStats, setConditionStats] = useState<Array<{ condition: string; label: string; count: number; percent: number; color: string }>>([]);
   useEffect(() => {
     if (isLikelyEmptyClinic) return;
+    if (!detailsOpen || activeTab !== "conditions") return;
     const token = localStorage.getItem("auth_token");
     fetch(`/api/patients/condition-stats`, {
       headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
@@ -391,7 +405,7 @@ export default function OwnerDashboard() {
         setConditionStats(list);
       })
       .catch(() => {});
-  }, [isLikelyEmptyClinic]);
+  }, [activeTab, detailsOpen, isLikelyEmptyClinic]);
 
   const patientSourceMap = useMemo(() => {
     return new Map(allPatients.map((p) => [p.id, p.source]));
@@ -923,13 +937,17 @@ export default function OwnerDashboard() {
           </div>
         </SheetContent>
       </Sheet>
-      <OnboardingWizard
-        open={onboardingOpen}
-        onClose={() => {
-          setOnboardingOpen(false);
-          setIsOnboardingCompleted(localStorage.getItem("onboarding_completed") === "true");
-        }}
-      />
+      {onboardingOpen && (
+        <Suspense fallback={null}>
+          <OnboardingWizard
+            open={onboardingOpen}
+            onClose={() => {
+              setOnboardingOpen(false);
+              setIsOnboardingCompleted(localStorage.getItem("onboarding_completed") === "true");
+            }}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }
