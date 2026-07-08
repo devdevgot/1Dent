@@ -34,6 +34,7 @@ import {
 import type { EmployeeFormData } from "./employee-dialog";
 import { cn } from "@/lib/utils";
 import { TableSkeleton } from "@/components/skeletons";
+import { StaffSectionNav } from "@/components/staff/staff-section-nav";
 
 const EmployeeDialog = lazy(() => import("./employee-dialog"));
 const InviteStaffDialog = lazy(() => import("./invite-staff-dialog"));
@@ -349,6 +350,11 @@ export default function StaffPage() {
               />
             )}
           </>
+        }
+        bottom={
+          <div className="px-4 pb-3">
+            <StaffSectionNav active="list" />
+          </div>
         }
       />
 
