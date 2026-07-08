@@ -409,6 +409,8 @@
 .dash-sheet {
   background: var(--bg) !important;
   border-top: 1px solid var(--ds-border) !important;
+  padding-top: 0 !important;
+  gap: 0 !important;
 }
 
 /* ── Alert banner ──────────────────────────────────────────────────────────── */

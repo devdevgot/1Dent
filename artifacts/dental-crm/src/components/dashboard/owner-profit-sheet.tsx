@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  X, ChevronLeft, CalendarDays, SlidersHorizontal, Wallet,
-} from "lucide-react";
+import { motion } from "framer-motion";
+import { X, CalendarDays, Wallet } from "lucide-react";
 import { format } from "date-fns";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { PeriodPills } from "@/components/layout/period-pills";
@@ -13,14 +11,13 @@ import { cn } from "@/lib/utils";
 import {
   ChannelIcon,
   DonutChart,
-  FILTER_PRESETS,
+  LIST_PERIOD_PRESETS,
   PAYMENT_COLORS,
   PAYMENT_ICONS,
   PAYMENT_METHOD_LABELS,
   fmtDateRange,
   fmtRevenue,
   getPresetRange,
-  toInputValue,
   type FilterPreset,
   type PaymentStat,
 } from "@/components/dashboard/owner-dashboard-shared";
@@ -30,6 +27,7 @@ type OwnerProfitSheetProps = {
   onOpenChange: (open: boolean) => void;
   branchId: string | null;
   branchName: string;
+  filterPreset: FilterPreset;
 };
 
 const CONDITION_LABELS: Record<string, string> = {
@@ -61,14 +59,8 @@ export function OwnerProfitSheet({
   onOpenChange,
   branchId,
   branchName,
+  filterPreset,
 }: OwnerProfitSheetProps) {
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [showCustom, setShowCustom] = useState(false);
-  const [filterPreset, setFilterPreset] = useState<FilterPreset>("month");
-  const [pendingPreset, setPendingPreset] = useState<FilterPreset>("month");
-  const today = new Date();
-  const [customFrom, setCustomFrom] = useState(toInputValue(today));
-  const [customTo, setCustomTo] = useState(toInputValue(today));
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"channels" | "conditions">("channels");
   const [conditionStats, setConditionStats] = useState<
@@ -76,21 +68,13 @@ export function OwnerProfitSheet({
   >([]);
 
   const dateRange = useMemo(() => {
-    if (filterPreset === "custom") {
-      const [fy, fm, fd] = customFrom.split("-").map(Number);
-      const [ty, tm, td] = customTo.split("-").map(Number);
-      return {
-        from: new Date(fy, fm - 1, fd, 0, 0, 0, 0),
-        to: new Date(ty, tm - 1, td, 23, 59, 59, 999),
-      };
-    }
     const range = getPresetRange(filterPreset);
     const to = new Date(range.to);
     to.setHours(23, 59, 59, 999);
     return { from: range.from, to };
-  }, [filterPreset, customFrom, customTo]);
+  }, [filterPreset]);
 
-  const filterLabel = FILTER_PRESETS.find((p) => p.key === filterPreset)?.label ?? "Месяц";
+  const filterLabel = LIST_PERIOD_PRESETS.find((p) => p.key === filterPreset)?.label ?? "Сегодня";
   const dateRangeLabel = fmtDateRange(dateRange.from, dateRange.to);
   const dateFromStr = format(dateRange.from, "yyyy-MM-dd");
   const dateToStr = format(dateRange.to, "yyyy-MM-dd");
@@ -287,8 +271,6 @@ export function OwnerProfitSheet({
   useEffect(() => {
     if (!open) {
       setDetailsOpen(false);
-      setFilterOpen(false);
-      setShowCustom(false);
     }
   }, [open]);
 
@@ -297,9 +279,9 @@ export function OwnerProfitSheet({
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent
           side="bottom"
-          className="dash-sheet rounded-t-3xl px-0 pb-6 max-h-[92dvh] overflow-y-auto"
+          className="dash-sheet rounded-t-3xl p-0 pb-6 gap-0 max-h-[92dvh] overflow-y-auto"
         >
-          <div className="sticky top-0 z-10 bg-white border-b border-[#f1ede4] px-5 pt-4 pb-3">
+          <div className="sticky top-0 z-10 bg-white border-b border-[#f1ede4] px-5 pt-5 pb-3 rounded-t-3xl">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <h2 className="text-lg font-bold text-[#0f172a] truncate">{branchName}</h2>
@@ -314,23 +296,11 @@ export function OwnerProfitSheet({
               </button>
             </div>
 
-            <div className="mt-3 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5 text-sm font-semibold text-[#0f172a] min-w-0">
-                <CalendarDays className="w-4 h-4 text-[#1f75fe] shrink-0" />
-                <span className="capitalize truncate">{dateRangeLabel}</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setPendingPreset(filterPreset);
-                  setShowCustom(false);
-                  setFilterOpen(true);
-                }}
-                className="flex items-center gap-1.5 bg-white border border-[#e8e3d9] rounded-xl px-3 py-1.5 text-xs font-semibold text-[#64748b] hover:bg-[#f1ede4] transition-colors shrink-0"
-              >
-                <SlidersHorizontal className="w-3.5 h-3.5 text-[#94a3b8]" />
-                {filterLabel}
-              </button>
+            <div className="mt-3 flex items-center gap-1.5 text-sm font-semibold text-[#0f172a] min-w-0">
+              <CalendarDays className="w-4 h-4 text-[#1f75fe] shrink-0" />
+              <span className="capitalize truncate">{filterLabel}</span>
+              <span className="text-[#94a3b8] font-medium">·</span>
+              <span className="capitalize truncate text-[#64748b] font-medium">{dateRangeLabel}</span>
             </div>
           </div>
 
@@ -385,102 +355,9 @@ export function OwnerProfitSheet({
         </SheetContent>
       </Sheet>
 
-      {/* Date filter */}
-      <Sheet open={filterOpen} onOpenChange={(v) => { setFilterOpen(v); if (!v) setShowCustom(false); }}>
-        <SheetContent side="bottom" className="dash-sheet rounded-t-3xl px-0 pb-8 max-h-[85dvh] overflow-y-auto">
-          <AnimatePresence mode="wait" initial={false}>
-            {!showCustom ? (
-              <motion.div key="presets" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                <div className="flex items-center justify-between px-5 pt-4 pb-2">
-                  <h2 className="text-base font-bold text-[#0f172a]">Фильтр по дате</h2>
-                  <button type="button" onClick={() => setFilterOpen(false)} className="w-8 h-8 rounded-full bg-[#f1ede4] flex items-center justify-center text-[#64748b]">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-                <div className="px-5 mt-2">
-                  <PeriodPills
-                    value={pendingPreset}
-                    options={FILTER_PRESETS.map((p) => ({ value: p.key, label: p.label }))}
-                    onChange={(key) => {
-                      if (key === "custom") {
-                        setPendingPreset("custom");
-                        setShowCustom(true);
-                      } else {
-                        setPendingPreset(key as FilterPreset);
-                      }
-                    }}
-                    size="md"
-                  />
-                </div>
-                <div className="px-5 mt-4 flex flex-col gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => { setFilterPreset(pendingPreset); setFilterOpen(false); setShowCustom(false); }}
-                    className="w-full py-3.5 rounded-full text-sm font-semibold text-white bg-[#1f75fe] hover:bg-[#1a65e8] transition-colors"
-                  >
-                    Применить
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setPendingPreset("month"); setFilterPreset("month"); setFilterOpen(false); setShowCustom(false); }}
-                    className="w-full py-3.5 rounded-full text-sm font-semibold text-[#64748b] bg-[#f1ede4] hover:bg-[#e8e3d9] transition-colors"
-                  >
-                    Сбросить
-                  </button>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div key="custom" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
-                <div className="flex items-center gap-3 px-5 pt-4 pb-4">
-                  <button type="button" onClick={() => setShowCustom(false)} className="w-8 h-8 rounded-full bg-[#f1ede4] flex items-center justify-center text-[#64748b]">
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <h2 className="text-base font-bold text-[#0f172a] flex-1">Выбрать период</h2>
-                  <button type="button" onClick={() => { setFilterOpen(false); setShowCustom(false); }} className="w-8 h-8 rounded-full bg-[#f1ede4] flex items-center justify-center text-[#64748b]">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-                <div className="px-5 space-y-3">
-                  <div>
-                    <p className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider mb-1.5">Начало</p>
-                    <div className="relative">
-                      <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8] pointer-events-none" />
-                      <input type="date" value={customFrom} max={customTo} onChange={(e) => setCustomFrom(e.target.value)} className="w-full pl-9 pr-4 py-3 rounded-xl border border-[#e8e3d9] text-sm font-semibold text-[#0f172a] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 focus:outline-none bg-white" />
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider mb-1.5">Конец</p>
-                    <div className="relative">
-                      <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8] pointer-events-none" />
-                      <input type="date" value={customTo} min={customFrom} max={toInputValue(new Date())} onChange={(e) => setCustomTo(e.target.value)} className="w-full pl-9 pr-4 py-3 rounded-xl border border-[#e8e3d9] text-sm font-semibold text-[#0f172a] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 focus:outline-none bg-white" />
-                    </div>
-                  </div>
-                  <div className="bg-[#1f75fe]/10 rounded-2xl px-4 py-3 flex items-center gap-2">
-                    <CalendarDays className="w-4 h-4 text-[#1f75fe] shrink-0" />
-                    <span className="text-sm font-semibold text-[#1f75fe]">
-                      {customFrom && customTo ? fmtDateRange(new Date(customFrom), new Date(customTo)) : "Выберите даты"}
-                    </span>
-                  </div>
-                </div>
-                <div className="px-5 mt-5">
-                  <button
-                    type="button"
-                    disabled={!customFrom || !customTo}
-                    onClick={() => { setFilterPreset("custom"); setPendingPreset("custom"); setFilterOpen(false); setShowCustom(false); }}
-                    className="w-full py-3.5 rounded-full text-sm font-semibold text-white disabled:opacity-50 bg-[#1f75fe] hover:bg-[#1a65e8] transition-colors"
-                  >
-                    Применить
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </SheetContent>
-      </Sheet>
-
       {/* Details analytics */}
       <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <SheetContent side="bottom" className="dash-sheet rounded-t-3xl px-0 pb-8 max-h-[85dvh] overflow-y-auto">
+        <SheetContent side="bottom" className="dash-sheet rounded-t-3xl p-0 pb-8 gap-0 max-h-[85dvh] overflow-y-auto">
           <div className="flex items-center justify-between px-5 pt-4 pb-2">
             <div>
               <h2 className="text-base font-bold text-[#0f172a]">Детальная аналитика</h2>
