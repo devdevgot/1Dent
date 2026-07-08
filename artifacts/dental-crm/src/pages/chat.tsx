@@ -33,6 +33,7 @@ import { getRoleDashboardPath } from "@/lib/role-redirect";
 import { WhatsAppConnectModal, WhatsAppIcon, type WaStatus } from "@/components/whatsapp/whatsapp-connect-modal";
 import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader } from "@/components/layout/page-header";
+import { ChatMessagesSkeleton } from "@/components/skeletons";
 import { toast } from "sonner";
 
 const BRAND      = "#1f75fe";
@@ -540,13 +541,7 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
         className="flex-1 overflow-y-auto overflow-x-hidden py-3 font-manrope"
         style={{ backgroundColor: CHAT_BG, backgroundImage: DOT_PATTERN }}
       >
-        {isLoading && (
-          <div className="flex items-center justify-center h-full">
-            <div className="bg-white rounded-2xl border border-[#e8e3d9] px-5 py-3 text-sm text-[#64748b] shadow-sm">
-              {t("chat.loadingMessages")}
-            </div>
-          </div>
-        )}
+        {isLoading && <ChatMessagesSkeleton />}
 
         {isError && (
           <div className="flex flex-col items-center justify-center h-full gap-3 px-8 text-center">

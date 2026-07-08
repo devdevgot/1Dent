@@ -77,7 +77,7 @@ export default function AccountantDashboard() {
   const { data: analyticsData, isLoading, refetch } = useGetOwnerAnalytics({
     query: { queryKey: getGetOwnerAnalyticsQueryKey() },
   });
-  const { data: proceduresData } = useListProcedures();
+  const { data: proceduresData, isLoading: proceduresLoading } = useListProcedures();
   const { data: payrollData, refetch: refetchPayroll } = useGetPayrollRecords();
   const { data: summaryData } = useGetFinancialSummary({
     dateFrom: todayStr,
@@ -273,7 +273,22 @@ export default function AccountantDashboard() {
             </button>
           </div>
 
-          {doctorRevenueList.length === 0 ? (
+          {proceduresLoading ? (
+            <div className="space-y-4">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <div className="dash-skeleton w-8 h-8 rounded-full flex-none" />
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center mb-1.5">
+                      <div className="dash-skeleton h-4 w-32 rounded" />
+                      <div className="dash-skeleton h-4 w-20 rounded" />
+                    </div>
+                    <div className="dash-skeleton h-1.5 w-full rounded-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : doctorRevenueList.length === 0 ? (
             <div className="text-center py-8">
               <TrendingUp className="w-10 h-10 text-[var(--text-subtle)]/30 mx-auto mb-3" />
               <p className="text-[var(--text-secondary)] font-medium">{t("accountantDashboard.noData")}</p>
@@ -333,7 +348,13 @@ export default function AccountantDashboard() {
             </span>
           )}
         </h3>
-        {completedNoBilling.length === 0 ? (
+        {proceduresLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="dash-skeleton h-12 rounded-lg" />
+            ))}
+          </div>
+        ) : completedNoBilling.length === 0 ? (
           <div className="text-center py-8">
             <div className="w-12 h-12 bg-[var(--success-light)] rounded-full flex items-center justify-center mx-auto mb-3">
               <TrendingUp className="w-6 h-6 text-[var(--success)]" />

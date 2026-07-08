@@ -25,46 +25,38 @@ import {
   DoctorScheduleDayPageSkeleton,
   DoctorAnalyticsPageSkeleton,
   AdminDashboardSkeleton,
+  OwnerDashboardSkeleton,
+  DoctorDashboardSkeleton,
+  AccountantDashboardSkeleton,
+  WarehouseDashboardSkeleton,
+  FinancialsPageSkeleton,
+  AdminFinancePageSkeleton,
+  AnalyticsPageSkeleton,
+  PayrollMyPageSkeleton,
+  UsersPageSkeleton,
+  StaffDetailPageSkeleton,
+  InventoryPageSkeleton,
+  WarehousePageSkeleton,
+  ServicesPageSkeleton,
+  LogsPageSkeleton,
+  ChatPageSkeleton,
+  ChatbotPageSkeleton,
+  ChannelsPageSkeleton,
+  MenuPageSkeleton,
+  AiCreditsPageSkeleton,
+  ContractTemplatesPageSkeleton,
+  MigrationPageSkeleton,
+  BranchesPageSkeleton,
+  ClinicBranchesPageSkeleton,
+  AppShellSkeleton,
+  AuthShellSkeleton,
 } from "@/components/skeletons";
-
-function LazyPageFallback() {
-  return (
-    <div className="flex items-center justify-center py-20">
-      <div className="w-10 h-10 border-4 border-[#1f75fe]/20 border-t-[#1f75fe] rounded-full animate-spin" />
-    </div>
-  );
-}
-
-function StaffRouteFallback() {
-  return (
-    <div className="min-h-screen bg-[#faf8f4] font-manrope">
-      <div className="px-5 pt-5 pb-4 bg-white border-b border-[#e8e3d9]">
-        <div className="h-7 w-40 rounded-xl bg-[#f1ede4] animate-pulse" />
-        <div className="h-4 w-32 rounded-lg bg-[#f1ede4] animate-pulse mt-2" />
-      </div>
-      <div className="p-5">
-        <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-md overflow-hidden">
-          {Array.from({ length: 7 }).map((_, i) => (
-            <div key={i} className="px-4 py-3.5 flex items-center gap-3 border-b border-[#e8e3d9] last:border-b-0">
-              <div className="w-9 h-9 rounded-xl bg-[#f1ede4] animate-pulse shrink-0" />
-              <div className="flex-1 space-y-2">
-                <div className="h-4 w-40 max-w-full rounded bg-[#f1ede4] animate-pulse" />
-                <div className="h-3 w-24 rounded bg-[#f1ede4] animate-pulse" />
-              </div>
-              <div className="h-6 w-16 rounded-lg bg-[#f1ede4] animate-pulse" />
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 type LazyPageModule = { default: React.ComponentType<any> };
 
 function lazyPage(
   load: () => Promise<LazyPageModule>,
-  fallback: React.ReactNode = <LazyPageFallback />,
+  fallback: React.ReactNode = <AppShellSkeleton />,
 ) {
   const Component = lazy(load);
   return function LazyRoutePage() {
@@ -80,23 +72,23 @@ const Login = lazyPage(() => import("@/pages/login"));
 const Register = lazyPage(() => import("@/pages/register"));
 const ForgotPassword = lazyPage(() => import("@/pages/forgot-password"));
 const ResetPassword = lazyPage(() => import("@/pages/reset-password"));
-const OwnerDashboard = lazyPage(() => import("@/pages/dashboard-owner"));
+const OwnerDashboard = lazyPage(() => import("@/pages/dashboard-owner"), <OwnerDashboardSkeleton />);
 const AdminDashboard = lazyPage(() => import("@/pages/dashboard-admin"), <AdminDashboardSkeleton />);
-const DoctorDashboard = lazyPage(() => import("@/pages/dashboard-doctor"));
-const AccountantDashboard = lazyPage(() => import("@/pages/dashboard-accountant"));
-const WarehouseDashboard = lazyPage(() => import("@/pages/dashboard-warehouse"));
+const DoctorDashboard = lazyPage(() => import("@/pages/dashboard-doctor"), <DoctorDashboardSkeleton />);
+const AccountantDashboard = lazyPage(() => import("@/pages/dashboard-accountant"), <AccountantDashboardSkeleton />);
+const WarehouseDashboard = lazyPage(() => import("@/pages/dashboard-warehouse"), <WarehouseDashboardSkeleton />);
 const PatientsPage = lazyPage(() => import("@/pages/patients"), <PatientsPageSkeleton />);
 const ToothDetailPage = lazyPage(() => import("@/pages/tooth-detail"), <ToothDetailPageSkeleton />);
-const ChatPage = lazyPage(() => import("@/pages/chat"));
-const AnalyticsPage = lazyPage(() => import("@/pages/analytics"));
-const InventoryPage = lazyPage(() => import("@/pages/inventory"));
-const ServicesPage = lazyPage(() => import("@/pages/services"));
-const LogsPage = lazyPage(() => import("@/pages/logs"));
-const FinancialsPage = lazyPage(() => import("@/pages/financials"));
-const WarehousePage = lazyPage(() => import("@/pages/warehouse"));
-const UsersPage = lazyPage(() => import("@/pages/users"), <StaffRouteFallback />);
-const ChatbotPage = lazyPage(() => import("@/pages/chatbot"));
-const StaffDetailPage = lazyPage(() => import("@/pages/staff-detail"), <StaffRouteFallback />);
+const ChatPage = lazyPage(() => import("@/pages/chat"), <ChatPageSkeleton />);
+const AnalyticsPage = lazyPage(() => import("@/pages/analytics"), <AnalyticsPageSkeleton />);
+const InventoryPage = lazyPage(() => import("@/pages/inventory"), <InventoryPageSkeleton />);
+const ServicesPage = lazyPage(() => import("@/pages/services"), <ServicesPageSkeleton />);
+const LogsPage = lazyPage(() => import("@/pages/logs"), <LogsPageSkeleton />);
+const FinancialsPage = lazyPage(() => import("@/pages/financials"), <FinancialsPageSkeleton />);
+const WarehousePage = lazyPage(() => import("@/pages/warehouse"), <WarehousePageSkeleton />);
+const UsersPage = lazyPage(() => import("@/pages/users"), <UsersPageSkeleton />);
+const ChatbotPage = lazyPage(() => import("@/pages/chatbot"), <ChatbotPageSkeleton />);
+const StaffDetailPage = lazyPage(() => import("@/pages/staff-detail"), <StaffDetailPageSkeleton />);
 const DoctorAnalyticsPage = lazyPage(() => import("@/pages/doctor-analytics"), <DoctorAnalyticsPageSkeleton />);
 const DoctorSchedulePage = lazyPage(() => import("@/pages/doctor-schedule"), <DoctorSchedulePageSkeleton />);
 const DoctorScheduleDayPage = lazyPage(() => import("@/pages/doctor-schedule-day"), <DoctorScheduleDayPageSkeleton />);
@@ -104,22 +96,22 @@ const AccountSettingsPage = lazyPage(() => import("@/pages/account-settings"));
 const AccountEditProfilePage = lazyPage(() => import("@/pages/account-edit-profile"));
 const AccountChangeEmailPage = lazyPage(() => import("@/pages/account-change-email"));
 const AccountChangePasswordPage = lazyPage(() => import("@/pages/account-change-password"));
-const MenuPage = lazyPage(() => import("@/pages/menu"));
-const MigrationPage = lazyPage(() => import("@/pages/migration"));
-const ChannelsPage = lazyPage(() => import("@/pages/channels"));
-const ContractTemplatesPage = lazyPage(() => import("@/pages/contract-templates"));
-const BranchesPage = lazyPage(() => import("@/pages/branches"));
-const ClinicBranchesPage = lazyPage(() => import("@/pages/clinic-branches"));
+const MenuPage = lazyPage(() => import("@/pages/menu"), <MenuPageSkeleton />);
+const MigrationPage = lazyPage(() => import("@/pages/migration"), <MigrationPageSkeleton />);
+const ChannelsPage = lazyPage(() => import("@/pages/channels"), <ChannelsPageSkeleton />);
+const ContractTemplatesPage = lazyPage(() => import("@/pages/contract-templates"), <ContractTemplatesPageSkeleton />);
+const BranchesPage = lazyPage(() => import("@/pages/branches"), <BranchesPageSkeleton />);
+const ClinicBranchesPage = lazyPage(() => import("@/pages/clinic-branches"), <ClinicBranchesPageSkeleton />);
 const PricingPage = lazyPage(() => import("@/pages/pricing"));
-const AiCreditsPage = lazyPage(() => import("@/pages/ai-credits"));
+const AiCreditsPage = lazyPage(() => import("@/pages/ai-credits"), <AiCreditsPageSkeleton />);
 const LandingPage = lazyPage(() => import("@/pages/landing"));
 const SlashTabletPage = lazyPage(() => import("@/pages/slash-tablet"));
 const TabletLinkPage = lazyPage(() => import("@/pages/slash-tablet/tablet-link"));
 const NotFound = lazyPage(() => import("@/pages/not-found"));
 const AdminCalendarPage = lazyPage(() => import("@/pages/admin-calendar"), <AdminCalendarPageSkeleton />);
 const AdminAppointmentNewPage = lazyPage(() => import("@/pages/admin-appointment-new"), <AppointmentNewPageSkeleton />);
-const AdminFinancePage = lazyPage(() => import("@/pages/admin-finance"));
-const PayrollMyPage = lazyPage(() => import("@/pages/payroll-my"));
+const AdminFinancePage = lazyPage(() => import("@/pages/admin-finance"), <AdminFinancePageSkeleton />);
+const PayrollMyPage = lazyPage(() => import("@/pages/payroll-my"), <PayrollMyPageSkeleton />);
 const PlanPaywall = lazy(() =>
   import("@/components/billing/plan-paywall").then((m) => ({ default: m.PlanPaywall })),
 );
@@ -204,13 +196,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [clearAuth, setLocation]);
 
   if (!DEV_BYPASS && isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center">
-          <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-        </div>
-      </div>
-    );
+    return <AuthShellSkeleton />;
   }
 
   return <>{children}</>;

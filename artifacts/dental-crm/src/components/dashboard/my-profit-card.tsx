@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
-import { ChevronRight, Loader2 } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useBranchStore, type ClinicBranch } from "@/hooks/use-branch-store";
@@ -160,7 +160,7 @@ export function MyProfitCard({ onSelectBranch }: MyProfitCardProps) {
             </div>
             <div className="shrink-0 text-right">
               {loadingRevenues || row.revenue === null ? (
-                <Loader2 className="w-4 h-4 text-[#94a3b8] animate-spin ml-auto" />
+                <div className="h-4 w-16 rounded bg-[#f1ede4] animate-pulse ml-auto" />
               ) : (
                 <p className="font-bold text-[15px] text-[#0f172a] tabular-nums">
                   {fmtRevenue(row.revenue)}

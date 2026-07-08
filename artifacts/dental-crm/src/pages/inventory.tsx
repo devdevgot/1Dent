@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { useTranslation } from "react-i18next";
+import { InventoryListSkeleton } from "@/components/skeletons";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { PageShell } from "@/components/layout/page-shell";
 
@@ -372,9 +373,7 @@ export default function InventoryPage() {
 
       {/* List */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="w-8 h-8 border-4 border-[#1f75fe]/20 border-t-[#1f75fe] rounded-full animate-spin" />
-        </div>
+        <InventoryListSkeleton />
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 gap-3 text-[#94a3b8]">
           <Package className="w-10 h-10 opacity-30" />

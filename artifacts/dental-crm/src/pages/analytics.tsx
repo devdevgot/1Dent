@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PageShell } from "@/components/layout/page-shell";
+import { QACardSkeleton } from "@/components/skeletons";
 import { PageHeader } from "@/components/layout/page-header";
 import { PeriodPills } from "@/components/layout/period-pills";
 import {
@@ -352,6 +353,9 @@ export default function AnalyticsPage() {
 
           {/* ── Section 1: Core KPI cards ── */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {/* First load: no analytics payload yet — mirror the KPI grid */}
+            {!analytics && analyticsLoading &&
+              Array.from({ length: 6 }).map((_, i) => <QACardSkeleton key={i} />)}
             {/* Revenue */}
             {analytics && ("revenueThisMonth" in analytics || "myRevenueThisMonth" in analytics) && (
               <QACard

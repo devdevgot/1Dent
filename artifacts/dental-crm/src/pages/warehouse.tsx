@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Package, AlertTriangle, TrendingDown, BarChart3 } from "lucide-react";
 import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader } from "@/components/layout/page-header";
+import { ListRowsSkeleton, Bone, SkeletonCard } from "@/components/skeletons";
 
 type Tab = "stock" | "consumption";
 
@@ -113,6 +114,15 @@ export default function WarehousePage() {
         <>
           {/* Summary stats */}
           <div className="grid grid-cols-3 gap-3">
+            {isLoading ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <SkeletonCard key={i} className="p-3 text-center">
+                  <Bone className="h-7 w-10 rounded mx-auto mb-1" />
+                  <Bone className="h-3 w-16 rounded mx-auto" />
+                </SkeletonCard>
+              ))
+            ) : (
+              <>
             <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-md p-3 text-center">
               <p className="text-xl font-bold text-[#0f172a]">{items.length}</p>
               <p className="text-xs text-[#64748b] mt-0.5">{t("warehouse.totalItems")}</p>
@@ -125,12 +135,12 @@ export default function WarehousePage() {
               <p className="text-xl font-bold text-[#dc2626]">{lowStock.length}</p>
               <p className="text-xs text-[#64748b] mt-0.5">{t("warehouse.lowStock")}</p>
             </div>
+              </>
+            )}
           </div>
 
           {isLoading ? (
-            <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-md p-8 text-center text-[#64748b] text-sm">
-              {t("common.loading")}
-            </div>
+            <ListRowsSkeleton rows={5} avatar={false} card />
           ) : items.length === 0 ? (
             <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-md p-8 text-center text-[#64748b] text-sm">
               {t("warehouse.empty")}
@@ -192,9 +202,7 @@ export default function WarehousePage() {
           </div>
 
           {consumptionLoading ? (
-            <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-md p-8 text-center text-[#64748b] text-sm">
-              {t("common.loading")}
-            </div>
+            <ListRowsSkeleton rows={4} avatar={false} card />
           ) : consumption.length === 0 ? (
             <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-md p-8 text-center text-[#64748b] text-sm">
               {t("warehouse.consumptionEmpty")}

@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader } from "@/components/layout/page-header";
+import { ListRowsSkeleton, ChatMessagesSkeleton } from "@/components/skeletons";
 import {
   useGetChatbotSettings,
   useUpdateChatbotSettings,
@@ -237,7 +238,7 @@ function SessionChat({ phone, onBack }: { phone: string; onBack: () => void }) {
 
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1 bg-[#faf8f4]">
         {isLoading ? (
-          <div className="flex items-center justify-center h-full text-sm text-[#64748b]">{t("chatbot.loading", "Загрузка...")}</div>
+          <ChatMessagesSkeleton />
         ) : isError ? (
           <div className="flex flex-col items-center justify-center h-full gap-3 px-6 text-center">
             <AlertCircle className="h-8 w-8 text-[#dc2626]/60" />
@@ -561,7 +562,7 @@ function AiBroadcastTab() {
       </div>
 
       {isLoading ? (
-        <div className="p-8 text-center text-[#64748b] text-sm">Загрузка…</div>
+        <ListRowsSkeleton rows={4} avatar={false} card />
       ) : runs.length === 0 ? (
         <div className="rounded-2xl border border-[#e8e3d9] bg-[#faf8f4] p-10 text-center">
           <Megaphone className="h-8 w-8 text-[#94a3b8]/40 mx-auto mb-2" />
@@ -811,7 +812,7 @@ export default function ChatbotPage() {
             </div>
 
             {sessionsLoading ? (
-              <div className="p-8 text-center text-[#64748b] text-sm">{t("common.loading")}</div>
+              <ListRowsSkeleton rows={5} avatar card />
             ) : sessions.length === 0 ? (
               <div className="rounded-2xl border border-[#e8e3d9] bg-[#faf8f4] p-10 text-center">
                 <Bot className="h-8 w-8 text-[#94a3b8]/40 mx-auto mb-2" />

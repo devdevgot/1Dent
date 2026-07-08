@@ -19,6 +19,7 @@ import {
 import { useLocation } from "wouter";
 import { PageHeader } from "@/components/layout/page-header";
 import { PageShell } from "@/components/layout/page-shell";
+import { ListRowsSkeleton } from "@/components/skeletons";
 
 const PATIENT_FIELDS = [
   { field: "patient.name",        label: "ФИО пациента" },
@@ -515,9 +516,7 @@ export default function ContractTemplatesPage() {
           </h2>
 
           {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-6 h-6 text-[#94a3b8] animate-spin" />
-            </div>
+            <ListRowsSkeleton rows={4} avatar={false} card />
           ) : templates.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-3 py-12 text-center bg-white rounded-2xl border border-[#e8e3d9]">
               <div className="w-12 h-12 rounded-2xl bg-[#f1ede4] flex items-center justify-center">

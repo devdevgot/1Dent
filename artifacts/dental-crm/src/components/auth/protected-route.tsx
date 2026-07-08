@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useAuthStore } from "@/hooks/use-auth";
 import { AppLayout } from "@/components/layout/app-layout";
 import { AdminLayout } from "@/components/layout/admin-layout";
+import { AuthShellSkeleton } from "@/components/skeletons";
 
 const DEV_BYPASS = import.meta.env.VITE_DEV_BYPASS_AUTH === "true";
 
@@ -45,14 +46,7 @@ export function ProtectedRoute({ component: Component, allowedRoles = [], useAdm
   }, [isLoading, isAuthenticated, setLocation]);
 
   if (!DEV_BYPASS && isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center">
-          <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-          <p className="mt-4 font-medium text-muted-foreground animate-pulse">Verifying session...</p>
-        </div>
-      </div>
-    );
+    return <AuthShellSkeleton />;
   }
 
   if (!DEV_BYPASS && (!isAuthenticated || !user)) {
