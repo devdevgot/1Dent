@@ -33,7 +33,7 @@ export function PageHeader({
   const { isOverlay } = useOverlayNavigation();
 
   if (isOverlay) {
-    if (!right && !bottom) return null;
+    if (!right && !bottom && !subtitle && !badge) return null;
     return (
       <header
         className={cn(
@@ -43,6 +43,16 @@ export function PageHeader({
           className,
         )}
       >
+        {(subtitle || badge) ? (
+          <div className="flex items-center gap-2 px-4 pt-2 min-h-[28px]">
+            {subtitle ? (
+              <p className="text-xs text-[#64748b] truncate flex-1">{subtitle}</p>
+            ) : (
+              <div className="flex-1" />
+            )}
+            {badge}
+          </div>
+        ) : null}
         {right ? (
           <div className="flex items-center justify-end gap-1.5 px-4 pt-2 pb-2 min-h-[44px]">
             {right}

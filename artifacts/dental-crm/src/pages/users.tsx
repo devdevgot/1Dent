@@ -24,6 +24,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 import { usePageBack } from "@/hooks/use-page-back";
+import { useOverlayNavigation } from "@/hooks/use-overlay-navigation";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import {
   DropdownMenu,
@@ -180,7 +181,13 @@ export default function StaffPage() {
   const { user: currentUser } = useAuthStore();
   const [, navigate] = useLocation();
   const goBack = usePageBack({ menuFallback: true });
+  const { isOverlay, pushDetail } = useOverlayNavigation();
   const queryClient = useQueryClient();
+
+  const openStaffDetail = (id: string) => {
+    if (isOverlay) pushDetail(id);
+    else navigate(`/users/${id}`);
+  };
 
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
@@ -354,9 +361,7 @@ export default function StaffPage() {
           </>
         }
         bottom={
-          <div className="px-4 pb-3">
-            <StaffSectionNav active="list" />
-          </div>
+          <StaffSectionNav active="list" />
         }
       />
 
@@ -473,7 +478,7 @@ export default function StaffPage() {
                           key={u.id}
                           onClick={() => {
                             if (u.role !== "owner") {
-                              navigate(`/users/${u.id}`);
+                              openStaffDetail(u.id);
                             }
                           }}
                           className={cn(
@@ -581,7 +586,7 @@ export default function StaffPage() {
                               onEdit={() => { setEditingUser(u); setEditDialogOpen(true); }}
                               onDelete={() => setDeleteConfirmId(u.id)}
                               onToggleActive={() => statusMutation.mutate({ id: u.id, isActive: !u.isActive })}
-                              onNavigate={() => navigate(`/users/${u.id}`)}
+                              onNavigate={() => openStaffDetail(u.id)}
                             />
                           </td>
                         </tr>

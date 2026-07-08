@@ -3,7 +3,7 @@
 import { useEffect, useCallback, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { X } from "lucide-react";
+import { ChevronLeft, X } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,8 @@ type MenuServiceSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
+  subtitle?: string;
+  onStackBack?: () => void;
   children: ReactNode;
 };
 
@@ -20,6 +22,8 @@ export function MenuServiceSheet({
   open,
   onOpenChange,
   title,
+  subtitle,
+  onStackBack,
   children,
 }: MenuServiceSheetProps) {
   const isMobile = useIsMobile();
@@ -35,7 +39,13 @@ export function MenuServiceSheet({
     document.body.style.overflow = "hidden";
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") handleClose();
+      if (e.key === "Escape") {
+        if (onStackBack) {
+          onStackBack();
+        } else {
+          handleClose();
+        }
+      }
     };
     window.addEventListener("keydown", onKeyDown);
 
@@ -43,7 +53,7 @@ export function MenuServiceSheet({
       document.body.style.overflow = prevOverflow;
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [open, handleClose]);
+  }, [open, handleClose, onStackBack]);
 
   if (typeof document === "undefined") return null;
 
@@ -58,7 +68,6 @@ export function MenuServiceSheet({
           aria-label={title}
           initial={false}
         >
-          {/* Backdrop */}
           <motion.button
             type="button"
             aria-label="Закрыть"
@@ -70,7 +79,6 @@ export function MenuServiceSheet({
             onClick={handleClose}
           />
 
-          {/* Panel */}
           <motion.div
             className={cn(
               "relative flex w-full flex-col overflow-hidden",
@@ -81,30 +89,42 @@ export function MenuServiceSheet({
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
-            transition={{
-              duration: 0.5,
-              ease: EASE,
-            }}
+            transition={{ duration: 0.5, ease: EASE }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Drag handle */}
             {isMobile ? (
               <div className="flex justify-center pt-2.5 shrink-0" aria-hidden="true">
                 <div className="w-10 h-1 rounded-full bg-[#d9d3c7]" />
               </div>
             ) : null}
 
-            {/* Header */}
             <motion.div
-              className="sticky top-0 z-10 shrink-0 bg-white/95 backdrop-blur-md border-b border-[#e8e3d9] px-5 pt-3 pb-3 safe-area-top"
+              className="sticky top-0 z-10 shrink-0 bg-white/95 backdrop-blur-md border-b border-[#e8e3d9] px-4 pt-3 pb-3 safe-area-top"
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.32, ease: EASE, delay: 0.08 }}
             >
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="min-w-0 flex-1 text-lg font-bold text-[#0f172a] truncate">
-                  {title}
-                </h2>
+              <div className="flex items-center gap-2">
+                {onStackBack ? (
+                  <button
+                    type="button"
+                    onClick={onStackBack}
+                    aria-label="Назад"
+                    className="w-9 h-9 rounded-full bg-[#f1ede4] flex items-center justify-center text-[#64748b] shrink-0 hover:bg-[#e8e3d9] active:scale-90 transition-all"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                ) : null}
+
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-base sm:text-lg font-bold text-[#0f172a] leading-tight line-clamp-2">
+                    {title}
+                  </h2>
+                  {subtitle ? (
+                    <p className="text-xs text-[#64748b] mt-0.5 truncate">{subtitle}</p>
+                  ) : null}
+                </div>
+
                 <button
                   type="button"
                   onClick={handleClose}
@@ -121,17 +141,12 @@ export function MenuServiceSheet({
               </div>
             </motion.div>
 
-            {/* Body */}
             <motion.div
               className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              transition={{
-                duration: 0.42,
-                ease: EASE,
-                delay: 0.14,
-              }}
+              transition={{ duration: 0.42, ease: EASE, delay: 0.14 }}
             >
               {children}
             </motion.div>

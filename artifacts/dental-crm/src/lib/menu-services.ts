@@ -13,6 +13,10 @@ export type MenuServiceDefinition = {
   category: MenuCategory;
   component: React.LazyExoticComponent<ComponentType<Record<string, never>>>;
   skeletonVariant: MenuServiceSkeletonVariant;
+  /** Hide from /menu category grid (still openable via overlay slug) */
+  showInMenu?: boolean;
+  supportsDetail?: boolean;
+  supportsDate?: boolean;
 };
 
 const MENU_CATEGORIES: { key: MenuCategory; titleKey: string }[] = [
@@ -67,6 +71,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     category: "clinic",
     component: lazy(() => import("@/pages/doctor-schedule")),
     skeletonVariant: "schedule",
+    supportsDate: true,
   },
   {
     slug: "services",
@@ -83,10 +88,23 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     nameKey: "nav.users",
     href: "/users",
     img: "/icons/menu/users.png",
-    roles: ["owner"],
+    roles: ["owner", "admin"],
     category: "clinic",
     component: lazy(() => import("@/pages/users")),
     skeletonVariant: "users",
+    supportsDetail: true,
+  },
+  {
+    slug: "doctor-ratings",
+    nameKey: "staff.ratingsTitle",
+    href: "/users/ratings",
+    img: "/icons/menu/users.png",
+    roles: ["owner", "admin"],
+    category: "clinic",
+    showInMenu: false,
+    component: lazy(() => import("@/pages/doctor-ratings")),
+    skeletonVariant: "users",
+    supportsDetail: true,
   },
   {
     slug: "clinic-branches",
