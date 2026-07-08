@@ -2,43 +2,15 @@ import { db, errorEventsTable, platformAdminsTable } from "@workspace/db";
 import type { ErrorEvent } from "@workspace/db";
 import { and, count, eq, gte } from "drizzle-orm";
 import { logger } from "../../lib/logger";
-import { getTmaUrl } from "../../shared/platform-bot";
 import type { CaptureErrorInput } from "./error-events.service";
-
-const DEDUP_MINUTES = 15;
-
-const SOURCE_LABELS: Record<string, string> = {
-  api: "API",
-  "dental-crm": "CRM",
-  "tg-admin": "Админка",
-  worker: "Worker",
-};
-
-export function isCriticalError(input: CaptureErrorInput): boolean {
-  const severity = input.severity ?? "error";
-  if (severity === "fatal") return true;
-  if (severity !== "error") return false;
-
-  if (input.source === "api" || input.source === "worker") return true;
-
-  const code = input.code ?? "";
-  if (input.source === "dental-crm" || input.source === "tg-admin") {
-    return (
-      code === "REACT_BOUNDARY"
-      || code === "UNHANDLED_REJECTION"
-      || code.startsWith("HTTP_5")
-    );
-  }
-
-  return false;
-}
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
+import {
+  canSendWithinHourlyCap,
+  formatAlert,
+  readTelegramDedupMinutes,
+  readTelegramMaxPerHour,
+  recordTelegramSend,
+  shouldNotifyTelegram,
+} from "./error-events.policy";
 
 async function sendTelegramMessage(token: string, chatId: string, text: string): Promise<void> {
   const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
@@ -58,38 +30,13 @@ async function sendTelegramMessage(token: string, chatId: string, text: string):
   }
 }
 
-function formatAlert(event: ErrorEvent): string {
-  const errorsUrl = `${getTmaUrl().replace(/\/$/, "")}#/errors`;
-
-  const lines = [
-    "🚨 <b>Критическая ошибка 1Dent</b>",
-    "",
-    `<b>Источник:</b> ${escapeHtml(SOURCE_LABELS[event.source] ?? event.source)}`,
-    `<b>Уровень:</b> ${escapeHtml(event.severity)}`,
-    event.code ? `<b>Код:</b> <code>${escapeHtml(event.code)}</code>` : null,
-    `<b>Время:</b> ${new Date(event.createdAt).toLocaleString("ru-RU", { timeZone: "Asia/Almaty" })}`,
-    "",
-    "<b>Сообщение:</b>",
-    escapeHtml(event.message.slice(0, 500)),
-  ];
-
-  if (event.url) {
-    lines.push("", `<b>URL:</b> <code>${escapeHtml(event.url.slice(0, 200))}</code>`);
-  }
-  if (event.clinicId) {
-    lines.push(`<b>Клиника:</b> <code>${escapeHtml(event.clinicId.slice(0, 8))}…</code>`);
-  }
-  if (errorsUrl) {
-    lines.push("", `<a href="${errorsUrl}">Открыть в панели →</a>`);
-  }
-
-  return lines.filter((line): line is string => line != null).join("\n");
-}
-
-async function isFirstFingerprintInWindow(fingerprint: string | null): Promise<boolean> {
+async function isFirstFingerprintInWindow(
+  fingerprint: string | null,
+  dedupMinutes: number,
+): Promise<boolean> {
   if (!fingerprint) return true;
 
-  const since = new Date(Date.now() - DEDUP_MINUTES * 60 * 1000);
+  const since = new Date(Date.now() - dedupMinutes * 60 * 1000);
   const [row] = await db
     .select({ total: count() })
     .from(errorEventsTable)
@@ -101,11 +48,11 @@ async function isFirstFingerprintInWindow(fingerprint: string | null): Promise<b
   return (row?.total ?? 0) <= 1;
 }
 
-export async function notifyAdminsIfCritical(
+export async function notifyAdmins(
   event: ErrorEvent,
   input: CaptureErrorInput,
 ): Promise<void> {
-  if (!isCriticalError(input)) return;
+  if (!shouldNotifyTelegram(input)) return;
 
   const token = process.env["PLATFORM_TG_BOT_TOKEN"];
   if (!token) {
@@ -113,8 +60,18 @@ export async function notifyAdminsIfCritical(
     return;
   }
 
-  if (!(await isFirstFingerprintInWindow(event.fingerprint))) {
+  const dedupMinutes = readTelegramDedupMinutes();
+  if (!(await isFirstFingerprintInWindow(event.fingerprint, dedupMinutes))) {
     logger.debug({ fingerprint: event.fingerprint }, "[error-events] skip Telegram alert — duplicate fingerprint");
+    return;
+  }
+
+  const maxPerHour = readTelegramMaxPerHour();
+  if (!canSendWithinHourlyCap(maxPerHour)) {
+    logger.warn(
+      { maxPerHour, eventId: event.id },
+      "[error-events] skip Telegram alert — hourly cap reached",
+    );
     return;
   }
 
@@ -135,7 +92,25 @@ export async function notifyAdminsIfCritical(
   const failed = results.filter((r) => r.status === "rejected").length;
   if (failed > 0) {
     logger.warn({ failed, total: admins.length }, "[error-events] some admin Telegram alerts failed");
-  } else {
-    logger.info({ admins: admins.length, eventId: event.id }, "[error-events] critical error Telegram alert sent");
+    return;
   }
+
+  recordTelegramSend();
+  logger.info({ admins: admins.length, eventId: event.id }, "[error-events] Telegram alert sent");
 }
+
+/** @deprecated Use notifyAdmins */
+export const notifyAdminsIfCritical = notifyAdmins;
+
+/** @deprecated All errors are notified when ERROR_TELEGRAM_NOTIFY=all */
+export function isCriticalError(_input: CaptureErrorInput): boolean {
+  return true;
+}
+
+export {
+  shouldNotifyTelegram,
+  formatAlert,
+  canSendWithinHourlyCap,
+  resetTelegramHourlyCapForTests,
+  recordTelegramSendForTests,
+} from "./error-events.policy";

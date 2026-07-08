@@ -9,6 +9,7 @@ import {
 import { eq, and, lte } from "drizzle-orm";
 import { sendWhatsAppMessage } from "../../shared/whatsapp";
 import { logger } from "../../lib/logger";
+import { attachWorkerFailedHandler } from "../error-events/error-events.worker-capture";
 import { transitionPatientStage, PATIENT_STAGE_TRIGGERS } from "../patients/patient-stage.service";
 
 const QUEUE_NAME = "postop-followups";
@@ -93,13 +94,15 @@ if (process.env["REDIS_URL"]) {
     defaultJobOptions: { attempts: 3, backoff: { type: "exponential", delay: 5000 } },
   });
 
-  new Worker<FollowupJobData>(
+  const followupWorker = new Worker<FollowupJobData>(
     QUEUE_NAME,
     async (job) => {
       await processFollowupJob(job.data);
     },
     { connection, concurrency: 3 },
   );
+
+  attachWorkerFailedHandler(followupWorker, QUEUE_NAME);
 
   logger.info("[FollowupQueue] BullMQ worker started for post-op followups");
 } else {
