@@ -5,8 +5,7 @@ import { useAuthStore } from "@/hooks/use-auth";
 import { prefetchStaffList } from "@workspace/api-client-react";
 import { useTranslation } from "react-i18next";
 import { PageShell } from "@/components/layout/page-shell";
-import { PageHeader } from "@/components/layout/page-header";
-import { IosGroup, IosSection } from "@/components/layout/ios-group";
+import { RootTabHeader } from "@/components/layout/root-tab-header";
 
 type MenuCategory = "clinic" | "finance" | "automation" | "admin" | "warehouse";
 
@@ -43,31 +42,39 @@ const ALL_NAV_ITEMS: {
   { nameKey: "nav.migration", href: "/migration", img: "/icons/menu/migration.png", roles: ["owner"], category: "admin" },
 ];
 
-function MenuTileGrid({ items }: { items: { href: string; img: string; name: string }[] }) {
+function CategoryCard({
+  title,
+  items,
+}: {
+  title: string;
+  items: { href: string; img: string; name: string }[];
+}) {
   return (
-    <IosGroup className="py-2 px-1">
+    <section className="bg-[var(--ds-surface)] rounded-[20px] border border-[var(--ds-border)] px-3 pt-4 pb-2 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+      <h2 className="px-2 mb-1 text-[13px] font-bold uppercase tracking-[0.06em] text-[var(--text-secondary)]">
+        {title}
+      </h2>
       <div className="grid grid-cols-4">
         {items.map((item) => (
-          <div key={item.href}>
-            <Link
-              href={item.href}
-              className="flex flex-col items-center gap-1.5 py-3 px-0.5 rounded-xl hover:bg-[#f1ede4] active:bg-[#f1ede4] transition-colors"
-            >
-              <img
-                src={item.img}
-                alt=""
-                aria-hidden
-                className="w-[52px] h-[52px] shrink-0 object-contain drop-shadow-sm"
-                draggable={false}
-              />
-              <span className="w-full text-[10px] font-bold text-[#0f172a] text-center leading-[1.2] line-clamp-2 break-words">
-                {item.name}
-              </span>
-            </Link>
-          </div>
+          <Link
+            key={item.href}
+            href={item.href}
+            className="flex flex-col items-center gap-2 pt-3 pb-3.5 px-1 rounded-2xl hover:bg-[var(--surface-2)] active:bg-[var(--surface-2)] active:scale-[0.97] transition-all"
+          >
+            <img
+              src={item.img}
+              alt=""
+              aria-hidden
+              className="w-14 h-14 shrink-0 object-contain drop-shadow-sm"
+              draggable={false}
+            />
+            <span className="w-full min-h-[26px] text-[11px] font-semibold text-[var(--text)] text-center leading-[1.2] line-clamp-2 break-words">
+              {item.name}
+            </span>
+          </Link>
         ))}
       </div>
-    </IosGroup>
+    </section>
   );
 }
 
@@ -94,22 +101,24 @@ export default function MenuPage() {
   })).filter((category) => category.items.length > 0);
 
   return (
-    <PageShell className="pb-6">
-      <PageHeader title={t("nav.servicesHub")} sticky />
+    <PageShell className="pb-8">
+      <RootTabHeader title={t("nav.servicesHub")} />
 
-      {categoriesWithItems.length === 0 ? (
-        <IosSection className="mt-4">
-          <p className="py-8 text-center text-caption text-[#94a3b8]">
+      <div className="px-4 pt-2 space-y-4">
+        {categoriesWithItems.length === 0 ? (
+          <p className="py-10 text-center text-caption text-[var(--text-subtle)]">
             {t("menuPage.noShortcuts")}
           </p>
-        </IosSection>
-      ) : (
-        categoriesWithItems.map((category) => (
-          <IosSection key={category.key} title={t(category.titleKey)} className="mb-5">
-            <MenuTileGrid items={category.items} />
-          </IosSection>
-        ))
-      )}
+        ) : (
+          categoriesWithItems.map((category) => (
+            <CategoryCard
+              key={category.key}
+              title={t(category.titleKey)}
+              items={category.items}
+            />
+          ))
+        )}
+      </div>
     </PageShell>
   );
 }
