@@ -8,15 +8,15 @@ type PatientsMenuTileProps = {
   className?: string;
 };
 
-/** «Пациенты» tile in reference style: pastel squircle + 3D object + bold label. */
+/** «Пациенты» tile in reference style: 3D-rendered pastel squircle + bold label. */
 export function PatientsMenuTile({ label, className }: PatientsMenuTileProps) {
   return (
     <div className={cn("flex flex-col items-center gap-1.5", className)}>
       <img
-        src="/icons/patients-menu.svg"
+        src="/icons/patients-menu.png"
         alt=""
         aria-hidden
-        className="shrink-0 object-contain"
+        className="shrink-0 object-contain drop-shadow-sm"
         style={{ width: PATIENTS_TILE_SIZE, height: PATIENTS_TILE_SIZE }}
         draggable={false}
       />
