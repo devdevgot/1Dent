@@ -9,6 +9,7 @@ import {
 import { eq, and, lte } from "drizzle-orm";
 import { sendWhatsAppMessage } from "../../shared/whatsapp";
 import { logger } from "../../lib/logger";
+import { transitionPatientStage, PATIENT_STAGE_TRIGGERS } from "../patients/patient-stage.service";
 
 const QUEUE_NAME = "postop-followups";
 const FOLLOWUP_DELAYS_HOURS = [3, 72, 168] as const;
@@ -45,7 +46,7 @@ async function getClinicTemplates(clinicId: string): Promise<[string, string, st
 }
 
 async function processFollowupJob(data: FollowupJobData): Promise<void> {
-  const { followupId, patientId, messageTemplate } = data;
+  const { followupId, patientId, clinicId, messageTemplate } = data;
 
   const [patient] = await db
     .select({ phone: patientsTable.phone })
@@ -68,10 +69,12 @@ async function processFollowupJob(data: FollowupJobData): Promise<void> {
         "[FollowupQueue] WhatsApp disabled — post-op followup would have been sent",
       );
     }
-    await db
-      .update(patientsTable)
-      .set({ status: "post_op_monitoring", updatedAt: new Date() })
-      .where(eq(patientsTable.id, patientId));
+    await transitionPatientStage({
+      patientId,
+      clinicId,
+      toStatus: "post_op_monitoring",
+      trigger: PATIENT_STAGE_TRIGGERS.POST_OP_FOLLOWUP_SENT,
+    });
   }
 
   await db

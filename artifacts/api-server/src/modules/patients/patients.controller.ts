@@ -30,8 +30,11 @@ const patientStatusValues = [
   "diagnostics",
   "treatment_assigned",
   "treatment_in_progress",
+  "payment_processing",
   "post_op_monitoring",
   "completed",
+  "repeat_sale",
+  "rejected",
 ] as const;
 
 const interactionTypeValues = [

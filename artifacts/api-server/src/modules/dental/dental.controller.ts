@@ -11,9 +11,8 @@ import multer from "multer";
 import { DentalRepository } from "./dental.repository";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
-import { db, patientsTable } from "@workspace/db";
-import { and, eq } from "drizzle-orm";
 import { PatientsRepository } from "../patients/patients.repository";
+import { transitionPatientStage, PATIENT_STAGE_TRIGGERS } from "../patients/patient-stage.service";
 import { ClinicPricesRepository } from "../clinic/clinic-prices.repository";
 import { ProceduresRepository } from "../procedures/procedures.repository";
 import { triggerDentalAiAnalysis, getLatestDentalAnalysis, deleteLatestDentalAnalysis } from "./dental-ai";
@@ -22,6 +21,7 @@ import { openrouter, DEEPSEEK_MODEL } from "../../lib/openrouter-client";
 import { matchVoiceServices } from "./voice-service-matching";
 
 const router: IRouter = Router({ mergeParams: true });
+export const diagnosisRouter: IRouter = Router({ mergeParams: true });
 const repo = new DentalRepository();
 const patientsRepo = new PatientsRepository();
 const pricesRepo = new ClinicPricesRepository();
@@ -66,6 +66,7 @@ const addTreatmentSchema = z.object({
 });
 
 router.use(authMiddleware);
+diagnosisRouter.use(authMiddleware);
 
 const readRoles = roleGuard("owner", "admin", "doctor");
 const writeRoles = roleGuard("owner", "admin", "doctor");
@@ -252,13 +253,26 @@ router.post("/trigger-ai-analysis", writeRoles, async (req: Request, res: Respon
     logger.warn({ err }, "[DentalAI] Background analysis error from trigger endpoint"),
   );
 
-  // Move patient to diagnostics stage
-  await db
-    .update(patientsTable)
-    .set({ status: "diagnostics", updatedAt: new Date() })
-    .where(and(eq(patientsTable.id, patientId), eq(patientsTable.clinicId, req.user!.clinicId)));
-
   res.status(202).json({ success: true });
+});
+
+// POST /patients/:id/diagnosis/start
+diagnosisRouter.post("/diagnosis/start", writeRoles, async (req: Request, res: Response, next: NextFunction) => {
+  const patientId = String(req.params["id"]);
+  const ok = await assertPatientAccess(patientId, req.user!.clinicId, next).catch(next);
+  if (!ok) return;
+
+  await transitionPatientStage({
+    patientId,
+    clinicId: req.user!.clinicId,
+    toStatus: "diagnostics",
+    trigger: PATIENT_STAGE_TRIGGERS.DIAGNOSIS_STARTED,
+    actorId: req.user!.userId,
+  }).catch((err) => {
+    logger.warn({ err, patientId }, "Failed to transition patient to diagnostics");
+  });
+
+  res.status(200).json({ success: true });
 });
 
 // POST /patients/:id/teeth/voice-diagnose
@@ -521,7 +535,13 @@ router.post("/:toothFdi/treatments", writeRoles, async (req: Request, res: Respo
     .catch(next);
   if (!treatment) return;
 
-  await patientsRepo.updateStatus(patientId, req.user!.clinicId, "treatment_in_progress").catch((err) => {
+  await transitionPatientStage({
+    patientId,
+    clinicId: req.user!.clinicId,
+    toStatus: "treatment_in_progress",
+    trigger: PATIENT_STAGE_TRIGGERS.TREATMENT_STARTED,
+    actorId: req.user!.userId,
+  }).catch((err) => {
     logger.warn({ err, patientId }, "Failed to update patient status to treatment_in_progress");
   });
 
@@ -556,7 +576,13 @@ router.patch("/:toothFdi/treatments/:treatmentId", writeRoles, async (req: Reque
     .catch(next);
   if (!result) return;
 
-  await patientsRepo.updateStatus(patientId, req.user!.clinicId, "payment_processing").catch((err) => {
+  await transitionPatientStage({
+    patientId,
+    clinicId: req.user!.clinicId,
+    toStatus: "payment_processing",
+    trigger: PATIENT_STAGE_TRIGGERS.TREATMENT_COMPLETED,
+    actorId: req.user!.userId,
+  }).catch((err) => {
     logger.warn({ err, patientId }, "Failed to update patient status to payment_processing");
   });
 

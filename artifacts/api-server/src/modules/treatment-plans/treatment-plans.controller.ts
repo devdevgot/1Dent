@@ -5,6 +5,7 @@ import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { NotFoundError, ValidationError } from "../../shared/errors";
 import { TreatmentPlansRepository, PlanLockedError, ItemAlreadyCompletedError } from "./treatment-plans.repository";
 import { PatientsRepository } from "../patients/patients.repository";
+import { transitionPatientStage, PATIENT_STAGE_TRIGGERS } from "../patients/patient-stage.service";
 import { ClinicPricesRepository } from "../clinic/clinic-prices.repository";
 import { DentalRepository } from "../dental/dental.repository";
 import { generatePlanPdfBuffer, type PlanPdfContext } from "./treatment-plan-pdf";
@@ -229,7 +230,13 @@ router.post(
     if (plan === undefined) return;
     if (!plan) return next(new NotFoundError("Treatment plan not found"));
 
-    await patientsRepo.updateStatus(req.params["id"] as string, req.user!.clinicId, "treatment_assigned").catch(() => {});
+    await transitionPatientStage({
+      patientId: req.params["id"] as string,
+      clinicId: req.user!.clinicId,
+      toStatus: "treatment_assigned",
+      trigger: PATIENT_STAGE_TRIGGERS.TREATMENT_PLAN_APPROVED,
+      actorId: req.user!.userId,
+    }).catch(() => {});
 
     res.json({ success: true, data: { plan } });
   },

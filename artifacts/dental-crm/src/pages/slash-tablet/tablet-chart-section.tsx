@@ -6,7 +6,9 @@ import {
 import {
   useUpdateTooth,
   useTriggerDentalAiAnalysis,
+  useStartDiagnosis,
   getListTeethQueryKey,
+  getListPatientsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -49,6 +51,13 @@ export function TabletChartSection({
   const qc = useQueryClient();
   const updateToothMutation = useUpdateTooth();
   const triggerAnalysisMutation = useTriggerDentalAiAnalysis();
+  const startDiagnosisMutation = useStartDiagnosis({
+    mutation: {
+      onSuccess: () => {
+        void qc.invalidateQueries({ queryKey: getListPatientsQueryKey() });
+      },
+    },
+  });
   const [isDiagnosisMode, setIsDiagnosisMode] = useState(false);
   const [diagnosisMap, setDiagnosisMap] = useState<DiagnosisMap>(new Map());
   const [diagnosisToothFdi, setDiagnosisToothFdi] = useState<number | null>(null);
@@ -67,11 +76,12 @@ export function TabletChartSection({
   }, [teeth, diagnosisMap]);
 
   const startDiagnosis = useCallback(() => {
+    void startDiagnosisMutation.mutateAsync(patientId);
     setIsDiagnosisMode(true);
     setDiagnosisMap(new Map());
     setDiagnosisToothFdi(null);
     onSelectFdi(null);
-  }, [onSelectFdi]);
+  }, [onSelectFdi, patientId, startDiagnosisMutation]);
 
   const cancelDiagnosis = useCallback(() => {
     setIsDiagnosisMode(false);
