@@ -1,4 +1,4 @@
-import { KZ_UTC_OFFSET_LABEL } from "./almaty-time";
+import { KZ_UTC_OFFSET_LABEL } from "./almaty-time.ts";
 import type { ChatbotState } from "./chatbot.types";
 
 export interface ChatbotPromptFacts {
@@ -283,7 +283,7 @@ export function buildFactsBlock(facts: ChatbotPromptFacts, state: ChatbotState):
     const urgencyLabel =
       filtered.urgency === "urgent"
         ? "срочно"
-        : filtered.urgency === "routine"
+        : filtered.urgency === "planned"
           ? "планово"
           : filtered.urgency;
     lines.push(`Срочность: ${urgencyLabel}`);

@@ -15,6 +15,7 @@ import {
   KZ_UTC_OFFSET_LABEL,
   parseAlmatyDatetime,
 } from "./almaty-time";
+import { detectServiceTypeFromKeywords } from "./service-type-keywords.ts";
 import {
   CHAT_STYLE_PROMPT,
   splitTextToReply,
@@ -175,42 +176,7 @@ export async function classifyPatientRequest(
   return classifyWithRetry(message, history);
 }
 
-const SERVICE_KEYWORD_PATTERNS: Array<{ type: ServiceType; pattern: RegExp }> = [
-  {
-    type: "therapy",
-    pattern:
-      /\b(болит\s+зуб|болит\s+зубы|зуб\s+болит|тиск\s+ауыра|тіс\s+ауыра|тис\s+аура|кариес|пломб|пульпит|чувствительн)\b/i,
-  },
-  {
-    type: "hygiene",
-    pattern: /\b(чистк|гигиен|профилактик|налёт|налет|камн|тазалау|тазалоу|отбелив)\b/i,
-  },
-  {
-    type: "surgery",
-    pattern: /\b(удалени|удалить|снять\s+зуб|жулу|жұлу|суыру|имплант|синус)\b/i,
-  },
-  {
-    type: "orthodontics",
-    pattern: /\b(брекет|элайнер|прикус|выравнив|тіс\s+түзету|тис\s+тузет)\b/i,
-  },
-  {
-    type: "orthopedics",
-    pattern: /\b(коронк|мост|протез|винир|реставрац)\b/i,
-  },
-  {
-    type: "consultation",
-    pattern: /\b(консультац|консульт|осмотр|приём|прием|кеңес|кенес|тексеру|қаралу|каралу)\b/i,
-  },
-];
-
-export function detectServiceTypeFromKeywords(text: string): ServiceType | null {
-  const normalized = text.trim();
-  if (!normalized) return null;
-  for (const { type, pattern } of SERVICE_KEYWORD_PATTERNS) {
-    if (pattern.test(normalized)) return type;
-  }
-  return null;
-}
+export { detectServiceTypeFromKeywords } from "./service-type-keywords.ts";
 
 // ─── AI response generator ───────────────────────────────────────────────────
 
