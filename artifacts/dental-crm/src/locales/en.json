@@ -983,6 +983,13 @@
   "staff": {
     "title": "Team",
     "subtitle": "View all doctors and staff members",
+    "tabList": "Staff",
+    "tabRatings": "Doctor ratings",
+    "ratingsTitle": "Doctor ratings",
+    "ratingsSubtitle": "Rating based on revenue, procedures, and patient reviews",
+    "noRatings": "No rating data yet",
+    "noRatingsHint": "Ratings appear after the first appointments and procedures",
+    "score": "Score",
     "noStaff": "No staff members",
     "notFound": "Staff member not found",
     "doctor": "Doctor",
