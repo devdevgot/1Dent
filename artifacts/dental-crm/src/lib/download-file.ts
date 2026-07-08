@@ -1,5 +1,8 @@
-import { getBaseUrl } from "@/lib/base-url";
+import { fetchWithAuth } from "@workspace/api-client-react";
 import { getBranchRequestHeaders } from "@/lib/branch-context";
+
+const EXPORT_ACCEPT =
+  "application/pdf, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/octet-stream";
 
 function parseErrorMessage(text: string, status: number): string {
   const trimmed = text.trim();
@@ -18,35 +21,43 @@ function filenameFromDisposition(header: string | null, fallback: string): strin
   return match?.[1]?.trim() || fallback;
 }
 
+function isErrorContentType(contentType: string | null): boolean {
+  if (!contentType) return false;
+  const ct = contentType.toLowerCase();
+  return (
+    ct.includes("application/json") ||
+    ct.includes("text/html") ||
+    ct.startsWith("text/plain")
+  );
+}
+
+async function readResponseError(res: Response): Promise<string> {
+  const text = await res.text();
+  return parseErrorMessage(text, res.status);
+}
+
 /**
  * Download a binary file from an authenticated API path.
- * Mirrors the proven pattern from migration.tsx export.
+ * Uses the same auth + branch headers as the rest of the CRM API client.
  */
 export async function downloadFile(path: string, fallbackFilename: string): Promise<void> {
-  const token = localStorage.getItem("auth_token");
-  const base = getBaseUrl();
+  const hadBranch = Boolean(getBranchRequestHeaders()["x-clinic-branch-id"]);
+  const fetchOpts = { headers: { Accept: EXPORT_ACCEPT } } as const;
 
-  const buildHeaders = (withBranch: boolean): Record<string, string> => ({
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...(withBranch ? getBranchRequestHeaders() : {}),
-  });
-
-  let res = await fetch(`${base}${path}`, {
-    headers: buildHeaders(true),
-    credentials: "include",
-  });
+  let res = await fetchWithAuth(path, fetchOpts);
 
   // Stale branch id in localStorage → 403; retry without branch scope.
-  if (res.status === 403 && getBranchRequestHeaders()["x-clinic-branch-id"]) {
-    res = await fetch(`${base}${path}`, {
-      headers: buildHeaders(false),
-      credentials: "include",
-    });
+  if (res.status === 403 && hadBranch) {
+    res = await fetchWithAuth(path, { ...fetchOpts, skipBranchHeader: true });
   }
 
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(parseErrorMessage(text, res.status));
+    throw new Error(await readResponseError(res));
+  }
+
+  const contentType = res.headers.get("content-type");
+  if (isErrorContentType(contentType)) {
+    throw new Error(await readResponseError(res));
   }
 
   const blob = await res.blob();

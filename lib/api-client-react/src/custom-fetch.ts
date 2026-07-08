@@ -2,6 +2,11 @@ export type CustomFetchOptions = RequestInit & {
   responseType?: "json" | "text" | "blob" | "auto";
 };
 
+export type FetchWithAuthOptions = RequestInit & {
+  /** When true, do not attach x-clinic-branch-id (e.g. retry after stale branch 403). */
+  skipBranchHeader?: boolean;
+};
+
 export type ErrorType<T = unknown> = ApiError<T>;
 
 export type BodyType<T> = T;
@@ -352,6 +357,53 @@ async function parseSuccessBody(
   }
 }
 
+async function attachAuthHeaders(
+  input: RequestInfo | URL,
+  headers: Headers,
+  options: { skipBranchHeader?: boolean } = {},
+): Promise<{ method: string; url: string }> {
+  const method = resolveMethod(input, undefined);
+
+  if (_authTokenGetter && !headers.has("authorization")) {
+    const token = await _authTokenGetter();
+    if (token) {
+      headers.set("authorization", `Bearer ${token}`);
+    }
+  }
+
+  const requestUrl = resolveUrl(input);
+  const shouldAttachBranchHeader =
+    !options.skipBranchHeader &&
+    !SKIP_BRANCH_HEADER_PATHS.some((p) => requestUrl.includes(p));
+  if (_branchIdGetter && shouldAttachBranchHeader && !headers.has("x-clinic-branch-id")) {
+    const branchId = await _branchIdGetter();
+    if (branchId) {
+      headers.set("x-clinic-branch-id", branchId);
+    }
+  }
+
+  return { method, url: requestUrl };
+}
+
+/** Low-level authenticated fetch that returns the raw Response (for file downloads). */
+export async function fetchWithAuth(
+  input: RequestInfo | URL,
+  options: FetchWithAuthOptions = {},
+): Promise<Response> {
+  input = applyBaseUrl(input);
+  const { skipBranchHeader = false, headers: headersInit, ...init } = options;
+  const method = resolveMethod(input, init.method);
+
+  if (init.body != null && (method === "GET" || method === "HEAD")) {
+    throw new TypeError(`fetchWithAuth: ${method} requests cannot have a body.`);
+  }
+
+  const headers = mergeHeaders(isRequest(input) ? input.headers : undefined, headersInit);
+  await attachAuthHeaders(input, headers, { skipBranchHeader });
+
+  return fetch(input, { ...init, method, headers, credentials: "include" });
+}
+
 export async function customFetch<T = unknown>(
   input: RequestInfo | URL,
   options: CustomFetchOptions = {},
@@ -379,25 +431,7 @@ export async function customFetch<T = unknown>(
     headers.set("accept", DEFAULT_JSON_ACCEPT);
   }
 
-  // Attach bearer token when an auth getter is configured and no
-  // Authorization header has been explicitly provided.
-  if (_authTokenGetter && !headers.has("authorization")) {
-    const token = await _authTokenGetter();
-    if (token) {
-      headers.set("authorization", `Bearer ${token}`);
-    }
-  }
-
-  const requestUrl = resolveUrl(input);
-  const shouldAttachBranchHeader = !SKIP_BRANCH_HEADER_PATHS.some((p) => requestUrl.includes(p));
-  if (_branchIdGetter && shouldAttachBranchHeader && !headers.has("x-clinic-branch-id")) {
-    const branchId = await _branchIdGetter();
-    if (branchId) {
-      headers.set("x-clinic-branch-id", branchId);
-    }
-  }
-
-  const requestInfo = { method, url: requestUrl };
+  const requestInfo = await attachAuthHeaders(input, headers);
 
   const response = await fetch(input, { ...init, method, headers, credentials: "include" });
 
