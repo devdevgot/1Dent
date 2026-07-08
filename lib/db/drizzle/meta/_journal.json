@@ -351,6 +351,13 @@
       "when": 1782565800000,
       "tag": "0048_contract_status_created",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1782652200000,
+      "tag": "0049_finance_payroll_tables",
+      "breakpoints": true
     }
   ]
 }

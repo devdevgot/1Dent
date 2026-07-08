@@ -7,7 +7,7 @@ import {
 } from "express";
 import { AnalyticsRepository, type DoctorAnalyticsFilters, type AnalyticsDateRange } from "./analytics.repository";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
-import { ForbiddenError } from "../../shared/errors";
+import { ForbiddenError, AppError } from "../../shared/errors";
 import {
   db,
   proceduresTable,
@@ -322,7 +322,9 @@ router.get(
       res.end(body);
     } catch (err) {
       logger.error({ err, clinicId: req.user?.clinicId }, "Financial Excel export failed");
-      next(err);
+      if (err instanceof AppError) return next(err);
+      const detail = err instanceof Error ? err.message : "Unknown export error";
+      return next(new AppError(`Не удалось сформировать Excel-отчёт: ${detail}`, 500, "EXPORT_EXCEL_FAILED"));
     }
   },
 );
@@ -348,7 +350,9 @@ router.get(
       res.end(body);
     } catch (err) {
       logger.error({ err, clinicId: req.user?.clinicId }, "Financial PDF export failed");
-      next(err);
+      if (err instanceof AppError) return next(err);
+      const detail = err instanceof Error ? err.message : "Unknown export error";
+      return next(new AppError(`Не удалось сформировать PDF-отчёт: ${detail}`, 500, "EXPORT_PDF_FAILED"));
     }
   },
 );

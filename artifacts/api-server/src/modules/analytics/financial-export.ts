@@ -13,24 +13,40 @@ import {
   usersTable,
   clinicsTable,
 } from "@workspace/db";
-import { eq, and, gte, lte, sql, desc, type SQL } from "drizzle-orm";
+import { eq, and, gte, lte, sql, desc, inArray, type SQL } from "drizzle-orm";
 import { logger } from "../../shared/logger";
+import { procedureStatusEnum } from "@workspace/db";
 
 const _require = createRequire(import.meta.url);
 const _pdfmakeDir = path.dirname(_require.resolve("pdfmake/package.json"));
 
 function resolveRobotoFontsDir(): string {
-  const bundledDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "fonts", "Roboto");
-  const packageDir = path.join(_pdfmakeDir, "fonts", "Roboto");
-  for (const dir of [bundledDir, packageDir]) {
+  const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+  const candidates = [
+    path.join(moduleDir, "fonts", "Roboto"),
+    path.join(moduleDir, "..", "assets", "fonts", "Roboto"),
+    path.join(_pdfmakeDir, "fonts", "Roboto"),
+  ];
+  for (const dir of candidates) {
     if (fs.existsSync(path.join(dir, "Roboto-Regular.ttf"))) {
       return dir;
     }
   }
-  return packageDir;
+  throw new Error(
+    `Roboto fonts not found for PDF export (checked: ${candidates.join(", ")})`,
+  );
 }
 
-const _fontsDir = resolveRobotoFontsDir();
+let _fontsDir: string | null = null;
+
+function getFontsDir(): string {
+  if (!_fontsDir) {
+    _fontsDir = resolveRobotoFontsDir();
+  }
+  return _fontsDir;
+}
+
+const VALID_PROCEDURE_STATUSES = new Set<string>(procedureStatusEnum.enumValues);
 
 interface PdfmakeInstance {
   fonts: Record<string, Record<string, string>>;
@@ -39,13 +55,14 @@ interface PdfmakeInstance {
 }
 
 function getPdfInstance(): PdfmakeInstance {
+  const fontsDir = getFontsDir();
   const instance = _require("pdfmake") as PdfmakeInstance;
   instance.fonts = {
     Roboto: {
-      normal: path.join(_fontsDir, "Roboto-Regular.ttf"),
-      bold: path.join(_fontsDir, "Roboto-Medium.ttf"),
-      italics: path.join(_fontsDir, "Roboto-Italic.ttf"),
-      bolditalics: path.join(_fontsDir, "Roboto-MediumItalic.ttf"),
+      normal: path.join(fontsDir, "Roboto-Regular.ttf"),
+      bold: path.join(fontsDir, "Roboto-Medium.ttf"),
+      italics: path.join(fontsDir, "Roboto-Italic.ttf"),
+      bolditalics: path.join(fontsDir, "Roboto-MediumItalic.ttf"),
     },
   };
   instance.setUrlAccessPolicy(() => false);
@@ -66,12 +83,13 @@ export function parseExportFilters(query: Record<string, unknown>): FinancialExp
   const dateTo = rawTo ? new Date(rawTo + "T23:59:59Z") : undefined;
   const doctorId = typeof query["doctorId"] === "string" && query["doctorId"] ? query["doctorId"] : undefined;
   const status = typeof query["status"] === "string" ? query["status"] : "completed";
+  const normalizedStatus = status && VALID_PROCEDURE_STATUSES.has(status) ? status : "completed";
 
   return {
     dateFrom: dateFrom && !isNaN(dateFrom.getTime()) ? dateFrom : undefined,
     dateTo: dateTo && !isNaN(dateTo.getTime()) ? dateTo : undefined,
     doctorId,
-    status: status || undefined,
+    status: normalizedStatus || undefined,
   };
 }
 
@@ -203,25 +221,39 @@ export async function loadFinancialExportData(
   const procConds = buildProcConditions(clinicId, filters);
   const expConds = buildExpConditions(clinicId, filters.dateFrom, filters.dateTo);
 
-  const [clinicRow, procedures, expenses] = await Promise.all([
-    db.select({ name: clinicsTable.name }).from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1),
-    db
-      .select({
-        id: proceduresTable.id,
-        name: proceduresTable.name,
-        price: proceduresTable.price,
-        paymentMethod: proceduresTable.paymentMethod,
-        status: proceduresTable.status,
-        scheduledAt: proceduresTable.scheduledAt,
-        completedAt: proceduresTable.completedAt,
-        notes: proceduresTable.notes,
-        patientId: proceduresTable.patientId,
-        doctorId: proceduresTable.doctorId,
-      })
-      .from(proceduresTable)
-      .where(and(...procConds))
-      .orderBy(desc(proceduresTable.completedAt)),
-    db
+  let clinicName = "1Dent";
+  let procedures: FinancialExportData["procedures"] = [];
+  let expenses: FinancialExportData["expenses"] = [];
+
+  try {
+    const [clinicRow, procedureRows] = await Promise.all([
+      db.select({ name: clinicsTable.name }).from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1),
+      db
+        .select({
+          id: proceduresTable.id,
+          name: proceduresTable.name,
+          price: proceduresTable.price,
+          paymentMethod: proceduresTable.paymentMethod,
+          status: proceduresTable.status,
+          scheduledAt: proceduresTable.scheduledAt,
+          completedAt: proceduresTable.completedAt,
+          notes: proceduresTable.notes,
+          patientId: proceduresTable.patientId,
+          doctorId: proceduresTable.doctorId,
+        })
+        .from(proceduresTable)
+        .where(and(...procConds))
+        .orderBy(desc(proceduresTable.completedAt)),
+    ]);
+    clinicName = clinicRow[0]?.name ?? clinicName;
+    procedures = procedureRows;
+  } catch (err) {
+    logger.error({ err, clinicId, filters }, "Financial export: procedure query failed");
+    throw err;
+  }
+
+  try {
+    expenses = await db
       .select({
         id: clinicExpensesTable.id,
         category: clinicExpensesTable.category,
@@ -232,8 +264,10 @@ export async function loadFinancialExportData(
       })
       .from(clinicExpensesTable)
       .where(and(...expConds))
-      .orderBy(desc(clinicExpensesTable.expenseDate)),
-  ]);
+      .orderBy(desc(clinicExpensesTable.expenseDate));
+  } catch (err) {
+    logger.warn({ err, clinicId }, "Financial export: expenses query failed, continuing without expenses");
+  }
 
   let totalMaterialCost = 0;
   let consumption: FinancialExportData["consumption"] = [];
@@ -280,10 +314,31 @@ export async function loadFinancialExportData(
     logger.warn({ err, clinicId }, "Financial export: materials query failed, continuing without materials sheet");
   }
 
-  const [patientRows, doctorRows] = await Promise.all([
-    db.select({ id: patientsTable.id, name: patientsTable.name }).from(patientsTable).where(eq(patientsTable.clinicId, clinicId)),
-    db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable).where(eq(usersTable.clinicId, clinicId)),
-  ]);
+  const patientIds = [...new Set(procedures.map((p) => p.patientId))];
+  const doctorIds = [
+    ...new Set(procedures.map((p) => p.doctorId).filter((id): id is string => Boolean(id))),
+  ];
+
+  let patientRows: Array<{ id: string; name: string }> = [];
+  let doctorRows: Array<{ id: string; name: string }> = [];
+  try {
+    [patientRows, doctorRows] = await Promise.all([
+      patientIds.length > 0
+        ? db
+            .select({ id: patientsTable.id, name: patientsTable.name })
+            .from(patientsTable)
+            .where(and(eq(patientsTable.clinicId, clinicId), inArray(patientsTable.id, patientIds)))
+        : Promise.resolve([]),
+      doctorIds.length > 0
+        ? db
+            .select({ id: usersTable.id, name: usersTable.name })
+            .from(usersTable)
+            .where(and(eq(usersTable.clinicId, clinicId), inArray(usersTable.id, doctorIds)))
+        : Promise.resolve([]),
+    ]);
+  } catch (err) {
+    logger.warn({ err, clinicId }, "Financial export: patient/doctor lookup failed, using placeholders");
+  }
 
   const patientMap = new Map(patientRows.map((p) => [p.id, p.name]));
   const doctorMap = new Map(doctorRows.map((d) => [d.id, d.name]));
@@ -321,7 +376,7 @@ export async function loadFinancialExportData(
           : "За всё время";
 
   return {
-    clinicName: clinicRow[0]?.name ?? "1Dent",
+    clinicName,
     periodLabel,
     filters,
     procedures,
