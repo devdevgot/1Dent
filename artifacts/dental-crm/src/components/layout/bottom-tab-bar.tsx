@@ -1,4 +1,4 @@
-import { Link, useLocation } from "wouter";
+import { Link, useLocation, useSearch } from "wouter";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import {
@@ -12,6 +12,8 @@ import {
   TabServicesIcon,
   TAB_ACTIVE,
 } from "./bottom-tab-icons";
+import { isClinicalStaff } from "@/lib/role-groups";
+import { hrefToServiceSlug } from "@/lib/menu-services";
 
 type BottomTabBarProps = {
   roleDashboardHref: string;
@@ -29,6 +31,8 @@ type ResolvedTab = {
   icon: TabIcon;
   geoRestricted: boolean;
   isActive: boolean;
+  /** Opens as ?service= overlay from the role dashboard */
+  overlaySlug: string | null;
 };
 
 const ACCOUNT_SETTINGS_PREFIXES = [
@@ -37,8 +41,6 @@ const ACCOUNT_SETTINGS_PREFIXES = [
   "/account-change-email",
   "/account-change-password",
 ];
-
-import { isClinicalStaff } from "@/lib/role-groups";
 
 function getWorkTab(role: string): { labelKey: string; icon: TabIcon; href: string } {
   if (isClinicalStaff(role)) {
@@ -58,8 +60,20 @@ function matchesPath(location: string, href: string): boolean {
   return location === href || location.startsWith(`${href}/`);
 }
 
-function buildTabs(role: string, roleDashboardHref: string, location: string): ResolvedTab[] {
+function parseActiveService(search: string): string | null {
+  const raw = search.startsWith("?") ? search.slice(1) : search;
+  if (!raw) return null;
+  return new URLSearchParams(raw).get("service");
+}
+
+function buildTabs(
+  role: string,
+  roleDashboardHref: string,
+  location: string,
+  activeService: string | null,
+): ResolvedTab[] {
   const work = getWorkTab(role);
+  const workOverlaySlug = hrefToServiceSlug(work.href);
 
   const tabs: ResolvedTab[] = [
     {
@@ -68,7 +82,8 @@ function buildTabs(role: string, roleDashboardHref: string, location: string): R
       href: roleDashboardHref,
       icon: TabHomeIcon,
       geoRestricted: false,
-      isActive: matchesPath(location, roleDashboardHref),
+      isActive: location === roleDashboardHref && !activeService,
+      overlaySlug: null,
     },
     {
       id: "work",
@@ -76,7 +91,10 @@ function buildTabs(role: string, roleDashboardHref: string, location: string): R
       href: work.href,
       icon: work.icon,
       geoRestricted: true,
-      isActive: matchesPath(location, work.href),
+      isActive:
+        activeService === workOverlaySlug ||
+        (!activeService && matchesPath(location, work.href)),
+      overlaySlug: workOverlaySlug,
     },
     {
       id: "services",
@@ -85,6 +103,7 @@ function buildTabs(role: string, roleDashboardHref: string, location: string): R
       icon: TabServicesIcon,
       geoRestricted: false,
       isActive: location === "/menu",
+      overlaySlug: null,
     },
   ];
 
@@ -96,6 +115,7 @@ function buildTabs(role: string, roleDashboardHref: string, location: string): R
       icon: TabMessagesIcon,
       geoRestricted: true,
       isActive: matchesPath(location, "/chat"),
+      overlaySlug: null,
     });
   }
 
@@ -106,6 +126,7 @@ function buildTabs(role: string, roleDashboardHref: string, location: string): R
     icon: TabMoreIcon,
     geoRestricted: false,
     isActive: ACCOUNT_SETTINGS_PREFIXES.some((p) => matchesPath(location, p)),
+    overlaySlug: null,
   });
 
   return tabs;
@@ -118,9 +139,15 @@ export function BottomTabBar({
   hasBranches,
 }: BottomTabBarProps) {
   const { t } = useTranslation();
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
+  const search = useSearch();
+  const activeService = parseActiveService(search);
 
-  const tabs = buildTabs(role, roleDashboardHref, location);
+  const tabs = buildTabs(role, roleDashboardHref, location, activeService);
+
+  const openWorkOverlay = (slug: string) => {
+    navigate(`${roleDashboardHref}?service=${slug}`);
+  };
 
   return (
     <nav className="flex-none bg-white border-t border-[#e8e3d9] z-20 safe-area-bottom">
@@ -144,12 +171,8 @@ export function BottomTabBar({
             );
           }
 
-          return (
-            <Link
-              key={tab.id}
-              href={tab.href}
-              className="flex-1 flex flex-col items-center justify-center gap-1 min-w-0 px-1 select-none transition-colors"
-            >
+          const content = (
+            <>
               <Icon active={tab.isActive} />
               <span
                 className={cn(
@@ -160,6 +183,29 @@ export function BottomTabBar({
               >
                 {label}
               </span>
+            </>
+          );
+
+          if (tab.id === "work" && tab.overlaySlug) {
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => openWorkOverlay(tab.overlaySlug!)}
+                className="flex-1 flex flex-col items-center justify-center gap-1 min-w-0 px-1 select-none transition-colors"
+              >
+                {content}
+              </button>
+            );
+          }
+
+          return (
+            <Link
+              key={tab.id}
+              href={tab.href}
+              className="flex-1 flex flex-col items-center justify-center gap-1 min-w-0 px-1 select-none transition-colors"
+            >
+              {content}
             </Link>
           );
         })}
