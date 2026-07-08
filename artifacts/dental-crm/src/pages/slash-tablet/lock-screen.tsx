@@ -145,7 +145,7 @@ export function LockScreen({
         <div className="absolute -bottom-32 -right-24 h-96 w-96 rounded-full bg-[#7c3aed]/8 blur-3xl" />
       </div>
 
-      <div className="relative w-full max-w-md">
+      <div className="relative w-full max-w-lg">
         {bootError ? (
           <div className="rounded-3xl border border-[#fecaca] bg-[#fef2f2] p-8 text-center">
             <p className="text-sm text-[#dc2626]">{bootError}</p>

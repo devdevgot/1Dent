@@ -140,7 +140,7 @@ export function TabletDoctorSetup() {
         <div className="absolute -bottom-32 -right-24 h-96 w-96 rounded-full bg-[#7c3aed]/8 blur-3xl" />
       </div>
 
-      <div className="relative flex w-full max-w-md flex-col items-center text-center">
+      <div className="relative flex w-full max-w-lg flex-col items-center text-center">
         <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-[#1f75fe]/10">
           <TabletSmartphone className="h-10 w-10 text-[#1f75fe]" />
         </div>

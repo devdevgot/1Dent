@@ -4,12 +4,14 @@ import {
   EyeOff, CheckCircle2, ShieldCheck, Clock, Sparkles,
   Loader2, CalendarDays, Stethoscope, CreditCard, Wallet,
   Activity, ClipboardList, ArrowRight, HeartPulse,
+  Scissors, Crown, Layers,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { customFetch } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { discountedItemPrice } from "@/components/dental-chart/treatment-stage-config";
 import { OneDentLogo } from "./onedent-logo";
 import { TabletDentalChart } from "./tablet-dental-chart";
 import {
@@ -34,6 +36,17 @@ const CONDITION_STORY: Partial<Record<ToothCondition, { title: string; action: s
 const PAYMENT_MONTHS: Record<Exclude<PaymentOption, "full">, number> = {
   "3": 3, "6": 6, "12": 12,
 };
+
+const STAGE_ICONS: Record<string, React.ElementType> = {
+  prevention_treatment: Stethoscope,
+  surgery: Scissors,
+  orthopedics: Crown,
+  other: Layers,
+};
+
+function itemDisplayPrice(item: PlanStage["items"][number]): number {
+  return discountedItemPrice(item.price, item.discount ?? 0);
+}
 
 export function TabletPresentationMode({
   patient,
@@ -85,7 +98,7 @@ export function TabletPresentationMode({
   const remainingTotal = plan
     .flatMap((s) => s.items)
     .filter((i) => i.status !== "completed")
-    .reduce((s, i) => s + i.price, 0);
+    .reduce((s, i) => s + itemDisplayPrice(i), 0);
 
   const monthlyAmount = useMemo(() => {
     if (payment === "full") return 0;
@@ -139,7 +152,7 @@ export function TabletPresentationMode({
         >
           <EyeOff className="h-4 w-4" /> Вернуться врачу
         </button>
-        <div className="hidden items-center gap-2 sm:flex">
+        <div className="flex items-center gap-2">
           <StepChip icon={Activity} label="Осмотр" onClick={() => scrollTo(examineRef)} />
           <StepChip icon={ClipboardList} label="План" onClick={() => scrollTo(planRef)} />
           <StepChip icon={CreditCard} label="Стоимость" onClick={() => scrollTo(costRef)} />
@@ -147,8 +160,8 @@ export function TabletPresentationMode({
         <p className="text-xs font-medium text-[#94a3b8]">Режим для пациента</p>
       </header>
 
-      <div className="flex-1 overflow-y-auto pb-40">
-        <div className="mx-auto w-full max-w-4xl px-5 py-6">
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-6xl px-5 py-6 pb-6">
 
           {/* Hero — фирменный */}
           <motion.div
@@ -255,7 +268,7 @@ export function TabletPresentationMode({
                 <h2 className="text-lg font-extrabold text-[#0f172a]">Зоны внимания</h2>
               </div>
               <p className="mb-4 text-sm text-[#64748b]">Что мы обнаружили и как это решим.</p>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 md:grid-cols-2">
                 {problemTeeth.map(({ fdi, cond }) => {
                   const story = CONDITION_STORY[cond];
                   const meta = CONDITION_META[cond];
@@ -296,49 +309,102 @@ export function TabletPresentationMode({
                 </span>
                 <h2 className="text-lg font-extrabold text-[#0f172a]">Ваш план лечения</h2>
               </div>
-              <p className="mb-4 text-sm text-[#64748b]">Пошагово и прозрачно — вы всегда знаете, что дальше.</p>
-              <div className="space-y-3">
+              <p className="mb-4 text-sm text-[#64748b]">Пошагово по этапам — вы всегда знаете, что дальше.</p>
+              <div className="space-y-4">
                 {plan.map((stage, idx) => {
-                  const stageTotal = stage.items.reduce((s, i) => s + i.price, 0);
+                  const StageIcon = STAGE_ICONS[stage.id] ?? ClipboardList;
+                  const stageOriginal = stage.items.reduce((s, i) => s + i.price, 0);
+                  const stageTotal = stage.items.reduce((s, i) => s + itemDisplayPrice(i), 0);
+                  const stageDiscount = stage.items.find((i) => (i.discount ?? 0) > 0)?.discount ?? 0;
                   const pending = stage.items.filter((i) => i.status !== "completed").length;
+                  const doneInStage = stage.items.filter((i) => i.status === "completed").length;
                   return (
-                    <div key={stage.id} className="overflow-hidden rounded-2xl border border-[#eef2f7]">
-                      <div className="flex items-center justify-between px-4 py-3" style={{ backgroundColor: stage.bg }}>
-                        <div className="flex items-center gap-3">
-                          <span
-                            className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-black text-white"
+                    <div
+                      key={stage.id}
+                      className="overflow-hidden rounded-2xl border border-[#e8e3d9] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
+                      style={{ borderLeft: `4px solid ${stage.color}` }}
+                    >
+                      <div className="flex items-center justify-between gap-3 border-b border-[#eef2f7] px-4 py-3.5" style={{ backgroundColor: stage.bg }}>
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div
+                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
                             style={{ backgroundColor: stage.color }}
                           >
-                            {idx + 1}
-                          </span>
-                          <div>
-                            <p className="text-sm font-bold text-[#0f172a]">{stage.label}</p>
-                            <p className="text-xs text-[#64748b]">
+                            {stage.indexNumber ?? idx + 1}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <StageIcon className="h-4 w-4 shrink-0" style={{ color: stage.color }} />
+                              <p className="text-sm font-bold leading-snug text-[#0f172a]">{stage.label}</p>
+                              {stageDiscount > 0 && (
+                                <span className="rounded-full border border-rose-100 bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-600">
+                                  -{stageDiscount}%
+                                </span>
+                              )}
+                            </div>
+                            <p className="mt-0.5 text-xs text-[#64748b]">
                               {stage.items.length} {plural(stage.items.length, "процедура", "процедуры", "процедур")}
-                              {pending > 0 ? ` · ${pending} предстоит` : " · выполнено"}
+                              {doneInStage > 0 ? ` · выполнено ${doneInStage}` : ""}
+                              {pending > 0 ? ` · предстоит ${pending}` : ""}
                             </p>
                           </div>
                         </div>
-                        <p className="text-sm font-extrabold text-[#0f172a]">{fmtTenge(stageTotal)}</p>
+                        <div className="shrink-0 text-right">
+                          {stageDiscount > 0 ? (
+                            <>
+                              <p className="text-[10px] text-[#94a3b8] line-through">{fmtTenge(stageOriginal)}</p>
+                              <p className="text-sm font-extrabold text-emerald-600">{fmtTenge(stageTotal)}</p>
+                            </>
+                          ) : (
+                            <p className="text-sm font-extrabold text-[#0f172a]">{fmtTenge(stageTotal)}</p>
+                          )}
+                        </div>
                       </div>
                       <div className="divide-y divide-[#f1f5f9] bg-white">
-                        {stage.items.map((item) => (
-                          <div key={item.id} className="flex items-center gap-3 px-4 py-2.5">
-                            {item.status === "completed" ? (
-                              <CheckCircle2 className="h-4 w-4 shrink-0 text-[#16a34a]" />
-                            ) : (
-                              <div className="h-4 w-4 shrink-0 rounded-full border-2 border-[#cbd5e1]" />
-                            )}
-                            <p className={cn(
-                              "min-w-0 flex-1 text-sm",
-                              item.status === "completed" ? "text-[#94a3b8] line-through" : "text-[#0f172a]",
-                            )}>
-                              {item.title}
-                              {item.tooth && <span className="ml-1 text-[#94a3b8]">· зуб {item.tooth}</span>}
-                            </p>
-                            <p className="text-sm font-semibold text-[#64748b]">{fmtTenge(item.price)}</p>
-                          </div>
-                        ))}
+                        {stage.items.map((item) => {
+                          const finalPrice = itemDisplayPrice(item);
+                          const hasDiscount = (item.discount ?? 0) > 0;
+                          return (
+                            <div key={item.id} className="flex items-center gap-3 px-4 py-3">
+                              {item.status === "completed" ? (
+                                <CheckCircle2 className="h-5 w-5 shrink-0 text-[#16a34a]" />
+                              ) : (
+                                <div className="h-5 w-5 shrink-0 rounded-full border-2 border-[#cbd5e1]" />
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <p className={cn(
+                                  "text-sm font-medium leading-snug",
+                                  item.status === "completed" ? "text-[#94a3b8] line-through" : "text-[#0f172a]",
+                                )}>
+                                  {item.title}
+                                </p>
+                                {item.tooth != null && (
+                                  <p className="mt-0.5 text-[11px] text-[#94a3b8]">Зуб №{item.tooth}</p>
+                                )}
+                              </div>
+                              <div className="shrink-0 text-right">
+                                {hasDiscount ? (
+                                  <>
+                                    <p className="text-[10px] text-[#94a3b8] line-through">{fmtTenge(item.price)}</p>
+                                    <p className={cn(
+                                      "text-sm font-bold",
+                                      item.status === "completed" ? "text-emerald-600" : "text-[#0f172a]",
+                                    )}>
+                                      {fmtTenge(finalPrice)}
+                                    </p>
+                                  </>
+                                ) : (
+                                  <p className={cn(
+                                    "text-sm font-semibold",
+                                    item.status === "completed" ? "text-emerald-600" : "text-[#64748b]",
+                                  )}>
+                                    {fmtTenge(item.price)}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   );
@@ -368,7 +434,7 @@ export function TabletPresentationMode({
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+            <div className="grid grid-cols-4 gap-2.5">
               <PayOption label="Полностью" sub="одним платежом" active={payment === "full"} onClick={() => setPayment("full")} />
               <PayOption label="3 месяца" sub={`${fmtTenge(Math.ceil(remainingTotal / 3 / 100) * 100)}/мес`} active={payment === "3"} onClick={() => setPayment("3")} />
               <PayOption label="6 месяцев" sub={`${fmtTenge(Math.ceil(remainingTotal / 6 / 100) * 100)}/мес`} active={payment === "6"} onClick={() => setPayment("6")} />
@@ -377,7 +443,7 @@ export function TabletPresentationMode({
           </section>
 
           {/* Почему нам доверяют — нейтрально */}
-          <section className="grid gap-3 sm:grid-cols-3">
+          <section className="grid grid-cols-3 gap-3">
             {[
               { icon: ShieldCheck, title: "Современные материалы", desc: "Работаем на проверенных материалах и оборудовании" },
               { icon: Clock, title: "Удобный график", desc: "Запись в комфортное время и напоминания в WhatsApp" },
@@ -397,8 +463,8 @@ export function TabletPresentationMode({
       </div>
 
       {/* Нижняя панель — WhatsApp */}
-      <div className="fixed inset-x-0 bottom-0 border-t border-[#e6ebf2] bg-white/95 px-5 py-4 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] backdrop-blur-md safe-area-bottom">
-        <div className="mx-auto flex max-w-4xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="shrink-0 border-t border-[#e6ebf2] bg-white/95 px-5 py-4 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] backdrop-blur-md safe-area-bottom">
+        <div className="mx-auto flex w-full max-w-6xl flex-row items-center justify-between gap-4">
           <div className="min-w-0">
             <p className="text-sm font-bold text-[#0f172a]">
               {fmtTenge(remainingTotal)}

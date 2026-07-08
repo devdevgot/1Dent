@@ -211,7 +211,7 @@ export function PatientList({ onSelect }: { onSelect: (patientId: string) => voi
                   </button>
                 ))}
               </div>
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid gap-2 md:grid-cols-2">
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value as PatientStatus | "all")}
@@ -254,7 +254,7 @@ export function PatientList({ onSelect }: { onSelect: (patientId: string) => voi
           <p className="text-sm">{t("patients.noResults")}</p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filtered.map((p, i) => {
             const statusCol = KANBAN_COLUMNS.find((c) => c.id === p.status);
             const todayList = todayProcedures.get(p.id) ?? [];

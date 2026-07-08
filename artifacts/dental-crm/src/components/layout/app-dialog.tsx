@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useIsSlashTablet } from "@/hooks/use-slash-tablet";
 import {
   Dialog,
   DialogContent,
@@ -19,7 +20,7 @@ type AppDialogProps = {
   footer?: ReactNode;
   className?: string;
   bodyClassName?: string;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg" | "xl" | "2xl";
   showClose?: boolean;
 };
 
@@ -28,6 +29,15 @@ const sizeClasses = {
   md: "max-w-md",
   lg: "max-w-lg",
   xl: "max-w-2xl",
+  "2xl": "max-w-3xl",
+} as const;
+
+const tabletSizeClasses = {
+  sm: "max-w-lg",
+  md: "max-w-2xl",
+  lg: "max-w-2xl",
+  xl: "max-w-3xl",
+  "2xl": "max-w-3xl",
 } as const;
 
 export function AppDialog({
@@ -42,15 +52,20 @@ export function AppDialog({
   size = "md",
   showClose = true,
 }: AppDialogProps) {
+  const isTablet = useIsSlashTablet();
+  const widths = isTablet ? tabletSizeClasses : sizeClasses;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         hideClose
         className={cn(
           "gap-0 overflow-hidden border-[var(--ds-border)] bg-[var(--ds-surface)] p-0 font-manrope",
-          "max-sm:fixed max-sm:bottom-0 max-sm:top-auto max-sm:left-0 max-sm:right-0 max-sm:translate-x-0 max-sm:translate-y-0",
-          "max-sm:rounded-t-3xl max-sm:rounded-b-none max-sm:max-h-[92vh]",
-          sizeClasses[size],
+          !isTablet && [
+            "max-sm:fixed max-sm:bottom-0 max-sm:top-auto max-sm:left-0 max-sm:right-0 max-sm:translate-x-0 max-sm:translate-y-0",
+            "max-sm:rounded-t-3xl max-sm:rounded-b-none max-sm:max-h-[92vh]",
+          ],
+          widths[size],
           className,
         )}
       >

@@ -23,8 +23,6 @@ EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
 --> statement-breakpoint
-ALTER TYPE "public"."procedure_status" ADD VALUE IF NOT EXISTS 'pending_payment';
---> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "user_salary_settings" (
   "user_id" text PRIMARY KEY NOT NULL,
   "clinic_id" text NOT NULL,

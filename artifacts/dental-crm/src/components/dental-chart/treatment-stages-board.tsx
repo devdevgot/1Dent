@@ -73,6 +73,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useIsSlashTablet } from "@/hooks/use-slash-tablet";
 import type { ToothRecord, TreatmentPlan, TreatmentPlanItem, UpdateTreatmentPlanItemRequest } from "@workspace/api-client-react";
 import { CONDITION_CONFIG } from "./fdi-chart";
 
@@ -885,26 +886,10 @@ function StageDetailSheet({
     ? `Зуб${teeth.length > 1 ? "ы" : ""} ${teeth.map((t) => t.toothFdi).join(", ")}`
     : orphanItems.length > 0 ? "Дополнительные услуги" : "—";
 
-  return (
-    <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <SheetContent
-        side="bottom"
-        className="p-0 rounded-t-3xl h-[92vh] flex flex-col overflow-hidden"
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 pt-5 pb-3 shrink-0">
-          <button
-            onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-[var(--surface-2)] hover:bg-[var(--ds-border)] transition-colors"
-          >
-            <ChevronDown className="w-4 h-4 text-[var(--text-secondary)]" />
-          </button>
-          <span className="text-[16px] font-bold text-[var(--text)]">{stage.label}</span>
-          <div className="w-8 h-8" />
-        </div>
+  const isTablet = useIsSlashTablet();
 
-        {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto px-4 pb-8 space-y-5">
+  const scrollBody = (
+    <div className="flex-1 overflow-y-auto px-4 pb-8 space-y-5">
           {/* Status badge */}
           <div className="flex justify-center pt-1">
             <span className={cn("text-[12px] font-semibold px-3 py-1 rounded-full border", statusLabel.cls)}>
@@ -1084,6 +1069,49 @@ function StageDetailSheet({
             </div>
           </div>
         </div>
+  );
+
+  if (isTablet) {
+    return (
+      <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+        <DialogContent
+          hideClose
+          className="flex max-h-[min(88dvh,900px)] w-[min(92vw,48rem)] max-w-3xl flex-col gap-0 overflow-hidden rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] p-0 shadow-xl"
+        >
+          <div className="flex items-center justify-between border-b border-[var(--ds-border)] px-5 py-4 shrink-0">
+            <DialogTitle className="text-base font-bold text-[var(--text)] pr-4">{stage.label}</DialogTitle>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--surface-2)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--ds-border)]"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          {scrollBody}
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  return (
+    <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <SheetContent
+        side="bottom"
+        className="p-0 rounded-t-3xl h-[92vh] flex flex-col overflow-hidden"
+      >
+        <div className="flex items-center justify-between px-4 pt-5 pb-3 shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-[var(--surface-2)] hover:bg-[var(--ds-border)] transition-colors"
+          >
+            <ChevronDown className="w-4 h-4 text-[var(--text-secondary)]" />
+          </button>
+          <span className="text-[16px] font-bold text-[var(--text)]">{stage.label}</span>
+          <div className="w-8 h-8" />
+        </div>
+        {scrollBody}
       </SheetContent>
     </Sheet>
   );
@@ -1300,13 +1328,13 @@ interface SortablePlanItemCardProps {
   isEditMode: boolean;
   completingId: string | null;
   cancellingId: string | null;
-  activeTimerItemId: string | null;
+  activeTimers: Map<string, number>;
   onComplete: (id: string) => void;
   onCancel: (id: string) => void;
   onOpenModal: (id: string) => void;
 }
 
-function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, activeTimerItemId, onComplete, onCancel, onOpenModal }: SortablePlanItemCardProps) {
+function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, activeTimers, onComplete, onCancel, onOpenModal }: SortablePlanItemCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
     disabled: !isEditMode || item.status !== "pending",
@@ -1331,8 +1359,8 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, ac
   const isCancellingThis = cancellingId === item.id;
 
   // Timer-aware states
-  const isActive = activeTimerItemId === item.id;
-  const isBlocked = isPending && !isActive && activeTimerItemId !== null;
+  const isActive = activeTimers.has(item.id);
+  const isBlocked = isPending && !isActive && activeTimers.size > 0;
 
   return (
     <div
@@ -1559,7 +1587,7 @@ function StageContainer({
               isEditMode={isEditMode}
               completingId={completingId}
               cancellingId={cancellingId}
-              activeTimerItemId={activeTimers.size > 0 ? (activeTimers.keys().next().value ?? null) : null}
+              activeTimers={activeTimers}
               onComplete={handleComplete}
               onCancel={handleCancel}
               onOpenModal={setModalItemId}
@@ -1621,9 +1649,11 @@ interface TreatmentStagesBoardProps {
   patientId: string;
   teeth: ToothRecord[];
   activePlan: TreatmentPlan | null;
+  filterFdi?: number | null;
 }
 
-export function TreatmentStagesBoard({ patientId, teeth, activePlan }: TreatmentStagesBoardProps) {
+export function TreatmentStagesBoard({ patientId, teeth, activePlan, filterFdi = null }: TreatmentStagesBoardProps) {
+  const isTablet = useIsSlashTablet();
   const STORAGE_KEY = `1dent:stages-order:${patientId}`;
   const qc = useQueryClient();
   const [discountModalStageId, setDiscountModalStageId] = useState<string | null>(null);
@@ -1794,9 +1824,17 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
         qc.invalidateQueries({ queryKey: getListTeethQueryKey(patientId) });
         toast({ title: "Процедура завершена", description: "Зубная карта обновлена" });
       },
-      onError: () => {
+      onError: (err: unknown) => {
         setCompletingId(null);
-        toast({ title: "Ошибка", description: "Не удалось завершить процедуру", variant: "destructive" });
+        const apiMsg =
+          (err as { data?: { error?: string; message?: string }; message?: string })?.data?.error ??
+          (err as { data?: { message?: string } })?.data?.message ??
+          (err as { message?: string })?.message;
+        const description =
+          typeof apiMsg === "string"
+            ? apiMsg.replace(/^HTTP \d{3} [^:]+:\s*/, "")
+            : "Не удалось завершить процедуру";
+        toast({ title: "Ошибка", description, variant: "destructive" });
       },
     },
   });
@@ -1975,11 +2013,15 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
   }, []);
 
   const handleComplete = useCallback((itemId: string) => {
-    if (!planId || completingId || cancellingId) return;
+    if (!planId) {
+      toast({ title: "Ошибка", description: "Активный план лечения не найден", variant: "destructive" });
+      return;
+    }
+    if (completingId || cancellingId) return;
     setCompletionPromptItemId(null);
     setCompletingId(itemId);
     completeMutation.mutate({ id: patientId, planId, itemId });
-  }, [planId, patientId, completingId, cancellingId, completeMutation]);
+  }, [planId, patientId, completingId, cancellingId, completeMutation, toast]);
 
   const handleCancel = useCallback((itemId: string) => {
     if (!planId || completingId || cancellingId) return;
@@ -2030,7 +2072,18 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
 
   // ── Stage filtering + DnD ─────────────────────────────────────────────────
 
-  const stageItems = useMemo(() => buildStageItems(teeth, activePlan), [teeth, activePlan]);
+  const stageItems = useMemo(() => {
+    const items = buildStageItems(teeth, activePlan);
+    if (filterFdi == null) return items;
+    const filtered = new Map<string, StageData>();
+    for (const [stageId, data] of items) {
+      filtered.set(stageId, {
+        teeth: data.teeth.filter((t) => t.toothFdi === filterFdi),
+        planItems: data.planItems.filter((p) => p.toothFdi === filterFdi),
+      });
+    }
+    return filtered;
+  }, [teeth, activePlan, filterFdi]);
 
   // ── Historical completed items from all plans, grouped by stage ──────────
 
@@ -2350,7 +2403,10 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
               const activeItem = localItems.find((i) => i.id === activeId);
               if (!activeItem) return null;
               return (
-                <div className="w-[calc(100vw-32px)] max-w-[400px] shadow-2xl opacity-95 pointer-events-none rotate-2">
+                <div className={cn(
+                  "shadow-2xl opacity-95 pointer-events-none rotate-2",
+                  isTablet ? "w-[min(480px,42vw)]" : "w-[calc(100vw-32px)] max-w-[400px]",
+                )}>
                   <PlanItemCardOverlay item={activeItem} />
                 </div>
               );
@@ -2389,7 +2445,10 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
           }
         }}
       >
-        <DialogContent className="max-w-[90vw] sm:max-w-[400px] rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] shadow-xl p-6">
+        <DialogContent className={cn(
+          "rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] shadow-xl p-6",
+          isTablet ? "max-w-lg w-[min(92vw,32rem)]" : "max-w-[90vw] sm:max-w-[400px]",
+        )}>
           <DialogHeader>
             <DialogTitle className="text-[17px] font-bold text-[var(--text)]">
               Указать скидку для этапа
@@ -2460,7 +2519,10 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan }: Treatment
           : null;
         return (
           <Dialog open={completionPromptItemId !== null} onOpenChange={(open) => { if (!open) onDismissPrompt(true); }}>
-            <DialogContent className="max-w-[90vw] rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] shadow-xl p-6">
+            <DialogContent className={cn(
+              "rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] shadow-xl p-6",
+              isTablet ? "max-w-md w-[min(92vw,28rem)]" : "max-w-[90vw]",
+            )}>
               <DialogHeader>
                 <DialogTitle className="text-[17px] font-bold text-[var(--text)] text-center">
                   Процедура завершена?

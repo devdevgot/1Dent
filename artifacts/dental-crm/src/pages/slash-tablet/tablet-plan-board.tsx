@@ -21,6 +21,7 @@ import type { ToothRecord, TreatmentPlan, TreatmentPlanItem, TreatmentPlanRespon
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { TreatmentStagesBoard } from "@/components/dental-chart/treatment-stages-board";
+import { cn } from "@/lib/utils";
 
 const PLAN_STATUS_BADGE: Record<string, { label: string; cls: string }> = {
   draft:       { label: "Черновик",   cls: "bg-slate-50 text-slate-500 border-slate-200" },
@@ -54,9 +55,15 @@ function RingChart({ pct, size = 68 }: { pct: number; size?: number }) {
 export function TabletPlanBoard({
   patientId,
   onGoToChart,
+  embedded = false,
+  filterFdi = null,
 }: {
   patientId: string;
   onGoToChart: () => void;
+  /** Встроенная панель на вкладке «Карта зубов» — сразу активный план, без списка */
+  embedded?: boolean;
+  /** Фильтр позиций по выбранному зубу на карте */
+  filterFdi?: number | null;
 }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -136,10 +143,14 @@ export function TabletPlanBoard({
     },
   });
 
+  const effectiveDetailId = embedded ? (activePlan?.id ?? null) : planDetailId;
+
+  const rootClass = embedded ? "flex h-full flex-col overflow-auto" : "space-y-3 p-4";
+
   // ── Loading ────────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center py-20">
+      <div className={cn("flex items-center justify-center", embedded ? "h-full" : "h-full py-20")}>
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#1f75fe]/20 border-t-[#1f75fe]" />
       </div>
     );
@@ -147,6 +158,14 @@ export function TabletPlanBoard({
 
   // ── No diagnosis yet ───────────────────────────────────────────────────────
   if (!hasDiagnosis) {
+    if (embedded) {
+      return (
+        <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-[#94a3b8]">
+          <ClipboardList className="h-8 w-8 opacity-40" />
+          <p className="text-sm">Заполните зубную карту слева</p>
+        </div>
+      );
+    }
     return (
       <div className="flex flex-col items-center justify-center gap-4 px-6 py-16 text-center">
         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#faf8f4]">
@@ -168,8 +187,42 @@ export function TabletPlanBoard({
     );
   }
 
+  // ── Embedded: нет активного плана ──────────────────────────────────────────
+  if (embedded && !activePlan) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
+        {needsRediagnosis ? (
+          <>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100">
+              <RotateCcw className="h-5 w-5 text-amber-600" />
+            </div>
+            <p className="text-sm font-semibold text-amber-800">Нужна повторная диагностика</p>
+            <p className="text-xs text-amber-600">Проведите осмотр на карте слева</p>
+          </>
+        ) : (
+          <>
+            <ClipboardList className="h-8 w-8 text-[#94a3b8] opacity-40" />
+            <p className="text-sm text-[#94a3b8]">План лечения ещё не создан</p>
+            <button
+              className="flex items-center gap-2 rounded-xl bg-[#1f75fe] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#1a65e8]"
+              onClick={() => createPlanMutation.mutate({ id: patientId, data: {} })}
+              disabled={createPlanMutation.isPending}
+            >
+              {createPlanMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
+              Составить план
+            </button>
+          </>
+        )}
+      </div>
+    );
+  }
+
   // ── List view ──────────────────────────────────────────────────────────────
-  if (planDetailId === null) {
+  if (effectiveDetailId === null) {
     const apItems: TreatmentPlanItem[] =
       activePlan?.items.filter((i: TreatmentPlanItem) => i.status !== "cancelled") ?? [];
     const apDone = apItems.filter((i) => i.status === "completed").length;
@@ -330,10 +383,10 @@ export function TabletPlanBoard({
   }
 
   // ── Detail view ────────────────────────────────────────────────────────────
-  const isActive = planDetailId === activePlan?.id;
+  const isActive = effectiveDetailId === activePlan?.id;
   const detailPlan = isActive
     ? activePlan
-    : allPlans.find((p: TreatmentPlan) => p.id === planDetailId) ?? null;
+    : allPlans.find((p: TreatmentPlan) => p.id === effectiveDetailId) ?? null;
 
   if (!detailPlan) {
     return (
@@ -359,9 +412,9 @@ export function TabletPlanBoard({
     .reduce((s, i) => s + i.price * (1 - (i.discount ?? 0) / 100), 0);
 
   return (
-    <div className="space-y-3 p-4">
+    <div className={rootClass}>
       {/* Навигация к списку планов (виден когда есть архив или неактивный план) */}
-      {(pastPlans.length > 0 || !isActive) && (
+      {!embedded && (pastPlans.length > 0 || !isActive) && (
         <button
           onClick={() => setPlanDetailId(null)}
           className="text-xs font-semibold text-[#1f75fe] underline-offset-2 hover:underline"
@@ -370,8 +423,17 @@ export function TabletPlanBoard({
         </button>
       )}
 
+      {filterFdi != null && (
+        <p className={cn("text-xs font-medium text-[#1f75fe]", embedded ? "px-4 pt-3" : "")}>
+          Показаны позиции по зубу {filterFdi}
+        </p>
+      )}
+
       {/* Financial summary */}
-      <div className="overflow-hidden rounded-2xl border border-[#e8e3d9] bg-white shadow-sm">
+      <div className={cn(
+        "overflow-hidden border border-[#e8e3d9] bg-white shadow-sm",
+        embedded ? "mx-3 mt-3 rounded-2xl" : "rounded-2xl",
+      )}>
         <div className="h-0.5 bg-[#1f75fe]" />
         <div className="px-4 py-4">
           <div className="mb-4 flex items-center gap-4">
@@ -410,7 +472,7 @@ export function TabletPlanBoard({
       </div>
 
       {/* Следующий план / повторная диагностика */}
-      {isActive && activePlan && (activePlan.status === "completed" || activePlan.status === "in_progress") && (
+      {!embedded && isActive && activePlan && (activePlan.status === "completed" || activePlan.status === "in_progress") && (
         needsRediagnosis ? (
           <button
             className="flex w-full items-center justify-center gap-2 rounded-2xl border border-amber-200 py-3 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-50"
@@ -438,12 +500,19 @@ export function TabletPlanBoard({
       {/* Полная CRM-доска этапов: DnD, скидки, таймеры, модал позиции
           (документы / ИИ-анализ / снимки) */}
       {isActive && (
-        <TreatmentStagesBoard patientId={patientId} teeth={teethRecords} activePlan={activePlan} />
+        <div className={embedded ? "px-3 pb-3" : undefined}>
+          <TreatmentStagesBoard
+            patientId={patientId}
+            teeth={teethRecords}
+            activePlan={activePlan}
+            filterFdi={filterFdi}
+          />
+        </div>
       )}
 
       {/* Архивный план — read-only список позиций */}
       {!isActive && (
-        <div className="space-y-2">
+        <div className={cn("space-y-2", embedded && "px-3 pb-3")}>
           {nc.length === 0 ? (
             <p className="py-6 text-center text-sm text-[#94a3b8]">Нет позиций</p>
           ) : (

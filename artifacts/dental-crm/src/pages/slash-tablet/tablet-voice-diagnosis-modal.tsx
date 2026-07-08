@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, X, Loader2, Check, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { overlayPanelClass, overlayShellClass } from "@/lib/tablet-overlay-classes";
 import { CONDITION_META, type ToothCondition } from "./mock-data";
 
 type Phase = "idle" | "recording" | "processing" | "review";
@@ -59,11 +60,12 @@ export function TabletVoiceDiagnosisModal({ patientName, onClose, onApply }: Pro
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center sm:p-6">
+    <div className={overlayShellClass(true)}>
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <motion.div
-        initial={{ opacity: 0, y: 40 }}
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl border border-[#e8e3d9] bg-white shadow-2xl sm:rounded-3xl"
+        className={cn(overlayPanelClass(true, { tablet: "max-w-2xl" }), "z-10")}
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[#e8e3d9] px-5 py-4">
