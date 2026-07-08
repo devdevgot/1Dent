@@ -128,7 +128,6 @@ export default function DoctorSchedulePage() {
     <PageShell className="pb-8" animate={false}>
       <PageHeader
         title={`${MONTHS[month]} ${year}`}
-        className="[&>div:first-child>div:first-child]:hidden"
         right={
           <>
             <PageHeaderIconButton onClick={prev} title="Предыдущий месяц">
